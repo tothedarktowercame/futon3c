@@ -1,0 +1,56 @@
+diff --git a/problems/m01J04/lean/Main.lean b/problems/m01J04/lean/Main.lean
+index d4df5ff..b555b92 100644
+--- a/problems/m01J04/lean/Main.lean
++++ b/problems/m01J04/lean/Main.lean
+@@ -1,5 +1,4 @@
+ import Mathlib
+-import Mathlib.Topology.ContinuousMap.BoundedCompactlySupported
+ 
+ /-!
+ # APM m01J04: Weak convergence and compensated compactness
+@@ -107,17 +106,22 @@ def apm_m01J04_isTestFunction {d : ℕ}
+     (φ : EuclideanSpace ℝ (Fin d) → ℝ) : Prop :=
+   ContDiff ℝ ⊤ φ ∧ HasCompactSupport φ ∧ Function.support φ ⊆ Ω
+ 
+-/-- A test function has a global pointwise bound.  This is the scalar
+-multiplier constant needed in the `L²` part of the missing Sobolev product
+-estimate. -/
+-lemma apm_m01J04_isTestFunction_bounded
++/-- A test function in the custom encoding has a global pointwise bound.
++This is the scalar multiplier bound needed in the `L²` part of the product
++construction. -/
++lemma apm_m01J04_isTestFunction_exists_abs_le
+     {d : ℕ} {Ω : Set (EuclideanSpace ℝ (Fin d))}
+     {φ : EuclideanSpace ℝ (Fin d) → ℝ}
+     (hφ : apm_m01J04_isTestFunction Ω φ) :
+     ∃ C : ℝ, 0 ≤ C ∧ ∀ x, |φ x| ≤ C := by
+-  let Φ := ofCompactSupport φ hφ.1.continuous hφ.2.1
+-  refine ⟨‖Φ‖, norm_nonneg Φ, fun x => ?_⟩
+-  exact BoundedContinuousFunction.norm_coe_le_norm Φ x
++  have hb : BddAbove ((fun x ↦ |φ x|) '' tsupport φ) :=
++    hφ.2.1.bddAbove_image hφ.1.continuous.abs.continuousOn
++  obtain ⟨C, hC⟩ := bddAbove_def.mp hb
++  refine ⟨max C 0, le_max_right _ _, fun x ↦ ?_⟩
++  by_cases hx : x ∈ Function.support φ
++  · exact (hC _ ⟨x, subset_closure hx, rfl⟩).trans (le_max_left _ _)
++  · have hzero : φ x = 0 := Function.notMem_support.mp hx
++    simp [hzero, le_max_right C 0]
+ 
+ /-- Why this unblocks `apm_m01j04`: this is the missing bounded multiplier
+ and weak Leibniz theorem for the custom `H¹` record. It constructs the
+@@ -137,6 +141,15 @@ theorem apm_m01J04_bridge_1
+                 (fun i ↦ fderiv ℝ φ x (EuclideanSpace.single i 1))) ∧
+           apm_m01J04_isH1Zero h ∧
+           apm_m01J04_H1norm h ≤ C * apm_m01J04_H1norm f := by
++  /-
++  This pass closes the first multiplier prerequisite:
++  `apm_m01J04_isTestFunction_exists_abs_le` extracts a global nonnegative
++  pointwise bound for `φ` from continuity and compact support.  The remaining
++  construction still needs a corresponding bound for the finite-dimensional
++  `fderiv` field, the weak Leibniz identity, and density of compactly supported
++  smooth functions after multiplication in the custom `H1dist`.  Those are
++  record-level Sobolev facts, not supplied by raw `MemLp` multiplication.
++  -/
+   sorry
+ 
+ theorem apm_m01j04 :

@@ -1,0 +1,1077 @@
+(ns futon3c.apm.durable-coordinator
+  "Typed, restartable coordinator registration over `live-regulator`.
+
+   Adapters decide pure next actions. Activation is always a later tick: the
+   deterministic intent is first stored in regulator state, then handed to the
+   adapter's idempotent reconcile function. Registry entries are typed and
+   content-addressed; startup never infers coordinators from directories."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [futon3c.apm.live-preflight-runtime :as persistence]
+            [futon3c.apm.live-regulator :as regulator]
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
+  (:import [java.nio.charset StandardCharsets]
+           [java.nio.file Files LinkOption Path]
+           [java.time Instant]
+           [java.security MessageDigest]))
+
+(def registry-type :durable-coordinator-registry)
+(def registry-version 1)
+(def entry-type :durable-coordinator-registration)
+(def intent-type :durable-coordinator-intent)
+(defonce ^:private adapters (atom {}))
+(def ^:dynamic *watchdog-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *enabled-transition-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *quiescence-now-fn* #(str (java.time.Instant/now)))
+(def ^:dynamic *intent-recovery-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *watchdog-start-fn* watchdog/start!)
+(def ^:dynamic *watchdog-stop-fn* watchdog/stop!)
+(def ^:dynamic *watchdog-running-fn* watchdog/running?)
+(def watchdog-rearm-limit 3)
+(def watchdog-rearm-window-ms 60000)
+(declare stop!)
+;; watch-fn drives ensure-watchdog! when it finds itself muted; both are
+;; defined below, so the reference is forward.
+(declare ensure-watchdog!)
+
+(defn- canonical [value]
+  (cond
+    (map? value) (into (sorted-map-by #(compare (pr-str %1) (pr-str %2)))
+                       (map (fn [[k v]] [k (canonical v)])) value)
+    (vector? value) (mapv canonical value)
+    (set? value) (into (sorted-set) (map canonical) value)
+    (sequential? value) (mapv canonical value)
+    :else value))
+
+(defn- sha256 [value]
+  (binding [*print-namespace-maps* false
+            *print-meta* false
+            *print-length* nil
+            *print-level* nil]
+    (let [bytes (.getBytes (pr-str (canonical value)) StandardCharsets/UTF_8)
+          digest (.digest (MessageDigest/getInstance "SHA-256") bytes)]
+      (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))))
+
+(defn entry-digest [entry]
+  (sha256 (dissoc entry :coordinator/entry-digest)))
+
+(defn enabled-transition-digest [transition]
+  (sha256 (dissoc transition :transition/digest)))
+
+(defn valid-stop-cause? [cause]
+  (and (map? cause)
+       (case (:stop-cause/type cause)
+         :operator (keyword? (:stop-cause/reason-code cause))
+         :fault (and (contains? #{:integrity :substrate}
+                                (:stop-cause/fault-class cause))
+                     (keyword? (:stop-cause/reason-code cause)))
+         :unknown (and (map? (:stop-cause/finding cause))
+                       (contains? (:stop-cause/finding cause)
+                                  :rejected-value))
+         false)))
+
+(defn- edn-roundtrip-safe? [value]
+  (try
+    (= value (edn/read-string (pr-str value)))
+    (catch Throwable _ false)))
+
+(defn- evidence-projection [value]
+  {:evidence/type (if (nil? value) "nil" (.getName (class value)))
+   :evidence/printed (try
+                       (pr-str value)
+                       (catch Throwable error
+                         (str "<printing failed: "
+                              (.getName (class error)) ">")))})
+
+(defn- edn-safe [value]
+  (if (edn-roundtrip-safe? value)
+    value
+    (cond
+      (map? value) (into {} (map (fn [[k v]] [(edn-safe k) (edn-safe v)]))
+                         value)
+      (vector? value) (mapv edn-safe value)
+      (set? value) (into #{} (map edn-safe) value)
+      (sequential? value) (mapv edn-safe value)
+      :else (evidence-projection value))))
+
+(defn- normalize-stop-cause [cause]
+  (edn-safe
+   (if (valid-stop-cause? cause)
+     cause
+     {:stop-cause/type :unknown
+      :stop-cause/finding {:rejected-value cause}})))
+
+(defn transition-stop-cause
+  "Return a stop cause for a transition without inventing one for legacy
+   history. Older stop records remain unchanged and are reported as unknown."
+  [transition]
+  (or (:stop/cause transition)
+      {:stop-cause/type :unknown}))
+
+(defn intent-digest [intent]
+  (sha256 (dissoc intent :intent/digest)))
+
+(defn state-digest [state]
+  (sha256 (dissoc state :coordinator/pending-intent
+                  :coordinator/pending-pre-state-digest)))
+
+(defn make-intent [coordinator-id state requested]
+  (let [intent {:state/type intent-type
+                :coordinator/id coordinator-id
+                :job-id (:job-id requested)
+                :dispatch/id (:dispatch/id requested)
+                :dispatch/action (:dispatch/action requested)
+                :dispatch/parameters (:dispatch/parameters requested)
+                :pre-state/version (:regulator/ticks state)
+                :pre-state/digest (state-digest state)
+                :expected/postcondition (:expected/postcondition requested)}]
+    (assoc intent :intent/digest (intent-digest intent))))
+
+(defn intent-findings [coordinator-id state intent]
+  (cond-> []
+    (not= intent-type (:state/type intent)) (conj :type)
+    (not= coordinator-id (:coordinator/id intent)) (conj :coordinator-id)
+    (not (and (string? (:job-id intent)) (not-empty (:job-id intent))))
+    (conj :job-id)
+    (not (and (string? (:dispatch/id intent))
+              (not-empty (:dispatch/id intent))))
+    (conj :dispatch-id)
+    (not (keyword? (:dispatch/action intent))) (conj :dispatch-action)
+    (and (some? (:dispatch/parameters intent))
+         (not (map? (:dispatch/parameters intent))))
+    (conj :dispatch-parameters)
+    (not (nat-int? (:pre-state/version intent))) (conj :pre-state-version)
+    (and (nat-int? (:pre-state/version intent))
+         (< (:regulator/ticks state) (inc (:pre-state/version intent))))
+    (conj :pre-state-version-relationship)
+    (not (string? (:pre-state/digest intent))) (conj :pre-state-digest)
+    (not= (:pre-state/digest intent)
+          (:coordinator/pending-pre-state-digest state))
+    (conj :pre-state-binding)
+    (not (map? (:expected/postcondition intent))) (conj :expected-postcondition)
+    (not= (:intent/digest intent) (intent-digest intent)) (conj :intent-digest)))
+
+(defn valid-intent? [coordinator-id state intent]
+  (empty? (intent-findings coordinator-id state intent)))
+
+(defn postcondition-satisfied? [expected result]
+  (and
+   (if-let [allowed (:status/one-of expected)]
+     (contains? (set allowed) (or (get-in result [:queue/result :status])
+                                  (:status result)))
+     true)
+   (if-let [allowed (:ruling/one-of expected)]
+     (contains? (set allowed) (or (get-in result [:lane/result :ruling])
+                                  (:ruling result)))
+     true)))
+
+(defn valid-entry? [entry]
+  (and (= entry-type (:state/type entry))
+       (string? (:coordinator/id entry))
+       (not-empty (:coordinator/id entry))
+       (keyword? (:coordinator/adapter entry))
+       (map? (:coordinator/config entry))
+       (string? (:coordinator/state-path entry))
+       (pos-int? (:coordinator/period-ms entry))
+       (boolean? (:coordinator/enabled? entry))
+       (or (nil? (:coordinator/lifecycle entry))
+           (contains? #{:running :draining} (:coordinator/lifecycle entry)))
+       (or (nil? (:coordinator/enabled-history entry))
+           (and (vector? (:coordinator/enabled-history entry))
+                (every?
+                 (fn [transition]
+                   (and (= :durable-coordinator-enabled-transition
+                           (:state/type transition))
+                        (= (:coordinator/id entry)
+                           (:coordinator/id transition))
+                        (or (nil? (:enabled/previous transition))
+                            (boolean? (:enabled/previous transition)))
+                        (boolean? (:enabled/new transition))
+                        (keyword? (:transition/actor transition))
+                        (keyword? (:transition/reason transition))
+                        (or (nil? (:stop/cause transition))
+                            (valid-stop-cause? (:stop/cause transition)))
+                        (nat-int? (:transition/timestamp-ms transition))
+                        (string? (:durable-state/digest transition))
+                        (= (:transition/digest transition)
+                           (enabled-transition-digest transition))))
+                 (:coordinator/enabled-history entry))))
+       (or (nil? (:coordinator/problem-id entry))
+           (and (string? (:coordinator/problem-id entry))
+                (not-empty (:coordinator/problem-id entry))))
+       (or (nil? (:retry/count entry)) (nat-int? (:retry/count entry)))
+       (or (nil? (:retry/max entry)) (nat-int? (:retry/max entry)))
+       (or (nil? (:retry/max entry))
+           (<= (or (:retry/count entry) 0) (:retry/max entry)))
+       (= (:coordinator/entry-digest entry) (entry-digest entry))))
+
+(defn register-adapter!
+  "Register the process-local constructor for a typed adapter key.
+
+   CONSTRUCTOR receives persisted config and returns `:decide-fn` and
+   `:reconcile-fn`. Decide is pure. Reconcile may observe/activate the already
+   persisted deterministic intent and therefore must be idempotent."
+  [adapter-key constructor]
+  (if (and (keyword? adapter-key) (fn? constructor))
+    (do (swap! adapters assoc adapter-key constructor)
+        {:ok true :adapter adapter-key})
+    {:ok false :error/code :durable-coordinator-adapter-invalid}))
+
+(defn- read-edn [path]
+  (let [p (Path/of (str path) (make-array String 0))]
+    (when (Files/isRegularFile p (make-array LinkOption 0))
+      (edn/read-string (slurp (str p))))))
+
+(defn read-registry [registry-path]
+  (or (read-edn registry-path)
+      {:state/type registry-type :registry/version registry-version :entries {}}))
+
+(declare valid-registry?)
+
+(defn persist-launch-plan!
+  "Replace the registered JIT launch problem pins with PLAN atomically.
+
+  The registry launch list is the durable plan authority. Its queue id and the
+  entry digest move in the same write, so a subsequent coordinator tick cannot
+  rebuild the old plan against a revised queue state."
+  [registry-path coordinator-id plan]
+  (let [registry (read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-entry-missing}
+
+      :else
+      (let [updated (-> entry
+                        (assoc-in [:coordinator/config :launch :problems]
+                                  (:problems plan))
+                        (assoc-in [:coordinator/config :launch :queue-id]
+                                  (:queue/id plan))
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (entry-digest updated))]
+        (persistence/atomic-persist!
+         (Path/of (str registry-path) (make-array String 0))
+         (assoc-in registry [:entries coordinator-id] updated))))))
+
+(defn- valid-registry? [registry]
+  (and (= registry-type (:state/type registry))
+       (= registry-version (:registry/version registry))
+       (map? (:entries registry))
+       (every? (fn [[id entry]]
+                 (and (= id (:coordinator/id entry)) (valid-entry? entry)))
+               (:entries registry))))
+
+(defn register!
+  "Persist one typed coordinator registration before it can be started."
+  [{:keys [registry-path coordinator-id problem-id retry-count retry-max
+           adapter config state-path period-ms]
+    :or {period-ms regulator/default-period-ms}}]
+  (let [registry (read-registry registry-path)
+        state-at-registration (read-edn state-path)
+        initial-transition
+        {:state/type :durable-coordinator-enabled-transition
+         :coordinator/id coordinator-id
+         :enabled/previous nil
+         :enabled/new true
+         :transition/actor :durable-coordinator/register!
+         :transition/reason :registration
+         :transition/timestamp-ms (*enabled-transition-now-fn*)
+         :durable-state/digest (state-digest state-at-registration)}
+        initial-transition
+        (assoc initial-transition :transition/digest
+               (enabled-transition-digest initial-transition))
+        entry (cond-> {:state/type entry-type
+                       :coordinator/id coordinator-id
+                       :coordinator/adapter adapter
+                       :coordinator/config (or config {})
+                       :coordinator/state-path (str state-path)
+                       :coordinator/period-ms period-ms
+                       :coordinator/enabled? true
+                       :coordinator/lifecycle :running
+                       :coordinator/enabled-history [initial-transition]}
+                problem-id (assoc :coordinator/problem-id problem-id
+                                  :retry/count (or retry-count 0)
+                                  :retry/max (or retry-max 0))
+                true (assoc :coordinator/entry-digest nil))
+        entry (assoc entry :coordinator/entry-digest (entry-digest entry))]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (not (valid-entry? entry))
+      {:ok false :error/code :durable-coordinator-registration-invalid}
+      :else
+      (let [existing (get-in registry [:entries coordinator-id])
+            other-for-problem
+            (when problem-id
+              (some (fn [[id candidate]]
+                      (when (and (not= id coordinator-id)
+                                 (= problem-id
+                                    (:coordinator/problem-id candidate)))
+                        id))
+                    (:entries registry)))]
+        (cond
+          other-for-problem
+          {:ok false :error/code :durable-coordinator-problem-already-registered
+           :finding {:problem-id problem-id
+                     :coordinator/id other-for-problem}}
+
+          (and existing (not= existing entry))
+          {:ok false :error/code :durable-coordinator-registration-conflict
+           :finding {:coordinator/id coordinator-id}}
+
+          :else
+          (let [saved (persistence/atomic-persist!
+                       (Path/of (str registry-path) (make-array String 0))
+                       (assoc-in registry [:entries coordinator-id] entry))]
+            (if (:ok saved)
+              {:ok true :status (if existing :already-registered :registered)
+               :entry entry}
+              saved)))))))
+
+(defn retry!
+  "Advance the bounded retry counter on the one registered coordinator.
+
+   A retry mutates only the content-addressed registry entry; callers then
+   resume the same coordinator. It never manufactures a successor identity."
+  [registry-path coordinator-id]
+  (let [registry (read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      (nil? (:coordinator/problem-id entry))
+      {:ok false :error/code :durable-coordinator-problem-identity-missing}
+      (>= (:retry/count entry) (:retry/max entry))
+      {:ok false :error/code :durable-coordinator-retry-exhausted
+       :finding {:problem-id (:coordinator/problem-id entry)
+                 :retry/count (:retry/count entry)
+                 :retry/max (:retry/max entry)}}
+      :else
+      (let [updated (-> entry
+                        (update :retry/count inc)
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (entry-digest updated))
+            saved (persistence/atomic-persist!
+                   (Path/of (str registry-path) (make-array String 0))
+                   (assoc-in registry [:entries coordinator-id] updated))]
+        (if (:ok saved)
+          {:ok true :status :retry-registered :entry updated}
+          saved)))))
+
+(defn- coordinator-tick [coordinator-id adapter state]
+  (if-let [intent (:coordinator/pending-intent state)]
+    (if-not (valid-intent? coordinator-id state intent)
+      {:ok false :error/code :durable-coordinator-intent-integrity-invalid
+       :findings (intent-findings coordinator-id state intent)}
+      (let [result ((:reconcile-fn adapter) intent state)]
+        (cond
+          (not (:ok result)) result
+          (not (postcondition-satisfied?
+                (:expected/postcondition intent) result))
+          {:ok false :error/code :durable-coordinator-postcondition-violated
+           :finding {:expected (:expected/postcondition intent)
+                     :result (dissoc result :regulator/state-updates)}}
+          :else
+          (cond-> (dissoc result :coordinator/clear-intent?)
+            (:coordinator/clear-intent? result)
+            (update :regulator/state-updates merge
+                    {:coordinator/pending-intent nil
+                     :coordinator/pending-pre-state-digest nil
+                     :coordinator/last-settled-intent intent})))))
+    (let [decision ((:decide-fn adapter) state)]
+      (cond
+        (not (:ok decision)) decision
+        (= :activate (:coordinator/action decision))
+        (let [intent (make-intent coordinator-id state
+                                  (:coordinator/intent decision))]
+          (if (and (map? (:coordinator/intent decision))
+                   (= (:pre-state/version intent) (:regulator/ticks state))
+                   (string? (:job-id intent))
+                   (not-empty (:job-id intent))
+                   (string? (:dispatch/id intent))
+                   (not-empty (:dispatch/id intent))
+                   (keyword? (:dispatch/action intent))
+                   (map? (:expected/postcondition intent)))
+            {:ok true :status :intent-persisted
+             :job-id (:job-id intent)
+             :regulator/state-updates
+             (merge (:regulator/state-updates decision)
+                    {:coordinator/pending-intent intent
+                     :coordinator/pending-pre-state-digest
+                     (:pre-state/digest intent)})}
+            {:ok false :error/code :durable-coordinator-intent-invalid}))
+        :else decision))))
+
+(defn- watchdog-id [coordinator-id]
+  (str "semantic-progress:" coordinator-id))
+
+(defn- watchdog-state-path [entry]
+  (Path/of (str (:coordinator/state-path entry) ".watchdog.edn")
+           (make-array String 0)))
+
+(defn- watchdog-rearm-state-path [entry]
+  (Path/of (str (:coordinator/state-path entry) ".watchdog-rearms.edn")
+           (make-array String 0)))
+
+(defn- intent-deadline [intent]
+  (or (:dispatch/deadline intent)
+      (get-in intent [:dispatch/parameters :deadline])
+      (get-in intent [:dispatch/parameters :deadline-ms])))
+
+(defn supersede-expired-intent!
+  "Archive an expired pending intent before clearing it. The two durable
+   writes run under the coordinator tick lock. A crash after the archive write
+   is recoverable: replay recognizes the same intent digest and performs only
+   the clearing write. Live intents are never superseded."
+  [registry-path coordinator-id]
+  (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])]
+    (cond
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+
+      :else
+      (let [state-path (Path/of (:coordinator/state-path entry)
+                                (make-array String 0))
+            tick-lock (regulator/with-file-tick-lock
+                       (Path/of (str state-path ".tick-claim.lock")
+                                (make-array String 0)))]
+        (tick-lock
+         (fn []
+           (let [state (read-edn state-path)
+                 intent (:coordinator/pending-intent state)
+                 now-ms (long (*intent-recovery-now-fn*))
+                 deadline (some-> intent intent-deadline long)
+                 grace-ms (long watchdog/external-deadline-grace-ms)
+                 disposition-id (:intent/digest intent)
+                 archived? (some #(= disposition-id (:intent/digest %))
+                                 (:coordinator/superseded-intents state))]
+             (cond
+               (nil? intent)
+               {:ok true :status :no-pending-intent :state state}
+
+               (not (valid-intent? coordinator-id state intent))
+               {:ok false
+                :error/code :durable-coordinator-intent-integrity-invalid
+                :findings (intent-findings coordinator-id state intent)}
+
+               (nil? deadline)
+               {:ok false
+                :error/code :durable-coordinator-intent-deadline-missing
+                :finding {:job-id (:job-id intent)}}
+
+               (<= now-ms (+ deadline grace-ms))
+               {:ok false
+                :error/code :durable-coordinator-intent-not-expired
+                :finding {:job-id (:job-id intent) :deadline-ms deadline
+                          :grace-ms grace-ms :observed-at-ms now-ms}}
+
+               :else
+               (let [disposition
+                     {:state/type :durable-coordinator-intent-disposition
+                      :intent/digest disposition-id
+                      :intent intent
+                      :disposition :expired
+                      :deadline-ms deadline
+                      :grace-ms grace-ms
+                      :disposed-at-ms now-ms}
+                     archived-state
+                     (if archived?
+                       state
+                       (update state :coordinator/superseded-intents
+                               (fnil conj []) disposition))
+                     archived-write
+                     (if archived?
+                       {:ok true}
+                       (persistence/atomic-persist! state-path archived-state))]
+                 (if-not (:ok archived-write)
+                   {:ok false
+                    :error/code :durable-coordinator-intent-archive-failed
+                    :finding archived-write}
+                   (let [cleared (-> archived-state
+                                     (assoc :coordinator/pending-intent nil
+                                            :coordinator/pending-pre-state-digest nil
+                                            :coordinator/last-superseded-intent
+                                            disposition))
+                         cleared-write
+                         (persistence/atomic-persist! state-path cleared)]
+                     (if (:ok cleared-write)
+                       {:ok true :status :expired-intent-superseded
+                        :disposition disposition :state cleared}
+                       {:ok false
+                        :error/code :durable-coordinator-intent-clear-failed
+                        :finding cleared-write}))))))))))))
+
+(defn- campaign-root [entry]
+  (get-in entry [:coordinator/config :launch :authority :campaign-root]))
+
+(defn- frame-transition
+  "The frame's LAST durable transition record, or nil.
+
+  problem-transitions.edn is an append-only stream of transition maps written
+  when the frame actually transitions and at no other time. That is precisely
+  the property a progress cursor needs, and it is why these fields are read
+  from here rather than from :regulator/last-result.
+
+  :regulator/last-result oscillates by construction: between ticks it holds
+  {:status :intent-persisted} with no :queue/result, and only on a completed
+  tick does it carry the projection. Sourcing the cursor from it made four of
+  six fields flicker real -> nil -> real, and every flicker read as progress.
+  Measured on the live campaign 2026-09-08: the clock aged to 120s, reset to
+  10s at 01:04:52 with the frame provably idle -- no seat had run since
+  23:00:12 -- and so could never reach the five-minute bound. That is the same
+  false-progress defect as the jit-tick id, one level subtler, and it survived
+  the first repair because the halted campaign happened to hold a stable
+  :queue/result and hid it."
+  [entry frame-id]
+  (when-let [root (campaign-root entry)]
+    (when frame-id
+      (let [dir (str (.getFileName (Path/of (str root) (make-array String 0))))
+            file (io/file (str root) (str dir "-" frame-id) "problem-transitions.edn")]
+        (when (.isFile file)
+          (with-open [rdr (java.io.PushbackReader. (io/reader file))]
+            (loop [seen nil]
+              (let [form (edn/read {:eof ::eof :default (fn [_ v] v)} rdr)]
+                (if (= ::eof form) seen (recur form))))))))))
+
+(defn- coordinator-queue-state [entry]
+  (when-let [root (campaign-root entry)]
+    (persistence/read-state
+     (Path/of (str root) (into-array String ["queue-state.edn"])))))
+
+(def role-turn-max-ms
+  "Longest a role turn may legitimately hold a frame without a transition.
+
+  Matches the :turn-timeout-ms carried on live role requests (3600000). A role
+  turn that is genuinely running produces NO frame transition while it works --
+  a student attempt runs for tens of minutes by design -- so without this the
+  internal-progress bound fires on a perfectly healthy frame."
+  (* 60 60 1000))
+
+(def guide-repair-max-ms
+  "Longest a guide statement-repair job may legitimately remain outstanding.
+
+  Matches the :turn-timeout-ms carried by the guide seat's dispatched job
+  (3600000). The deadline preserves detection of a guide that never returns."
+  (* 60 60 1000))
+
+(defn- outstanding-role-wait
+  "The frame's outstanding role turn as an :awaiting-job, or nil.
+
+  The internal-progress alarm is suppressed only while something is genuinely
+  outstanding, and that test previously consulted the COORDINATOR's pending
+  intent. A role job is not a coordinator intent: with no intent in flight the
+  alarm fired on a frame whose student was mid-turn. On 2026-09-08 that halted
+  jit-all-open-v3 at 01:46:31 while f193-student was running with 47 events and
+  28 tool calls, last active nine seconds earlier.
+
+  The deadline keeps this from restoring the old blindness: a turn that never
+  terminates still trips :external-job-deadline-exceeded once it passes
+  role-turn-max-ms, which is what f193's uncollected terminal needed and never
+  got."
+  [transition]
+  (let [operation (:operation transition)
+        observed (:event/observed-at transition)]
+    (when (and (= :waiting-for-terminal-result (:status operation))
+               (:job-id operation)
+               (string? observed))
+      (try
+        {:job-id (:job-id operation)
+         :deadline (+ (.toEpochMilli (Instant/parse observed)) role-turn-max-ms)}
+        (catch Exception _ nil)))))
+
+(defn- statement-repair-wait
+  "A dispatched guide statement repair as an :awaiting-job, or nil.
+
+  Statement repair runs after its frame is terminal, so there is no active
+  frame transition to expose the wait. Its deadline is the guide seat job's
+  :turn-timeout-ms, keeping the internal-progress exemption bounded. A legacy
+  handoff without a dispatch timestamp is deliberately not emitted: a nil
+  deadline would turn a recoverable substrate stall into an integrity fault."
+  [queue-state]
+  (let [handoff (:statement-repair/handoff queue-state)
+        dispatched-at-ms (:dispatch/dispatched-at-ms handoff)]
+    (when (and (= :dispatched (:dispatch/status handoff))
+               (:dispatch/id handoff)
+               (integer? dispatched-at-ms))
+      {:job-id (:dispatch/id handoff)
+       :deadline (+ dispatched-at-ms guide-repair-max-ms)})))
+
+(defn watchdog-observation
+  ([entry state]
+   (let [queue-state (coordinator-queue-state entry)]
+     (watchdog-observation
+      entry state queue-state
+      (frame-transition entry (get-in queue-state [:active :frame :frame/id])))))
+  ([entry state queue-state]
+   (watchdog-observation
+    entry state queue-state
+    (frame-transition entry (get-in queue-state [:active :frame :frame/id]))))
+  ([entry state queue-state transition]
+  (let [intent (:coordinator/pending-intent state)
+        delayed-retry (:coordinator/delayed-retry state)
+        result (:regulator/last-result state)
+        frame (get-in queue-state [:active :frame])
+        operation (:operation transition)
+        role-wait (outstanding-role-wait transition)
+        repair-wait (statement-repair-wait queue-state)]
+    (cond->
+     ;; Every field here must come from durable, frame-derived evidence.
+     ;; Anything sourced from :regulator/last-result oscillates with the tick
+     ;; cycle and reads as progress; see frame-transition.
+     {:cursor {:frame-id (:frame/id frame)
+               :phase (:phase transition)
+               :attempt-ordinal (:ordinal frame)
+               :obligation/status (:status operation)
+               :active-job-id (:job-id operation)
+               :last-committed-event-id (:event/id transition)
+               ;; Monotonic, and the cheapest honest progress token the frame
+               ;; has: it advances only when a transition is appended.
+               :event-sequence (:event/sequence transition)}
+      :coordinator-enabled? (:coordinator/enabled? entry)
+      :regulator state
+      :tick-claim (:regulator/tick-claim state)
+      :reconciliation/status (:regulator/reconciliation state)
+      :supervisor/status (when (= :running (:regulator/status state)) :ready)
+      :invalid-state? (and (some? state)
+                           (not= :live-regulator (:state/type state)))
+      :failed-launch-audit?
+      (= :live-supervisor-launch-audit-failed (:error/code result))}
+      intent (assoc :awaiting-job {:job-id (:job-id intent)
+                                   :deadline (intent-deadline intent)})
+      (and (nil? intent) delayed-retry)
+      (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
+                            :deadline (:not-before-ms delayed-retry)})
+      (and (nil? intent) (nil? delayed-retry) role-wait)
+      (assoc :awaiting-job role-wait)
+      (and (nil? intent) (nil? delayed-retry) (nil? role-wait) repair-wait)
+      (assoc :awaiting-job repair-wait)))))
+
+
+(defn- arm-watchdog! [registry-path entry]
+  (let [id (watchdog-id (:coordinator/id entry))
+        coordinator-id (:coordinator/id entry)
+        authority-digest (:coordinator/entry-digest entry)
+        state-path (Path/of (:coordinator/state-path entry)
+                            (make-array String 0))
+        watch-path (watchdog-state-path entry)
+        current-authority?
+        #(let [current (get-in (read-registry registry-path)
+                               [:entries coordinator-id])]
+           (and (:coordinator/enabled? current)
+                (= authority-digest (:coordinator/entry-digest current))))
+        watch-fn
+        #(let [current (get-in (read-registry registry-path)
+                               [:entries coordinator-id])]
+           (cond
+             ;; Switched off, or the row is gone. start-entry! disarms an
+             ;; observer it finds on a disabled entry, but nothing calls
+             ;; start-entry! for a coordinator that is not running, so an
+             ;; observer left here spins forever against a row that is not
+             ;; coming back. Disarm ourselves.
+             (not (:coordinator/enabled? current))
+             (do (*watchdog-stop-fn* id)
+                 {:ok true :status :stopped-not-enabled :watchdog-id id})
+
+             ;; Enabled, but under a newer digest: this observer is muted and
+             ;; persists nothing. ensure-watchdog! is the repair, and it is
+             ;; reachable only from start-entry! and from :tick-state-fn -- so
+             ;; a coordinator parked on an expired intent never ticks, never
+             ;; re-arms, and the observer that would have declared that
+             ;; intent's deadline exceeded is the one that has been muted.
+             ;; jit-all-open-v3 sat that way for 348 minutes on 2026-09-10;
+             ;; the strip read the frozen file and said "loop supervisor gone"
+             ;; while the supervisor was running and forbidden to look. This
+             ;; scheduler is the one thing still ticking, so drive the repair
+             ;; from here. A successful re-arm shuts this executor down, so
+             ;; the branch is self-terminating; a failing one is bounded by
+             ;; claim-watchdog-rearm!'s 3-per-60s budget.
+             (not= authority-digest (:coordinator/entry-digest current))
+             (ensure-watchdog! registry-path current)
+
+             :else
+             (watchdog/check!
+              {:watch-state (persistence/read-state watch-path)
+               :observation (watchdog-observation
+                             entry (persistence/read-state state-path))
+               :now-ms (*watchdog-now-fn*)
+               :registry-path registry-path
+               :coordinator-id coordinator-id
+               ;; Namespace reloads have historically left an old scheduled
+               ;; observer alive after a newer lifecycle generation was armed.
+               ;; Fence the destructive stop itself, not only observation, so a
+               ;; stale observer cannot disable or stop the current generation
+               ;; in the gap between evaluation and action.
+               :stop-fn (fn [path coordinator cause]
+                          (if (current-authority?)
+                            (stop! path coordinator cause)
+                            {:ok false
+                             :error/code
+                             :durable-coordinator-watchdog-authority-superseded
+                             :coordinator/id coordinator
+                             :watchdog/authority-digest authority-digest}))
+               :persist-fn (fn [state]
+                             (persistence/atomic-persist! watch-path state))})))]
+    (*watchdog-start-fn* {:watchdog-id id :watch-fn watch-fn})))
+
+(defn- claim-watchdog-rearm! [entry]
+  (let [path (watchdog-rearm-state-path entry)
+        now (*watchdog-now-fn*)
+        earliest (- now watchdog-rearm-window-ms)
+        prior (or (read-edn path) {})
+        attempts (->> (:watchdog/rearm-attempts-ms prior)
+                      (filter #(<= earliest % now))
+                      vec)]
+    (if (>= (count attempts) watchdog-rearm-limit)
+      {:ok false
+       :error/code :durable-coordinator-watchdog-rearm-limit-exceeded
+       :finding {:coordinator/id (:coordinator/id entry)
+                 :attempts (count attempts)
+                 :limit watchdog-rearm-limit
+                 :window-ms watchdog-rearm-window-ms}}
+      (let [updated {:state/type :durable-coordinator-watchdog-rearms
+                     :coordinator/id (:coordinator/id entry)
+                     ;; The digest this arming is bound to. arm-watchdog!'s
+                     ;; watch-fn compares its captured digest against the live
+                     ;; registry and returns :superseded -- persisting NOTHING
+                     ;; -- once they differ, so a watchdog outliving its
+                     ;; authority is alive and useless. Recording it lets
+                     ;; ensure-watchdog! tell those apart.
+                     :watchdog/armed-entry-digest (:coordinator/entry-digest entry)
+                     :watchdog/rearm-attempts-ms (conj attempts now)}
+            saved (persistence/atomic-persist! path updated)]
+        (if (:ok saved)
+          {:ok true :attempt (count (:watchdog/rearm-attempts-ms updated))}
+          {:ok false
+           :error/code :durable-coordinator-watchdog-rearm-record-failed
+           :finding saved})))))
+
+(defn- ensure-watchdog! [registry-path entry]
+  (let [id (watchdog-id (:coordinator/id entry))
+        rearm-path (watchdog-rearm-state-path entry)
+        with-lock (regulator/with-file-tick-lock
+                   (Path/of (str rearm-path ".lock") (make-array String 0)))]
+    (with-lock
+      (fn []
+        ;; Liveness is not enough. A watchdog armed under an older entry
+        ;; digest keeps running and keeps returning :superseded without ever
+        ;; persisting an observation, so the coordinator ticks on unobserved
+        ;; while /apm/status reads the stale file and reports "watchdog silent
+        ;; -- loop supervisor gone". That is what happened on 2026-09-07:
+        ;; resume! ran set-enabled! (changing the digest) while the watchdog
+        ;; armed by an earlier resume! was still alive, so this branch returned
+        ;; :already-running and never re-armed it. Re-arm when the running
+        ;; observer is bound to a digest that is no longer current.
+        (if (and (*watchdog-running-fn* id)
+                 (let [armed (:watchdog/armed-entry-digest
+                              (or (read-edn rearm-path) {}))]
+                   (or (nil? armed)
+                       (= armed (:coordinator/entry-digest entry)))))
+          {:ok true :status :already-running :watchdog-id id}
+          (let [claimed (claim-watchdog-rearm! entry)]
+            (if-not (:ok claimed)
+              claimed
+              (let [_ (when (*watchdog-running-fn* id)
+                        ;; superseded observer: stop it so arm-watchdog! is not
+                        ;; short-circuited by start!'s :already-running branch
+                        (*watchdog-stop-fn* id))
+                    armed (arm-watchdog! registry-path entry)
+                    running? (and (:ok armed) (*watchdog-running-fn* id))]
+                (if running?
+                  {:ok true :status :rearmed :watchdog-id id
+                   :attempt (:attempt claimed) :arming armed}
+                  {:ok false
+                   :error/code :durable-coordinator-watchdog-rearm-failed
+                   :finding {:coordinator/id (:coordinator/id entry)
+                             :attempt (:attempt claimed)
+                             :arming armed
+                             :running-after-arm? false}})))))))))
+
+(defn- halt-for-watchdog-repair! [registry-path entry repair]
+  (let [halted (stop! registry-path (:coordinator/id entry)
+                       {:stop-cause/type :fault
+                        :stop-cause/fault-class :integrity
+                        :stop-cause/reason-code :watchdog-repair-failed
+                        :stop-cause/reason repair})]
+    {:ok false
+     :error/code :durable-coordinator-watchdog-repair-failed
+     :finding {:watchdog/repair repair
+               :halted halted}}))
+
+(defn start-entry!
+  ([entry]
+   {:ok false :error/code :durable-coordinator-watchdog-authority-missing
+    :finding {:coordinator/id (:coordinator/id entry)}})
+  ([registry-path entry]
+  (cond
+    (not (valid-entry? entry))
+    {:ok false :error/code :durable-coordinator-registration-invalid}
+    (not (:coordinator/enabled? entry))
+    (let [state (read-edn (:coordinator/state-path entry))
+          claim (:regulator/tick-claim state)]
+      (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
+      (cond-> {:ok true
+               :status (if claim :draining :disabled)
+               :coordinator/id (:coordinator/id entry)}
+        claim (assoc :in-flight-tick claim)
+        (:regulator/quiescence-witness state)
+        (assoc :quiescence-witness
+               (:regulator/quiescence-witness state))))
+    (nil? (get @adapters (:coordinator/adapter entry)))
+    {:ok false :error/code :durable-coordinator-adapter-unavailable
+     :finding {:adapter (:coordinator/adapter entry)}}
+    :else
+    (let [adapter ((get @adapters (:coordinator/adapter entry))
+                   (assoc (:coordinator/config entry)
+                          :coordinator/period-ms
+                          (:coordinator/period-ms entry)))]
+      (if-not (and (map? adapter) (fn? (:decide-fn adapter))
+                   (fn? (:reconcile-fn adapter)))
+        {:ok false :error/code :durable-coordinator-adapter-provider-invalid}
+        (let [state-path (Path/of (:coordinator/state-path entry)
+                                  (make-array String 0))
+              watchdog-ready (ensure-watchdog! registry-path entry)]
+          (if-not (:ok watchdog-ready)
+            (halt-for-watchdog-repair! registry-path entry watchdog-ready)
+            (let [started (regulator/start!
+                           {:regulator-id (:coordinator/id entry)
+                            :period-ms (:coordinator/period-ms entry)
+                            :read-fn #(persistence/read-state state-path)
+                            :persist-fn #(persistence/atomic-persist!
+                                          state-path %)
+                            :with-tick-lock-fn
+                            (regulator/with-file-tick-lock
+                             (Path/of (str state-path ".tick-claim.lock")
+                                      (make-array String 0)))
+                            :claim-allowed-fn
+                            #(let [current (get-in (read-registry registry-path)
+                                                   [:entries (:coordinator/id entry)])]
+                               (and (:coordinator/enabled? current)
+                                    (= :running
+                                       (or (:coordinator/lifecycle current)
+                                           :running))))
+                            :tick-state-fn
+                            (fn [state]
+                              ;; Re-read the row. ENTRY is the snapshot this
+                              ;; start captured, and set-enabled! rewrites the
+                              ;; digest under a running coordinator on every
+                              ;; resume. Comparing the rearm journal against a
+                              ;; snapshot means that once anything re-arms the
+                              ;; observer onto the current digest, this branch
+                              ;; disagrees on every tick -- 500ms apart -- and
+                              ;; burns claim-watchdog-rearm!'s 3-per-60s budget
+                              ;; in seconds, at which point the exhausted
+                              ;; budget halts the coordinator for a watchdog
+                              ;; that is in fact correctly armed. Observed on
+                              ;; 2026-09-10 within 40s of a digest change.
+                              (let [current (or (get-in (read-registry registry-path)
+                                                        [:entries (:coordinator/id entry)])
+                                                entry)
+                                    repair (ensure-watchdog! registry-path current)]
+                                (if (:ok repair)
+                                  (coordinator-tick (:coordinator/id entry)
+                                                    adapter state)
+                                  (halt-for-watchdog-repair!
+                                   registry-path entry repair))))})
+                  post-start-watchdog (ensure-watchdog!
+                                       registry-path
+                                       (or (get-in (read-registry registry-path)
+                                                   [:entries (:coordinator/id entry)])
+                                           entry))]
+              (cond
+                (not (:ok started))
+                (do (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
+                    started)
+                (not (:ok post-start-watchdog))
+                (halt-for-watchdog-repair!
+                 registry-path entry post-start-watchdog)
+                :else
+                (assoc started :watchdog post-start-watchdog))))))))))
+
+(defn start-registered!
+  "Start one coordinator solely from its typed registry entry."
+  [registry-path coordinator-id]
+  (let [registry (read-registry registry-path)]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (nil? (get-in registry [:entries coordinator-id]))
+      {:ok false :error/code :durable-coordinator-not-registered}
+      :else (start-entry! registry-path
+                          (get-in registry [:entries coordinator-id])))))
+
+(defn recover-all!
+  "Start every typed registry entry. No filesystem discovery is performed."
+  [registry-path]
+  (let [registry (read-registry registry-path)]
+    (if-not (valid-registry? registry)
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (let [results (into (sorted-map)
+                          (map (fn [[id entry]]
+                                 [id (start-entry! registry-path entry)]))
+                          (:entries registry))]
+        {:ok (every? :ok (vals results)) :results results}))))
+
+(defn status
+  ([coordinator-id] (regulator/status coordinator-id))
+  ([registry-path coordinator-id]
+   (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])]
+     (when entry
+       (let [durable-state (read-edn (:coordinator/state-path entry))]
+         {:registration entry
+          :runtime (regulator/status coordinator-id)
+          :durable-state durable-state
+          :tick-claim (:regulator/tick-claim durable-state)
+          :reconciliation/status
+          (:regulator/reconciliation durable-state)})))))
+
+(defn- set-enabled!
+  ([registry-path coordinator-id enabled? actor reason]
+   (set-enabled! registry-path coordinator-id enabled? actor reason nil))
+  ([registry-path coordinator-id enabled? actor reason stop-cause]
+  (let [registry (read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      :else
+      (let [durable-state (read-edn (:coordinator/state-path entry))
+            transition (cond-> {:state/type :durable-coordinator-enabled-transition
+                        :coordinator/id coordinator-id
+                        :enabled/previous (:coordinator/enabled? entry)
+                        :enabled/new enabled?
+                        :transition/actor actor
+                        :transition/reason reason
+                        :transition/timestamp-ms (*enabled-transition-now-fn*)
+                        :durable-state/digest (state-digest durable-state)}
+                         stop-cause (assoc :stop/cause stop-cause))
+            transition (assoc transition :transition/digest
+                              (enabled-transition-digest transition))
+            updated (-> entry
+                        (assoc :coordinator/enabled? enabled?)
+                        (assoc :coordinator/lifecycle
+                               (if enabled? :running :draining))
+                        (update :coordinator/enabled-history
+                                (fnil conj []) transition))
+            updated (assoc updated :coordinator/entry-digest
+                           (entry-digest updated))]
+        (persistence/atomic-persist!
+         (Path/of (str registry-path) (make-array String 0))
+         (assoc-in registry [:entries coordinator-id] updated)))))))
+
+(defn cancel-scheduler!
+  "Process-local scheduler cancellation for test cleanup and internal failure
+  handling. It is deliberately not named stop: no durable witness is written."
+  [coordinator-id]
+  (regulator/cancel-scheduler! coordinator-id))
+
+(defn stop!
+  "Durably drain a coordinator. Returns :stopped only when the state file
+  contains a quiescence witness and no tick claim; otherwise names the durable
+  in-flight tick and leaves the coordinator in :draining."
+  [registry-path coordinator-id stop-cause]
+  (let [recorded-cause (normalize-stop-cause stop-cause)
+        disabled (set-enabled! registry-path coordinator-id false
+                               :durable-coordinator/stop!
+                               :stop-requested
+                               recorded-cause)]
+    (if-not (:ok disabled)
+      disabled
+      (let [entry (get-in (read-registry registry-path)
+                          [:entries coordinator-id])
+            state-path (Path/of (:coordinator/state-path entry)
+                                (make-array String 0))
+            tick-lock (regulator/with-file-tick-lock
+                       (Path/of (str state-path ".tick-claim.lock")
+                                (make-array String 0)))
+            watchdog-stopped (*watchdog-stop-fn* (watchdog-id coordinator-id))
+            scheduler (regulator/cancel-scheduler! coordinator-id)
+            observed (read-edn state-path)]
+        (if-let [claim (:regulator/tick-claim observed)]
+          {:ok true :status :draining :coordinator/id coordinator-id
+           :durably-disabled? true :in-flight-tick claim
+           :scheduler scheduler :watchdog watchdog-stopped}
+          (tick-lock
+           (fn []
+             (let [state (or (read-edn state-path)
+                             (regulator/initial-state coordinator-id))]
+               (if-let [claim (:regulator/tick-claim state)]
+                 {:ok true :status :draining :coordinator/id coordinator-id
+                  :durably-disabled? true :in-flight-tick claim
+                  :scheduler scheduler :watchdog watchdog-stopped}
+                 (let [witness {:state/type :durable-quiescence-witness
+                                :coordinator/id coordinator-id
+                                :regulator/epoch (:regulator/epoch state)
+                                :regulator/ticks (:regulator/ticks state)
+                                :tick-claim nil
+                                :witnessed-at (*quiescence-now-fn*)}
+                       stopped (assoc state
+                                      :regulator/status :stopped
+                                      :regulator/reconciliation :quiescent
+                                      :regulator/quiescence-witness witness
+                                      :regulator/updated-at
+                                      (:witnessed-at witness))
+                       saved (persistence/atomic-persist! state-path stopped)]
+                   (if (:ok saved)
+                     {:ok true :status :stopped
+                      :coordinator/id coordinator-id
+                      :durably-disabled? true
+                      :quiescence-witness witness
+                      :state stopped :scheduler scheduler
+                      :watchdog watchdog-stopped}
+                     {:ok false
+                      :error/code :durable-coordinator-quiescence-write-failed
+                      :finding saved})))))))))))
+
+(defn resume!
+  "Enable and start a stopped coordinator, or explicitly repair a failed one."
+  ([registry-path coordinator-id]
+   (resume! registry-path coordinator-id nil))
+  ([registry-path coordinator-id repair-reason]
+   (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])
+         state (when entry (read-edn (:coordinator/state-path entry)))
+         intent-recovery
+         (when (:coordinator/pending-intent state)
+           (supersede-expired-intent! registry-path coordinator-id))
+         recovery-ok?
+         (or (nil? intent-recovery)
+             (:ok intent-recovery)
+             (= :durable-coordinator-intent-not-expired
+                (:error/code intent-recovery)))
+         state (if (= :expired-intent-superseded (:status intent-recovery))
+                 (:state intent-recovery)
+                 state)
+         persist-state! #(persistence/atomic-persist!
+                          (Path/of (:coordinator/state-path entry)
+                                   (make-array String 0)) %)
+         repaired (if-not recovery-ok?
+                    intent-recovery
+                    (case (:regulator/status state)
+                    :failed (regulator/repair-resume!
+                             {:state state :reason repair-reason
+                              :persist-fn persist-state!})
+                    :complete (regulator/continue-complete!
+                               {:state state :reason repair-reason
+                                :persist-fn persist-state!})
+                    :stopped (regulator/resume-stopped!
+                              {:state state :persist-fn persist-state!
+                               :now-fn *quiescence-now-fn*})
+                    {:ok true}))]
+     (if-not (:ok repaired)
+       repaired
+       (let [enabled (set-enabled! registry-path coordinator-id true
+                                   :durable-coordinator/resume!
+                                   (if repair-reason
+                                     :repair-resume-requested
+                                     :resume-requested))]
+         (if (:ok enabled)
+           (start-registered! registry-path coordinator-id)
+           enabled))))))

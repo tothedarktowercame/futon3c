@@ -1,0 +1,11 @@
+{:schema :wm/source-pins-v1
+ :tree-sha "f5a3cf115a9354efe09b4fe2cbb301c9e0a38e9a"
+ :files
+ [{:path "src/futon3c/agency/invoke_ingress_controller.clj"
+   :sha256 "e643cd9d5715b249ccf8afffa3e5506cf23af0ed7c833f885e5e54514bd5a6ac"}
+  {:path "src/futon3c/transport/http.clj"
+   :sha256 "27be0df0e3e69a55e4812dc5e39754448cb345f014f9de0fc2614a7cfbf4bd0a"}
+  {:path "test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :sha256 "eca7965524353b04867ec56e8299b13fdf0e557f4134df1b1ba2770799660084"}
+  {:path "holes/labs/wm-contract/runs/row-19-http-creator-integration-2026-09-13/INTEGRATION.md"
+   :sha256 "33de0d6f6f10b7b896e48de91e4fd4db141fa69c79d8c72740876ae42334e169"}]}

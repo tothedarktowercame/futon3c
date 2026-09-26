@@ -1,0 +1,1 @@
+{:case :terminal-before-worker-exit, :worker-alive? true, :snapshot {:drained? true, :generation 0, :mode :open, :deferred 0, :executing 0, :accepted-queued 0, :restart-authorized? false, :waiting-writer 0, :final-delivery 0}}

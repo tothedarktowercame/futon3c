@@ -1,0 +1,82 @@
+{
+  "status": "TA adjudication, joined to actual receipts in receipt-audit.json; not independent-session outcomes",
+  "system_exposure": "Agency system prompt, AGENTS.md, cwd/dirty path snapshot automatically included; see full messages. No future problem or reference observed in boot. Shared filesystem not technically isolated.",
+  "cases": [
+    {
+      "case_turn": "C1 initial",
+      "retrieved": "5 IDs by inventory; no ranking",
+      "read": [
+        "math-formalization-CA/uniform-continuity-boundedness",
+        "math-informal/local-to-global"
+      ],
+      "claimed_used": [
+        "math-formalization-CA/uniform-continuity-boundedness",
+        "math-informal/local-to-global"
+      ],
+      "proof_supported": "finite-cover bound assembly in positive theorem; no support for invalid contrast",
+      "feedback": "condition gap + construction gap in contrast; hash-field provenance defect",
+      "source_lesson_exposed": false,
+      "reference_exposed": false,
+      "memory_read": []
+    },
+    {
+      "case_turn": "C1 revised",
+      "retrieved": "none new",
+      "read": [
+        "materials/source-lesson.md"
+      ],
+      "claimed_used": [
+        "source lesson for mapping; TA hint X=[0,1]"
+      ],
+      "proof_supported": "explicit common δ/net/maximum mapping; independent triangular-spike construction fixes contrast",
+      "feedback": "passes paper review with piecewise B_0=0 clarification",
+      "source_lesson_exposed": true,
+      "reference_exposed": false,
+      "memory_read": []
+    },
+    {
+      "case_turn": "C2",
+      "retrieved": "none new",
+      "read": [],
+      "claimed_used": [
+        "prior bounded-image pattern read",
+        "prior source lesson read"
+      ],
+      "proof_supported": "discrete metric premise checks and failed finite-net step; correct rejection",
+      "feedback": "library-error evidence, missing total boundedness; no Student error requiring hint",
+      "source_lesson_exposed": true,
+      "reference_exposed": false,
+      "memory_read": []
+    },
+    {
+      "case_turn": "C3 initial",
+      "retrieved": "2 exact-ID lookups from prior inventory; not ranked discovery",
+      "read": [
+        "math-formalization-CA/metric-cauchy-convergence",
+        "math-informal/unfold-the-definition"
+      ],
+      "claimed_used": [
+        "math-formalization-CA/metric-cauchy-convergence",
+        "math-informal/unfold-the-definition"
+      ],
+      "proof_supported": "Cauchy-image convergence and explicit epsilon/delta proof; extension/independence construction supplied by Student",
+      "feedback": "metric-only notation and strict-limit margin require precision repair",
+      "source_lesson_exposed": true,
+      "reference_exposed": false,
+      "memory_read": []
+    },
+    {
+      "case_turn": "C3 revised",
+      "retrieved": "none new",
+      "read": [],
+      "claimed_used": [
+        "prior Cauchy-convergence pattern in unchanged existence step"
+      ],
+      "proof_supported": "metric triangle proof of independence; epsilon/2 strict uniform continuity; density and empty-space boundary",
+      "feedback": "passes TA paper review",
+      "source_lesson_exposed": true,
+      "reference_exposed": false,
+      "memory_read": []
+    }
+  ]
+}

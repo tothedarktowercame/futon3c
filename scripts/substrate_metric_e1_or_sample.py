@@ -42,7 +42,9 @@ class Edge:
 
 
 def fetch_type(base_url: str, hx_type: str, limit: int) -> List[dict]:
-    query = urllib.parse.urlencode({"type": hx_type, "limit": str(limit)})
+    query = urllib.parse.urlencode(
+        {"type": hx_type, "limit": str(limit), "include-total": "false"}
+    )
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/alpha/hyperedges?{query}",
         headers={"Accept": "application/json", "X-Penholder": "api"},
@@ -262,7 +264,7 @@ def run(args: argparse.Namespace) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--futon1a-url", default="http://localhost:7071")
+    parser.add_argument("--futon1a-url", default=os.environ.get("FUTON1A_URL", "http://localhost:7071"))
     parser.add_argument("--limit", type=int, default=2000)
     parser.add_argument("--sample", type=int, default=8)
     parser.add_argument("--alpha", type=float, default=0.5)

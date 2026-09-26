@@ -10,11 +10,12 @@
    This is an INSTANTIATE-car-#1 substrate reader for
    M-action-cost-modelling §5 T9-completion subpart (a)."
   (:require [babashka.http-client :as http]
-            [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.string :as str]))
 
 (def ^:private FUTON1A
-  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def ^:private PENHOLDER
   (or (System/getenv "FUTON1A_PENHOLDER") "api"))
@@ -53,12 +54,109 @@
   [s]
   (java.net.URLEncoder/encode (str s) "UTF-8"))
 
-(defn- parse-json-body
+;; 1a→1b port (2026-07-17): the retired futon1a XTDB1 store (7071) is gone —
+;; futon1b is the live substrate and serves `application/edn`, NOT JSON. It also
+;; does not serve the `?end=<endpoint>` targeted route (it hangs); only the
+;; `?type=<hx-type>` route responds. So we fetch the fixed set of edge/vertex
+;; families delta-t needs by TYPE and filter to those touching the endpoint.
+;; Shape differences handled: EDN body (edn/read-string), and `:hx/props` that
+;; arrives either as an EDN-encoded string OR an already-parsed map. Endpoints
+;; already arrive as a string list under `:hx/endpoints`, so `real-endpoints`
+;; is unchanged.
+(def ^:private fetch-types
+  ["code/v05/mission-doc"
+   "code/v05/related-mission"
+   "code/v05/mission-cross-ref"
+   "code/v05/file→mission"
+   "code/v05/sorry-doc"])
+
+(defn- selected-fetch-types
+  "Return FAMILIES in canonical fetch order, rejecting requests outside the
+   delta-T family universe. Nil retains the full historical family set."
+  [families]
+  (if (nil? families)
+    fetch-types
+    (let [requested (set families)
+          known (set fetch-types)
+          unknown (remove known requested)]
+      (when (seq unknown)
+        (throw (ex-info "Unknown mission delta-T fetch families"
+                        {:unknown-families (vec (sort unknown))
+                         :known-families fetch-types})))
+      (filterv requested fetch-types))))
+
+(defn- parse-edn-body
   [body]
   (cond
-    (string? body) (json/parse-string body true)
+    (string? body) (try (edn/read-string body) (catch Exception _ nil))
     (map? body) body
     :else nil))
+
+(defn- normalize-props
+  "1b delivers `:hx/props` as an EDN-encoded string on some records and a parsed
+   map on others. Normalize to a map so `mission-phase-from-doc` / `sorry-t-from-doc`
+   read it uniformly."
+  [hx]
+  (let [p (:hx/props hx)]
+    (if (string? p)
+      (assoc hx :hx/props (or (try (edn/read-string p) (catch Exception _ nil)) {}))
+      hx)))
+
+(defn fetch-hyperedges-by-type
+  "Fetch all hyperedges of one type from the live substrate (the `?type=` route,
+   which 1b serves; the `?end=` route is not served and hangs).
+
+   Best-effort: a slow/oversized/unavailable type degrades to `[]` rather than
+   throwing, so one flaky edge-family cannot break the essential `mission-doc`
+   read that supplies `:mission-T`. `:mission-T` is preserved because `mission-doc`
+   is the reliable family; only the ΔT contributions from a failed family are lost."
+  [futon1a-url hx-type limit]
+  (let [url (str futon1a-url "/api/alpha/hyperedges?type="
+                 (url-encode hx-type) "&limit=" limit
+                 "&include-total=false")
+        ;; The essential `mission-doc` family (supplies :mission-T) is a large
+        ;; read — ~6-9s in the loaded serving JVM — so it gets ample headroom.
+        ;; The ΔT-only edge families stay short: they are best-effort and some
+        ;; are oversized/absent in 1b, so a tight bound keeps selection snappy.
+        timeout-ms (if (= hx-type "code/v05/mission-doc") 30000 6000)]
+    (try
+      (let [resp (http/get url {:headers {"Accept" "application/edn"
+                                          "X-Penholder" PENHOLDER}
+                                :throw false
+                                :timeout timeout-ms})]
+        (if (= 200 (:status resp))
+          (mapv normalize-props (or (:hyperedges (parse-edn-body (:body resp))) []))
+          (do (binding [*out* *err*]
+                (println "[mission-delta-t] hyperedges type fetch non-200"
+                         {:hx-type hx-type :status (:status resp)}))
+              [])))
+      (catch Exception e
+        (binding [*out* *err*]
+          (println "[mission-delta-t] hyperedges type fetch failed"
+                   {:hx-type hx-type :error (.getMessage e)}))
+        []))))
+
+;; Per-process snapshot cache: one fetch per (base,type) is reused across all
+;; missions in a judgement. The WM full loop runs as a fresh JVM per click, so
+;; this is a point-in-time snapshot, never stale across clicks; call
+;; `reset-type-cache!` to force a refresh inside a long-lived JVM.
+(def ^:private type-cache (atom {}))
+
+(defn reset-type-cache! [] (reset! type-cache {}))
+
+(defn- cached-fetch-by-type
+  [futon1a-url hx-type limit]
+  (let [k [futon1a-url hx-type]]
+    (if-let [hit (get @type-cache k)]
+      hit
+      (let [v (fetch-hyperedges-by-type futon1a-url hx-type limit)]
+        ;; Never cache an empty essential `mission-doc` result — that only
+        ;; happens on a transient failure, and caching it would poison every
+        ;; mission's :mission-T to the nil-phase default for the process
+        ;; lifetime. Edge families legitimately return empty and stay cached.
+        (when-not (and (= hx-type "code/v05/mission-doc") (empty? v))
+          (swap! type-cache assoc k v))
+        v))))
 
 (defn- hx-type-str
   [hx]
@@ -103,27 +201,21 @@
   (get phase-t-table (normalize-phase phase) 0.5))
 
 (defn fetch-hyperedges-by-endpoint
-  "Targeted substrate-2 read by endpoint. Returns all matching hyperedges."
+  "Return all hyperedges (of the families delta-t cares about) touching `endpoint`.
+
+   1b does not serve the targeted `?end=` route, so we fetch the fixed
+   `fetch-types` families via the served `?type=` route (per-process cached) and
+   filter to those whose endpoints include `endpoint`. Semantically equivalent to
+   the old 1a targeted read for delta-t's purposes. `:families` may restrict the
+   read to a validated subset; nil preserves the complete family set."
   ([endpoint] (fetch-hyperedges-by-endpoint endpoint {}))
-  ([endpoint {:keys [limit futon1a-url]
-              :or {limit 200
+  ([endpoint {:keys [limit futon1a-url families]
+              :or {limit 500
                    futon1a-url FUTON1A}}]
-   (let [url (str futon1a-url
-                  "/api/alpha/hyperedges?end="
-                  (url-encode endpoint)
-                  "&limit="
-                  limit)
-         resp (http/get url {:headers {"Accept" "application/json"
-                                       "X-Penholder" PENHOLDER}
-                             :throw false
-                             :timeout 5000})]
-     (if (= 200 (:status resp))
-       (vec (or (:hyperedges (parse-json-body (:body resp))) []))
-       (throw (ex-info "hyperedges-by-endpoint failed"
-                       {:endpoint endpoint
-                        :url url
-                        :status (:status resp)
-                        :body (:body resp)}))))))
+   (->> (selected-fetch-types families)
+        (mapcat #(cached-fetch-by-type futon1a-url % limit))
+        (filter (fn [hx] (some #(= endpoint %) (real-endpoints hx))))
+        vec)))
 
 (defn- find-vertex-doc
   [endpoint hyperedges]
@@ -210,9 +302,10 @@
 
 (defn delta-t-mission
   "Compute v0 mission ΔT over incoming related-mission + mission-cross-ref
-   edges for the given mission endpoint string."
+   edges for the given mission endpoint string. `:families` is forwarded to
+   endpoint reads; omitting it preserves full-family behavior."
   ([mission-endpoint] (delta-t-mission mission-endpoint {}))
-  ([mission-endpoint {:keys [limit futon1a-url]
+  ([mission-endpoint {:keys [limit futon1a-url families]
                       :or {limit 200
                            futon1a-url FUTON1A}}]
    (let [cache (atom {})
@@ -220,7 +313,8 @@
                   (or (get @cache endpoint)
                       (let [hyperedges (fetch-hyperedges-by-endpoint endpoint
                                                                      {:limit limit
-                                                                      :futon1a-url futon1a-url})]
+                                                                      :futon1a-url futon1a-url
+                                                                      :families families})]
                         (swap! cache assoc endpoint hyperedges)
                         hyperedges)))
          target-hyperedges (fetch* mission-endpoint)

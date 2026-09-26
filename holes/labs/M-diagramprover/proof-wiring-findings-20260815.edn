@@ -1,0 +1,14 @@
+{:snapshot/date "2026-08-15",
+ :conformance [],
+ :multiply-written [],
+ :phase-chain [],
+ :snapshot/authoring-findings
+ [:required-outputs-gate-not-enforced-in-proof-domain-config
+  :contract-duplicated-and-drifted-in-proof-logic
+  :live-output-checking-reads-the-stale-copy],
+ :snapshot/by "claude-7 (WS-E generality sibling 1)",
+ :written-never-read [],
+ :snapshot/spec :proof-peripheral-live,
+ :read-never-written [],
+ :snapshot/at-commit "7787eb9a56bc75cc1f4e33cdd85217248982b7ca",
+ :snapshot/phases-source :live-proof-shapes-config}

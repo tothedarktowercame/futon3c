@@ -1,0 +1,92 @@
+[{:name "preflight-file-elaboration-before-sorry-accounting-or-runner-dispatch"
+  :lane :trajectory-lane
+  :level :verification-rule
+  :status :draft
+  :body
+  {:hook
+   "A sorry queue is not actionable until the exact target file elaborates: otherwise the runner is debugging the statement surface or build state rather than discharging a proof hole."
+   :how-to-apply
+   ["Run `lake env lean <target-file>` before computing the proof-hole baseline or dispatching a prover."
+    "If elaboration fails, classify the first failure before inspecting any `sorry`: ill-typed statement, stale notation/API, domain/measure mismatch, missing import, or unavailable compiled dependency."
+    "When the failure may be a missing dependency artifact, build the named dependency or module and rerun the exact same file before calling the source defective."
+    "Only after the file elaborates should the queue record direct proof holes, declaration types, and the runner target."
+    "Keep repairs that change mathematical meaning—such as replacing an ill-typed Borel-set predicate with a measurable-set predicate—behind owner review rather than treating them as compilation maintenance."]
+   :observed-case
+   {:problem "a01J02"
+    :failures
+    ["`B ∈ borel ℝ` applies set-membership notation to a measurable-space value."
+     "A subtype-domain function is paired with a measure on `ℝ`."
+     "The symmetric-difference statement uses stale scope/API assumptions."]
+    :semantic-risk
+    "The literal repair makes the conclusions reflexive, while the intended completion theorem needs `NullMeasurableSet` and `AEMeasurable`; compilation repair therefore requires a mathematical choice."}
+   :rule
+   "Treat successful elaboration of the exact target under its real project build as a precondition for proof-hole measurement and runner dispatch, and separate dependency-build failures from source-statement failures by rerunning after the dependency is built."
+   :boundary
+   "This preflight detects whether a row is formally runnable. It does not decide which semantic repair is faithful when an ill-typed statement admits several interpretations."
+   :capture-kind :runner-elaboration-diagnosis-and-owner-verified-repair-fork}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01J02"}
+   #:ref{:type :pattern, :id "math/corpus-trust-protocol"}
+   #:ref{:type :pattern, :id "math-formalization/notation-semantics-traps"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t050"]
+   :receipt-ids ["4f67ccb0-2721-43b4-8d9a-c164a6da8ffc"]
+   :problems ["a01J02-borel-representatives"]
+   :artifacts ["problems/a01J02/lean/Main.lean"]
+   :store-resolution
+   {:resolved ["e-codexroll-019f9b12-t050"]}}
+  :confidence :single-direct-case-plus-ground-control-audit-rule
+  :review {:verdict :pending-owner-review}}
+
+ {:name "require-model-invariants-to-link-enumerated-data-with-derived-counts"
+  :lane :trajectory-lane
+  :level :semantic-model-audit
+  :status :draft
+  :body
+  {:hook
+   "If a theorem moves from an analytic function to its zero count and then to an enumerated zero sequence, verify that the structure actually relates all three objects; separately well-typed fields can make the conclusion false."
+   :how-to-apply
+   ["Draw the dependency chain named by the informal proof: here `f → zeros of f → zeroCount → weighted summability`."
+    "For every arrow, locate a structure field, definition, or proved invariant that enforces it."
+    "Treat `True` analytic hypotheses, constant derived quantities, and freely chosen enumerations as independent warning signs."
+    "Construct a model satisfying the retained fields while choosing the unconstrained field adversarially."
+    "Require the intended linking invariant in `ProblemData` before proving downstream estimates; do not count consequences of a constant placeholder as progress on the intended theorem."]
+   :observed-case
+   {:problem "a01J06"
+    :formal-shape
+    ["`hEntire : True` does not constrain `f`."
+     "`zeroCount data r := 0` does not count `data.zeros`."
+     "`zeros : ℕ → ℂ` is not related to `f` or `zeroCount`."]
+    :countermodel
+    "Take the zero function and the constant-zero enumeration. The stub count has linear growth, but every weight is one, so the requested series is not summable."
+    :verification
+    "`unconstrainedZerosCounterexample_not_summable` is axiom-clean in commit `a8f8752a816746d24e6ce125e446385a7d12f0d1`."}
+   :relation-to-existing
+   {:memory-id
+    "e-codexpilot-inspect-placeholder-definitions-before-claiming-mathematical-content"
+    :distinction
+    "The existing memory catches a central definition implemented as a constant. This record adds the structural case where independently meaningful fields lack the invariant that makes a downstream theorem about the same mathematical object."}
+   :rule
+   "Before proving a theorem over a bundled problem structure, audit that every semantic transition in the informal argument is represented by a formal invariant; type compatibility and axiom-clean helper proofs do not connect independent fields."
+   :boundary
+   "The countermodel refutes the current formal target. It does not refute the intended zero-distribution theorem once the missing entire-function, zero-enumeration, and counting invariants are supplied."
+   :capture-kind :machine-checked-countermodel-to-unconstrained-formal-model}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01J06"}
+   #:ref{:type :pattern, :id "math/corpus-trust-protocol"}
+   #:ref{:type :pattern, :id "math-formalization/notation-semantics-traps"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t050"]
+   :receipt-ids ["8279ca0a-a275-4f1f-b628-f6d730fc0e6f"]
+   :commits ["a8f8752a816746d24e6ce125e446385a7d12f0d1"]
+   :problems ["a01J06-zero-distribution"]
+   :artifacts
+   ["problems/a01J06/lean/Main.lean:ProblemData"
+    "problems/a01J06/lean/Main.lean:zeroCount"
+    "problems/a01J06/lean/Main.lean:unconstrainedZerosCounterexample_not_summable"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest ["e-codexroll-019fa2c1-t050"]}}
+  :confidence :machine-checked-countermodel-and-owner-verified-model-defect
+  :review {:verdict :pending-owner-review}}]

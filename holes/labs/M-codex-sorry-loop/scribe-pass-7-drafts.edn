@@ -1,0 +1,181 @@
+[{:name "bridge-darboux-cells-to-lebesgue-integral-by-telescoping"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Prove that the lower Darboux integral of a bounded measurable function on `[0,1]` is at most its Lebesgue integral, which is at most its upper Darboux integral."
+   :architecture
+   ["Derive `IntegrableOn f (Icc 0 1) volume` from measurability and the uniform bound."
+    "For an arbitrary strict finite partition, show each closed cell lies in `[0,1]` and inherit integrability on the cell."
+    "Bound the lower cell constant `sInf (f '' cell)` below `f` and the upper cell constant `sSup (f '' cell)` above `f`."
+    "Use `setIntegral_mono_on` to sandwich each cell's Lebesgue set integral between its lower and upper Darboux terms."
+    "Convert the finite sum of closed-cell set integrals to adjacent interval integrals and telescope them to the integral on the full endpoint interval."
+    "Apply `csSup_le` over all lower sums and `le_csInf` over all upper sums."]
+   :key-helper
+   {:declaration "ApmCanaries.A95A01.sum_setIntegral_partition"
+    :role
+    "Turns the sum of the set integrals over adjacent partition cells into the set integral over the full partition interval."}
+   :literature
+   {:source "leanprover-community Zulip archive"
+    :thread "Riemann integrability"
+    :archive-path
+    "217875-Is-there-code-for-X%3F/Riemann.20integrability.json"
+    :use-status :consulted-and-followed
+    :contribution
+    "The thread recommends explicitly bridging mesh-based Riemann sums to Lebesgue/BoxIntegral machinery instead of expecting an existing Darboux-integral theorem; the committed proof follows that architecture directly."}
+   :witness
+   {:declaration "ApmCanaries.A95A01.riemann_lebesgue_sandwich"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :boundary
+   "This closes part (a) only. The unrelated compact-set characteristic-function theorem in part (b) remains sorried."
+   :capture-kind :runner-narrated-commit-witnessed-and-literature-followed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A01"}
+   #:ref{:type :proof-strategy,
+         :id "darboux-cell-setIntegral-telescoping"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t017"]
+   :receipt-ids ["ec43ba1c-6e5d-47b0-856c-7139f427f99b"]
+   :commits ["f081e793db9ff8a26f2ae3bf752f4fa0dad6ab74"]
+   :problems ["a95A01-part-a"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path
+     "217875-Is-there-code-for-X%3F/Riemann.20integrability.json"}]
+   :artifacts
+   ["problems/a95A01/lean/Main.lean:sum_setIntegral_partition"
+    "problems/a95A01/lean/Main.lean:riemann_lebesgue_sandwich"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "extend-fin-partition-to-bounded-nat-sequence-for-telescoping"
+  :lane :arc-lane
+  :level :index-conversion
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "Partition cells are indexed by `Fin (n+1)`, while `intervalIntegral.sum_integral_adjacent_intervals` is phrased over a `Nat` sequence and a bounded range."}
+   :before
+   "Try to rewrite the `Fin`-indexed cell sum directly with the adjacent-interval telescoping theorem."
+   :failure
+   "The theorem's `Nat` indices and the partition's `Fin` endpoints do not unify."
+   :after
+   "Define `a : ℕ → ℝ` by returning `t ⟨k,hk⟩` for `k < n+2` and the last endpoint otherwise; prove the bounded conversion equations, telescope the `Nat` sequence, rewrite the range sum with `Fin.sum_univ_eq_sum_range`, and identify `castSucc`/`succ` endpoints extensionally."
+   :rule
+   "Bridge a finite indexed partition to a `Nat` telescoping API with a total bounded extension; keep all uses inside the range where it definitionally agrees with the original `Fin` map."
+   :capture-kind :runner-error-fix-log-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A01"}
+   #:ref{:type :lean-pattern, :id "fin-to-nat-telescoping-extension"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t017"]
+   :commits ["f081e793db9ff8a26f2ae3bf752f4fa0dad6ab74"]
+   :problems ["a95A01-part-a"]
+   :artifacts
+   ["problems/a95A01/lean/Main.lean:sum_setIntegral_partition"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "switch-to-setIntegral-mono-on-for-cell-local-bounds"
+  :lane :arc-lane
+  :level :api-selection
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "The Darboux infimum/supremum bounds are known only for points belonging to the current partition cell."}
+   :before
+   "Apply `setIntegral_mono`, which asks for a global pointwise inequality and does not consume the available cell-membership hypothesis in the needed form."
+   :after
+   "Apply `setIntegral_mono_on` with integrability of both integrands and `measurableSet_Icc`, then discharge its comparison using the local `x ∈ cell` bound."
+   :rule
+   "When the comparison is inherently restricted to the set being integrated over, select the `_on` monotonicity theorem rather than strengthening a local bound into an unnecessary global one."
+   :capture-kind :runner-error-fix-log-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A01"}
+   #:ref{:type :mathlib-lemma, :id "setIntegral_mono_on"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t017"]
+   :commits ["f081e793db9ff8a26f2ae3bf752f4fa0dad6ab74"]
+   :problems ["a95A01-part-a"]
+   :artifacts
+   ["problems/a95A01/lean/Main.lean:riemann_lebesgue_sandwich"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "supply-finite-interval-measure-to-integrableOn-const"
+  :lane :arc-lane
+  :level :elaboration
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A constant Darboux cell bound must be shown integrable on a real closed interval."}
+   :before
+   "Invoke `integrableOn_const` without an explicit proof that the restricted interval measure is finite."
+   :failure
+   "Lean cannot infer the required finite-measure hypothesis for the interval."
+   :after
+   "Pass `measure_Icc_lt_top.ne` explicitly, as in `integrableOn_const measure_Icc_lt_top.ne`."
+   :rule
+   "For a constant on `Icc`, supply the concrete finite-measure witness when elaboration does not synthesize it from the interval."
+   :capture-kind :runner-error-fix-log-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A01"}
+   #:ref{:type :mathlib-lemma, :id "measure_Icc_lt_top"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t017"]
+   :commits ["f081e793db9ff8a26f2ae3bf752f4fa0dad6ab74"]
+   :problems ["a95A01-part-a"]
+   :artifacts
+   ["problems/a95A01/lean/Main.lean:riemann_lebesgue_sandwich"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "record-real-analysis-riemann-darboux-recall-terrain"
+  :lane :trajectory-lane
+  :level :curriculum
+  :status :draft
+  :body
+  {:observation-kind :recall-empty
+   :target "a95A01-part-a"
+   :observed
+   {:terrain :real-analysis-riemann-darboux
+    :surfaced-count 0
+    :used-count 0
+    :recall-system :v1.2-normalized
+    :statement-hint-tokenization :confirmed-working}
+   :taxonomy
+   {:classification :genuine-vocabulary-terrain-gap
+    :census-position 5
+    :source
+    "Ground control classifies this as the fifth terrain class observed by the cron lane."
+    :scope
+    "No available pattern covered the clean query's real-analysis, Riemann, or Darboux vocabulary; this does not assert that the store contains no real-analysis memories."}
+   :backlog
+   "Add mesh partitions, Darboux lower/upper sums, set-integral cell bounds, and adjacent-interval telescoping to the recall vocabulary/pattern backlog used in the recall-system investigation."
+   :contrast
+   "Unlike the earlier malformed Rouché query, the receipt confirms working statement-hint tokenization, so this empty result belongs in the terrain census rather than the dispatch-defect bin."
+   :capture-kind :runner-report-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A01"}
+   #:ref{:type :curriculum-terrain,
+         :id "real-analysis-riemann-darboux"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t017"]
+   :receipt-ids ["ec43ba1c-6e5d-47b0-856c-7139f427f99b"]
+   :commits ["f081e793db9ff8a26f2ae3bf752f4fa0dad6ab74"]
+   :problems ["a95A01-part-a"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

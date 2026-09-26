@@ -1,0 +1,635 @@
+{
+  "aggregate" : {
+    "a" : {
+      "denominator" : 5,
+      "hits" : 2,
+      "rate" : 0.4
+    },
+    "b12" : {
+      "denominator" : 5,
+      "hits" : 2,
+      "rate" : 0.4
+    },
+    "b16" : {
+      "denominator" : 5,
+      "hits" : 2,
+      "rate" : 0.4
+    },
+    "b8" : {
+      "denominator" : 5,
+      "hits" : 2,
+      "rate" : 0.4
+    },
+    "c" : {
+      "denominator" : 5,
+      "hits" : 2,
+      "rate" : 0.4
+    },
+    "d" : {
+      "denominator" : 5,
+      "hits" : 4,
+      "rate" : 0.8
+    }
+  },
+  "analysis-date" : "2026-08-03",
+  "case-2-resolution" : {
+    "ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6", "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-f7982156-16dc-4863-8504-0f831999a55d" ],
+    "rule" : "current reviewed mathematics-domain memory/assert components on endpoint a93J02"
+  },
+  "case-3-resolution" : {
+    "ids" : [ "e-0e4e32fe-54af-451b-b302-17aa521891fd", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-ff95cfd3-c645-4b64-afa1-46605015bb00" ],
+    "rule" : "current reviewed mathematics-domain memory/assert components on endpoint math/weak-convergence-hilbert"
+  },
+  "experiment" : "E8-query-binding",
+  "parameters" : {
+    "cardinality-sweep" : [ 8, 12, 16 ],
+    "query-term-default" : 4,
+    "recall-timeout-ms" : 240000,
+    "surfaced-limit" : 5
+  },
+  "read-only" : true,
+  "results" : [ {
+    "arms" : {
+      "a" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "convergence infinity weakly",
+        "ladder-rung" : "triple",
+        "query" : "convergence infinity weakly converges",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "convergence", "infinity", "weakly", "converges" ]
+      },
+      "b12" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "convergence infinity weakly",
+        "ladder-rung" : "triple",
+        "query" : "convergence infinity weakly converges sequence converge h_n-h hilbert inner malformed norm product",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "convergence", "infinity", "weakly", "converges", "sequence", "converge", "h_n-h", "hilbert", "inner", "malformed", "norm", "product" ]
+      },
+      "b16" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "convergence infinity weakly",
+        "ladder-rung" : "triple",
+        "query" : "convergence infinity weakly converges sequence converge h_n-h hilbert inner malformed norm product said space apm-a93a03",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "convergence", "infinity", "weakly", "converges", "sequence", "converge", "h_n-h", "hilbert", "inner", "malformed", "norm", "product", "said", "space", "apm-a93a03" ]
+      },
+      "b8" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "convergence infinity weakly",
+        "ladder-rung" : "triple",
+        "query" : "convergence infinity weakly converges sequence converge h_n-h hilbert",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "convergence", "infinity", "weakly", "converges", "sequence", "converge", "h_n-h", "hilbert" ]
+      },
+      "c" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 0.1111111111111111,
+        "ladder-query" : "mathlib.analysis.innerproductspace.basic mathlib.analysis.innerproductspace.linearmap mathlib.analysis.normed.operator.banachsteinhaus mathlib.order.liminflimsup mathlib.topology.order.liminflimsup mathlib.data.real.sqrt langle cdot rangle rightarrow infty item liminf soln",
+        "ladder-rung" : "none",
+        "query" : "mathlib.analysis.innerproductspace.basic mathlib.analysis.innerproductspace.linearmap mathlib.analysis.normed.operator.banachsteinhaus mathlib.order.liminflimsup mathlib.topology.order.liminflimsup mathlib.data.real.sqrt langle cdot rangle rightarrow infty item liminf soln",
+        "surfaced-ids" : [ "e-0e4e32fe-54af-451b-b302-17aa521891fd", "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-codexpilot-audit-the-hidden-typeclass-preconditions-of-the-proof-engine", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-le-liminf-is-cobounded-under-unbounded-above-gap" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "mathlib.analysis.innerproductspace.basic", "mathlib.analysis.innerproductspace.linearmap", "mathlib.analysis.normed.operator.banachsteinhaus", "mathlib.order.liminflimsup", "mathlib.topology.order.liminflimsup", "mathlib.data.real.sqrt", "langle", "cdot", "rangle", "rightarrow", "infty", "item", "liminf", "soln" ]
+      },
+      "d" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 1
+        },
+        "jaccard-vs-a" : 0.0,
+        "ladder-query" : "isboundedunder a96a03 bound",
+        "ladder-rung" : "triple",
+        "query" : "isboundedunder a96a03 bound liminf_le_of_le lower opposite sequence witness direction eventual iscoboundedunder le_liminf_of_le memory nonnegative premise a93a03",
+        "surfaced-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-0e4e32fe-54af-451b-b302-17aa521891fd", "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-codexpilot-audit-the-hidden-typeclass-preconditions-of-the-proof-engine" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "isboundedunder", "a96a03", "bound", "liminf_le_of_le", "lower", "opposite", "sequence", "witness", "direction", "eventual", "iscoboundedunder", "le_liminf_of_le", "memory", "nonnegative", "premise", "a93a03" ]
+      }
+    },
+    "case" : 1,
+    "expected-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" ],
+    "expected-label" : "direction-scoped liminf memory",
+    "match-rule" : "all",
+    "oracle-terms" : [ "isboundedunder", "a96a03", "bound", "liminf_le_of_le", "lower", "opposite", "sequence", "witness", "direction", "eventual", "iscoboundedunder", "le_liminf_of_le", "memory", "nonnegative", "premise", "a93a03" ],
+    "problem" : "a93A03",
+    "reachability" : {
+      "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : true
+    },
+    "scoreable" : true,
+    "source" : {
+      "imports-sha256" : "a72ac3270c41d0e2043730b2a2759e3757c843d2347efec44fcb21a4f85aec38",
+      "kind" : "problem-statement",
+      "problem-md-sha256" : "be6f85485862d37572aa8078cac5402708ab74bcdee8adc0886f4e9f9db331bc",
+      "problem-tex-sha256" : "7e8f68a6882e6428312c1a7283048307e92b3022bcf8cf9782e58c68b874848f"
+    },
+    "structure-terms" : [ "mathlib.analysis.innerproductspace.basic", "mathlib.analysis.innerproductspace.linearmap", "mathlib.analysis.normed.operator.banachsteinhaus", "mathlib.order.liminflimsup", "mathlib.topology.order.liminflimsup", "mathlib.data.real.sqrt", "langle", "cdot", "rangle", "rightarrow", "infty", "item", "liminf", "soln" ]
+  }, {
+    "arms" : {
+      "a" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 4,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 5
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "apply consider convergence",
+        "ladder-rung" : "triple",
+        "query" : "apply consider convergence dominated",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali", "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "apply", "consider", "convergence", "dominated" ]
+      },
+      "b12" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 4,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 5
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "apply consider convergence",
+        "ladder-rung" : "triple",
+        "query" : "apply consider convergence dominated fact give hint infinity justification rigorous theorem apm-a93j02",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali", "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "apply", "consider", "convergence", "dominated", "fact", "give", "hint", "infinity", "justification", "rigorous", "theorem", "apm-a93j02" ]
+      },
+      "b16" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 4,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 5
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "apply consider convergence",
+        "ladder-rung" : "triple",
+        "query" : "apply consider convergence dominated fact give hint infinity justification rigorous theorem apm-a93j02",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali", "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "apply", "consider", "convergence", "dominated", "fact", "give", "hint", "infinity", "justification", "rigorous", "theorem", "apm-a93j02" ]
+      },
+      "b8" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 4,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 5
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "apply consider convergence",
+        "ladder-rung" : "triple",
+        "query" : "apply consider convergence dominated fact give hint infinity",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali", "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "apply", "consider", "convergence", "dominated", "fact", "give", "hint", "infinity" ]
+      },
+      "c" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6", "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-f7982156-16dc-4863-8504-0f831999a55d" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 1,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 2,
+          "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6" : 3,
+          "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form" : 4,
+          "e-f7982156-16dc-4863-8504-0f831999a55d" : 5
+        },
+        "jaccard-vs-a" : 0.25,
+        "ladder-query" : "mathlib.analysis.specialfunctions.integrals.basic mathlib.analysis.specialfunctions.log.deriv mathlib.analysis.complex.abellimit mathlib.topology.algebra.infinitesum.basic infty",
+        "ladder-rung" : "none",
+        "query" : "mathlib.analysis.specialfunctions.integrals.basic mathlib.analysis.specialfunctions.log.deriv mathlib.analysis.complex.abellimit mathlib.topology.algebra.infinitesum.basic infty",
+        "surfaced-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6", "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-f7982156-16dc-4863-8504-0f831999a55d" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "mathlib.analysis.specialfunctions.integrals.basic", "mathlib.analysis.specialfunctions.log.deriv", "mathlib.analysis.complex.abellimit", "mathlib.topology.algebra.infinitesum.basic", "infty" ]
+      },
+      "d" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6" ],
+        "hit-ranks" : {
+          "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : 2,
+          "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : 4,
+          "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6" : 5,
+          "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form" : 1
+        },
+        "jaccard-vs-a" : 0.25,
+        "ladder-query" : "series convergence limit",
+        "ladder-rung" : "triple",
+        "query" : "series convergence limit boundary abel hassum theorem radial a93j02 evaluation form name power alternating interior real",
+        "surfaced-ids" : [ "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "series", "convergence", "limit", "boundary", "abel", "hassum", "theorem", "radial", "a93j02", "evaluation", "form", "name", "power", "alternating", "interior", "real" ]
+      }
+    },
+    "case" : 2,
+    "expected-ids" : [ "e-95c49e49-5982-4c66-abc0-7bba11a5be35", "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08", "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6", "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", "e-f7982156-16dc-4863-8504-0f831999a55d" ],
+    "expected-label" : "any current reviewed memory directly attached to a93J02",
+    "match-rule" : "any",
+    "oracle-terms" : [ "series", "convergence", "limit", "boundary", "abel", "hassum", "theorem", "radial", "a93j02", "evaluation", "form", "name", "power", "alternating", "interior", "real" ],
+    "problem" : "a93J02",
+    "reachability" : {
+      "e-95c49e49-5982-4c66-abc0-7bba11a5be35" : true,
+      "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" : true,
+      "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6" : true,
+      "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form" : true,
+      "e-f7982156-16dc-4863-8504-0f831999a55d" : true
+    },
+    "scoreable" : true,
+    "source" : {
+      "imports-sha256" : "36bc2f317201aeb016ee3cb6b5b37d7f573390ea2202367cabaebdbceb2a63e8",
+      "kind" : "problem-statement",
+      "problem-md-sha256" : "f051a0931ebafed9917b6fe8200087ba5e988b9135987fdcf95564487af90efc",
+      "problem-tex-sha256" : "e9f1b9a086c8860b6ef3b3f7b6dad97b66c17eafcd53ba760803f31902777714"
+    },
+    "structure-terms" : [ "mathlib.analysis.specialfunctions.integrals.basic", "mathlib.analysis.specialfunctions.log.deriv", "mathlib.analysis.complex.abellimit", "mathlib.topology.algebra.infinitesum.basic", "infty" ]
+  }, {
+    "arms" : {
+      "a" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 3,
+          "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : 4
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "infinity convergence function",
+        "ladder-rung" : "triple",
+        "query" : "infinity convergence function integral",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "infinity", "convergence", "function", "integral" ]
+      },
+      "b12" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 3,
+          "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : 4
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "infinity convergence function",
+        "ladder-rung" : "triple",
+        "query" : "infinity convergence function integral measure almost belongs bounded case considering continuous everywhere",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "infinity", "convergence", "function", "integral", "measure", "almost", "belongs", "bounded", "case", "considering", "continuous", "everywhere" ]
+      },
+      "b16" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 3,
+          "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : 4
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "infinity convergence function",
+        "ladder-rung" : "triple",
+        "query" : "infinity convergence function integral measure almost belongs bounded case considering continuous everywhere hint interval apm-a96a03",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "infinity", "convergence", "function", "integral", "measure", "almost", "belongs", "bounded", "case", "considering", "continuous", "everywhere", "hint", "interval", "apm-a96a03" ]
+      },
+      "b8" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 3,
+          "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : 4
+        },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "infinity convergence function",
+        "ladder-rung" : "triple",
+        "query" : "infinity convergence function integral measure almost belongs bounded",
+        "surfaced-ids" : [ "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "infinity", "convergence", "function", "integral", "measure", "almost", "belongs", "bounded" ]
+      },
+      "c" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "hit-ranks" : {
+          "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : 1,
+          "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : 3
+        },
+        "jaccard-vs-a" : 0.6,
+        "ladder-query" : "mathlib.measuretheory.function.lpspace.complete mathlib.measuretheory.function.holder mathlib.measuretheory.function.uniftight mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.integral.dominatedconvergence pipe rightarrow infty",
+        "ladder-rung" : "none",
+        "query" : "mathlib.measuretheory.function.lpspace.complete mathlib.measuretheory.function.holder mathlib.measuretheory.function.uniftight mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.integral.dominatedconvergence pipe rightarrow infty",
+        "surfaced-ids" : [ "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" ],
+        "surfaced-set-size" : 3,
+        "terms" : [ "mathlib.measuretheory.function.lpspace.complete", "mathlib.measuretheory.function.holder", "mathlib.measuretheory.function.uniftight", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.integral.dominatedconvergence", "pipe", "rightarrow", "infty" ]
+      },
+      "d" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-ff95cfd3-c645-4b64-afa1-46605015bb00" ],
+        "hit-ranks" : {
+          "e-afb1eae8-284f-4551-8c49-d0babd83a780" : 1,
+          "e-ff95cfd3-c645-4b64-afa1-46605015bb00" : 2
+        },
+        "jaccard-vs-a" : 0.0,
+        "ladder-query" : "convergence norm real",
+        "ladder-rung" : "triple",
+        "query" : "convergence norm real bound lower eventual isboundedunder role zero a96a03 bounds evidence iscoboundedunder lemma level liminf",
+        "surfaced-ids" : [ "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-ff95cfd3-c645-4b64-afa1-46605015bb00", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "convergence", "norm", "real", "bound", "lower", "eventual", "isboundedunder", "role", "zero", "a96a03", "bounds", "evidence", "iscoboundedunder", "lemma", "level", "liminf" ]
+      }
+    },
+    "case" : 3,
+    "expected-ids" : [ "e-0e4e32fe-54af-451b-b302-17aa521891fd", "e-30e87097-f843-4341-81c0-a49ee7ce0ef4", "e-afb1eae8-284f-4551-8c49-d0babd83a780", "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde", "e-ff95cfd3-c645-4b64-afa1-46605015bb00" ],
+    "expected-label" : "any current reviewed memory attached to math/weak-convergence-hilbert",
+    "match-rule" : "any",
+    "oracle-terms" : [ "convergence", "norm", "real", "bound", "lower", "eventual", "isboundedunder", "role", "zero", "a96a03", "bounds", "evidence", "iscoboundedunder", "lemma", "level", "liminf" ],
+    "problem" : "a96A03",
+    "reachability" : {
+      "e-0e4e32fe-54af-451b-b302-17aa521891fd" : true,
+      "e-30e87097-f843-4341-81c0-a49ee7ce0ef4" : true,
+      "e-afb1eae8-284f-4551-8c49-d0babd83a780" : true,
+      "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde" : true,
+      "e-ff95cfd3-c645-4b64-afa1-46605015bb00" : true
+    },
+    "scoreable" : true,
+    "source" : {
+      "imports-sha256" : "57861e5036b9c60687ff52c297322547e03be25e73993258a7cc8d8e4df753c1",
+      "kind" : "problem-statement",
+      "problem-md-sha256" : "18db8b0b96a858b469be87390e07aedf3ddfe99762f2a6c927f457add4336fb6",
+      "problem-tex-sha256" : "20e89381129989a38b229c4ecc304bdeb2461d9fedcee69efbb49127ee390eb7"
+    },
+    "structure-terms" : [ "mathlib.measuretheory.function.lpspace.complete", "mathlib.measuretheory.function.holder", "mathlib.measuretheory.function.uniftight", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.integral.dominatedconvergence", "pipe", "rightarrow", "infty" ]
+  }, {
+    "arms" : {
+      "a" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "volume convolution import",
+        "ladder-rung" : "triple",
+        "query" : "volume convolution import measuretheory",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses", "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases", "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count", "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "volume", "convolution", "import", "measuretheory" ]
+      },
+      "b12" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "volume convolution import",
+        "ladder-rung" : "triple",
+        "query" : "volume convolution import measuretheory norm cauchy-schwarz convergence fubini",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses", "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases", "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count", "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "volume", "convolution", "import", "measuretheory", "norm", "cauchy-schwarz", "convergence", "fubini" ]
+      },
+      "b16" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "volume convolution import",
+        "ladder-rung" : "triple",
+        "query" : "volume convolution import measuretheory norm cauchy-schwarz convergence fubini",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses", "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases", "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count", "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "volume", "convolution", "import", "measuretheory", "norm", "cauchy-schwarz", "convergence", "fubini" ]
+      },
+      "b8" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "volume convolution import",
+        "ladder-rung" : "triple",
+        "query" : "volume convolution import measuretheory norm cauchy-schwarz convergence fubini",
+        "surfaced-ids" : [ "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses", "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases", "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count", "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "volume", "convolution", "import", "measuretheory", "norm", "cauchy-schwarz", "convergence", "fubini" ]
+      },
+      "c" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 0.0,
+        "ladder-query" : "young_convolution_inequality_l2 convolution_l2_contraction_of_probability_kernel",
+        "ladder-rung" : "pair",
+        "query" : "young_convolution_inequality_l2 convolution_l2_contraction_of_probability_kernel mathlib.measuretheory.function.lpseminorm.defs mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.measure.lebesgue.basic mathlib.analysis.convolution ennreal.ofreal",
+        "surfaced-ids" : [ "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young", "e-codexpilot-derive-integrable-from-nonzero-bochner-integral", "e-codexpilot-integral-minkowski-eLpNorm-bochner", "e-1ac936fb-04e8-460e-a710-37fac474401c", "e-4adf0546-2bed-4f35-93f1-032cd254177f" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "young_convolution_inequality_l2", "convolution_l2_contraction_of_probability_kernel", "mathlib.measuretheory.function.lpseminorm.defs", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.measure.lebesgue.basic", "mathlib.analysis.convolution", "ennreal.ofreal" ]
+      },
+      "d" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" ],
+        "hit-ranks" : {
+          "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" : 1
+        },
+        "jaccard-vs-a" : 0.42857142857142855,
+        "ladder-query" : "theorem assembly dependency",
+        "ladder-rung" : "triple",
+        "query" : "theorem assembly dependency missing same search a95j08 a96a04 review a95j04 a96a01 cost evidence first inequality instance",
+        "surfaced-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses", "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases", "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "theorem", "assembly", "dependency", "missing", "same", "search", "a95j08", "a96a04", "review", "a95j04", "a96a01", "cost", "evidence", "first", "inequality", "instance" ]
+      }
+    },
+    "case" : 4,
+    "expected-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" ],
+    "expected-label" : "both missing-dependency memories",
+    "match-rule" : "all",
+    "oracle-terms" : [ "theorem", "assembly", "dependency", "missing", "same", "search", "a95j08", "a96a04", "review", "a95j04", "a96a01", "cost", "evidence", "first", "inequality", "instance" ],
+    "problem" : "lib-young-completion",
+    "reachability" : {
+      "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" : true,
+      "e-dfea2de9-8979-4f8f-9343-caabb48487e6" : true
+    },
+    "scoreable" : true,
+    "source" : {
+      "kind" : "git-object",
+      "path" : "YoungL2.lean",
+      "revision" : "525253b",
+      "sha256" : "ea3ed4cf13c2c40d7c5def85fc64cfe504c6ca36279e4c1f9d3869c6d630c53d"
+    },
+    "structure-terms" : [ "young_convolution_inequality_l2", "convolution_l2_contraction_of_probability_kernel", "mathlib.measuretheory.function.lpseminorm.defs", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.measure.lebesgue.basic", "mathlib.analysis.convolution", "ennreal.ofreal" ]
+  }, {
+    "arms" : {
+      "a" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "consider convergence fixed",
+        "ladder-rung" : "triple",
+        "query" : "consider convergence fixed function",
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-bb16ffa8-e6da-4956-81c3-011e312d5302" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "consider", "convergence", "fixed", "function" ]
+      },
+      "b12" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "consider convergence fixed",
+        "ladder-rung" : "triple",
+        "query" : "consider convergence fixed function integral satisfies show smooth variable approximate avoid bochner",
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-bb16ffa8-e6da-4956-81c3-011e312d5302" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "consider", "convergence", "fixed", "function", "integral", "satisfies", "show", "smooth", "variable", "approximate", "avoid", "bochner" ]
+      },
+      "b16" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "consider convergence fixed",
+        "ladder-rung" : "triple",
+        "query" : "consider convergence fixed function integral satisfies show smooth variable approximate avoid bochner boundaries checked classification clean",
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-bb16ffa8-e6da-4956-81c3-011e312d5302" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "consider", "convergence", "fixed", "function", "integral", "satisfies", "show", "smooth", "variable", "approximate", "avoid", "bochner", "boundaries", "checked", "classification", "clean" ]
+      },
+      "b8" : {
+        "empty-recall" : false,
+        "execution" : "equivalent-prefix-reuse",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 1.0,
+        "ladder-query" : "consider convergence fixed",
+        "ladder-rung" : "triple",
+        "query" : "consider convergence fixed function integral satisfies show smooth",
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails", "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure", "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness", "e-bb16ffa8-e6da-4956-81c3-011e312d5302" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "consider", "convergence", "fixed", "function", "integral", "satisfies", "show", "smooth" ]
+      },
+      "c" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : false,
+        "hit-ids" : [ ],
+        "hit-ranks" : { },
+        "jaccard-vs-a" : 0.3333333333333333,
+        "ladder-query" : "mathlib.measuretheory.function.lpseminorm.defs mathlib.measuretheory.function.l2space mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.integral.dominatedconvergence mathlib.measuretheory.measure.lebesgue.basic mathlib.analysis.calculus.contdiff.basic mathlib.analysis.calculus.contdiff.deriv mathlib.analysis.calculus.parametricintegral mathlib.analysis.specialfunctions.gaussian.gaussianintegral mathlib.ringtheory.polynomial.hermite.gaussian constructiontargets.l2translation constructiontargets.lprepresentative constructiontargets.youngconvolution youngl2 item",
+        "ladder-rung" : "none",
+        "query" : "mathlib.measuretheory.function.lpseminorm.defs mathlib.measuretheory.function.l2space mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.integral.dominatedconvergence mathlib.measuretheory.measure.lebesgue.basic mathlib.analysis.calculus.contdiff.basic mathlib.analysis.calculus.contdiff.deriv mathlib.analysis.calculus.parametricintegral mathlib.analysis.specialfunctions.gaussian.gaussianintegral mathlib.ringtheory.polynomial.hermite.gaussian constructiontargets.l2translation constructiontargets.lprepresentative constructiontargets.youngconvolution youngl2 item",
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner" ],
+        "surfaced-set-size" : 3,
+        "terms" : [ "mathlib.measuretheory.function.lpseminorm.defs", "mathlib.measuretheory.function.l2space", "mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.integral.dominatedconvergence", "mathlib.measuretheory.measure.lebesgue.basic", "mathlib.analysis.calculus.contdiff.basic", "mathlib.analysis.calculus.contdiff.deriv", "mathlib.analysis.calculus.parametricintegral", "mathlib.analysis.specialfunctions.gaussian.gaussianintegral", "mathlib.ringtheory.polynomial.hermite.gaussian", "constructiontargets.l2translation", "constructiontargets.lprepresentative", "constructiontargets.youngconvolution", "youngl2", "item" ]
+      },
+      "d" : {
+        "empty-recall" : false,
+        "execution" : "live-run",
+        "hit" : true,
+        "hit-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" ],
+        "hit-ranks" : {
+          "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" : 1
+        },
+        "jaccard-vs-a" : 0.25,
+        "ladder-query" : "assembly a95j04 a96a01",
+        "ladder-rung" : "triple",
+        "query" : "assembly a95j04 a96a01 dependency lemmas theorem analytic family first ladder leaf local process review rule a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa",
+        "surfaced-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2", "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses" ],
+        "surfaced-set-size" : 5,
+        "terms" : [ "assembly", "a95j04", "a96a01", "dependency", "lemmas", "theorem", "analytic", "family", "first", "ladder", "leaf", "local", "process", "review", "rule", "a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa" ]
+      }
+    },
+    "case" : 5,
+    "expected-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" ],
+    "expected-label" : "inventory-assembly-dependencies memory",
+    "match-rule" : "all",
+    "oracle-terms" : [ "assembly", "a95j04", "a96a01", "dependency", "lemmas", "theorem", "analytic", "family", "first", "ladder", "leaf", "local", "process", "review", "rule", "a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa" ],
+    "problem" : "a96A04",
+    "reachability" : {
+      "e-9751e537-f5b7-4c40-a857-0c0b699b93a2" : true
+    },
+    "scoreable" : true,
+    "source" : {
+      "imports-sha256" : "b93ed286f56896755b8f1ba6e74738f96230dfdf41ef691a92460af358214075",
+      "kind" : "problem-statement",
+      "problem-md-sha256" : "95fa16f429986d77683a4d619fdf25974a90408437cde7d736b023d8ed4db340",
+      "problem-tex-sha256" : "4375f688c3e27d572e15ad502a4e576abb7e73c4b583652429747d70c8373526"
+    },
+    "structure-terms" : [ "mathlib.measuretheory.function.lpseminorm.defs", "mathlib.measuretheory.function.l2space", "mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.integral.dominatedconvergence", "mathlib.measuretheory.measure.lebesgue.basic", "mathlib.analysis.calculus.contdiff.basic", "mathlib.analysis.calculus.contdiff.deriv", "mathlib.analysis.calculus.parametricintegral", "mathlib.analysis.specialfunctions.gaussian.gaussianintegral", "mathlib.ringtheory.polynomial.hermite.gaussian", "constructiontargets.l2translation", "constructiontargets.lprepresentative", "constructiontargets.youngconvolution", "youngl2", "item" ]
+  } ],
+  "store" : {
+    "base" : "http://127.0.0.1:7073",
+    "memory-entry-count" : 522,
+    "memory-snapshot-sha256" : "b5fed62aecf0a9fa6cf4a149ec8a7581b96b3053f9fb22ebb259d39bda5572d0",
+    "ranking-receipt-snapshot-sha256" : "25860bf6bcc4a110ee892782c29c3fafe983c380230391f2ea8d1f3b0f5d6bbf",
+    "unchanged-during-run" : true
+  }
+}

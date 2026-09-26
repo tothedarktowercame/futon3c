@@ -244,7 +244,10 @@
 ;; =============================================================================
 
 (deftest phase-order-is-complete
-  (is (= 9 (count ps/phase-order)))
+  ;; 10 since 36d3b4ba (2026-03-31) added :target-check. The assertion said 9
+  ;; and stayed red on master for four and a half months, so every "tests green"
+  ;; claim in this namespace was either wrong or scoped around it.
+  (is (= 10 (count ps/phase-order)))
   (is (= :observe (first ps/phase-order)))
   (is (= :completed (last ps/phase-order))))
 

@@ -1,0 +1,37 @@
+{
+  "evidence/body": {
+    "review/reported-attachment-status": "reviewed",
+    "review/reason": "residual: Main.lean:110 (endpoint-safe uniqueness). fact: apply an interior Gronwall bound on [delta,t], pass delta to zero along the right-neighborhood filter with le_of_tendsto_of_tendsto, and build Ioo 0 t membership by inter_mem rather than unfolding nhdsWithin. This is actionable, findable, and useful on unseen endpoint-limit arguments, but it is not an instance of the proposed parent, whose move reconstructs HasDerivWithinAt and invokes closed-interval uniqueness directly; reassign it to the distinct interior-estimate-to-endpoint-limit pattern.",
+    "review/reported-pattern-ids": [
+      "math-formalization/pass-interior-estimates-to-a-closed-endpoint-by-one-sided-limits"
+    ],
+    "memory-use/kind": "substitutive",
+    "review/verdict": "reassign",
+    "review/provenance": {
+      "kind": "promotion-review",
+      "job-id": "apm-role-ca6c80321afb2b38e7876e89ebf740a342ad7d6c1c18a44ca7203ac473a3d8e7"
+    },
+    "review/pattern-ids": [
+      "math-formalization/pass-interior-estimates-to-a-closed-endpoint-by-one-sided-limits"
+    ],
+    "review/event": "memory-attachment-review",
+    "review/reported-reviewer": "f196-promotion-proctor",
+    "review/memory-id": "e-apm-promotion-5fdb99169bd788313841375c797c302c",
+    "review/residual": "Main.lean:110 requires endpoint-safe uniqueness; this candidate supplies the alternative one-sided limiting route from strictly interior Gronwall estimates, with concrete filter-membership API details."
+  },
+  "evidence/session-id": "apm-role-ca6c80321afb2b38e7876e89ebf740a342ad7d6c1c18a44ca7203ac473a3d8e7",
+  "evidence/tags": [
+    "memory",
+    "memory/attachment-review",
+    "apm/promotion-review"
+  ],
+  "evidence/at": "2026-09-08T11:58:40.031778692Z",
+  "evidence/type": "memory",
+  "evidence/subject": {
+    "ref/type": "memory",
+    "ref/id": "e-apm-promotion-5fdb99169bd788313841375c797c302c"
+  },
+  "evidence/author": "f196-promotion-proctor",
+  "evidence/claim-type": "observation",
+  "evidence/id": "e-apm-promotion-review-02bee0ac9d6dbd565d46b51fb03696e7"
+}

@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-Status: parked
+Status: active — programme of work adopted 2026-08-02 (see §Programme of Work below)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -1274,3 +1274,533 @@ Pattern library: 15 formalization + 31 informal + 7 strategy = 53 total.
 - Phase 3a requires LeanDojo-v2 installation (check with Rob)
 - Phase 3b requires futon5 TPG + Pantograph integration
 - Phase 4 requires superpod GPU access (non-blocking)
+
+---
+
+## Programme of Work (2026-08-02) — concept → build
+
+Everything above this line is the April 2026 concept (IDENTIFY→VERIFY,
+parked at VERIFY). This section supersedes the phasing above where they
+conflict; the April analysis remains the design record. Per the revision
+contract discipline, changes land as dated deltas, not silent edits.
+
+### What changed since April
+
+1. **The data problem is solved.** M-codex-sorry-loop ran a full campaign
+   (137/145 modules closed; queue audits in `scripts/queue_audit.py`;
+   residual taxonomy in `holes/labs/M-codex-sorry-loop/
+   known-residual-20260801.md`). The "diagram of failures" this mission
+   wanted to read now exists at scale, with process telemetry (runner
+   legs, verification failures, statement-defect classes) the April
+   overnight run never had. The 489-prelim corpus remains available as a
+   second dataset.
+
+2. **The missing formalism has been chosen.** Decision of 2026-08-02
+   (memory: `causal-engine-target2`): build a **generic deep-rewriting
+   engine** (diagrams as hypergraphs, DPO rewriting modulo SMC axioms —
+   the chyp/quantomatic discipline) with the target set to the
+   categorical causal-inference line (Fong's causal theories, Fritz's
+   Markov categories, Jacobs–Kissinger–Zanasi surgery). This is exactly
+   the "string diagram in a category of goal states" formalism Layer 1.5
+   gestured at — VERIFY's #1 HIGH risk ("pattern-to-diagram translation
+   does not exist") now has a concrete build target instead of a gap.
+   Context: Kissinger grant decision ~Aug 2026; we build from public
+   materials only, aiming at a prototype he'd find interesting.
+
+3. **Layer 2's counterfactual ambition gets real machinery.** Model C
+   wanted to answer "if we added ENNReal rpow-exponent continuity, how
+   many sorry would close?" — that is an interventional query,
+   `do(extension)`, and the ad hoc NPT route is superseded by doing it
+   properly: author the proof pipeline as a causal DAG, check
+   identification with do-calculus/d-separation, *then* estimate.
+   Models A/B survive as the estimation layer under the causal spec;
+   Model C as originally scoped is retired.
+
+4. **Rob's Pearl/Neo4j port is the compatibility baseline.** The DAG
+   level (variables, evidenced arrows, the JSON spec format of
+   `docs/memory-causal-graph-spec.json`) is the interchange format.
+   Anything our engine derives that dagitty/Y0/Rob's port can also
+   compute must agree (differential testing); divergence is a bug or a
+   result. Rob's own bar — "success on a real non-toy problem" — is met
+   by modelling our systems, not the Book of Why figures.
+
+### Workstreams (target: working prototype in ~1 month)
+
+**WS-A: Engine core — LANDED 2026-08-02, reviewed and accepted**
+(commits 52cb3fae, d07e4442, 07115ef8; review by claude-10 same day:
+gates re-run, all 7 spec test expectations verified, REPL transcript
+reproduced over Drawbridge). Clojure. Diagrams as hypergraphs; regime is
+**SDRT-II convex DPO (plain SMC)** — matching + DPO rewriting modulo
+symmetric monoidal structure ONLY; the commutative-comonoid regime a
+Markov category needs is *not* covered (see WS-B.0). Rule sets pluggable
+(Tom-style separation); rule application returns all legal rewrites as a
+lazy relation. Porting material was chyp (Apache-2.0, ported).
+Quantomatic is unmaintained — historical reference only; PyZX is a
+performance reference, not a rule-set source (delta D7).
+
+**WS-B.0: Rewriting-regime decision — DECIDED 2026-08-02 (delta D1,
+adopted by Joe).** Route (b): keep the convex-SMC kernel and carry
+copy/discard as explicit generators + rules, with the quotient gap
+contained three ways rather than merely documented:
+(i) **canonical-form invariant at ingest** — the DAG-ingest functor
+emits a fixed copy-comb normal form (ordered branches), and WS-B rules
+preserve it; receipts are stated as valid *for canonically-ingested
+diagrams*, which is the entire v1 population;
+(ii) **executable gap marker** — a pinned test asserting that two
+diagrams equal modulo cocommutativity are NOT identified by find-iso;
+it documents the gap and doubles as the acceptance test for the MPZ
+extension;
+(iii) **MPZ extension (route (a)) is a NAMED MONTH-2 OBLIGATION, not
+scope** — Milosavljevic–Piedeleu–Zanasi, LMCS 21(1) 2025
+(arXiv:2204.04274), the sound-and-complete DPO characterisation for the
+comonoid regime; the kernel's validity-predicate seam (matcher `:convex?`
+option) is the extension point, so route (a) later is an extension, not
+a rewrite. Entry condition per Joe: explore once the working system
+answers the receipts we asked of Rob on the memory-system DAG.
+**WS-B.0 read — DONE 2026-08-02** (claude-10, LMCS 21(1):12, §3–4 to
+decision grade). Findings: (1) MPZ absorb the (co)monoid into the
+*representation* — diagrams become **right-monogamous acyclic cospans**
+(Thm 3.21), i.e. wire-sharing at nodes, not explicit copy edges;
+(2) **matching stays convex** (Def 4.7, unchanged from the SDRT-II
+kernel we ported) — what changes is the pushout complement: **weak
+boundary complements** (Def 4.6, conditions A–D) allowing boundary-node
+identification on the monoid side, not necessarily unique, so one match
+can induce several rewrites; "weakly convex DPO" (Def 4.9) is sound and
+complete (Thm 4.10). Consequences: (a) route (a) later is confirmed an
+extension at existing seams — matcher untouched, `rewrite.clj`'s
+pushout-complement step generalises, plus relaxing one-sided monogamy
+in the graph model and switching `diagram.clj` from explicit copy-combs
+to node-sharing; (b) route (b) is confirmed safe for month 1 trivially:
+the soundness condition constrains *rewriting steps*, and stage 1
+performs none — surgery and d-separation are DAG-level algorithms.
+Non-obvious cost surfaced for month 2: complement non-uniqueness widens
+the rewrite relation, which the receipts machinery must enumerate, not
+assume unique. Rationale in full: the month's receipts are
+computed by algorithmic passes (surgery = one deterministic
+transformation; d-separation = reachability), not free rewriting search,
+so the modulo-comonoid machinery is not load-bearing until equational
+derivations (JKZ disintegration proofs) enter — month 2.
+
+**WS-B: Causal rule set + receipts** (weeks 2–3). Markov-category
+structure (copy/discard as explicit generators per WS-B.0), interventions
+as JKZ surgery, d-separation (Fritz–Klingler characterisation). DAG
+ingest from the interchange JSON (canonical form, per WS-B.0). ALSO
+(delta D2): enumerate testable implications and run each authored spec
+through a falsification pass — dagitty impliedConditionalIndependencies
++ localTests, y0 verma.py, DoWhy gcm.falsify_graph (permutation-baselined)
+— reported *with* the spec, including the survives-only-because-data-
+are-thin case. Acceptance: derive the three receipts on the
+memory-system DAG — Q1 cohort identification, Q2 E2-surgery + mediation,
+Q3 filter-equivalence d-separation on both corpus topologies — and agree
+with dagitty/y0 oracles (causaleffect as independent ID/IDC cross-check).
+Priced-in validation limits (census): there is NO oracle for
+mediation-under-surgery, so Q2's receipt is checkable only piecewise;
+and DAG-level oracle agreement cannot catch a categorical-layer bug that
+projects correctly — state both when the receipts land. Q3's falsifiable
+divergence prediction is the prototype's first real output.
+
+**WS-B stages 1+2 — DONE 2026-08-02** (codex-1 authored, claude-10
+reviewed; stage 1: `8ed1d561`+`251d6bf6`+`028abf71`, stage 2:
+`2e50339d`+`504be25c`). Stage 1: validated ingest of both spec JSONs,
+leak variants, surgery, canonical copy-comb rendering with round-trip,
+d-separation with named witnesses, bounded implied-independency
+enumeration (209 minimal implications on the memory spec at k≤2,
+independently recounted by the reviewer's from-scratch implementation —
+exact agreement), pinned cocommutativity-gap test in place. Stage 2:
+`receipts.clj` computing Q1/Q2/Q3 (memory) + R1 (lean) as pure EDN with
+computed verdicts and named paths. Q3 delivered its predicted
+divergence pair: star_forest separated / populated_graph connected via
+[:M-in-store :shared-patterns :V12-minus-M] — mechanism (b)
+filter-at-dispatch is a valid substitute for (a) only on the current
+star topology; the divergence on populated_graph is the preregistered
+finding for the multi-attachment repair. R1 formalized E7 selection
+with time-indexed :P10-pre (avoiding post-treatment adjustment and
+cycles), computed the open selection backdoor, and verified
+{:P01 :P10-pre} closes it. Review re-ran all gates (26 tests / 95
+assertions green; kondo and check-parens clean with negative control),
+re-ran receipts over Drawbridge, and hand-verified Q1/Q3/R1 verdicts
+with an independent d-separation implementation from the raw JSONs.
+**Stage 3 (delta D2 oracle pass) — DONE 2026-08-02, WS-B CLOSED**
+(codex-1 authored `59ee1f3f`, claude-10 reviewed; artifacts + REPORT.md
+in `holes/labs/M-diagramprover/oracle-pass/`, one-command repro via
+`run.sh`). Structure-level results, all verified by the reviewer
+re-running the pass end-to-end (regenerated artifacts byte-identical to
+committed — determinism confirmed): engine's 209 implications 209/209
+against NetworkX AND 209/209 against dagitty 0.3-4 (installed with V8;
+bnlearn fallback not needed); converse direction 1,382/1,382 — every CI
+in dagitty's emitted basis (157 non-adjacent pairs, multiple separating
+sets each) confirmed by the engine; Q3 divergence pair + V18
+corollaries 4/4 in both oracles; y0 finds Q1 P(V18|do(V06)), R1
+P(P16|do(P20)), and the R1 IDC conditional query all identifiable
+(encoding caveat stated in REPORT.md: fully-observed directed DAG, no
+bidirected arcs — the receipts' backdoor verdicts remain separate
+computed claims). Zero disagreements anywhere. Deferred with reason,
+verbatim in REPORT.md: dagitty localTests and DoWhy gcm.falsify_graph
+are data-dependent (await M-memory-retrieval cohort data);
+Q2 mediation-under-surgery has no structure-level oracle (priced-in
+limit, restated). DAG-level agreement still cannot catch a
+categorical-layer bug that projects correctly — that limit is
+permanent, not deferred.
+
+**Stage 4 (WS-C completion: R2+R3, lean falsification, dosearch) —
+DONE 2026-08-02** (codex-1 `2a9807fb`+`aba7e01c`, claude-10 reviewed:
+gates re-run, run.sh byte-identical on re-run, R2/R3 verdicts
+hand-verified independently from raw JSON). **R2 ANSWERED**: K1–K4
+opened paths named + per-leak severance verified; provenance asymmetry
+CONFIRMED as computed outcome (copied-class do(withhold P19) → null,
+content survives via the K2-byte-copy channel, named; extracted-class →
+effect through module-import); duplication debt = the recorded contrast
+between do(withhold-module) [no effect] and do(remove-content)
+[effect]. **R3 ANSWERED, with a headline refutation of our own spec
+prose**: T04 insufficient for progress (confirmed, path named) BUT the
+preregistered T05-retirement case is NOT confirmed — T05 as a
+measurement child of P10 cannot screen off T04 (d-sep: conditioning on
+a noisy child never blocks the parent's other paths); the reviewer's
+independent check adds the constructive form: conditioning on
+P10-at-k ITSELF screens off T04. Reformulated retirement case: record
+the dependency SET as an artifact (lossless), or argue T05≡P10 via
+pipeline determinism — which is exactly the D6 caveat (deterministic
+CI is invisible to plain d-sep) now biting in our favor. **Lean
+falsification DONE**: 202/202 implications × NetworkX and × dagitty;
+converse 426/426; R2 3/3 and R3 2/2 × both oracles; zero
+disagreements anywhere. **dosearch (D3) EXERCISED TO A BOUNDARY**:
+installed (1.0.12), correct refusal — the faithful 18-node ancestral
+reduction becomes 36 internal intervention nodes > its hard limit 30;
+no proxy substituted; exact query strings in REPORT.md. Open follow-up
+(small): rerun on the latent projection onto the query-relevant
+variable set (sound: identifiability is preserved under latent
+projection; lands well under the limit). NDE/NIE remains outside
+dosearch's syntax — Q2 mediation stays answered piecewise.
+
+**WS-C: Lean-pipeline causal spec, example #2 — AUTHORED 2026-08-02**
+(`docs/lean-proof-pipeline-causal-spec.json` + `.md`: 20 variables, 31
+evidenced arrows, conjecture CJ1, receipts R1–R3; valid JSON, acyclic).
+Variables from the sorry-loop mechanism chain, sensors with missingness
+(stale-olean and wrong-namespace failures as *measurement-error nodes*),
+interventions `do(add extension)` / `do(withhold module)` /
+`do(full statement audit)`. This upgrades Phase 0's "write one
+extension, measure closures" into a causal experiment with
+identification checked by the engine before the run.
+Adopted deltas: **(D3)** any identification question routing through the
+missingness/measurement layer is oracled by **dosearch**
+(arXiv:1902.01073) — y0's tree does not clearly cover missing-data
+identification; dosearch cloned into `diagramprover-refs/`. **(D6)**
+Methodological statement: WS-C authors the DAG and checks
+identification; it does NOT run constraint-based structure discovery on
+pipeline traces — the pipeline is deterministic, determinism generates
+CIs beyond the Markov condition, and PC-family algorithms are unsound
+under it. Model revision proceeds by hard intervention, for which
+intervention-immediacy faithfulness suffices (Mazaheri–Zhang–Uhler, UAI
+2026); the interventional program-model precedent is CPDA (JSS 2024).
+This is also the transpiler use case's citable ancestor. **(D2)** The
+falsification pass applies to this spec too, with the stated caveat that
+LMC-violation statistics behave differently on deterministic pipeline
+runs than in the i.i.d. setting.
+
+**WS-D: Proofs as diagrams** (weeks 3–4, then ongoing — the mission's
+original thesis, now on a real substrate). Tactic traces as string
+diagrams in the engine's representation; typed ports = goal-state types;
+composition type-checked before Lean runs (the `addresses-valid?`
+invariant, for real). Re-run Pilot A/B specimens (t92J01, t94A02,
+a00J01) through the engine instead of by hand. Pattern induction
+(including from failures, per Pilot C's finding) becomes diagram
+extraction. Adopted delta **(D5)**: trace extraction is via Lean 4's
+**`InfoTree`/`TacticInfo`** (the Paperproof approach) — not manual
+transcription, not LeanDojo/Pantograph, which stay parked. **Represent
+the extracted structure as a DAG, not a tree**: Paperproof's Gentzen
+tree discards exactly the sharing (hypotheses and `have`s used more than
+once) that makes a proof a diagram rather than a derivation. Cheap
+companion read: LeanTree (arXiv:2507.14722) — on its abstract, the
+closest existing work to the typed-ports invariant.
+
+**WS-E: Mission-wiring verification — ADOPTED 2026-08-15 as a matter of
+urgency (operator ruling, Joe).** Trigger: M-apm-demonstration built and
+REPL-bashed a cycle machine with no process-level verifier, accumulating
+sixteen written-but-not-wired instances plus three independent-audit
+findings before the class was caught — while scoring 4-for-4 on the
+wiring-required test added the same day to `futon4/holes/
+mission-lifecycle.md` §Specification Bill of Materials. Operator ruling,
+recorded: *"we need this sorted out as a matter of urgency, not just
+recorded. M-diagramprover will have two jobs: solving this at a
+sufficient level of generality for other missions, and proving it — not
+'self-certifying' but at least demonstrating that it itself follows
+known best practice."*
+
+Job 1 — **solve, generally.** An ingest functor from process configs to
+the engine's typed-diagram representation (the WS-B DAG-ingest functor
+is the worked precedent; WS-D's typed ports are the same invariant on a
+different source), plus structural checks over the result. First
+sources: futon3c `CycleDomainConfig` (problem peripheral) + the round-1
+registration EDN; futon5 exotype `.edn`. Checks, minimum three: every
+wire has both ends (no orphan writer/reader), every box is reachable
+(no ghost phase), every wire leaves exactly one box (single writer /
+declared ownership). Generality bar, per shape-first discipline: the
+same functor + checks run on **≥2 non-APM configs** — the proof
+peripheral's domain config is sibling #1; sibling #2 from the WM flight
+loop or the futon3b gate pipeline. If only the APM instance ever works,
+record `:special-case true` as a finding, not a success.
+
+Job 2 — **prove it, without self-certification.** Warrants:
+(i) *ground truth that predates the tool* — the APM reconstruction as
+replay corpus. Sensitivity: the verifier must catch, on pre-fix states,
+the unreachable `:close` (`44d8fe6d`), the unread registration pins,
+the injectable `:retrieval-probes`, and the producer-less validator
+field (`TN-problem-peripheral-RC-fable-review.md`, findings established
+by other parties before WS-E existed). Specificity: it must pass the
+post-fix states as negative control. (ii) *author ≠ reviewer*, per
+mission ownership — Codex authors, Claude owner reviews with
+independent re-runs (the WS-B pattern that produced three-way oracle
+agreement). (iii) M-diagramprover fills **its own BOM** at VERIFY
+(futon4 lifecycle §SBOM), including running WS-E over WS-E's own
+pipeline config — flagged as *demonstration*, never certificate; the
+certificate-grade warrant is (i)+(ii).
+
+Discharges: the priced hole in `futon4/holes/mission-lifecycle.md`
+§Specification Bill of Materials (tool-status note). When acceptance
+lands, re-point the lifecycle's process row at WS-E and close the hole.
+
+**WS-E slices 1–4 LANDED + reviewed 2026-08-15** (codex-4 authored,
+claude-7 reviewed with gates re-run and adversarial probes per slice):
+`a7131e61` ingest + written-never-read; `ad256571` read-never-written +
+multiply-written; `7aa8e8df` site conformance (+ review fix `77cca3c9`:
+unreadable site is a finding, not an exception); `c474470f` phase-chain
+checks; `0a26ea42` the live declared map + findings snapshot
+(`holes/labs/M-apm-demonstration/problem-wiring.edn`,
+`wiring-findings-20260815.edn`). **Sensitivity: demonstrated on all four
+recorded defect classes** — unread pins (fixture; and on the first live
+run the conformance check caught the MAP AUTHOR's stale belief that the
+pins were still unread — they had been made load-bearing by the "Fable
+RC review" commit); missing producer (`:retrieval-probes`, live);
+double-writer (`:environment-checkouts` payload fallback, live — the one
+open seam, flagged to the peripheral owners); ghost phase (pre-`44d8fe6d`
+fixture). **Specificity: post-fix states clean** — live snapshot:
+written-never-read [], phase-chain [] (phases derived from the live
+config at check time), conformance []. **Remaining for acceptance: the
+generality leg** — the same functor + checks on ≥2 non-APM configs
+(proof peripheral first).
+
+**Generality sibling #1 (proof peripheral) — DONE 2026-08-15**
+(`holes/labs/M-diagramprover/proof-wiring.edn` +
+`proof-wiring-findings-20260815.edn`). Same functor and all five checks,
+zero new machinery. The authoring-plus-checking process surfaced **three
+real latent findings in a config the tool was not built from**:
+(1) `proof-domain-config` never opts into `:enforce-required-outputs?`,
+so the canonical CR-1..8 contract gates nothing at advance time;
+(2) `proof_logic.clj` holds a private duplicate of `phase-order` and
+`phase-required-outputs` that has **drifted** — 9 phases, missing
+`:target-check` and its three outputs; (3) the duplicate is the copy the
+only live output-checking consumes (`query-missing-phase-outputs`), so
+enforcement-that-exists reads the stale contract. All three flagged to
+the proof peripheral's owners; fixes change cycle behavior and are not
+applied from WS-E. Also the second and third instances of the checker
+out-auditing its own author: the conformance pass exposed a broken
+authoring grep (`\b` after `?`), which is how the duplicate was found.
+Final truthful-map verdicts: all five checks clean. **Sibling #2 to be
+picked next (operator's call: WM flight loop or futon3b gate pipeline).**
+
+**Generality sibling #2 (War Machine belief path) — DONE 2026-08-15;
+WS-E ACCEPTANCE MET** (`holes/labs/M-diagramprover/wm-wiring.edn` +
+`wm-wiring-findings-20260815.edn`). Referent pinned first, at the
+operator's insistence: the PLoP paper (`p4ng/plop-2026.tex`) describes
+the **futon2** implementation — entry point
+`futon2/scripts/wm_scheduled_run.clj` (scheduled loop), belief path
+`futon2/src/futon2/aif/belief.clj`, production seam
+`futon2/scripts/futon2/report/war_machine.clj` — NOT the futon3c pilot
+peripheral; mapping the pilot would have been the day's third
+two-machines specimen. Map covers the paper's A/B/D `model-manifest`
+seam (the four trace stamps); the three content hashes are write-mostly
+by design with the paper-cited live-wiring test as their load-bearing
+reader — declared, not manufactured into a defect. All five checks
+clean, cross-repo, on a non-cycle-engine machine — the strongest form
+of the generality bar. **Acceptance summary: sensitivity (four recorded
+defect classes, three on live artifacts), specificity (post-fix states
+clean), generality (proof peripheral + futon2 War Machine). The
+lifecycle's priced hole is discharged in the same push.** Honest grade:
+the checks are detect-grade over declared+conformance-kept maps;
+by-construction unconstructibility (V.12's F1 lesson) remains the
+Lean/engine layer's territory.
+
+### Explicitly parked / superseded
+
+- **TPG as tactic generator** (Phase 3b) — parked, off the critical
+  path. The engine replaces the missing pattern-representation layer;
+  whether TPG re-enters as a search strategy is a post-prototype
+  question.
+- **Model C (NPT)** — superseded by WS-B/WS-C (causal formulation).
+- **LeanDojo-v2 / Pantograph / superpod** (Phases 3a, 4) — parked and now
+  fully off WS-D's critical path (InfoTree extraction replaces the
+  "manual until then" fallback, delta D5).
+- **PatternBoost-on-a-Dell** (Checkpoint 1) — parked with TPG.
+- **Causal abstraction (HELD, not parked — delta D4).** Lorenz–Tull
+  2026 (arXiv:2602.16612, successor to the 2023 paper WS-B builds on)
+  supplies the formalism for "is our coarse DAG a sound abstraction of
+  the fine mechanism?" and for the concrete-`do` → abstract-`do` lift
+  WS-C performs informally (a specific Mathlib lemma read as
+  `do(add extension)` — their *upward abstraction*). Named obligation;
+  entry condition: WS-B's receipts landed AND WS-C's spec used for at
+  least one real intervention.
+- **MPZ comonoid-regime extension — OPENED 2026-08-02 (route a).**
+  Entry condition met and accepted by Joe same day: all six receipts
+  self-answered with three-way oracle agreement. Architectural
+  decision (claude-10): the MPZ regime lands ALONGSIDE the plain
+  kernel, not in place of it — new right-monogamous graph model + RM
+  rendering in new namespaces; graph.clj/matcher.clj/rewrite.clj/
+  diagram.clj and the whole route-(b) causal pipeline stay untouched
+  and remain the delivered system. The pinned cocommutativity-gap test
+  STAYS (it documents the plain kernel's quotient gap); acceptance of
+  the extension is a COMPANION flip test: the same cocommuted pair,
+  rendered right-monogamously, is identified (the gap closes by
+  representation, per MPZ Thm 3.21 — copy absorbed into node-sharing).
+  Slices: **A1 DONE 2026-08-02** (codex-1 `1deee0de`+`9a3970f4`,
+  corrected in `74a3475d` after review found two defects — see
+  E-ratchet-probe cycle 1: canonicalize's tied-class fallback crashed
+  on first execution (min-key over string keys, never exercised by
+  singleton-partition tests), and the flip test was vacuous
+  (difference erased upstream of the RM mechanism). Post-correction:
+  41/156 green, tied-class permutation path forced by tests, flip test
+  constructs the cocommuted pair at RM level with an explicit
+  non-vacuity witness, reviewer's counterexample probes pass over
+  Drawbridge, protected paths untouched throughout.) A2 = convex
+  matching over RM + weak boundary complement ENUMERATION (Def 4.6
+  A–D; non-unique, so enumerate — the priced-in cost from the WS-B.0
+  read) + weakly convex DPO (Thm 4.10). A2 doubles as the ratchet
+  probe's measurement leg (no rule restatement in its bell).
+
+### Acceptance for the month
+
+1. Engine core rewrites diagrams under a pluggable rule set (WS-A).
+   **CLEARED 2026-08-02** (landed + reviewed).
+2. Receipts Q1–Q3 derived on the memory-system DAG, oracle-checked
+   (WS-B). Q3 verdict delivered to the M-memory-retrieval cohort
+   registration. Per delta D2, each authored spec also ships with its
+   falsification-pass report (dagitty localTests + y0 verma + DoWhy
+   falsify_graph), including the too-thin-to-falsify case; per the
+   census, Q2's mediation-under-surgery has no oracle and is checked
+   piecewise — stated with the receipt.
+3. `lean-proof-pipeline-causal-spec.json` v1 exists and its first
+   identification question is answered by the engine (WS-C). Spec
+   **AUTHORED 2026-08-02**; **R1 ANSWERED 2026-08-02** (stage-2 receipt:
+   controlled regime identified with ∅, E7 selection regime refused
+   with the named backdoor, {:P01 :P10-pre} verified as the closing
+   adjustment; y0 ID + IDC agreement in the stage-3 oracle pass).
+   Remaining WS-C: R2, R3; lean-spec structure-level falsification
+   pass; dosearch (D3) on missingness-routed questions.
+4. ≥1 proved Lean proof and ≥1 partial rendered as typed string
+   diagrams by the engine, open ports = sorry (WS-D).
+
+### Decision record — 2026-08-02 (deep-research deltas)
+
+All seven deltas from `holes/labs/M-diagramprover/deep-research-deltas.md`
+adopted by Joe, with D1 resolved as **route (b), hardened** (see WS-B.0
+for the three containment measures and the month-2 entry condition for
+route (a)/MPZ). D4 and the MPZ extension enter as HELD named obligations,
+not scope. Census: `deep-research-census.md`, same directory.
+
+Ownership: architecture + review = Claude owner; substantial coding
+slices = Codex via bell+park; specs and gates per AGENTS.md.
+
+## Application to theorem-proving capability construction (2026-08-03, Joe + claude-10)
+
+M-diagramprover's machinery is not only for proving APM/BPM theorems —
+it is the right frame for holding the whole "co-proof" programme
+together, because the programme's own capability claim is itself a
+theorem to be proved **by construction**.
+
+### The top-level claim, read constructively
+
+Take the premise "**all APM problems are solved**." Read
+constructively (BHK), this is not a census of solved problems — it is
+the claim that a PROCEDURE exists which, handed any APM problem,
+produces a solution, together with witnesses that each component of
+the procedure does its job. The relay pipeline (starter → boundary
+artifact → closer chain, with memory and desk research in the loop)
+is the constructive content of the claim. The proof updates as
+certificates land; it is never re-argued, only re-certified.
+
+### The skeleton: sub-claims as typed holes with contracts
+
+The high-level proof is deliberately small (~a dozen nodes). Each
+sub-claim is a hole with a contract: a statement, a current warrant,
+attached certificates, and a named upgrade path. Initial skeleton with
+the certificates already banked on 2026-08-03:
+
+1. **Extra resources can fill Mathlib holes.** Witnesses: a96J04
+   (interval-decomposition gap, proved locally in ~15 min, commit
+   33575db, 6-step gate); a96J07 (local Liouville from the two-pole
+   result, commit 462b48a, non-circularity verified by import
+   analysis). Open instance: a96J08 (rectangular-contour residue
+   theorem; boundary documented, commit 37192e1). Warrant: n=2
+   positive, 1 open hole.
+2. **Work transports between agents.** Mechanism: the
+   boundary-comment artifact (the relay's transport layer). Witnesses:
+   E9→J04 (the closer's 15-minute path was paved by the starter's
+   boundary comment), a92J06→a96J07 (cross-problem reuse, cited in
+   source), protocol now specified in the store
+   (e-e9-a96j04-localize-an-observed-blocker-at-one-sorry). Warrant:
+   n=3.
+3. **The memory store records learning.** Witnesses: 12 reviewed,
+   tagged, attached memories from one day's runs; scribe protocol with
+   hunger audit (demand-side tagging); approval discipline
+   (author≠reviewer, operator approval retired 08-03). Warrant:
+   write-side strong; consumption-side n=1 (one retrieval correctly
+   graded marginal in E10 phase A).
+4. **Agents consult memory when instructed.** Witness: E10 (same
+   agent: 0 lookups under invitation, 21 under the two-part frame —
+   the propensity gap closes with task framing). Warrant: n=1
+   controlled contrast, preregistered (E9-pull-probe-prereg.md).
+5. **Retrieval serves the need when consulted.** Current warrant:
+   WEAK — the four-layer anatomy (propensity/framing/affordance/
+   index-reach) shows layers 2–4 are mechanical; repairs 2–4 in
+   claude-12's queue; hunger audit + demand-side tagging are the
+   upgrade path. Honest state: the relay currently runs on
+   repo-memory; the store amortizes ACROSS chains, not within them.
+6. **Capability transports from APM to held-out BPM.** This is the
+   headline meter and it is formally a TRANSPORTABILITY claim
+   (selection diagrams; E-book-of-why-complete B1, promoted 08-03).
+   Warrant: none yet; identification requirement named.
+7. **Outcomes are mechanically scoreable.** Contract =
+   endpoint-preregistration-draft.md (delta-form endpoint,
+   executed-witness-only, statement-fidelity with voiding); capture in
+   flight (§5 fields). Warrant: designed, capture pending.
+8. **The process learns at the ability level.** Mechanism: practice
+   memories → packet-template deltas (the delta contract generalized
+   from specs to behavior). Warrant: designed 08-03, not yet built;
+   today's ability transfers (event-anchored lookups, ignore-and-
+   move-on, boundary protocol) all traveled through hand-authored
+   packets.
+
+### Heterogeneous warrants are the point, not a defect
+
+Some nodes are discharged mechanically (lake exit 0, axiom-clean);
+some by replication (the E8 rank rerun — "frozen and replicated
+license different things"); some by scientific induction with honesty
+bounds (n=1/n=2 markers); some are registered candidates; some are
+refusals (proved-impossible vs not-yet-capable, kept distinct). A
+capability proof whose nodes carry graded warrants is not a weaker
+proof — it is an honest one (the etik reading: the document marks
+absence of certification precisely). Inductions enter the
+construction AS constructions, with their evidence grade on their
+sleeve.
+
+### The engine's role
+
+The claim-dependency structure is a DAG spec in the same interchange
+format as the retrieval-stage spec; certificate updates follow the
+deltas-not-silent-edits revision contract (the retrieval spec's
+ten-delta trail on 2026-08-03 is the working preview of a capability
+proof revising itself under evidence); causal sub-claims (arm
+contrasts, transport, mediation) get their identification receipts
+from the engine, with its refusal discipline. The sequencing receipts
+(v3-sequencing-receipts.md) are this section's method applied to the
+experiment plan itself: instruments before arms, ordered by computed
+constraint.
+
+### Update discipline
+
+As runs land, their receipts attach to the relevant nodes; a node's
+warrant upgrades only by certificate, never by narrative. The
+pipeline generates certificates as a byproduct of ordinary work (the
+chase and the cohort are the same instrumented process). The document
+that instantiates this section — the capability-proof skeleton with
+live certificate links — is the next M-diagramprover artifact
+(queued 2026-08-03; the morning opener).

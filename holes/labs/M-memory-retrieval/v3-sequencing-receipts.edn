@@ -1,0 +1,24 @@
+;; Computed sequencing receipts over the V3 arm set - 2026-08-03 claude-10.
+;; Machine-readable companion to v3-sequencing-receipts.md.
+{:seq-0 {:blocks :all-arms
+         :preconditions
+         [{:id :common-outcome-endpoint :source :falsification-mapping-table
+           :finding :runner-outcome-unmeasured}
+          {:id :pull-side-surfacing-fields :source :cohort-guard
+           :operational? true :commit "47166e23"}
+          {:id :per-dispatch-attachment-export :source :falsification-mapping-table
+           :finding :attachment-density-unmeasured}
+          {:id :offer-stage-measurement-repair :source :data-contact-violations
+           :violations [:candidate-delta-v5 :candidate-delta-v6]}]}
+ :seq-1 {:settled-by :e8-frozen-results
+         :cardinality :inert :vocabulary :the-lever
+         :axis-2-collapse "cardinality levels drop; :structure-aware remains"}
+ :seq-2 {:claim :axis2-nested-under-axis1
+         :receipt {:axis2-causally-inert-in-pull-only? true
+                   :residual-association-path
+                   [[:query-vocabulary :problem-difficulty :runner-outcome]]}
+         :consequence "assign axis-2 levels within push channels only; :pull-only query/outcome correlations are pure difficulty confounding"}
+ :seq-3 {:claim :axis3-last
+         :grounds [:rs2-masking :seq-0-attachment-export]
+         :surfaced-parents [:attachment-density :pattern-endpoints :pollution :reachability]}
+ :partial-order [[:seq-0 :axis-1] [:axis-1 :axis-2] [:axis-2 :axis-3]]}

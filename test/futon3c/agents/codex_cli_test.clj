@@ -3,6 +3,39 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.agents.codex-cli :as codex-cli]))
 
+(deftest memory-mcp-is-added-only-when-provisioned
+  (let [base {:codex-bin "codex"
+              :sandbox "danger-full-access"
+              :approval-policy "never"}
+        plain (codex-cli/build-exec-args base)
+        provisioned
+        (codex-cli/build-exec-args
+         (assoc base :mcp-server
+                {:command "/tmp/memory-mcp"
+                 :args ["codex-2" "/tmp/sid" "mathematics"
+                        "http://127.0.0.1:7073"]}))]
+    (is (not-any? #(str/includes? % "mcp_servers.futon_memory") plain))
+    (is (some #(= "mcp_servers.futon_memory.command=\"/tmp/memory-mcp\"" %)
+              provisioned))
+    (is (some #(str/includes?
+                % "[\"codex-2\",\"/tmp/sid\",\"mathematics\"")
+              provisioned))))
+
+(deftest per-call-dispatch-id-is-appended-to-memory-mcp-args
+  (let [seen (atom nil)
+        invoke (codex-cli/make-invoke-fn
+                {:codex-bin "codex" :cwd "/tmp"
+                 :mcp-server {:command "/tmp/memory-mcp"
+                              :args ["codex-solver" "/tmp/sid"
+                                     "mathematics" "http://store"]}})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [cmd _ _]
+                    (reset! seen cmd)
+                    {:exit 0 :timed-out? false :session-id "sid"
+                     :text "done" :stderr "" :raw-output ""})]
+      (invoke "solve" nil {:dispatch-id "job-codex-cycle"}))
+    (is (some #(str/includes? % "job-codex-cycle") @seen))))
+
 (deftest parse-output-prefers-agent-message-and-thread-id
   (testing "thread.started + item.completed agent_message"
     (let [raw (str "{\"type\":\"thread.started\",\"thread_id\":\"tid-123\"}\n"
@@ -90,7 +123,10 @@
             (is (some #{"--json"} cmd))
             (is (some #{"-"} cmd))
             (is (= "hello codex" prompt))
-            (is (= 1800000 (:timeout-ms opts)))
+            ;; No registration-time default: the process is unbounded unless a
+            ;; bound is asked for. The job supervisor owns turn lifecycle
+            ;; (README-agency-cap.md).
+            (is (nil? (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
   (testing "placeholder tool narration does not leak as final response text"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
@@ -129,6 +165,68 @@
           (is (string? (:error resp)))
           (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
+
+(deftest invoke-failure-with-only-thread-event-preserves-stderr
+  (let [invoke (codex-cli/make-invoke-fn {:cwd "/tmp"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [& _]
+                    {:exit 1 :timed-out? false :text nil :error-text nil
+                     :stderr "turn could not start: diagnostic from stderr"
+                     :raw-output "{\"type\":\"thread.started\",\"thread_id\":\"sid\"}\n"})]
+      (let [result (invoke "work" "sid")]
+        (is (nil? (:result result)))
+        (is (= "Exit 1: turn could not start: diagnostic from stderr"
+               (:error result)))
+        (is (= "sid" (:session-id result)))))))
+
+(deftest process-timeout-ms-defaults-to-unbounded
+  (testing "nil / non-positive callers are unbounded"
+    (is (nil? (codex-cli/process-timeout-ms nil)))
+    (is (nil? (codex-cli/process-timeout-ms 0)))
+    (is (nil? (codex-cli/process-timeout-ms -1))))
+  (testing "a positive caller bound is honoured"
+    (is (= 5400000 (codex-cli/process-timeout-ms 5400000))))
+  (testing "the operator override wins over the caller, and 0 restores unbounded"
+    (try
+      (System/setProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS" "120000")
+      (is (= 120000 (codex-cli/process-timeout-ms 5400000)))
+      (is (= 120000 (codex-cli/process-timeout-ms nil)))
+      (System/setProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS" "0")
+      (is (nil? (codex-cli/process-timeout-ms 5400000)))
+      (finally
+        (System/clearProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS")))))
+
+(deftest make-invoke-fn-accepts-a-per-call-timeout
+  (testing "the 3-arity carries the caller's bound to the process"
+    (let [calls (atom [])
+          invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                            :sandbox "workspace-write"
+                                            :approval-policy "never"
+                                            :timeout-ms 60000})
+          fake-run (fn [_cmd _prompt opts]
+                     (swap! calls conj opts)
+                     {:exit 0 :timed-out? false :session-id "sid" :text "ok"
+                      :raw-output "{\"type\":\"thread.started\",\"thread_id\":\"sid\"}\n"})]
+      (with-redefs [codex-cli/run-codex-stream! fake-run]
+        (invoke "a" nil)
+        (invoke "b" nil {:timeout-ms 5400000})
+        (invoke "c" nil {:timeout-ms nil})
+        (invoke "d"))
+      (is (= [60000 5400000 nil 60000] (mapv :timeout-ms @calls))
+          "registration default, per-call override, explicit unbounded, 1-arity"))))
+
+(deftest make-invoke-fn-accepts-per-call-model-and-reasoning-effort
+  (let [seen (atom nil)
+        invoke (codex-cli/make-invoke-fn
+                {:model "registration-model" :reasoning-effort "low"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [args _prompt _opts]
+                    (reset! seen args)
+                    {:exit 0 :timed-out? false :text "ok" :raw-output ""})]
+      (invoke "prompt" nil {:model "pinned-model"
+                            :reasoning-effort "high"})
+      (is (some #{"pinned-model"} @seen))
+      (is (some #{"model_reasoning_effort=\"high\""} @seen)))))
 
 (deftest make-invoke-fn-preserves-exception-class-when-message-is-blank
   (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
@@ -196,6 +294,62 @@
   (is (= "preparing response"
          (codex-cli/event->activity {:type "reasoning"}))))
 
+(deftest event->ledger-event-translates-codex-stream-schema
+  (testing "tool starts become one ledger tool-use event"
+    (is (= {:type "tool_use"
+            :tools ["bash"]
+            :tool_details [{:name "bash"
+                            :input {:command "/bin/bash -lc 'ls'"}}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "command_execution"
+                    :command "/bin/bash -lc 'ls'"}})))
+    (is (= {:type "tool_use"
+            :tools ["read_file"]
+            :tool_details [{:name "read_file"
+                            :input {:path "README.md"}}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "tool_call"
+                    :name "read_file"
+                    :arguments {:path "README.md"}}})))
+    (is (= {:type "tool_use"
+            :tools ["read_file"]
+            :tool_details [{:name "read_file"}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "tool_call"
+                    :name "read_file"
+                    :arguments "not-a-map"}}))))
+  (testing "completed shell calls retain their output"
+    (is (= {:type "tool_result" :results [{:content "compiled\n"}]}
+           (codex-cli/event->ledger-event
+            {:type "item.completed"
+             :item {:type "command_execution"
+                    :aggregated_output "compiled\n"}}))))
+  (testing "completed assistant messages become meaningful ledger text"
+    (is (= {:type "text" :text "Finished the change."}
+           (codex-cli/event->ledger-event
+            {:type "item.completed"
+             :item {:type "agent_message"
+                    :text "  Finished the change.  "}}))))
+  (testing "Codex failures become visible text"
+    (is (= {:type "text" :text "[codex error] process failed"}
+           (codex-cli/event->ledger-event
+            {:type "error" :message "process failed"})))
+    (is (= {:type "text" :text "[codex error] turn failed"}
+           (codex-cli/event->ledger-event
+            {:type "turn.failed" :error {:message "turn failed"}}))))
+  (testing "non-ledger and duplicate completion events are omitted"
+    (is (nil? (codex-cli/event->ledger-event {:type "thread.started"})))
+    (is (nil? (codex-cli/event->ledger-event {:type "reasoning"})))
+    (is (nil? (codex-cli/event->ledger-event
+               {:type "item.completed"
+                :item {:type "command_execution" :command "ls"}})))
+    (is (nil? (codex-cli/event->ledger-event
+               {:type "item.completed"
+                :item {:type "agent_message" :text "   "}})))))
+
 (deftest command-execution-item-events-count-as-execution-evidence
   (let [evt-start {:type "item.started"
                    :item {:type "command_execution"
@@ -214,8 +368,8 @@
   (testing "real subprocess launch emits verified process/output lifecycle callbacks"
     (let [events (atom [])
           result (codex-cli/run-codex-stream!
-                  ["python" "-c"
-                   (str "import sys; "
+                  ["python3" "-c"
+                   (str "import sys; sys.stdin.buffer.read(); "
                         "sys.stdout.write('{\\\"type\\\":\\\"thread.started\\\",\\\"thread_id\\\":\\\"sid-runtime\\\"}\\\\n'); "
                         "sys.stdout.flush(); "
                         "sys.stderr.write('stderr-line\\\\n'); "
@@ -248,7 +402,7 @@
   (testing "prompt text round-trips through the subprocess boundary as UTF-8"
     (let [prompt "Caller: irc:bob⚡️"
           result (codex-cli/run-codex-stream!
-                  ["python" "-c"
+                  ["python3" "-c"
                    (str "import sys; "
                         "data = sys.stdin.buffer.read(); "
                         "sys.stdout.buffer.write(data)")]
@@ -256,3 +410,50 @@
                   {:timeout-ms 5000})]
       (is (= 0 (:exit result)))
       (is (str/includes? (:raw-output result) prompt)))))
+
+(def ^:private oversized-turn-start-error
+  ;; Verbatim from Agency job invoke-1789828353993-22366-ad7c5d90 (codex-23,
+  ;; 2026-09-19T14:32:37Z), the sixth of six War Machine repair attempts on
+  ;; one obligation that died before the agent ran.
+  (str "Exit 1: Error: turn/start: turn/start failed: Input exceeds the "
+       "maximum length of 1048576 characters. (code -32602), data: "
+       "{\"input_error_code\":\"input_too_large\",\"max_chars\":1048576,"
+       "\"actual_chars\":1690401}"))
+
+(deftest oversized-resumed-session-is-recognised
+  (is (codex-cli/oversized-resumed-session-error? oversized-turn-start-error))
+  (testing "an ordinary failure is not mistaken for one"
+    (is (not (codex-cli/oversized-resumed-session-error? "Exit 2: nope")))
+    (is (not (codex-cli/oversized-resumed-session-error? nil)))
+    ;; A model-side context-length complaint is a different thing: it is about
+    ;; the turn's own content, and a fresh session would discard work without
+    ;; fixing it. Only turn/start's refusal to accept the resumed transcript
+    ;; takes this path.
+    (is (not (codex-cli/oversized-resumed-session-error?
+              "context_length_exceeded: too many tokens for this model")))))
+
+(deftest oversized-resumed-session-retries-in-a-fresh-session
+  (let [calls (atom [])
+        invoke (codex-cli/make-invoke-fn {:codex-bin "codex" :cwd "/tmp"})
+        fake-run (fn [cmd prompt _opts]
+                   (swap! calls conj {:cmd cmd :prompt prompt})
+                   (if (some #{"resume"} cmd)
+                     {:exit 1 :timed-out? false :session-id nil :text nil
+                      :error-text oversized-turn-start-error
+                      :stderr oversized-turn-start-error :raw-output ""}
+                     {:exit 0 :timed-out? false :session-id "sid-fresh"
+                      :text "repaired" :error-text nil :stderr ""
+                      :raw-output (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-fresh\"}\n"
+                                       "{\"type\":\"item.completed\",\"item\":"
+                                       "{\"type\":\"agent_message\",\"text\":\"repaired\"}}\n")}))]
+    (with-redefs [codex-cli/run-codex-stream! fake-run]
+      (let [resp (invoke "repair this obligation" "sid-90mb")]
+        (is (= 2 (count @calls)) "the refused resume is retried exactly once")
+        (is (some #{"resume"} (:cmd (first @calls))) "first attempt resumes")
+        (is (not (some #{"resume"} (:cmd (second @calls))))
+            "the retry starts a FRESH session — retrying the same session cannot succeed")
+        (is (= "repair this obligation" (:prompt (second @calls)))
+            "the same prompt is carried into the fresh session")
+        (is (= "repaired" (:result resp)))
+        (is (= "sid-fresh" (:session-id resp)))
+        (is (nil? (:error resp)))))))

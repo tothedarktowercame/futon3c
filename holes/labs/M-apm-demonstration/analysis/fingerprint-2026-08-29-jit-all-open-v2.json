@@ -1,0 +1,1107 @@
+{
+ "campaign": "jit-all-open-v2",
+ "substrate": "http://127.0.0.1:7073",
+ "standard": "retrieval-whitepaper-v3 3.1 (artifact carries the memory's fingerprint)",
+ "token-witness-rule": {
+  "measure": "origin/master problem-file document frequency",
+  "witnessing-when": "frequency < 0.05",
+  "threshold": 0.05,
+  "corpus-problem-files": 508
+ },
+ "summary": {
+  "attempts": 21,
+  "attempts-with-used": 12,
+  "use-events": 32,
+  "fingerprinted": 14,
+  "paste": 0,
+  "already-in-base": 10,
+  "weak-fingerprint": 3,
+  "unwitnessed": 5,
+  "no-source": 0,
+  "no-base": 0,
+  "unfetchable": 0
+ },
+ "rows": [
+  {
+   "frame": "f46",
+   "attempt": 2,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a",
+   "source": "5da1ebf70292adcbe01fb5e932f871b0040d7e1e-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f46",
+   "attempt": 2,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-96a98b34a7b6343bd34fcf3e3c407e12",
+   "source": "5da1ebf70292adcbe01fb5e932f871b0040d7e1e-Main.lean",
+   "tokens-named": 30,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f46",
+   "attempt": 2,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-c99db7afb5e674475257a437aba2d17e",
+   "source": "5da1ebf70292adcbe01fb5e932f871b0040d7e1e-Main.lean",
+   "tokens-named": 2,
+   "tokens-hit": 0,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "unwitnessed"
+  },
+  {
+   "frame": "f46",
+   "attempt": 2,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-e421265776ff1fe7143421bf86500a63",
+   "source": "5da1ebf70292adcbe01fb5e932f871b0040d7e1e-Main.lean",
+   "tokens-named": 20,
+   "tokens-hit": 2,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f46",
+   "attempt": 3,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a",
+   "source": "9b85819211d632b8b22a0836732015955965dc0b-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f46",
+   "attempt": 3,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-8e58331bc3c8cf6cacadb5960f1d5db3",
+   "source": "9b85819211d632b8b22a0836732015955965dc0b-Main.lean",
+   "tokens-named": 32,
+   "tokens-hit": 9,
+   "tokens-novel": 7,
+   "novel-hits": [
+    "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent",
+    "Mathlib.Analysis.SpecialFunctions.ImproperIntegrals",
+    "intervalIntegral.integral_comp_neg",
+    "hasSum_geometric_of_norm_lt_one",
+    "intervalIntegral.integral_neg",
+    "integral_neg",
+    "HasSum"
+   ],
+   "witnessing-novel-hits": [
+    "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent",
+    "Mathlib.Analysis.SpecialFunctions.ImproperIntegrals",
+    "intervalIntegral.integral_comp_neg",
+    "hasSum_geometric_of_norm_lt_one",
+    "intervalIntegral.integral_neg",
+    "integral_neg",
+    "HasSum"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "Mathlib.Analysis.SpecialFunctions.ImproperIntegrals",
+     "master-problem-files": 5,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.00984251968503937,
+     "information-bits": 6.666756591884804,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "intervalIntegral.integral_comp_neg",
+     "master-problem-files": 2,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.003937007874015748,
+     "information-bits": 7.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "hasSum_geometric_of_norm_lt_one",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "intervalIntegral.integral_neg",
+     "master-problem-files": 2,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.003937007874015748,
+     "information-bits": 7.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "integral_neg",
+     "master-problem-files": 11,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.021653543307086614,
+     "information-bits": 5.529253068134869,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "HasSum",
+     "master-problem-files": 10,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.01968503937007874,
+     "information-bits": 5.666756591884804,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f46",
+   "attempt": 3,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-96a98b34a7b6343bd34fcf3e3c407e12",
+   "source": "9b85819211d632b8b22a0836732015955965dc0b-Main.lean",
+   "tokens-named": 30,
+   "tokens-hit": 4,
+   "tokens-novel": 3,
+   "novel-hits": [
+    "hasSum_geometric_of_norm_lt_one",
+    "Real.exp_lt_one_iff",
+    "Complex.norm_exp"
+   ],
+   "witnessing-novel-hits": [
+    "hasSum_geometric_of_norm_lt_one",
+    "Real.exp_lt_one_iff",
+    "Complex.norm_exp"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "hasSum_geometric_of_norm_lt_one",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "Real.exp_lt_one_iff",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "Complex.norm_exp",
+     "master-problem-files": 19,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.03740157480314961,
+     "information-bits": 4.74075717332858,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f46",
+   "attempt": 3,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-c99db7afb5e674475257a437aba2d17e",
+   "source": "9b85819211d632b8b22a0836732015955965dc0b-Main.lean",
+   "tokens-named": 2,
+   "tokens-hit": 0,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "unwitnessed"
+  },
+  {
+   "frame": "f46",
+   "attempt": 3,
+   "problem": "a96J08",
+   "memory": "e-apm-promotion-e421265776ff1fe7143421bf86500a63",
+   "source": "9b85819211d632b8b22a0836732015955965dc0b-Main.lean",
+   "tokens-named": 20,
+   "tokens-hit": 3,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent"
+   ],
+   "witnessing-novel-hits": [
+    "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f47",
+   "attempt": 1,
+   "problem": "a97A01",
+   "memory": "e-23a2940f-5fa6-444e-948c-74e6e201eb31",
+   "source": "eb6087e10273e23617eba0972b3ced7905673aff-Main.lean",
+   "tokens-named": 20,
+   "tokens-hit": 2,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f47",
+   "attempt": 2,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-11eee63f24e3c081d84dc0e94dcaf9bd",
+   "source": "8bc17e6fa2de697b63b52d3ce919cba22a702033-Main.lean",
+   "tokens-named": 5,
+   "tokens-hit": 2,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f47",
+   "attempt": 2,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-607bb25c9e4bbfc5c9bbc58998f150fe",
+   "source": "8bc17e6fa2de697b63b52d3ce919cba22a702033-Main.lean",
+   "tokens-named": 35,
+   "tokens-hit": 3,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f47",
+   "attempt": 2,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-def31cb9167208c3135fef4355f3601c",
+   "source": "8bc17e6fa2de697b63b52d3ce919cba22a702033-Main.lean",
+   "tokens-named": 12,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f47",
+   "attempt": 2,
+   "problem": "a97A01",
+   "memory": "e-a97j02-measure-finite-union-closed-grid-cells",
+   "source": "8bc17e6fa2de697b63b52d3ce919cba22a702033-Main.lean",
+   "tokens-named": 5,
+   "tokens-hit": 0,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "unwitnessed"
+  },
+  {
+   "frame": "f47",
+   "attempt": 3,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-6c6774f8377c730662cf24765ed054d4",
+   "source": "cb1683c163bb76e9424d29a85aba6da8a521cc31-Main.lean",
+   "tokens-named": 8,
+   "tokens-hit": 2,
+   "tokens-novel": 2,
+   "novel-hits": [
+    "div_lt_div_iff_of_pos_right",
+    "exact_mod_cast"
+   ],
+   "witnessing-novel-hits": [
+    "div_lt_div_iff_of_pos_right"
+   ],
+   "nonwitnessing-novel-hits": [
+    "exact_mod_cast"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "div_lt_div_iff_of_pos_right",
+     "master-problem-files": 2,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.003937007874015748,
+     "information-bits": 7.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "exact_mod_cast",
+     "master-problem-files": 66,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.12992125984251968,
+     "information-bits": 2.9442905674137125,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f47",
+   "attempt": 3,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-607bb25c9e4bbfc5c9bbc58998f150fe",
+   "source": "cb1683c163bb76e9424d29a85aba6da8a521cc31-Main.lean",
+   "tokens-named": 35,
+   "tokens-hit": 5,
+   "tokens-novel": 2,
+   "novel-hits": [
+    "div_lt_div_iff_of_pos_right",
+    "exact_mod_cast"
+   ],
+   "witnessing-novel-hits": [
+    "div_lt_div_iff_of_pos_right"
+   ],
+   "nonwitnessing-novel-hits": [
+    "exact_mod_cast"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "div_lt_div_iff_of_pos_right",
+     "master-problem-files": 2,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.003937007874015748,
+     "information-bits": 7.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "exact_mod_cast",
+     "master-problem-files": 66,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.12992125984251968,
+     "information-bits": 2.9442905674137125,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f47",
+   "attempt": 3,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-5d755fb1354a530ee33b199ee9061357",
+   "source": "cb1683c163bb76e9424d29a85aba6da8a521cc31-Main.lean",
+   "tokens-named": 25,
+   "tokens-hit": 5,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "exact_mod_cast"
+   ],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [
+    "exact_mod_cast"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "exact_mod_cast",
+     "master-problem-files": 66,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.12992125984251968,
+     "information-bits": 2.9442905674137125,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 4,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "weak-fingerprint"
+  },
+  {
+   "frame": "f47",
+   "attempt": 3,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-6d832ceee03324edf07bc33617ee65f0",
+   "source": "cb1683c163bb76e9424d29a85aba6da8a521cc31-Main.lean",
+   "tokens-named": 19,
+   "tokens-hit": 2,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "exact_mod_cast"
+   ],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [
+    "exact_mod_cast"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "exact_mod_cast",
+     "master-problem-files": 66,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.12992125984251968,
+     "information-bits": 2.9442905674137125,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "weak-fingerprint"
+  },
+  {
+   "frame": "f47",
+   "attempt": 3,
+   "problem": "a97A01",
+   "memory": "e-apm-promotion-0af2ca3ab1d3461da7f90822a1c7c028",
+   "source": "cb1683c163bb76e9424d29a85aba6da8a521cc31-Main.lean",
+   "tokens-named": 6,
+   "tokens-hit": 0,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "unwitnessed"
+  },
+  {
+   "frame": "f50",
+   "attempt": 1,
+   "problem": "a98A07",
+   "memory": "e-63b7c7c1-1906-412c-ae18-b4644762fbea",
+   "source": "826cd81d5ce1ce7d3bedf03a79e91ce3c1f0f256-Main.lean",
+   "tokens-named": 30,
+   "tokens-hit": 4,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "norm_num"
+   ],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [
+    "norm_num"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "norm_num",
+     "master-problem-files": 214,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.421259842519685,
+     "information-bits": 1.247217700371019,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "weak-fingerprint"
+  },
+  {
+   "frame": "f50",
+   "attempt": 2,
+   "problem": "a98A07",
+   "memory": "e-apm-promotion-5ee5f9ebc3dacc34ade531388d5f6dce",
+   "source": "e812f11ae797432a7169af0b8c1dbf436394fb4c-Main.lean",
+   "tokens-named": 2,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f50",
+   "attempt": 2,
+   "problem": "a98A07",
+   "memory": "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence",
+   "source": "e812f11ae797432a7169af0b8c1dbf436394fb4c-Main.lean",
+   "tokens-named": 9,
+   "tokens-hit": 1,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "already-in-base"
+  },
+  {
+   "frame": "f50",
+   "attempt": 3,
+   "problem": "a98A07",
+   "memory": "e-apm-promotion-1227dda286cc1b7e1eda4a05d62f2c68",
+   "source": "4817c87879efd36eb9f66041d753c41fae67d6fa-Main.lean",
+   "tokens-named": 2,
+   "tokens-hit": 2,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "integrableOn_Ioi_deriv_of_nonneg"
+   ],
+   "witnessing-novel-hits": [
+    "integrableOn_Ioi_deriv_of_nonneg"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "integrableOn_Ioi_deriv_of_nonneg",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 1,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f50",
+   "attempt": 3,
+   "problem": "a98A07",
+   "memory": "e-apm-promotion-0af2ca3ab1d3461da7f90822a1c7c028",
+   "source": "4817c87879efd36eb9f66041d753c41fae67d6fa-Main.lean",
+   "tokens-named": 6,
+   "tokens-hit": 0,
+   "tokens-novel": 0,
+   "novel-hits": [],
+   "witnessing-novel-hits": [],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "unwitnessed"
+  },
+  {
+   "frame": "f52",
+   "attempt": 2,
+   "problem": "a99J01",
+   "memory": "e-apm-promotion-93b28c6be836048b289ec2eeb3c2885a",
+   "source": "fc5bca15aae3f858c429a8bbcf65fd3cba0dda8e-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 3,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "ae_lt_top"
+   ],
+   "witnessing-novel-hits": [
+    "ae_lt_top"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "ae_lt_top",
+     "master-problem-files": 5,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.00984251968503937,
+     "information-bits": 6.666756591884804,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f52",
+   "attempt": 2,
+   "problem": "a99J01",
+   "memory": "e-apm-promotion-df7cc8128c574b105d58ecf2476dcc6a",
+   "source": "fc5bca15aae3f858c429a8bbcf65fd3cba0dda8e-Main.lean",
+   "tokens-named": 20,
+   "tokens-hit": 14,
+   "tokens-novel": 11,
+   "novel-hits": [
+    "EReal.coe_ennreal_toReal",
+    "ENNReal.add_lt_top.mpr",
+    "EReal.coe_le_coe_iff",
+    "lintegral_add_left",
+    "lintegral_congr_ae",
+    "Real.norm_eq_abs",
+    "IsFiniteMeasure",
+    "EReal.coe_sub",
+    "abs_of_nonneg",
+    "abs_of_nonpos",
+    "le_total"
+   ],
+   "witnessing-novel-hits": [
+    "EReal.coe_ennreal_toReal",
+    "ENNReal.add_lt_top.mpr",
+    "EReal.coe_le_coe_iff",
+    "lintegral_add_left",
+    "lintegral_congr_ae",
+    "IsFiniteMeasure",
+    "EReal.coe_sub",
+    "abs_of_nonpos",
+    "le_total"
+   ],
+   "nonwitnessing-novel-hits": [
+    "Real.norm_eq_abs",
+    "abs_of_nonneg"
+   ],
+   "novel-token-assessments": [
+    {
+     "token": "EReal.coe_ennreal_toReal",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "ENNReal.add_lt_top.mpr",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "EReal.coe_le_coe_iff",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "lintegral_add_left",
+     "master-problem-files": 2,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.003937007874015748,
+     "information-bits": 7.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "lintegral_congr_ae",
+     "master-problem-files": 4,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.007874015748031496,
+     "information-bits": 6.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "Real.norm_eq_abs",
+     "master-problem-files": 86,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.16929133858267717,
+     "information-bits": 2.562419932070068,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    },
+    {
+     "token": "IsFiniteMeasure",
+     "master-problem-files": 8,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.015748031496062992,
+     "information-bits": 5.9886846867721655,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "EReal.coe_sub",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "abs_of_nonneg",
+     "master-problem-files": 68,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.13385826771653545,
+     "information-bits": 2.9012218455218264,
+     "witnessing": false,
+     "reason": "common-in-master-problem-corpus"
+    },
+    {
+     "token": "abs_of_nonpos",
+     "master-problem-files": 14,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.027559055118110236,
+     "information-bits": 5.181329764714562,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "le_total",
+     "master-problem-files": 7,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.013779527559055118,
+     "information-bits": 6.181329764714562,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f52",
+   "attempt": 3,
+   "problem": "a99J01",
+   "memory": "e-apm-promotion-93b28c6be836048b289ec2eeb3c2885a",
+   "source": "727426dde9b27ef8fc8c4288ae611ff8e8df0abf-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 3,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "ae_lt_top"
+   ],
+   "witnessing-novel-hits": [
+    "ae_lt_top"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "ae_lt_top",
+     "master-problem-files": 5,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.00984251968503937,
+     "information-bits": 6.666756591884804,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f52",
+   "attempt": 3,
+   "problem": "a99J01",
+   "memory": "e-apm-promotion-3f30ae342c8115309a567a99510d3996",
+   "source": "727426dde9b27ef8fc8c4288ae611ff8e8df0abf-Main.lean",
+   "tokens-named": 8,
+   "tokens-hit": 5,
+   "tokens-novel": 2,
+   "novel-hits": [
+    "Measurable.ite",
+    "ae_lt_top"
+   ],
+   "witnessing-novel-hits": [
+    "Measurable.ite",
+    "ae_lt_top"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "Measurable.ite",
+     "master-problem-files": 9,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.017716535433070866,
+     "information-bits": 5.818759685329853,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "ae_lt_top",
+     "master-problem-files": 5,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.00984251968503937,
+     "information-bits": 6.666756591884804,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f53",
+   "attempt": 2,
+   "problem": "a99J03",
+   "memory": "e-apm-promotion-de30b5ae3706422a549cc710ce4e7841",
+   "source": "501058418fa8353cb6df6888c0acb6b8fda37de7-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 3,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen"
+   ],
+   "witnessing-novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "contDiffOn_succ_iff_deriv_of_isOpen",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f53",
+   "attempt": 3,
+   "problem": "a99J03",
+   "memory": "e-apm-promotion-9d03c55d6f53f4dcf9c09ca7fe8d2db1",
+   "source": "1bebbfeb7f4bb2a1b71bf9d99944f6dda3dc422a-Main.lean",
+   "tokens-named": 12,
+   "tokens-hit": 7,
+   "tokens-novel": 4,
+   "novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen",
+    "contDiffOn_zero.mpr",
+    "contDiffOn_infty",
+    "contDiffOn_zero"
+   ],
+   "witnessing-novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen",
+    "contDiffOn_zero.mpr",
+    "contDiffOn_infty",
+    "contDiffOn_zero"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "contDiffOn_succ_iff_deriv_of_isOpen",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "contDiffOn_zero.mpr",
+     "master-problem-files": 0,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.0,
+     "information-bits": 8.991521846075695,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "contDiffOn_infty",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    },
+    {
+     "token": "contDiffOn_zero",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 3,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f53",
+   "attempt": 3,
+   "problem": "a99J03",
+   "memory": "e-apm-promotion-de30b5ae3706422a549cc710ce4e7841",
+   "source": "1bebbfeb7f4bb2a1b71bf9d99944f6dda3dc422a-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 3,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen"
+   ],
+   "witnessing-novel-hits": [
+    "contDiffOn_succ_iff_deriv_of_isOpen"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "contDiffOn_succ_iff_deriv_of_isOpen",
+     "master-problem-files": 1,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.001968503937007874,
+     "information-bits": 8.988684686772165,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 2,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  },
+  {
+   "frame": "f53",
+   "attempt": 3,
+   "problem": "a99J03",
+   "memory": "e-apm-promotion-26f3266c5972f3bff9c0c798fa3f1eb4",
+   "source": "1bebbfeb7f4bb2a1b71bf9d99944f6dda3dc422a-Main.lean",
+   "tokens-named": 3,
+   "tokens-hit": 1,
+   "tokens-novel": 1,
+   "novel-hits": [
+    "integrableOn_Ioi_rpow_of_lt"
+   ],
+   "witnessing-novel-hits": [
+    "integrableOn_Ioi_rpow_of_lt"
+   ],
+   "nonwitnessing-novel-hits": [],
+   "novel-token-assessments": [
+    {
+     "token": "integrableOn_Ioi_rpow_of_lt",
+     "master-problem-files": 6,
+     "master-problem-files-total": 508,
+     "master-document-frequency": 0.011811023622047244,
+     "information-bits": 6.403722186051009,
+     "witnessing": true,
+     "reason": "rare-in-master-problem-corpus"
+    }
+   ],
+   "in-base-already": 0,
+   "paste-longest-run": 0,
+   "paste-lines-hit": 0,
+   "verdict": "fingerprinted"
+  }
+ ]
+}

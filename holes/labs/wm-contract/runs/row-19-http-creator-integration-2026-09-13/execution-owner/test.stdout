@@ -1,0 +1,8 @@
+
+Running tests in #{"test"}
+
+Testing futon3c.transport.invoke-ingress-integration-test
+[invoke] skipping terminal-skip for worker-1: already done before execution began
+
+Ran 13 tests containing 85 assertions.
+0 failures, 0 errors.

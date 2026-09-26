@@ -1,0 +1,801 @@
+{
+ "provenance": {
+  "generated-at": "2026-07-06T12:40:03+0100",
+  "host": "http://172-236-28-208.ip.linodeusercontent.com:7070",
+  "hours": 8.0,
+  "messages": 101,
+  "patterns-library": 1202,
+  "threshold": 0.32,
+  "top-k": 3,
+  "method": "MiniLM message embedding x cosine vs futon3a pattern embeddings"
+ },
+ "weights": {
+  "Keep Realtime Messages Single-Line": 3.3273338675498962,
+  "Require Realtime Rendezvous Handshakes": 1.9246874451637268,
+  "Every Message Gets a Receipt or an Explicit Failure": 1.52235609292984,
+  "Make Async Handoffs Idempotent \u2014 A Crossed or Re-Sent Bell Must Be a No-Op": 0.6881437301635742,
+  "Evidence as Situated Log, Not Exhibit": 1.61482572555542,
+  "IFR \u2014 FUTON1 Graph Memory Seed (dhammavicaya)": 1.8324239253997803,
+  "IFR \u2014 FUTON2 Active Inference Energy (viriya)": 0.7472515106201172,
+  "Exotype XYZ (0xYY)": 0.9195564985275269,
+  "Exotype 194 (0xC2)": 0.8860508799552917,
+  "Pattern Search Protocol (G3)": 0.780811071395874,
+  "Method/Documentary Split": 1.5791962146759033,
+  "Supplement workshop transcript": 0.7714384198188782,
+  "Collective Intelligence \u2014 Communication Framing": 0.7032670974731445,
+  "Session as Rehearsal": 0.666240930557251,
+  "Audience Shift": 0.8691537380218506,
+  "Economic Resonance Layer": 0.7813087105751038,
+  "Argument for Futon Enrichment: Rational Reconstruction of Cross-Column Connective Tissue": 1.0654592514038086,
+  "Durability First": 1.0066723823547363,
+  "Graph-Memory Contract": 1.9682540893554688,
+  "Shared Memory Architecture": 0.9242082834243774,
+  "Treat Transport Switches as Explicit Pivots": 0.9132985472679138,
+  "Live AIF Scores per Move": 1.7501204013824463,
+  "Live Notebook Cell": 0.9884543418884277,
+  "Agent Contract": 8.490261763334274,
+  "Assignment Binding (G4)": 0.9138591289520264,
+  "Role Reveal (Agent-Facing)": 1.773164987564087,
+  "Log Pattern Actions via RPC": 0.9807575941085815,
+  "Agential Pattern Hygiene": 0.9798938035964966,
+  "\u4dcc \u540c\u4eba (T\u00f3ng R\u00e9n) - Fellowship with Men": 1.004715085029602,
+  "Agency Invariant Set": 2.0330790877342224,
+  "Agent Pattern Proposal": 0.7538270950317383,
+  "Agents Speak for Themselves": 3.9218640327453613,
+  "Capability Gate (G4)": 1.9963918626308441,
+  "State Transitions Are All-or-Nothing": 0.9997227787971497,
+  "Annotation as Commitment": 0.6987519562244415,
+  "Constrain an Extracted Field to the Downstream Vocabulary; Default to the Common Case": 0.6432514488697052,
+  "Declare Scope and Exit Condition": 0.8394351005554199,
+  "Pause with Backtrace": 0.8367478847503662,
+  "Align Evidence With the Claim": 0.7113978862762451,
+  "Use Extract Tables When Themes Are Parallel": 0.7090103030204773,
+  "A Found Text Can Carry What Direct Speech Can't Yet Hold": 0.7057436108589172,
+  "Agential Open Source Infrastructure": 0.9160506129264832,
+  "The Teaching Inversion": 0.891629695892334,
+  "FULAB Report Block": 0.6622056365013123,
+  "Intent Restatement": 0.6468404531478882
+ },
+ "hits": [
+  {
+   "author": "claude",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.443
+  },
+  {
+   "author": "claude",
+   "pattern": "Require Realtime Rendezvous Handshakes",
+   "cos": 0.357
+  },
+  {
+   "author": "claude",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.443
+  },
+  {
+   "author": "claude",
+   "pattern": "Require Realtime Rendezvous Handshakes",
+   "cos": 0.357
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.484
+  },
+  {
+   "author": "guest15",
+   "pattern": "Every Message Gets a Receipt or an Explicit Failure",
+   "cos": 0.403
+  },
+  {
+   "author": "guest15",
+   "pattern": "Make Async Handoffs Idempotent \u2014 A Crossed or Re-Sent Bell Must Be a No-Op",
+   "cos": 0.344
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.484
+  },
+  {
+   "author": "guest15",
+   "pattern": "Every Message Gets a Receipt or an Explicit Failure",
+   "cos": 0.403
+  },
+  {
+   "author": "guest15",
+   "pattern": "Make Async Handoffs Idempotent \u2014 A Crossed or Re-Sent Bell Must Be a No-Op",
+   "cos": 0.344
+  },
+  {
+   "author": "claude",
+   "pattern": "Evidence as Situated Log, Not Exhibit",
+   "cos": 0.444
+  },
+  {
+   "author": "claude",
+   "pattern": "IFR \u2014 FUTON1 Graph Memory Seed (dhammavicaya)",
+   "cos": 0.434
+  },
+  {
+   "author": "claude",
+   "pattern": "IFR \u2014 FUTON2 Active Inference Energy (viriya)",
+   "cos": 0.374
+  },
+  {
+   "author": "claude",
+   "pattern": "Evidence as Situated Log, Not Exhibit",
+   "cos": 0.444
+  },
+  {
+   "author": "claude",
+   "pattern": "IFR \u2014 FUTON1 Graph Memory Seed (dhammavicaya)",
+   "cos": 0.434
+  },
+  {
+   "author": "claude",
+   "pattern": "IFR \u2014 FUTON2 Active Inference Energy (viriya)",
+   "cos": 0.374
+  },
+  {
+   "author": "guest15",
+   "pattern": "IFR \u2014 FUTON1 Graph Memory Seed (dhammavicaya)",
+   "cos": 0.482
+  },
+  {
+   "author": "guest15",
+   "pattern": "Exotype XYZ (0xYY)",
+   "cos": 0.46
+  },
+  {
+   "author": "guest15",
+   "pattern": "Exotype 194 (0xC2)",
+   "cos": 0.443
+  },
+  {
+   "author": "guest15",
+   "pattern": "IFR \u2014 FUTON1 Graph Memory Seed (dhammavicaya)",
+   "cos": 0.482
+  },
+  {
+   "author": "guest15",
+   "pattern": "Exotype XYZ (0xYY)",
+   "cos": 0.46
+  },
+  {
+   "author": "guest15",
+   "pattern": "Exotype 194 (0xC2)",
+   "cos": 0.443
+  },
+  {
+   "author": "claude",
+   "pattern": "Pattern Search Protocol (G3)",
+   "cos": 0.39
+  },
+  {
+   "author": "claude",
+   "pattern": "Evidence as Situated Log, Not Exhibit",
+   "cos": 0.364
+  },
+  {
+   "author": "claude",
+   "pattern": "Method/Documentary Split",
+   "cos": 0.363
+  },
+  {
+   "author": "claude",
+   "pattern": "Pattern Search Protocol (G3)",
+   "cos": 0.39
+  },
+  {
+   "author": "claude",
+   "pattern": "Evidence as Situated Log, Not Exhibit",
+   "cos": 0.364
+  },
+  {
+   "author": "claude",
+   "pattern": "Method/Documentary Split",
+   "cos": 0.363
+  },
+  {
+   "author": "guest15",
+   "pattern": "Supplement workshop transcript",
+   "cos": 0.386
+  },
+  {
+   "author": "guest15",
+   "pattern": "Collective Intelligence \u2014 Communication Framing",
+   "cos": 0.352
+  },
+  {
+   "author": "guest15",
+   "pattern": "Session as Rehearsal",
+   "cos": 0.333
+  },
+  {
+   "author": "guest15",
+   "pattern": "Supplement workshop transcript",
+   "cos": 0.386
+  },
+  {
+   "author": "guest15",
+   "pattern": "Collective Intelligence \u2014 Communication Framing",
+   "cos": 0.352
+  },
+  {
+   "author": "guest15",
+   "pattern": "Session as Rehearsal",
+   "cos": 0.333
+  },
+  {
+   "author": "guest15",
+   "pattern": "Audience Shift",
+   "cos": 0.435
+  },
+  {
+   "author": "guest15",
+   "pattern": "Method/Documentary Split",
+   "cos": 0.426
+  },
+  {
+   "author": "guest15",
+   "pattern": "Economic Resonance Layer",
+   "cos": 0.391
+  },
+  {
+   "author": "guest15",
+   "pattern": "Audience Shift",
+   "cos": 0.435
+  },
+  {
+   "author": "guest15",
+   "pattern": "Method/Documentary Split",
+   "cos": 0.426
+  },
+  {
+   "author": "guest15",
+   "pattern": "Economic Resonance Layer",
+   "cos": 0.391
+  },
+  {
+   "author": "claude",
+   "pattern": "Argument for Futon Enrichment: Rational Reconstruction of Cross-Column Connective Tissue",
+   "cos": 0.533
+  },
+  {
+   "author": "claude",
+   "pattern": "Durability First",
+   "cos": 0.503
+  },
+  {
+   "author": "claude",
+   "pattern": "Graph-Memory Contract",
+   "cos": 0.487
+  },
+  {
+   "author": "claude",
+   "pattern": "Argument for Futon Enrichment: Rational Reconstruction of Cross-Column Connective Tissue",
+   "cos": 0.533
+  },
+  {
+   "author": "claude",
+   "pattern": "Durability First",
+   "cos": 0.503
+  },
+  {
+   "author": "claude",
+   "pattern": "Graph-Memory Contract",
+   "cos": 0.487
+  },
+  {
+   "author": "guest15",
+   "pattern": "Graph-Memory Contract",
+   "cos": 0.497
+  },
+  {
+   "author": "guest15",
+   "pattern": "Shared Memory Architecture",
+   "cos": 0.462
+  },
+  {
+   "author": "guest15",
+   "pattern": "Treat Transport Switches as Explicit Pivots",
+   "cos": 0.457
+  },
+  {
+   "author": "guest15",
+   "pattern": "Graph-Memory Contract",
+   "cos": 0.497
+  },
+  {
+   "author": "guest15",
+   "pattern": "Shared Memory Architecture",
+   "cos": 0.462
+  },
+  {
+   "author": "guest15",
+   "pattern": "Treat Transport Switches as Explicit Pivots",
+   "cos": 0.457
+  },
+  {
+   "author": "claude",
+   "pattern": "Live AIF Scores per Move",
+   "cos": 0.497
+  },
+  {
+   "author": "claude",
+   "pattern": "Live Notebook Cell",
+   "cos": 0.494
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.493
+  },
+  {
+   "author": "claude",
+   "pattern": "Live AIF Scores per Move",
+   "cos": 0.497
+  },
+  {
+   "author": "claude",
+   "pattern": "Live Notebook Cell",
+   "cos": 0.494
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.493
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.499
+  },
+  {
+   "author": "guest15",
+   "pattern": "Assignment Binding (G4)",
+   "cos": 0.457
+  },
+  {
+   "author": "guest15",
+   "pattern": "Role Reveal (Agent-Facing)",
+   "cos": 0.455
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.499
+  },
+  {
+   "author": "guest15",
+   "pattern": "Assignment Binding (G4)",
+   "cos": 0.457
+  },
+  {
+   "author": "guest15",
+   "pattern": "Role Reveal (Agent-Facing)",
+   "cos": 0.455
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.372
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.372
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.365
+  },
+  {
+   "author": "guest15",
+   "pattern": "Keep Realtime Messages Single-Line",
+   "cos": 0.365
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.525
+  },
+  {
+   "author": "claude",
+   "pattern": "Log Pattern Actions via RPC",
+   "cos": 0.49
+  },
+  {
+   "author": "claude",
+   "pattern": "Agential Pattern Hygiene",
+   "cos": 0.49
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.525
+  },
+  {
+   "author": "claude",
+   "pattern": "Log Pattern Actions via RPC",
+   "cos": 0.49
+  },
+  {
+   "author": "claude",
+   "pattern": "Agential Pattern Hygiene",
+   "cos": 0.49
+  },
+  {
+   "author": "claude-2",
+   "pattern": "\u4dcc \u540c\u4eba (T\u00f3ng R\u00e9n) - Fellowship with Men",
+   "cos": 0.335
+  },
+  {
+   "author": "claude-2",
+   "pattern": "\u4dcc \u540c\u4eba (T\u00f3ng R\u00e9n) - Fellowship with Men",
+   "cos": 0.335
+  },
+  {
+   "author": "claude-2",
+   "pattern": "\u4dcc \u540c\u4eba (T\u00f3ng R\u00e9n) - Fellowship with Men",
+   "cos": 0.335
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.501
+  },
+  {
+   "author": "guest15",
+   "pattern": "Role Reveal (Agent-Facing)",
+   "cos": 0.432
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agency Invariant Set",
+   "cos": 0.416
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.501
+  },
+  {
+   "author": "guest15",
+   "pattern": "Role Reveal (Agent-Facing)",
+   "cos": 0.432
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agency Invariant Set",
+   "cos": 0.416
+  },
+  {
+   "author": "claude",
+   "pattern": "Live AIF Scores per Move",
+   "cos": 0.378
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Pattern Proposal",
+   "cos": 0.377
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.36
+  },
+  {
+   "author": "claude",
+   "pattern": "Live AIF Scores per Move",
+   "cos": 0.378
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Pattern Proposal",
+   "cos": 0.377
+  },
+  {
+   "author": "claude",
+   "pattern": "Agent Contract",
+   "cos": 0.36
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.321
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.321
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Require Realtime Rendezvous Handshakes",
+   "cos": 0.404
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agency Invariant Set",
+   "cos": 0.4
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agent Contract",
+   "cos": 0.38
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Require Realtime Rendezvous Handshakes",
+   "cos": 0.404
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agency Invariant Set",
+   "cos": 0.4
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agent Contract",
+   "cos": 0.38
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Require Realtime Rendezvous Handshakes",
+   "cos": 0.404
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agency Invariant Set",
+   "cos": 0.4
+  },
+  {
+   "author": "claude-2",
+   "pattern": "Agent Contract",
+   "cos": 0.38
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.396
+  },
+  {
+   "author": "tickle",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.336
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agent Contract",
+   "cos": 0.329
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.396
+  },
+  {
+   "author": "tickle",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.336
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agent Contract",
+   "cos": 0.329
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.396
+  },
+  {
+   "author": "tickle",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.336
+  },
+  {
+   "author": "tickle",
+   "pattern": "Agent Contract",
+   "cos": 0.329
+  },
+  {
+   "author": "corpus",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.374
+  },
+  {
+   "author": "corpus",
+   "pattern": "State Transitions Are All-or-Nothing",
+   "cos": 0.333
+  },
+  {
+   "author": "corpus",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.329
+  },
+  {
+   "author": "corpus",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.374
+  },
+  {
+   "author": "corpus",
+   "pattern": "State Transitions Are All-or-Nothing",
+   "cos": 0.333
+  },
+  {
+   "author": "corpus",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.329
+  },
+  {
+   "author": "corpus",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.374
+  },
+  {
+   "author": "corpus",
+   "pattern": "State Transitions Are All-or-Nothing",
+   "cos": 0.333
+  },
+  {
+   "author": "corpus",
+   "pattern": "Capability Gate (G4)",
+   "cos": 0.329
+  },
+  {
+   "author": "guest15",
+   "pattern": "Annotation as Commitment",
+   "cos": 0.349
+  },
+  {
+   "author": "guest15",
+   "pattern": "Constrain an Extracted Field to the Downstream Vocabulary; Default to the Common Case",
+   "cos": 0.322
+  },
+  {
+   "author": "guest15",
+   "pattern": "Annotation as Commitment",
+   "cos": 0.349
+  },
+  {
+   "author": "guest15",
+   "pattern": "Constrain an Extracted Field to the Downstream Vocabulary; Default to the Common Case",
+   "cos": 0.322
+  },
+  {
+   "author": "claude",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.442
+  },
+  {
+   "author": "claude",
+   "pattern": "Declare Scope and Exit Condition",
+   "cos": 0.42
+  },
+  {
+   "author": "claude",
+   "pattern": "Pause with Backtrace",
+   "cos": 0.418
+  },
+  {
+   "author": "claude",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.442
+  },
+  {
+   "author": "claude",
+   "pattern": "Declare Scope and Exit Condition",
+   "cos": 0.42
+  },
+  {
+   "author": "claude",
+   "pattern": "Pause with Backtrace",
+   "cos": 0.418
+  },
+  {
+   "author": "guest15",
+   "pattern": "Align Evidence With the Claim",
+   "cos": 0.356
+  },
+  {
+   "author": "guest15",
+   "pattern": "Use Extract Tables When Themes Are Parallel",
+   "cos": 0.355
+  },
+  {
+   "author": "guest15",
+   "pattern": "A Found Text Can Carry What Direct Speech Can't Yet Hold",
+   "cos": 0.353
+  },
+  {
+   "author": "guest15",
+   "pattern": "Align Evidence With the Claim",
+   "cos": 0.356
+  },
+  {
+   "author": "guest15",
+   "pattern": "Use Extract Tables When Themes Are Parallel",
+   "cos": 0.355
+  },
+  {
+   "author": "guest15",
+   "pattern": "A Found Text Can Carry What Direct Speech Can't Yet Hold",
+   "cos": 0.353
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.482
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agential Open Source Infrastructure",
+   "cos": 0.458
+  },
+  {
+   "author": "guest15",
+   "pattern": "The Teaching Inversion",
+   "cos": 0.446
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agent Contract",
+   "cos": 0.482
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agential Open Source Infrastructure",
+   "cos": 0.458
+  },
+  {
+   "author": "guest15",
+   "pattern": "The Teaching Inversion",
+   "cos": 0.446
+  },
+  {
+   "author": "claude",
+   "pattern": "FULAB Report Block",
+   "cos": 0.331
+  },
+  {
+   "author": "claude",
+   "pattern": "FULAB Report Block",
+   "cos": 0.331
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.365
+  },
+  {
+   "author": "guest15",
+   "pattern": "Every Message Gets a Receipt or an Explicit Failure",
+   "cos": 0.358
+  },
+  {
+   "author": "guest15",
+   "pattern": "Intent Restatement",
+   "cos": 0.323
+  },
+  {
+   "author": "guest15",
+   "pattern": "Agents Speak for Themselves",
+   "cos": 0.365
+  },
+  {
+   "author": "guest15",
+   "pattern": "Every Message Gets a Receipt or an Explicit Failure",
+   "cos": 0.358
+  },
+  {
+   "author": "guest15",
+   "pattern": "Intent Restatement",
+   "cos": 0.323
+  }
+ ]
+}

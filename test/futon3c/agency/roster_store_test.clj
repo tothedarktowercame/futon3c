@@ -123,6 +123,28 @@
   (roster/persist-registry! (registry-with-agents ["a" "b"]))
   (is (= ["a" "b"] (persisted-agent-ids))))
 
+(deftest concurrent-readers-never-observe-partial-roster-edn
+  (let [path (roster/roster-store-path)
+        done? (atom false)
+        read-errors (atom [])
+        reader (future
+                 (while (not @done?)
+                   (try
+                     (edn/read-string (slurp path))
+                     (catch Throwable t
+                       (swap! read-errors conj (.getMessage t))))))]
+    (try
+      (dotimes [n 200]
+        (roster/persist-registry!
+         {"a" {:agent/id {:id/value "a" :id/type :continuity}
+               :agent/type :codex
+               :agent/session-id (str "session-" n)}}))
+      (finally
+        (reset! done? true)
+        @reader))
+    (is (empty? @read-errors) @read-errors)
+    (is (= ["a"] (persisted-agent-ids)))))
+
 (deftest counter-ratchet-allow-drop-escape-permits-bulk-drop
   (roster/persist-registry! (registry-with-agents ["a" "b" "c" "d"]))
   (System/setProperty "FUTON3C_ROSTER_ALLOW_DROP" "true")
@@ -155,8 +177,29 @@
     (is (= 1 (:attempted r1)))
     (is (= 1 (:restored r1)))
     (is (= 1 (:restored r2)))
+    (is (empty? (:session-collisions r1)))
     (is (= ["codex-replay"] (sort (keys @registered))))
     (is (true? (get-in @registered ["codex-replay" :restored-detached?])))))
+
+(deftest restore-on-boot-refuses-every-alias-in-a-session-collision
+  (spit (roster/roster-store-path)
+        (pr-str {:version 1
+                 :agents [{:agent-id "codex-1" :type :codex :session-id "shared"}
+                          {:agent-id "codex-3" :type :codex :session-id "shared"}
+                          {:agent-id "codex-4" :type :codex :session-id "distinct"}]}))
+  (System/setProperty "FUTON3C_AGENT_RESTORE" "true")
+  (let [restored (atom [])
+        report (roster/restore-on-boot!
+                (fn [payload]
+                  (swap! restored conj (:agent-id payload))
+                  {:ok true :agent-id (:agent-id payload)}))]
+    (is (= ["codex-4"] @restored))
+    (is (= 3 (:attempted report)))
+    (is (= 1 (:restored report)))
+    (is (= [{:session-id "shared" :agent-ids ["codex-1" "codex-3"]}]
+           (:session-collisions report)))
+    (is (= ["session-collision" "session-collision" nil]
+           (mapv :err (:results report))))))
 
 (deftest restored-agent-is-detached-not-falsely-idle
   (let [handler (make-handler)
@@ -180,3 +223,25 @@
       (finally
         (when (.exists session-file)
           (.delete session-file))))))
+
+(deftest proxies-are-not-persisted
+  ;; AG-2 regression (M-federated-agency-hardening, 2026-07-12): restore-payload
+  ;; strips :proxy?/:origin-url, so a persisted federation proxy replayed on
+  ;; boot as a LOCAL phantom (the chi-claude-1/chi-codex-1 phantoms on lucy).
+  ;; Proxies must be absent from the durable snapshot; the sync daemon
+  ;; re-imports them from the live peer after boot.
+  (let [registry {"claude-1" {:agent/id {:id/value "claude-1" :id/type :continuity}
+                              :agent/type :claude
+                              :agent/session-id "sess-local"}
+                  "chi-claude-1" {:agent/id {:id/value "chi-claude-1" :id/type :continuity}
+                                  :agent/type :claude
+                                  :agent/session-id "sess-chi"
+                                  :agent/metadata {:proxy? true
+                                                   :remote? true
+                                                   :home-site :chi
+                                                   :origin-url "http://chi:7070"}}
+                  "oxf-zai-1" {:agent/id {:id/value "oxf-zai-1" :id/type :continuity}
+                               :agent/type :zai
+                               :agent/metadata {"remote-proxy?" true}}}
+        snapshot (roster/roster-snapshot registry)]
+    (is (= ["claude-1"] (mapv :agent-id (:agents snapshot))))))

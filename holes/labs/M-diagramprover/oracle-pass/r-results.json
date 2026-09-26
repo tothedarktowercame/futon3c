@@ -1,0 +1,62 @@
+{
+  "tool_versions": {
+    "R": "4.3.3",
+    "dagitty": "0.3.4"
+  },
+  "dagitty_implications": {
+    "checked": 209,
+    "agreements": 209,
+    "disagreements": []
+  },
+  "dagitty_lean_implications": {
+    "checked": 202,
+    "agreements": 202,
+    "disagreements": []
+  },
+  "dagitty_converse": {
+    "memory_emitted": 1382,
+    "lean_emitted": 426,
+    "basis_file": "dagitty-basis.json"
+  },
+  "q3": {
+    "verdicts": {
+      "populated-graph": {
+        "marginal_separated": false,
+        "v18_separated_given_v12_minus_m": true
+      },
+      "star-forest": {
+        "marginal_separated": true,
+        "v18_separated_given_v12_minus_m": true
+      }
+    },
+    "disagreements": []
+  },
+  "r2": {
+    "verdicts": {
+      "copied-class": false,
+      "extracted-class": true,
+      "content-removal-effect": true
+    },
+    "disagreements": []
+  },
+  "r3": {
+    "verdicts": {
+      "current-sensors": false,
+      "with-hypothetical-t05": false
+    },
+    "disagreements": []
+  },
+  "bow": {
+    "frontdoor_adjustment": {
+      "dagitty_sets": [
+        "U"
+      ],
+      "rejected_latent_sets": [
+        "U"
+      ],
+      "observed_candidate_sets": [],
+      "candidate_set_count": 0,
+      "backdoor_exhaustion_agrees": true
+    }
+  }
+}

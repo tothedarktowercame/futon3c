@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "pets",
+    "to" : "supervision"
+  }, {
+    "from" : "supervision",
+    "to" : "training"
+  }, {
+    "from" : "pets",
+    "to" : "training"
+  } ],
+  "id" : "daisy-house-training",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "daisy-house-training.json"
+  },
+  "variables" : [ {
+    "id" : "pets",
+    "kind" : "observed",
+    "name" : "Other Pets"
+  }, {
+    "id" : "supervision",
+    "kind" : "observed",
+    "name" : "Crating/Supervision"
+  }, {
+    "id" : "training",
+    "kind" : "observed",
+    "name" : "House Training"
+  } ]
+}

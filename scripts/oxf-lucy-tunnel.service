@@ -1,0 +1,38 @@
+# Reverse SSH tunnel: laptop (oxf) :7070 -> lucy 127.0.0.1:17070
+#
+# This is the network path for oxf federation (dev-laptop-env CP-C amendment 3;
+# dev-linode-env peer entry oxf=http://127.0.0.1:17070). The previous manual
+# `ssh -f -N` form has no reconnect: when lucy reboots, sshd drops the tunnel
+# and the laptop-side ssh exits (or lingers dead), so oxf silently falls off
+# the federation until someone re-runs it — observed 2026-07-13 after a lucy
+# reboot (lucy sync daemon: 18 consecutive peer-sync failures on :17070).
+# systemd's Restart=always closes that gap: the tunnel re-dials until lucy is
+# back, and lucy's 30s sync daemon re-imports the oxf roster on the next tick.
+#
+# Install (on the LAPTOP, as joe):
+#   cp scripts/oxf-lucy-tunnel.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now oxf-lucy-tunnel
+#   loginctl enable-linger joe        # keep it up without a login session
+#
+# ExitOnForwardFailure matters: if lucy still holds a stale :17070 bind, ssh
+# exits instead of connecting without the forward, and systemd retries.
+
+[Unit]
+Description=futon3c oxf federation tunnel (laptop :7070 -> lucy :17070)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o ExitOnForwardFailure=yes \
+  -o ConnectTimeout=10 \
+  -R 17070:localhost:7070 -p 2222 joe@172.236.28.208
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target

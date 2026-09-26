@@ -87,6 +87,23 @@
                               (str entry)))]
     [(str/lower-case nick) agent-id]))
 
+(defn site-prefix
+  "This box's site code (e.g. \"lon\", \"chi\") from FUTON3C_SITE, or nil when
+   undecorated (e.g. the laptop)."
+  []
+  (some-> (env "FUTON3C_SITE") str/trim str/lower-case not-empty))
+
+(defn site-qualify
+  "Prefix a locally-registered base agent-id with the site (claude-1 ->
+   lon-claude-1) when FUTON3C_SITE is set; identity when undecorated. Site-
+   qualified ids are globally unique and off the protected-id list, so federated
+   peers mirror this box's agents instead of refusing them. Apply ONLY to agents
+   this box registers locally — not to foreign agents arriving via bridge."
+  [base]
+  (if-let [s (site-prefix)]
+    (str s "-" base)
+    base))
+
 (defn configured-nick-agent-map
   "Nick -> agent-id mapping for IRC-visible agents.
 
@@ -97,7 +114,7 @@
                   "codex-vscode" "codex-vscode"
                   "codex-2" "codex-2"
                   "codex-3" "codex-3"
-                  "claude" "claude-1"
+                  "claude" (site-qualify "claude-1")
                   "claude-2" "claude-2"
                   "claude-3" "claude-3"
                   "tickle" "tickle-1"}
@@ -115,7 +132,7 @@
                   "codex-vscode" "codex-vscode"
                   "codex-2" "codex-2"
                   "codex-3" "codex-3"
-                  "claude-1" "claude"
+                  (site-qualify "claude-1") "claude"
                   "claude-2" "claude-2"
                   "claude-3" "claude-3"
                   "tickle-1" "tickle"}

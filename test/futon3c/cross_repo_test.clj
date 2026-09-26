@@ -15,7 +15,8 @@
    This test exercises all three repos through their public APIs with
    no filesystem dependencies — missions, patterns, and proof-paths are
    all in-memory."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             ;; futon3c: social pipeline
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.mode :as mode]
@@ -38,7 +39,7 @@
 ;; =============================================================================
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)

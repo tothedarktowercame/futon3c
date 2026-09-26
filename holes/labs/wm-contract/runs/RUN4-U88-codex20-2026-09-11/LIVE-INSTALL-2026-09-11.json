@@ -1,0 +1,27 @@
+{
+  "click": "wm-click-a6856c5f-1526-4dc8-8271-341aea4beb67",
+  "root": "/home/joe/run4/U88-codex20-20260911",
+  "casting": {
+    "author": "codex-20",
+    "reviewer": "zai-1",
+    "repair-reviewer": "zai-1"
+  },
+  "prior_capacity_reset": false,
+  "historical_action_installed": false,
+  "task_result": "pending",
+  "source_before_start": {
+    "futon2": "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
+  },
+  "packet_hashes": {
+    "server-config.disabled.edn": "4080337e5dda39bfe79154ff8fbf711cd3f85d26100ef7066c0f1d177bf6b095",
+    "queue.disabled.edn": "d2a4613ed648a4fdff32bc03b6d6994f2ec2d30a6d00781dae243263d08f70e9",
+    "LIVE-START-2026-09-11.edn": "e4c4d6deaa77ed1ced78d7da548e2bac561a27240b49bb2dda0041b8f18b0312",
+    "execution-cohort.disabled.edn": "60b6367f3f811ca539546fcf45543deb5d8a4f20e9c458f110ccb71633c53d63",
+    "authority/holes/labs/wm-contract/runs/RUN4-U88-codex20-2026-09-11/cohort.edn": "4c635a5b3391479a28d207f870a162d2e25fa383b10030f1924d72594b5cfcc3",
+    "authority/holes/labs/wm-contract/runs/RUN4-U88-codex20-2026-09-11/series-pin.edn": "44e8ee799708775a5dfa8fbc39406be00e65ab3d86012b7850c2ee3ad40beb14",
+    "authority/holes/labs/wm-contract/runs/RUN4-U88-codex20-2026-09-11/task-pin.edn": "73a74c5b7532d34ad3bd9164d94284a369dcec0a2401d796b253c72d30d1cec7",
+    "authority/holes/labs/wm-contract/runs/RUN4-U88-codex20-2026-09-11/run-config.edn": "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8",
+    "authority/resources/run4/seeded-c.edn": "1459952e2d3e4534760ba8512482fc3cb3aa4020d2c3464b2056efaff6112e1f",
+    "authority/resources/run4/checkpoint-kernel.edn": "39996c267ba36fc7cfbfb53a5821f304a4ff21089ff53bff031090e8f23e90d0"
+  }
+}

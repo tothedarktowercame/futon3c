@@ -1,0 +1,27 @@
+{:schema :wm/execution-receipts-v1
+ :at "2026-09-14"
+ :initial-tree-sha "df0e47fb41b072a162fbbb9dfd1ba748ee092536"
+ :final-tree-sha "a7a75861bfa390da75c71fea48e8d631e8865da9"
+ :http-baseline
+ {:command "clj-kondo --lint src/futon3c/transport/http.clj"
+  :exit 0 :errors 0 :warnings 0 :output "http-kondo-baseline.out"}
+ :failed-attempt
+ [{:command "clj-kondo --lint src/futon3c/wm/r10_commission.clj src/futon3c/wm/r10_click_adapter.clj test/futon3c/wm/r10_click_adapter_test.clj"
+   :exit 2 :errors 0 :warnings 2 :output "clj-kondo-new.out"}
+  {:command "clojure -M:test -n futon3c.wm.r10-click-adapter-test"
+   :exit 1 :tests 5 :assertions 22 :failures 1 :errors 1 :output "tests.out"
+   :finding "adapter returned dispatch-reserved result envelope where ledger required its linked receipt"}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/wm/r10_commission.clj src/futon3c/wm/r10_click_adapter.clj src/futon3c/transport/http.clj test/futon3c/wm/r10_click_adapter_test.clj"
+   :exit 0 :output "check-parens.out"}]
+ :final
+ [{:command "clj-kondo --lint src/futon3c/wm/r10_commission.clj src/futon3c/wm/r10_click_adapter.clj test/futon3c/wm/r10_click_adapter_test.clj"
+   :exit 0 :errors 0 :warnings 0 :output "clj-kondo-final.out"}
+  {:command "clj-kondo --lint src/futon3c/transport/http.clj"
+   :exit 0 :errors 0 :warnings 0 :output "http-kondo-final.out"
+   :baseline-delta {:errors 0 :warnings 0}}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/wm/r10_commission.clj src/futon3c/wm/r10_click_adapter.clj src/futon3c/transport/http.clj test/futon3c/wm/r10_click_adapter_test.clj"
+   :exit 0 :output "check-parens-final.out"}
+  {:command "clojure -M:test -n futon3c.wm.r10-click-adapter-test"
+   :exit 0 :tests 5 :assertions 28 :output "tests-final.out"}]
+ :zero-mass {:real-click false :production-commission-spent false
+             :production-reservation-created false :serving-jvm-contacted false}}

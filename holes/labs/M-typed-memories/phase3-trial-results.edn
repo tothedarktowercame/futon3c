@@ -1,0 +1,68 @@
+{:phase :shared-memory/phase-3
+ :date "2026-07-23"
+ :claim :audit-only-no-success-rate
+ :runner {:agent-id "zai-7"
+          :session-id "zai-982cb7cd-faa2-4120-b2ba-724191b9065a"}
+ :bounds {:max-trials 20 :max-concurrency 4}
+ :trials
+ [{:trial/id "phase2-natural-semantic-residual"
+   :trial/query "field_simp polynomial denominator normalization"
+   :trial/retrieval
+   {:rank 1
+    :pattern-id "math-formalization/tactic-algebra-interference"
+    :psr-id "psr-21ea59da-680e-45a7-aca7-3812f9ba3067"
+    :used-memory-id "e-6bcbb51e-f368-4bcc-afbf-97fcc616772d"}
+   :trial/external-outcome
+   {:evidence-id "e-16c5d419-d617-46de-aff0-58d89ae7a801"
+    :checker-exit 0}
+   :trial/pur
+   {:canonical-id "pur-b4215bd2-19a3-41c2-8a2e-554b8b2edc2a"
+    :receipt-id "e-3113d43a-c0e9-416c-abe4-c5ea58b8b275"
+    :duplicate-observed
+    {:pur-id "pur-1b216a1b-97cc-477c-a6dd-ba5655273ff7"
+     :receipt-id "e-8b8fb511-655b-4e8c-8dc8-b33a830c5be8"
+     :fixed-by :exact-pur-replay-idempotency}}
+   :trial/correction
+   {:original-id "e-6bcbb51e-f368-4bcc-afbf-97fcc616772d"
+    :correcting-id "e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7"
+    :challenge-id "e-2c7b37d9-5c88-4858-b589-6c680127410e"
+    :lag-ms 5109}}
+
+  {:trial/id "pattern-id-control"
+   :trial/query "tactic algebra interference"
+   :trial/retrieval
+   {:rank 1
+    :pattern-id "math-formalization/tactic-algebra-interference"
+    :psr-id "psr-8c4d2781-1da8-48d2-9607-a1086be868df"
+    :used-memory-id "e-9e32e848-089b-4ec7-8aff-63d6558e7db6"
+    :correction-surfaced "e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7"
+    :superseded-original-excluded
+    "e-6bcbb51e-f368-4bcc-afbf-97fcc616772d"}
+   :trial/external-outcome
+   {:evidence-id "e-b2e576e1-0666-4c69-af3b-4ccb2eed3131"
+    :checker-exit 0}
+   :trial/pur
+   {:id "pur-4da1c5db-5a82-4066-9a6c-d6d51099d109"
+    :receipt-id "e-5c56a9e2-78dc-4a2c-9483-2b037143c6f4"
+    :exact-replay-returned-same-ids? true}}
+
+  {:trial/id "memory-hook-paraphrase"
+   :trial/query "normalize a denominator before using field_simp"
+   :trial/retrieval
+   {:initial-result :intended-pattern-absent
+    :corrected-result-rank 1
+    :strategy :bounded-token-disjunction
+    :fallback-tokens ["normalize" "denominator" "field_simp"]
+    :final-read-only-probe
+    {:rank 1
+     :checked-memory-count 3
+     :candidate-endpoint-recall-total-ms 17778}
+    :pattern-id "math-formalization/tactic-algebra-interference"
+    :psr-id "psr-6bb62492-a8ce-4610-879e-90d404e59deb"
+    :used-memory-id "e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7"}
+   :trial/external-outcome
+   {:evidence-id "e-034ee8f8-e2c8-401a-853d-579e2e5a555d"
+    :checker-exit 0}
+   :trial/pur
+   {:id "pur-44a58de7-17dd-4f0f-a328-056f0aff348f"
+    :receipt-id "e-c576a6b2-2b31-4c7f-b3b6-83d5382f0bd9"}}]}

@@ -1,0 +1,694 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[htt]{hyphenat}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!50!black}
+\usepackage{enumitem}
+\setlist{nosep}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,backgrounds}
+
+\title{A Capability Proof, by Construction:\\
+\large Structural mining of a mathematical field from arXiv,\\
+with graded warrants and a hazard ledger}
+\author{Joseph Corneli\thanks{Prepared with the futon agent mesh. The mining
+runs described here were executed on a CPU-only host (``Zone'') against a
+locally served GLM-4.5-Air; the human's role was direction, the scoping
+decisions marked as such, and review.}}
+\date{August 2026}
+
+\newcommand{\warrant}[1]{\textsl{#1}}
+\newcommand{\hz}[1]{\textsf{#1}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}\noindent
+We are extracting the argumentative and expository structure of a mathematical
+field (\texttt{math.CT}, ${\sim}4{,}616$ primary papers) from arXiv sources, as
+gated machine-checkable artifacts plus corpus-level findings. As with the
+companion APM note, we organise the programme as a \emph{proof by construction}
+of the claim ``the field's reasoning structure is recoverable at corpus
+scale'': the constructive content is a twelve-stage pipeline; the claim
+decomposes into stage-level sub-claims with contracts; and each sub-claim
+carries a \emph{graded warrant} backed by certificates --- gate exits, ledger
+entries, oracle agreement, census counts --- rather than narrative.
+The pipeline has been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
+a sixteen-paper corpus on an unattended host --- the condition under which its
+characteristic failure modes become observable. Forty such failure modes
+are enumerated as a hazard ledger, thirty-seven of them closed. The
+intended contribution is less the corpus coverage than the epistemic form: a
+mining programme whose own readiness claim is held to the same standard as the
+structures it extracts, and whose remaining gaps are drawn rather than
+described.
+\end{abstract}
+
+\section{The claim, read constructively}
+
+The headline claim --- \emph{the reasoning structure of \texttt{math.CT} is
+recoverable} --- is not established by having mined some papers. Read
+constructively, it asserts that a \emph{procedure} exists which, handed any
+paper in the field, yields (i) a gated structural artifact for each proof and
+expository region, and (ii) corpus-level findings that accumulate across
+papers, together with witnesses that each component of the procedure does its
+job \emph{on a machine other than the one it was written on}.
+
+That last clause carries most of the weight. A pipeline developed where its
+operator watches the terminal cannot distinguish a stage that works from a stage
+that prints its findings and persists nothing; the distinction only becomes
+observable on an unattended host. Executing it under that condition exposes a
+class of failure invisible to ordinary testing, and the hazard ledger
+(\S\ref{sec:hazards}) enumerates forty instances: eight that halt or stall
+the run outright, ten that cost operator time or mislabel what was measured,
+five that read the wrong corpus or the wrong inputs, three whose outputs do not
+survive the run, five that pass one gate and are unreadable by the next, two
+that silently shrink the corpus, one that only bites at scale,
+\emph{five that report success without doing the work}, and one that does not
+point where it claims to.
+
+The emphasised category is the one worth the reader's attention, because its
+members are invisible by construction: a stage that fails loudly is a nuisance,
+whereas a stage that reports PASS while half of it never executed is a false
+entry in the evidence base. Its worst member does not merely omit work but
+manufactures output --- an LLM pass whose replies used different key names than
+the prompt requested, so every lookup missed, every question silently fell back
+to a stock template, and the run emitted a complete set of plausible findings the
+model had not written. All were found by asking what a green result would
+look like if the work behind it had not happened.
+
+The corpus percentage is the odometer. The pipeline is the proof object, and
+the hazard ledger is the record of what must hold for it to be one.
+
+\section{Warrants, certificates, hazards}
+
+Warrant classes are as in the APM note: \warrant{mechanical} (an executed
+witness --- a gate exits 0, a ledger entry is written, an oracle agrees);
+\warrant{replicated} (independent runs agree on the load-bearing quantities);
+\warrant{inductive-$n{=}K$} ($K$ observed instances, honesty bounds stated);
+\warrant{designed} (contract written, no witnesses yet); \warrant{registered}
+(candidate mechanism, not yet applied); and \warrant{refused} ---
+proved-impossible held apart from not-yet-capable.
+
+To these we add a \textbf{hazard ledger}, which the APM programme did not need
+because its pipeline ran in one place. A hazard is a way a stage can appear to
+succeed while failing, recorded with its detection, its repair, and its
+measured incidence. Hazards are what convert \warrant{designed} into
+\warrant{mechanical}: a stage whose contract is written but whose hazards are
+unenumerated has not been shown to work, only shown to run. The full ledger is
+\texttt{futon6/holes/excursions/E-superpod-hardening.md}; \S\ref{sec:hazards}
+gives its shape.
+
+Certificates here are cheap and adversarial by construction: every stage gates
+its own output before the next consumes it, a completeness ledger refuses any
+stage whose upstream has no passing entry \emph{for this corpus}, and the
+numbers below were re-derived from the run directory rather than from the logs
+that produced them.
+
+\section{The construction}
+
+Twelve stages, each gated before the next consumes it. CPU stages are cheap;
+the three LLM stages (S3, S4, S7) are the cost pole.
+
+\begin{enumerate}
+\item \textbf{S1 anatomy} --- deterministic marks over the \LaTeX{} source:
+symbol typings, scopes, binders, proof-moves, citations. No model.
+\item \textbf{S2 concept substrate} --- the corpus-fresh concept spine, and a
+\emph{measured} substrate-corpus match (this gate is new; see \hz{H1}).
+\item \textbf{S3 IATC} --- per proof passage, an argument DAG in EDN with
+source-anchored nodes, typed inference edges, and explicit
+\texttt{missing-warrant} holes. Self-gated by \texttt{iatc\_argcheck} and a
+substance gate, with feedback retry.
+\item \textbf{S4 expository} --- per expository region, a classified scope
+graph (motivation, heuristic, strategy), capped per paper and self-gated.
+\item \textbf{S5 comprehension} --- R2d noun grounding $\oplus$ rung-3 strategy
+grounding, verdict separating weak-extraction from weak-proof. S5 now
+\emph{builds} its rung-3 half from two deterministic producers that were absent
+from the DAG entirely (\hz{H13}).
+\item \textbf{S6 paper-graph} --- proofs attach to their statements; orphans
+flagged.
+\item \textbf{S7 CLean typing + structure embedding} --- box-typing of each
+argument DAG into a method vocabulary, then a structure embedding, gated for
+vocabulary conformance and for discriminativeness (entropy gate).
+\item \textbf{S8 export} --- graph JSON, Cypher, pgvector; and, separately, a
+direct EDN ingest into the XTDB 2.2.0-rc0 bench store.
+\item \textbf{S9 hole harvest} --- the pass-3 hole map and a normalised
+\texttt{(type, concept)} hole vocabulary, both run-scoped. The APM
+structure-match tail that formerly stood here was withdrawn: it consumed scope
+files this corpus does not produce, and had failed silently on every run since
+it was written. It belongs to the APM programme, against APM's own inputs.
+\item \textbf{S10 lexicon + reground} --- harvest the corpus's own inference
+and expository move vocabulary; measure the grounding lift obtained by
+re-grounding the corpus against its own harvested moves.
+\item \textbf{S11 structural canon + whole-paper signatures} --- canonical
+definition shapes; paper-level archetypes. \emph{Prints; does not persist.}
+\item \textbf{S12 accretion sweep} --- every tier metric checkpointed at
+log-spaced $n$, yielding the rising curves that are the sweep's stated product.
+\end{enumerate}
+
+Every stage transition is a ledger record under a corpus id; state is derived by
+folding the ledger; a stage whose upstream did not run \emph{for this corpus}
+is refused rather than run on stale inputs. These are requirements extracted
+from a failure (the mark5 run silently skipped S2 and grounded against a prior
+corpus), not aspirations --- and \hz{H19} shows the same failure recurring one
+level down, inside a stage, where the ledger could not see it.
+
+\section{Current warrant state}
+
+Corpus \texttt{math-ct-e2e-16}: sixteen citation-ranked \texttt{math.CT} papers
+(including \emph{Higher Topos Theory}), twelve mined to completion and four
+partially, yielding 98 proof graphs and 280 expository regions. Executed on a
+CPU-only host, GLM-4.5-Air Q4 served locally at ${\sim}4.2$ tok/s single-stream
+and $1.58\times$ aggregate on two shards (measured, not assumed). Corpus
+membership is asserted by manifest and checked mechanically
+(\S\ref{sec:replay}, check \texttt{I1}), because a shared output directory
+otherwise admits artifacts from a neighbouring run.
+
+{\small
+\begin{longtable}{p{0.30\textwidth} p{0.15\textwidth} p{0.40\textwidth}}
+\toprule
+\textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\emph{\small Claims table, continued from previous page}}\\
+\toprule
+\textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\emph{\small continued overleaf}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+A1 Anatomy is recoverable from source (S1) & mechanical &
+$16/16$ papers emitted, $0$ failures; $320{,}337$ marks (1{,}871 on HTT
+alone); ledgered for this corpus\\[3pt]
+A2 The substrate matches the corpus (S2) & mechanical &
+substrate-corpus match is measured, not assumed: $16/16$ run ids present
+($100\%$, threshold $95\%$). The stage \emph{checks} a shipped substrate
+rather than rebuilding one per corpus; corpus-fresh rebuild remains
+\hz{H1} tier~2\\[3pt]
+A3 Proof arguments reconstruct as gated DAGs (S3) & mechanical &
+$98/98$ graphs gated PASS (argcheck $+$ substance) \emph{when the finals are
+selected explicitly}; the stage's directory gate also sees $98$
+\texttt{.rung2} reports and fails on them. The first-pass retry rate is
+\emph{outstanding, and now instrumented} (\hz{H37}): the attempt directory was
+not run-scoped, so the previously reported $45.9\%$ is not reproducible from
+it --- reconstructions give $37.8\%$ and $36.7\%$ depending on how one guesses
+which invocation wrote which file. It is not re-derivable offline, because
+mtimes cannot say that. \texttt{.attempts/} is now run-scoped and S3 emits
+\texttt{retry-rate-\$RUN\_ID.json} from the loop's own bookkeeping, so the
+figure becomes a byproduct of the next run rather than a separate study\\[3pt]
+A3$'$ \dots\ and their anchors are trustworthy & \textbf{weak} &
+Content faithful (\S\ref{sec:annex}), \emph{coordinates} not: $41\%$ of node
+anchors cover their own text's line, median drift $3$ ($n{=}290$). Repaired by
+numbering the prompt window (\hz{H21}). Validation at volume now runs
+($n{=}98$, up from $n{=}3$) and is reported in two parts, because the raw
+figure conflates two different failures. Corpus-wide: $64.3\%$ pass at floor
+$0.30$. But $25$ graphs score \emph{exactly} $0.000$, missing $0/3$, $0/4$,
+$0/6$ and $0/7$ key terms simultaneously and concentrated in $4$ papers ($3$
+entirely zero), while $32$ score exactly $1.000$. Drift does not produce that
+shape; a different line basis does, and does here --- the checker resolves a
+paper to an artifact whose line $379$ is blank where the graph anchors into the
+candidate window (\hz{H38}). Excluding those $25$, the remaining $73$ give
+$\mathbf{86.3\%}$ pass, mean $0.729$. The honest claim is the second number
+with its exclusion stated, and the frame repair is open\\[3pt]
+A4 Expository structure reconstructs (S4) & mechanical &
+$280/280$ gated PASS. First pass $238/280$; all $42$ failures were one
+serialization defect and \emph{all} recovered after \hz{H18}\\[3pt]
+A5 Comprehension is measurable (S5) & mechanical &
+Was degenerate --- all $98$ proofs \emph{no-structure}, \texttt{weak-proof}
+unreachable. Two deterministic producers were missing from the DAG, not from
+the codebase: strategy moves $0 \to$ \textbf{202 grounded / 564 thin / 52
+ungrounded}; verdicts now \textbf{well-formed $6$, partial $82$,
+weak-extraction $10$} (\hz{H13} closed, no GPU)\\[3pt]
+A6 Papers assemble into whole-paper objects (S6) & \textbf{weak} &
+$12$ paper objects for $16$ papers; the producer's own \texttt{wellformed}
+field is \emph{false} for two, and $33$ orphan statements are recorded.
+Output lands in \texttt{data/paper-graphs} while RETRIEVE collects
+\texttt{data/iatc-paper-graphs/\$RUN\_ID}\\[3pt]
+A7 Proof structure is typable \emph{and discriminative} (S7) & mechanical &
+$\mathbf{94}$ typed / $\mathbf{4}$ cycle-rejected / $0$ failed of $98$ --- complete
+accounting. Was $88/10$: six rejections were a serialisation defect (an edge
+concluding several claims at once serialised as a Python list repr and failed
+the \emph{readability} gate) reported under a guessed cycle reason. The four
+survivors carry a genuine wire-graph cycle, all four flattened
+\texttt{iff}-structure. Vocabulary gate PASS. Entropy gate PASS: mean off-diagonal
+structure cosine $0.02$ (ceiling $0.85$) --- the Mark~1 embedding collapse
+definitively absent\\[3pt]
+A8 The result is queryable (S8 + bench) & mechanical (export) &
+Export re-run against the corrected $94$-proof typing (\hz{H36}):
+$\mathbf{481}$ nodes / $\mathbf{304}$ edges ($94$ \texttt{Proof} $+$ $387$
+\texttt{Step}), up from $446/286$ ($88+358$). The XTDB ingest ($772$ nodes / $419$ edges, query ladder,
+integrity census) lives in a separate benchmark artifact and is
+\emph{not} re-derivable from this run directory\\[3pt]
+A9 The field's move repertoire is harvestable (S10) & inductive-$n{=}16$ &
+$732$ distinct entries over $737$ moves; $62$ relation types with a Zipf
+head (\emph{because} $161$, \emph{implies} $69$); mean anchor confidence
+$0.43$; now \emph{persisted} (\hz{H15})\\[3pt]
+A10 Structural archetypes are censusable (S11) & mechanical &
+\texttt{structural-canon.json}: $5$ proof shapes; $9$ paper signatures (the
+papers with $\ge 2$ proofs). \texttt{structural-canon-defs.json}: $97$
+definitions over $77$ canonical shapes, $0$ SFC coverage gaps. Paper-twin
+similarity \emph{pending recomputation}\\[3pt]
+A11 Metrics rise with corpus size (S12) & mechanical &
+proof-move grounding $0.118 \to 0.272$ ($+0.154$), \texttt{rising=True};
+expository-move recognition $0.033 \to 0.094$. Both measured on the
+\emph{run's} corpus for the first time (\hz{H19})\\[3pt]
+A11$'$ Proof moves are recognisable \emph{at the pattern level} & mechanical &
+Over the same $818$ proof steps, deterministic tactic-gesture recognition reaches
+$76$ moves ($9.3\%$) in $5$ classes; LLM pattern verification reaches
+$\mathbf{478}$ ($\mathbf{58.4\%}$) in $\mathbf{26}$, with $95/98$ proofs carrying
+at least one verified match. The gap between them is the size of the residue
+rung~3 exists for. The $9.3\%$ is \emph{not} recall --- the two instruments look
+for different objects (Lean-style tactic gestures vs.\ reasoning patterns)\\[3pt]
+A11$''$ \dots\ and the check menu matches the field & \textbf{weak} &
+It does not. Of $478$ verified matches, $157$ fire a check, $89$ select a menu
+key whose list is empty, and $\mathbf{232}$ ($48\%$) name a pattern the menu does
+not contain. The three keys that never matched once are all analysis
+(\texttt{estimate-by-bounding}, \texttt{induction-and-well-ordering},
+\texttt{separate-into-independent-pieces}); the frequent absentees are all
+categorical (\texttt{transport-across-isomorphism} $64$,
+\texttt{find-the-right-abstraction} $50$, \texttt{verify-universal-property}
+$43$). Shares stable from $72$ to $98$ proofs, so this is a property of the
+corpus, not of run length\\[3pt]
+A12 The pipeline runs unattended off the dev box & \textbf{partial} &
+$12/12$ stages ledgered; $9$ executed under this corpus id and $3$
+(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $40$ hazards
+enumerated, $37$ closed (open: \hz{H1} tier~2, \hz{H10}'s region cap,
+\hz{H38}'s frame repair); the replay harness re-checks the
+accounting invariants in $0.5$\,s (\S\ref{sec:replay})\\[3pt]
+A12$'$ The extraction answers questions & inductive-$n{=}16$ &
+$12$ query forms answerable today over the corpus --- $6$ read-off, $6$ by
+join or traversal --- enumerated with their counts in \S\ref{sec:queries};
+$4$ more named as needing connections not yet made\\[3pt]
+A13 Capability transports to the full field & designed &
+stated as a scale-transport claim; no witnesses. See
+Fig.~\ref{fig:dag} (right)\\[3pt]
+A14 Model choice is not load-bearing & registered &
+the same corpus is now minable by a second model class, and one stage has run
+end-to-end on it (A11$'$, GLM-4.5-Air Q4 on CPU, $818$ calls) --- but that is a
+\emph{different task} from the mining the claim is about, so it is evidence the
+apparatus is model-portable, not that mining results are. The comparison remains
+designed, not run (\hz{H8})\\
+\end{longtable}
+}
+
+\medskip
+Two entries deserve a sentence because they are the ones a reader should
+distrust. \textbf{A3's retry rate} is a first-pass quality bound, not a
+defect: gates catch, feedback repairs, and the corpus-level artifact is clean.
+Its \emph{value}, however, is pending re-derivation (\hz{H37}) --- the attempt
+directory is shared across runs, so the figure once quoted here cannot now be
+recovered from it, and reconstructions land between $36.7\%$ and $37.8\%$. A
+reader tempted to quote ``$98/98$ gated'' as a model-quality figure should quote
+the retry rate beside it once it is measurable again, and should note what \emph{gated} means
+here. The verification ladder has four rungs, and S3's gate is the first two:
+wiring well-formedness (\texttt{argcheck}) and anti-degeneracy
+(\texttt{substance}). Rung~2, which asks the harder questions --- are node texts
+faithful to their cited lines, is every node reachable, are warrants resolved,
+are concepts defined --- passes on $49/98$. Closure is the binding constraint at
+$40$ of those $49$ failures: claims extracted but never joined to the inference
+structure, which is the corpus's $58\%$ \texttt{missing-warrant} rate seen from
+the other side. Rung~2's one clean sweep should not be read as a result:
+warrant-resolution's $98/98$ is a configuration rather than a finding, since its
+floor is $0.0$ and no rate can fail it --- report-only, by the checker's own
+note, until a stricter floor is calibrated, and $31$ of those passes are at
+rate $0$. \emph{Gated} in this report therefore means rungs $0$--$1$
+corpus-wide and rung~2 on half. And \textbf{A9's $732$ entries over
+$737$ moves} means essentially \emph{zero} reuse at $n{=}16$: the lexicon
+convergence curve begins at one-distinct-per-move and has nowhere to go but
+down, if convergence exists at all. That is a starting point, not a finding.
+
+\section{The causal layer}
+
+\begin{figure}[t]
+\centering
+\begin{minipage}[c]{0.66\textwidth}
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize},
+  var/.style={draw, rounded corners, minimum height=5.5mm, inner sep=2pt, align=center},
+  wk/.style={draw, rounded corners, minimum height=5.5mm, inner sep=2pt, align=center, dashed},
+  wit/.style={-{Stealth}, thick},
+  unwit/.style={-{Stealth}, thick, dashed},
+  lab/.style={font=\tiny\itshape, align=center}]
+
+\node[var] (src) {\LaTeX\\source};
+\node[var, right=10mm of src] (anat) {S1\\anatomy};
+\node[var, right=10mm of anat] (sub) {S2\\substrate};
+\node[var, below=9mm of anat] (iatc) {S3 proof\\DAGs};
+\node[var, right=10mm of iatc] (expo) {S4\\expository};
+\node[var, right=14mm of expo] (comp) {S5 compre-\\hension};
+\node[var, below=9mm of iatc] (typ) {S7 typed\\+ embedded};
+\node[var, right=10mm of typ] (exp) {S8 export\\+ store};
+\node[var, below=9mm of typ] (lex) {S10\\lexicon};
+\node[var, right=10mm of lex] (curve) {S12\\curves};
+\node[var, right=14mm of curve] (canon) {S11\\canon};
+\node[var, below=9mm of lex] (field) {questions\\answerable};
+
+\draw[wit] (src) -- (anat);
+\draw[wit] (anat) -- node[lab, above] {H1 gate} (sub);
+\draw[wit] (anat) -- (iatc);
+\draw[wit] (anat) -- (expo.north west);
+\draw[wit] (iatc) -- node[lab, above] {98/98} (expo);
+\draw[wit] (iatc) -- node[lab, left] {88/98} (typ);
+\draw[wit] (typ) -- node[lab, above] {H12} (exp);
+\draw[wit] (expo) -- node[lab, above] {H13} (comp);
+\draw[wit] (iatc.west) to[bend right=42] node[lab, left, pos=0.55] {H14/H18} (lex.west);
+\draw[wit] (lex) -- node[lab, above] {$+0.154$} (curve);
+\draw[wit] (curve) -- node[lab, above] {S11} node[lab, below] {persists} (canon);
+\draw[wit] (lex) -- node[lab, left] {H15/H19} (field);
+% Both terminal edges are routed OUTSIDE the node block: the read-off edge
+% around the right and under, the ArSE edge further out still, so neither
+% crosses an interior node or another edge.
+\draw[wit] (comp.east) to[out=0, in=90, looseness=0.9] (10.1,-1.6)
+      to[out=-90, in=0, looseness=0.9]
+      node[lab, above right, pos=0.42] {read-off + join} (field.east);
+\draw[unwit] (canon.south) to[out=-90, in=-90, looseness=1.1]
+      node[lab, below, pos=0.5] {ArSE / memory} (field.south);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.30\textwidth}
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize},
+  var/.style={draw, ellipse, minimum height=5mm, inner sep=1.5pt, align=center},
+  sel/.style={draw, rectangle, minimum height=4.5mm, inner sep=3pt},
+  wit/.style={-{Stealth}, thick},
+  unwit/.style={-{Stealth}, thick, dashed},
+  lab/.style={font=\tiny\itshape, align=center}]
+\node[sel] (S) {$S$};
+\node[var, below=7mm of S] (scale) {corpus\\scale};
+\node[var, below=8mm of scale] (works) {pipeline\\completes};
+\node[var, left=8mm of works] (pipe) {pipeline\\+ hazards};
+\draw[wit] (S) -- node[lab, right] {12 $\to$ 4616} (scale);
+\draw[unwit] (scale) -- (works);
+\draw[wit] (pipe) -- (works);
+\end{tikzpicture}
+\end{minipage}
+\caption{\textbf{Left:} the mining mechanism as currently witnessed, terminating
+in \emph{questions answerable} rather than in an anatomy delivered --- a
+capability claim should end in what the artifacts let you ask. Solid edges carry
+certificates: the label names the gate, the count, or the hazard class whose
+closure the edge depends on. \emph{The dashed edge is what is not yet
+witnessed} --- the argument graphs carry premises, warrants and declared holes,
+which is the shape an adversarial exchange or a retrieval stage requires, but
+nothing consumes them. The labelled dependencies on the learning path
+(S3 $\to$ S10 $\to$ S12) are load-bearing rather than decorative: each names a
+hazard class whose closure that edge requires, and the three failure modes they
+represent --- aborting on an id family, emitting to stdout only, and measuring a
+fixture corpus --- are silent, so an unlabelled diagram would show this path as
+sound whether or not it is.
+\textbf{Right:} A13 as a selection diagram. $S$ switches corpus scale (16
+papers $\to$ the full field); ``the pipeline completes at field scale'' is
+identified only if the $S$-dependence can be separated from the pipeline edge.
+It cannot yet: \hz{H20} was a defect whose \emph{severity} is scale-dependent (a
+$23\times$ waste here, ${\sim}138$k redundant rebuilds and non-termination at
+field scale), which is precisely an $S$-to-outcome path that does not pass
+through the pipeline edge. Scale transport is therefore a derivation
+obligation, not an extrapolation --- see \S\ref{sec:prereg}.}
+\label{fig:dag}
+\end{figure}
+
+``The pipeline works'' is a causal claim, and the hazards are what make it one.
+Three of them are worth reading as causal structure rather than as bugs.
+
+\hz{H19} (S10's reground scripts read hardcoded mark4-era paths) is a
+\emph{confounded measurement}: the reported lift was a function of the fixture
+corpus, not of the run. It failed on Zone only because a fixture paper's
+source was unstaged; on a host holding all of arXiv math it would have returned
+a confident number for a corpus nobody ran. The completeness ledger was built
+to prevent exactly this at the \emph{stage} level after mark5, and could not
+see it one level down, \emph{inside} a stage.
+
+\hz{H20} (a missing cache, $O(\text{scope files})$ rather than
+$O(\text{papers})$) is the clearest $S$-dependent hazard: harmless-looking at
+$n{=}16$, fatal at $n{=}4616$. Any readiness claim that does not distinguish
+scale-invariant hazards from scale-dependent ones is not a readiness claim.
+
+\hz{H12}/\hz{H18} together say that \emph{artifact validity is
+reader-relative}: a graph can pass a Clojure-side gate and be unreadable by the
+Python stage that consumes it (unicode in keywords), or carry \LaTeX{} that is
+not legal EDN escaping (all $42$ of S4's first-pass failures). Both were
+repaired at one shared site only after being patched at two or three
+independently --- the same lesson, twice, that when one reconciliation grows
+several implementations the abstraction wants to be shared.
+
+\section{The hazard ledger, in shape}
+\label{sec:hazards}
+
+Forty hazards at the time of writing --- \hz{H1}--\hz{H38} with letter
+variants; \hz{H8} is recorded as an asset, not a hazard --- thirty-seven
+closed, three carrying an open remainder. \emph{The ledger file, not this
+note, is the authority on the count.} Grouped by what they cost, because the
+groups argue for different remedies:
+
+{\small
+\begin{longtable}{p{0.24\textwidth} p{0.12\textwidth} p{0.52\textwidth}}
+\toprule
+\textbf{Class} & \textbf{Hazards} & \textbf{What the class implies}\\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\emph{\small Hazard classes, continued}}\\
+\toprule
+\textbf{Class} & \textbf{Hazards} & \textbf{What the class implies}\\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\emph{\small continued overleaf}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\emph{Halts or stalls the run} &
+\hz{H1} \hz{H2} \hz{H3} \hz{H9} \hz{H10} \hz{H14} \hz{H24} \hz{H26} &
+Missing commands, hardcoded model names, GPU-tuned timeouts, id parsing that
+breaks one arXiv family; a run-discarding abort on one malformed reply; an
+uncapped generation on a nine-day trajectory. Loud, cheap to fix, and each
+would independently have ended a cluster window.\\[3pt]
+\emph{Costs operator time or mislabels what was measured} &
+\hz{H4} \hz{H5} \hz{H6} \hz{H7} \hz{H17} \hz{H23} \hz{H30} \hz{H32} \hz{H36}
+\hz{H37} &
+Window arithmetic $2.5\times$ off; a block-buffered log that reads as a stall;
+an axis labelled ``papers'' counting proof-graphs; a venv miss that read as
+$0/98$; empty-candidate calls folded into no-match; a guessed rejection reason
+that cost a day; a retry rate no longer derivable from its directory.\\[3pt]
+\emph{Reads the wrong corpus or the wrong inputs} &
+\hz{H13} \hz{H19} \hz{H19b} \hz{H35} \hz{H38} &
+Stage inputs and the measurement set defaulting to fixtures or to shared,
+un-scoped directories. The most dangerous class: it neither crashes nor loses
+data, it returns plausible numbers.\\[3pt]
+\emph{Outputs do not survive the run} &
+\hz{H15} \hz{H16} \hz{H27} &
+The learning layer printed its results and persisted nothing; the accretion
+curve wrote to a mark6-named file outside the retrieval manifest; verdicts
+keyed by paper collapsed $98$ proofs to $16$ rows. The science, not the
+artifacts.\\[3pt]
+\emph{Passes one gate, unreadable by the next} &
+\hz{H12} \hz{H12b} \hz{H18} \hz{H33} \hz{H34} &
+Artifact validity is reader-relative: unicode in keywords, \LaTeX{} that is
+not legal EDN escaping, JSON truncated by an external cap, an extractor that
+could not parse mathematics.\\[3pt]
+\emph{Silently shrinks the corpus} &
+\hz{H11} \hz{H11b} &
+A server blip fast-failing a whole batch. These do not fail --- they shrink
+the corpus without saying so.\\[3pt]
+\emph{Scale-dependent} &
+\hz{H20} &
+Harmless at pilot size, fatal at field size. The class that a pilot cannot
+detect by succeeding.\\[3pt]
+\emph{Reports success without doing the work} &
+\hz{H22} \hz{H25} \hz{H28} \hz{H29} \hz{H31} &
+A stage recording PASS while half of it never executed; a rung whose floor no
+rate can fail; fabricated template content wearing the model's voice;
+prompt-and-hope where constrained decoding was available; authorship recorded
+but not originality. The class \S1 emphasises, and the reason the conformance
+gate's negative checks exist.\\[3pt]
+\emph{Unfaithful} &
+\hz{H21} &
+Artifacts that do not point where they say they point. The prompt gave the
+model the passage as bare text, so \texttt{:source} anchors were \emph{counted}
+rather than read: $41\%$ cover the line their own text came from, median drift
+$3$ lines. Content faithful, coordinates not. Found only by reading a paper
+against its source (\S\ref{sec:annex}).\\[3pt]
+\emph{Open remainders} &
+\hz{H1} \hz{H10} \hz{H38} &
+Tier-2 corpus-fresh substrate rebuild; the S4 region cap is an out-of-band
+trim, not a flag; the anchor checker still counts lines in a different frame
+than the graphs anchor into. \hz{S11}'s compute-and-discard, formerly listed
+here, is closed (\hz{H22}, \S\ref{sec:open}).\\
+\end{longtable}
+}
+
+\section{Honest boundaries and the open gaps}
+\label{sec:open}
+
+\textbf{\hz{H13} --- the expensive-looking gap that was not one.}
+S5's rung-3 half reads
+\texttt{data/rung3-technique/<pid>.technique.json}, and the obvious reading was
+that producing it needed a mining run. It did not. Both producers already
+existed and are explicitly \emph{deterministic} --- \texttt{cas\_segment.py}
+turns gated graphs into proof steps, \texttt{rung3\_technique.py} turns those
+into technique gap maps --- and neither appeared in any stage of the stepper.
+The one real defect was a granularity mismatch: \texttt{cas\_segment} named its
+output per \emph{paper} while S5 looked up per \emph{proof}, so every proof of a
+paper overwrote its siblings and $98$ graphs collapsed to $12$ files, which S5
+then failed to find at all. One line, plus the DAG wiring. Strategy moves went
+$0 \to 202$ grounded / $564$ thin / $52$ ungrounded, and the verdict
+distribution from uniformly \texttt{no-structure} to $\{$well-formed $6$,
+partial $82$, weak-extraction $10\}$. Total cost: two CPU minutes.
+
+\textbf{The check menu is specified for the wrong mathematics.} The cascade's
+premise is that each proof gets a menu of checks matched to \emph{its} topology
+rather than a uniform $\{$R2a,R2b,R2c$\}$. Selection works --- $478$ verified
+matches over $95$ of $98$ proofs. What the selected patterns then meet is a menu
+built from a different field: $48\%$ of matches name a pattern it does not
+contain, and every key that never matched once is an analysis pattern while the
+frequent absentees are categorical.
+
+This gap has a property the others do not: \emph{it was only visible because the
+component ran}. The deterministic path yields all-thin on arXiv, so the component
+looked inert, and the economical reading was to retract it. Retracting it would
+have removed the only instrument able to report that the menu does not fit the
+corpus --- the $232$ unmatched patterns are not a failure of the feature but its
+most informative output. A third gap category therefore has to be named beside
+\emph{accounting} and \emph{capability}: \emph{built, reviewed, and never run},
+which resembles both and is neither.
+
+\emph{The generalisable form.} Four of this pipeline's gaps are accounting
+rather than capability --- information already computed and not carried across a
+seam --- as are \hz{H15}/\hz{H16} (computed, printed, discarded) and \hz{H19}
+(computed against the wrong inputs). \hz{H22} is the counterexample: its blocker
+was a dependency absent from the host, which no wiring would have supplied.
+\emph{Is this a missing capability or a missing connection?} is therefore a
+productive first question rather than a rule, and the second answer is roughly
+two orders of magnitude cheaper where it holds.
+
+\emph{The original diagnosis, retained:}
+Comprehension is defined as R2d $\oplus$ rung-3, and the rung-3 half reads
+\texttt{data/rung3-technique/<pid>.technique.json}, produced by
+\texttt{rung3\_technique.py}, which appears in no stage of the stepper and no
+entry of the DAG contract. The only such directory present is a mark4-era
+artifact for a different corpus. Consequence, measured: all $98$ proofs score
+\emph{no-structure} and \texttt{weak-proof} is unreachable. This is not a
+wiring bug --- it is a choice between two repairs, and the choice changes what
+a run \emph{means}: either promote \texttt{rung3\_technique} to a stage (and
+trace the producers of its \texttt{--steps-dir}/\texttt{--cas-select} inputs),
+or restate S5's criterion as what the pipeline can actually compute. Deferred
+deliberately to the operator.
+
+\textbf{\hz{S11} --- a stage that reported success without executing.} S11
+chains two scripts. The first, \texttt{sfc\_struct\_canon}, canonicalises
+definition formulae; its input file had no producer anywhere in the pipeline,
+and the transducer that would build one shells to \texttt{latexmlmath}, which
+was absent from the host. Because the stage joined its sub-steps with
+\texttt{;}, the resulting \texttt{FileNotFoundError} was discarded and the stage
+recorded PASS on every run while half of it had never executed.
+
+Three repairs, in the order they matter. The stage now joins with
+\texttt{\&\&}, so a sub-step failure fails the stage. \texttt{sfc\_struct\_canon}
+records an explicit refusal artifact --- \texttt{\{"measured": false, "reason":
+\dots\}} --- when it cannot run, on the principle that a durable statement of
+what was \emph{not} measured is worth more than an exception nobody reads; this
+is the \warrant{refused} warrant class applied to a stage rather than a claim.
+And \texttt{def\_formulae\_extract} supplies the missing input from the
+definition-snippet substrate, scoped to the run manifest. The canon consequently
+runs: $97$ definitions reduce to $77$ canonical shapes with no coverage gaps,
+and the merges are structural rather than lexical --- \texttt{f:K}$\to$\texttt{L} and \texttt{F:D}$\to$\texttt{E} collapse to a single shape under
+$\alpha$-renaming.
+
+\emph{The dependency was not undocumented.} It is recorded in the project's own
+readiness dashboard as MARK7-DEPS, marked ready, with an installer written for
+it and the exact silent-no-op failure mode described in its notes. What was
+missing was any check that the installer had been applied to \emph{this} host.
+A setup script states an intention; only a preflight states a fact
+(\S\ref{sec:replay}).
+
+\textbf{What is not claimed.} $n{=}16$ papers is a pilot; every
+inductive warrant above is small. The accretion rise is \emph{recognition}
+lift, not verification --- the script says so itself and we repeat it. The
+mining used one model class, so A14 is registered rather than witnessed. The
+XTDB bench numbers are at a corpus size where the store is not under load, and
+the missing-warrant rate ($58\%$, stable from $n{=}22$ to $n{=}98$) is a
+property of \emph{extraction over this literature}, not yet attributable
+between literature omission and extractor failure --- that attribution is what
+the three-arm exam in \texttt{E-mining-qual-loop.md} is designed to provide.
+
+\section{What this is for}
+
+Two things. First, it is the artifact that lets a cluster window be booked
+against a tested pipeline rather than a hope: the readiness claim is now
+``S1--S12 executed end-to-end, gated and ledgered, on a host nobody was
+watching, with forty hazards enumerated and thirty-seven closed'', which is a
+different kind of sentence from ``the stages exist''.
+
+Second, and more transferable: the hazard ledger is a \emph{form}. The APM note
+showed a capability claim decomposed into contracted holes with graded
+warrants. This note adds the observation that for a pipeline, the warrants are
+not enough --- because a stage can satisfy its contract while printing into a
+void, or while measuring a fixture. What closes that gap is not more testing
+but a different question, asked stage by stage: \emph{if this stage were
+silently wrong, what would I see?} Six of the first twenty-two hazards were
+found by asking it, and the audit's second wave found the entire
+reports-success class the same way. Each of the three open remainders now has
+a visible signal rather than ``nothing'' --- the substrate gate, the plan's
+region-cap note, and a frame-mismatch line in the faithfulness report.
+
+There is one further move, which \hz{H21} argues for and the annex performs:
+after asking what a silent failure would look like, \emph{read one artifact
+against its source}. The census counts many things approximately; a worked
+example checks a few things exactly. \hz{H21} --- anchors naming the wrong line
+while glossing the right text --- is invisible to every aggregate check we run,
+and obvious on the first paper anyone reads.
+
+
+\section{The replay harness: the ledger, made executable}
+\label{sec:replay}
+
+The slow run establishes that the stages \emph{compute}. Almost none of the
+forty hazards were compute failures --- they were accounting and I/O-contract
+failures, and the accounting half is checkable in half a second against
+artifacts that already exist.
+So the ledger is now a regression suite: eleven checks, one per hazard class,
+asserting \emph{conservation} (every proof has a steps file; every graph is
+typed or logged-rejected), \emph{identity} (artifacts belong to this corpus;
+metrics carry its id; both arXiv id families parse), \emph{shape} (graphs load
+through the \emph{consuming} reader; refs resolve; anchors sit inside their
+passage), and \emph{persistence} (the run directory holds what RETRIEVE
+promises; twelve stages ledgered; the curve rises).
+
+Each check declares the earliest stage at which it is meaningful, which turns
+the suite into a \textbf{mid-run abort gate}. At \texttt{-{}-through S3} seven of
+the eleven apply and four are deferred; the seven include every check that
+catches a catastrophic hazard. That matters operationally: a cluster window is
+booked in one large block, but a run producing artifacts that violate these
+invariants will not repair itself downstream, so the honest move on a failed
+prefix is to abort and give the remaining hours back. Three severities keep the
+gate actionable --- \textsc{fail} (artifacts violate an invariant: abort),
+\textsc{warn} (provenance imperfect, artifacts sound: continue), and
+not-yet-applicable. Provenance noise must never be a reason to abandon a
+window; artifact corruption must always be.
+
+The harness earns its place on the class of defect it catches rather than the
+count. Its corpus-identity check (\texttt{I1}) established that $58$ of the
+$98$ proof graphs originated from four papers outside the declared manifest ---
+residue of a prior sharded run sharing the output directory, which every
+downstream stage then consumed. The stage-mechanics claims are unaffected by
+this, but every corpus-level figure is over a sixteen-paper set rather than the
+twelve originally declared, and the corpus label is stated accordingly
+throughout. A directory is not a corpus; only a manifest is, and only a check
+makes the difference observable.
+
+\input{by-the-numbers}
+
+\input{prereg-scale}
+
+\input{annex-worked-example}
+
+\end{document}

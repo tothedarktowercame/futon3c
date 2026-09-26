@@ -1,0 +1,340 @@
+;; One click of the War Machine, worked by hand against PROOF-2a
+;; (futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md at
+;; 4c502847), clauses T and 0 only. Step 1 of 2: choosing the target and
+;; constructing its candidate field. Clauses 1-6 need the instance executed.
+;;
+;; Authored by claude-1, 2026-09-24. Every number in this file came from
+;; running the prototypes named in :computed-by; nothing here was estimated.
+;; Where a field has no honest value it carries a typed absence rather than a
+;; number, and the largest of those is the one PROOF-2a cares about most: this
+;; field was built BY HAND, not by the in-machine constructor, so W0's
+;; construction condition does not hold on it. That is recorded as a finding,
+;; not dressed up.
+{:schema :m-futon-seams/proof2a-click-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
+ :click "click-001"
+ :authored-by "claude-1"
+ :authored-at "2026-09-24"
+ :mission {:path "holes/missions/M-futon-seams.md"
+           :sha256 "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"}
+ :computed-by
+ [{:what [:decision :selection-certificate :candidate-derivations :* :prediction]
+   :command "bb holes/labs/M-futon-seams/proto/kernels.clj 0.8 6 holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"}
+  {:what [:decision :selection-certificate :candidate-derivations :* :meet-findings]
+   :command "bb holes/labs/M-futon-seams/proto/meets.clj holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"}
+  {:what [:decision :selection-certificate :candidate-derivations :* :interpretations]
+   :command "python3 scripts/cascade_check.py holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"
+   :note "checks each id resolves, its id line matches its path under @arg/@flexiarg/@multiarg, and each receipt sha256 still matches the file's bytes"}]
+
+ ;; RECORD COMPLETENESS (after claude-10's P0 findings, 2026-09-24): both
+ ;; candidates carry their interpretations, containment order and
+ ;; co-application edges inline, so each is recomputable from this file alone
+ ;; without reading the cascade it came from. :source :sha256 pins the cascade
+ ;; file's bytes at the click, so a later edit to instance-4.edn or
+ ;; instance-4b.edn shows as drift rather than passing unnoticed. Verified:
+ ;; each inlined derivation reproduces its cascade's ids, guards, produces,
+ ;; receipt shas and edge count.
+ ;;
+ ;; NOTE ON NAMING: the request specified targets :inst/1 .. :inst/8. EDN
+ ;; rejects those -- a keyword's name may not begin with a digit -- so they are
+ ;; :inst/i1 .. :inst/i8 here, and the candidates :cand/a-… and :cand/b-… for the same reason. Small, but it is the kind of thing a spec only
+ ;; discovers when something tries to read it.
+ :decision
+ {:target-field
+  {:considered [:inst/i1 :inst/i2 :inst/i3 :inst/i4 :inst/i5 :inst/i6 :inst/i7 :inst/i8]
+   :feasible [:inst/i4 :inst/i5 :inst/i6 :inst/i7]
+   :exclusions
+   [{:target :inst/i1 :reason :no-candidate-field
+     :what-would-make-feasible "Author its cascade. The instance is well evidenced -- futon6 6007937, 228 occurrences across 130 scripts, with the regression at 115554f -- but no proto-cascade-v1 file exists for it, so no candidate can be constructed and no G computed."
+     :cue [4399 4421]}
+    {:target :inst/i2 :reason :no-candidate-field
+     :what-would-make-feasible "Author its cascade. Note this instance is recorded as already DONE (22 thin wrappers in scripts/windows), so its cascade would be a retrospective reading rather than a plan; that may make it the wrong kind of target rather than merely an unbuilt one."
+     :cue [6743 6763]}
+    {:target :inst/i3 :reason :no-candidate-field
+     :what-would-make-feasible "Author its cascade. Same caveat as inst/2 and stronger: the mission records this interface as having worked, so there is no want left unproduced."
+     :cue [7811 7832]}
+    {:target :inst/i8 :reason :no-candidate-field
+     :what-would-make-feasible "Author its cascade. Unlike 1-3 this one is live and unresolved (xtdb 40 times in src/ including social/shapes.clj), so it is a genuine candidate that simply has not been written."
+     :cue [15917 15934]}]
+
+   :cost-ordering
+   {:ranking [{:rank 1 :kind :declare-the-interface-first :cost :free}
+              {:rank 2 :kind :retrofit-a-seam-in-code :cost :expensive-but-mechanical}
+              {:rank 3 :kind :retrofit-a-seam-in-prompt-text :cost :worst}]
+    :source-cue [3700 3741]
+    :entered-as :not-used
+    :how "STATED HONESTLY BECAUSE IT IS A FINDING. The mission declares two different orderings and only one of them picked the target. This cost ordering ranks KINDS of retrofit by expense. The choice of inst/4 came from a separate ranking in the IDENTIFY exit, whose stated reasons are 'smallest surface' and 'it unblocks provider substitution for Rob immediately' -- surface size and unblocking value, not retrofit kind. Applying the cost ordering to instances would not yield this choice: inst/4 and inst/5 and inst/7 are all rank-2 code retrofits and it does not discriminate between them, while inst/6 is the unique rank-3.
+Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean most expensive to fix, which argues for doing it last, or most damaging, which argues for doing it first. The mission does not say which, so consistency of the choice with the cost ordering cannot be decided from the record. Wt asks whether the chosen target is consistent with the stated entry; with :entered-as :not-used the question does not arise, but the ambiguity should be fixed in the mission before any later click tries to use this ordering as a prior."
+    :second-ordering
+    {:source-cue [17308 17368]
+     :ranking [:inst/i4 :inst/i5 :inst/i7]
+     :stated-reasons {:inst/i4 "smallest surface; unblocks provider substitution for Rob immediately"
+                      :inst/i5 "larger, but it retires matrix-ircd and the do-not-start-an-IRC-server flag together"
+                      :inst/i7 "do before a VS Code implementation exists, not after"}
+     :entered-as :prior
+     :covers [:inst/i4 :inst/i5 :inst/i7]
+     :note "inst/6 is feasible and absent from this ranking. The mission ranks it nowhere, which is why it is feasible-but-unranked rather than excluded."}}
+
+   :score-inputs
+   {:inst/i4 {:selection-posterior {:status :missing-definition
+                                   :reason "PROOF-2a Clause T: target-grain scoring needs a G per target and the natural candidate (the best candidate cascade's G) is stated there, not settled. No G was computed for any target in this click."}
+             :used [{:input :declared-rank :value 1 :from :second-ordering}
+                    {:input :candidate-field-size :value 2}
+                    {:input :best-candidate-p-all-wants :value 0.26
+                     :kernel :coapp :theta 0.8 :horizon 6}]}
+    :inst/i5 {:selection-posterior {:status :missing-definition}
+             :used [{:input :declared-rank :value 2 :from :second-ordering}
+                    {:input :candidate-field-size :value 1}
+                    {:input :best-candidate-p-all-wants :value 0.924
+                     :kernel :coapp :theta 0.8 :horizon 8}]}
+    :inst/i6 {:selection-posterior {:status :missing-definition}
+             :used [{:input :declared-rank :value {:status :not-ranked}}
+                    {:input :candidate-field-size :value 1}
+                    {:input :best-candidate-p-all-wants :value 0.619
+                     :kernel :coapp :theta 0.8 :horizon 8}]}
+    :inst/i7 {:selection-posterior {:status :missing-definition}
+             :used [{:input :declared-rank :value 3 :from :second-ordering}
+                    {:input :candidate-field-size :value 1}
+                    {:input :best-candidate-p-all-wants :value 0.853
+                     :kernel :coapp :theta 0.8 :horizon 6}]}}
+
+   :score-inputs-finding
+   {:kind :chosen-target-does-not-maximise-any-measured-quantity
+    :statement "inst/4 has the LOWEST best-candidate p(all wants) of the four feasible targets (0.26 against 0.924, 0.853, 0.619), at comparable theta. It was chosen on the declared rank alone. If a later G is defined from the candidate cascade's p(all wants), this click's choice will contradict it, and the record should show that rather than be rewritten. The honest reading is that p(all wants) measures how readily a cascade reaches its own wants, not how much the target is worth doing -- so the two are not competing measurements of one thing, and a G built only from the first would be wrong."}
+
+   :chosen :inst/i4}
+
+  :selection-law
+  {:target :inst/i4
+   :note "Equal to [:decision :target-field :chosen], as Pt requires."}
+
+  :selection-certificate
+  {:candidate-field-size 2
+   :candidate-derivations
+   {:cand/a-registry-first
+    {:target :inst/i4
+     :source {:path "holes/labs/M-futon-seams/proto/instance-4.edn"
+              :sha256 "8a8f7528ded74de1309a7b55c57aa0cdfccfef180081e3c272f4add1aacfce1b"
+              :pinned-at "2026-09-24, the click"
+              :schema :m-futon-seams/proto-cascade-v1}
+     :route "Registry-first: name the grain, make the role-to-seat binding a record, give it exactly one producer, then transfer one caller and test."
+     :initial #{}
+     :want #{:caller-converted :redirect-test :prefix-routing-retired}
+     :interpretations
+     {:or3/count-every-card-back
+      {:guard {:needs #{} :forbids #{}} :produces #{:sites-enumerated}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                          :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+                 :reading "The counting discipline: every occurrence is counted back before any is changed."}}
+      :cascade-construction/choose-the-grain-where-state-lives
+      {:guard {:needs #{} :forbids #{}} :produces #{:roles-named}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
+                          :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
+                 :reading "The state one dispatch changes lives at the role, not the seat and not the provider."}}
+      :coordination/assignment-binding
+      {:guard {:needs #{:roles-named} :forbids #{}} :produces #{:binding-recorded}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/coordination/assignment-binding.flexiarg"
+                          :sha256 "d20124da82dd1ff934ea1067f5626c154cbcf62f2487194e65c712db195253ee"}
+                 :reading "An explicit record binding role to seat, with a conflicting binding rejected rather than preferred."}}
+      :cycle-machine/single-producer
+      {:guard {:needs #{:binding-recorded} :forbids #{}} :produces #{:one-producer}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/cycle-machine/single-producer.flexiarg"
+                          :sha256 "973389525453e7e94222fe87d870dd6246dc155975a7469f6441ba7bad187e65"}
+                 :reading "Three sites derive the provider independently today; exactly one producer, with a contract test against the real counterpart."}}
+      :gauntlet/placenta-transfer
+      {:guard {:needs #{:sites-enumerated :one-producer} :forbids #{}} :produces #{:caller-converted}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/gauntlet/placenta-transfer.flexiarg"
+                          :sha256 "9771eca50e93c42de6b1ea22e188c770635d62830ca190f5ae4ca18056a069cd"}
+                 :reading "Transfer one function the human performs as a surrogate for missing infrastructure: deciding which seat plays a role."}}
+      :translation/test-by-reproducing-behaviour
+      {:guard {:needs #{:caller-converted} :forbids #{}} :produces #{:redirect-test}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                          :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+                 :reading "Redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail."}}
+      :realtime/mode-gate
+      {:guard {:needs #{:redirect-test} :forbids #{}} :produces #{:prefix-routing-retired}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                          :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+                 :reading "The prefix branches stay reachable behind an explicit switch until the redirect test passes, then switch and branches go together."}}}
+
+     :construction-receipt
+     {:kind :machine-constructed
+      :constructor "futon2.aif.interpretation-construction/construct, replayed at futon2 a89646f6 by exemplar/construct_replay.clj (futon3c a3f65fcc)"
+      :interpretations-authored-by "claude-1, reading holes/missions/M-futon-seams.md and searching futon3/library with scripts/xlate.py find"
+      :replay {:record "holes/labs/M-futon-seams/exemplar/construct-replay.edn"
+               :reproduced? true
+               :what "replaying the constructor on exactly these seven interpretations and the recorded initial state returns this candidate's pattern set, in an order consistent with the containment order"}
+      :finding
+      {:kind :w0-construction-condition-met-by-replay
+       :statement "UPDATED 2026-09-24. This record previously said the condition could not hold, because no replay existed. One does now: proof2a_check.clj passes W_0 by replay, and fails it on a replay that does not reproduce the candidate. What remains hand-authored, and is recorded as such because W_0 permits it, is the INTERPRETATIONS -- the guard, produces and receipt for each pattern -- and the containment edges between them. The constructor reproduces the candidate from those; it does not produce them."
+       :what-is-still-by-hand "the seven interpretations and the containment order"}}
+
+     :containment-order
+     [{:above :cascade-construction/choose-the-grain-where-state-lives :below :coordination/assignment-binding
+       :via "Choosing the role as the grain is what makes a binding record about roles."}
+      {:above :coordination/assignment-binding :below :cycle-machine/single-producer
+       :via "Once a binding is a record, asking who may write it becomes a question."}
+      {:above :gauntlet/placenta-transfer :below :translation/test-by-reproducing-behaviour
+       :via "A converted caller is what the redirect test acts on."}
+      {:above :translation/test-by-reproducing-behaviour :below :realtime/mode-gate
+       :via "Retiring the old routing is safe only once the test shows the new path carries the behaviour."}]
+     :co-application-edges
+     [{:above :or3/count-every-card-back :below :gauntlet/placenta-transfer :kind :jointly-with
+       :via "You cannot convert what you have not enumerated."}
+      {:above :cycle-machine/single-producer :below :gauntlet/placenta-transfer :kind :jointly-with
+       :via "And there must be something to convert to."}]
+
+     :meet-findings
+     {:overlapping-pairs 21 :with-greatest-common-descendant 21 :missing []
+      :computed-with :reflexive-below
+      :statement "Every overlapping pair has a greatest common descendant that is itself a pattern of the cascade, so the restricted semilattice condition of clause 0 holds. The two roots overlap (they share every pattern below placenta-transfer) and their meet is gauntlet/placenta-transfer."
+      :definition-note "Recomputed 2026-09-24 with REFLEXIVE descendants, matching CascadeOrder.Below in the PROOF-2a Lean module (a = b OR Reach r a b). The earlier figures here (15 and 15) came from a strict reading, under which a comparable pair loses its lower unit from the common part and reports as missing a meet even though in containment terms A meet B = B. Under the strict reading these files showed five missing meets across instances 5, 6 and 7; under the reflexive one there is exactly one, in instance 6. The finding changed with the definition, which is what a formalisation is for."}
+
+     :frontier-conflicts
+     {:conflicting-states 0 :pairs []
+      :statement "No reachable frontier contains p, q with produces_p meeting forbids_q. This candidate does not exercise clause 0's conflict flag; instance 6 does."}
+
+     :prediction
+     {:kernel :coapp :theta 0.8 :horizon 6
+      :depth 5
+      :p-all-wants 0.26 :e-wants 1.814
+      :list-spread {:extensions 4 :cap 200 :p-all-wants [0.0 0.0] :e-wants [0.918 0.918]}
+      :interleaving {:p-all-wants 0.0 :e-wants 0.918}
+      :x0e-finding
+      {:horizon-vs-depth "Horizon 6 exceeds the depth 5 by one step, so the comparison is informative rather than vacuous: a chain of six would need six steps at theta 1.0 and this cascade is not a chain."
+       :co-application-outside-spread? true
+       :statement "co-application's 0.26 lies outside the list spread [0.0, 0.0], which is degenerate here: all four linear extensions agree on zero. The structure changes the result at this horizon. At horizon 14 all three kernels reach 0.998-1.0 (measured separately), so the difference is rate and not reachability for this candidate."}}}
+
+    :cand/b-observe-first
+    {:target :inst/i4
+     :source {:path "holes/labs/M-futon-seams/proto/instance-4b.edn"
+              :sha256 "64fd0b2b500490c3930c96a520df52e62cf4e5327f01f9c95ebdb1c9641b3daa"
+              :pinned-at "2026-09-24, the click"
+              :schema :m-futon-seams/proto-cascade-v1}
+     :route "Observe-first: build a read-only role-to-seat view from the seats that exist, put routing through it behind a switch, make that the single routing authority, then convert a caller, test, and replace."
+     :semantic-difference "Not a reordering of the same moves. 4a declares a binding record before anything observes; 4b derives a view from what exists and learns the binding's shape from watching, which is the route Rob actually took in instance 6. They share three patterns and differ in four, and 4b uses the domain-specific agency/single-routing-authority where 4a uses the general cycle-machine/single-producer."
+     :initial #{}
+     :want #{:caller-converted :redirect-test :prefix-routing-retired}
+     :interpretations
+     {
+      :agency/single-routing-authority
+      {:guard {:needs #{:routing-gated}, :forbids #{}} :produces #{:one-routing-path}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/agency/single-routing-authority.flexiarg"
+                          :sha256 "df6bf568dee5ded23e3cf08530605b12abe375a3351676fe082305713a1dbf07"}
+                 :reading "The library already states this instance's requirement in the agency family: each agent-id resolves to exactly one routing path at a time, and the authority is a single source of truth rather than a priority cascade across independent stores. Candidate A reaches the same place through cycle-machine/single-producer, which is the general form; this is the domain-specific one and it names the failure modes."}}
+      :gauntlet/placenta-transfer
+      {:guard {:needs #{:one-routing-path}, :forbids #{}} :produces #{:caller-converted}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/gauntlet/placenta-transfer.flexiarg"
+                          :sha256 "9771eca50e93c42de6b1ea22e188c770635d62830ca190f5ae4ca18056a069cd"}
+                 :reading "Same reading as candidate A: the function the human performs as a surrogate — deciding which seat plays a role — is transferred to the system one caller at a time. In this candidate it happens later, after the authority exists rather than before."}}
+      :iching/hexagram-49-ge
+      {:guard {:needs #{:redirect-test :one-routing-path}, :forbids #{}} :produces #{:prefix-routing-retired}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/iching/hexagram-49-ge.flexiarg"
+                          :sha256 "6e9f317cd451a4863296c0ed5d8e8158f2ec728ed245405fdb2d512da4dc0631"}
+                 :reading "革: replace the old with the new, where timing and legitimacy are the conditions. Legitimacy is the single authority; timing is the test having passed. Candidate A reaches retirement through realtime/mode-gate instead, which is the weaker reading — a gate closing is not the same act as a replacement."}}
+      :or3/count-every-card-back
+      {:guard {:needs #{}, :forbids #{}} :produces #{:sites-enumerated}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                          :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+                 :reading "Same reading as in candidate A: the 51 literals and three prefix branches are counted back before any is changed."}}
+      :peripherals/read-only-first-then-extend
+      {:guard {:needs #{}, :forbids #{}} :produces #{:roles-observable}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/peripherals/read-only-first-then-extend.flexiarg"
+                          :sha256 "ffe10550fc9d3c85725b0a086a1e9e3c5eae2f93319a67e90a073698022a1180"}
+                 :reading "The move that makes this candidate different from A: the first instantiation of the role view observes and displays and does not write, so what a binding actually needs is learned from watching before anything routes through it. A read-only view can be built from the seats that exist today without deciding anything."}}
+      :realtime/mode-gate
+      {:guard {:needs #{:roles-observable :sites-enumerated}, :forbids #{}} :produces #{:routing-gated}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                          :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+                 :reading "Routing through the view becomes reachable only behind an explicit switch, with the string reading still live beside it. This is what Rob did in instance 6, and the mission's warning about that instance applies here too: the switch is a transitional state, not the destination."}}
+      :translation/test-by-reproducing-behaviour
+      {:guard {:needs #{:caller-converted}, :forbids #{}} :produces #{:redirect-test}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                          :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+                 :reading "The mission's stated acceptance method, unchanged between the candidates: redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail."}}
+      }
+     :containment-order
+     [
+      {:above :realtime/mode-gate :below :agency/single-routing-authority
+       :via "Asking which path is authoritative only has an answer once there are two paths and a switch between them."}
+      {:above :agency/single-routing-authority :below :gauntlet/placenta-transfer
+       :via "Transferring the resolution off the operator requires somewhere single to transfer it to."}
+      {:above :gauntlet/placenta-transfer :below :translation/test-by-reproducing-behaviour
+       :via "A converted caller is what the redirect test acts on."}
+     ]
+     :co-application-edges
+     [
+      {:above :or3/count-every-card-back :below :realtime/mode-gate :kind :jointly-with
+       :via "A switch over routing must know every site that routes; one of two joint contexts."}
+      {:above :peripherals/read-only-first-then-extend :below :realtime/mode-gate :kind :jointly-with
+       :via "And there must be a view to route through. The second joint context, and the one that makes this candidate observe-first rather than registry-first."}
+      {:above :translation/test-by-reproducing-behaviour :below :iching/hexagram-49-ge :kind :jointly-with
+       :via "Timing: the test must have passed. One of two joint contexts."}
+      {:above :agency/single-routing-authority :below :iching/hexagram-49-ge :kind :jointly-with
+       :via "Legitimacy: there must be one authority for the old path to be replaced BY. The second joint context."}
+     ]
+     :construction-receipt
+     {:kind :machine-constructed
+      :constructor "futon2.aif.interpretation-construction/construct, replayed as for 4a"
+      :interpretations-authored-by "claude-1, same method as 4a"
+      :replay {:record "holes/labs/M-futon-seams/exemplar/construct-replay.edn"
+               :reproduced? true}
+      :finding {:kind :w0-construction-condition-met-by-replay
+                :statement "As for 4a: reproduced by replay, interpretations hand-authored and recorded."}}
+
+     :meet-findings
+     {:overlapping-pairs 21 :with-greatest-common-descendant 21 :missing []
+      :computed-with :reflexive-below
+      :statement "The restricted condition holds here too."}
+     :frontier-conflicts {:conflicting-states 0 :pairs []}
+     :prediction
+     {:kernel :coapp :theta 0.8 :horizon 6
+      :depth 5
+      :p-all-wants 0.21 :e-wants 1.663
+      :list-spread {:extensions 2 :cap 200 :p-all-wants [0.0 0.0] :e-wants [0.918 0.918]}
+      :interleaving {:p-all-wants 0.0 :e-wants 0.918}
+      :x0e-finding
+      {:statement "This candidate is nearly a chain: 2 linear extensions against 4a's 4, and one wide state of 9 reachable against 3 of 11. Clause 0 says a precedence list is the chain case of the containment order, and the numbers show the approach to that case rather than the case itself -- co-application still beats the list here (0.21 against 0.0), because one branch remains."}}}}
+
+   :comparison
+   {:preferred :cand/a-registry-first
+    :on {:p-all-wants [0.26 0.21] :e-wants [1.814 1.663]}
+    :caveat "The two candidates were authored by the same agent from the same mission within an hour, so their independence is limited. A field of two candidates from one author is not the same evidence as a field of two from two."}}}
+
+ :clause-status
+ {:T {:verdict :partially-met
+      :met ["every considered target listed and partitioned"
+            "each exclusion carries a typed reason and what-would-make-feasible"
+            "chosen equals the selection-law target"
+            "a declared cost ordering is recorded with how it entered"]
+      :not-met ["the chosen target does not maximise selectionPosterior over T_f, because no posterior was computed: :missing-definition, as Clause T's own missing-definition paragraph anticipates"]
+      :findings ["the mission declares two orderings and the cost ordering is not the one that chose the target"
+                 "the cost ordering is ambiguous between most-expensive and most-damaging"
+                 "the chosen target has the lowest best-candidate p(all wants) of the four feasible"]}
+  :0 {:verdict :met
+      :met ["two semantically different candidates for the chosen target"
+            "each candidate's interpretations carry pattern id, guard, produces and a receipt with source path and sha"
+            "the carrier is extracted as a containment order with co-application edges"
+            "the restricted semilattice condition holds on both candidates, with the meet findings recorded"
+            "frontier conflicts recorded, and empty for both, with a pointer to the instance that has them"
+            "X0(e) computed over every linear extension with the cap recorded and the finding stated against horizon and depth"]
+      :not-met []
+      :history "Until 2026-09-24 this read :not-met on the construction condition, because the candidates were hand-built and no replay existed. exemplar/construct_replay.clj replays futon2's constructor on the recorded interpretations and reproduces both candidates; proof2a_check.clj passes W_0 by replay and fails it on a replay that does not reproduce the candidate. Kept here rather than overwritten: the verdict changed because the apparatus changed, not because the record did."}}}

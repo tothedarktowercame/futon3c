@@ -1,0 +1,612 @@
+{:evidence/id
+ "test-registry-307b896903dc56c6c6b19d077161a1b04a253938f3c0b063105368159db96ecf",
+ :command
+ ["clojure" "-M:test" "-n" "futon2.aif.mission-reading-c8-test"],
+ :repo-root "/home/joe/code/futon2",
+ :source
+ "copied verbatim from the registration output of futon2 d5320918 (claude-10, 2026-09-25 03:49Z); :load-closure is the run record field",
+ :load-closure
+ [{:ns "meme.fold",
+   :path "/home/joe/code/futon3a/src/meme/fold.clj",
+   :sha256
+   "7773a18cf0baddb1752c292de4d1f1464d545a7f73fdaa2661c8d1969d541a24"}
+  {:ns "meme.gates",
+   :path "/home/joe/code/futon3a/src/meme/gates.clj",
+   :sha256
+   "14325e7a4518b2ed8a656bdc6b0ea06503ff08a0f8b2c7e9d9a567d05ea30b6d"}
+  {:ns "meme.step",
+   :path "/home/joe/code/futon3a/src/meme/step.clj",
+   :sha256
+   "e2989a150fcc615bad5125a43c736c21b80f27c0ca1853cabe34e1b768131409"}
+  {:ns "resource:wm/observation-contract.edn",
+   :path "resources/wm/observation-contract.edn",
+   :sha256
+   "a3bee89abe07a233a7cf1a62ed260a4dc5db5e56973678637a280515b76f9c17"}
+  {:ns "futon2.report.cascade-lane",
+   :path "scripts/futon2/report/cascade_lane.clj",
+   :sha256
+   "a1494e4de3eade3523d201efc3e0470de228627d2caa8247e25431ab03c06c2b"}
+  {:ns "futon2.report.war-machine",
+   :path "scripts/futon2/report/war_machine.clj",
+   :sha256
+   "0387620e78cac156942385c966a61f85496d6c595f574bc41a7d291b4f49bbba"}
+  {:ns "futon2.aif.accepted-increment",
+   :path "src/futon2/aif/accepted_increment.clj",
+   :sha256
+   "c0fa9f64c5b3f5a8894169c92c07c8eb4ed03c655ac54f33e47e04e47e7d6e56"}
+  {:ns "futon2.aif.action-identity",
+   :path "src/futon2/aif/action_identity.clj",
+   :sha256
+   "5b477c0280edea969b26d80f2408b6eba280cf7e084f44953c69721253fc2488"}
+  {:ns "futon2.aif.action-proposer",
+   :path "src/futon2/aif/action_proposer.clj",
+   :sha256
+   "e4f4abdd3f79d4f740002f01ba0b7f765f3cd2fa20e9870741ed56c814461eca"}
+  {:ns "futon2.aif.anticipation",
+   :path "src/futon2/aif/anticipation.clj",
+   :sha256
+   "9d9cd6a8d7f050536a56f170390da863d461853001d6102890c6718761a333f4"}
+  {:ns "futon2.aif.attempt-learning",
+   :path "src/futon2/aif/attempt_learning.clj",
+   :sha256
+   "1b30ff728cd80703beeb5568086723bd21dcf7f85f0cc5212455f6b90b11f59c"}
+  {:ns "futon2.aif.belief",
+   :path "src/futon2/aif/belief.clj",
+   :sha256
+   "39c1dabaf7be878b638ee1f14f22e4d54f2b5b9ed1a2cc09bdd7b63d1b27a595"}
+  {:ns "futon2.aif.beta-habit",
+   :path "src/futon2/aif/beta_habit.clj",
+   :sha256
+   "9e481c6bc27ca74691d4dbf30105066ee9eb48e5df0aefa14163764bd4dcc446"}
+  {:ns "futon2.aif.c-fold-config",
+   :path "src/futon2/aif/c_fold_config.clj",
+   :sha256
+   "b1e743a6b14152faf59e6604c60ef2a0ab54242f919303729ed9bd854c4b5605"}
+  {:ns "futon2.aif.c-vector",
+   :path "src/futon2/aif/c_vector.clj",
+   :sha256
+   "10f92a860d366c3005d4c0a9792b2a9e6c6298c9414efab9de3a3c6165738015"}
+  {:ns "futon2.aif.calibration-admission",
+   :path "src/futon2/aif/calibration_admission.clj",
+   :sha256
+   "9c00f0133e9f5b52ca6cb98ba04d09f57244cfb2ef4aa21b62005d1ca7d926eb"}
+  {:ns "futon2.aif.calibration-cycle",
+   :path "src/futon2/aif/calibration_cycle.clj",
+   :sha256
+   "375731b2a08d43ab89d39428c425f83c8c2757c40e25579ade7059891466464c"}
+  {:ns "futon2.aif.candidate-derivations",
+   :path "src/futon2/aif/candidate_derivations.clj",
+   :sha256
+   "135b1ea0dc0bc741958c614351fff8388d114f34aefe2788998525eddc3fb77b"}
+  {:ns "futon2.aif.cascade-equivalence",
+   :path "src/futon2/aif/cascade_equivalence.clj",
+   :sha256
+   "ca1d173144c615912a24ae3dbc78d3bc559d7f485a3bc4e9cb2144d32ea3a395"}
+  {:ns "futon2.aif.cascade-free-energy",
+   :path "src/futon2/aif/cascade_free_energy.clj",
+   :sha256
+   "b5bcf1d562a04283cbdf01e4a87b944d8c02dc02e90b74a78d8ae56064f1d5b8"}
+  {:ns "futon2.aif.cascade-habit-reinforcement",
+   :path "src/futon2/aif/cascade_habit_reinforcement.clj",
+   :sha256
+   "2ade42b1c8df6901673a0e081ed81ccd91c9a5f515cccf5721f4b3bf6e039a92"}
+  {:ns "futon2.aif.cascade-habit-store",
+   :path "src/futon2/aif/cascade_habit_store.clj",
+   :sha256
+   "a779210d8c4014072355e56a8381d033f53b71f124756baab4f427ebfc80645c"}
+  {:ns "futon2.aif.cascade-model-manifest",
+   :path "src/futon2/aif/cascade_model_manifest.clj",
+   :sha256
+   "3814ee891a27ce9e4ef65f98d379ee724835617415d374412631213aadd7a781"}
+  {:ns "futon2.aif.cascade-plan",
+   :path "src/futon2/aif/cascade_plan.clj",
+   :sha256
+   "be64df1e237721fb5f9e9b5298f484f3ccf609f122b8c3f24054b2a946af20d9"}
+  {:ns "futon2.aif.cascade-policy",
+   :path "src/futon2/aif/cascade_policy.clj",
+   :sha256
+   "29b7130f6f9077353a1e02eb3ce54c250087ec001ae13993a7fe07fa11b72a56"}
+  {:ns "futon2.aif.cascade-prior",
+   :path "src/futon2/aif/cascade_prior.clj",
+   :sha256
+   "9c63b7d5792caf4116ea8b6f648cbdf6c502c7daa82c9f5d69e4207f7de64f37"}
+  {:ns "futon2.aif.cascade-problems",
+   :path "src/futon2/aif/cascade_problems.clj",
+   :sha256
+   "2981d2ff16757453369949cf7e7d592cc65c6f1c0f2333649d18aacf8a0b4320"}
+  {:ns "futon2.aif.cascade-proposals",
+   :path "src/futon2/aif/cascade_proposals.clj",
+   :sha256
+   "99d2f96306be29e970b867f80df145ce85e7bb45aa5e9e8ba219305eade93f5f"}
+  {:ns "futon2.aif.cascade-selection",
+   :path "src/futon2/aif/cascade_selection.clj",
+   :sha256
+   "36de7ef293d7b40aebf942dd05fb6e72cf7dc02ea7458f71418e3d339328623a"}
+  {:ns "futon2.aif.cascade-sources",
+   :path "src/futon2/aif/cascade_sources.clj",
+   :sha256
+   "8c845b3529e70c3ad9038b1e229df910888457a4159375679b842a222d6afaed"}
+  {:ns "futon2.aif.cascade-structure",
+   :path "src/futon2/aif/cascade_structure.clj",
+   :sha256
+   "f04b554872d1accd1929f79d3fe6e356a582740a144f9420c48cb7b0cca4a223"}
+  {:ns "futon2.aif.check-candidates",
+   :path "src/futon2/aif/check_candidates.clj",
+   :sha256
+   "d3c0ca33b27242db78fcb136a8a4a8c1c0f96d7cfc38b67c4ea402c0bdd25b29"}
+  {:ns "futon2.aif.close-loop",
+   :path "src/futon2/aif/close_loop.clj",
+   :sha256
+   "f774f248ff94f3b0559affa6d9222e133a4617ebf7f0ee3f79c8f28e44d14772"}
+  {:ns "futon2.aif.close-retention",
+   :path "src/futon2/aif/close_retention.clj",
+   :sha256
+   "99ff8cb322700a3067126426018745b0a0227c17880d863398f3480b5d4cd9ae"}
+  {:ns "futon2.aif.conditioned-trajectory",
+   :path "src/futon2/aif/conditioned_trajectory.clj",
+   :sha256
+   "a65615bc83bc3244d9ac1a1e7db91964598ad221024258441206164a4b502525"}
+  {:ns "futon2.aif.construction",
+   :path "src/futon2/aif/construction.clj",
+   :sha256
+   "1d99ed543914d2ed0e1691bdee563691bfd35e8353953c30b5d457ba6c923bc9"}
+  {:ns "futon2.aif.construction-moves",
+   :path "src/futon2/aif/construction_moves.clj",
+   :sha256
+   "6933d0d7b6703a9b5abc522afab12e2f417ab107543737e4acf223c0e409b78b"}
+  {:ns "futon2.aif.controller-authority",
+   :path "src/futon2/aif/controller_authority.clj",
+   :sha256
+   "5e232785e67822bbb2d7f1b887d311ee0d4fdc875691aedeb3ece3beee6f2ff0"}
+  {:ns "futon2.aif.d-predecessor-task-authority",
+   :path "src/futon2/aif/d_predecessor_task_authority.clj",
+   :sha256
+   "4dbcdf6678b20a014f3c3960b3bb39d4802c2baddc64f4f21d3a12dda2b00216"}
+  {:ns "futon2.aif.decision-gate",
+   :path "src/futon2/aif/decision_gate.clj",
+   :sha256
+   "892ee891df132fa871628efb921ab9eecb825a4485aa4ecf44f0aba8d745fbb0"}
+  {:ns "futon2.aif.delivery-qa",
+   :path "src/futon2/aif/delivery_qa.clj",
+   :sha256
+   "27ed0cbb1ca309513a7f685c72954294ff7118fdcf1667f4d66df29f87eb7b50"}
+  {:ns "futon2.aif.disposition-risk",
+   :path "src/futon2/aif/disposition_risk.clj",
+   :sha256
+   "b2b70f228939a511baa610d921b3c3431ee4618dcd8dc39fdd66bebc9807afe0"}
+  {:ns "futon2.aif.efe",
+   :path "src/futon2/aif/efe.clj",
+   :sha256
+   "d62bd876351c9119954eaf06862c290740dca2f00a580cc1fe069a7e7ca17bd8"}
+  {:ns "futon2.aif.enumeration-completeness",
+   :path "src/futon2/aif/enumeration_completeness.clj",
+   :sha256
+   "a61039052dc96a194afac68e9f17323253959868739c2b1369aed6d51d035123"}
+  {:ns "futon2.aif.epistemic-value",
+   :path "src/futon2/aif/epistemic_value.clj",
+   :sha256
+   "0df62893adfdce64189c99724a4e1fb80ff0d0a07f84c74a5acf780cc370b690"}
+  {:ns "futon2.aif.evidence-manifest",
+   :path "src/futon2/aif/evidence_manifest.clj",
+   :sha256
+   "6a10f78fe93a67d4c4c653658b8d5b8e1275e94b5185bbc099f20b9acfc4e0d9"}
+  {:ns "futon2.aif.exact-belief-core",
+   :path "src/futon2/aif/exact_belief_core.clj",
+   :sha256
+   "829d4df30bf297ee5194ee4dae21ed249bc2299ee1faa42f3a126f3d5559db94"}
+  {:ns "futon2.aif.fact-measurement",
+   :path "src/futon2/aif/fact_measurement.clj",
+   :sha256
+   "c0d29ca82a6884b67fb15c8ea46a3b71296c6d67a1c83daff71ef21b5d980035"}
+  {:ns "futon2.aif.find-designation",
+   :path "src/futon2/aif/find_designation.clj",
+   :sha256
+   "3131d771f7e49d472e5ac0aabac167b6b110295c456820aadb97039b9f0c8aa7"}
+  {:ns "futon2.aif.find-expectations",
+   :path "src/futon2/aif/find_expectations.clj",
+   :sha256
+   "0da3602ce5a4fdc753e91bfb589c219f50c7ce7d1ba4310a51d3cc46f476a9cc"}
+  {:ns "futon2.aif.find-receipt",
+   :path "src/futon2/aif/find_receipt.clj",
+   :sha256
+   "49011c2867fcea012c8d6b299cd597cf90649401e87ab6a84e03bfe838039731"}
+  {:ns "futon2.aif.finding-ticket",
+   :path "src/futon2/aif/finding_ticket.clj",
+   :sha256
+   "20acb9f0aef434536562aeff8e29ae45ed40c28ab369a0f1e17011a21d8b3337"}
+  {:ns "futon2.aif.flight",
+   :path "src/futon2/aif/flight.clj",
+   :sha256
+   "34a6fb9fa168b033634685c76094eb18a98cb817dc1809fffd7b1fa5e227dfd7"}
+  {:ns "futon2.aif.flight-runner",
+   :path "src/futon2/aif/flight_runner.clj",
+   :sha256
+   "999fa98296254d5a3d78d85f7178494e9333b17fa19e602d3fe51f14cd6502a8"}
+  {:ns "futon2.aif.focus-receipt",
+   :path "src/futon2/aif/focus_receipt.clj",
+   :sha256
+   "a9a628f6788b69599ec411030b35aded3a0885d48425a3eb3e58cb2748e90dcd"}
+  {:ns "futon2.aif.fold",
+   :path "src/futon2/aif/fold.clj",
+   :sha256
+   "d0aea7c98e70c3675f6065fe08e43772d4d58be44f056608754c3ff8f3ea4de6"}
+  {:ns "futon2.aif.fold-cascade",
+   :path "src/futon2/aif/fold_cascade.clj",
+   :sha256
+   "4e194f53badb0d11d789e8793d900b9d6374f668edf2d4dce52e6e32469c10a9"}
+  {:ns "futon2.aif.fold-classical",
+   :path "src/futon2/aif/fold_classical.clj",
+   :sha256
+   "0ae85340f06e5b3fd903f6369de0057141c648534e807c7c82bae3c5626ee446"}
+  {:ns "futon2.aif.fold-eval",
+   :path "src/futon2/aif/fold_eval.clj",
+   :sha256
+   "0a8e8b3d98510fc550a4c8928262cca4b645d2dae23d5ce8e762be56c3170f61"}
+  {:ns "futon2.aif.fold-llm",
+   :path "src/futon2/aif/fold_llm.clj",
+   :sha256
+   "7bb347fd166bb668a612fd5d04811a862d1fbb76923360159b4da53f1189ae35"}
+  {:ns "futon2.aif.fold-semilattice",
+   :path "src/futon2/aif/fold_semilattice.clj",
+   :sha256
+   "e044b4a9a6f079ce2ad930cefef62bbd2880f613a60aa592fc4ac5973882ee4b"}
+  {:ns "futon2.aif.forward-model",
+   :path "src/futon2/aif/forward_model.clj",
+   :sha256
+   "da9f516159467fbf43d0b6587fcb01466fdff6974028e1613df86be930f518d3"}
+  {:ns "futon2.aif.free-energy",
+   :path "src/futon2/aif/free_energy.clj",
+   :sha256
+   "272c0b999af69513327f5db0b5606a92b6b5b07d574c661e33a1968beb43c71c"}
+  {:ns "futon2.aif.full-loop-cohort",
+   :path "src/futon2/aif/full_loop_cohort.clj",
+   :sha256
+   "5830205342bdd69443a319e25d9ae754812e60f45c92363af0b60493a5a01438"}
+  {:ns "futon2.aif.full-loop-runner",
+   :path "src/futon2/aif/full_loop_runner.clj",
+   :sha256
+   "10ed5f6d9a54a3e7c7cf487ca82423228935f39d364309b8cd3f0a546d5857f5"}
+  {:ns "futon2.aif.g-term-decomposition",
+   :path "src/futon2/aif/g_term_decomposition.clj",
+   :sha256
+   "7045c9442827e5e2aa23a4642ce0f4fca504edc90b97dccf7c0fddc9cbdcddb4"}
+  {:ns "futon2.aif.habit-prior",
+   :path "src/futon2/aif/habit_prior.clj",
+   :sha256
+   "23f631d82dbbace7f8b854b243ef31ebed11fabfe55e24b41020857b11007f9f"}
+  {:ns "futon2.aif.hierarchical-budget",
+   :path "src/futon2/aif/hierarchical_budget.clj",
+   :sha256
+   "a0581c1d7135324b1190795ba56dfc9fa834869474a297155678d88d71e5216b"}
+  {:ns "futon2.aif.increment-attestation",
+   :path "src/futon2/aif/increment_attestation.clj",
+   :sha256
+   "7af9016fb746c4d2b932bcb02964bf41baeed6f7ce055c1cde147b21241fb2d7"}
+  {:ns "futon2.aif.interoceptive-store-lock",
+   :path "src/futon2/aif/interoceptive_store_lock.clj",
+   :sha256
+   "199c8852ac14e946823c8699ee140d653f8286821713790d95b0966afd09a4f5"}
+  {:ns "futon2.aif.interpretation-construction",
+   :path "src/futon2/aif/interpretation_construction.clj",
+   :sha256
+   "ef18699e0cb3f1e0e09f250d5770216e7a637fcdf9b043f363ac72c11e01cf15"}
+  {:ns "futon2.aif.interpretation-evidence",
+   :path "src/futon2/aif/interpretation_evidence.clj",
+   :sha256
+   "41f97c13bcd09e0d2e367b20e565fc63fbebefa2e8e47f0f4b4766d268f7b7ee"}
+  {:ns "futon2.aif.interpretation-job",
+   :path "src/futon2/aif/interpretation_job.clj",
+   :sha256
+   "a85a3d64a9d7d757a6d45f98998a8512147eeab7c47cb599dffc4d26822e7df5"}
+  {:ns "futon2.aif.interpretation-request",
+   :path "src/futon2/aif/interpretation_request.clj",
+   :sha256
+   "7747fe95fed084c49d7dec39b6ad26ec563b1e9075187b0db8e55eb2cdb0b0bb"}
+  {:ns "futon2.aif.intrinsic-values",
+   :path "src/futon2/aif/intrinsic_values.clj",
+   :sha256
+   "ea07fb662fed93e801e613a102f35f7baa3c3053fd636d478d14e504a1be758b"}
+  {:ns "futon2.aif.job-text-retention",
+   :path "src/futon2/aif/job_text_retention.clj",
+   :sha256
+   "0180d87c9a0824c34552f0216fa886386b665d7cb6c1e3ed73cae75919e4a379"}
+  {:ns "futon2.aif.kernel-example",
+   :path "src/futon2/aif/kernel_example.clj",
+   :sha256
+   "8393e64a5f9e8aa4307d1615ef64fae8ca01d2a75c29560b953de7f3407c4c42"}
+  {:ns "futon2.aif.lane-futility",
+   :path "src/futon2/aif/lane_futility.clj",
+   :sha256
+   "2ca51cdb0b506dae4f1b41ec21c9bb6b6023dda95feec54e2748e747fa2b20cb"}
+  {:ns "futon2.aif.learning-trial",
+   :path "src/futon2/aif/learning_trial.clj",
+   :sha256
+   "70d6bcfd1f805241b9395a18e11d1fe5794f99523916a2ece4e40a963eac1e0c"}
+  {:ns "futon2.aif.learning-trial-ledger",
+   :path "src/futon2/aif/learning_trial_ledger.clj",
+   :sha256
+   "b66b1308680a0b7cd38bb045382466f1136eaf38b3f7bda910913780c1eec138"}
+  {:ns "futon2.aif.likelihood-precision",
+   :path "src/futon2/aif/likelihood_precision.clj",
+   :sha256
+   "3b0958dea8da100fd927208523b1583690afa70d32d5778cf14c479bf584966b"}
+  {:ns "futon2.aif.limb-evidence",
+   :path "src/futon2/aif/limb_evidence.clj",
+   :sha256
+   "05b3b520523bf406a4d489a7236f04f083662010207b6ab04a15f31dc52893f0"}
+  {:ns "futon2.aif.live-c",
+   :path "src/futon2/aif/live_c.clj",
+   :sha256
+   "8427954e6d86d6116580b291c5da27335d41bfa10fcbc586c573959f22423cb4"}
+  {:ns "futon2.aif.load-identity",
+   :path "src/futon2/aif/load_identity.clj",
+   :sha256
+   "881d49d54ce5114262a307c9c67b8631f3b43c818e43acdff1b0cd14539d0950"}
+  {:ns "futon2.aif.machine-accumulation",
+   :path "src/futon2/aif/machine_accumulation.clj",
+   :sha256
+   "22f03895f6a05cd78822e756c164d039916d4c53d7313f3700c1f9f63dd1091b"}
+  {:ns "futon2.aif.machine-model",
+   :path "src/futon2/aif/machine_model.clj",
+   :sha256
+   "6a34ac3813aa82a56686ecf962e61bb948e9f65af2f2893b65fdaf2644726c92"}
+  {:ns "futon2.aif.machine-q",
+   :path "src/futon2/aif/machine_q.clj",
+   :sha256
+   "5ca91dd8065ce73ad8ada66e5c6bd1f5f0f462ab0920f9bd3415b3e35bbd9299"}
+  {:ns "futon2.aif.machine-q-risk",
+   :path "src/futon2/aif/machine_q_risk.clj",
+   :sha256
+   "c8ec44dc5ad74e35ec7dec412b79152bc0f3d730441105fc9496c66115b2c3fa"}
+  {:ns "futon2.aif.matched-observation-evidence",
+   :path "src/futon2/aif/matched_observation_evidence.clj",
+   :sha256
+   "78349e620a3863bfead1a1ce635742daa1eff56407ef72709e814297c486b7d0"}
+  {:ns "futon2.aif.mission-c",
+   :path "src/futon2/aif/mission_c.clj",
+   :sha256
+   "72a19171338cf354a878f75a5b127fc19ffbe136573412ff3b4b7d8eed61bf95"}
+  {:ns "futon2.aif.mission-criteria",
+   :path "src/futon2/aif/mission_criteria.clj",
+   :sha256
+   "6bf51c70de7d268a60fc43e49b4339177645d91d2b02fef230d237be08c630e0"}
+  {:ns "futon2.aif.mission-epistemic-value",
+   :path "src/futon2/aif/mission_epistemic_value.clj",
+   :sha256
+   "b397c7d3adc266cd569fd66237744c813474f6d0ba7f2dbb96a1cea04f3155c0"}
+  {:ns "futon2.aif.mission-gauges",
+   :path "src/futon2/aif/mission_gauges.clj",
+   :sha256
+   "ee955fd9d7e771c3bb7bd1f5c84fcaa7d92f0d2c112ddedf80dd8c63b1dd485f"}
+  {:ns "futon2.aif.mission-hole-wants",
+   :path "src/futon2/aif/mission_hole_wants.clj",
+   :sha256
+   "fe1f7af60949d662a7d945697383e913204a3298842762868fd660bb9972a05f"}
+  {:ns "futon2.aif.mission-reading",
+   :path "src/futon2/aif/mission_reading.clj",
+   :sha256
+   "c85f9de90c03b58cb45c6947a934d31a27eb149403bd7b1a3a6bed7c64aea75d"}
+  {:ns "futon2.aif.mission-registry",
+   :path "src/futon2/aif/mission_registry.clj",
+   :sha256
+   "86ccd3d3007fc8706a38dd1678c6e8d5ac6781a10ea1baba6e5bc8c2fc9830c0"}
+  {:ns "futon2.aif.morning-brief",
+   :path "src/futon2/aif/morning_brief.clj",
+   :sha256
+   "db677db8e76e17a353ab56370fc5dbd1ab934c44886c75ec3fd84a936ff875a0"}
+  {:ns "futon2.aif.move-class-intensity",
+   :path "src/futon2/aif/move_class_intensity.clj",
+   :sha256
+   "0f8c78c01bd68d9e7a2c00003ac4bff985446b350c2e57a73fb7ef5314c45a47"}
+  {:ns "futon2.aif.observation",
+   :path "src/futon2/aif/observation.clj",
+   :sha256
+   "582d87dbedbaf42b0d8203fcae292214552642f0c29176e5b2ff9ca1ffe4bae7"}
+  {:ns "futon2.aif.observation-checks",
+   :path "src/futon2/aif/observation_checks.clj",
+   :sha256
+   "e05efc43a9cf2a557948d7ce981cb4398ee0795ffe1a9c1825085bf8d8a7470d"}
+  {:ns "futon2.aif.observation-model",
+   :path "src/futon2/aif/observation_model.clj",
+   :sha256
+   "d291e202fd9c9103437777c11620f139d3739475f21ca2bfb1e2d3deffa7b649"}
+  {:ns "futon2.aif.observation-rates",
+   :path "src/futon2/aif/observation_rates.clj",
+   :sha256
+   "4043195129358156318f448a9267a353cf69f3b71e6063f1fc432b4c3ed05b86"}
+  {:ns "futon2.aif.parameter-novelty",
+   :path "src/futon2/aif/parameter_novelty.clj",
+   :sha256
+   "6ecc02a17cf80f8e032b83fe3e799b1603453945cd9769ada6629469ba600aa7"}
+  {:ns "futon2.aif.pattern-registry",
+   :path "src/futon2/aif/pattern_registry.clj",
+   :sha256
+   "3a75d6c7ba4fbe188759fc4e2ae18f8f7aa3dc24f8b23d780440c405c6113df2"}
+  {:ns "futon2.aif.policy",
+   :path "src/futon2/aif/policy.clj",
+   :sha256
+   "61cb8c889f8704bc985b1795b3faa42b53f463b7aab9d352ad3abdf6735109ea"}
+  {:ns "futon2.aif.policy-depth",
+   :path "src/futon2/aif/policy_depth.clj",
+   :sha256
+   "24fba07ef6458570ddd7e5f4dd3b4bc6ec0b49432ead8af06b51e29e0d369786"}
+  {:ns "futon2.aif.policy-free-energy",
+   :path "src/futon2/aif/policy_free_energy.clj",
+   :sha256
+   "05a53b3fe2f6455f0deca83850b8d4a550065995b05ac38724d1b848eaa2af1d"}
+  {:ns "futon2.aif.policy-precision",
+   :path "src/futon2/aif/policy_precision.clj",
+   :sha256
+   "ea42a477d25d62bb42c72412df781071b05db6e759451a78a591266202d4e6e4"}
+  {:ns "futon2.aif.policy-precision-carry",
+   :path "src/futon2/aif/policy_precision_carry.clj",
+   :sha256
+   "5bf253bb68662c76094368c686f643e2a7f7680bf6296446fed383f132099079"}
+  {:ns "futon2.aif.policy-prefix-evidence",
+   :path "src/futon2/aif/policy_prefix_evidence.clj",
+   :sha256
+   "c67a644b01d3fcc88559fb2f5db5aaf6c2f73e3b9a360577e12448db2d26263d"}
+  {:ns "futon2.aif.precision",
+   :path "src/futon2/aif/precision.clj",
+   :sha256
+   "f365e6f518c6feaf72cd42074dbaa9eea59c8457dfdd780e256bd5275f207fed"}
+  {:ns "futon2.aif.preference-audit",
+   :path "src/futon2/aif/preference_audit.clj",
+   :sha256
+   "af3a8ab5d03263757960321c6e0b5162b888eec02a46b3b6ac7df2f61be629d6"}
+  {:ns "futon2.aif.preference-module",
+   :path "src/futon2/aif/preference_module.clj",
+   :sha256
+   "992105412b34b4a4235cf7554c4667ec8f833af0327a19c7c043403dc47c8291"}
+  {:ns "futon2.aif.preferences",
+   :path "src/futon2/aif/preferences.clj",
+   :sha256
+   "5438295b8f5fd6f53e70176a8e193113c7b5d0cd4dce2522a324b14b7f08c682"}
+  {:ns "futon2.aif.realized-outcome",
+   :path "src/futon2/aif/realized_outcome.clj",
+   :sha256
+   "5ab6330ce29f08a081a4c031e91054519227b8f02e9458d5cab1788f320619d0"}
+  {:ns "futon2.aif.realized-recording",
+   :path "src/futon2/aif/realized_recording.clj",
+   :sha256
+   "afb2c0f90967907b550f104b9ad55991f9f5a205c7805ce75540ed9e5a2adade"}
+  {:ns "futon2.aif.receipt-construction",
+   :path "src/futon2/aif/receipt_construction.clj",
+   :sha256
+   "9ee0a16cbea593be2206da2e8b22fe0b53e28b17b62d1abb68fec90e0b3d8cef"}
+  {:ns "futon2.aif.repair-discharge",
+   :path "src/futon2/aif/repair_discharge.clj",
+   :sha256
+   "7e0be193be44537a9a4d54fc3bfc7c3c10493769e7d26ff726f39b08e39cf687"}
+  {:ns "futon2.aif.repair-discharge-evidence",
+   :path "src/futon2/aif/repair_discharge_evidence.clj",
+   :sha256
+   "5000333b5bd11ebae3de14583ce969d2c938455d9ede6263953707d5e7c87fc3"}
+  {:ns "futon2.aif.repair-discharge-receipt",
+   :path "src/futon2/aif/repair_discharge_receipt.clj",
+   :sha256
+   "74c50e20359947ed85f0806842b70f314ed71f002cd891afeb1e282752b1836c"}
+  {:ns "futon2.aif.repair-evaluators",
+   :path "src/futon2/aif/repair_evaluators.clj",
+   :sha256
+   "cf262d4a2871f2d8ef5cb9e35e9736bfd656a1eae778d105ba8a3c6d40bd47e4"}
+  {:ns "resource:futon2/aif/repair_history_replay.clj",
+   :path "src/futon2/aif/repair_history_replay.clj",
+   :sha256
+   "c805d0d2e3b2ea2aae2f4fe7918f1594f511ecda96c00c3f51ac31506f4c6e0e"}
+  {:ns "futon2.aif.repair-obligation",
+   :path "src/futon2/aif/repair_obligation.clj",
+   :sha256
+   "2fe230c0dcaa603e82c2358bcc9cfe3fbcbe7b12aafb97991d582e327e92c2d0"}
+  {:ns "futon2.aif.repair-proposals",
+   :path "src/futon2/aif/repair_proposals.clj",
+   :sha256
+   "241dc12ff5b3abc26538bec8817cbcf0ed8f9479adf9a9c65df6794dcc55f42f"}
+  {:ns "futon2.aif.rollout",
+   :path "src/futon2/aif/rollout.clj",
+   :sha256
+   "3d32c605511cea48d6002bcc970155098b3428c761ca5c323aae059cf9336e70"}
+  {:ns "futon2.aif.route-attestation",
+   :path "src/futon2/aif/route_attestation.clj",
+   :sha256
+   "3a91d6333f7c982914f5126ab8c7fc940fa4822954553369ebc385383efaa67b"}
+  {:ns "futon2.aif.ruled-outcome-c",
+   :path "src/futon2/aif/ruled_outcome_c.clj",
+   :sha256
+   "e4af46db0bbc6a4eb6a8215d5267e02864de3f83bf44fe4b89e7b7c5c83825b5"}
+  {:ns "futon2.aif.run-ending-classification",
+   :path "src/futon2/aif/run_ending_classification.clj",
+   :sha256
+   "2a49bd9ebd880116f5edf428d3160a9275cf1c156d06221f18ba192f11327454"}
+  {:ns "futon2.aif.run-participants",
+   :path "src/futon2/aif/run_participants.clj",
+   :sha256
+   "3c439c2dc76ac69ee629383a05af75bad19be2e0cfbd58599ff1d748501479b0"}
+  {:ns "futon2.aif.scan-report",
+   :path "src/futon2/aif/scan_report.clj",
+   :sha256
+   "ccf7a180bd8256d2b6dfbdb5c1127816f33e35c74c0fee663db4e874ba594e4d"}
+  {:ns "futon2.aif.scoring-input-receipts",
+   :path "src/futon2/aif/scoring_input_receipts.clj",
+   :sha256
+   "653bb5407fc05afec6ac9b26a6070783de3eeab35022821bc745b2e45443ae3a"}
+  {:ns "futon2.aif.selection-gain",
+   :path "src/futon2/aif/selection_gain.clj",
+   :sha256
+   "80ffd163350e27eb01f21497cbebdc45210f3334a28a4116b2e2c3e4f76c1239"}
+  {:ns "futon2.aif.selection-rationale",
+   :path "src/futon2/aif/selection_rationale.clj",
+   :sha256
+   "845f6bc65c5abf6f4b77374fb5b1282efcba73d7ba0be65efd03451cd38446e3"}
+  {:ns "futon2.aif.shadow-cascade-g",
+   :path "src/futon2/aif/shadow_cascade_g.clj",
+   :sha256
+   "e1e52c87792c3b820dbf6f785b575c3b96716ac83145f4d9fdf4559679b39028"}
+  {:ns "futon2.aif.sorry-registry",
+   :path "src/futon2/aif/sorry_registry.clj",
+   :sha256
+   "bc32403b7bee2360debcb2f435e76375cba51e1895e47fb5b57f041bf1e03696"}
+  {:ns "futon2.aif.strategic-habit",
+   :path "src/futon2/aif/strategic_habit.clj",
+   :sha256
+   "9cd03887493ab1bb2837356b2224d18fe4fc5cba4e9a91fc36634327fbdec665"}
+  {:ns "futon2.aif.substrate",
+   :path "src/futon2/aif/substrate.clj",
+   :sha256
+   "f3c1c2698f5010b318b81ef8e98a737e771822fa4dfc8579c77574efc65ffb2e"}
+  {:ns "futon2.aif.surprise",
+   :path "src/futon2/aif/surprise.clj",
+   :sha256
+   "1c5ebd4151434e288d001e0d5d85ca208758744fee187014884d5a4d4e816130"}
+  {:ns "futon2.aif.task-belief-ladder",
+   :path "src/futon2/aif/task_belief_ladder.clj",
+   :sha256
+   "864284c4053a4b5834d21752f2e6505a9b5663db8ce3f7332f918e4296cd1d3a"}
+  {:ns "futon2.aif.task-execution-evidence",
+   :path "src/futon2/aif/task_execution_evidence.clj",
+   :sha256
+   "c46f312c07e783b3c78f227cbdfeefb2f5168cfbfa07f0c585e584a6a5a965a3"}
+  {:ns "futon2.aif.ticket-publication-io",
+   :path "src/futon2/aif/ticket_publication_io.clj",
+   :sha256
+   "bf57a2b932a50416349c2b1c98701a3c5af24c8ea15078f7cdbf925429f23285"}
+  {:ns "futon2.aif.ticket-queue",
+   :path "src/futon2/aif/ticket_queue.clj",
+   :sha256
+   "29dea8e4aaa49907d6af1b653e47aaa86966ae9cc1834a6bb8de712bbcaa98b0"}
+  {:ns "futon2.aif.token-belief-carry",
+   :path "src/futon2/aif/token_belief_carry.clj",
+   :sha256
+   "9bf050a9f1bab20eda1b66517b5dc24bc1169cefaf27c4c0956a360eb27c41c2"}
+  {:ns "futon2.aif.token-belief-predecessor",
+   :path "src/futon2/aif/token_belief_predecessor.clj",
+   :sha256
+   "e6d8c068e1ca4301ff98396e47fa3386a49503398102f67e31f47d866b53a9a5"}
+  {:ns "futon2.aif.token-initialization-policy",
+   :path "src/futon2/aif/token_initialization_policy.clj",
+   :sha256
+   "e9ca3599f61e51eb9e044e8bce7daa70d198f827df79b19cb64c5f47751e2635"}
+  {:ns "futon2.aif.token-outcome",
+   :path "src/futon2/aif/token_outcome.clj",
+   :sha256
+   "1835f1421452353bbbbdcd6767ed07ce3bc419672476757218a1fbebc5ead741"}
+  {:ns "futon2.aif.token-outcome-pair",
+   :path "src/futon2/aif/token_outcome_pair.clj",
+   :sha256
+   "a07c28ebf5422cd2a0ce4001247c42968ae21dcc4be9d8a81c4d6db904676907"}
+  {:ns "futon2.aif.trace",
+   :path "src/futon2/aif/trace.clj",
+   :sha256
+   "5293c962a874590233741372eda0ad942d6778bd79e125834939146be6f1f4e1"}
+  {:ns "futon2.aif.tripwire",
+   :path "src/futon2/aif/tripwire.clj",
+   :sha256
+   "4d84de47db9350f7ddd6f510a24c845c6c83005380cbfecfd467ed715ecf39b9"}
+  {:ns "futon2.aif.want-interpretation",
+   :path "src/futon2/aif/want_interpretation.clj",
+   :sha256
+   "8cfadab5696338e1c258dd64f4c21bf2c2206614283d428bd8bfb2a5868cbaa4"}
+  {:ns "futon2.aif.mission-reading-c8-test",
+   :path "test/futon2/aif/mission_reading_c8_test.clj",
+   :sha256
+   "427fbc7b5889bf1cce8eed7344c16620d78e97b068299ba6e7b18449efcc50c3"}]}

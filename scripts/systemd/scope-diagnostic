@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+human_bytes() {
+  local value="$1"
+  if [[ -z "$value" || "$value" == "[not set]" || "$value" == "infinity" ]]; then
+    printf '%s' "${value:-?}"
+  else
+    numfmt --to=iec-i --suffix=B "$value" 2>/dev/null || printf '%s' "$value"
+  fi
+}
+
+pressure_for() {
+  local control_group="$1" file="/sys/fs/cgroup${control_group}/memory.pressure"
+  if [[ -r "$file" ]]; then
+    awk '/^some / {for (i=1;i<=NF;i++) if ($i ~ /^avg10=/) {sub("avg10=", "", $i); print $i; exit}}' "$file"
+  else
+    printf '%s' "n/a"
+  fi
+}
+
+pane_is_live() {
+  local pane="$1"
+  [[ "$pane" == "none" ]] && return 0
+  command -v tmux >/dev/null 2>&1 || return 1
+  tmux list-panes -a -F '#{session_name}:#{window_name}.#{pane_index}' 2>/dev/null \
+    | grep -Fxq "$pane"
+}
+
+unit_processes() {
+  local control_group="$1" root="/sys/fs/cgroup${control_group}"
+  [[ -d "$root" ]] || return 0
+  find "$root" -name cgroup.procs -type f -print0 2>/dev/null \
+    | xargs -0 -r cat 2>/dev/null | sort -nu
+}
+
+mapfile -t units < <(
+  {
+    printf '%s\n' futon3c-server.service
+    while read -r server_pid; do
+      [[ -n "$server_pid" ]] || continue
+      awk -F: '$1 == "0" {n=split($3, parts, "/"); print parts[n]}' \
+        "/proc/${server_pid}/cgroup" 2>/dev/null || true
+    done < <(pgrep -f '[c]lojure\.main -m futon3c\.dev($| )' || true)
+    systemctl --user list-units --type=scope --all --no-legend --plain \
+      'futon-agent-*.scope' 'futon-lifecycle-test-*.scope' 2>/dev/null \
+      | awk '{print $1}'
+  } | sort -u
+)
+
+printf '%-48s %-10s %-9s %-9s %-7s %-8s %s\n' \
+  UNIT STATE CURRENT HIGH TASKS PSI10 ORPHAN
+for unit in "${units[@]}"; do
+  load_state="$(systemctl --user show "$unit" -p LoadState --value 2>/dev/null || true)"
+  [[ "$load_state" == "not-found" ]] && continue
+  active="$(systemctl --user show "$unit" -p ActiveState --value)"
+  current="$(systemctl --user show "$unit" -p MemoryCurrent --value)"
+  high="$(systemctl --user show "$unit" -p MemoryHigh --value)"
+  tasks="$(systemctl --user show "$unit" -p TasksCurrent --value)"
+  control_group="$(systemctl --user show "$unit" -p ControlGroup --value)"
+  description="$(systemctl --user show "$unit" -p Description --value)"
+  pane="none"
+  if [[ "$description" =~ pane=([^[:space:]]+) ]]; then
+    pane="${BASH_REMATCH[1]}"
+  fi
+  orphan="no"
+  if [[ "$active" == "active" && "${tasks:-0}" == "0" ]]; then
+    orphan="YES:no-tasks"
+  elif [[ "$active" == "active" && "$pane" != "none" ]] && ! pane_is_live "$pane"; then
+    orphan="YES:pane-gone"
+  fi
+  printf '%-48s %-10s %-9s %-9s %-7s %-8s %s\n' \
+    "$unit" "$active" "$(human_bytes "$current")" "$(human_bytes "$high")" \
+    "${tasks:-?}" "$(pressure_for "$control_group")" "$orphan"
+  printf '  description: %s\n' "$description"
+  pids="$(unit_processes "$control_group")"
+  if [[ -n "$pids" ]]; then
+    ps -ww -o pid=,ppid=,rss=,etimes=,cmd= -p "${pids//$'\n'/,}" \
+      | cut -c1-240 \
+      | sed 's/^/  process: /'
+  fi
+done

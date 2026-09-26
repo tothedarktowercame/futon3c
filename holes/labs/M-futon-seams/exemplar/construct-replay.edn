@@ -1,0 +1,56 @@
+{:schema :m-futon-seams/construct-replay-v1,
+ :constructor "futon2.aif.interpretation-construction/construct",
+ :constructor-commit "a89646f6",
+ :replays
+ [{:candidate :cand/a-registry-first,
+   :hand-built-patterns
+   [:cascade-construction/choose-the-grain-where-state-lives
+    :coordination/assignment-binding
+    :cycle-machine/single-producer
+    :gauntlet/placenta-transfer
+    :or3/count-every-card-back
+    :realtime/mode-gate
+    :translation/test-by-reproducing-behaviour],
+   :constructor-status :constructed,
+   :refusal nil,
+   :constructed
+   [{:precedence
+     [:cascade-construction/choose-the-grain-where-state-lives
+      :coordination/assignment-binding
+      :cycle-machine/single-producer
+      :or3/count-every-card-back
+      :gauntlet/placenta-transfer
+      :translation/test-by-reproducing-behaviour
+      :realtime/mode-gate],
+     :same-pattern-set? true,
+     :missing-from-constructed [],
+     :extra-in-constructed [],
+     :respects-containment-order? true,
+     :receipt-kind :machine-constructed}],
+   :findings []}
+  {:candidate :cand/b-observe-first,
+   :hand-built-patterns
+   [:agency/single-routing-authority
+    :gauntlet/placenta-transfer
+    :iching/hexagram-49-ge
+    :or3/count-every-card-back
+    :peripherals/read-only-first-then-extend
+    :realtime/mode-gate
+    :translation/test-by-reproducing-behaviour],
+   :constructor-status :constructed,
+   :refusal nil,
+   :constructed
+   [{:precedence
+     [:peripherals/read-only-first-then-extend
+      :or3/count-every-card-back
+      :realtime/mode-gate
+      :agency/single-routing-authority
+      :gauntlet/placenta-transfer
+      :translation/test-by-reproducing-behaviour
+      :iching/hexagram-49-ge],
+     :same-pattern-set? true,
+     :missing-from-constructed [],
+     :extra-in-constructed [],
+     :respects-containment-order? true,
+     :receipt-kind :machine-constructed}],
+   :findings []}]}

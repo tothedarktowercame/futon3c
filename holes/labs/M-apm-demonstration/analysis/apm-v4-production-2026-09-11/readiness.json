@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-11T19:22:16.228387+00:00",
+  "canonical_head": "4ddf799266bbdcffb7a10af955303324db7c8416",
+  "integration_base": "9d3d32b88ec039cd1ee05dc091f2d15ce702b2f6",
+  "uncommitted_coordinator_paths": [
+    "src/futon3c/apm/durable_coordinator.clj",
+    "test/futon3c/apm/durable_coordinator_test.clj"
+  ],
+  "production_ready": false,
+  "v3_restart_performed": false,
+  "v4_dispatch_performed": false,
+  "canonical_publication_performed": false
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "wm/run4-preparation-review-v1",
+  "review-job-id": "invoke-1789105860704-20026-7fabe76a",
+  "reviewed-commit": "4be6a96a987d0e1de081f937303a60cb322774b1",
+  "review-state": "done",
+  "reviewer": "codex-12",
+  "execution": {
+    "executed": true,
+    "tool-events": 12,
+    "command-events": 12
+  },
+  "source-head": "72d9beba7252ae362635d77fd81d213e6e22378d",
+  "source-copy-matches": [
+    "holes/missions/M-u88-contextual-preferences.md",
+    "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md",
+    "src/futon2/aif/mission_registry.clj",
+    "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json",
+    "resources/run4/seeded-c.edn",
+    "resources/run4/checkpoint-kernel.edn"
+  ],
+  "artifact-sha256": {
+    "server-config.disabled.edn": "397960a19a0b1909ef89e03cf7bb9607461cff76bbda930150e5acf4b284d6f9",
+    "authority/holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/series-pin.edn": "25c8a48fc30cff11e69bd402ffff4632a474e1cf8992387b474bf46ca9798dd9",
+    "authority/holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/task-pin.edn": "57bc2b984f7c331e139087d9ecf9cd69c7e078e7cb98abea38a50707e9a3422c",
+    "authority/holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/cohort.edn": "2c4f3004c32f5d9f978dcb8cc8aa7d2fee118933ebed41cb940e63c1147113ef",
+    "authority/holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/run-config.edn": "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"
+  },
+  "scope": "disabled preparation only",
+  "live-state-inspected": false,
+  "live-activation": false
+}

@@ -1,0 +1,10 @@
+{
+  "head": "0c70b9e4edb00335ad7a7861107f62e449db6f7a",
+  "sha256": {
+    "src/futon3c/apm/durable_coordinator.clj": "b9be6692e3bb71bdaa01d99dba6628651bb0d60e38330be9c8590b1cd6b33b3d",
+    "src/futon3c/apm/live_promotion.clj": "bed00cd5b6b2606cef3cfe032d61d8994f25911751ab7baa5329d5757294ec3d",
+    "src/futon3c/evidence/futon1b_backend.clj": "fdc8a200fc1793ffc07cb3eeb205160d6cf3d23d4ac8536b629e85427eec9c85",
+    "src/futon3c/apm/jit_queue_coordinator.clj": "33b1850752937acc4c03562b045b83b2aabc59910f339c5d74ee389d010ad3f3"
+  },
+  "note": "Canonical checkout reload; durable_coordinator.clj contains pre-existing uncommitted watchdog repair, validated 33 tests/237 assertions; not staged by this packet."
+}

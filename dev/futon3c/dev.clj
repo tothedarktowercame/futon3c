@@ -33,7 +33,8 @@
                         — codex approval policy (default: never)
      CODEX_REASONING_EFFORT
                        — codex reasoning effort override (for example: low|medium|high)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 1800000)
+     CODEX_INVOKE_TIMEOUT_MS — optional process bound for codex exec
+                               (default: unbounded; the job supervisor ends turns)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -46,23 +47,32 @@
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
      FUTON3C_PROCESS_WATCHDOG_AUTOSTART — auto-start infra process watchdog on boot (default true)
+     FUTON3_INBOX_ZERO_WITNESS_DIR — immutable exact-seat tool-edit witness intake
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle :as tickle]
+            [futon3c.agents.zai-api :as zai-api]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.invoke-activity :as invoke-activity]
+            [futon3c.agency.invoke-controls :as invoke-controls]
+            [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.clock-decision :as clock-decision]
+            [futon3c.agency.clock-lineage :as clock-lineage]
+            [futon3c.inbox-zero.witness :as inbox-zero-witness]
+            [futon3c.inbox-zero.turn-promotion :as turn-promotion]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
+            [futon3c.runtime.incidents :as incidents]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.replication :as ws-repl]
             [futon3c.dev.config :as config]
@@ -94,6 +104,7 @@
 
 (declare make-claude-invoke-fn)
 (declare make-codex-invoke-fn)
+(declare make-zai-invoke-fn)
 (declare record-invoke-delivery!)
 (declare make-bridge-irc-send-fn)
 (declare mirror-apm-conductor-v2-to-codex-repl!)
@@ -734,7 +745,39 @@
                            (.join (.buildAsync (.newWebSocketBuilder client)
                                                (URI/create url)
                                                listener))
-                           (deref closed 600000 nil))
+                           ;; Liveness-polled wait. This previously parked up to 10 min
+                           ;; on `closed`, which is delivered ONLY from onClose/onError —
+                           ;; but java.net.http does not surface a silently-dropped TCP
+                           ;; connection there (no read-timeout / no keepalive). A killed
+                           ;; remote (e.g. a Linode JVM restart) therefore left the bridge
+                           ;; stuck at :connected, dropping every invoke until this
+                           ;; timeout. Instead ping every ~25s: a ping on a dead socket
+                           ;; completes exceptionally, so we detect the drop and fall
+                           ;; through to reconnect within one interval. (A ping racing an
+                           ;; in-flight send can fail spuriously and force an early
+                           ;; reconnect — cheap, since backoff resets on the next onOpen,
+                           ;; and far better than a 10-minute zombie.)
+                           (loop []
+                             (when (and @running? (not (realized? closed)))
+                               (when (= ::tick (deref closed 25000 ::tick))
+                                 (let [ws @ws*
+                                       alive? (boolean
+                                               (and ws
+                                                    (try
+                                                      (.get (.sendPing ^WebSocket ws
+                                                                       (java.nio.ByteBuffer/allocate 0))
+                                                            5 java.util.concurrent.TimeUnit/SECONDS)
+                                                      true
+                                                      (catch Exception _ false))))]
+                                   (if alive?
+                                     (recur)
+                                     (do
+                                       (reset! ws* nil)
+                                       (when @running?
+                                         (reset! bridge-state* {:status :disconnected
+                                                                :target url
+                                                                :reason "liveness-ping-failed"}))
+                                       (deliver closed true))))))))
                          (catch Exception e
                            (if (unreachable-network-exception? e)
                              (pause-bridge! :connect e)
@@ -952,7 +995,7 @@
                                          results))))
                            (rseq ctx))))]
       (bb/blackboard! "*context*" content
-                      (merge {:width 60 :slot 2 :no-display true} bb-opts)))
+                      (merge {:width 60 :slot 2 :no-display true :async? true} bb-opts)))
     (catch Throwable _ nil)))
 
 (defn- context-retrieval!
@@ -977,12 +1020,12 @@
           (println (str "[context] " cert " retrieved: "
                         (str/join ", " (map :id results))))
           (flush)
-          ;; Desktop notification
-          (-> (ProcessBuilder. ["notify-send" "--urgency" "low"
-                                (str "futon3a \u00b7 " cert)
-                                body])
-              .start
-              (.waitFor 2000 java.util.concurrent.TimeUnit/MILLISECONDS))
+          ;; Desktop notification is optional. Its failure must not suppress
+          ;; the context ring-buffer and HUD projection below.
+          (process-watchdog/default-notify!
+           {:urgency "low"
+            :title (str "futon3a \u00b7 " cert)
+            :body body})
           ;; Accumulate in ring buffer and project to HUD
           (swap! !recent-context
                  (fn [buf]
@@ -1042,18 +1085,17 @@
 
 (defn- record-dispatch-clock!
   [agent-id session-id prompt]
-  (when-let [mission-id (prompt-field* prompt :mission-id)]
-    (clock-store/set-dispatch-mission! agent-id session-id mission-id)))
+  (when-let [mission-id (when-not clock-decision/*turn*
+                         (prompt-field* prompt :mission-id))]
+    ;; clock-dispatch! = set-dispatch-mission! + DURABLE persist (single-active via
+    ;; durable-edge retract). Routing the prompt-sourced dispatch through it makes
+    ;; those dispatches durable too, and shares ONE safe persist path with the
+    ;; http.clj payload-sourced wire — so the two loci no longer race the retract.
+    (clock-lineage/clock-dispatch! agent-id session-id mission-id)))
 
 (defn- record-agent-tool-use!
   [agent-id session-id tool-detail]
-  (try
-    (clock-store/record-tool-use! agent-id session-id tool-detail)
-    (catch Throwable t
-      (println (str "[auto-clock] agent tool-use reclock failed for "
-                    agent-id ": " (.getMessage t)))
-      (flush)
-      nil)))
+  (clock-decision/record-tool-use! agent-id session-id tool-detail))
 
 (defn- assistant-tool-details
   [assistant-event]
@@ -1073,6 +1115,32 @@
   (doseq [tool-detail tool-details]
     (record-agent-tool-use! agent-id session-id tool-detail)))
 
+(defonce ^:private !pending-inbox-zero-tool-edits (atom {}))
+
+(defn- remember-inbox-zero-tool-details!
+  [agent-id session-id tool-details]
+  (doseq [detail tool-details
+          :when (and (:id detail) (inbox-zero-witness/edit-path detail))]
+    (swap! !pending-inbox-zero-tool-edits
+           assoc [agent-id session-id (:id detail)] detail)))
+
+(defn- record-inbox-zero-tool-results!
+  [agent-id session-id tool-results]
+  (doseq [{:keys [tool_use_id is_error]} tool-results
+          :let [key [agent-id session-id tool_use_id]
+                detail (get @!pending-inbox-zero-tool-edits key)]
+          :when detail]
+    (swap! !pending-inbox-zero-tool-edits dissoc key)
+    (when-not is_error
+      (try
+        (inbox-zero-witness/publish-successful-edit!
+         {:witness-dir (System/getenv "FUTON3_INBOX_ZERO_WITNESS_DIR")
+          :agent-id agent-id :session-id session-id :tool-detail detail})
+        (catch Throwable t
+          (println (str "[inbox-zero] tool-edit witness failed for " agent-id
+                        ": " (.getMessage t)))
+          (flush))))))
+
 (defn- invoke-meta-trace-id
   "Extract invoke trace id from invoke-meta maps with keyword or string keys."
   [invoke-meta]
@@ -1082,6 +1150,10 @@
   "Build invoke-trace metadata only (never semantic response text)."
   [agent-id session-id invoke-trace-id result-text]
   (dev-invoke/invoke-trace-response-block agent-id session-id invoke-trace-id result-text))
+
+(defn- format-delivery-receipt-line
+  [invoke-trace-id receipt]
+  (dev-invoke/format-delivery-receipt-line invoke-trace-id receipt))
 
 (defn record-invoke-delivery!
   "Record where an invoke reply was actually delivered.
@@ -1748,7 +1820,8 @@ RESPOND WITH ONLY:
                                                "Reason: " reason "\n"
                                                "Time: " (Instant/now)
                                                (when auto-restart?
-                                                 "\nAction: restarting agent layer")))
+                                                 "\nAction: restarting agent layer"))
+                                          {:async? true})
                                          ;; 2. Emit escalation evidence
                                          (boundary/append! evidence-store
                                                          {:subject {:ref/type :agent
@@ -2258,8 +2331,6 @@ RESPOND WITH ONLY:
      :mentor (when (seq @!mentor)
                {:running true :handles (mentor-handles)})
      :irc (when @!irc-sys {:port (:port @!irc-sys)})
-     :evidence-count (when @!evidence-store
-                       (count (futon3c.evidence.store/query* @!evidence-store {})))
      :ct-queue (when @!evidence-store
                  (let [s (ct-queue/queue-status @!evidence-store)]
                    {:completed (:completed s) :remaining (:remaining s)}))
@@ -2563,6 +2634,45 @@ RESPOND WITH ONLY:
   []
   (dev-bootstrap/start-futon5! nonstarter-fn))
 
+(defn- deliver-pouch-unsolicited-to-repl!
+  "Insert an already-produced autonomous pouch turn into its Claude REPL.
+   This is display-only: it never sends the text back through the agent."
+  [{:keys [agent-id session-id speaker text]}]
+  (let [agent (reg/get-agent agent-id)
+        socket (get-in agent [:agent/metadata :emacs-socket])
+        q #(json/generate-string (str (or % "")))
+        elisp
+        (str "(let* ((agent " (q agent-id) ")"
+             " (session " (q session-id) ")"
+             " (buf (or (and (not (string-empty-p session))"
+             " (fboundp 'claude-repl-find-buffer-by-session-id)"
+             " (claude-repl-find-buffer-by-session-id session))"
+             " (and (fboundp 'claude-repl-find-buffer-by-agent-id)"
+             " (claude-repl-find-buffer-by-agent-id agent))"
+             " (get-buffer (format \"*claude-repl:%s*\" agent)))))"
+             " (unless (buffer-live-p buf)"
+             " (error \"No live Claude REPL buffer for %s\" agent))"
+             " (with-current-buffer buf"
+             " (agent-chat-insert-message " (q speaker) " " (q text) ")"
+             " (goto-char (point-max))"
+             " (agent-chat-scroll-to-bottom)) t)")
+        result (bb/blackboard-eval! elisp (cond-> {} socket (assoc :emacs-socket socket)))]
+    (when-not (:ok result)
+      (throw (ex-info "Claude REPL notification delivery failed"
+                      {:agent-id agent-id :session-id session-id
+                       :emacs-socket socket :result result})))
+    result))
+
+(defn install-pouch-unsolicited-repl-sink!
+  "Install D6's operator-surface route only when pouch demux is enabled.
+   The OFF path neither installs nor changes the existing sink."
+  []
+  (when (agent-pouch/demux?)
+    (agent-pouch/set-unsolicited-sink!
+     (agent-pouch/make-unsolicited-sink
+      #'deliver-pouch-unsolicited-to-repl!))
+    true))
+
 (defn start-futon3c!
   "Start futon3c transport HTTP+WS. Returns system map or nil if disabled.
 
@@ -2573,14 +2683,18 @@ RESPOND WITH ONLY:
      :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)
      :irc-send-base    — remote Agency base URL hint for IRC send fallback"
   [{:keys [xtdb-node evidence-store irc-interceptor irc-send-fn irc-send-base]}]
-  (dev-bootstrap/start-futon3c!
-   {:xtdb-node xtdb-node
-    :evidence-store evidence-store
-    :irc-interceptor irc-interceptor
-    :irc-send-fn irc-send-fn
-    :irc-send-base irc-send-base
-    :make-http-handler rt/make-http-handler
-    :make-ws-handler rt/make-ws-handler}))
+  (let [system (dev-bootstrap/start-futon3c!
+                {:xtdb-node xtdb-node
+                 :evidence-store evidence-store
+                 :irc-interceptor irc-interceptor
+                 :irc-send-fn irc-send-fn
+                 :irc-send-base irc-send-base
+                 :make-http-handler rt/make-http-handler
+                 :make-ws-handler rt/make-ws-handler})]
+    (when system
+      (install-pouch-unsolicited-repl-sink!)
+      (job-tree/start!))
+    system))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil if disabled.
@@ -3046,7 +3160,7 @@ RESPOND WITH ONLY:
   (try
     (bb/blackboard! "*Codex Code*"
                     (format-codex-status-board @!codex-status)
-                    {:width 72 :slot 2 :no-display true})
+                    {:width 72 :slot 2 :no-display true :async? true})
     (catch Throwable _ nil)))
 
 (defn- update-codex-status!
@@ -3201,10 +3315,16 @@ RESPOND WITH ONLY:
 
 (defn interrupt-agent-invoke!
   "Best-effort local interrupt for an agent's current invoke subprocess tree.
-   Returns {:ok bool :agent-id str :action keyword ...}."
+   Returns {:ok bool :agent-id str :action keyword ...}.
+
+   CLI lanes (Claude/Codex) register their controls in !invoke-controls here.
+   In-JVM ZAI lanes register in futon3c.agency.invoke-controls (2026-09-19,
+   zai-14 wedge: an interrupted zai turn had no control here, kept running
+   headless, and pinned the registry at :invoking). This fn checks both."
   [agent-id]
   (let [aid (str agent-id)
-        entry (get @!invoke-controls aid)
+        entry (or (get @!invoke-controls aid)
+                  (invoke-controls/control-for aid))
         control (:control entry)]
     (cond
       (nil? entry)
@@ -3333,7 +3453,7 @@ RESPOND WITH ONLY:
                             (catch Throwable _)))
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
-                        (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                        (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                         (update-codex-status!
                          agent-id
                          {:lifecycle-status :invoking
@@ -3394,6 +3514,9 @@ RESPOND WITH ONLY:
                            (reset! skipped 0)
                            (future
                              (try
+                               (try
+                                 (reg/reconcile-stale-invoking! 120000)
+                                 (catch Throwable _))
                                (bb/project-agents! (reg/registry-status))
                                (catch Throwable _)
                                (finally
@@ -3433,7 +3556,7 @@ RESPOND WITH ONLY:
      :agent-id         — agent identifier (default \"claude\")
      :session-file     — path to session ID file for persistence (optional)
      :session-id-atom  — atom holding current session ID (optional)
-     :timeout-ms       — hard process timeout in ms (default 1800000 = 30 min).
+     :timeout-ms       — hard process timeout in ms (default 3600000 = 60 min).
                          Set high because Emacs sessions replace the CLI and should
                          not be arbitrarily killed. IRC relay enforces its own
                          shorter timeout (120s) via invoke-timeout-ms.
@@ -3441,7 +3564,7 @@ RESPOND WITH ONLY:
                          When nil, uses the CLI default."
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
-         timeout-ms 1800000}}]
+         timeout-ms 3600000}}]
   (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
                        {:agent-id agent-id
                         :session-file session-file
@@ -3509,7 +3632,7 @@ RESPOND WITH ONLY:
                                        "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                        (when (> (count prompt-str) 300) "...")
                                        "\n\nStarting...")
-                                  (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                  (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
@@ -3532,6 +3655,8 @@ RESPOND WITH ONLY:
               tools-acc (atom [])
               result-sid (atom nil)
               result-error (atom false)
+              compact-status (atom nil)
+              result-event (atom nil)
               aid-val (str agent-id)
               ;; Register invoke control so interrupt-invoke endpoint works
               control-token (str "claude-invoke-" (UUID/randomUUID))
@@ -3556,7 +3681,16 @@ RESPOND WITH ONLY:
                                     (when-not (str/blank? line)
                                       (try
                                         (let [parsed (json/parse-string line true)]
+                                          (job-tree/observe-event!
+                                           {:agent-id aid-val
+                                            :turn-id turn-queue/*turn-id*
+                                            :root-pid (.pid proc)
+                                            :event parsed})
                                           (case (:type parsed)
+                                            "system"
+                                            (when (and (= "status" (:subtype parsed))
+                                                       (contains? parsed :compact_result))
+                                              (reset! compact-status parsed))
                                             "assistant"
                                             (let [content (get-in parsed [:message :content])
                                                   tools (when (sequential? content)
@@ -3572,7 +3706,8 @@ RESPOND WITH ONLY:
                                                 (when tools
                                                   (update-activity!
                                                    aid-val
-                                                   (str "using " (str/join ", " tools))))
+                                                   (or (invoke-activity/tool-details->activity tool-details)
+                                                       (str "using " (str/join ", " tools)))))
                                                 (when (and (not tools) text (not (str/blank? text)))
                                                   (update-activity! aid-val "composing response")))
                                               ;; Only keep text from the last response turn.
@@ -3584,7 +3719,9 @@ RESPOND WITH ONLY:
                                                 (.append text-acc text))
                                               (when tools (swap! tools-acc into tools))
                                               (when (seq tool-details)
-                                                (record-agent-tool-details! aid-val used-sid tool-details))
+                                                (record-agent-tool-details! aid-val used-sid tool-details)
+                                                (remember-inbox-zero-tool-details!
+                                                 aid-val used-sid tool-details))
                                               (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
@@ -3606,8 +3743,13 @@ RESPOND WITH ONLY:
                                                          (filter #(= "tool_result" (:type %)))
                                                          (mapv (fn [block]
                                                                  (cond-> {:tool_use_id (:tool_use_id block)}
+                                                                   (contains? block :is_error)
+                                                                   (assoc :is_error (:is_error block))
                                                                    (:content block)
                                                                    (assoc :content (:content block)))))))]
+                                              (when (seq tool-results)
+                                                (record-inbox-zero-tool-results!
+                                                 aid-val used-sid tool-results))
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
                                                                               'get-invoke-event-sink)]
                                                 (when-let [sink (get-sink aid-val)]
@@ -3618,7 +3760,8 @@ RESPOND WITH ONLY:
                                                              :tool_use_result (:tool_use_result parsed)}))
                                                     (catch Throwable _)))))
                                             "result"
-                                            (do (reset! result-sid (:session_id parsed))
+                                            (do (reset! result-event parsed)
+                                                (reset! result-sid (:session_id parsed))
                                                 (when (:is_error parsed)
                                                   (reset! result-error true)))
                                             nil))
@@ -3647,6 +3790,15 @@ RESPOND WITH ONLY:
                 (persist-session-id! session-file final-sid))
               (when (and ok? session-id-atom final-sid (not (str/blank? final-sid)))
                 (reset! session-id-atom final-sid))
+              ;; Inbox-zero turn-end promotion fires HERE, once per completed
+              ;; turn, and only on success with a session id the CLI reported.
+              ;; It used to fire inside the stream loop on every tool_result
+              ;; batch: in execute mode that commits and pushes a shared
+              ;; checkout between Edit 1 and Edit 3 of one sequence (Joe,
+              ;; 2026-08-25: an I-0 violation), and used-sid there is
+              ;; sometimes nil, which is the refusal flood c4922353 made legible.
+              (when (and ok? final-sid (not (str/blank? final-sid)))
+                (turn-promotion/launch-at-turn-end! aid-val final-sid))
               ;; Evidence: invoke complete
               (emit-invoke-evidence! agent-id "invoke-complete"
                                      {"ok" ok?
@@ -3667,7 +3819,7 @@ RESPOND WITH ONLY:
                                      (when (not (str/blank? err))
                                        (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
                                      (invoke-trace-response-block agent-id final-sid invoke-trace-id text))
-                                (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
                             " text-len=" (count (or text ""))
@@ -3684,15 +3836,23 @@ RESPOND WITH ONLY:
                      :turn-counter !turn-count
                      :bb-opts bb-opts})))
               (if ok?
-                {:result (if (str/blank? text)
-                           ;; tool-last / no-text turn: surface what was called.
-                           (let [names (->> @tools-acc (remove nil?) distinct vec)]
-                             (if (seq names)
-                               (str "[no text — called: " (str/join ", " names) "]")
-                               "[no text or tool calls in this turn]"))
-                           text)
-                 :session-id final-sid
-                 :invoke-trace-id invoke-trace-id}
+                (cond->
+                 {:result (if (str/blank? text)
+                            ;; tool-last / no-text turn: surface what was called.
+                            (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                              (if (seq names)
+                                (str "[no text — called: " (str/join ", " names) "]")
+                                "[no text or tool calls in this turn]"))
+                            text)
+                  :session-id final-sid
+                  :invoke-trace-id invoke-trace-id}
+                  @compact-status
+                  (assoc :compact-result (:compact_result @compact-status)
+                         :compact-error (:compact_error @compact-status))
+                  (:usage @result-event)
+                  (assoc :usage (:usage @result-event))
+                  (contains? @result-event :total_cost_usd)
+                  (assoc :total-cost-usd (:total_cost_usd @result-event)))
                 {:result nil :session-id final-sid
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))
@@ -3707,7 +3867,9 @@ RESPOND WITH ONLY:
 
                     ;; Joey gate: only warm a small session. A monster stays cold
                     ;; (warming a giant history is a token-cost trap) unless overridden.
-                    (not (agent-pouch/joey-eligible? agent-id warm-sid))
+                    ;; E-monster-to-joey: when compaction is enabled, a monster's cold
+                    ;; transcript is compacted in place first, so a shrunk monster warms.
+                    (not (agent-pouch/joey-eligible-or-compact? agent-id warm-sid))
                     (do (agent-pouch/note-monster-cold! agent-id warm-sid)
                         (invoke-once prompt session-id))
 
@@ -3724,6 +3886,7 @@ RESPOND WITH ONLY:
                           aid-val (str agent-id)
                           invoke-trace-id (str "invoke-" (UUID/randomUUID))
                           control-token (str "claude-pouch-" (UUID/randomUUID))
+                          !warm-interrupted? (atom false)
                           warm-attempt
                           (do
                             (println (str "[invoke] " aid-val " warm pouch feed (session: "
@@ -3741,7 +3904,7 @@ RESPOND WITH ONLY:
                                                    "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                                    (when (> (count prompt-str) 300) "...")
                                                    "\n\nStarting...")
-                                              (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                              (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                               (catch Throwable _))
                             (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str warm-sid 5000 :bb-opts bb-opts)]
                               ;; Interrupting a warm turn = evict the pouch: the
@@ -3752,6 +3915,7 @@ RESPOND WITH ONLY:
                                aid-val control-token
                                {:interrupt!
                                 (fn []
+                                  (reset! !warm-interrupted? true)
                                   (agent-pouch/evict! aid-val)
                                   {:ok true
                                    :agent-id aid-val
@@ -3759,7 +3923,11 @@ RESPOND WITH ONLY:
                                    :message "warm pouch evicted (turn interrupted)"
                                    :interrupted? true})})
                               (try
-                                (let [warm-result
+                                (let [;; Accumulate assistant text across the turn's stream-json
+                                      ;; events so the warm path can surface it INCREMENTALLY
+                                      ;; (it otherwise shows nothing until the final block at DONE).
+                                      stream-acc (StringBuilder.)
+                                      warm-result
                                       (agent-pouch/feed-turn!
                                        agent-id
                                        prompt
@@ -3773,7 +3941,7 @@ RESPOND WITH ONLY:
                                         ;; (→ *agents* buffer), like the cold
                                         ;; path's stdout loop does.
                                         :on-event
-                                        (fn [event]
+                                        (bound-fn [event]
                                           (when (= "assistant" (:type event))
                                             (let [content (get-in event [:message :content])
                                                   tools (when (sequential? content)
@@ -3781,15 +3949,56 @@ RESPOND WITH ONLY:
                                                                (filter #(= "tool_use" (:type %)))
                                                                (map :name)
                                                                seq))
+                                                  text (when (sequential? content)
+                                                         (not-empty
+                                                          (str/join (->> content
+                                                                         (filter #(= "text" (:type %)))
+                                                                         (keep :text)))))
                                                   tool-details (assistant-tool-details event)]
                                               (when (seq tool-details)
-                                                (record-agent-tool-details! aid-val warm-sid tool-details))
+                                                (record-agent-tool-details! aid-val warm-sid tool-details)
+                                                (remember-inbox-zero-tool-details!
+                                                 aid-val warm-sid tool-details))
                                               (when tools
                                                 (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
                                                                                         'update-invoke-activity!)]
                                                   (update-activity!
                                                    aid-val
-                                                   (str "using " (str/join ", " tools))))))))})
+                                                   (or (invoke-activity/tool-details->activity tool-details)
+                                                       (str "using " (str/join ", " tools))))))
+                                              ;; Emit to the streaming event sink (→ /invoke-stream →
+                                              ;; the *claude-repl* buffer), exactly like the cold path —
+                                              ;; this is what makes warm turns stream INTO the REPL.
+                                              (when-let [get-sink (ns-resolve 'futon3c.agency.registry
+                                                                              'get-invoke-event-sink)]
+                                                (when-let [sink (get-sink aid-val)]
+                                                  (try
+                                                    (when tools
+                                                      (sink {:type "tool_use" :tools (vec tools) :tool_details tool-details}))
+                                                    (when text
+                                                      (sink {:type "text" :text text}))
+                                                    (catch Throwable _))))
+                                              ;; Stream assistant text chunks to the invoke buffer as
+                                              ;; they arrive — mirrors the tool-activity surfacing
+                                              ;; above so the warm pouch shows its prose incrementally
+                                              ;; instead of only the final block at DONE.
+                                              (when text
+                                                (.append stream-acc text)
+                                                (try
+                                                  (bb/blackboard! buf-name
+                                                                  (str "Invoke: " agent-id " — streaming (warm pouch)\n\n"
+                                                                       stream-acc)
+                                                                  (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
+                                                  (catch Throwable _)))))
+                                          (when (= "user" (:type event))
+                                            (let [content (get-in event [:message :content])
+                                                  results (when (sequential? content)
+                                                            (->> content
+                                                                 (filter #(= "tool_result" (:type %)))
+                                                                 (mapv #(select-keys % [:tool_use_id :is_error :content]))))]
+                                              (when (seq results)
+                                                (record-inbox-zero-tool-results!
+                                                 aid-val warm-sid results)))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
                                   ;; Persist like invoke-once does (cold path, above): today
@@ -3810,10 +4019,15 @@ RESPOND WITH ONLY:
                                                          "Session: " warm-result-sid "\n"
                                                          "Output: " (count result-text) " chars\n"
                                                          (invoke-trace-response-block agent-id warm-result-sid invoke-trace-id result-text))
-                                                    (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                                    (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                                     (catch Throwable _))
                                   (println (str "[invoke] " aid-val " warm-turn done text-len=" (count result-text)))
                                   (flush)
+                                  ;; Inbox-zero turn-end promotion: once per completed warm
+                                  ;; turn (feed-turn! throws on failure, so this is the
+                                  ;; success path), never per tool_result — see the cold path.
+                                  (when warm-result-sid
+                                    (turn-promotion/launch-at-turn-end! aid-val warm-result-sid))
                                   ;; Context retrieval: fire-and-forget (pattern
                                   ;; retrieval is a must-have on warm turns too).
                                   (future
@@ -3826,16 +4040,33 @@ RESPOND WITH ONLY:
                                       :bb-opts bb-opts}))
                                   (assoc warm-result :invoke-trace-id invoke-trace-id))
                                 (catch Throwable t
-                                  (println (str "[kangaroo] " agent-id
-                                                " warm pouch failed; falling back cold: "
-                                                (.getMessage t)))
-                                  (flush)
-                                  (emit-invoke-evidence! agent-id "invoke-error"
-                                                         {"warm" true
-                                                          "error" (str (.getMessage t))}
-                                                         :session-id warm-sid
-                                                         :tags ["invoke-error"])
-                                  ::pouch-failed)
+                                  (if @!warm-interrupted?
+                                    (do
+                                      (println (str "[kangaroo] " agent-id
+                                                    " warm pouch interrupted; not falling back cold"))
+                                      (flush)
+                                      (emit-invoke-evidence! agent-id "invoke-error"
+                                                             {"warm" true
+                                                              "interrupted" true
+                                                              "error" (str (.getMessage t))}
+                                                             :session-id warm-sid
+                                                             :tags ["invoke-error" "invoke-interrupted"])
+                                      {:result nil
+                                       :session-id warm-sid
+                                       :error "invoke interrupted"
+                                       :interrupted? true
+                                       :invoke-trace-id invoke-trace-id})
+                                    (do
+                                      (println (str "[kangaroo] " agent-id
+                                                    " warm pouch failed; falling back cold: "
+                                                    (.getMessage t)))
+                                      (flush)
+                                      (emit-invoke-evidence! agent-id "invoke-error"
+                                                             {"warm" true
+                                                              "error" (str (.getMessage t))}
+                                                             :session-id warm-sid
+                                                             :tags ["invoke-error"])
+                                      ::pouch-failed)))
                                 (finally
                                   (clear-invoke-control! aid-val control-token)
                                   (stop-ticker!)))))]
@@ -3866,6 +4097,34 @@ RESPOND WITH ONLY:
             :else
             (locking !lock
               (invoke-warm-or-cold prompt session-id))))))))
+
+(defn make-zai-invoke-fn
+  "Create an invoke-fn backed by Z.AI chat completions plus local Futon tools."
+  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms
+           request-timeout-ms turn-timeout-ms model cwd evidence-store memory-domain]
+    :or {agent-id "zai"}}]
+  (let [irc-send-fn (or (some-> @!irc-sys :server :send-to-channel!)
+                        (try
+                          (make-bridge-irc-send-fn)
+                          (catch Throwable _ nil)))
+        irc-recent-fn (fn [n] (irc-recent (or n 30)))]
+    (zai-api/make-invoke-fn
+     (cond-> {:agent-id agent-id
+              :session-file session-file
+              :session-id-atom session-id-atom
+              :initial-session-id initial-session-id
+              ;; Legacy callers used :timeout-ms as the invoke/turn bound at
+              ;; this facade. Keep that meaning here while the lower-level
+              ;; Z.AI constructor separates request and turn envelopes.
+              :turn-timeout-ms (or turn-timeout-ms timeout-ms
+                                   zai-api/default-turn-timeout-ms)
+              :cwd (or cwd (System/getProperty "user.dir"))
+              :evidence-store evidence-store
+              :irc-recent-fn irc-recent-fn}
+       model (assoc :model model)
+       request-timeout-ms (assoc :request-timeout-ms request-timeout-ms)
+       memory-domain (assoc :memory-domain memory-domain)
+       irc-send-fn (assoc :irc-send-fn irc-send-fn)))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
@@ -4087,16 +4346,33 @@ RESPOND WITH ONLY:
       :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
-     :timeout-ms         — hard timeout for codex process (default 1800000)
+     :timeout-ms         — default process bound in ms; nil (the default) is
+                           unbounded. The job supervisor owns turn lifecycle;
+                           see codex-cli/process-timeout-ms.
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
-            session-file session-id-atom]
+            session-file session-id-atom memory-domain]
     :or {codex-bin "codex" sandbox "danger-full-access"
-         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
+         approval-policy "never" agent-id "codex"}}]
   (let [aid-val (str agent-id)
+        provisioned-domain
+        (or memory-domain
+            ((requiring-resolve 'futon3c.agents.memory-provisioning/domain-for)
+             aid-val))
+        memory-tool?
+        ((requiring-resolve 'futon3c.agents.memory-provisioning/tool-enabled?)
+         aid-val :memory-record)
+        mcp-server
+        (when memory-tool?
+          {:command "/home/joe/code/futon3c/scripts/memory-mcp"
+           :args [aid-val
+                  (str session-file)
+                  (name provisioned-domain)
+                  (or (System/getenv "FUTON1B_URL")
+                      "http://127.0.0.1:7073")]})
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
         !event-trace (atom [])
@@ -4137,7 +4413,12 @@ RESPOND WITH ONLY:
                        (when-let [sink (get-event-sink aid-val)]
                          (try
                            (sink evt)
-                           (catch Throwable _))))))
+                           (catch Throwable _))
+                         (when-let [ledger-event
+                                    (codex-cli/event->ledger-event evt)]
+                           (try
+                             (sink ledger-event)
+                             (catch Throwable _)))))))
         on-runtime-event (fn [{:keys [kind] :as evt}]
                            (let [timestamp (or (:at evt) (str (Instant/now)))]
                              (case kind
@@ -4219,9 +4500,16 @@ RESPOND WITH ONLY:
                                                       200))
                                nil))
                            (publish-runtime! @!runtime-state))
-        buf-name (str "*invoke: " agent-id "*")]
-    (fn [prompt session-id]
-      (let [prompt-str (cond
+        buf-name (str "*invoke: " agent-id "*")
+        invoke-once
+        (fn [prompt session-id call-opts]
+      ;; A per-call :timeout-ms overrides the registration default, so a
+      ;; caller's bound reaches the process instead of only making an outer
+      ;; layer stop waiting (README-agency-cap.md).
+      (let [timeout-ms (if (contains? call-opts :timeout-ms)
+                         (:timeout-ms call-opts)
+                         timeout-ms)
+            prompt-str (cond
                          (string? prompt) prompt
                          (map? prompt)    (or (:prompt prompt) (:text prompt)
                                               (json/generate-string prompt))
@@ -4275,7 +4563,7 @@ RESPOND WITH ONLY:
                                "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                (when (> (count prompt-str) 300) "...")
                                "\n\nStarting...")
-                          {:width 80 :slot 1})
+                          {:width 80 :slot 1 :async? true})
           (catch Throwable _))
         ;; Start ticker with evidence heartbeats + event trace
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
@@ -4291,6 +4579,7 @@ RESPOND WITH ONLY:
                                              :sandbox sandbox
                                              :approval-policy approval-policy
                                              :reasoning-effort reasoning-effort
+                                             :mcp-server mcp-server
                                              :timeout-ms timeout-ms
                                              :cwd cwd
                                              :on-event on-event
@@ -4315,7 +4604,8 @@ RESPOND WITH ONLY:
                                              (fn [_proc _exit]
                                                (clear-invoke-control! aid-val control-token))})
                                            next-prompt
-                                           next-session-id))
+                                           next-session-id
+                                           call-opts))
                              initial (call-codex prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? prompt-str initial)
                                  (codex-task-reply-without-execution? prompt-str initial)
@@ -4438,7 +4728,7 @@ RESPOND WITH ONLY:
                                  ", command-events=" command-events "\n"
                                  (runtime-summary-block final-runtime (System/currentTimeMillis) "")
                                  (invoke-trace-response-block agent-id final-sid invoke-trace-id (:result result)))
-                            {:width 80 :slot 1 :no-display true})
+                            {:width 80 :slot 1 :no-display true :async? true})
             (catch Throwable _))
           (update-codex-status!
            agent-id
@@ -4470,7 +4760,11 @@ RESPOND WITH ONLY:
                         " tool-events=" tool-events
                         " command-events=" command-events))
           (flush)
-          (assoc result :invoke-trace-id invoke-trace-id))))))
+          (assoc result :invoke-trace-id invoke-trace-id))))]
+    (fn
+      ([prompt] (invoke-once prompt nil nil))
+      ([prompt session-id] (invoke-once prompt session-id nil))
+      ([prompt session-id call-opts] (invoke-once prompt session-id call-opts)))))
 
 ;; =============================================================================
 ;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response
@@ -4489,9 +4783,9 @@ RESPOND WITH ONLY:
      :channel     — IRC channel (default \"#futon\")
      :from-nick   — nick to send as (default \"tickle-1\")
      :poll-ms     — poll interval in ms (default 3000)
-     :timeout-ms  — max wait for response (default 1800000 = 30 min)"
+     :timeout-ms  — max wait for response (default 3600000 = 60 min)"
   [{:keys [channel from-nick poll-ms timeout-ms]
-    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 1800000}}]
+    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 3600000}}]
   (fn [prompt _session-id]
     (let [prompt-str (cond
                        (string? prompt) prompt
@@ -4801,7 +5095,7 @@ RESPOND WITH ONLY:
     :or {agent-id "claude-1" nick "claude"
          channel "#futon"
          invoke-timeout-ms 600000
-         invoke-hard-timeout-ms 1800000}}]
+         invoke-hard-timeout-ms 3600000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick channel
      (fn [data]
@@ -4859,7 +5153,7 @@ RESPOND WITH ONLY:
                                                      (and invoke-hard-timeout-ms (pos? (long invoke-hard-timeout-ms)))
                                                      (long invoke-hard-timeout-ms)
                                                      soft-timeout-ms soft-timeout-ms
-                                                     :else 1800000)
+                                                     :else 3600000)
                                    invoke-fut (future
                                                 (coordination/invoke-with-edge!
                                                  {:from sender
@@ -4995,6 +5289,7 @@ RESPOND WITH ONLY:
   (start-agents!))
 
 (defn -main [& _args]
+  (incidents/install-default-handler!)
   (dev-bootstrap/run-main!
    {:!f1-sys !f1-sys
     :!evidence-store !evidence-store

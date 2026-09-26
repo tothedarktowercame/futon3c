@@ -1,0 +1,60 @@
+{
+  "example_id": "deconfounding-game-1",
+  "title": "Deconfounding Game 1: smoking and miscarriage",
+  "topology_basis": "printed_diagram",
+  "content": "Smoking acts through an unobserved underlying abnormality that can cause both prior and future miscarriage. Prior miscarriage is therefore a descendant and proxy for part of the causal mechanism, not a confounder to adjust away.",
+  "variables": [
+    {
+      "key": "smoking",
+      "name": "Smoking (X)",
+      "content": "The proposed cause whose total effect on future miscarriage is sought."
+    },
+    {
+      "key": "abnormality",
+      "name": "Underlying Abnormality (A)",
+      "content": "An unobservable abnormality induced by smoking and capable of causing miscarriage."
+    },
+    {
+      "key": "future_miscarriage",
+      "name": "Future Miscarriage (Y)",
+      "content": "The outcome whose causal response to smoking is being estimated."
+    },
+    {
+      "key": "prior_miscarriage",
+      "name": "Prior Miscarriage (B)",
+      "content": "Observed miscarriage history caused by the same underlying abnormality."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "smoking",
+      "target": "abnormality",
+      "because": "The source defines A as an underlying abnormality induced by smoking."
+    },
+    {
+      "source": "abnormality",
+      "target": "future_miscarriage",
+      "because": "The abnormality is the mechanism through which smoking can cause a future miscarriage."
+    },
+    {
+      "source": "abnormality",
+      "target": "prior_miscarriage",
+      "because": "Prior miscarriage history is another consequence of the same abnormality."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:0b34f742e81f9b9c",
+    "ta-book-of-why-2018:c1dc660a65dc7be4",
+    "ta-book-of-why-2018:dc8d3f86667e304c",
+    "ta-book-of-why-2018:baaebe87bf4c29b5",
+    "ta-book-of-why-2018:b1723d4f28c9103d",
+    "ta-book-of-why-2018:3037715fd42512d6",
+    "ta-book-of-why-2018:442b6f485a38b409",
+    "ta-book-of-why-2018:fc9ff693ce5079d3"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0171",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0174",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0175"
+  ]
+}

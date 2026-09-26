@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+# ck — Kimi lane in the terminal, the kimi sibling of cr/cx/cz.
+#
+# Opens *kimi-repl:kimi-N* Emacs lanes with the same numbering rule as cz
+# (2026-08-12, Joe): lane numbers depend on WHAT NUMBERS EXIST in the
+# local site display column (plain kimi-N and <site>-kimi-N), never on
+# attached/busy status.
+#
+# Usage:
+#   ck                    # attach highest existing plain kimi-N (mint if none)
+#   ck new | ck --new     # mint smallest unused kimi-N, open fresh lane
+#   ck -a kimi-5          # target a specific lane id (registers it if new)
+#   ck kimi-5             # same as -a kimi-5
+#
+# Requires: futon3c checkout (FUTON3C_ROOT or ~/code/futon3c), Agency on
+# FUTON3C_PORT (default 7070), Emacs daemon (socket discovered via
+# emacs-socket-lib.sh), and a Kimi key in ~/.kimikey (see README-kimi.md).
+#
+# Unlike ~/bin/cz, this lives in the repo and ~/bin/ck is a symlink to it —
+# the way cr is wired. cz's own comments record what the other arrangement
+# cost: the tracked copy was dropped in an untracked rewrite and the two
+# drifted apart silently.
+
+futon3c_root="${FUTON3C_ROOT:-${HOME}/code/futon3c}"
+agency_base="${FUTON3C_BASE:-http://127.0.0.1:${FUTON3C_PORT:-7070}}"
+emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+site="${FUTON_SITE:-ams}"
+cwd_for_agent="${FUTON3C_BOOTSTRAP_AGENT_CWD:-${HOME}/code}"
+
+socket_lib="${futon3c_root}/scripts/emacs-socket-lib.sh"
+if [[ -f "${socket_lib}" ]]; then
+  # shellcheck source=/dev/null
+  source "${socket_lib}"
+fi
+
+start_new=false
+lane_id="${AGENCY_AGENT_ID:-}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    new|--new) start_new=true; shift ;;
+    -a|--agent)
+      shift
+      [[ $# -gt 0 ]] || { echo "ck: -a needs a lane id (e.g. kimi-5)" >&2; exit 1; }
+      lane_id="$1"; shift ;;
+    -h|--help)
+      sed -n '3,20p' "$(readlink -f "${BASH_SOURCE[0]}")" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    kimi-*) lane_id="$1"; shift ;;
+    *) echo "ck: unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+if ! curl -sS --max-time 2 "${agency_base%/}/api/alpha/agents" >/dev/null 2>&1; then
+  echo "ck: Agency not reachable at ${agency_base} — start it first." >&2
+  exit 1
+fi
+
+# Numbering by name-existence, local-site-scoped (see cz / cx / codex-picker).
+if [[ -z "${lane_id}" ]]; then
+  lane_id="$(curl -sS --max-time 5 "${agency_base%/}/api/alpha/agents" \
+    | python3 -c '
+import json, re, sys
+mode, site = sys.argv[1], sys.argv[2]
+try:
+    ids = list((json.load(sys.stdin).get("agents") or {}).keys())
+except Exception:
+    ids = []
+used = set()
+plain = []
+for i in ids:
+    m = re.fullmatch(r"kimi-([0-9]+)", i) or re.fullmatch(
+        re.escape(site) + r"-kimi-([0-9]+)", i)
+    if m:
+        used.add(int(m.group(1)))
+    if re.fullmatch(r"kimi-([0-9]+)", i):
+        plain.append(int(i.rsplit("-", 1)[1]))
+if mode == "attach" and plain:
+    print(f"kimi-{max(plain)}")
+else:
+    n = 1
+    while n in used:
+        n += 1
+    print(f"kimi-{n}")' "$( $start_new && echo new || echo attach )" "${site}")"
+fi
+
+# Register.
+#
+# POST /api/alpha/agents installs a STUB invoke-fn that never calls the model.
+# For an id that already exists that is harmless (409, real invoke-fn
+# untouched), but minting a new lane through it yields a seat that answers
+# "registered-via-http" to everything while the roster reports invoke-ready.
+# /api/alpha/agents/auto is the endpoint that builds a real invoke-fn.
+if curl -fsS --max-time 3 "${agency_base%/}/api/alpha/agents/${lane_id}" \
+     >/dev/null 2>&1; then
+  : # exists already; leave its invoke-fn alone
+else
+  auto_response="$(curl -sS --max-time 15 -H "Content-Type: application/json" \
+    -X POST -d "{\"type\":\"kimi\",\"cwd\":\"${cwd_for_agent}\"}" \
+    "${agency_base%/}/api/alpha/agents/auto" || true)"
+  auto_id="$(printf '%s' "${auto_response}" | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(d.get("agent-id") or "" if d.get("ok") else "")
+except Exception:
+    print("")' 2>/dev/null || true)"
+  if [[ -z "${auto_id}" ]]; then
+    echo "ck: could not mint a kimi lane via /api/alpha/agents/auto" >&2
+    echo "ck: response was: ${auto_response}" >&2
+    exit 1
+  fi
+  if [[ "${auto_id}" != "${lane_id}" ]]; then
+    # /auto allocates its own next-unused id and cannot be told which to use.
+    # Adopt it rather than falling back to the stub path.
+    echo "ck: requested ${lane_id}, Agency allocated ${auto_id} — using ${auto_id}" >&2
+    lane_id="${auto_id}"
+  fi
+fi
+
+session_file="/tmp/futon-kimi-session-id-${lane_id}"
+if $start_new; then
+  rm -f "${session_file}"
+fi
+
+socket_name=""
+if declare -F futon_preferred_emacs_socket >/dev/null 2>&1; then
+  socket_name="$(futon_preferred_emacs_socket || true)"
+fi
+socket_args=()
+[[ -n "${socket_name}" ]] && socket_args=(-s "${socket_name}")
+
+esc() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1])[1:-1])' "$1"; }
+agent_chat_el="$(esc "${futon3c_root}/emacs/agent-chat.el")"
+kimi_repl_el="$(esc "${futon3c_root}/emacs/kimi-repl.el")"
+esc_lane="$(esc "${lane_id}")"
+esc_sf="$(esc "${session_file}")"
+
+echo "ck: lane ${lane_id} (session file ${session_file})"
+"${emacsclient_bin}" "${socket_args[@]}" --timeout 8 --no-wait -e "(progn
+  (load \"${agent_chat_el}\" nil t)
+  (load \"${kimi_repl_el}\" nil t)
+  (kimi-repl--open-instance (format \"*kimi-repl:%s*\" \"${esc_lane}\")
+                            \"${esc_lane}\"
+                            \"${esc_sf}\"))" >/dev/null
+echo "ck: opened *kimi-repl:${lane_id}*"

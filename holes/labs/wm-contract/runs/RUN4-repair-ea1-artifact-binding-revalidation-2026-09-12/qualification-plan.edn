@@ -1,0 +1,9 @@
+{:schema :wm/historical-qualification-plan-v1
+ :verification-id "repair-ea1-artifact-binding-revalidation-20260912-v1"
+ :repair-id "repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch"
+ :sources [{:path "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch.edn" :sha256 "7e9a8d45743cf759161f70b1d2a709e5866057dcd6387eb6e590c8759ca91048"}
+           {:path "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj" :sha256 "f38c0f9dd81b056d881cb7ad2b77096f7fb5609dee29e77e165dc24cf8307509"}
+           {:path "/home/joe/code/futon2/test/futon2/aif/full_loop_runner_test.clj" :sha256 "403f22530997e1659eab088a46a813b53e6a9354077dca6b356eb88b402fd106"}]
+ :checks [{:id :commissioned-repository-resolution-regression
+           :argv ["bash" "-lc" "cd /home/joe/code/futon2 && exec clojure -M:test:test-all -m cognitect.test-runner -n futon2.aif.full-loop-runner-test -v futon2.aif.full-loop-runner-test/commissioned-repository-wins-over-shared-worktree-objects"]
+           :timeout-ms 300000}]}

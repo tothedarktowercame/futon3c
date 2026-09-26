@@ -1,0 +1,58 @@
+;; Computed 2026-08-03 by the causal engine from retrieval-stage-causal-spec.json (v2).
+;; RS-2/RS-3 computed earlier this morning; RS-1/RS-4 this block.
+{:rs1 {:question "What does E8 arm-D failure actually localize?"
+       :surfaced-set-parents [:attachment-density :pattern-endpoints :pollution :reachability]
+       :causes-independent-of-query [:attachment-density :pollution :reachability]
+       :after-e8-controls [:attachment-density :pollution]
+       :consequence "Arm-D failure does NOT uniquely support V2 §5.2: after E8's reachability control and store-presence verification, the residual causes are attachment-density AND pollution-at-the-surfacing-cutoff (spec delta v2). E8's preregistered interpretation 'D fails => bottleneck downstream, §5.2 supported' is too strong as written."
+       :free-discriminator "CORRECTED by claude-12 against E8 frozen data (2026-08-03): NOT free as claimed. (a) the frozen artifact records ranks: null - the harness captured membership, not position; (b) deeper: with a hard top-5 cutoff, present-but-drowned is unobservable BY CONSTRUCTION - rank 6 and never-retrieved both read as absent. The discriminator requires rank over the PRE-cutoff candidate list (instrument change; cheap on frozen data). Until then E8's one D-failure (case 4) is UNRESOLVED between the two residuals, not resolved toward §5.2. Structural basis of the split stands: attachment acts only on surfaced-set; pollution also at text-match-set and offered-set."
+       :named-vs-needed "ADDED from claude-12's decomposition of the frozen E8 JSON (their 0750f5ec): arm A's 40% baseline is carried ENTIRELY by set-valued cases (any-of-five sufficing); every specifically-named target (two singletons + one pair) missed under the shipped query, and both singletons convert under oracle vocabulary. Distinction the spec conflates: retrieving A relevant memory vs retrieving THE needed one - candidate delta v4 (registered not applied): split surfaced-set into relevant-surfaced and named-target-surfaced, or index the outcome by target kind."
+       :discharged "RS-2 held against E8's frozen-data results (STAGE NAMED PRECISELY per claude-12's correction: E8 read a live store but ran no dispatches/runners/tokens - this is frozen-data analysis, not a live experiment; the prediction was validated on frozen data): cardinality inert (A=B8=B12=B16=40%), vocabulary is the lever (oracle 40%->80%) - the C1 arm would have run starved; sequencing constraint vindicated. Note the confound was narrower than modeled: query-ladder truncates to 3 terms, so the take-4 cap was never the operative lever - a query-cardinality mechanism refinement for any v3 delta."}
+ :rs2 {:attachment-effect-route-exists? true
+       :query-stage-is-independent-bottleneck? true
+       :consequence "C1's populated-vs-star arm under the shipped (take 4) query can produce an attachment-null that is actually a query-starvation null - E8-before-C1 is a computed sequencing constraint."}
+ :rs3 {:total-effect-of-reachability :identifiable-empty-set
+       :channel-decomposition :path-specific-effect-outside-total-effect-machinery
+       :naive-conditioning-backfires
+       [[:reachability :grep-channel :corpus-coverage :text-match-set :pattern-endpoints :surfaced-set :offered-set :used-set :runner-outcome]]
+       :with-artifact-index :decomposition-becomes-computable
+       :consequence "V2 §5.1's 'needs a different instrument' holds as a two-sided receipt: no conditioning trick on existing receipt fields yields the grep-vs-recall split (collider opens, path shown); the artifact-index instrument makes it standard mediation."}
+ :rs4 {:total-effect {:method :backdoor :primary-adjustment-set #{}}
+       :active-channels [[:reachability :grep-channel :runner-outcome]
+                         [:reachability :surfaced-set :offered-set :used-set :runner-outcome]]
+       :n=1-licenses "existence of an active reachability->outcome route (witnessed), NOT magnitude, NOT channel share (see :rs3)"}
+ :data-contact
+ {:run "falsification-with-data 046b6fb6, frozen 129-dispatch corpus (hash-verified), 2026-08-03"
+  :mapping "6/15 nodes measurable (query-cardinality, query-vocabulary CONSTANT, pollution PROXY, surfaced/offered sets, used-set 106/129); 9 unmeasured incl. RUNNER-OUTCOME (no preregistered common endpoint in the corpus - itself a headline instrumentation finding)"
+  :ci-verdicts {:survived 4 :survived-vacuous 5 :violated 2 :untestable 0}
+  :vacuous-discipline "constant/thin columns flagged per-CI; thin-data survivals explicitly not corroboration"
+  :violations
+  [{:ci "offered-set _||_ query-cardinality | {pollution, surfaced-set}" :p 0.012 :n 129
+    :readings ["graph defect: missing query-cardinality -> offered-set edge (cardinality reaches offer beyond surfacing)"
+               "measurement mismatch: inclusion-reasons proxy for offered-set carries query-size artifacts"]
+    :status :candidate-delta-v5-registered-not-applied}
+   {:ci "surfaced-set _||_ used-set | {offered-set}" :p 2.38e-9 :n 106
+    :readings ["graph defect: direct surfaced -> used dependence (runner consumes beyond the offer)"
+               "measurement mismatch: the offered NODE is not what inclusion-reasons measures - the V2 pattern (instrument field != phenomenon) recurring"]
+    :status :candidate-delta-v6-registered-not-applied}]
+  :dowhy "complete-case n=106, 20 permutations, not rejected; does NOT override exact dagitty violations (stated)"
+  :rank-rerun-resolution
+ {:status "reviewed-not-frozen (adb67b13; producing job overran cap, determinism unverified)"
+  :headline "ALL THREE named targets ABSENT from arm-A candidate lists (depths 19/16/13/6/19 vs cutoff 5) - failure is at CANDIDATE GENERATION, upstream of ranking; re-ranking/score-tuning/cutoff interventions are structurally null for the named-target failure mode (set-valued hits still route through ranking, so the pruning is mode-scoped, not global)"
+  :rs1-residual-split-resolved "arm-A absence = query-side (oracle vocabulary recovers cases 1+5); arm-D absence (case 4) = downstream, endpoint-relative attachment family; the two residuals separate cleanly and neither reduces to the other"
+  :pollution-correction "S4's 'pollution not absence' log line REFUTED - candidate-list absence, not drowning; spec delta v7 registered withdrawing the v2 edge's support; RS-1's pollution residual loses its only witnessed instance"
+  :arm-c-reread "structure-aware arm failed via NARROWER candidate pools (depths 3-5), not wrong vocabulary in principle - evidence against that construction, not the axis-2 level"
+  :psi "RETRACTED-AND-REFINED (claude-12, same day): fires SOMETIMES - receipt-ranking is intermittent under store backpressure, silently degrading to base order against an identical snapshot (run1 score-kind deterministic-base-order vs run2 receipt-ranked, same store sha). Load-dependent nuisance on every Psi-dependent estimand until the fallback is loud (SEQ-0.5)."
+  :warrant "v3/v4/v7 APPLIED ON REPLICATION WARRANT, not freeze: harness non-byte-reproducible (adb67b13 vs ff9b3682, held snapshot); 28/30 cells identical incl. every load-bearing quantity; the two differing cells are same-set/different-order surfaced lists in case 5. Frozen and replicated license different things; this is the latter."
+  :v8-status
+ {:instrument "SEQ-0.5 DISCHARGED (codex-5 39d6400b, claude-12 reviewed): per-dispatch mode/degraded?/typed-reason/score-kind in the offered receipt; 'no stats found' (status ok) now distinct from 'stats fetch failed' (degraded true)"
+  :estimand-refinement "codex-5's added :not-applicable-no-candidates category is load-bearing for v8: ranking-mode is 4-level, and the no-candidates level is EXCLUDED from the degradation contrast - otherwise the ~40% empty-recall dispatches systematically misclassify"
+  :confirmation-protocol "paired runs under induced load vs idle; per-run record (mode, degraded?, reason, outcome); prediction: failures cluster with degraded?=true + fetch-failure/budget reasons, passes with :receipt-ranked; the a92J05 intermittent test is the candidate unread alarm (claude-12, flagged not claimed)"
+  :on-confirmation "v8 applies in OBSERVED form - ranking-mode enters the spec as an observed node (the instrument measures it), store-load adjacent via degraded?/reason; stronger than the registered latent form. Psi-dependent contrasts then condition on ranking-mode, discharging the SEQ-0.5 confound by adjustment rather than exclusion"}
+ :v8-a92j05-probe
+ {:result "NEGATIVE for the a92J05 route (12 read-only dry-runs: mode :deterministic-base-order x12, degraded? false, :stats-absent x12, all passing) - the flake is NOT ranking degradation. Recorded negative, not a hypothesis left hanging (claude-12). v8 itself stays registered: the original two-run score-kind intermittency (E8 case 5, a memory WITH stats) is unexplained by this probe, which ran a query whose memories have no stats to rank."
+  :epistemic-correction "claude-12 retracts 'known pre-existing failure, independently reproduced': two samples drawn while the machine was busy, read as a stable property - load-dependence mistaken for determinism; the clearing verdicts were right for the wrong reason"
+  :v9-candidate "REGISTERED NOT APPLIED: store-load -> candidate-generation starvation (evidence endpoint returns :expensive-read-busy under load; naive readers count it as zero; both a92J05 assertions fail together iff recall returns nothing). CONVERGENCE: this is the same stage the pre-cutoff instrument implicated for every named-target miss - two independent routes now point at candidate generation."
+  :confirmation-now-passive "The stated limit (needs induced load, declined on shared-resource grounds) is DISSOLVED by the SEQ-0.5 instrument itself: a load-starved run now leaves a readable receipt (:not-applicable-no-candidates + empty surfaced set + the dispatch context). One ORGANIC failure under the new receipts confirms or refutes v9 - no induced load required; the alarm is now readable instead of unread."}
+ :rs1-final "On the applied graph (v7 edge removed), arm-D residual after E8's controls = {attachment-density} ALONE - the corrected spec now predicts exactly what the rank data showed (case-4 arm-D absence = attachment family, endpoint-relative). Model and data converged through four evidence-driven deltas in one day."}
+ :consequence "The spec survived first whole-corpus contact on every testable edge EXCEPT the offer-stage mediation chain, which is exactly where claude-12's requirement-2 (denominator/measurement checks) already pointed. The two violations + the runner-outcome gap are the V3 instrumentation agenda, derived from data."}}

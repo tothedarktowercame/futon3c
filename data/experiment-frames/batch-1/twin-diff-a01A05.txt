@@ -1,0 +1,182 @@
+diff --git a/problems/a01A05/lean/Main.lean b/problems/a01A05/lean/Main.lean
+index 1cf1283..d851c98 100644
+--- a/problems/a01A05/lean/Main.lean
++++ b/problems/a01A05/lean/Main.lean
+@@ -202,73 +202,32 @@ lemma apm_a01A05_counterexample_norm_one_all (n : ℕ) :
+ lemma apm_a01A05_counterexample_inner_bound (n m : ℕ) (hnm : n < m) :
+     |inner ℝ (apm_a01A05_counterexample n) (apm_a01A05_counterexample m)| ≤
+       (2 : ℝ) ^ (-(m : ℝ)) := by
+-  rcases n with _ | n
+-  · rcases m with _ | m
+-    · omega
+-    rcases m with _ | m
+-    · rw [apm_a01A05_counterexample_zero, apm_a01A05_counterexample_one,
+-          inner_add_right, inner_smul_right, inner_smul_right,
+-          lp.inner_single_left, lp.inner_single_left]
+-      norm_num
+-    · rw [apm_a01A05_counterexample_zero,
+-          apm_a01A05_counterexample_of_two_le (by omega), lp.inner_single_left]
+-      simp [lp.single_apply]
+-      exact Real.rpow_nonneg (x := (2 : ℝ)) (by norm_num) _
+-  · rcases n with _ | n
+-    · have hm2 : 2 ≤ m := by omega
+-      rw [apm_a01A05_counterexample_one,
+-          apm_a01A05_counterexample_of_two_le hm2, inner_add_left,
+-          inner_smul_left, inner_smul_left, lp.inner_single_left,
+-          lp.inner_single_left]
+-      simp [show m ≠ 0 by omega, show m ≠ 1 by omega]
+-    · have hn2 : 2 ≤ n + 2 := by omega
+-      have hm2 : 2 ≤ m := by omega
+-      rw [apm_a01A05_counterexample_of_two_le hn2,
+-          apm_a01A05_counterexample_of_two_le hm2, lp.inner_single_left]
+-      simp [show n + 2 ≠ m by omega]
+-
+-lemma apm_a01A05_counterexample_gramSchmidtNormed_one :
+-    InnerProductSpace.gramSchmidtNormed ℝ apm_a01A05_counterexample 1 =
+-      lp.single 2 1 1 := by
+-  rw [apm_a01A05_gramSchmidtNormed_one _ apm_a01A05_counterexample_norm_zero,
+-    apm_a01A05_counterexample_zero, apm_a01A05_counterexample_one,
+-    inner_add_right, inner_smul_right, inner_smul_right,
+-    lp.inner_single_left, lp.inner_single_left]
+-  have hsqrt : Real.sqrt 3 ≠ 0 := by positivity
+-  have hcoefpos : 0 < Real.sqrt 3 / 2 :=
+-    div_pos (Real.sqrt_pos.2 (by norm_num)) (by norm_num)
+-  simp [lp.single_apply]
+-  rw [norm_smul, lp.norm_single, norm_one, mul_one, Real.norm_eq_abs,
+-    abs_of_pos hcoefpos,
+-    inv_smul_smul₀]
+-  exact div_ne_zero hsqrt (by norm_num)
+-  norm_num
+-
+-lemma apm_a01A05_counterexample_distance_one :
+-    (1 / 2 : ℝ) <
+-      ‖apm_a01A05_counterexample 1 -
+-        InnerProductSpace.gramSchmidtNormed ℝ apm_a01A05_counterexample 1‖ := by
+-  rw [apm_a01A05_counterexample_one,
+-    apm_a01A05_counterexample_gramSchmidtNormed_one]
+-  let e0 : apm_a01A05_l2 := lp.single 2 0 1
+-  let e1 : apm_a01A05_l2 := lp.single 2 1 1
+-  rw [show (1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1 - e1 =
+-      (1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2 - 1) • e1 by module]
+-  have hinner : inner ℝ ((1 / 2 : ℝ) • e0)
+-      ((Real.sqrt 3 / 2 - 1) • e1) = 0 := by
+-    rw [inner_smul_left, inner_smul_right, lp.inner_single_left]
+-    simp [e1]
+-  have hsq := norm_add_sq_eq_norm_sq_add_norm_sq_real hinner
+-  simp [e0, e1, lp.norm_single, norm_smul] at hsq
+-  have hsqrt_sq : (Real.sqrt 3) ^ 2 = 3 := by norm_num
+-  have hcoef : Real.sqrt 3 / 2 - 1 ≠ 0 := by
+-    intro h
+-    have : Real.sqrt 3 = 2 := by linarith
+-    nlinarith
+-  have hcoef_sq : 0 < |Real.sqrt 3 / 2 - 1| ^ 2 := sq_pos_of_ne_zero (abs_ne_zero.mpr hcoef)
+-  have hnorm_nonneg : 0 ≤
+-      ‖(1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2 - 1) • e1‖ := norm_nonneg _
+-  nlinarith
++  rcases m with _ | m
++  · omega
++  rcases m with _ | m
++  · have hn : n = 0 := by omega
++    subst n
++    rw [apm_a01A05_counterexample_zero, apm_a01A05_counterexample_one,
++      inner_add_right, inner_smul_right, inner_smul_right]
++    simp [lp.inner_single_left]
++    norm_num
++  · have hm : 2 ≤ m + 2 := by omega
++    rw [apm_a01A05_counterexample_of_two_le hm]
++    rcases n with _ | n
++    · rw [apm_a01A05_counterexample_zero, lp.inner_single_left]
++      simp
++      positivity
++    rcases n with _ | n
++    · rw [apm_a01A05_counterexample_one, inner_add_left, inner_smul_left,
++        inner_smul_left, lp.inner_single_left, lp.inner_single_left]
++      simp
++      positivity
++    · have hn : 2 ≤ n + 2 := by omega
++      rw [apm_a01A05_counterexample_of_two_le hn, lp.inner_single_left]
++      rw [lp.coeFn_single,
++        Pi.single_eq_of_ne (by omega : n + 2 ≠ m + 2)]
++      simp
++      positivity
+ 
+ theorem apm_a01a05 :
+     (¬ ∀ (H : Type) [NormedAddCommGroup H] [InnerProductSpace ℝ H]
+@@ -279,7 +238,51 @@ theorem apm_a01a05 :
+       [CompleteSpace H] (seq : apm_a01A05_NearOrthogonalSeq H) (g : H),
+       Tendsto (fun m ↦ inner ℝ g (seq.f m)) atTop (nhds 0)) := by
+   constructor
+-  · /-
++  · intro h
++    let seq : apm_a01A05_NearOrthogonalSeq apm_a01A05_l2 :=
++      { f := apm_a01A05_counterexample
++        norm_one := apm_a01A05_counterexample_norm_one_all
++        inner_bound := apm_a01A05_counterexample_inner_bound }
++    have hbound := h apm_a01A05_l2 seq 1
++    let e0 : apm_a01A05_l2 := lp.single 2 0 1
++    let e1 : apm_a01A05_l2 := lp.single 2 1 1
++    have hinner : inner ℝ e0
++        ((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) = 1 / 2 := by
++      rw [inner_add_right, inner_smul_right, inner_smul_right,
++        lp.inner_single_left, lp.inner_single_left]
++      simp [e0, e1]
++    have hgs : InnerProductSpace.gramSchmidtNormed ℝ seq.f 1 = e1 := by
++      rw [apm_a01A05_gramSchmidtNormed_one seq.f (seq.norm_one 0)]
++      change ‖((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) -
++          inner ℝ e0 ((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) • e0‖⁻¹ •
++          (((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) -
++            inner ℝ e0 ((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) • e0) = e1
++      rw [hinner]
++      have hsqrt : Real.sqrt 3 ≠ 0 := by positivity
++      rw [show ((1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1) -
++          (1 / 2 : ℝ) • e0 = (Real.sqrt 3 / 2) • e1 by module]
++      simp [norm_smul, e1, lp.norm_single, abs_of_nonneg (Real.sqrt_nonneg 3), hsqrt]
++      rw [smul_smul]
++      rw [show (2 / Real.sqrt 3) * (Real.sqrt 3 / 2) = (1 : ℝ) by field_simp,
++        one_smul]
++    rw [show seq.f 1 = (1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1 by
++      simp [seq, e0, e1, apm_a01A05_counterexample_one], hgs] at hbound
++    have horth : inner ℝ ((1 / 2 : ℝ) • e0)
++        ((Real.sqrt 3 / 2 - 1) • e1) = 0 := by
++      rw [inner_smul_left, inner_smul_right, lp.inner_single_left]
++      simp [e0, e1]
++    have hsq := norm_add_sq_eq_norm_sq_add_norm_sq_real horth
++    have hsqrt_sq : (Real.sqrt 3) ^ 2 = 3 := by norm_num
++    have hnonneg : 0 ≤ ‖(1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2 - 1) • e1‖ :=
++      norm_nonneg _
++    have hsqrt_lt : Real.sqrt 3 < 7 / 4 := by nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
++    simp [e0, e1, lp.norm_single, norm_smul,
++      abs_of_nonneg (Real.sqrt_nonneg 3)] at hsq
++    norm_num [Real.rpow_neg (by norm_num : (0 : ℝ) ≤ 2)] at hbound
++    rw [show (1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2) • e1 - e1 =
++      (1 / 2 : ℝ) • e0 + (Real.sqrt 3 / 2 - 1) • e1 by module] at hbound
++    nlinarith
++    /-
+     Boundary (closer hop 3): hop 1 closed the valid weak-convergence conjunct
+     with `apm_a01A05_inner_tendsto_zero`. The proof was recovered from
+     repository history (`f4bf72c`) and revalidated against the frozen repaired
+@@ -317,24 +320,6 @@ theorem apm_a01a05 :
+     solved Gram--Schmidt artifacts, Mathlib's `lp` and Gram--Schmidt APIs, and
+     git history found no pre-bundled counterexample. The frozen statement is
+     unchanged.
+-
+-    Closer hop 4 completes the witness.  The pairwise estimate is a four-case
+-    coordinate calculation in `lp.single`; normalized Gram--Schmidt at index
+-    one is exactly the second coordinate vector.  Orthogonality then computes
+-    the squared displacement as `1/4 + (sqrt 3 / 2 - 1)^2`, strictly greater
+-    than `1/4`, contradicting the claimed bound `2⁻¹`.
+     -/
+-    intro hall
+-    let seq : apm_a01A05_NearOrthogonalSeq apm_a01A05_l2 :=
+-      { f := apm_a01A05_counterexample
+-        norm_one := apm_a01A05_counterexample_norm_one_all
+-        inner_bound := apm_a01A05_counterexample_inner_bound }
+-    have hle := hall apm_a01A05_l2 seq 1
+-    have hle' :
+-        ‖apm_a01A05_counterexample 1 -
+-          InnerProductSpace.gramSchmidtNormed ℝ apm_a01A05_counterexample 1‖ ≤
+-            (1 / 2 : ℝ) := by
+-      simpa [seq, Real.rpow_neg_one] using hle
+-    exact (not_lt_of_ge hle') apm_a01A05_counterexample_distance_one
+   · intro H _ _ _ seq g
+     exact apm_a01A05_inner_tendsto_zero seq g

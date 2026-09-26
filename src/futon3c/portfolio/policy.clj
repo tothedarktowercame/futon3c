@@ -23,7 +23,10 @@
   "The initial action arena for portfolio management."
   {:arena/id :portfolio-management
    :arena/participants [:human :claude :codex]
-   :arena/actions [:work-on :review :consolidate :upvote :wait]
+   ;; :acquire-patterns is the EPISTEMIC / niche-construction action (M-wm-policies
+   ;; Track 3): when the pragmatic field is flat (the abstain regime), the WM does not
+   ;; freeze — it constructs new policy (a pattern cascade) so a low-G move comes to exist.
+   :arena/actions [:work-on :review :consolidate :upvote :acquire-patterns :wait]
    :arena/rules {:mode-gate true
                  :mana-gate true
                  :upvote-decay 0.10}})
@@ -70,6 +73,14 @@
                       (* 0.3 (:spinoff-pressure observation 0.0))
                       (* 0.2 (- 1.0 (:coverage-pct observation 0.5)))))
     :upvote   0.1  ; small constant — upvoting is always mildly useful
+    :acquire-patterns
+    ;; Niche-construction has only MILD pragmatic value — it doesn't advance a goal
+    ;; directly. It is warranted when there is stalled/gapped work that no current
+    ;; action confidently addresses. Kept small so it never hijacks normal operation
+    ;; (when a pragmatic action has real value, that action dominates).
+    (let [stall (:stall-count observation 0.0)
+          gap   (:gap-count observation 0.0)]
+      (* 0.2 (obs/clamp01 (* 0.5 (+ stall gap)))))
     :wait     (let [total-error (reduce + (map (fn [k]
                                                  (Math/abs (- (get observation k 0.5)
                                                               (get mu-sens k 0.5))))
@@ -92,6 +103,16 @@
       0.3
       :upvote     ;; Upvoting doesn't produce information
       0.05
+      :acquire-patterns
+      ;; FALLBACK ONLY — the live path (choose-action) overrides this with the real
+      ;; expected-information-gain = action-posterior entropy (see posterior-entropy).
+      ;; This flatness-from-precision proxy is the degenerate value used if
+      ;; expected-free-energy is called for :acquire-patterns without an :epistemic-override.
+      (let [tau (:tau precision 1.0)
+            low-precision-channels (count (filter (fn [[_k v]] (< v 0.6)) pi-o))
+            flatness (obs/clamp01 (/ (double low-precision-channels) 6.0))
+            low-confidence (obs/clamp01 (/ (- 0.55 tau) 0.55))] ; 0 at τ≥0.55, →1 as τ→0
+        (* 0.9 flatness low-confidence))
       :wait       ;; Waiting produces no information
       0.0)))
 
@@ -117,6 +138,7 @@
                 :review      0.2
                 :consolidate 0.4
                 :upvote      0.05
+                :acquire-patterns 0.3  ; constructing a cascade costs some mana/time
                 :wait        0.0)]
      (if observation
        (let [epe (:effort-prediction-error observation 0.0)
@@ -134,10 +156,15 @@
   "Compute G(a) for a single action.
    Lower G = better (minimizing free energy).
 
-   Returns {:action, :G, :terms {term-name → value}}."
-  [action observation mu-sens precision adjacent-missions upvote-state lambdas]
+   Returns {:action, :G, :terms {term-name → value}}.
+
+   :epistemic-override — when supplied, used as the epistemic value instead of
+   `epistemic-value`. choose-action passes the real expected-information-gain (the
+   action-posterior entropy) for :acquire-patterns this way (M-wm-policies Track 3)."
+  [action observation mu-sens precision adjacent-missions upvote-state lambdas
+   & {:keys [epistemic-override]}]
   (let [prag (pragmatic-value action observation mu-sens adjacent-missions)
-        epis (epistemic-value action observation precision)
+        epis (or epistemic-override (epistemic-value action observation precision))
         upv (upvote-value action upvote-state)
         eff (effort-cost action observation)
         ;; G = negative of value + cost
@@ -165,6 +192,20 @@
         sum (reduce + exps)]
     (mapv #(/ % sum) exps)))
 
+(defn posterior-entropy
+  "Normalized Shannon entropy of the action-posterior P(a) ∝ exp(−G/τ) over a set of
+   action G-values. 1.0 = a maximally flat field (every action equally (un)preferred →
+   maximal uncertainty over which action helps); 0.0 = a clear winner. This IS the
+   expected-information-gain available to a structure-acquiring action (M-wm-policies
+   Track 3 / AIF grounding): the uncertainty that acquiring new policy could resolve —
+   a real information-theoretic quantity, not a flatness heuristic."
+  [gs tau]
+  (let [t (max (double (or tau 1.0)) 0.1)
+        probs (softmax (mapv (fn [g] (/ (- (double g)) t)) gs))
+        n (count probs)
+        h (- (reduce + (map (fn [p] (if (pos? p) (* p (Math/log p)) 0.0)) probs)))]
+    (if (> n 1) (/ h (Math/log n)) 0.0)))
+
 (defn choose-action
   "Evaluate all actions and select via softmax.
 
@@ -187,10 +228,29 @@
         abstain-threshold 0.55
         abstain? (< tau abstain-threshold)
         actions (:arena/actions portfolio-arena)
-        ;; Compute G for each action
-        evaluations (mapv #(expected-free-energy
-                            % observation (:sens mu) precision
-                            adjacent-missions upvote-state lambdas)
+        ;; --- real expected-information-gain for :acquire-patterns (M-wm-policies Track 3,
+        ;; AIF grounding 2026-06-24). The epistemic drive is ADDED, not derived from
+        ;; projecting VFE forward (Millidge "Whence the EFE"); its MAGNITUDE is the genuine
+        ;; EIG = the normalized Shannon entropy of the action-posterior over the EXISTING
+        ;; (pragmatic) actions — the uncertainty over "which action helps" that acquiring
+        ;; new policy could resolve. τ-gated (×low-confidence) so it is exactly 0 when
+        ;; confident (τ≥0.55) and cannot hijack normal operation.
+        prag-actions (vec (remove #{:acquire-patterns} actions))
+        prag-evals (mapv #(expected-free-energy
+                           % observation (:sens mu) precision
+                           adjacent-missions upvote-state lambdas)
+                         prag-actions)
+        eig (* (posterior-entropy (mapv :G prag-evals) tau)
+               (obs/clamp01 (/ (- 0.55 tau) 0.55)))
+        by-action (zipmap prag-actions prag-evals)
+        ;; Compute G for each action (acquire-patterns uses the real EIG as its epistemic)
+        evaluations (mapv (fn [a]
+                            (if (= a :acquire-patterns)
+                              (expected-free-energy
+                               a observation (:sens mu) precision
+                               adjacent-missions upvote-state lambdas
+                               :epistemic-override eig)
+                              (by-action a)))
                           actions)
         ;; Softmax: logits = -G/τ (lower G → higher probability)
         logits (mapv (fn [e] (/ (- (:G e)) (max tau 0.1))) evaluations)
@@ -201,7 +261,16 @@
         ;; Select: if not abstaining, sample from distribution
         ;; For determinism in tests, use :rng seed; otherwise argmax
         selected (if abstain?
-                   :wait
+                   ;; ABSTAIN = don't COMMIT to a pragmatic action — but don't FREEZE
+                   ;; either (M-wm-policies Track 3). Pick the best (min-G) NON-COMMITTAL
+                   ;; action: niche-construction (:acquire-patterns) when the policy field
+                   ;; is flat — its epistemic value dominates there — else :wait when the
+                   ;; field is genuinely calm. The "I don't have the right patterns yet"
+                   ;; vs "nothing to do" split falls out of EFE, not a hardcoded rule.
+                   (->> policies
+                        (filter #(#{:acquire-patterns :wait} (:action %)))
+                        (apply min-key :G)
+                        :action)
                    (let [rng (:rng opts)]
                      (if rng
                        ;; Stochastic: weighted sample

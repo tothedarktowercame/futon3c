@@ -1,6 +1,7 @@
 (ns futon3c.social.whistles-test
   "Tests for whistle dispatcher — synchronous request-response coordination."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.social.whistles :as whistles]
             [futon3c.agency.registry :as registry]
             [futon3c.evidence.store :as estore]))
@@ -10,7 +11,7 @@
 ;; =============================================================================
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (registry/reset-registry!)
     (estore/reset-store!)
@@ -114,7 +115,12 @@
       (is (= "works fine" (:whistle/response result)))
       (is (empty? (filter #(some #{:whistle} (:evidence/tags %)) entries)))
       (is (= [:invoke-result :invoke]
-             (mapv #(get-in % [:evidence/body :edge/kind]) entries))))))
+             (mapv #(get-in % [:evidence/body :edge/kind])
+                   (filter #(some #{:mesh-edge} (:evidence/tags %)) entries))))
+      (let [decisions (filter #(some #{:clock-decision} (:evidence/tags %)) entries)]
+        (is (seq decisions))
+        (is (every? #(= "whistle" (get-in % [:evidence/body :surface])) decisions))
+        (is (every? #(= :no-source (get-in % [:evidence/body :reason])) decisions))))))
 
 ;; =============================================================================
 ;; Timeout handling
@@ -149,7 +155,7 @@
                        :prompt "status?"
                        :author "joe"})]
           (is (true? (:whistle/ok result)))
-          (is (= 1800000 @captured-timeout)))))))
+          (is (= 3600000 (:timeout-ms @captured-timeout))))))))
 
 (deftest whistle-records-delivery-when-invoke-trace-id-present
   (testing "whistle! records delivery receipt for trace-id-bearing invokes"

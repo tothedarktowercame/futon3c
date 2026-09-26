@@ -1,5 +1,7 @@
 # T-mq7-unaddressable-caller — mesh-QA invariant for completions that can't bell back
 
+**Status (triaged 2026-09-01): PARTIAL -- policy conflict, not missing code.** MQ-7 is wired and flags unregistered callers, but the ticket's motivating case (http-caller, blank) is deliberately exempted by mesh_qa.clj:261-265 and asserted by tests. Reconcile: amend the ticket as superseded policy, or flag placeholders and update tests. Note 145 agent-not-found jobs suggest the placeholder exemption hides real routing debt.
+
 Parent: `M-agency-hardening.md`. Motivated by datapoint #1
 (`M-agency-hardening-datapoints.md`): codex-2 completed but its completion bell
 couldn't fire because the caller was recorded as `http-caller` (no `--from`) —

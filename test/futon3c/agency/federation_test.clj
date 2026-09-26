@@ -2,6 +2,7 @@
   "Federation unit tests — peer announcement, proxy invoke, hook wiring."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as fed]
             [org.httpkit.client :as http]))
@@ -30,6 +31,12 @@
     (fed/configure! {:peers ["http://host-a:7070" "" "  " "http://host-b:7070"]
                      :self-url "http://me:7070"})
     (is (= ["http://host-a:7070" "http://host-b:7070"] (fed/peers)))))
+
+(deftest configure-normalizes-blank-self-url
+  (testing "configure! treats blank self-url as unset"
+    (fed/configure! {:peers ["http://host-a:7070"]
+                     :self-url "  "})
+    (is (nil? (fed/self-url)))))
 
 (deftest configure-nil-peers-defaults-to-empty
   (testing "configure! with nil peers defaults to []"
@@ -94,6 +101,18 @@
                         :agent/metadata {}}]
       (is (nil? (fed/announce! agent-record))))))
 
+(deftest announce-skip-is-observable
+  (testing "announce! logs a diagnostic when federation is configured too weakly to announce"
+    (fed/configure! {:peers ["http://host-a:7070"] :self-url nil})
+    (let [agent-record {:agent/id {:id/value "codex-1" :id/type :continuity}
+                        :agent/type :codex
+                        :agent/capabilities [:edit]
+                        :agent/metadata {}}
+          logged (with-out-str
+                   (is (nil? (fed/announce! agent-record))))]
+      (is (str/includes? logged "announce skipped"))
+      (is (str/includes? logged ":no-self-url")))))
+
 (deftest announce-skips-proxy-agents
   (testing "announce! skips agents marked as proxy (prevents loops)"
     (fed/configure! {:peers ["http://host-a:7070"] :self-url "http://me:7070"})
@@ -101,7 +120,8 @@
                         :agent/type :codex
                         :agent/capabilities [:edit]
                         :agent/metadata {:proxy? true}}]
-      (is (nil? (fed/announce! agent-record))))))
+      (is (= "" (with-out-str
+                    (is (nil? (fed/announce! agent-record)))))))))
 
 (deftest announce-skips-ws-remote-bridge-agents
   (testing "announce! skips agents marked to avoid proxy federation"
@@ -110,7 +130,8 @@
                         :agent/type :codex
                         :agent/capabilities [:edit]
                         :agent/metadata {:skip-federation-proxy? true}}]
-      (is (nil? (fed/announce! agent-record))))))
+      (is (= "" (with-out-str
+                    (is (nil? (fed/announce! agent-record)))))))))
 
 (deftest announce-attempts-post-to-each-peer
   (testing "announce! attempts POST to each configured peer"
@@ -141,7 +162,9 @@
         (let [results (fed/announce! agent-record)
               payload (json/parse-string (get-in (first @calls) [:opts :body]) true)]
           (is (= 1 (count results)))
-          (is (= ["edit" "coordination/execute"] (:capabilities payload))))))))
+          (is (= ["edit" "coordination/execute"] (:capabilities payload)))
+          (is (= "http://me:7070" (:origin-url payload)))
+          (is (= true (:proxy payload))))))))
 
 ;; =============================================================================
 ;; Hook wiring
@@ -207,6 +230,7 @@
             tickle (reg/get-agent "tickle-1")]
         (is (:ok result))
         (is (= 1 (:count result)))
+        (is (= :registered (get-in result [:results 0 :action])))
         (is (= :tickle (:agent/type tickle)))
         (is (= [:coordination/orchestrate] (:agent/capabilities tickle)))
         (is (= true (get-in tickle [:agent/metadata :proxy?])))

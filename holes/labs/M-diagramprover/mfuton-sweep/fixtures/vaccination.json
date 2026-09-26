@@ -1,0 +1,118 @@
+{
+  "example_id": "vaccination",
+  "title": "Smallpox vaccination policy counterfactual",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's probabilistic vaccination model. Vaccination can cause a dangerous reaction while preventing smallpox; reaction and smallpox can each cause death.",
+  "variables": [
+    {
+      "key": "vaccination",
+      "name": "Vaccination",
+      "content": "Whether a child is vaccinated. The factual population vaccination rate is 99 percent.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "rows": [
+          {
+            "when": {},
+            "probability_true": {"numerator": 99, "denominator": 100}
+          }
+        ]
+      }
+    },
+    {
+      "key": "reaction",
+      "name": "Reaction",
+      "content": "Whether a child develops a reaction to the vaccine.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "rows": [
+          {
+            "when": {"vaccination": false},
+            "probability_true": {"numerator": 0, "denominator": 1}
+          },
+          {
+            "when": {"vaccination": true},
+            "probability_true": {"numerator": 1, "denominator": 100}
+          }
+        ]
+      }
+    },
+    {
+      "key": "smallpox",
+      "name": "Smallpox",
+      "content": "Whether a child develops smallpox.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "rows": [
+          {
+            "when": {"vaccination": false},
+            "probability_true": {"numerator": 1, "denominator": 50}
+          },
+          {
+            "when": {"vaccination": true},
+            "probability_true": {"numerator": 0, "denominator": 1}
+          }
+        ]
+      }
+    },
+    {
+      "key": "death",
+      "name": "Death",
+      "content": "Whether a child dies from a vaccine reaction or smallpox.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "rows": [
+          {
+            "when": {"reaction": false, "smallpox": false},
+            "probability_true": {"numerator": 0, "denominator": 1}
+          },
+          {
+            "when": {"reaction": false, "smallpox": true},
+            "probability_true": {"numerator": 1, "denominator": 5}
+          },
+          {
+            "when": {"reaction": true, "smallpox": false},
+            "probability_true": {"numerator": 1, "denominator": 100}
+          }
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "source": "vaccination",
+      "target": "reaction",
+      "because": "Vaccination creates the possibility of a vaccine reaction."
+    },
+    {
+      "source": "vaccination",
+      "target": "smallpox",
+      "because": "Vaccination changes the probability of developing smallpox."
+    },
+    {
+      "source": "reaction",
+      "target": "death",
+      "because": "A vaccine reaction has a one-in-one-hundred probability of being fatal."
+    },
+    {
+      "source": "smallpox",
+      "target": "death",
+      "because": "Smallpox is fatal in one out of five cases."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:e65a3eb7b0305f96",
+    "ta-book-of-why-2018:cd4186e9f2f455fe",
+    "ta-book-of-why-2018:f48eeba261d5e394",
+    "ta-book-of-why-2018:33474fafb6b322ac",
+    "ta-book-of-why-2018:601eaf206be0aeca",
+    "ta-book-of-why-2018:175c56cb0cadc74f",
+    "ta-book-of-why-2018:23e1f5b16c31b279",
+    "ta-book-of-why-2018:385e7956fb45394a",
+    "ta-book-of-why-2018:b2ab4eb122e702ea",
+    "ta-book-of-why-2018:5b92034042e28895"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0056",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0057"
+  ]
+}

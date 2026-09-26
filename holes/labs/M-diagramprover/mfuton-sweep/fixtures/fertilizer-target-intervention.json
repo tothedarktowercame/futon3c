@@ -1,0 +1,29 @@
+{
+  "example_id": "fertilizer-target-intervention",
+  "title": "Fertilizer Model 2: do(Fertilizer=1)",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 4.5 is the target intervention world. Fertilizer is clamped to 1, every incoming Fertilizer arrow is erased, and the five plot causes continue to affect Yield.",
+  "variables": [
+    {"key": "soil-fertility", "name": "Soil Fertility", "content": "A plot cause of yield."},
+    {"key": "texture", "name": "Texture", "content": "A plot cause of yield."},
+    {"key": "drainage", "name": "Drainage", "content": "A plot cause of yield."},
+    {"key": "microflora", "name": "Microflora", "content": "A plot cause of yield."},
+    {"key": "other", "name": "Other", "content": "Residual plot causes of yield."},
+    {"key": "fertilizer", "name": "Fertilizer", "content": "The treatment clamped by intervention.", "value_domain": "categorical", "domain_values": [1, 2]},
+    {"key": "yield", "name": "Yield", "content": "The crop-yield outcome."}
+  ],
+  "arrows": [
+    {"source": "soil-fertility", "target": "yield", "because": "The intervention does not alter this yield mechanism."},
+    {"source": "texture", "target": "yield", "because": "The intervention does not alter this yield mechanism."},
+    {"source": "drainage", "target": "yield", "because": "The intervention does not alter this yield mechanism."},
+    {"source": "microflora", "target": "yield", "because": "The intervention does not alter this yield mechanism."},
+    {"source": "other", "target": "yield", "because": "The intervention does not alter this yield mechanism."},
+    {"source": "fertilizer", "target": "yield", "because": "The treatment mechanism remains after incoming arrows are cut."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:49583ceb5b8fc02a",
+    "ta-book-of-why-2018:66eeb4a89dc34737",
+    "ta-book-of-why-2018:3e509899747c4baa"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0160"]
+}

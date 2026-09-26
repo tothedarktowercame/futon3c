@@ -1,5 +1,7 @@
 # M-typed-holes — ARGUE (2026-06-14)
 
+Status: complete
+
 *Phase 4 per `futon4/holes/mission-lifecycle.md`: synthesise — why is the DERIVE
 design *right*, not merely workable? Technical synthesis (pattern cross-ref,
 coherence, trade-offs, generalization) + a plain-language argument. Exit: the

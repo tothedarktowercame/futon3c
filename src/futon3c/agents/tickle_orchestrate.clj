@@ -16,6 +16,8 @@
             [cheshire.core :as json]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roles :as roles]
+            [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.blackboard :as bb]
@@ -76,7 +78,7 @@
   ([evidence-store]
    (tickle-status evidence-store {}))
   ([evidence-store {:keys [now]}]
-   (let [entries (if evidence-store (estore/query* evidence-store {}) [])
+   (let [entries (if evidence-store (estore/query* evidence-store {:query/tags [:orchestrate]}) []) ;; tag-filter into XTDB (futon1a#5)
          orch-entries (->> entries
                            (filter #(some #{:orchestrate} (:evidence/tags %)))
                            (map (fn [entry]
@@ -325,14 +327,14 @@
    Returns {:ok bool :result str :elapsed-ms long}.
 
    config:
-     :agent-id — agent to invoke (default \"codex-1\")
+     :agent-id — agent to invoke (default: the seat bound to :implementer in roles.edn)
      :evidence-store — for workflow tracking
      :repo-dir — repository root
      :timeout-ms — invoke timeout (default 180000 = 3 min)
      :session-id — workflow session id"
   [issue config]
   (let [{:keys [evidence-store repo-dir timeout-ms session-id agent-id]} config
-        agent-id (or agent-id "codex-1")
+        agent-id (or agent-id (roles/seat-for :implementer))
         timeout-ms (or timeout-ms 180000)
         prompt (make-assign-prompt issue repo-dir agent-id)
         issue-number (:number issue)
@@ -363,6 +365,7 @@
                      :error (when-not ok? (str (:error result)))
                      :elapsed-ms elapsed}})
       {:ok ok?
+       :agent-id agent-id
        :result (:result result)
        :session-id (:session-id result)
        :error (:error result)
@@ -381,38 +384,64 @@
   (let [{:keys [evidence-store repo-dir timeout-ms session-id]} config
         timeout-ms (or timeout-ms 300000)
         prompt (make-review-prompt issue codex-result repo-dir)
-        issue-number (:number issue)]
+        issue-number (:number issue)
+        ;; The reviewer is a role, bound in resources/roles.edn, not a seat
+        ;; named here (M-futon-seams instance 4).
+        reviewer (roles/seat-for :reviewer)]
     (emit! evidence-store
            {:session-id session-id
             :issue-number issue-number
             :repo repo-dir
             :claim-type :step
             :event-tag :review-assigned
-            :body {:reviewer "claude-1"}})
+            :body {:reviewer reviewer}})
     (project! {:issue issue :status :running :phase "Claude reviewing..."})
     (let [start (System/currentTimeMillis)
-          result (reg/invoke-agent! "claude-1" prompt timeout-ms)
+          result (reg/invoke-agent! reviewer prompt timeout-ms)
           elapsed (- (System/currentTimeMillis) start)
           ok? (:ok result)
-          verdict (when ok? (parse-verdict (:result result)))]
+          verdict (when ok? (parse-verdict (:result result)))
+          handoff-event (checked-handoff/verdict-event
+                         {:worker-seat (:agent-id codex-result)
+                          :author-seat reviewer
+                          :proposal {:issue issue
+                                     :worker-result (:result codex-result)}
+                          :verdict verdict
+                          :adjudication {:rerun-witness :absent}})
+          checked (checked-handoff/validate-verdict-event
+                   handoff-event (constantly nil))
+          accepted? (and ok? (:ok checked))
+          emitted-verdict (if accepted? verdict :unclear)]
       (emit! evidence-store
              {:session-id session-id
               :issue-number issue-number
               :repo repo-dir
               :claim-type :observation
               :event-tag :review-complete
-              :body {:ok ok?
-                     :verdict verdict
-                     :result-preview (when (:result result)
-                                       (subs (:result result)
-                                             0 (min 300 (count (:result result)))))
-                     :error (when-not ok? (str (:error result)))
-                     :elapsed-ms elapsed}})
-      {:ok ok?
-       :result (:result result)
-       :verdict verdict
-       :error (:error result)
-       :elapsed-ms elapsed})))
+              :body (cond-> {:ok accepted?
+                              :verdict emitted-verdict
+                              :result-preview (when (:result result)
+                                                (subs (:result result)
+                                                      0 (min 300 (count (:result result)))))
+                              :error (if-not ok?
+                                       (str (:error result))
+                                       (when-not (:ok checked)
+                                         (:error/code checked)))
+                              :elapsed-ms elapsed}
+                      (:ok checked)
+                      (assoc :checked-handoff/event (:event checked)
+                             :independence/grade
+                             (:independence/grade checked)))})
+      (cond-> {:ok accepted?
+               :result (:result result)
+               :verdict emitted-verdict
+               :error (:error result)
+               :elapsed-ms elapsed}
+        (:ok checked)
+        (assoc :checked-handoff/event (:event checked)
+               :independence/grade (:independence/grade checked))
+        (not (:ok checked))
+        (assoc :error/code (:error/code checked))))))
 
 (defn comment-on-issue!
   "Post a comment on a GitHub issue via gh CLI.
@@ -494,10 +523,16 @@
                                                     :timeout-ms review-timeout-ms))
               elapsed (- (System/currentTimeMillis) start)
               verdict (or (:verdict review-result) :unclear)
-              summary {:issue-number issue-number
-                       :status (if (:ok review-result) :complete :review-failed)
-                       :verdict verdict
-                       :total-elapsed-ms elapsed}]
+              summary (cond->
+                       {:issue-number issue-number
+                        :status (if (:ok review-result) :complete :review-failed)
+                        :verdict verdict
+                        :total-elapsed-ms elapsed}
+                        (:checked-handoff/event review-result)
+                        (assoc :checked-handoff/event
+                               (:checked-handoff/event review-result)
+                               :independence/grade
+                               (:independence/grade review-result)))]
 
           ;; 4. Report
           (emit! evidence-store
@@ -536,14 +571,14 @@
    config:
      :evidence-store — evidence store
      :repo-dir — repository root
-     :agent-id — agent to invoke (default \"codex-1\")
+     :agent-id — agent to invoke (default: the seat bound to :implementer in roles.edn)
      :timeout-ms — invoke timeout (default 180000)
      :send-to-channel! — IRC send fn (optional)
      :room — IRC room (default \"#futon\")"
   [issue config]
   (let [{:keys [evidence-store repo-dir agent-id timeout-ms
                 send-to-channel! room]} config
-        agent-id (or agent-id "codex-1")
+        agent-id (or agent-id (roles/seat-for :implementer))
         session-id (workflow-id)
         issue-number (:number issue)
         start (System/currentTimeMillis)]
@@ -790,7 +825,7 @@
             (if pass?
               (do (println (str "[fm-conductor] " target-agent " → PASS"))
                   ;; Whistle: if PASS and no assignable work, escalate via Agency
-                  (let [mentor "claude-2"
+                  (let [mentor (roles/seat-for :mentor)
                         whistle? (and (empty? assignable)
                                       (not= target-agent mentor)
                                       (cooldown-elapsed? conductor-state

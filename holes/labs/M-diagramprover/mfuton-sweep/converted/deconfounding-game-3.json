@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "b",
+    "to" : "x"
+  }, {
+    "from" : "b",
+    "to" : "y"
+  }, {
+    "from" : "b",
+    "to" : "a"
+  }, {
+    "from" : "x",
+    "to" : "a"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "deconfounding-game-3",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "deconfounding-game-3.json"
+  },
+  "variables" : [ {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Treatment (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Outcome (Y)"
+  }, {
+    "id" : "b",
+    "kind" : "latent-unobserved",
+    "name" : "Unobserved Confounder (B)"
+  }, {
+    "id" : "a",
+    "kind" : "observed",
+    "name" : "Observed Proxy (A)"
+  } ]
+}

@@ -1,0 +1,831 @@
+(ns futon3c.apm.queued-frame-adapter-test
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-launch-preparation :as live-preparation]
+            [futon3c.apm.problem-queue-supervisor :as queue]
+            [futon3c.apm.queued-frame-adapter :as sut]))
+
+(def problem {:problem/id "p1" :repository "/repo" :revision "r"
+              :path "p1.lean" :blob "b" :classification :non-excluded})
+(def frame (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                              :frame-number-base 30})))
+(def digest (apply str (repeat 64 "a")))
+
+(deftest retirement-lock-serializes-two-in-process-attempts
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "retirement-lock-" (make-array java.nio.file.attribute.FileAttribute 0))
+        retry-path (.resolve directory "retry.edn")
+        active (atom 0)
+        maximum (atom 0)
+        entered (promise)
+        run (fn []
+              (#'sut/with-retirement-lock
+               retry-path
+               (fn []
+                 (let [n (swap! active inc)]
+                   (swap! maximum max n)
+                   (deliver entered true)
+                   (Thread/sleep 30)
+                   (swap! active dec)))))]
+    (let [first-attempt (future (run))]
+      @entered
+      (let [second-attempt (future (run))]
+        @first-attempt
+        @second-attempt))
+    (is (= 1 @maximum))))
+
+(deftest missing-or-corrupt-retry-state-fails-closed
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "retirement-state-" (make-array java.nio.file.attribute.FileAttribute 0))
+        retry-path (.resolve directory "retry.edn")
+        marker-path (.resolve directory "retry-started.edn")]
+    (spit (str marker-path) (pr-str {:retry/started? true}))
+    (is (= :workspace-retirement-audit-retry-state-missing
+           (:error/code (#'sut/read-retirement-retry-state
+                         retry-path marker-path))))
+    (spit (str retry-path) "{:not valid")
+    (is (= :workspace-retirement-audit-retry-state-corrupt
+           (:error/code (#'sut/read-retirement-retry-state
+                         retry-path marker-path))))))
+
+(def coherent-seat-cast
+  {"solver" {:model "gpt-5.6-sol"}
+   "student" {:model "glm-5.3"}
+   "guide" {:model "glm-5.3"}
+   "proctor" {:model "gpt-5.6-sol"}
+   "promotion-proctor" {:model "gpt-5.6-sol"}
+   "scribe" {:model "gpt-5.6-sol"}
+   "zai-scribe" {:model "glm-5.3"}
+   "analyst" {:model "glm-5.3"}})
+
+(deftest future-frame-defaults-pin-explicit-memory-contract-cards
+  (is (= "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v4.md"
+         (:promotion-proctor sut/default-artifacts)))
+  (is (= "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.4.md"
+         (:guide sut/default-artifacts))))
+
+(deftest f61-memory-audit-conditions-are-registered
+  (let [conditions (read-string
+                    (slurp "data/apm-campaigns/jit-all-open-v2/conditions.edn"))
+        indexed (into {} (map (juxt :id identity)) conditions)]
+    (is (= "f60" (get-in indexed ["C-11" :since-frame])))
+    (is (= "f61" (get-in indexed ["C-12" :since-frame])))
+    (is (true? (get-in indexed ["C-11" :loaded?])))
+    (is (true? (get-in indexed ["C-12" :loaded?])))))
+
+(deftest failed-seat-mint-surfaces-source-error-and-findings
+  (with-redefs [live-preparation/prepare!
+                (fn [{:keys [mint-fn]}]
+                  (let [minted (mint-fn "f53" {:guide :claude} {})]
+                    {:ok false :error/code :seat-mint-failed
+                     :finding minted}))]
+    (let [result
+          (sut/prepare-live!
+           {:seat-cast coherent-seat-cast
+            :http-fn
+            (fn [_method _url _payload]
+              {:ok false :http/status 409 :error "invalid-seat-cast"
+               :findings [{:finding "seat-type-mismatch"
+                           :seat "guide" :expected-type "zai"
+                           :actual-type "claude"}]})})]
+      (is (= :seat-mint-failed (:error/code result)))
+      (is (= :invalid-seat-cast (get-in result [:finding :error])))
+      (is (= [{:finding :seat-type-mismatch
+               :seat "guide" :expected-type "zai" :actual-type "claude"}]
+             (get-in result [:finding :findings]))))))
+
+(deftest campaign-paths-use-a-stable-operator-buffer
+  (let [paths (sut/campaign-paths {:campaign-root "/tmp/apm-campaigns"}
+                                  frame)]
+    (is (= "*problem*" (:problem-buffer-name paths)))
+    (is (= "/tmp/apm-campaigns/queue-state.edn"
+           (:campaign-queue-state-path paths)))
+    (is (.endsWith ^String (:problem-buffer-path paths)
+                   "problem-buffer.md"))))
+
+(deftest deterministic-mint-and-qualification
+  (is (= "f30" (:frame/id frame)))
+  (is (sut/valid-mint? frame))
+  (is (:ok (sut/qualify {:frame frame :generated-contract-digest digest
+                         :qualification-digest digest}))))
+
+(deftest exhausted-solver-checkpoint-becomes-reenterable-frame-park
+  (let [round {:ordinal 50
+               :report {:final-head "solver-head-50"
+                        :branch "exp/countdown-f30-p1-solver"
+                        :failure-account ["earlier" "exact residual"]}}
+        result
+        (sut/solver-human-intervention-park
+         {:frame frame
+          :solver-state-path "/campaign/f30/live/solve.edn"
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "last-valid"}}}]}
+          :result {:ok false
+                   :error/code :solver-human-intervention-required
+                   :state {:state/type :solver-human-intervention-required
+                           :rounds (vec (repeat 50 round))}}})
+        park (:frame/park result)]
+    (is (:ok result))
+    (is (= :frame-parked (:status result)))
+    (is (= :solver-human-intervention-frame-park (:state/type park)))
+    (is (= 50 (:solver/rounds-completed park)))
+    (is (= "solver-head-50" (:solver/final-head park)))
+    (is (= "exact residual" (:residual park)))
+    (is (= "last-valid" (:last-valid-receipt/id park)))
+    (is (= :claude-required (:student/decision park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (= :awaiting-decision (:decision/status park)))
+    (is (true? (:decision/bell-required park)))))
+
+(deftest non-exhaustion-error-is-not-reclassified
+  (let [result {:ok false :error/code :solver-remediation-required}]
+    (is (= result
+           (sut/solver-human-intervention-park
+            {:frame frame :ledger {:events []}
+             :solver-state-path "/solve.edn" :result result})))))
+
+(deftest exhausted-scribe-deposit-parks-with-prior-receipt-intact
+  (let [result
+        (sut/scribe-reduce-apparatus-park
+         {:frame frame
+          :promotion-state-path "/campaign/f30/live/scribe-reduce.edn"
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "attempt-3-receipt"}}}]}
+          :result {:ok false
+                   :error/code :promotion-deposit-retries-exhausted
+                   :attempts 3
+                   :findings [{:ordinal 1
+                               :findings [:candidate-body-missing]}]}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :scribe-reduce-apparatus-frame-park (:state/type park)))
+    (is (= "attempt-3-receipt" (:last-valid-receipt/id park)))
+    (is (= "/campaign/f30/live/scribe-reduce.edn"
+           (:promotion/state-path park)))
+    (is (= 3 (:deposit/attempts park)))
+    (is (= :claude-supervisor (:decision/owner park)))))
+
+(deftest exhausted-promotion-repair-parks-with-persisted-review-intact
+  (let [review-result {:review-job "terminal-review"
+                       :reviews [{:memory-id "m" :verdict :approve}]}
+        result
+        (sut/promotion-apparatus-park
+         {:frame frame
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "last-valid"}}}]}
+          :result {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :promotion/state-path "/campaign/f30/live/promote-solver.edn"
+                   :repair/kind :review-projection :repair/attempts 1
+                   :findings [{:failure :edge-write-failed}]
+                   :state {:persisted-review-result review-result}}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :promotion-apparatus-frame-park (:state/type park)))
+    (is (= "last-valid" (:last-valid-receipt/id park)))
+    (is (= review-result (:persisted-review-result park)))
+    (is (= :review-projection (:repair/kind park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (true? (:decision/bell-required park)))))
+
+(deftest exhausted-role-terminal-repair-is-a-typed-frame-void
+  (let [void-call (atom nil)
+        certificate {:certificate/type :frame-void
+                     :classification :role-terminal-unrecoverable
+                     :certificate/id "void-certificate"}
+        error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        result
+        (with-redefs [sut/apply-reviewed-void!
+                      (fn [request]
+                        (reset! void-call request)
+                        {:ok true :certificate certificate})]
+          (sut/void-exhausted-role-terminal!
+           {:frame frame :ledger-path "/campaign/f30/ledger.edn"
+            :actor "queue" :now "2026-08-28T09:00:00Z"
+            :result error}))]
+    (is (= :terminal-collected (:status result)))
+    (is (= certificate (:frame/void result)))
+    (is (= :role-terminal-unrecoverable (:classification @void-call)))
+    (is (= [:live-job-terminal-repair-exhausted :typed-submission-missing]
+           (:failures @void-call)))
+    (is (= "f30" (:frame-id @void-call)))
+    (is (= "p1" (:problem-id @void-call)))))
+
+(deftest exhausted-role-terminal-parks-with-reenterable-record
+  ;; Park, not void (Joe, 2026-09-06): the production disposition for
+  ;; repair exhaustion preserves the role's work behind a decision record.
+  (let [ledger {:ok true
+                :projection {:active/frame {:frame-id (:frame/id frame)
+                                            :phase :student-attempt-1}}
+                :events [{:event/body {:certificate
+                                       {:receipt/id "promote-receipt"}}}]}
+        result (sut/role-terminal-repair-park
+                {:frame frame :ledger ledger
+                 :role-state-path "/campaign/f30/live/student-attempt-1.edn"
+                 :result {:ok false
+                          :error/code :live-job-terminal-repair-exhausted
+                          :repair/attempts 1
+                          :validation {:findings [:fresh-session-id-missing]}
+                          :repair/history
+                          [{:findings [:typed-submission-missing]}]}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :role-terminal-repair-frame-park (:state/type park)))
+    (is (= (:frame/id frame) (:frame/id park)))
+    (is (= :student-attempt-1 (:phase park)))
+    (is (= "promote-receipt" (:last-valid-receipt/id park)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code park)))
+    (is (= [:live-job-terminal-repair-exhausted
+            :fresh-session-id-missing
+            :typed-submission-missing]
+           (:role/findings park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (= :awaiting-decision (:decision/status park)))
+    (is (true? (:decision/bell-required park)))
+    (is (queue/valid-frame-park? park)
+        "the park must satisfy the supervisor's own validation")))
+
+(deftest under-evidenced-role-terminal-exhaustion-is-not-parked
+  (let [ledger {:ok true
+                :projection {:active/frame {:frame-id (:frame/id frame)
+                                            :phase :student-attempt-1}}
+                :events [{:event/body {:certificate
+                                       {:receipt/id "promote-receipt"}}}]}
+        error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        complete {:frame frame :ledger ledger
+                  :role-state-path "/campaign/f30/live/student-attempt-1.edn"
+                  :result error}]
+    (doseq [input [(assoc-in complete [:result :findings] [])
+                   (assoc-in complete [:result :repair/attempts] 0)
+                   (dissoc complete :role-state-path)
+                   (assoc-in complete
+                             [:ledger :projection :active/frame :phase] nil)]]
+      (is (= (:result input) (sut/role-terminal-repair-park input))
+          "an under-evidenced park request returns the raw result"))))
+
+(deftest under-evidenced-role-terminal-exhaustion-is-not-voided
+  (let [error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        complete {:frame frame :ledger-path "/campaign/f30/ledger.edn"
+                  :result error}]
+    (doseq [input [(assoc-in complete [:result :findings] [])
+                   (assoc-in complete [:result :repair/attempts] 0)]]
+      (is (= (:result input) (sut/void-exhausted-role-terminal! input))))))
+
+(deftest exhausted-role-terminal-collects-nested-validation-and-repair-findings
+  (let [request (atom nil)
+        result {:ok false
+                :error/code :live-job-terminal-repair-exhausted
+                :repair/attempts 1
+                :validation {:findings [:workspace-probe-failed]}
+                :repair/history [{:findings [:typed-submission-missing]}]}]
+    (with-redefs [sut/apply-reviewed-void!
+                  (fn [value]
+                    (reset! request value)
+                    {:ok true :certificate {:certificate/id "void"}})]
+      (is (= :terminal-collected
+             (:status (sut/void-exhausted-role-terminal!
+                       {:frame frame :ledger-path "/campaign/ledger.edn"
+                        :result result}))))
+      (is (= [:live-job-terminal-repair-exhausted
+              :workspace-probe-failed
+              :typed-submission-missing]
+             (:failures @request))))))
+
+(deftest fresh-one-off-manifest-pins-both-scribe-cards
+  (let [manifest (sut/one-off-manifest
+                  {:frame frame :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (string? (get-in manifest [:apparatus :artifacts :scribe :blob])))
+    (is (string? (get-in manifest [:apparatus :artifacts :zai-scribe :blob])))
+    (is (.endsWith (get-in manifest [:apparatus :artifacts :scribe :path])
+                   "codex-scribe-v2.md"))
+    (is (.endsWith (get-in manifest [:apparatus :artifacts :zai-scribe :path])
+                   "zai-scribe-v2.md"))))
+
+(deftest memory-cascade-arm-is-pinned-from-minted-frame-into-manifest
+  (let [config {:enabled? true :routes [:sibling :why-hop] :cap 37}
+        frame (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                 :frame-number-base 30
+                                 :memory-cascade config}))
+        manifest (sut/one-off-manifest
+                  {:frame frame :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (= config (:memory-cascade frame)))
+    (is (= config (get-in manifest [:units 0 :memory-cascade])))
+    (is (sut/valid-mint? frame))
+    (is (string? (:manifest/id manifest)))))
+
+(deftest solver-shelf-canary-applies-only-to-its-exact-minted-frame
+  (let [canary {:schema/version 1 :canary/id "c1" :eligible/frame-id "f30"
+                :assignment :control :matched/size 4 :shelf/entries []
+                :shelf/digest "digest"}
+        eligible (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                    :frame-number-base 30
+                                    :solver-shelf-canary canary}))
+        later (:frame (sut/mint {:problem problem :ordinal 1 :queue/id "queue"
+                                 :frame-number-base 30
+                                 :solver-shelf-canary canary}))
+        manifest (sut/one-off-manifest
+                  {:frame eligible :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (= canary (:solver-shelf-canary eligible)))
+    (is (= canary (get-in manifest [:units 0 :solver-shelf-canary])))
+    (is (not (contains? later :solver-shelf-canary)))
+    (is (sut/valid-mint? eligible))
+    (is (sut/valid-mint? later))))
+
+(deftest registered-conditions-are-pinned-from-minted-frame-into-manifest
+  (let [conditions [{:id "C-1" :at "2026-08-26T18:40Z" :by "claude-19"
+                     :kind :reload :head "0bc2b81f"
+                     :namespaces ["futon3c.apm.countdown-control"]
+                     :note "conditions registry read at mint"}]
+        with (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                :frame-number-base 30 :conditions conditions}))
+        bare (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                :frame-number-base 30 :conditions []}))
+        manifest (sut/one-off-manifest
+                  {:frame with :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})
+        bare-manifest (sut/one-off-manifest
+                       {:frame bare :apparatus-repository "."
+                        :apparatus-branch "master" :baseline {}})]
+    (is (= conditions (:conditions with)))
+    (is (sut/valid-mint? with))
+    (is (= conditions (:conditions manifest)))
+    (is (string? (:manifest/id manifest)))
+    (is (not (contains? bare :conditions)) "empty registry => frame unchanged")
+    (is (not (contains? bare-manifest :conditions))
+        "empty registry => manifest unchanged")
+    (is (not= (:manifest/id manifest) (:manifest/id bare-manifest))
+        "conditions are covered by :manifest/id")))
+
+(deftest open-precedes-all-resource-effects
+  (let [calls (atom [])
+        body {:preparation/version 2 :frame/id "f30" :problem/id "p1"}
+        preparation (assoc body :preparation/id (machine/ledger-digest [body]))
+        result
+        (sut/open-and-prepare!
+         {:frame frame
+          :open-frame-fn (fn [_] (swap! calls conj :open) {:ok true})
+          :preparation-observation-fn
+          (fn [_] (swap! calls conj :observe)
+            {:ok true :version 5 :phase :preflight :claim nil
+             :frame-id "f30" :problem-id "p1"})
+          :prepare-frame-fn (fn [_ _] (swap! calls conj :prepare)
+                              {:ok true :preparation preparation})
+          :persist-preparation-fn (fn [_ _] (swap! calls conj :persist)
+                                    {:ok true})})]
+    (is (:ok result))
+    (is (= [:open :observe :prepare :persist] @calls))))
+
+(deftest no-provisioning-before-authoritative-preflight
+  (let [calls (atom [])
+        result
+        (sut/open-and-prepare!
+         {:frame frame :open-frame-fn (constantly {:ok true})
+          :preparation-observation-fn
+          (constantly {:ok true :version 4 :phase :open-frame :claim nil
+                       :frame-id "f30" :problem-id "p1"})
+          :prepare-frame-fn #(do (swap! calls conj :prepare) {:ok true})
+          :persist-preparation-fn #(do (swap! calls conj :persist) {:ok true})})]
+    (is (= :queued-frame-preparation-authority-invalid (:error/code result)))
+    (is (empty? @calls))))
+
+(defn- lease [frame role]
+  (let [body {:workspace/id nil :workspace/path (str "/work/" (:frame/id frame)
+                                                        "-" (name role))
+              :repository/path "/repo" :branch (str "branch-" (name role))
+              :base-revision "rev" :problem/id (:problem/id frame)
+              :problem/path "Main.lean" :problem/blob "blob"
+              :frame/id (:frame/id frame) :role role :created-at "now"
+              :retention/state :provisioned :substrate/path "/lake"}]
+    (assoc body :workspace/id
+           (machine/ledger-digest [(dissoc body :workspace/id)]))))
+
+(defn- roster [frame-id]
+  {:ok true :http/status 200
+   :agents
+   (into {}
+         (map (fn [[role type]]
+                [(str frame-id "-" (name role))
+                 {:type type :invoke-ready? true
+                  :metadata {:effective-timeouts
+                             {:request-timeout-ms (if (= type :zai)
+                                                    300000 :not-applicable)
+                              :turn-timeout-ms (if (= role :student)
+                                                 1800000
+                                                 3600000)}}}]))
+         {:solver :codex :student :zai :guide :zai
+          :proctor :codex :promotion-proctor :codex
+          :scribe :codex :zai-scribe :zai :analyst :zai})})
+
+(deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
+  (let [calls (atom [])
+        cast-path (str (java.nio.file.Files/createTempFile
+                        "seat-cast-" ".edn"
+                        (make-array java.nio.file.attribute.FileAttribute 0)))
+        seat-cast {"solver" {:model "gpt-5.6-sol"}
+                   "student" {:model "glm-5.3"}
+                   "guide" {:model "glm-5.3"}
+                   "proctor" {:model "gpt-5.6-sol"}
+                   "promotion-proctor" {:model "gpt-5.6-sol"}
+                   "scribe" {:model "gpt-5.6-sol"}
+                   "zai-scribe" {:model "glm-5.3"}
+                   "analyst" {:model "glm-5.3"}}
+        manifest {:manifest/id digest}
+        _ (spit cast-path (pr-str seat-cast))
+        result (sut/prepare-live!
+                {:frame frame
+                 :ledger {:version 5 :digest digest :phase :preflight :claim nil}
+                 :manifest manifest
+                 :role-cards (into {} (map (fn [role]
+                                             [role {:path (name role) :blob digest}])
+                                           [:solver :student :guide :proctor
+                                            :promotion-proctor :scribe
+                                            :zai-scribe :analyst]))
+                 :workspace-root "/work" :substrate-path "/lake"
+                 :seat-cast-path cast-path
+                 :provision-fn
+                 (fn [{:keys [role]}]
+                   (swap! calls conj [:provision role])
+                   {:ok true :lease (lease frame role)})
+                 :bootstrap-workspace-fn
+                 (fn [new-lease]
+                   (swap! calls conj [:bootstrap (:role new-lease)])
+                   {:ok true})
+                 :validate-workspace-fn (constantly {:valid? true})
+                 :http-fn
+                 (fn [method url & [payload]]
+                   (swap! calls conj [method url payload])
+                   (if (= method "POST") {:ok true :http/status 200}
+                       (roster "f30")))})]
+    (is (:ok result) (pr-str result))
+    (is (= #{:solver :student}
+           (set (keys (get-in result [:preparation :workspaces])))))
+    (is (= "f30-student"
+           (get-in result [:preparation :seats :student :agent-id])))
+    (is (= :codex (get-in result [:preparation :seats :scribe :type])))
+    (is (= :zai (get-in result [:preparation :seats :zai-scribe :type])))
+    (is (= (:preparation/id (:preparation result))
+           (machine/ledger-digest
+            [(dissoc (:preparation result) :preparation/id)])))
+    (is (= [[:provision :student] [:provision :solver]]
+           (filter #(= :provision (first %)) @calls)))
+    (is (= [[:bootstrap :student] [:bootstrap :solver]]
+           (filter #(= :bootstrap (first %)) @calls)))
+    (let [mint-payload (some (fn [[method url payload]]
+                               (when (and (= "POST" method)
+                                          (.endsWith ^String url "/mint-seats"))
+                                 payload))
+                             @calls)]
+      (is (= "glm-5.3"
+             (get-in mint-payload [:cast "guide" :model])))
+      (is (= "glm-5.3"
+             (get-in mint-payload [:cast "analyst" :model])))
+      (is (= "gpt-5.6-sol"
+             (get-in mint-payload [:cast "solver" :model])))
+      (is (= "glm-5.3"
+             (get-in mint-payload [:cast "student" :model])))
+      (is (= "codex" (get-in mint-payload [:cast "scribe" :type])))
+      (is (= "gpt-5.6-sol"
+             (get-in mint-payload [:cast "scribe" :model]))))))
+
+(deftest missing-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        result (sut/prepare-live!
+                {:seat-cast-path "/definitely/missing/seat-cast.edn"
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-missing (:error/code result)))
+    (is (empty? @calls))))
+
+(deftest incomplete-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        result (sut/prepare-live!
+                {:seat-cast {"guide" {:model "glm-5.3"}}
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-invalid (:error/code result)))
+    (is (= :seat-cast-roles-missing
+           (get-in result [:findings 0 :finding])))
+    (is (empty? @calls))))
+
+(deftest provider-incoherent-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        cast {"solver" {:model "gpt-5.6-sol"}
+              "student" {:model "glm-5.3"}
+              "guide" {:model "glm-5.3"}
+              "proctor" {:model "gpt-5.6-sol"}
+              "promotion-proctor" {:model "gpt-5.6-sol"}
+              "scribe" {:model "glm-5.3"}
+              "zai-scribe" {:model "glm-5.3"}
+              "analyst" {:model "glm-5.3"}}
+        result (sut/prepare-live!
+                {:seat-cast cast
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-invalid (:error/code result)))
+    (is (= {:finding :seat-model-provider-mismatch
+            :seat "scribe" :agent-type "codex" :model "glm-5.3"
+            :accepted-prefixes ["gpt-"]}
+           (first (filter #(= :seat-model-provider-mismatch (:finding %))
+                          (:findings result)))))
+    (is (empty? @calls))))
+
+(deftest five-problem-live-effects-never-prepare-a-successor-early
+  (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
+                                 :revision "r" :path "Main.lean" :blob "b"
+                                 :classification :non-excluded}) (range 5))
+        plan (queue/queue-plan problems)
+        state (atom nil)
+        calls (atom [])
+        effects {:mint-frame-fn #(do (swap! calls conj [:mint (:ordinal %)])
+                                     (sut/mint (assoc % :frame-number-base 40)))
+                 :qualify-frame-fn #(do (swap! calls conj [:qualify (:frame/id %)])
+                                        {:ok true})
+                 :prepare-frame-fn #(do (swap! calls conj [:prepare (:frame/id %)])
+                                        {:ok true :preparation/id digest})
+                 :frame-tick-fn #(do (swap! calls conj [:tick (:frame/id %)])
+                                     {:ok true :status :parked})
+                 :retire-frame-fn #(do (swap! calls conj [:retire %]) {:ok true})
+                 :state-provider #(deref state)
+                 :persist-state-fn #(do (reset! state %) {:ok true})}]
+    (is (= :frame-prepared (:status (queue/tick! (assoc effects :plan plan)))))
+    (is (= :parked (:status (queue/tick! (assoc effects :plan plan)))))
+    (is (= [[:mint 0] [:qualify "f40"] [:prepare "f40"] [:tick "f40"]]
+           @calls))
+    (is (= 1 (:next-index @state)))
+    (is (= 5 (count (:problems plan))))))
+
+(deftest terminal-evidence-is-derived-from-ledger-not-supervisor-status
+  (let [solve {:receipt/type :frame-solve :receipt/id digest
+               :receipt/final-head (apply str (repeat 40 "b"))
+               :receipt/lean {:sorry-warnings 0}}
+        verify {:receipt/type :frame-verify :receipt/id digest
+                :receipt/mathematical-sound? true}
+        close {:receipt/type :frame-close :receipt/id digest
+               :receipt/result :closed}
+        result
+        (sut/terminal-from-ledger
+         {:frame frame
+          :ledger {:events (mapv #(hash-map :event/body {:certificate %})
+                                 [solve verify close])}
+          :preparation {:workspaces
+                        {:solver {:branch "exp/f30" :terminal-head
+                                  (apply str (repeat 40 "b"))}
+                         :student {:terminal-head
+                                   (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :closed (:frame/result result)))
+    (is (= :solved (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= "exp/f30" (get-in result [:terminal-receipt :solver :branch])))))
+
+(deftest terminal-replay-uses-a-validated-prior-terminal-after-retirement
+  (let [solver-head (apply str (repeat 40 "b"))
+        student-head (apply str (repeat 40 "c"))
+        solve {:receipt/type :frame-solve :receipt/id digest
+               :receipt/final-head solver-head
+               :receipt/lean {:sorry-warnings 0}}
+        verify {:receipt/type :frame-verify :receipt/id digest
+                :receipt/mathematical-sound? true}
+        close {:receipt/type :frame-close :receipt/id digest
+               :receipt/result :closed}
+        ledger {:events (mapv #(hash-map :event/body {:certificate %})
+                              [solve verify close])}
+        initial (sut/terminal-from-ledger
+                 {:frame frame :ledger ledger
+                  :preparation {:workspaces
+                                {:solver {:branch "exp/f30"
+                                          :terminal-head solver-head}
+                                 :student {:terminal-head student-head}}}})
+        replayed (sut/terminal-from-ledger
+                  {:frame frame :ledger ledger
+                   :preparation {:workspaces
+                                 {:solver {:branch "exp/f30"
+                                           :workspace/path "/absent/solver"}
+                                  :student {:workspace/path "/absent/student"}}}
+                   :prior-terminal (:terminal-receipt initial)})]
+    (is (:ok initial) (pr-str initial))
+    (is (:ok replayed) (pr-str replayed))
+    (is (= {:solver solver-head :student student-head}
+           (get-in replayed [:terminal-receipt :workspace/terminal-heads])))))
+
+(deftest apparatus-invalidated-void-derives-terminal-without-verify-or-close
+  (let [void {:certificate/type :frame-void :certificate/id digest
+              :classification :apparatus-invalidated
+              :failed-invariants [:student-snapshot-not-campaign-cumulative]}
+        result
+        (sut/terminal-from-ledger
+         {:frame frame
+          :ledger {:events [{:event/body {:certificate void}}]}
+          :preparation {:workspaces
+                        {:solver {:branch "exp/f30" :terminal-head
+                                  (apply str (repeat 40 "b"))}
+                         :student {:terminal-head
+                                   (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :skipped (get-in result [:terminal-receipt :learning/outcome])))
+    (is (= :apparatus-invalidated
+           (get-in result [:terminal-receipt :void/classification])))
+    (is (= [:student-snapshot-not-campaign-cumulative]
+           (get-in result [:terminal-receipt :void/failed-invariants])))))
+
+(deftest statement-refuted-void-has-distinct-problem-outcome
+  (let [void {:certificate/type :frame-void :certificate/id digest
+              :classification :statement-refuted
+              :failed-invariants [:registered-statement-false]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate void}}]}
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f45" :terminal-head
+                                         (apply str (repeat 40 "b"))}
+                                :student {:terminal-head
+                                          (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :refuted (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :statement-refuted
+           (get-in result [:terminal-receipt :void/classification])))))
+
+;; --- statement-refuted-void! ------------------------------------------------
+;; The Solver's refutation must reach the repair path by itself. These pin the
+;; guard, because the cost of getting it wrong is a rewritten statement.
+
+(defn- defect-result
+  "A :solver-defect-review-required tick result, with the Solver's report
+  overridable per case."
+  [report]
+  {:ok false
+   :error/code :solver-defect-review-required
+   :state {:state/type :solver-defect-review-required
+           :rounds [{:outcome :claimed-defect :report report}]}})
+
+(def ^:private substantiated
+  {:solver/outcome :claimed-defect
+   :statement-unchanged? true
+   :failure-account ["Claimed defect with precise compiled falsifying witness."]})
+
+(deftest substantiated-refutation-voids-the-frame-instead-of-parking
+  (let [seen (atom nil)]
+    (with-redefs [sut/apply-reviewed-void!
+                  (fn [opts] (reset! seen opts) {:ok true :certificate {:certificate/id "c1"}})]
+      (let [out (sut/statement-refuted-void!
+                 {:frame frame :ledger-path "/tmp/ledger.edn"
+                  :result (defect-result substantiated)})]
+        (is (:ok out))
+        (is (= :phase-advanced (:status out))
+            "the void is in the ledger; terminal-from-ledger observes it next tick")
+        (is (= :statement-refuted (:void/classification out)))
+        (is (= :statement-refuted (:classification @seen)))
+        (is (= [:statement-refuted-by-solver] (:failures @seen)))
+        (is (= (:frame/id frame) (:frame-id @seen)))))))
+
+(deftest an-unsubstantiated-claim-still-parks
+  ;; Each case drops exactly one of the three conditions. None may void.
+  (doseq [[label report]
+          [["no failure-account" (dissoc substantiated :failure-account)]
+           ["blank failure-account" (assoc substantiated :failure-account ["   "])]
+           ["statement was edited" (assoc substantiated :statement-unchanged? false)]
+           ["not a defect claim" (assoc substantiated :solver/outcome :progress)]]]
+    (let [called (atom false)]
+      (with-redefs [sut/apply-reviewed-void!
+                    (fn [_] (reset! called true) {:ok true})]
+        (let [in (defect-result report)
+              out (sut/statement-refuted-void!
+                   {:frame frame :ledger-path "/tmp/ledger.edn" :result in})]
+          (is (= in out) (str label ": result must pass through untouched"))
+          (is (false? @called) (str label ": must not void")))))))
+
+(deftest a-refused-void-falls-back-to-the-park
+  ;; If the ledger refuses the void -- stale digest, frame no longer active --
+  ;; the frame must park as before rather than advance on a void that is not there.
+  (with-redefs [sut/apply-reviewed-void!
+                (fn [_] {:ok false :error/code :frame-void-frame-not-active})]
+    (let [in (defect-result substantiated)]
+      (is (= in (sut/statement-refuted-void!
+                 {:frame frame :ledger-path "/tmp/ledger.edn" :result in}))))))
+
+;; --- a refuted statement must reach the Guide ------------------------------
+;; statement-refuted-void! writes a void certificate and returns :phase-advanced,
+;; on the premise that the queue then observes it and dispatches a repair. That
+;; premise was never exercised: campaign-wide, zero statement-repair jobs had
+;; ever been dispatched, so the whole path downstream of the void is unproven.
+;; These walk it end to end.
+
+(deftest a-statement-refuted-void-reads-as-refuted-not-merely-unsolved
+  ;; The hinge. queued-frame-adapter maps a void to :refuted ONLY when its
+  ;; classification is :statement-refuted; every other void is :unsolved, and
+  ;; :unsolved does not reach the repair path.
+  (let [void-cert {:certificate/type :frame-void
+                   :certificate/id digest
+                   :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                   :classification :statement-refuted
+                   :failed-invariants [:statement-refuted-by-solver]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate void-cert}}]}
+                 ;; Workspace heads are what a real preparation carries; a
+                 ;; void needs no solve or verify receipt, but validate-terminal
+                 ;; still requires the solver identity and both heads.
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f30"
+                                         :terminal-head (apply str (repeat 40 "b"))}
+                                :student {:terminal-head (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :refuted (get-in result [:terminal-receipt :problem/outcome]))
+        "a statement-refuted void must not read as merely unsolved"))
+  ;; Contrast: any other void classification stays :unsolved.
+  (let [other {:certificate/type :frame-void :certificate/id digest
+               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+               :classification :apparatus-invalidated
+               :failed-invariants [:whatever]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate other}}]}
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f30"
+                                         :terminal-head (apply str (repeat 40 "b"))}
+                                :student {:terminal-head (apply str (repeat 40 "c"))}}}})]
+    (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))))
+
+(deftest a-refuted-frame-dispatches-a-statement-repair-to-the-guide
+  (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
+                                :revision "r" :path "Main.lean" :blob "b"
+                                :classification :non-excluded}) (range 3))
+        plan (queue/queue-plan problems)
+        state (atom nil)
+        dispatched (atom [])
+        terminal {:receipt/type :frame-terminal :receipt/id digest
+                  :problem/outcome :refuted
+                  :void/classification :statement-refuted
+                  :void/failed-invariants [:statement-refuted-by-solver]}
+        effects {:mint-frame-fn #(sut/mint (assoc % :frame-number-base 40))
+                 :qualify-frame-fn (fn [_] {:ok true})
+                 :prepare-frame-fn (fn [_] {:ok true :preparation/id digest})
+                 :frame-tick-fn (fn [_] {:ok true :status :frame-complete
+                                         :frame/result :void
+                                         :terminal-receipt terminal})
+                 :retire-frame-fn (fn [_] {:ok true})
+                 :dispatch-statement-repair-fn
+                 (fn [handoff] (swap! dispatched conj handoff)
+                   {:ok true :dispatch/id "statement-repair-1"})
+                 :state-provider #(deref state)
+                 :persist-state-fn #(do (reset! state %) {:ok true})}
+        tick #(queue/tick! (assoc effects :plan plan))]
+    (tick)                              ; prepare the first frame
+    (tick)                              ; frame completes as a refuted void
+    (is (= :voided-slot-awaiting-revision (:status @state))
+        "a refuted frame must void its slot for revision, not advance past it")
+    (tick)                              ; the queue dispatches the repair
+    (is (= 1 (count @dispatched))
+        "the Guide must actually be dispatched; this path had never run")
+    (let [h (first @dispatched)]
+      (is (= :statement-repair (:obligation/type h)))
+      (is (= :guide (:repair/role h)))
+      (is (= :repair-registered-statement-once (:instruction h)))
+      (is (= [:replacement-pinned-problem :guide-receipt] (:required-output h)))
+      (is (= :discard-and-advance (:exhaustion/action h)))
+      (is (= :refuted (get-in h [:diagnostic :problem/outcome]))))))
+
+(deftest repair-observer-requires-eligible-pins-for-the-same-problem
+  (let [handoff {:obligation/id "obligation" :problem/id "p1" :frame/id "f205"}
+        receipt {:obligation/id "obligation" :repair/role :guide :receipt/id digest}
+        retired (atom [])
+        observe (fn [replacement]
+                  (with-redefs [job-port/observe
+                                (fn [& _]
+                                  {:ok true :terminal? true :state :done
+                                   :report {:replacement-pinned-problem replacement
+                                            :guide-receipt receipt}})]
+                    (#'sut/observe-statement-repair
+                     {:http-fn (fn [& args] (swap! retired conj args))}
+                     handoff)))]
+    (is (= :complete (:status (observe problem))))
+    ;; f205's real failure shape: a statement and source aliases, no pins.
+    (is (= :failed (:status (observe {:problem/id "p1"
+                                     :source/repository "/repo"
+                                     :source/path "p1.lean"
+                                     :statement "repaired"}))))
+    (doseq [key [:problem/id :repository :revision :path :blob :classification]]
+      (is (= :failed (:status (observe (dissoc problem key))))))
+    (is (= :failed (:status (observe (assoc problem :problem/id "other")))))
+    (is (= :failed (:status (observe (assoc problem :classification :excluded)))))
+    (is (= 10 (count @retired)))
+    (is (every? #(= "DELETE" (first %)) @retired))))

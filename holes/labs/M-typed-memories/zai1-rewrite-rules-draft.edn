@@ -1,0 +1,80 @@
+{:rules/version 1
+ :rules/source "*zai-repl:zai-1* symmetric_split repair arc (a95A04, commit dce39a8) + a94-series arc"
+ :rules/extracted-by "claude-4, 2026-07-25, hand-reshaped from standoff-recognized sites"
+ :rules/status :draft-for-operator-review
+ :rules/shape-note
+ "Each rule is a scoped rewrite: :scope bounds where it applies (the NNexus
+  sense — a region of applicability, not a term hit); :before is the failing
+  form plus its symptom; :after is the repaired form; :evidence grounds it in
+  the corpus. Confidence :single-instance until a second independent
+  occurrence or an operator promotion. Shape is intended to be presentable to
+  Rob's Panopticon as-is or trivially mappable."
+
+ :rules
+ [{:rule/id :rw-direction-flip
+   :rule/scope {:lang :lean4 :context "rw with a lemma-derived equation"
+                :trigger "type mismatch / motive error at the rw site"}
+   :rule/before {:form "rw [h]  ;; h : A = B obtained from a lemma application"
+                 :symptom "rw expects B = A; type mismatch"}
+   :rule/after {:form "rw [← h]  ;; or use (lemma ...).symm at the binding site"}
+   :rule/rationale "Equations from lemma applications arrive in the lemma's canonical direction, not the goal's. Check direction before restructuring anything else — the fix is one character."
+   :rule/evidence {:buffer-lines [1151 1160] :problem "a95A04" :lemma "symmetric_split"
+                   :quote "The h_split direction is wrong ... Let me fix by using it in the right direction"}
+   :rule/confidence :single-instance}
+
+  {:rule/id :binder-name-mismatch-use-show
+   :rule/scope {:lang :lean4 :context "goals containing binder expressions (∫ x, ..., ∑ i, ..., fun t => ...)"
+                :trigger "type mismatch where the two sides differ only in bound-variable names"}
+   :rule/before {:form "exact h   ;; or convert h"
+                 :symptom "mismatch on definitionally-equal terms (x vs t); convert leaves a defeq side goal"}
+   :rule/after {:form "show <goal with h's binder spelling>; exact h  ;; state the target so elaboration unifies definitionally"}
+   :rule/rationale "Bound-variable names are not part of the term, but elaboration surfaces them in mismatch reports; convert generates spurious side goals for them. show re-states the goal in the hypothesis's spelling and lets defeq do the work."
+   :rule/evidence {:buffer-lines [1183 1190] :problem "a95A04"
+                   :quote "The bound variable names differ (x vs t). This is just a congr issue. Let me use show"}
+   :rule/confidence :two-instances-same-arc}
+
+  {:rule/id :rw-occurrence-fight-use-linarith
+   :rule/scope {:lang :lean4 :context "closing a goal that is a linear consequence of hypotheses"
+                :trigger "rw rewrites the wrong occurrence; ring then fails or loops"}
+   :rule/before {:form "rw [h]; ring"
+                 :symptom "rw occurrence selection lands on the wrong subterm; ring cannot close"}
+   :rule/after {:form "linarith [h]  ;; skip the rewrite entirely; feed the equation as a fact"}
+   :rule/rationale "When the goal is linear in the rewritten quantities, occurrence surgery is wasted work — linarith consumes the equation as a hypothesis and closes directly."
+   :rule/evidence {:buffer-lines [1175 1180] :problem "a95A04"
+                   :quote "The issue is that rw rewrites the wrong occurrence. Let me use linarith instead of ring"}
+   :rule/confidence :single-instance}
+
+  {:rule/id :min-max-unfold-then-linarith
+   :rule/scope {:lang :lean4 :context "inequality goals over min/max (uIcc subset goals) under ordering hypotheses"
+                :trigger "simp [min_def, if_pos h] makes no progress — the min/max instance in the goal is not the one h addresses"}
+   :rule/before {:form "simp [min_def, if_pos ham]"
+                 :symptom "simp target is min a b, hypothesis addresses min a m; no progress"}
+   :rule/after {:form "simp only [min_def, max_def]; split_ifs <;> linarith  ;; unfold all instances, then decide linearly"}
+   :rule/rationale "Positional simp lemmas bind to a specific instance; goals often carry several min/max instances at once. Unfold uniformly and hand the ordering to linarith."
+   :rule/evidence {:buffer-lines [1141 1144] :problem "a95A04"
+                   :quote "simp [min_def, if_pos ham] isn't working because min a b appears (not min a m) ... Let me just use linarith after unfolding min/max"}
+   :rule/confidence :single-instance}
+
+  {:rule/id :unsatisfiable-side-goal-means-wrong-split
+   :rule/scope {:lang :lean4 :context "congruence/monotonicity tactics (gcongr, mono) inside a case split"
+                :trigger "a generated side goal is FALSE (not merely hard)"}
+   :rule/before {:form "cases ...; gcongr  ;; second branch demands b ≤ m which is false"
+                 :symptom "side goal contradicts the branch hypothesis"}
+   :rule/after {:form "re-derive the branch: the monotonicity direction (or the split point) is wrong for this case; fix the case analysis, do not fight the side goal"}
+   :rule/rationale "An unsatisfiable side goal is evidence about the PROOF PLAN, not the tactic. The repair lives one level up — this is the rule that distinguishes structural errors from tactical ones."
+   :rule/evidence {:buffer-lines [1132 1136] :problem "a95A04"
+                   :quote "gcongr in the second hf_am branch wants b ≤ m which is false"}
+   :rule/confidence :single-instance}
+
+  {:rule/id :error-triage-narrowing-loop
+   :rule/scope {:lang :any :context "compile-fix loops against a batch checker (lake env lean)"
+                :trigger "multi-error output after an edit"
+                :meta? true}
+   :rule/before {:form "read full compiler output each round"
+                 :symptom "attention spent re-reading unchanged errors"}
+   :rule/after {:form "pipeline: (1) | grep -E \"error|warning|sorry\" for the count; (2) | grep \"⊢\" for goal states; (3) | grep -A5 \"<line>:<col>\" to zoom one site; fix; repeat"
+                :note "zai-1 converged on this unprompted; it is the efficient triage ladder"}
+   :rule/rationale "Process rule rather than proof rule: narrow the observation window monotonically — census, then goals, then one site. Keeps each fix round grounded in exactly one error."
+   :rule/evidence {:buffer-lines [1146 1178] :problem "a95A04"
+                   :quote "lake env lean ... | grep -E error|warning|sorry ... | grep ⊢ ... | grep -A5 92:4"}
+   :rule/confidence :recurring-pattern}]}

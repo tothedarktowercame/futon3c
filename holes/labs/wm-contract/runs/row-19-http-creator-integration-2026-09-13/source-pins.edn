@@ -1,0 +1,18 @@
+{:schema :wm/source-pins-v1
+ :tree-sha "7e99b6da6624ce759019bbd2deb0859b6c12717a"
+ :files
+ [{:repo "futon3c" :branch "master"
+   :path "src/futon3c/transport/http.clj"
+   :sha256 "7223a181d4a918e778f59e9a35ddba1f22d886f949c7243cec0f11b56ae6e6a1"}
+  {:repo "futon3c" :branch "master"
+   :path "src/futon3c/agency/invoke_ingress_controller.clj"
+   :sha256 "966dba69d13c3f39431dd73369716e53d07a171e09b09818529113c00db52756"}
+  {:repo "futon3c" :branch "master"
+   :path "test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :sha256 "b2f7e101d608b7bdb691b6f2cc1be1779c21c36efd3b300ca80b19ca1e7dddcc"}
+  {:repo "futon3c" :branch "master"
+   :path "holes/labs/wm-contract/runs/row-19-http-creator-integration-2026-09-13/INTEGRATION.md"
+   :sha256 "847e5ea8e8c78ac91db7722e3f841cc238b9c48e0a700e9859e8920e5bb03a69"}
+  {:repo "futon2" :branch "main"
+   :path "holes/labs/wm-contract/runs/row-19-ingress-controller-2026-09-13/INTEGRATION.md"
+   :sha256 "1610929a27c8855b1b3ef86a6813f84ddb082e44218e3677bee1dc02227a0796"}]}

@@ -1,0 +1,378 @@
+{
+ "note": "First E2-pilot control run with a working toolchain on the isolated runner. e3 does NOT discharge: the extractor is byte-stable on a real compiling trace and the isolation receipt is valid, but the control manipulation check fails because only one of the two registered memories surfaces for a95J01 under v1.2 recall. The attribution failure recorded here is a harness artefact (codex exec emits its final message twice); fixed after this run.",
+ "record": {
+  "accepted": false,
+  "arm": "control",
+  "attribution": {
+   "passed": false,
+   "violations": [
+    "5 surfaced id(s) without exactly one verdict: e-88a1af39-53d5-4ac8-a01b-04137a559619, e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity, e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound, e-codexpilot-derive-integrable-from-nonzero-bochner-integral, e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality"
+   ]
+  },
+  "extractor-stable": true,
+  "isolation-receipt": {
+   "effective-uid": 1001,
+   "probe-count": 7,
+   "probe-result-hash": "4825c2cb9dc378ea209e5437f64a4f2179a58929c207da2cf5eafed4be350758",
+   "valid": true
+  },
+  "manipulation": {
+   "arm": "control",
+   "detail": "both registered memories surfaced and none was withheld",
+   "passed": false,
+   "surfaced-ids": [
+    "e-88a1af39-53d5-4ac8-a01b-04137a559619",
+    "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+    "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+    "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+    "e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality"
+   ],
+   "target": null,
+   "withheld-ids": [],
+   "withholding-delivered-ids": []
+  },
+  "offered-receipt": {
+   "author": "ground-control",
+   "body": {
+    "event": "memory-use",
+    "job-id": "<dry-run-job-id>",
+    "memory-use": {
+     "memory-use/cascade-id": "dispatch-recall-4701003c-0a4f-482d-9f18-f09182638563",
+     "memory-use/decision-id": "<dry-run-job-id>",
+     "memory-use/domain": "mathematics",
+     "memory-use/inclusion-reasons": [
+      {
+       "memory-id": "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+       "reason": "reviewed attachment surfaced by terrain-conditioned dispatch recall"
+      },
+      {
+       "memory-id": "e-88a1af39-53d5-4ac8-a01b-04137a559619",
+       "reason": "reviewed attachment surfaced by terrain-conditioned dispatch recall"
+      },
+      {
+       "memory-id": "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+       "reason": "reviewed attachment surfaced by terrain-conditioned dispatch recall"
+      },
+      {
+       "memory-id": "e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality",
+       "reason": "reviewed attachment surfaced by terrain-conditioned dispatch recall"
+      },
+      {
+       "memory-id": "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+       "reason": "reviewed attachment surfaced by terrain-conditioned dispatch recall"
+      }
+     ],
+     "memory-use/recorded-at": "2026-08-03T06:36:23.181189540Z",
+     "memory-use/rejected-ids": [],
+     "memory-use/rejection-reasons": [],
+     "memory-use/retrieval-to-use-ms": 0,
+     "memory-use/session-id": "<dry-run-session-id>",
+     "memory-use/signal": "agent-attribution",
+     "memory-use/status": "pending-outcome",
+     "memory-use/surfaced-at": "2026-08-03T06:36:23.181189540Z",
+     "memory-use/surfaced-ids": [
+      "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+      "e-88a1af39-53d5-4ac8-a01b-04137a559619",
+      "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+      "e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality",
+      "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound"
+     ],
+     "memory-use/surfacing-via": [
+      {
+       "memory-id": "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+       "via": "content-match"
+      },
+      {
+       "memory-id": "e-88a1af39-53d5-4ac8-a01b-04137a559619",
+       "via": "endpoint"
+      },
+      {
+       "memory-id": "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+       "via": "endpoint"
+      },
+      {
+       "memory-id": "e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality",
+       "via": "endpoint"
+      },
+      {
+       "memory-id": "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+       "via": "pattern"
+      }
+     ],
+     "memory-use/unused-ids": [
+      "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+      "e-88a1af39-53d5-4ac8-a01b-04137a559619",
+      "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+      "e-codexpilot-transport-a-composition-derivative-through-local-eventual-equality",
+      "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound"
+     ],
+     "memory-use/used-ids": [],
+     "memory-use/withheld-ids": []
+    },
+    "phase": "offered",
+    "problem": "a95J01",
+    "recall-index-as-of": "2026-08-02T15:42:09.805736147Z",
+    "recall-ladder-query": "assume functions what",
+    "recall-ladder-rung": "triple",
+    "recall-lexical-seed": [
+     {
+      "evidence-id": "e-0971c149-d5b7-404c-91e4-5bd86042c26a",
+      "evidence-type": "coordination",
+      "score": -15.59270256653792
+     },
+     {
+      "evidence-id": "e-64569b48-5672-4761-aa41-1c8e92f16683",
+      "evidence-type": "coordination",
+      "score": -11.31192081284849
+     },
+     {
+      "evidence-id": "e-ac53cd22-d838-4c07-8856-718ac80fad24",
+      "evidence-type": "coordination",
+      "score": -11.12531656533097
+     },
+     {
+      "evidence-id": "e-8b28c27d-3928-457b-b498-e5cad6a1dca4",
+      "evidence-type": "coordination",
+      "score": -10.63799116206104
+     },
+     {
+      "evidence-id": "e-2b0322e2-be75-4067-8606-ca2e3db5a844",
+      "evidence-type": "coordination",
+      "score": -10.389613659744168
+     },
+     {
+      "evidence-id": "e-53a5da02-97a4-4d6e-9b98-b51a2f88d640",
+      "evidence-type": "coordination",
+      "score": -10.389613659744168
+     },
+     {
+      "evidence-id": "e-5446433a-efc0-481f-82b1-8facd746d622",
+      "evidence-type": "coordination",
+      "score": -10.358412539666713
+     },
+     {
+      "evidence-id": "emacs-cd6bf131d8332ee51b18fbd4a7bfa408",
+      "evidence-type": "coordination",
+      "score": -10.296569144754718
+     },
+     {
+      "evidence-id": "e-5f19d40d-d350-4b0c-ac94-05828307b94c",
+      "evidence-type": "coordination",
+      "score": -10.205176363824574
+     },
+     {
+      "evidence-id": "e-3a338449-d3a6-4221-ae38-901c087d236e",
+      "evidence-type": "coordination",
+      "score": -10.115391721327336
+     },
+     {
+      "evidence-id": "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+      "evidence-type": "memory",
+      "score": -10.10870992460712
+     },
+     {
+      "evidence-id": "emacs-022ac701ba93d5e515f003008b409e16",
+      "evidence-type": "coordination",
+      "score": -10.027173142465195
+     },
+     {
+      "evidence-id": "e-50f9bd87-57c5-451c-8c59-b0776d2af44d",
+      "evidence-type": "coordination",
+      "score": -9.827194467134458
+     },
+     {
+      "evidence-id": "e-caf09d9c-2a31-490c-a0a3-e177d5084dea",
+      "evidence-type": "coordination",
+      "score": -9.827194467134458
+     },
+     {
+      "evidence-id": "e-04860e06-d1f5-464a-a432-1e749b230220",
+      "evidence-type": "coordination",
+      "score": -9.61217002696602
+     },
+     {
+      "evidence-id": "e-0c2c9e05-4f67-4fda-838f-3e3b3d4caf6f",
+      "evidence-type": "coordination",
+      "score": -9.424427922198348
+     },
+     {
+      "evidence-id": "e-70676e37-c80b-4ab9-ab2d-0e250a4fdb7d",
+      "evidence-type": "coordination",
+      "score": -9.349461706624625
+     },
+     {
+      "evidence-id": "e-072356a4-896f-4f0c-921c-60802aa9d780",
+      "evidence-type": "coordination",
+      "score": -9.250942739593182
+     },
+     {
+      "evidence-id": "e-3ee1ac3a-736b-4b8d-8c8e-8e9f15c1b9dc",
+      "evidence-type": "coordination",
+      "score": -9.206171666334
+     },
+     {
+      "evidence-id": "e-6c18051e-5206-4d55-b28f-0fd3372cf9ed",
+      "evidence-type": "coordination",
+      "score": -9.122896907096896
+     },
+     {
+      "evidence-id": "e-2b7cc8e9-3e3e-41a0-a9d6-86d8b3f30aff",
+      "evidence-type": "coordination",
+      "score": -9.032447877409464
+     },
+     {
+      "evidence-id": "e-0c8055e9-84d1-45df-bdf4-03a19be29133",
+      "evidence-type": "coordination",
+      "score": -8.983517035758833
+     },
+     {
+      "evidence-id": "e-186d18e3-fe2d-4b2f-b721-b4b27aa058ac",
+      "evidence-type": "coordination",
+      "score": -8.967739521391774
+     },
+     {
+      "evidence-id": "e-bf7bd833-2c92-4383-ac66-2265d5c4c0c0",
+      "evidence-type": "coordination",
+      "score": -8.956699645081763
+     },
+     {
+      "evidence-id": "e-2f98176d-34c5-415e-ab50-5dd06dc0ce5a",
+      "evidence-type": "coordination",
+      "score": -8.95383845541212
+     },
+     {
+      "evidence-id": "e-77d31a06-c90e-4419-be7d-963a13dbf899",
+      "evidence-type": "coordination",
+      "score": -8.930041887201584
+     },
+     {
+      "evidence-id": "e-ce5b309e-7ea0-49e2-b498-661c37da832f",
+      "evidence-type": "coordination",
+      "score": -8.799319950259482
+     },
+     {
+      "evidence-id": "e-3a8b8619-6c31-4f48-859c-de08f8affef6",
+      "evidence-type": "coordination",
+      "score": -8.799319950259482
+     },
+     {
+      "evidence-id": "emacs-efb24216ae9ac14c16686f7cb078ecaa",
+      "evidence-type": "coordination",
+      "score": -8.788670688377042
+     },
+     {
+      "evidence-id": "emacs-7b86869d84fb9a11738ba9dd4686bd21",
+      "evidence-type": "coordination",
+      "score": -8.759179459861363
+     }
+    ],
+    "recall-query": {
+     "query": "assume functions what analytic",
+     "recall-system": "v1.2-receipt-instrumented",
+     "receipt-ranking": {
+      "alpha": 0.5,
+      "enabled": true,
+      "stats-found?": false
+     },
+     "term-sources": [
+      {
+       "path": "/home/joe/code/apm-lean/problems/a95J01/problem.md",
+       "source": "problem-md",
+       "terms": [
+        "assume",
+        "functions",
+        "what",
+        "analytic",
+        "case",
+        "disk",
+        "holds",
+        "inequality",
+        "numbers",
+        "one-to-one",
+        "open",
+        "relationship"
+       ]
+      },
+      {
+       "path": "/home/joe/code/apm-lean/problems/a95J01/proof-outline.md",
+       "source": "proof-outline-md",
+       "terms": [
+        "convergence",
+        "equality",
+        "rotation",
+        "analytic",
+        "composition",
+        "deriv",
+        "lemma",
+        "needs",
+        "schwarz"
+       ]
+      },
+      {
+       "scope": "whole-packet-fallback",
+       "source": "stdin-packet",
+       "terms": [
+        "target",
+        "isolated",
+        "problems/a95j01/lean/main",
+        "staged",
+        "agents",
+        "axiom-clean",
+        "b6bc00"
+       ]
+      }
+     ],
+     "terms": [
+      "assume",
+      "functions",
+      "what",
+      "analytic"
+     ],
+     "terrain": null
+    },
+    "recall-status": "ok",
+    "recall-system": "v1.2-receipt-instrumented",
+    "withheld-memory-ids": [],
+    "withholding-delivered-ids": []
+   },
+   "claim-type": "observation",
+   "session-id": "<dry-run-session-id>",
+   "subject": {
+    "ref/id": "a95J01",
+    "ref/type": "apm-problem"
+   },
+   "tags": [
+    "memory",
+    "memory-use",
+    "memory-offered"
+   ],
+   "type": "pattern-outcome"
+  },
+  "runner-exit-code": 0,
+  "schema": "e2-pilot-run/v1",
+  "trace": {
+   "attempt-count": 1,
+   "schema": "e2-decision-sequence/v1",
+   "sequence": [
+    [
+     "import:Mathlib.Analysis.Calculus.InverseFunctionTheorem.Analytic",
+     "add-import",
+     "sorry-present"
+    ],
+    [
+     "deriv_ne_zero_of_injOn_ball",
+     "add-decl",
+     "sorry-present"
+    ],
+    [
+     "subordination_deriv_le",
+     "sorry-removed",
+     "sorry-present"
+    ]
+   ],
+   "sha256": "1468f0ccc6dacadd8f3816dc08484a55c90eb297ffa68eb19fc9fb1e8b78861b"
+  },
+  "trace-hash": "1468f0ccc6dacadd8f3816dc08484a55c90eb297ffa68eb19fc9fb1e8b78861b",
+  "wrapper-exit": 0
+ }
+}

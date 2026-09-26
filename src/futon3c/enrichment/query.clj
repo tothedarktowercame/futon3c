@@ -10,7 +10,9 @@
   (:import [java.net URLEncoder]
            [java.nio.charset StandardCharsets]))
 
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (defn- url-encode [s]
   (URLEncoder/encode (str s) (.name StandardCharsets/UTF_8)))
@@ -30,17 +32,25 @@
           (edn/read-string (slurp is)))))
     (catch Exception _ nil)))
 
+(def ^:private query-limit
+  "Upper bound on every hyperedge query. An unbounded `?end=`/`?type=` makes
+   the store realize the full result set — a high-fan-in endpoint OOMed the
+   serving JVMs that way (2026-07-21, clock-lineage incident)."
+  10000)
+
 (defn- query-by-endpoint
-  "Query futon1a for all hyperedges involving endpoint-id."
+  "Query futon1a for hyperedges involving endpoint-id (bounded by query-limit)."
   [futon1a-url endpoint-id]
-  (let [url (str futon1a-url "/api/alpha/hyperedges?end=" (url-encode endpoint-id))
+  (let [url (str futon1a-url "/api/alpha/hyperedges?end=" (url-encode endpoint-id)
+                 "&limit=" query-limit "&include-total=false")
         result (http-get-edn url)]
     (or (:hyperedges result) [])))
 
 (defn- query-by-type
-  "Query futon1a for all hyperedges of a given type."
+  "Query futon1a for hyperedges of a given type (bounded by query-limit)."
   [futon1a-url hx-type]
-  (let [url (str futon1a-url "/api/alpha/hyperedges?type=" (url-encode hx-type))
+  (let [url (str futon1a-url "/api/alpha/hyperedges?type=" (url-encode hx-type)
+                 "&limit=" query-limit "&include-total=false")
         result (http-get-edn url)]
     (or (:hyperedges result) [])))
 

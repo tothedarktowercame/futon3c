@@ -1,5 +1,7 @@
 # T-agency-desktop-save — durable agent roster (W5), restart → same agents, warm
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** roster_store.clj shipped whole (restore-payload, continuous persist watch, restore-on-boot! with detached marking and collision refusal), wired into bootstrap restore-before-watch, flag default TRUE since 2026-06-14, 12 tests. Close.
+
 Parent: `holes/missions/M-agency-hardening.md` **W5** (durable session registry /
 kill-restart robustness, invariant 8). Joe's "Desktop Save Mode for Agency."
 Dispatched by claude-6, 2026-06-10. Reviewer: claude-6. Branch off **master**.

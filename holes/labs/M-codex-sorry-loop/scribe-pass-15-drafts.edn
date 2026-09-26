@@ -1,0 +1,49 @@
+[{:name "package-closed-ball-holomorphicity-as-DiffContOnCl-for-Cauchy-estimates"
+  :lane :arc-lane
+  :level :api-adapter
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Apply Cauchy's derivative estimate when the available hypothesis is `DifferentiableOn ℂ g (closedBall z₀ ρ)` and the norm bound is stated on that closed ball."}
+   :target
+   "`‖deriv g z₀‖ ≤ M / ρ` for `0 < ρ` and `‖g w‖ ≤ M` on `closedBall z₀ ρ`."
+   :key-api
+   "Complex.norm_deriv_le_of_forall_mem_sphere_norm_le"
+   :adapter
+   ["Build the `DiffContOnCl` argument required by the Cauchy estimate."
+    "For its differentiability field, restrict the closed-ball hypothesis to the open ball with `hg.mono ball_subset_closedBall`."
+    "For continuity on the closure, use `hg.continuousOn` and normalize the closure with `closure_ball _ hρ.ne'`."
+    "For the sphere norm bound, inherit the closed-ball bound through `sphere_subset_closedBall`."
+    "Apply `norm_deriv_le_of_forall_mem_sphere_norm_le hρ` to obtain the estimate directly."]
+   :lean-shape
+   "apply norm_deriv_le_of_forall_mem_sphere_norm_le hρ
+    · constructor
+      · exact hg.mono ball_subset_closedBall
+      · simpa [closure_ball _ hρ.ne'] using hg.continuousOn
+    · exact fun w hw ↦ hM w (sphere_subset_closedBall hw)"
+   :witness
+   {:declaration "deriv_norm_le_sup_div_radius"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a complex-analysis theorem expects `DiffContOnCl`, adapt a closed-ball differentiability hypothesis by separating its three interfaces: differentiability on the open ball, continuity on the closed closure, and a sphere-local bound."
+   :boundary
+   "This closes the derivative estimate only. The row's remaining disk-area mean-value inequality still needs radial integration, polar coordinates, and Fubini."
+   :capture-kind :runner-api-packaging-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A07"}
+   #:ref{:type :mathlib-api,
+         :id "Complex.norm_deriv_le_of_forall_mem_sphere_norm_le"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t013"]
+   :receipt-ids ["dfaee970-084c-4b91-8498-7b6dd5faeb45"]
+   :commits ["1ad1ea34c93d4c8754853563ad527d8d9f8e8d64"]
+   :problems ["a01A07-l1-limits-holomorphic"]
+   :artifacts
+   ["problems/a01A07/lean/Main.lean:deriv_norm_le_sup_div_radius"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]

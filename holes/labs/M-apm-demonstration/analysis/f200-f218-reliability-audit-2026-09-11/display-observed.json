@@ -1,0 +1,49 @@
+{
+  "diagnostic": "readable empty job feed against deliberately stopped campaign",
+  "source_sha256": {
+    "server.py": "0ca6ca05e49e69841787c0973bfbeb7c9ef35cac9fb145cb45e0064131a4a1f1",
+    "index.html": "db75a7fc16bea20b6b45f04017dc1d299c6b496dd7286798391dab02491f13da"
+  },
+  "observed": {
+    "campaign": "jit-all-open-v3",
+    "frame": "f218",
+    "phase": "guide-intervention-1",
+    "state": "stalled",
+    "alert": "watchdog silent 12m \u2014 loop supervisor gone",
+    "timeline": [
+      {
+        "phase": "solve",
+        "started_at": "2026-09-10T21:10:17.728815319Z",
+        "duration_s": 2321,
+        "current": false
+      },
+      {
+        "phase": "verify",
+        "started_at": "2026-09-10T21:48:59.180772902Z",
+        "duration_s": 130,
+        "current": false
+      },
+      {
+        "phase": "promote-solver",
+        "started_at": "2026-09-10T21:51:10.033242545Z",
+        "duration_s": 1432,
+        "current": false
+      },
+      {
+        "phase": "student-attempt-1",
+        "started_at": "2026-09-10T22:15:02.834195545Z",
+        "duration_s": 1623,
+        "current": false
+      },
+      {
+        "phase": "guide-intervention-1",
+        "started_at": "2026-09-10T22:42:06.109087562Z",
+        "duration_s": 8061,
+        "current": true,
+        "agent": null,
+        "actor": "in-process"
+      }
+    ]
+  },
+  "limitation": "Reproduces the projection; not a browser screenshot or live-feed observation."
+}

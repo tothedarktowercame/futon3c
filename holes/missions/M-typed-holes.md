@@ -1,8 +1,12 @@
 # Mission: M-typed-holes
 
-**Status:** IDENTIFY (charter, 2026-06-14) — spun out of a Joe↔claude-2 design
-conversation. No implementation yet; this records the unification + the first
-data-backed rung.
+**Status:** **CLOSED (2026-06-15, Joe).** Ran the full lifecycle
+IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE→DOCUMENT in two sessions
+(2026-06-14 design; 2026-06-15 build). The single runtime `fill` is built and all
+six projections route through it (D1, failure-condition #1 closed); see
+`## CLOSED` at the foot of this doc for the close-out, extensions, and the new
+hole-type the close surfaced. *(Charter, 2026-06-14: spun out of a Joe↔claude-2
+design conversation; recorded the unification + the first data-backed rung.)*
 **Owner:** claude-2 (charter author); Joe + agents for refinement/review.
 **Repo:** futon3c (coordination/stack home, next to `M-typed-bells`); consumes
 futon6 mining data and futon5a theory.
@@ -273,6 +277,80 @@ unifying makes the disunity impossible by construction — the design reads
 times; build it once, and asking a question = proving a theorem = filling the
 slot, witnessed.*
 
+## INSTANTIATE (2026-06-15) — D1 landed; all six projections through one `fill`
+
+Phase 6. The mining wrap finishing unblocked the gated build (D6). The keystone
+— **the single runtime `fill(hole, filler, kind=…)`** — was authored by the
+Claude owner (architecture) and committed as `futon3c/scripts/fill.py`
+(`f7ca75b`): one operator, witnessed by an ArSE `(ask→answer)` pair (I3+I5), with
+an I1 typed-fill gate and the six discharge kinds matching `Coverage.lean`'s
+`Projection`. The six projections were then routed through it (each an *adapter*,
+no discharge reimplementation — I3), authored by codex-1…4 in parallel and each
+reviewed PASS by claude-1 (read diff + independent per-thread ArSE verification):
+
+| projection | adapter | commit | witnesses |
+|---|---|---|---|
+| answer/query | `proving_loop.py` (refactor) | `f7ca75b` | 5 (ArSE -74..-78) |
+| ground/symbol | `adapters/ground_adapter.py` | `3fc8f01` | 4 (-79..-82) |
+| compose/comb | `adapters/compose_adapter.py` | `eb3666bf` | 4 (-83..-86) |
+| discharge/proof | `adapters/discharge_adapter.py` | `d82f669` | 3 (-87..-89) |
+| cascade-feed/mining | `adapters/cascade_adapter.py` | `00cb2212` | 3 (-90..-92) |
+| reply/bell | (conformant by construction) | — | `fill` *is* the `/arse` path |
+
+**Final integrity sweep:** 19 witnessed fills (-74..-92), all answered, projection
+distribution {answer 5, ground 4, compose 4, discharge 3, cascade-feed 3}; ArSE
+74→93 reconciles exactly (no lost update despite 4 concurrent writers). Open holes
+(ungrounded symbol, unfed node, open sorry, gap-no-boundary comb) recorded as
+`filled=False` with **no** ArSE write — I2 honesty, no silent drop.
+
+**Failure-condition #1 is CLOSED:** every projection demonstrably routes through
+the one `fill`; the unification is not decorative. This closes the `?wiring-cert`
+owed open arrow from VERIFY. Adapters draw on first-cut substrate-2a / mined data,
+so filler *quality* (e.g. noisy groundings) tracks the data's QA baseline, not the
+wiring. **Open / Joe's call:** mission-close; full-corpus substrate-2a reimport;
+the satiety-transition upgrade (cascade-feed schematic leg in `?design-cert`);
+concurrency-safe ArSE writes (the parallel-writer lost-update risk did not bite
+here but the store is not locked — see `T-typed-bell-arse-write-async`).
+
+## CLOSED (2026-06-15, Joe)
+
+**Close-out bar — what shipped:**
+- the single runtime `fill(hole, filler, kind=…)` (`futon3c/scripts/fill.py`,
+  `f7ca75b`), witnessed in ArSE (I3+I5) with the I1 typed-fill gate;
+- **all six projections routed through it** as adapters (answer/query, reply/bell,
+  ground/symbol, compose/comb, discharge/proof, cascade-feed/mining) — keystone by
+  the Claude owner, six adapters Codex-authored + claude-1-reviewed (author ≠
+  reviewer); 19 witnessed fills, integrity sweep clean, **failure-condition #1
+  closed**;
+- VERIFY's two certificates: design (`DarkTower/Coverage.lean`, 0 `sorryAx`) +
+  wiring (substrate-2a import `12fa355` + proving loop `a573b54`);
+- DOCUMENT: the CT **"Reprise and technical explainer"** supplement,
+  `futon6/holes/anatomy-of-a-futonic-mission.md` §9 — which reports the host
+  paper's own §5.3 debt ("two projections of one quantity") **discharged**.
+
+**Extensions, typed as holes** (the reflexive close — the mission about holes
+records its own future work *as* holes). These are **open arrows** (named target,
+construction owed): the satiety→sated *transition* (upgrades the cascade-feed
+schematic leg in `?design-cert`); concurrency-safe ArSE writes
+(`T-typed-bell-arse-write-async`); full-corpus substrate-2a reimport (80→9,733,
+measured against the QA baseline); the last-mile UI/registry unification (§7's
+counted-hole-as-first-class-scope); a formal `copar`-interaction functor.
+
+**New hole-type surfaced by the close (Joe) — the *unaimed (outbound) arrow*.**
+A hole that gestures at an extension *direction* but whose **target type is not
+yet specified**. It is strictly weaker than the two hole-types we already had:
+- **ghost line** — typed by an *expected phase* (the standard form knows what is
+  missing);
+- **open arrow** — typed by a *named but unbuilt target* (target specified, only
+  the construction owed).
+
+The unaimed arrow has neither a structural expectation nor a named target — only
+the knowledge that *some* outbound extension belongs here. Many "maybe we
+could…" extensions are exactly this: a real direction, target-type still open
+(`TypedHole` `hungry_for = :unspecified`/⊤). It is a candidate third entry in the
+hole-type taxonomy, and is itself an unaimed arrow for a future mission. Fittingly,
+the mission about typing holes closes by discovering a hole-type it had not named.
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the
@@ -286,3 +364,7 @@ slot, witnessed.*
 - **iiching pattern language** (futon5 `tools/iiching`, `resources/iiching-ct`) —
   the eventual home for the Lean manifest entries as lifted CT patterns.
 - **XTDB hypergraph store / Arxana** — projection #5 (query = scope = hole).
+- **`../excursions/E-queries-and-scopes.md`** — projection #5's relationship
+  stated as such: separates the two senses of "scope" (environment vs.
+  partial-hyperedge), gives the object-vs-probe (Yoneda/`queryComb`) reading, and
+  cashes out answering = filling = counit. Synthesis, 2026-06-15.

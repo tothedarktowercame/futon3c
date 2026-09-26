@@ -15,7 +15,8 @@
             [futon3c.watcher.projections.flight :as flight])
   (:import (java.net URLEncoder)))
 
-(def futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def futon1a-url (or (System/getenv "FUTON_SUBSTRATE_URL")
+                     (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def write-sentinel-path
   "The in-JVM form of the operator gate. Discovered at Joe's first live

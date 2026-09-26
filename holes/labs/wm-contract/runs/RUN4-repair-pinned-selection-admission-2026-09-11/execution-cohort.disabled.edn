@@ -1,0 +1,6 @@
+{:schema :wm/run4-execution-cohort-binding-v1 :enabled? false
+ :preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-pinned-selection-admission-2026-09-11/authority/holes/labs/wm-contract/runs/RUN4-repair-pinned-selection-admission-2026-09-11/cohort.edn"
+ :data-root "/home/joe/run4/repair-pinned-selection-admission/cohort"
+ :cohort-id :run4-repair-pinned-selection-admission-20260911-v1
+ :sha256 "efa8758f500e39bb7e9a5dc3b0783042aed90a317abc708a0294d2811edc576a"
+ :target 1 :activation :not-performed}

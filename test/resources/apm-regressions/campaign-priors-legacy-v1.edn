@@ -1,0 +1,59 @@
+{:fixture/id :campaign-priors-legacy-v1
+ :provenance {:observed-campaign "jit-all-open-nontopology-v1"
+              :observed-queue-path "data/apm-campaigns/jit-all-open-nontopology-v1/queue-state.edn"
+              :observed-contract-digest "e8d143d5d5c41f81db35f8bbbb54bf3c9a708f6e646c771afac2f8f7aea33b66"
+              :captured-at "2026-08-27"}
+ :current-campaign "current-v2"
+ :lineage {:campaign/priors ["prior-v1"]}
+ :queues
+ {"prior-v1" {:completed [{:frame/id "f10" :problem/id "p10"}
+                            {:frame/id "f11" :problem/id "p11"}]}
+  "current-v2" {:completed [{:frame/id "f20" :problem/id "p20"}]}
+  "undeclared-experiment" {:completed [{:frame/id "f99" :problem/id "p99"}]}}
+ :ledgers
+ {["prior-v1" "f10"]
+  [{:event/id "legacy-e0" :event/seq 0 :event/type :campaign/registered :event/campaign-id "prior-v1-f10"
+    :event/actor "fixture" :event/at "2026-08-24T00:00:00Z" :event/expected-version 0
+    :event/body {:series :apm :manifest-hash "legacy" :phase-order [:probe :close]}}
+   {:event/id "legacy-e1" :event/seq 1 :event/type :block/opened :event/campaign-id "prior-v1-f10"
+    :event/actor "fixture" :event/at "2026-08-24T00:00:01Z" :event/expected-version 1
+    :event/body {:block-id "b10" :ordinal 1}}
+   {:event/id "legacy-e2" :event/seq 2 :event/type :frame/opened :event/campaign-id "prior-v1-f10"
+    :event/actor "fixture" :event/at "2026-08-24T00:00:02Z" :event/expected-version 2
+    :event/body {:frame-id "f10" :block-id "b10" :problem-id "p10"
+                 :registration-hash "r10" :harness-hash "h10"}}
+   {:event/id "legacy-e3" :event/seq 3 :event/type :frame/advanced :event/campaign-id "prior-v1-f10"
+    :event/actor "fixture" :event/at "2026-08-24T00:00:03Z" :event/expected-version 3
+    :event/body {:frame-id "f10" :from :probe :to :close
+                 :certificate {:receipt/snapshot-path "snapshot-old"}}}
+   {:event/id "legacy-e4" :event/seq 4 :event/type :frame/closed :event/campaign-id "prior-v1-f10"
+    :event/actor "fixture" :event/at "2026-08-24T00:00:04Z" :event/expected-version 4
+    :event/body {:frame-id "f10"
+                 :certificate {:receipt/snapshot-path "snapshot-f10-final"}}}]
+  ["prior-v1" "f11"]
+  [{:event/body {:certificate {:receipt/snapshot-path "snapshot-unreadable"}}}]
+  ["current-v2" "f20"]
+  [{:event/body {:certificate {:receipt/snapshot-path "snapshot-f20-final"}}}]
+  ["undeclared-experiment" "f99"]
+  [{:event/body {:certificate {:receipt/snapshot-path "snapshot-rogue"}}}]}
+ :snapshots
+ {"snapshot-old" {:snapshot/memories [{:memory-id "obsolete" :depositor "f10-guide"}]}
+  "snapshot-f10-final"
+  {:snapshot/memories
+   [{:memory-id "m10-a" :depositor "f10-guide"
+     :provenance {:campaign-id "prior-v1" :frame-id "f10" :problem-id "p10"}}
+    {:memory-id "m10-b" :depositor "f10-scribe"
+     :provenance {:campaign-id "prior-v1" :frame-id "f10" :problem-id "p10"}}]}
+  "snapshot-f20-final"
+  {:snapshot/memories
+   [{:memory-id "m20" :depositor "f20-guide"
+     :provenance {:campaign-id "current-v2" :frame-id "f20" :problem-id "p20"}}]}
+  "snapshot-rogue"
+  {:snapshot/memories
+   [{:memory-id "rogue" :depositor "f99-guide"
+     :provenance {:campaign-id "undeclared-experiment" :frame-id "f99"
+                  :problem-id "p99"}}]}}
+ :expected {:lineage ["prior-v1" "current-v2"]
+            :memory-ids ["m10-a" "m10-b" "m20"]
+            :dropped [{:frame-id "f11" :problem-id "p11"
+                       :finding :prior-snapshot-unreadable}]}}

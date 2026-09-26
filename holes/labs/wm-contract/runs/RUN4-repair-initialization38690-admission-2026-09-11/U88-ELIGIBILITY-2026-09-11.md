@@ -1,0 +1,5 @@
+Initialization38690 historical admission completed: exact click wm-click-f877de07-7580-4eb8-9b58-63a06899fecf. The strict historical bundle and canonical closed-execution readers accepted it; cohort target1 remaining0. LIVE-RESULT-2026-09-11.edn retains the exact result. No repair resolution or U88 success is inferred.
+
+Live mission resolver returned M-u88-contextual-preferences, status open, one open hole; actual action-admissible? returned true for {:type :advance-mission :target "M-u88-contextual-preferences"}. The runner is idle. No open non-environmental stop-lines remain. Historical awaiting-validation obligations and environmental holds remain; they have not been deleted or discharged.
+
+Codex-20 and Zai-1 were freshly observed idle/invoke-ready. Joe requests Codex-20 as author inside the next task run, Zai-1 reviewer, Codex-17 coordinator. New task admission requires fresh pinned casting/identity/capacity and normal live readiness; the consumed historical cohort cannot be reused. No U88 admission was submitted during this observation turn.

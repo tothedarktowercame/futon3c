@@ -1,0 +1,50 @@
+;; chipwitz-warrant-map.edn — the rule→pattern mapping table for ChipWitz.
+;;
+;; This is DATA, not code branches (per pattern-warranted-choice-point NEXT-STEPS):
+;; {guardrail-rule → {pattern-id, warrant-text, gap, unblock}}
+;; The operator can audit and edit warrants without touching code.
+;;
+;; Each entry maps a guardrail rule (the consent-gate condition) to the
+;; pattern that warrants proceeding, the text of the warrant, the gap
+;; (what the pattern does NOT decide), and the minimal unblock (what the
+;; operator provides if the warrant is insufficient).
+
+[
+ ;; ── The cycle-5 motivating example ──────────────────────────────
+ {:rule :consent-gate/fork-exists
+  :pattern-id "aif/expected-free-energy-scorecard"
+  :warrant-text "Expected information gain prefers experiments where the model sticks its neck out — measured pairs over fallback. This fork is determined: the standing contract already prefers the measured-pair path."
+  :gap "Whether the measured-pair path is currently advanceable (pilot-flow state)"
+  :unblock "Confirm the pilot is in a state where measured pairs can accrue, or defer to the next cycle."
+  :determines :option-B}
+
+ ;; ── General warrant rules ──────────────────────────────────────
+ {:rule :consent-gate/outward-action
+  :pattern-id "orchestration/consent-gate"
+  :warrant-text "Outward/irreversible actions require explicit operator consent — this is NOT a determined fork, it is the operator's call by definition."
+  :gap "Whether the specific outward action is within today's envelope"
+  :unblock "Operator approval for this specific action."
+  :determines :nag}  ; always a NAG — outward actions are never auto-warranted
+
+ {:rule :consent-gate/self-modifying
+  :pattern-id "orchestration/consent-gate"
+  :warrant-text "Self-modifying actions require explicit operator consent."
+  :gap "Whether the self-modification is pre-authorized"
+  :unblock "Operator confirmation that this specific modification is approved."
+  :determines :nag}
+
+ {:rule :consent-gate/off-goal
+  :pattern-id "war-machine/advanceability"
+  :warrant-text "Actions off the current mission's goal require a warrant connecting them to the standing contract."
+  :gap "Whether the off-goal action serves a higher-priority mission"
+  :unblock "Operator confirmation that the off-goal work is the right priority now."
+  :determines :nag}
+
+ ;; ── The determined-fork default ────────────────────────────────
+ {:rule :consent-gate/undetermined-fork
+  :pattern-id "collaboration-coherence/determined-fork-proto-psr"
+  :warrant-text "If the warrant is findable (standing contract, documented preference, the method, prior coaching), the fork is determined — name the warrant and proceed."
+  :gap "Whether a specific warrant DETERMINES this choice (not merely consistent with it)"
+  :unblock "Specify which option the standing contract prefers, or confirm genuinely operator-decided."
+  :determines :warrant-finder}  ; delegate to the warrant-finder (cascade-policy-for)
+]

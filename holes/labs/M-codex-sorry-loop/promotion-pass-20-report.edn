@@ -1,0 +1,1 @@
+{:at "2026-07-28", :mode :commit, :patterns {}, :results [{:name "extend-local-absolute-continuity-to-an-endpoint-via-the-derivative-primitive", :pattern "math/measure-integration-api", :status :promoted}]}

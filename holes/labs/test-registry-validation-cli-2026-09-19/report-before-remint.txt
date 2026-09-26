@@ -1,0 +1,8 @@
+AGG-single-kl-reduction unverifiable test-registry-7c20e8379cab6701951f27cf052d332a624f5fea49f107ff20f63938102299fb
+EV-uniform-run-record unverifiable test-registry-5e72c13850a778ecc13f1b2041bddac4d3f450ae0ba42d87ae99888623250ac8
+OPS-ordinary-run/click current test-registry-4eebcf94553ffb79d0b52353d133ec1ee682929b991084a0ecfe9193c37785c4
+WIRE-f-on-tick stale test-registry-1ef986623fd9683af9ec1f6d3ca2840bffe5f1df3d621962405bdc06a610b5ce
+WIRE-habit-accumulate current test-registry-78d77a1a608a93370f56c3fafec3b24b47bcfd2d48e7c4a46cc1fea2153d95d8
+WM-01-numerical-operations stale test-registry-3f63a376e2f965c64156051c197a7a4fcd2245e191d514b730a35e818d00b4f9
+test-registry/validation-cli current test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7
+SUMMARY {:current 3, :stale 2, :unverifiable 2}

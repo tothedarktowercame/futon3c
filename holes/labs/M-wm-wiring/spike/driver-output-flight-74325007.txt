@@ -1,0 +1,30 @@
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379611150-24518-43fd9181 operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379651200-24519-4b29696f operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379676756-24520-2a06f334 operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379706563-24522-3780b8ca operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379735344-24523-d5e096a0 operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379796156-24524-6c70d41d operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790379832836-24526-1640409f operator-request
+[wm-cancel] Ctrl-C alone does NOT cancel the Agency job.
+[wm-cancel] To stop this runner and its Agency job:
+clojure -M:wm-full-loop cancel invoke-1790380084572-24530-ac3e2343 operator-request
+Execution error (HttpTimeoutException) at jdk.internal.net.http.HttpClientImpl/send (HttpClientImpl.java:953).
+request timed out
+
+Full report at:
+/tmp/clojure-2914322454517989241.edn
+EXIT 1

@@ -1,0 +1,465 @@
+{
+  "fts_snapshot": {
+    "caveat": "DF values are from the current-index copy made 2026-08-01, while dispatches are historical; they are not dispatch-time DF snapshots.",
+    "copy_filename": "fts5-evidence.db",
+    "index_as_of_reported_by_service": "2026-07-31T04:44:43Z",
+    "indexed_rows_at_copy": 121589,
+    "source_policy": "queried a copied snapshot, never the live writer database"
+  },
+  "h1": {
+    "analyzable_n": 126,
+    "bucket_rule": "tertiles of observed min-DF; ties remain in the lower-DF bucket",
+    "buckets": {
+      "common": {
+        "empty_n": 29,
+        "empty_rate": 0.7435897435897436,
+        "n": 39
+      },
+      "middle": {
+        "empty_n": 20,
+        "empty_rate": 0.4444444444444444,
+        "n": 45
+      },
+      "rare": {
+        "empty_n": 30,
+        "empty_rate": 0.7142857142857143,
+        "n": 42
+      }
+    },
+    "classification": "FALSIFIED",
+    "cutpoints": {
+      "middle_max_df": 56,
+      "rare_max_df": 11
+    },
+    "decision_rule": "CONFIRMED iff rare > middle > common empty rates",
+    "missing_query_n": 3,
+    "one_sided_permutation_p": 0.6177382261773823,
+    "rare_minus_common": -0.02930402930402931
+  },
+  "h2": {
+    "classification": "UNTESTABLE",
+    "mandatory_caption": "Any use rate computed from used-ids would be a FLOOR: outcome used-ids is populated only about 16% of the time. No H2 use rate is reported because the comparison rung is not recorded.",
+    "reason": "The fired rung is absent from every offered receipt. The implementation associates recall/tier and recall/query-used with proposals but persists only the original query-data. Replaying against the current index would not recover the historical rung.",
+    "receipts_n": 129,
+    "receipts_with_fired_rung": 0,
+    "surfaced_count_distribution": {
+      "0": 82,
+      "1": 1,
+      "2": 2,
+      "3": 4,
+      "4": 2,
+      "5": 38
+    }
+  },
+  "h3": {
+    "alpha": 0.05,
+    "classification": "CONFIRMED",
+    "family_count": 73,
+    "family_rates": {
+      "a00j01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a00j04": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a00j05": {
+        "empty_n": 3,
+        "empty_rate": 1.0,
+        "n": 3
+      },
+      "a00j06": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a01a02": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01a03": {
+        "empty_n": 3,
+        "empty_rate": 1.0,
+        "n": 3
+      },
+      "a01a04": {
+        "empty_n": 3,
+        "empty_rate": 1.0,
+        "n": 3
+      },
+      "a01a05": {
+        "empty_n": 1,
+        "empty_rate": 0.5,
+        "n": 2
+      },
+      "a01a06": {
+        "empty_n": 2,
+        "empty_rate": 0.6666666666666666,
+        "n": 3
+      },
+      "a01a07": {
+        "empty_n": 4,
+        "empty_rate": 0.8,
+        "n": 5
+      },
+      "a01a08": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01a09": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01a10": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01a11": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a01a12": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a01j01": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01j02": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a01j06": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a02j01": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a02j02": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 2
+      },
+      "a02j03": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a02j05": {
+        "empty_n": 1,
+        "empty_rate": 0.3333333333333333,
+        "n": 3
+      },
+      "a02j07": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a03j03": {
+        "empty_n": 2,
+        "empty_rate": 1.0,
+        "n": 2
+      },
+      "a03j08": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a92j02": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a92j03": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a92j04": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a92j05": {
+        "empty_n": 1,
+        "empty_rate": 0.5,
+        "n": 2
+      },
+      "a92j06": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a92j07": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93a01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93a02": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93a03": {
+        "empty_n": 4,
+        "empty_rate": 1.0,
+        "n": 4
+      },
+      "a93a04": {
+        "empty_n": 2,
+        "empty_rate": 1.0,
+        "n": 2
+      },
+      "a93j01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93j02": {
+        "empty_n": 2,
+        "empty_rate": 0.6666666666666666,
+        "n": 3
+      },
+      "a93j04": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93j05": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93j06": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a93j07": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a94a01": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a94a03": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 2
+      },
+      "a94a04": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a94a06": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a94j02": {
+        "empty_n": 1,
+        "empty_rate": 0.5,
+        "n": 2
+      },
+      "a94j04": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 2
+      },
+      "a94j07": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a94j08": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95a01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95a02": {
+        "empty_n": 4,
+        "empty_rate": 1.0,
+        "n": 4
+      },
+      "a95a03": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95a04": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95a05": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95a06": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95a07": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95a08": {
+        "empty_n": 3,
+        "empty_rate": 1.0,
+        "n": 3
+      },
+      "a95j01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95j02": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95j03": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95j04": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95j05": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95j06": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a95j07": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a95j08": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 3
+      },
+      "a96a01": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a96a03": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 2
+      },
+      "a96a04": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 2
+      },
+      "a96j01": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a96j10": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a97a06": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      },
+      "a97a07": {
+        "empty_n": 1,
+        "empty_rate": 1.0,
+        "n": 1
+      },
+      "a97a08": {
+        "empty_n": 0,
+        "empty_rate": 0.0,
+        "n": 1
+      }
+    },
+    "matched_n": 109,
+    "permutation_p": 0.00039996000399960006,
+    "shuffles": 10000,
+    "statistic": 21.277981651376148,
+    "unmatched_n": 20,
+    "unmatched_problems": [
+      "connectedComponents-complement-lemniscate",
+      "connectedComponents-complement-lemniscate",
+      "construction-deriv-ne-zero-of-injon",
+      "construction-deriv-ne-zero-of-injon",
+      "lib-young-completion",
+      "lib-young-convolution",
+      "radial-integration-r3",
+      "rouche-root-count-transfer",
+      "rouche-root-count-transfer",
+      "rouche-root-count-transfer",
+      "schwarz-equality-case",
+      "sorry-0244",
+      "sorry-0251",
+      "sorry-0285",
+      "sorry-0288",
+      "sorry-0298",
+      "topology-probe",
+      "young-convolution-L1-L2",
+      "young-convolution-L1-L2",
+      "young-convolution-L1-L2-frontier"
+    ]
+  },
+  "input": {
+    "offered_n": 129,
+    "path": "receipts-export-20260731-all-authors.edn",
+    "sha256": "0cc527e23c3678a4cc7d8053d6636d0cde556dab15fcc3ce69bedf0b659820b3"
+  },
+  "runtime": {
+    "edn_format": "0.7.5",
+    "python": "3.12.3",
+    "seed": 20260731,
+    "sqlite": "3.45.1"
+  },
+  "study": "P1 recall-empty mechanism and bias"
+}

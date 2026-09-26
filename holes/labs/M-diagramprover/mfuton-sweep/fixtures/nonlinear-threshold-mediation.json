@@ -1,0 +1,55 @@
+{
+  "example_id": "nonlinear-threshold-mediation",
+  "title": "Mediation with a threshold effect",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.8 combines linear Education-to-Skill and Salary equations with a nonlinear job-acceptance threshold. It demonstrates that natural and controlled effects need not add as linear path products do.",
+  "variables": [
+    {"key": "education", "name": "Education", "content": "Education is changed from zero to one.", "value_domain": "rational"},
+    {
+      "key": "skill",
+      "name": "Skill",
+      "content": "Skill increases by two for a unit increase in Education.",
+      "value_domain": "rational",
+      "affine_equation": {"kind": "affine", "intercept": 0, "coefficients": {"education": 2}, "disturbance": "U_SKILL"}
+    },
+    {
+      "key": "salary",
+      "name": "Salary",
+      "content": "Salary is seven times Education plus three times Skill.",
+      "value_domain": "rational",
+      "affine_equation": {"kind": "affine", "intercept": 0, "coefficients": {"education": 7, "skill": 3}, "disturbance": "U_SALARY"}
+    },
+    {
+      "key": "outcome",
+      "name": "Outcome",
+      "content": "The applicant accepts exactly when Salary exceeds ten.",
+      "value_domain": "boolean",
+      "structural_expression": {"kind": "greater_than", "variable": "salary", "threshold": 10}
+    }
+  ],
+  "arrows": [
+    {"source": "education", "target": "skill", "coefficient": "2", "because": "Figure 9.8 labels the Education-to-Skill coefficient 2."},
+    {"source": "education", "target": "salary", "coefficient": "7", "because": "Figure 9.8 labels the direct Education-to-Salary coefficient 7."},
+    {"source": "skill", "target": "salary", "coefficient": "3", "because": "Figure 9.8 labels the Skill-to-Salary coefficient 3."},
+    {"source": "salary", "target": "outcome", "because": "The source defines Outcome by whether Salary exceeds ten."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:b61d762bf702e72e",
+    "ta-book-of-why-2018:d5ed264635f06db6",
+    "ta-book-of-why-2018:59e1902c80c1a3ba",
+    "ta-book-of-why-2018:faeef1d984441a56",
+    "ta-book-of-why-2018:b3fc1aa7046a5344",
+    "ta-book-of-why-2018:231fd6b3eb8ec883",
+    "ta-book-of-why-2018:9d31dd1c9ddeb491",
+    "ta-book-of-why-2018:a3fa6dd4fe34026c",
+    "ta-book-of-why-2018:77aa716b0edca6cc",
+    "ta-book-of-why-2018:2f62d58ddad87ae9",
+    "ta-book-of-why-2018:4eaf08849cedd21a",
+    "ta-book-of-why-2018:3a2eac19f5a9be9b"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0337",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0338",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0339"
+  ]
+}

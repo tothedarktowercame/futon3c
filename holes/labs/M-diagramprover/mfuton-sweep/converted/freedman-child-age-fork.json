@@ -1,0 +1,28 @@
+{
+  "arrows" : [ {
+    "from" : "age-of-child",
+    "to" : "shoe-size"
+  }, {
+    "from" : "age-of-child",
+    "to" : "reading-ability"
+  } ],
+  "id" : "freedman-child-age-fork",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "freedman-child-age-fork.json"
+  },
+  "variables" : [ {
+    "id" : "age-of-child",
+    "kind" : "observed",
+    "name" : "Age of Child"
+  }, {
+    "id" : "shoe-size",
+    "kind" : "observed",
+    "name" : "Shoe Size"
+  }, {
+    "id" : "reading-ability",
+    "kind" : "observed",
+    "name" : "Reading Ability"
+  } ]
+}

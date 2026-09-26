@@ -1,0 +1,15 @@
+;; Agent name aliases -> existing sessions. Aliases change LOOKUP only; they
+;; never create agents and never add registry keys (futon3c I-1).
+;;
+;; Emptied 2026-09-18 on Joe's instruction, ending the
+;; wm-item-ownership-2026-09-16 campaign's 46 checklist-owner aliases
+;; (WM-01..WM-14, R1..R20, TRACE, E01..E10 -> zai-9..zai-54).
+;;
+;; Why, so the next person does not simply restore them: those aliases index
+;; seats by CHECKLIST ITEM, while the work that actually moves is organised by
+;; SLICE (WIRE-1 emission, WIRE-2 F, WIRE-3 live C, WIRE-4 rates), and each
+;; slice cuts across many items. Dispatches went to whichever seat was free
+;; with a self-contained packet, not to "the WM-10 owner" -- E06/zai-50 built
+;; the WIRE-1 emission slice, which has nothing to do with E06. An alias
+;; scheme nobody routes by is a lookup table that can only mislead.
+{}

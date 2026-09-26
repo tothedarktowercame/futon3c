@@ -1,0 +1,4 @@
+evidence-id test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7
+warrant? true
+results {:assertions 55, :duration-ms 1892, :errors 0, :exit 0, :failures 0, :tests 7}
+bound test-registry/validation-cli -> test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7

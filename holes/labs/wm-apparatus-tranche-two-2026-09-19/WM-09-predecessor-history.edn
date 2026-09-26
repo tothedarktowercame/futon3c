@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :subject-id "WM-09-predecessor-history"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.receipt-construction-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/wm-apparatus-tranche-two-2026-09-19/WM-09-predecessor-history"
+ :code-paths ["test/futon2/aif/receipt_construction_test.clj"]
+ :test-paths ["test/futon2/aif/receipt_construction_test.clj"]}

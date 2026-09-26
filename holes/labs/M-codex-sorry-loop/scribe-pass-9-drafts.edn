@@ -1,0 +1,102 @@
+[{:name "inspect-conclusion-binding-structure-before-claiming-mathematical-content"
+  :lane :trajectory-lane
+  :level :qa-discipline
+  :status :draft
+  :body
+  {:headline-observation
+   "The runner detected that `coefficients_bounded_of_simple_poles` concludes only `∃ M : ℝ, 0 ≤ M`, with no occurrence connecting `M` to the function, its coefficients, or any hypothesis; it proved the encoded statement with `M = 0` and independently reported the vacuity."
+   :qa-rule
+   "Read the conclusion's binding structure before proving: an existential that binds nothing is a red flag to REPORT, not just prove."
+   :inspection-checks
+   ["For each existential witness, locate every occurrence of the bound variable in the proposition that follows."
+    "Check that the witness is related to the mathematical objects named in the theorem and its documentation."
+    "If a constant witness discharges a purported analytic estimate without using its hypotheses, classify and report the statement divergence before announcing mathematical closure."]
+   :observed-case
+   {:problem "a95J04"
+    :declaration "coefficients_bounded_of_simple_poles"
+    :announced-content
+    "Bound coefficients using meromorphic extension with simple boundary poles."
+    :encoded-conclusion "`∃ M : ℝ, 0 ≤ M`"
+    :missing-bindings
+    ["No coefficient sequence appears in the conclusion."
+     "`M` is not related to `f`, `D`, pole locations, or any norm."]
+    :formal-witness "`⟨0, le_rfl⟩`"
+    :formal-status :axiom-clean
+    :mathematical-status :under-constrained-and-vacuous
+    :statement-changed? false}
+   :divergence-taxonomy
+   {:witnessed-member-count 2
+    :members
+    [{:class :stub-definition
+      :witness "a95J03/winding_number_bounded"
+      :shape
+      "The theorem's central semantic object is a placeholder `windingNumber := 0`, so the honest-looking conclusion collapses after unfolding."}
+     {:class :under-constrained-statement
+      :witness "a95J04/coefficients_bounded_of_simple_poles"
+      :shape
+      "The existential conclusion omits the relation it was intended to assert, so a content-free witness closes it."}]
+    :distinction
+    "The first divergence is hidden in a dependency definition; the second is visible in the theorem conclusion's binder structure."}
+   :runner-behavior
+   ["Flagged the weakness unprompted before the final report."
+    "Made the one-line exact proof without changing or weakening any hypothesis."
+    "Reported that the real pole-subtraction and Cauchy-estimate argument remains absent."]
+   :capture-kind :runner-self-audit-ledger-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J04"}
+   #:ref{:type :process-pattern,
+         :id "conclusion-binding-faithfulness-check"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t004"]
+   :receipt-ids ["61d889c8-523a-46d8-bc0a-0abf3b004d8d"]
+   :commits ["028ffd1b9404993187082092920d017d904c10c3"]
+   :problems ["a95J04-coefficients-bounded"]
+   :cross-row-evidence
+   [{:turn-round-id "e-codexroll-019f9b12-t018"
+     :receipt-id "6582b2b4-153b-4be2-a2cd-9d3b0b16a324"
+     :class :stub-definition}]
+   :artifacts
+   ["problems/a95J04/lean/Main.lean:coefficients_bounded_of_simple_poles"
+    "holes/labs/M-codex-sorry-loop/faithfulness-ledger.md:entry-2"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary"
+  :lane :trajectory-lane
+  :level :recall-near-miss
+  :status :proposal
+  :body
+  {:observation-kind :dispatch-recall-empty
+   :target "a95J04-coefficients-bounded"
+   :observed
+   {:surfaced-count 0
+    :used-count 0
+    :existing-pattern "math/holomorphic-disk-api"
+    :near-miss
+    "The existing complex-analysis pattern covers holomorphic disk APIs but its description does not carry the coefficients, poles, Laurent-series, or residue vocabulary needed to propose it for this row."}
+   :proposal
+   {:kind :description-extension-candidate
+    :target-pattern "math/holomorphic-disk-api"
+    :candidate-vocabulary
+    ["coefficients" "poles" "simple poles" "Laurent" "residue"
+     "Cauchy estimates" "meromorphic extension"]
+    :action-status :not-applied
+    :note
+    "Owner/versioned recall review should decide whether to extend the existing pattern, split a meromorphic/Laurent pattern, or change query semantics."}
+   :boundary
+   "This row does not demonstrate that the existing pattern contained a solution to the genuine theorem. It records a proposal-routing near miss, not a claim that vocabulary extension would solve the missing mathematics."
+   :inference
+   "The description-extension proposal follows ground control's receipt diagnosis. No pattern metadata was changed during this scribe pass."
+   :capture-kind :receipt-confirmed-near-miss-proposal}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J04"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t004"]
+   :receipt-ids ["61d889c8-523a-46d8-bc0a-0abf3b004d8d"]
+   :commits ["028ffd1b9404993187082092920d017d904c10c3"]
+   :problems ["a95J04-coefficients-bounded"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

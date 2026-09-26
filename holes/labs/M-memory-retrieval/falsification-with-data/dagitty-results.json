@@ -1,0 +1,116 @@
+{
+  "dagitty_version": "0.3.4",
+  "graph": "dag {\n\"offered-set\"\n\"query-cardinality\"\n\"query-vocabulary\"\n\"surfaced-set\"\n\"used-set\"\npollution\n\"offered-set\" -> \"used-set\"\n\"query-cardinality\" -> \"surfaced-set\"\n\"query-vocabulary\" -> \"surfaced-set\"\n\"surfaced-set\" -> \"offered-set\"\npollution -> \"offered-set\"\npollution -> \"surfaced-set\"\n}\n",
+  "tests": [
+    {
+      "x": "offered-set",
+      "y": "query-cardinality",
+      "given": ["pollution", "surfaced-set"],
+      "test": "\"offered-set\" _||_ \"query-cardinality\" | \"pollution\",\"surfaced-set\"",
+      "n": 129,
+      "p_value": 0.012018719362762139,
+      "status": "violated",
+      "reason": null
+    },
+    {
+      "x": "offered-set",
+      "y": "query-vocabulary",
+      "given": ["pollution", "surfaced-set"],
+      "test": "\"offered-set\" _||_ \"query-vocabulary\" | \"pollution\",\"surfaced-set\"",
+      "n": 129,
+      "p_value": null,
+      "status": "survived-vacuous",
+      "reason": "constant/thin column support: offered-set=6, query-vocabulary=1, pollution=6, surfaced-set=6"
+    },
+    {
+      "x": "pollution",
+      "y": "query-cardinality",
+      "given": null,
+      "test": "\"pollution\" _||_ \"query-cardinality\"",
+      "n": 129,
+      "p_value": 0.90514074432288305,
+      "status": "survived",
+      "reason": null
+    },
+    {
+      "x": "pollution",
+      "y": "query-vocabulary",
+      "given": null,
+      "test": "\"pollution\" _||_ \"query-vocabulary\"",
+      "n": 129,
+      "p_value": null,
+      "status": "survived-vacuous",
+      "reason": "constant/thin column support: pollution=6, query-vocabulary=1"
+    },
+    {
+      "x": "pollution",
+      "y": "used-set",
+      "given": "offered-set",
+      "test": "\"pollution\" _||_ \"used-set\" | \"offered-set\"",
+      "n": 106,
+      "p_value": 0.1934933540918321,
+      "status": "survived",
+      "reason": null
+    },
+    {
+      "x": "query-cardinality",
+      "y": "query-vocabulary",
+      "given": null,
+      "test": "\"query-cardinality\" _||_ \"query-vocabulary\"",
+      "n": 129,
+      "p_value": null,
+      "status": "survived-vacuous",
+      "reason": "constant/thin column support: query-cardinality=18, query-vocabulary=1"
+    },
+    {
+      "x": "query-cardinality",
+      "y": "used-set",
+      "given": "offered-set",
+      "test": "\"query-cardinality\" _||_ \"used-set\" | \"offered-set\"",
+      "n": 106,
+      "p_value": 0.88053843090317363,
+      "status": "survived",
+      "reason": null
+    },
+    {
+      "x": "query-cardinality",
+      "y": "used-set",
+      "given": ["pollution", "surfaced-set"],
+      "test": "\"query-cardinality\" _||_ \"used-set\" | \"pollution\",\"surfaced-set\"",
+      "n": 106,
+      "p_value": 0.86954922960896475,
+      "status": "survived",
+      "reason": null
+    },
+    {
+      "x": "query-vocabulary",
+      "y": "used-set",
+      "given": "offered-set",
+      "test": "\"query-vocabulary\" _||_ \"used-set\" | \"offered-set\"",
+      "n": 106,
+      "p_value": null,
+      "status": "survived-vacuous",
+      "reason": "constant/thin column support: query-vocabulary=1, used-set=5, offered-set=6"
+    },
+    {
+      "x": "query-vocabulary",
+      "y": "used-set",
+      "given": ["pollution", "surfaced-set"],
+      "test": "\"query-vocabulary\" _||_ \"used-set\" | \"pollution\",\"surfaced-set\"",
+      "n": 106,
+      "p_value": null,
+      "status": "survived-vacuous",
+      "reason": "constant/thin column support: query-vocabulary=1, used-set=5, pollution=6, surfaced-set=6"
+    },
+    {
+      "x": "surfaced-set",
+      "y": "used-set",
+      "given": "offered-set",
+      "test": "\"surfaced-set\" _||_ \"used-set\" | \"offered-set\"",
+      "n": 106,
+      "p_value": 2.3799403207934806e-09,
+      "status": "violated",
+      "reason": null
+    }
+  ]
+}

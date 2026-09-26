@@ -1,0 +1,144 @@
+{
+  "library": {
+    "demo/finite-net-bound": {
+      "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+      "body": {
+        "caption": "Bound a uniformly continuous image using finitely many centers",
+        "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+        "construction": "Choose a common oscillation scale, a finite net, and a maximum over its centers.",
+        "failure_contrasts": [
+          "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+        ],
+        "example_links": []
+      }
+    }
+  },
+  "proposals": {
+    "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f": {
+      "proposal": {
+        "type": "propose",
+        "author": "SIMULATED-TA",
+        "pattern": "demo/finite-net-bound",
+        "base_revision": "7f76d61d39aba9c9131fa1fea7e70cfd1911dc51f2eb26d8ad1e755d393350a3",
+        "category": "applicability",
+        "patch": {
+          "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+          "failure_contrasts": [
+            "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+          ]
+        },
+        "expected_change": "Reject application when only metric boundedness is known; require the finite-net obligation.",
+        "trigger": {
+          "problem": "a93A01",
+          "node": "B2",
+          "cascade_digest": "6c52bf8a8749cc6fb39b39ba8374e72e38e62b4a58c337fbfb993f8b9a11e9c8",
+          "goal": "Construct a finite eta-net in (0,1)",
+          "evidence": "DEMONSTRATION: correction motivated by historical C2; this is not a new Student observation."
+        }
+      },
+      "candidate": {
+        "caption": "Bound a uniformly continuous image using finitely many centers",
+        "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+        "construction": "Choose a common oscillation scale, a finite net, and a maximum over its centers.",
+        "failure_contrasts": [
+          "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+        ],
+        "example_links": []
+      },
+      "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+      "status": "published",
+      "review": {
+        "type": "review",
+        "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+        "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+        "reviewer": "SIMULATED-INDEPENDENT-REVIEWER",
+        "verdict": "accept",
+        "evidence": "SIMULATED acceptance for executable demonstration, not a real independent review."
+      },
+      "published_sequence": 2,
+      "next_use": "not-yet-observed"
+    }
+  },
+  "history": [
+    {
+      "sequence": 0,
+      "event_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+      "event": {
+        "type": "propose",
+        "author": "SIMULATED-TA",
+        "pattern": "demo/finite-net-bound",
+        "base_revision": "7f76d61d39aba9c9131fa1fea7e70cfd1911dc51f2eb26d8ad1e755d393350a3",
+        "category": "applicability",
+        "patch": {
+          "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+          "failure_contrasts": [
+            "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+          ]
+        },
+        "expected_change": "Reject application when only metric boundedness is known; require the finite-net obligation.",
+        "trigger": {
+          "problem": "a93A01",
+          "node": "B2",
+          "cascade_digest": "6c52bf8a8749cc6fb39b39ba8374e72e38e62b4a58c337fbfb993f8b9a11e9c8",
+          "goal": "Construct a finite eta-net in (0,1)",
+          "evidence": "DEMONSTRATION: correction motivated by historical C2; this is not a new Student observation."
+        }
+      }
+    },
+    {
+      "sequence": 1,
+      "event_id": "8855e258748110eb549c6fa6aa2882bd7154f8e0bb32a2cf983df653db8defff",
+      "event": {
+        "type": "review",
+        "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+        "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+        "reviewer": "SIMULATED-INDEPENDENT-REVIEWER",
+        "verdict": "accept",
+        "evidence": "SIMULATED acceptance for executable demonstration, not a real independent review."
+      }
+    },
+    {
+      "sequence": 2,
+      "event_id": "9379bdb7142152d90a4c0451719f27199c0caaeec928bc086808de63add8684e",
+      "event": {
+        "type": "publish",
+        "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f"
+      }
+    },
+    {
+      "sequence": 3,
+      "event_id": "727e1d377a1e4c976ba65944f17e8a4c10f32367fccd2b303a7364b04537a207",
+      "event": {
+        "type": "begin-use",
+        "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+        "attempt_id": "demo-next-attempt",
+        "student": "SIMULATED-STUDENT",
+        "problem": "demo-unseen-family-bound"
+      }
+    }
+  ],
+  "observations": [],
+  "attempts": {
+    "demo-next-attempt": {
+      "type": "begin-use",
+      "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+      "attempt_id": "demo-next-attempt",
+      "student": "SIMULATED-STUDENT",
+      "problem": "demo-unseen-family-bound",
+      "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+      "entry": {
+        "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+        "body": {
+          "caption": "Bound a uniformly continuous image using finitely many centers",
+          "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+          "construction": "Choose a common oscillation scale, a finite net, and a maximum over its centers.",
+          "failure_contrasts": [
+            "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+          ],
+          "example_links": []
+        }
+      },
+      "started_sequence": 3
+    }
+  }
+}

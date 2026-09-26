@@ -1,0 +1,3 @@
+:refused-bind {:record/type :test-registry.validation/refusal, :reason :binding-invalid, :details {:subject-id "acceptance/refusal-demo", :warrant-id "", :actor "codex-2"}}
+:refused-close {:record/type :test-registry.validation/refusal, :reason :warrant-not-fresh, :details {:incident-at "2026-09-19T16:18:01.230830508Z", :warrant-finished-at "2026-09-19T16:13:09.010754866Z"}}
+:subjects-count 1 :open-incidents 1

@@ -1,0 +1,42 @@
+{
+  "arrows" : [ {
+    "from" : "success-0",
+    "to" : "success-1"
+  }, {
+    "from" : "luck-1",
+    "to" : "success-1"
+  }, {
+    "from" : "success-1",
+    "to" : "success-2"
+  }, {
+    "from" : "luck-2",
+    "to" : "success-2"
+  } ],
+  "id" : "inheritance-galton-board",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "inheritance-galton-board.json"
+  },
+  "variables" : [ {
+    "id" : "success-0",
+    "kind" : "observed",
+    "name" : "Success 0"
+  }, {
+    "id" : "luck-1",
+    "kind" : "observed",
+    "name" : "Luck 1"
+  }, {
+    "id" : "success-1",
+    "kind" : "observed",
+    "name" : "Success 1"
+  }, {
+    "id" : "luck-2",
+    "kind" : "observed",
+    "name" : "Luck 2"
+  }, {
+    "id" : "success-2",
+    "kind" : "observed",
+    "name" : "Success 2"
+  } ]
+}

@@ -1,0 +1,167 @@
+{
+ "analytic": "served(4) is a subset of served(5), so on value alone 5 beats 4 whenever w(no-drifting-forks) > 0; 4 comes before 5 iff lam * (cost5 - cost4) > w(no-drifting-forks), i.e. lam * 1.25 > w_drift",
+ "cost": {
+  "4": 8.75,
+  "4b": 8.75,
+  "5": 10.0,
+  "6": 10.0,
+  "7": 8.75
+ },
+ "cues": {
+  "coupling-visible-to-tooling": "With hardcoded code you can grep for the literal; with a hardcoded prompt you must match natural language at runtime",
+  "joe-can-use-robs-work": "Joe could not use Rob's memory MCP because it is neo4j-specific",
+  "no-drifting-forks": "Two implementations that have already drifted cost more to unify than one implementation plus a stub",
+  "rob-can-run-the-stack": "Rob could not use futon3c's agent roles because the code reads the provider out of the agent id",
+  "second-implementation-is-cheap": "every later implementation must impersonate the first",
+  "vs-code-implementation-possible": "wants a seam inserted so later implementations are less painful"
+ },
+ "grid_points": 1001,
+ "mission_sha_at_HEAD": "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030",
+ "mission_sha_in_C": "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030",
+ "outcomes_swept": [
+  "coupling-visible-to-tooling",
+  "no-drifting-forks",
+  "rob-can-run-the-stack",
+  "second-implementation-is-cheap",
+  "vs-code-implementation-possible"
+ ],
+ "served": {
+  "4": [
+   "rob-can-run-the-stack",
+   "second-implementation-is-cheap"
+  ],
+  "5": [
+   "no-drifting-forks",
+   "rob-can-run-the-stack",
+   "second-implementation-is-cheap"
+  ],
+  "6": [
+   "coupling-visible-to-tooling",
+   "no-drifting-forks"
+  ],
+  "7": [
+   "no-drifting-forks",
+   "second-implementation-is-cheap",
+   "vs-code-implementation-possible"
+  ]
+ },
+ "sha_matches": true,
+ "share_of_weights_giving_4_before_5_before_7": {
+  "0": 0.0,
+  "0.02": 0.125,
+  "0.05": 0.125,
+  "0.1": 0.165,
+  "0.2": 0.154,
+  "0.4": 0.046
+ },
+ "top_rankings": {
+  "0": [
+   [
+    "7 > 5 > 6 > 4",
+    0.104
+   ],
+   [
+    "4 > 5 > 7 > 6",
+    0.096
+   ],
+   [
+    "7 > 5 > 4 > 6",
+    0.096
+   ],
+   [
+    "5 > 4 > 7 > 6",
+    0.093
+   ]
+  ],
+  "0.02": [
+   [
+    "7 > 5 > 4 > 6",
+    0.144
+   ],
+   [
+    "7 > 5 > 6 > 4",
+    0.14
+   ],
+   [
+    "5 > 4 > 7 > 6",
+    0.117
+   ],
+   [
+    "7 > 4 > 5 > 6",
+    0.084
+   ]
+  ],
+  "0.05": [
+   [
+    "7 > 5 > 4 > 6",
+    0.144
+   ],
+   [
+    "7 > 5 > 6 > 4",
+    0.14
+   ],
+   [
+    "5 > 4 > 7 > 6",
+    0.117
+   ],
+   [
+    "7 > 4 > 5 > 6",
+    0.084
+   ]
+  ],
+  "0.1": [
+   [
+    "7 > 4 > 5 > 6",
+    0.169
+   ],
+   [
+    "7 > 5 > 4 > 6",
+    0.129
+   ],
+   [
+    "4 > 5 > 7 > 6",
+    0.126
+   ],
+   [
+    "7 > 5 > 6 > 4",
+    0.124
+   ]
+  ],
+  "0.2": [
+   [
+    "7 > 4 > 5 > 6",
+    0.249
+   ],
+   [
+    "4 > 5 > 7 > 6",
+    0.132
+   ],
+   [
+    "4 > 7 > 5 > 6",
+    0.111
+   ],
+   [
+    "7 > 5 > 4 > 6",
+    0.109
+   ]
+  ],
+  "0.4": [
+   [
+    "7 > 4 > 5 > 6",
+    0.414
+   ],
+   [
+    "4 > 7 > 5 > 6",
+    0.208
+   ],
+   [
+    "7 > 4 > 6 > 5",
+    0.108
+   ],
+   [
+    "4 > 5 > 7 > 6",
+    0.079
+   ]
+  ]
+ }
+}

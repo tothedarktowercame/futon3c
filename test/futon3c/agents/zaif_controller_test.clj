@@ -1,0 +1,573 @@
+(ns futon3c.agents.zaif-controller-test
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.set]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.agents.zai-api :as zai]
+            [futon3c.agents.zaif-controller :as zaif]
+            [futon3c.evidence.boundary :as boundary]))
+
+(defn- workspace-root
+  []
+  (let [source-file (-> (io/resource "futon3c/agents/zaif_controller_test.clj")
+                        .toURI
+                        io/file)]
+    (loop [dir (.getParentFile source-file)]
+      (cond
+        (nil? dir)
+        (throw (ex-info "Could not locate futon3c checkout" {}))
+
+        (.isFile (io/file dir "deps.edn"))
+        (.getParentFile dir)
+
+        :else
+        (recur (.getParentFile dir))))))
+
+(deftest d9-live-replay-scores-select-the-arm
+  ;; LIVE PIN: values are read verbatim from D9's tracked replay of live
+  ;; evidence record e-0f2f9aec-6240-40e9-a25a-e45d9452076f.
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        replayed (zaif/decide (:inputs pin))
+        selected-score (get-in replayed [:g-terms (:arm replayed)])
+        other-scores (vals (dissoc (:g-terms replayed) (:arm replayed)))]
+    (is (= "e-0f2f9aec-6240-40e9-a25a-e45d9452076f" (:id pin)))
+    (is (= 56 (get-in report [:live :count])))
+    (is (= {:score-settled 56} (get-in report [:live :settlement-counts])))
+    (is (= (:decision pin) replayed))
+    (is (= :retrieve (:arm replayed)))
+    (is (= 0.7456643332946383 selected-score))
+    (is (every? #(< % selected-score) other-scores)
+        "the recorded posterior scores, rather than case order, select the arm")))
+
+(deftest u15-bare-scalars-are-typed-without-changing-live-replay
+  ;; LIVE PIN: inputs and expected values are read verbatim from the tracked
+  ;; D9 replay of evidence record e-0f2f9aec-6240-40e9-a25a-e45d9452076f.
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        source (-> (io/resource "futon3c/agents/zaif_controller.clj") slurp)
+        replayed (zaif/decide (:inputs pin))]
+    (doseq [token [":retrieve-eig-scale" ":retrieve-token-cost"
+                   ":default-retrieve-tokens" ":act-pragmatic-scale"
+                   ":ask-eig-scale" ":operator-attention-cost"
+                   ":yield-baseline"]]
+      (is (re-find (re-pattern (str ":scalar-awaiting-density[^\\n]*\\n\\s*"
+                                    token))
+                   source)
+          (str token " must immediately follow its structured type marker")))
+    (is (re-find #":scalar-awaiting-density[^\n]*\n\s*\(- \(\* \(:ask-eig-scale"
+                 source)
+        "the computed ask payoff carries the same structured marker")
+    (is (= (:decision pin) replayed)
+        "typing comments leave the live record's numeric decision byte-identical")))
+
+(deftest wm-r6-fixture-posterior-selects-counterfactual-winner
+  ;; LIVE PIN: values are read verbatim from tracked fixture 4abad68c-R6.edn,
+  ;; harvested from live record/run id 4abad68c-5481-4402-8f0e-252add62c54b.
+  (let [fixture (-> (io/file (workspace-root)
+                             "futon2/holes/labs/wm-contract/runs"
+                             "U12-c-mis-falsifier/node-fixtures/4abad68c-R6.edn")
+                    slurp
+                    edn/read-string)
+        decision (:value fixture)
+        posterior (:habit-adjusted-ranking decision)
+        winner (get-in decision [:counterfactual :winner])]
+    (is (= :R6 (:node fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.aif.policy/select-action" (:via fixture)))
+    (is (= 25.0681481226624 (:tau-spread decision)))
+    (is (= winner (first posterior)))
+    (is (= "M-learning-loop" (get-in winner [:action :target])))
+    (is (= -7.669223854855124 (:selection-score winner)))
+    (is (every? #(>= (:selection-score winner) (:selection-score %))
+                (rest posterior))
+        "the recorded posterior ordering supplies the selected winner")))
+
+(deftest fixture-beliefs-produce-deterministic-arm-choices
+  (testing "posting statistics can select retrieve"
+    (let [d (zaif/decide {:mission "M-z"
+                          :observations {:posting-stats {:total-docs 1000 :dfs [1]}
+                                         :estimated-tokens 400}
+                          :task-belief {:act-value 0.1}
+                          :c-belief {:operator-c-uncertainty 0.2}})]
+      (is (= :retrieve (:arm d)))
+      (is (= 1.0 (:gamma-used d)))))
+  (testing "operator uncertainty can select ask after attention cost"
+    (is (= :ask (:arm (zaif/decide {:mission "M-z"
+                                    :c-belief {:operator-c-uncertainty 1.0}
+                                    :observations {:retrieve-eig 0.1}
+                                    :task-belief {:act-value 0.1}}))))))
+
+(deftest gamma-lowered-mission-shifts-act-to-hedge
+  (let [inputs {:mission "M-low"
+                :gamma {"M-low" {:policy-precision 0.5}}
+                :task-belief {:act-value 0.6}
+                :observations {:retrieve-eig 0.45 :estimated-tokens 100}
+                :c-belief {:operator-c-uncertainty 0.1}}
+        neutral (zaif/decide (assoc inputs :gamma {"M-low" {:policy-precision 1.0}}))
+        lowered (zaif/decide inputs)]
+    (is (= :act (:arm neutral)))
+    (is (= :retrieve (:arm lowered)))
+    (is (= 0.5 (:gamma-used lowered)))))
+
+(deftest missing-gamma-uses-uniform-prior
+  (let [d (zaif/decide {:mission "M-unburned"
+                        :gamma {}
+                        :task-belief {:act-value 0.2}})]
+    (is (= 1.0 (:gamma-used d)))))
+
+(deftest evidence-record-shape
+  (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}
+        decision (zaif/decide inputs)
+        ev (zaif/decision-evidence-entry {:agent-id "zai-test"
+                                          :sid "sid-1"
+                                          :decision decision
+                                          :inputs inputs})]
+    (is (= :coordination (:evidence/type ev)))
+    (is (= :step (:evidence/claim-type ev)))
+    (is (= [:zaif :arm-choice] (:evidence/tags ev)))
+    (is (= (:arm decision) (get-in ev [:evidence/body :arm])))
+    (is (= (:g-terms decision) (get-in ev [:evidence/body :g-terms])))
+    (is (= "M-z" (get-in ev [:evidence/body :mission])))
+    (is (string? (get-in ev [:evidence/body :inputs-digest :sha256-16])))))
+
+(deftest zai-profile-does-not-consult-controller
+  (let [called? (atom false)]
+    (with-redefs [zaif/decide (fn [_] (reset! called? true) {:arm :yield})
+                  zaif/persist-decision! (fn [_])]
+      (is (nil? (#'zai/maybe-zaif-decision! {:profile :zai
+                                             :agent-id "zai-test"
+                                             :sid "sid"})))
+      (is (false? @called?)))))
+
+(deftest zaif-profile-consults-controller-and-persists
+  (let [persisted (atom [])]
+    (with-redefs [zaif/persist-decision! (fn [ctx] (swap! persisted conj ctx))]
+      (let [decision (#'zai/maybe-zaif-decision!
+                      {:profile :zaif
+                       :agent-id "zai-test"
+                       :sid "sid"
+                       :turn-id "turn-1"
+                       :round 1
+                       :zaif-inputs-fn (fn [_] {:mission "M-z"
+                                                :task-belief {:act-value 1.0}})})]
+        ;; Returns the shipped (primary) decision
+        (is (= :act (:arm decision)))
+        ;; Both constants persisted (D-1 dual recording)
+        (is (= 2 (count @persisted)))
+        (is (= #{:shipped :sweep}
+               (set (map :constant-label @persisted))))
+        (is (= #{0.65 0.15}
+               (set (map :constant @persisted))))
+        ;; Both share the same pairing-key
+        (is (= 1 (count (set (map :pairing-key @persisted)))))
+        ;; Both use the same inputs
+        (is (every? #(= "M-z" (get-in % [:inputs :mission])) @persisted))))))
+
+(deftest zaif-profile-hydrates-by-default
+  (testing "without an explicit :zaif-inputs-fn the D-1 hydrator runs —
+    recorded inputs must NOT be the empty-map degenerate shape (the
+    unwired-hydrator regression caught live on zai-2, 2026-07-22)"
+    (let [persisted (atom [])]
+      (with-redefs [zaif/persist-decision! (fn [ctx] (swap! persisted conj ctx))]
+        (#'zai/maybe-zaif-decision!
+         {:profile :zaif
+          :agent-id "zai-test"
+          :sid "sid"
+          :turn-id "turn-h"
+          :round 1
+          :context "please check the failing witness derivation in M-a-sorry-enterprise"})
+        (is (= 2 (count @persisted)))
+        (doseq [p @persisted]
+          (let [inputs (:inputs p)]
+            (is (nil? (:mission inputs)))
+            (is (= :d10/unclocked (:mission-source inputs)))
+            (is (number? (get-in inputs [:c-belief :operator-c-uncertainty])))
+            (is (seq (get-in inputs [:observations :posting-stats])))))))))
+
+(deftest zaif-persistence-rejection-does-not-kill-the-turn
+  (testing "a store rejection during shadow persistence is swallowed —
+    counted+surfaced, never propagated into the round loop (2026-07-22
+    brown-out incident: a rejected write aborted a live operator turn)"
+    (with-redefs [zaif/persist-decision!
+                  (fn [_] (throw (ex-info "ZAIF decision persistence was rejected" {})))]
+      (let [decision (#'zai/maybe-zaif-decision!
+                      {:profile :zaif
+                       :agent-id "zai-test"
+                       :sid "sid"
+                       :turn-id "turn-b"
+                       :round 1
+                       :zaif-inputs-fn (fn [_] {:mission "M-z"
+                                                :task-belief {:act-value 1.0}})})]
+        ;; still returns the shipped decision; no exception escaped
+        (is (= :act (:arm decision)))))))
+
+(deftest transcript-persistence-rejection-does-not-kill-the-turn
+  (testing "a rejected transcript append is counted+surfaced, never thrown
+    into the round loop (2026-07-22: store outages aborted operator turns
+    via persist-round!/persist-turn-start! — 'ZAI transcript persistence
+    was rejected' killed live turns)"
+    (with-redefs [boundary/append! (fn [_ _] {:ok false :err "store down"})]
+      (is (nil? (#'zai/persist-round! {:evidence-store :stub
+                                       :agent-id "zai-test"
+                                       :sid "s" :turn-id "t" :profile :zai
+                                       :round 1 :text "x" :calls []})))
+      (is (nil? (#'zai/persist-turn-start! {:evidence-store :stub
+                                            :agent-id "zai-test"
+                                            :sid "s" :turn-id "t"
+                                            :profile :zai :prompt "p"}))))))
+
+(deftest zaif-persistence-failure-is-counted-and-raised
+  (let [before (:failure-count (zaif/persistence-status))]
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (zaif/persist-decision!
+                  {:agent-id "zai-test"
+                   :sid "sid"
+                   :turn-id "turn-test"
+                   :decision {:arm :yield :g-terms {}}
+                   :inputs {}})))
+    (let [status (zaif/persistence-status)]
+      (is (= (inc before) (:failure-count status)))
+      (is (string? (:last-error status))))))
+
+(deftest calibration-ask-arm-unreachable-at-shipped-cost
+  (testing "ZU-2 calibration: at cost=0.65, :ask cannot win against realistic act-value"
+    ;; The :ask value = c-uncertainty - 0.65. Even at c-uncertainty=0.7
+    ;; (high), ask-value = 0.05 — below any gamma-weighted act-value.
+    (let [d (zaif/decide {:mission "M-z"
+                          :c-belief {:operator-c-uncertainty 0.7}
+                          :task-belief {:act-value 0.0}
+                          :observations {}})
+          ask-val (-> d :g-terms :ask)]
+      (is (< ask-val 0.1)
+          "ask-value at c-uncertainty=0.7 is < 0.1 — below typical act-values"))
+    ;; At low cost (0.15 — the calibration sweep's clean-separation value),
+    ;; :ask would win on high C-uncertainty. But that constant is NOT shipped.
+    ;; This test documents the gap: the shipped constant makes :ask unreachable.
+    (let [d (zaif/decide {:mission "M-z"
+                          :c-belief {:operator-c-uncertainty 0.5}
+                          :task-belief {:act-value 0.3}
+                          :observations {}})]
+      (is (= :act (:arm d))
+          "With typical beliefs, the shipped constants always pick :act")))
+  (testing "non-correction sessions correctly pick :act"
+    (is (= :act (:arm (zaif/decide {:mission "M-z"
+                                     :task-belief {:act-value 0.5}
+                                     :c-belief {:operator-c-uncertainty 0.2}
+                                     :observations {}}))))))
+
+;; ─── D-1: dual-constant recording tests ────────────────────────
+
+(deftest decide-with-constants-override-changes-ask-value
+  (testing "constants-override changes the operator-attention-cost in the output"
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.1}
+                  :observations {}}
+          shipped (zaif/decide inputs)
+          swept (zaif/decide (assoc inputs :constants-override
+                                    {:operator-attention-cost 0.15}))]
+      (is (= 0.65 (:operator-attention-cost shipped)))
+      (is (= 0.15 (:operator-attention-cost swept)))
+      ;; ask-value at shipped cost = 0.5 - 0.65 = -0.15
+      (is (< (Math/abs (- (get-in shipped [:g-terms :ask]) -0.15)) 0.001))
+      ;; ask-value at sweep cost = 0.5 - 0.15 = 0.35
+      (is (< (Math/abs (- (get-in swept [:g-terms :ask]) 0.35)) 0.001)))))
+
+(deftest dual-decide-produces-two-paired-decisions
+  (testing "dual-decide returns both constants from the same inputs"
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.1}
+                  :observations {}}
+          results (zaif/dual-decide inputs)]
+      (is (= 2 (count results)))
+      (is (= #{:shipped :sweep} (set (map :label results))))
+      (is (= #{0.65 0.15} (set (map :operator-attention-cost results)))))))
+
+(deftest controller-is-pinned-to-the-current-turn
+  ;; R13 horizon-entry seam: app-zaif assigns the longer horizon to the
+  ;; mission. A mission-supplied T would enter when :clocked-mission is turned
+  ;; into :mission by the ctx/zaif_inputs hydrator path, before `decide` sees
+  ;; this map. Until that seam is implemented, these kernels must neither read
+  ;; multi-turn state nor emit a plan beyond this turn.
+  (let [inputs {:mission "M-z"
+                :c-belief {:operator-c-uncertainty 0.5}
+                :task-belief {:act-value 0.3}
+                :gamma {"M-z" {:policy-precision 1.0}}
+                :observations {:retrieve-eig 0.1}}
+        horizon-state {:prior-turn {:arm :retrieve}
+                       :plan [:retrieve :act]
+                       :horizon 3}
+        decide-output-keys
+        #{:arm :g-terms :gamma-used :mission :operator-attention-cost :why}
+        dual-output-keys #{:label :operator-attention-cost :decision}
+        plain (zaif/decide inputs)
+        with-horizon (zaif/decide (merge inputs horizon-state))
+        dual-plain (vec (zaif/dual-decide inputs))
+        dual-with-horizon (vec (zaif/dual-decide (merge inputs horizon-state)))]
+    (is (empty? (select-keys inputs (keys horizon-state)))
+        "the declared controller input carries no prior turn, plan, or horizon")
+    (is (= plain with-horizon)
+        "decide ignores planted multi-turn state")
+    (is (= dual-plain dual-with-horizon)
+        "dual-decide ignores planted multi-turn state")
+    (is (= decide-output-keys (set (keys plain)))
+        "a new plan or horizon output must fail the R13 pin")
+    (is (every? #(= dual-output-keys (set (keys %))) dual-plain)
+        "dual-decide's envelope is pinned")
+    (is (every? #(= decide-output-keys
+                    (set (keys (:decision %))))
+                dual-plain)
+        "each paired decision is pinned to the current-turn output")))
+
+(deftest r13-allowlist-agrees-with-live-vocabulary
+  ;; LIVE-PIN (board rule, 2026-09-02): body key set captured verbatim from
+  ;; live record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (zai-3, 2026-08-09,
+  ;; :zaif-arm-choice). Two facts pinned: (1) the R13 allowlist above speaks
+  ;; the vocabulary the live recorder actually persists (every allowlisted
+  ;; key except :mission appears in the recorded body -- the rest of the
+  ;; body's keys are recorder envelope, not decide output); (2) that record
+  ;; carries NO :mission key -- the pre-D10 attribution absence
+  ;; (:u8/decision-mission-attribution-absent), kept here as history even
+  ;; after D10 lands.
+  (let [live-body-keys #{:turn-id :inputs-digest :arm :why :g-terms :constant
+                         :pairing-key :gamma-used :round :event :constant-label
+                         :operator-attention-cost :inputs-snapshot}
+        decide-output-keys
+        #{:arm :g-terms :gamma-used :mission :operator-attention-cost :why}]
+    (is (= (disj decide-output-keys :mission)
+           (clojure.set/intersection decide-output-keys live-body-keys))
+        "the allowlist minus :mission is exactly what the live recorder persisted")
+    (is (not (contains? live-body-keys :mission))
+        "the 2026-08-09 corpus records no mission -- D10's finding, pinned")))
+
+(deftest dual-decide-determinism-check
+  (testing "arms are re-derivable from recorded inputs by calling decide again"
+    ;; This is the acceptance criterion 2 determinism check: the scorer
+    ;; can re-derive the arm from the inputs + constant override.
+    (let [inputs {:mission "M-futon-forward-model"
+                  :c-belief {:operator-c-uncertainty 1.0}
+                  :task-belief {:act-value 0.1}
+                  :gamma {"M-futon-forward-model" {:policy-precision 0.7071067811865476}}
+                  :observations {:posting-stats {:total-docs 10 :dfs [1]}}}
+          results (zaif/dual-decide inputs)]
+      (doseq [{:keys [label operator-attention-cost decision]} results]
+        (let [re-derived (zaif/decide
+                          (assoc inputs :constants-override
+                                 {:operator-attention-cost operator-attention-cost}))]
+          (is (= (:arm decision) (:arm re-derived))
+              (str "arm mismatch for " label ": " (:arm decision) " vs " (:arm re-derived)))
+          (is (= (:g-terms decision) (:g-terms re-derived))
+              (str "g-terms mismatch for " label)))))))
+
+(deftest dual-decide-constants-diverge-on-high-c-uncertainty
+  (testing "at moderate c-uncertainty, shipped picks :act, sweep picks :ask"
+    ;; c-uncertainty 0.5: shipped ask = 0.5-0.65 = -0.15 (below act=0.3);
+    ;; sweep ask = 0.5-0.15 = 0.35 (above act=0.3).
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.3}
+                  :gamma {"M-z" {:policy-precision 1.0}}
+                  :observations {}}
+          results (zaif/dual-decide inputs)
+          by-label (into {} (map (juxt :label :decision) results))]
+      (is (= :act (get-in by-label [:shipped :arm])))
+      (is (= :ask (get-in by-label [:sweep :arm]))))))
+
+(deftest live-shaped-context-leaves-divergent-rounds-reachable
+  (testing "realistic posting-stats cannot let :retrieve swamp both constants"
+    ;; Live task-belief is empty (act = 0) and context text is never blank,
+    ;; so an unnormalized EIG proxy (2.5-4 on any real message) made
+    ;; :retrieve win at BOTH constants — an empty Z3a divergent-round set.
+    ;; With the log(total+1) normalization the sweep's ask arm stays
+    ;; reachable on high-c-uncertainty missions.
+    (let [inputs {:mission "M-live"
+                  :c-belief {:operator-c-uncertainty 1.0}
+                  :task-belief {}
+                  :gamma {"M-live" {:policy-precision 1.0}}
+                  :observations {:posting-stats {:total-docs 48
+                                                 :dfs [1 1 1 1 1 1 1 1 1 1]
+                                                 :estimated-tokens 96}}}
+          results (zaif/dual-decide inputs)
+          by-label (into {} (map (juxt :label :decision) results))]
+      (is (= :retrieve (get-in by-label [:shipped :arm])))
+      (is (= :ask (get-in by-label [:sweep :arm])))
+      (is (< (get-in by-label [:shipped :g-terms :retrieve]) 1.0)))))
+
+(deftest decision-evidence-entry-carries-pairing-and-constant
+  (testing "evidence entry includes :constant, :constant-label, :pairing-key"
+    (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}
+          decision (zaif/decide inputs)
+          entry (zaif/decision-evidence-entry
+                 {:agent-id "zai-test"
+                  :sid "sid-1"
+                  :turn-id "turn-1"
+                  :round 3
+                  :decision decision
+                  :inputs inputs
+                  :constant 0.15
+                  :constant-label :sweep
+                  :pairing-key "turn-1:r3"})]
+      (is (= [:zaif :arm-choice] (:evidence/tags entry)))
+      (is (= 0.15 (get-in entry [:evidence/body :constant])))
+      (is (= :sweep (get-in entry [:evidence/body :constant-label])))
+      (is (= "turn-1:r3" (get-in entry [:evidence/body :pairing-key])))
+      (is (= 3 (get-in entry [:evidence/body :round])))
+      (is (contains? (get-in entry [:evidence/body]) :inputs-snapshot))
+      (is (= "M-z" (get-in entry [:evidence/body :inputs-snapshot :mission]))))))
+
+(deftest decision-evidence-entry-backward-compatible-without-z3a-fields
+  (testing "entry works without constant/pairing fields (backward compat)"
+    (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}
+          decision (zaif/decide inputs)
+          entry (zaif/decision-evidence-entry
+                 {:agent-id "zai-test"
+                  :sid "sid-1"
+                  :decision decision
+                  :inputs inputs})]
+      (is (= [:zaif :arm-choice] (:evidence/tags entry)))
+      (is (nil? (get-in entry [:evidence/body :constant])))
+      (is (nil? (get-in entry [:evidence/body :pairing-key]))))))
+
+(deftest dual-decision-through-stub-evidence-store
+  (testing "both constants' decisions recorded through a stub store, mechanically paired"
+    ;; Acceptance criterion 2: dual-decision test through a stub evidence store.
+    ;; Uses a simple atom as the evidence store (boundary resolves it to AtomBackend).
+    (let [!store (atom [])
+          inputs {:mission "M-futon-forward-model"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.3}
+                  :gamma {"M-futon-forward-model" {:policy-precision 0.7071067811865476}}
+                  :observations {}}
+          pairing-key "test-turn:r1"
+          results (zaif/dual-decide inputs)]
+      ;; Persist both decisions through persist-decision! with the stub
+      ;; We test decision-evidence-entry directly (persist-decision! requires
+      ;; a real boundary store; here we verify the entry shape + pairing).
+      (doseq [{:keys [label operator-attention-cost decision]} results]
+        (let [entry (zaif/decision-evidence-entry
+                     {:agent-id "zai-test"
+                      :sid "sid-stub"
+                      :turn-id "test-turn"
+                      :round 1
+                      :decision decision
+                      :inputs inputs
+                      :constant operator-attention-cost
+                      :constant-label label
+                      :pairing-key pairing-key})]
+          (swap! !store conj entry)))
+      (let [entries @!store]
+        (is (= 2 (count entries)))
+        (is (= #{:shipped :sweep}
+               (set (map #(get-in % [:evidence/body :constant-label]) entries))))
+        ;; Mechanical pairing: both share the same pairing-key
+        (is (= 1 (count (set (map #(get-in % [:evidence/body :pairing-key]) entries)))))
+        ;; Determinism: arms re-derivable from recorded inputs
+        (doseq [entry entries
+                :let [body (:evidence/body entry)
+                      recorded-inputs (:inputs-snapshot body)
+                      constant (:constant body)
+                      re-derived (zaif/decide
+                                  (assoc recorded-inputs :constants-override
+                                         {:operator-attention-cost constant}))]]
+          (is (= (get-in entry [:evidence/body :arm]) (:arm re-derived))
+              "arm must be re-derivable from recorded inputs + constant"))
+        ;; Divergence: the two constants pick different arms on high c-uncertainty
+        (let [arms (set (map #(get-in % [:evidence/body :arm]) entries))]
+          (is (> (count arms) 1)
+              "high-c-uncertainty inputs should produce arm divergence across constants"))))))
+
+(deftest r17-receipt-fed-learning-replays-recorded-input
+  ;; LIVE PIN: input values and shipped decision are read verbatim from tracked
+  ;; D9 record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (56-record live replay).
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        inputs (:inputs pin)
+        pairing-key "e-0f2f9aec-6240-40e9-a25a-e45d9452076f:r1"
+        receipts
+        (mapv (fn [{:keys [label operator-attention-cost decision]}]
+                (zaif/decision-evidence-entry
+                 {:agent-id "zai-3"
+                  :sid "recorded-replay"
+                  :turn-id (:id pin)
+                  :round 1
+                  :decision decision
+                  :inputs inputs
+                  :constant operator-attention-cost
+                  :constant-label label
+                  :pairing-key pairing-key}))
+              (zaif/dual-decide inputs))
+        learning (zaif/receipt-learning-summary receipts)
+        corrupted (assoc-in (first receipts) [:evidence/body :arm] :yield)
+        refused (zaif/receipt-learning-summary
+                 [corrupted (second receipts)])]
+    (is (= "e-0f2f9aec-6240-40e9-a25a-e45d9452076f" (:id pin)))
+    (is (= 56 (get-in report [:live :count])))
+    (is (= (:decision pin)
+           (select-keys (get-in (first receipts) [:evidence/body])
+                        [:arm :g-terms :gamma-used :mission
+                         :operator-attention-cost :why]))
+        "the shipped receipt replays the tracked live decision verbatim")
+    (is (= {:shipped {:retrieve 1} :sweep {:retrieve 1}}
+           (:arm-counts learning)))
+    (is (= 1 (:replayed-pair-count learning)))
+    (is (= 0 (:divergent-pair-count learning)))
+    (is (= :none (:constants-update learning)))
+    (is (= :j-gate-required (:constants-update-reason learning)))
+    (is (= :non-replayable (get-in refused [:pairs 0 :status]))
+        "a receipt whose recorded arm does not replay is excluded")
+    (is (= 0 (:replayed-pair-count refused)))
+    (is (= zaif/constants
+           {:retrieve-eig-scale 1.0
+            :retrieve-token-cost 0.0005
+            :default-retrieve-tokens 800
+            :act-pragmatic-scale 1.0
+            :ask-eig-scale 1.0
+            :operator-attention-cost 0.65
+            :yield-baseline 0.0})
+        "receipt-fed learning reports evidence without silently tuning v0")
+    ;; The A/B half of the report. The D9 pin above chooses :retrieve under
+    ;; both constants, so it cannot exercise divergence or per-label arm
+    ;; attribution; these inputs are the synthetic c-uncertainty 0.5 case
+    ;; already pinned by dual-decide-constants-diverge-on-high-c-uncertainty.
+    (let [ab-inputs {:mission "M-z"
+                     :c-belief {:operator-c-uncertainty 0.5}
+                     :task-belief {:act-value 0.3}
+                     :gamma {"M-z" {:policy-precision 1.0}}
+                     :observations {}}
+          ab-receipts
+          (mapv (fn [{:keys [label operator-attention-cost decision]}]
+                  (zaif/decision-evidence-entry
+                   {:agent-id "zai-3"
+                    :sid "recorded-replay"
+                    :turn-id "ab-divergent"
+                    :round 2
+                    :decision decision
+                    :inputs ab-inputs
+                    :constant operator-attention-cost
+                    :constant-label label
+                    :pairing-key "ab-divergent:r2"}))
+                (zaif/dual-decide ab-inputs))
+          ab (zaif/receipt-learning-summary ab-receipts)
+          half (zaif/receipt-learning-summary [(first ab-receipts)])]
+      (is (= 2 (:receipt-count ab)))
+      (is (= {:shipped {:act 1} :sweep {:ask 1}} (:arm-counts ab))
+          "each label counts the arm its own constant produced")
+      (is (true? (get-in ab [:pairs 0 :divergent?])))
+      (is (= 1 (:divergent-pair-count ab)))
+      (is (= :incomplete (get-in half [:pairs 0 :status]))
+          "a half pair is reported incomplete, never counted as replayed")
+      (is (= 0 (:replayed-pair-count half))))))

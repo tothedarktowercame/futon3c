@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-initialization-collision-queue-20260911-v1"
+ :state-root "/home/joe/run4/initialization-collision-admission/queue"
+ :visibility-file "/home/joe/run4/initialization-collision-admission/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "initialization-collision-historical-admission"
+         :series-id "run4-initialization-collision-admission-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-admission-2026-09-11/series-pin.edn"
+         :manifest-sha256 "7fcdd23315f767e5e33c4b0b6935b30f70321a6566f4feb607624c0972d47a01"
+         :cohort-id :run4-initialization-collision-admission-20260911-v1
+         :cohort-sha256 "6418b1fbd5dadd36a4a3ce4efffb344461a3f25e6d6eeced975fa0c7d0abfeb4"}
+ :activation :not-performed}

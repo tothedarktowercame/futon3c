@@ -1,0 +1,23 @@
+{
+  "id": "napkin",
+  "variables": [
+    {"id": "U1", "kind": "latent-unobserved"},
+    {"id": "U2", "kind": "latent-unobserved"},
+    {"id": "W", "kind": "observed"},
+    {"id": "Z", "kind": "observed"},
+    {"id": "X", "kind": "observed"},
+    {"id": "Y", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "U1", "to": "W"},
+    {"from": "U1", "to": "X"},
+    {"from": "U2", "to": "W"},
+    {"from": "U2", "to": "Y"},
+    {"from": "W", "to": "Z"},
+    {"from": "Z", "to": "X"},
+    {"from": "X", "to": "Y"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-NAPKIN", "question": "Identify P(Y | do(X)) in the napkin graph."}
+  ]
+}

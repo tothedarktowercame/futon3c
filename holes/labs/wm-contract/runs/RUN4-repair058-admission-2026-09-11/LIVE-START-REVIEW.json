@@ -1,0 +1,42 @@
+{
+  "schema": "wm/repair058-live-start-review-v1",
+  "at": "2026-09-11T13:07:06.959986+00:00",
+  "response": {
+    "http-status": 200,
+    "body": {
+      "status": "trial-started",
+      "ordinal": 1,
+      "click-id": "wm-click-53f7d985-489f-48eb-a8fc-607c9cbab779",
+      "run4/series": true
+    }
+  },
+  "prelaunch": {
+    "applicable-repair": "repair-attempt-058-untyped-failure",
+    "remaining": 1,
+    "runner-idle": true,
+    "actors-idle-and-invoke-ready": [
+      "codex-10",
+      "codex-12"
+    ]
+  },
+  "sources": [
+    {
+      "path": "/home/joe/run4/repair058-admission/controller/series.edn",
+      "sha256": "ade381c306f15b7a9fee187eb0e72656618bc64e09b04ef2bea33fa674491567"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/controller/001-started.edn",
+      "sha256": "55f4f5cbef6084d5353468b3fd387937bbf5f2485ef45c479cfd6d688b411b8a"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/controller/repair058-historical-verification-admission-001/reservation.edn",
+      "sha256": "e42b2777d92a3c35290a8555b06bb1a9a49bec3d92978a689d3efd75cc2afdaa"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/controller/repair058-historical-verification-admission-001/click-result.edn",
+      "sha256": "7d71834f59c67d312e21e7a2d7430078361fffc168a3052d5124889dfb41c779"
+    }
+  ],
+  "outcome": "pending",
+  "repair-resolved": false
+}

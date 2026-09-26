@@ -1,0 +1,16 @@
+{:schema :wm/execution-receipts-v1
+ :tree-sha "122b18c92e471c63b7400b2be5ed8d9bad63ea18"
+ :at "2026-09-13T16:33:15Z"
+ :runs
+ [{:gate :http-integration
+   :command "clojure -M:test -n futon3c.transport.invoke-ingress-integration-test"
+   :exit 0 :tests 11 :assertions 72 :stdout "http-test.stdout" :stderr "http-test.stderr"}
+  {:gate :clj-kondo
+   :command "clj-kondo --lint src/futon3c/agency/invoke_ingress_controller.clj src/futon3c/transport/http.clj test/futon3c/agency/invoke_ingress_controller_test.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :errors 0 :warnings 0 :stdout "kondo.stdout" :stderr "kondo.stderr"}
+  {:gate :check-parens
+   :command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/agency/invoke_ingress_controller.clj src/futon3c/transport/http.clj test/futon3c/agency/invoke_ingress_controller_test.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :stdout "parens.stdout" :stderr "parens.stderr"}]
+ :prior-induced-failure
+ {:tree-sha "289bb323c30a4b7a3f842bfa36a7e21aa7f95393"
+  :receipt "../execution-receipts.edn"}}

@@ -1,0 +1,25 @@
+{
+  "arrows" : [ {
+    "from" : "y",
+    "to" : "o"
+  } ],
+  "id" : "monty-hall-fake-a-deal",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "monty-hall-fake-a-deal.json"
+  },
+  "variables" : [ {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Your Door"
+  }, {
+    "id" : "c",
+    "kind" : "observed",
+    "name" : "Location of Car"
+  }, {
+    "id" : "o",
+    "kind" : "observed",
+    "name" : "Door Opened"
+  } ]
+}

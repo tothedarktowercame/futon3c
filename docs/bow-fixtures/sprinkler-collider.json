@@ -1,0 +1,17 @@
+{
+  "id": "sprinkler-collider",
+  "variables": [
+    {"id": "season", "kind": "observed"},
+    {"id": "rain", "kind": "observed"},
+    {"id": "sprinkler", "kind": "observed"},
+    {"id": "wet-grass", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "season", "to": "rain"},
+    {"from": "rain", "to": "wet-grass"},
+    {"from": "sprinkler", "to": "wet-grass"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-SPRINKLER", "question": "Are rain and sprinkler independent before, but dependent after, conditioning on wet grass?"}
+  ]
+}

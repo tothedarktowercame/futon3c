@@ -1,0 +1,180 @@
+[{:name "specialize-fixed-dimensional-jacobian-sard-to-one-dimensional-deriv"
+  :lane :arc-lane
+  :level :api-route
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Show that the image of `{x ∈ Ioo 0 1 | DifferentiableAt ℝ f x ∧ deriv f x = 0}` has zero Lebesgue measure."}
+   :trigger-vocabulary
+   ["Sard" "critical set" "Jacobian" "measure zero" "fderiv" "deriv bridge"]
+   :before
+   "Accept the apparent absence of a theorem named as a one-dimensional Sard result, or begin rebuilding it from a Vitali covering argument."
+   :route
+   ["Search the fixed-dimensional Jacobian API for the generalized critical-image theorem."
+    "Apply `MeasureTheory.addHaar_image_eq_zero_of_det_fderivWithin_eq_zero` with the real volume measure and `f' := fun _ => 0`."
+    "At a point of `criticalSet f`, turn `DifferentiableAt ℝ f x` into `HasDerivAt f (deriv f x) x`, then use `HasDerivAt.hasFDerivAt.hasFDerivWithinAt`."
+    "Simplify with the stored equality `deriv f x = 0`; the determinant-zero side is immediate in dimension one."]
+   :key-api
+   ["MeasureTheory.addHaar_image_eq_zero_of_det_fderivWithin_eq_zero"
+    "HasDerivAt.hasFDerivAt"
+    "HasFDerivAt.hasFDerivWithinAt"]
+   :after
+   "`measure_image_criticalSet_eq_zero` is proved directly from the current generalized theorem without depending on the file's two remaining sorries."
+   :witness
+   {:declaration "measure_image_criticalSet_eq_zero"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a one-dimensional analysis theorem appears absent, search fixed-dimensional/Jacobian formulations and specialize to dimension one before rebuilding the named classical proof."
+   :capture-kind :runner-route-commit-witnessed-and-ground-control-verified}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J07"}
+   #:ref{:type :mathlib-lemma,
+         :id "addHaar_image_eq_zero_of_det_fderivWithin_eq_zero"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t020"]
+   :receipt-ids
+   ["1a77b36d-80e5-4ce9-8d1a-20299d45bd5e"
+    "e-a408dc96-f374-46f5-bf92-cbf1a9dbf252"]
+   :commits ["d224a3d1ef0285238caf63a51cdda777e4d9659c"]
+   :problems ["a95J07-measure-image-criticalSet"]
+   :artifacts
+   ["problems/a95J07/lean/Main.lean:criticalSet"
+    "problems/a95J07/lean/Main.lean:measure_image_criticalSet_eq_zero"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :owner-approved
+           :reviewed-by "claude-9"
+           :checks
+           ["trigger-vocabulary carries all four terms a runner on this row would
+             actually type (Sard, critical set, Jacobian, measure zero) — the
+             specific check this row earned, since its dispatch recall returned
+             surfaced-ids []"
+            "witness axioms match ground control's own re-elaboration from source
+             on a /tmp scratch copy, not the runner's pasted output"
+            "cited turn-round e-codexroll-019f9b12-t020 resolves and is the
+             session's LAST turn (event-seq-range 2794-2876), i.e. this row"
+            "rule generalises from n=1; the :confidence label says so rather than
+             the rule being hedged into uselessness"]}}
+
+ {:name "treat-not-in-mathlib-comments-as-revision-scoped-search-claims"
+  :lane :trajectory-lane
+  :level :qa-discipline
+  :status :draft
+  :body
+  {:headline-observation
+   "The file asserted that the one-dimensional Sard theorem was not in Mathlib, but the current fixed-dimensional Jacobian API contained a theorem that specializes directly to the target."
+   :qa-rule
+   "An in-file `NOT in Mathlib` theory-boundary comment is a revision-scoped claim, not a fact: search the generalized current API before accepting it as a blocker."
+   :observed-case
+   {:stale-claim
+    "`The 1D Sard theorem (image of critical set has measure zero) is NOT in Mathlib.`"
+    :refutation
+    "`MeasureTheory.addHaar_image_eq_zero_of_det_fderivWithin_eq_zero` supplies the result in generalized fixed-dimensional form."
+    :correction
+    "The same commit imports `Mathlib.MeasureTheory.Function.Jacobian` and replaces both stale blocker comments with the precise current API route."
+    :result
+    "The target sorry was discharged axiom-clean; the file count fell from three to two and the corpus count from 345 to 344."}
+   :search-guidance
+   ["Treat classical theorem names as one vocabulary, not the only possible Mathlib naming."
+    "Search structural terms such as dimension, Jacobian, determinant, image measure, and derivative-within."
+    "Correct the stale documentation in the same change so later runners do not inherit the false blocker."]
+   :relation-to-existing-discipline
+   {:classification :inference
+    :note
+    "This is a sibling of refusal and statement-faithfulness QA: all prevent false progress announcements, but this case corrects a stale dependency claim rather than refusing a `sorry` relocation or detecting a vacuous statement."}
+   :capture-kind :source-claim-refuted-by-commit-and-receipt}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J07"}
+   #:ref{:type :process-pattern,
+         :id "revision-scope-not-in-mathlib-claims"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t020"]
+   :receipt-ids
+   ["1a77b36d-80e5-4ce9-8d1a-20299d45bd5e"
+    "e-a408dc96-f374-46f5-bf92-cbf1a9dbf252"]
+   :commits ["d224a3d1ef0285238caf63a51cdda777e4d9659c"]
+   :problems ["a95J07-measure-image-criticalSet"]
+   :artifacts ["problems/a95J07/lean/Main.lean:theory-boundaries"]}
+  :confidence :commit-confirmed
+  :review {:verdict :owner-approved
+           :reviewed-by "claude-9"
+           :amended-by "claude-9"
+           :amendment
+           "Confidence DOWNGRADED from :receipt-confirmed to :commit-confirmed.
+            The outcome receipt 1a77b36d does NOT record the stale-comment
+            refutation — its only mention of comments is the statement-integrity
+            note 'diff touches only doc comments and the proof body'. The claim
+            is real and verified, but its evidence is the commit diff d224a3d
+            (cited under :commits/:artifacts), not the receipt. The gap is
+            ground control's: the refutation was logged to the ⊸ register but
+            omitted from the receipt, and the outcome half is write-once per
+            job-id (dedupe = earliest), so it cannot be amended after the fact.
+            Rule for future rows: anything intended to warrant a QA memory must
+            go into the receipt at write time."}}
+
+ {:name "record-genuine-statement-check-after-two-vacuity-detections"
+  :lane :trajectory-lane
+  :level :qa-negative-result
+  :status :draft
+  :body
+  {:observation-kind :statement-faithfulness-negative
+   :current-row
+   {:problem "a95J07"
+    :definition
+    "`criticalSet f := {x ∈ Ioo 0 1 | DifferentiableAt ℝ f x ∧ deriv f x = 0}`"
+    :conclusion
+    "`volume (f '' criticalSet f) = 0`"
+    :faithfulness-check
+    ["The central object is a genuine predicate-defined set, not a stub."
+     "The conclusion explicitly binds the image of that set."
+     "The proof uses the differentiability and zero-derivative fields stored in membership of the set."]
+    :ledger-action :no-entry}
+   :preceding-streak
+   [{:problem "a95J03"
+     :divergence :stub-definition
+     :receipt-id "6582b2b4-153b-4be2-a2cd-9d3b0b16a324"}
+    {:problem "a95J04"
+     :divergence :under-constrained-statement
+     :receipt-id "61d889c8-523a-46d8-bc0a-0abf3b004d8d"}]
+   :result
+   "This genuine discharge breaks the two-row vacuity streak; the statement-faithfulness ledger correctly gains no third entry."
+   :why-record-negative
+   "Recording a checked non-divergence shows that the announcement gate distinguishes valid statements rather than labeling every short or library-driven proof as vacuous."
+   :inference
+   "The value of retaining negative QA outcomes is an inference from this three-row sequence. The current row's genuine-definition, bound-conclusion, and no-ledger-entry facts are ground-control verified."
+   :capture-kind :cross-row-receipt-and-ledger-observation}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J07"}
+   #:ref{:type :process-pattern,
+         :id "statement-faithfulness-negative-result"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t020"]
+   :receipt-ids
+   ["1a77b36d-80e5-4ce9-8d1a-20299d45bd5e"
+    "e-a408dc96-f374-46f5-bf92-cbf1a9dbf252"]
+   :commits ["d224a3d1ef0285238caf63a51cdda777e4d9659c"]
+   :problems ["a95J07-measure-image-criticalSet"]
+   :cross-row-receipt-ids
+   ["6582b2b4-153b-4be2-a2cd-9d3b0b16a324"
+    "61d889c8-523a-46d8-bc0a-0abf3b004d8d"]
+   :artifacts
+   ["problems/a95J07/lean/Main.lean:criticalSet"
+    "problems/a95J07/lean/Main.lean:measure_image_criticalSet_eq_zero"
+    "holes/labs/M-codex-sorry-loop/faithfulness-ledger.md"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :owner-approved
+           :reviewed-by "claude-9"
+           :checks
+           [":receipt-confirmed HOLDS here (unlike draft 2): outcome receipt
+             1a77b36d states the non-vacuity finding directly — genuine
+             definition, conclusion binds it, streak broken"
+            "both cross-row receipts resolve (6582b2b4 = a95J03 stub-definition,
+             61d889c8 = a95J04 under-constrained)"
+            "the inference — that negative QA outcomes are worth retaining — is
+             explicitly marked :inference and kept separate from the verified
+             facts of the row"]}}]

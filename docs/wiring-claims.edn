@@ -44,6 +44,7 @@
    :verification/required #{:commit :script :test}}
 
   {:claim/id :peripheral/portfolio-inference
+   :claim/status :deprecated ;; 2026-07-04: DEREGISTERED from registry.clj (off next JVM start); superseded by the futon2 War Machine. Reference ns retained on disk. See futon2/holes/aif-wiring-upgrade-note.md.
    :claim/description "Portfolio Inference is registered as a flat tool-dispatch peripheral exposing mission-feature scoring, per-family precision-proxy aggregation, promotion-candidate extraction, and the AIF loop entry points (aif-step / portfolio-step! / portfolio-heartbeat!) for cross-repo strategic visibility."
    :diagram/components [:S-dispatch :S-persist]
    :implementation/files ["src/futon3c/peripheral/portfolio_inference.clj"
@@ -56,6 +57,7 @@
    :verification/notes "VERIFY by running the babashka regression baseline and comparing pi-mission-features / pi-precision-table / pi-promotion-candidates outputs."}
 
   {:claim/id :daemon/portfolio-inference-scheduler
+   :claim/status :deprecated ;; 2026-07-04: scheduler STOPPED (running? false) + peripheral deregistered; no longer a continuously-present substrate — the futon2 War Machine is the live AIF loop. The VERIFY note below (running? true) now inverts: expect running? FALSE. See futon2/holes/aif-wiring-upgrade-note.md.
    :claim/description "A ScheduledExecutorService inside futon3c calls futon3c.portfolio.core/portfolio-step! at a fixed cadence (default 1 h) so the live AIF loop deposits :portfolio/observation, :portfolio/belief, :portfolio/policy, and :portfolio/step evidence on its own. Registered with futon3c.cyder for steppable + inspectable visibility. This makes Portfolio Inference a continuously present substrate (not a callable function) — the AIF-side answer to M-war-machine's continuous-synthesis goal and the slow-timescale-dual claim in M-aif-head."
    :diagram/components [:S-dispatch :S-persist]
    :implementation/files ["src/futon3c/portfolio_inference/scheduler.clj"

@@ -1,0 +1,270 @@
+(ns futon3c.transport.morning-brief-http-test
+  (:require [cheshire.core :as json]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.transport.http :as http]
+            [futon3c.peripheral.live-wm-selection :as live]))
+
+(def ^:private review-uri "/api/alpha/morning-brief/review")
+(def ^:private addendum-uri "/api/alpha/morning-brief/addendum")
+(def ^:private item-uri "/api/alpha/morning-brief/item")
+(def ^:private pending-uri "/api/alpha/morning-brief/pending")
+(def ^:private strategic-selection-uri
+  "/api/alpha/war-machine/strategic-selection")
+
+(defn- response-body [response]
+  (json/parse-string (:body response) true))
+
+(defn- post-review [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri review-uri
+    :body (json/generate-string payload)}))
+
+(defn- post-addendum [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri addendum-uri
+    :body (json/generate-string payload)}))
+
+(defn- post-item [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri item-uri
+    :body (json/generate-string payload)}))
+
+(defn- get-pending []
+  ((http/make-handler {}) {:request-method :get :uri pending-uri}))
+
+(defn- post-strategic-selection [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri strategic-selection-uri
+    :body (json/generate-string payload)}))
+
+(defn- resolver [implementations]
+  (fn [sym] (get implementations sym)))
+
+(deftest selection-failure-item-enters-the-field-desk-ledger
+  (let [seen (atom nil)]
+    (with-redefs
+      [clojure.core/requiring-resolve
+       (resolver
+        {'futon2.aif.morning-brief/queue-item!
+         (fn [item]
+           (reset! seen item)
+           "/tmp/attempt-selection-failure.edn")})]
+      (let [response
+            (post-item
+             {:attempt-id "wm-selection-failure-1"
+              :outcome "incomplete"
+              :failure
+              {:kind "strategic-selection-empty-frontier"
+               :stage "selection"
+               :first-failed-seam "phase5-admissible-projection"}})]
+        (is (= 200 (:status response)))
+        (is (= "wm-selection-failure-1" (:attempt-id @seen)))
+        (is (= "/tmp/attempt-selection-failure.edn"
+               (:item-ref (response-body response))))))))
+
+(deftest strategic-selection-route-invokes-the-cache-gated-selector
+  (let [seen (atom nil)
+        selection {:status :verified-live-selection
+                   :selected-mission-ids
+                   ["M-shared-memory-control-build-test"]}]
+    (with-redefs
+      [live/open-mission? (constantly true)
+       live/current-selection
+       (fn [request] (reset! seen request) selection)]
+      (let [response
+            (post-strategic-selection
+             {:scheduler-habit-ranking
+              ["M-shared-memory-control-build-test"
+               "M-aif-policy-conditioned-eig"]
+              :trace-id "click-selection-1"})]
+        (is (= 200 (:status response)))
+        (is (= {:scheduler-habit-ranking
+                ["M-shared-memory-control-build-test"
+                 "M-aif-policy-conditioned-eig"]
+                :trace-id "click-selection-1"}
+               @seen))
+        (is (= ["M-shared-memory-control-build-test"]
+               (get-in (response-body response)
+                       [:selection :selected-mission-ids]))))))
+  (testing "unbounded or absent candidate input is rejected"
+    (is (= 400
+           (:status
+            (post-strategic-selection
+             {:scheduler-habit-ranking []}))))))
+
+(deftest review-route-resolves-and-invokes-canonical-store-api
+  (let [called (atom nil)
+        review {:morning-brief/review-id "mbqa-1"
+                :attempt-id "attempt-1"
+                :objective :feature-verdict
+                :answer :accept-feature}]
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/review!
+                    (fn [& args] (reset! called args) review)})]
+      (let [response (post-review {:attempt-id "attempt-1"
+                                   :objective "feature-verdict"
+                                   :answer "accept-feature"
+                                   :note "Ready to use"
+                                   :reviewer "joe"})]
+        (is (= 200 (:status response)))
+        (is (= ["attempt-1" :feature-verdict :accept-feature
+                "Ready to use" "joe"]
+               @called))
+        (is (= "mbqa-1" (get-in (response-body response)
+                                 [:review :morning-brief/review-id])))))))
+
+(deftest review-route-maps-validation-and-conflict-errors
+  (testing "invalid request fields are rejected before store invocation"
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver {'futon2.aif.morning-brief/review! (fn [& _])})]
+      (is (= 400 (:status (post-review {:attempt-id "attempt-1"
+                                        :objective "feature-verdict"
+                                        :answer "accept-feature"
+                                        :note " "
+                                        :reviewer "joe"}))))))
+  (testing "store validation errors become 400"
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/review!
+                    (fn [& _] (throw (ex-info "Unknown Morning Brief answer" {})))})]
+      (is (= 400 (:status (post-review {:attempt-id "attempt-1"
+                                        :objective "feature-verdict"
+                                        :answer "bogus"
+                                        :note "No"
+                                        :reviewer "joe"}))))))
+  (testing "the store's per-objective duplicate refusal becomes 409"
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/review!
+                    (fn [& _]
+                      (throw (ex-info "Morning Brief objective was already reviewed"
+                                      {:review-id "mbqa-existing"})))})]
+      (is (= 409 (:status (post-review {:attempt-id "attempt-1"
+                                        :objective "feature-verdict"
+                                        :answer "accept-feature"
+                                        :note "Again"
+                                        :reviewer "joe"})))))))
+
+(deftest addendum-route-resolves-and-validates-the-canonical-store-api
+  (let [called (atom nil)
+        addendum {:morning-brief/addendum-id "mba-1"
+                  :attempt-id "attempt-1"
+                  :kind :repro}]
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/addendum!
+                    (fn [& args] (reset! called args) addendum)})]
+      (let [response (post-addendum {:attempt-id "attempt-1"
+                                     :kind "repro"
+                                     :title "Run it"
+                                     :body "M-x field-desk -> notebook appears"
+                                     :author "joe"})]
+        (is (= 200 (:status response)))
+        (is (= ["attempt-1" :repro "Run it"
+                "M-x field-desk -> notebook appears" "joe"]
+               @called))
+        (is (= "mba-1" (get-in (response-body response)
+                                [:addendum :morning-brief/addendum-id]))))))
+  (testing "request shape and canonical store validation both become 400"
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/addendum!
+                    (fn [& _] (throw (ex-info "Unknown Morning Brief attempt" {})))})]
+      (is (= 400 (:status (post-addendum {:attempt-id "attempt-1"
+                                          :kind "repro"
+                                          :title " "
+                                          :body "Body"
+                                          :author "joe"}))))
+      (is (= 400 (:status (post-addendum {:attempt-id "missing"
+                                          :kind "repro"
+                                          :title "Run it"
+                                          :body "Body"
+                                          :author "joe"})))))))
+
+(deftest pending-route-returns-applicable-and-answered-objectives
+  (with-redefs [clojure.core/requiring-resolve
+                (resolver
+                 {'futon2.aif.morning-brief/items
+                  (fn [] [{:attempt-id "attempt-1" :commit "abc"}
+                          {:attempt-id "attempt-2"}])
+                  'futon2.aif.morning-brief/reviews
+                  (fn [] [{:attempt-id "attempt-1"
+                           :objective :feature-verdict}])
+                  'futon2.aif.morning-brief/addenda
+                  (fn [] [{:morning-brief/addendum-id "mba-later"
+                           :attempt-id "attempt-1" :kind :note
+                           :created-at "2026-07-18T12:00:00Z"}
+                          {:morning-brief/addendum-id "mba-earlier"
+                           :attempt-id "attempt-1" :kind :repro
+                           :created-at "2026-07-18T11:00:00Z"}])
+                  'futon2.aif.morning-brief/item-objectives
+                  (fn [item]
+                    (if (:commit item)
+                      [:feature-verdict :selection-quality]
+                      [:selection-quality]))})]
+    (let [response (get-pending)
+          body (response-body response)]
+      (is (= 200 (:status response)))
+      (is (= 2 (:count body)))
+      (is (= ["feature-verdict" "selection-quality"]
+             (get-in body [:items 0 :applicable-objectives])))
+      (is (= ["feature-verdict"]
+             (get-in body [:items 0 :answered-objectives])))
+      (is (= ["mba-earlier" "mba-later"]
+             (mapv :morning-brief/addendum-id
+                   (get-in body [:items 0 :addenda]))))
+      (is (= [] (get-in body [:items 1 :answered-objectives]))))))
+
+(deftest morning-brief-routes-report-an-unavailable-futon2-api
+  (with-redefs [clojure.core/requiring-resolve (constantly nil)]
+    (doseq [response [(post-review {:attempt-id "attempt-1"
+                                    :objective "feature-verdict"
+                                    :answer "accept-feature"
+                                    :note "Ready"
+                                    :reviewer "joe"})
+                      (post-addendum {:attempt-id "attempt-1"
+                                      :kind "repro"
+                                      :title "Run it"
+                                      :body "Observe it"
+                                      :author "joe"})
+                      (get-pending)]]
+      (is (= 501 (:status response)))
+      (is (= "morning-brief-unavailable" (:err (response-body response)))))))
+
+(deftest strategic-scope-refusal-matches-in-process
+  (with-redefs [live/open-mission? #{"M-outside-old-canary"}
+                live/current-selection (constantly {:status :experiment-only})]
+    (is (= 200 (:status (post-strategic-selection
+                        {:scheduler-habit-ranking ["M-outside-old-canary"]}))))
+    (doseq [target ["M-closed" "M-unknown"]]
+      (let [request {:scheduler-habit-ranking [target]}]
+        (is (= 400 (:status (post-strategic-selection request))))
+        (is (= :invalid-strategic-selection-request
+               (try (live/validated-selection request)
+                    (catch clojure.lang.ExceptionInfo e (:err (ex-data e))))))))))
+
+(deftest ticket-status-is-shared-by-http-and-in-process
+  (with-redefs-fn
+    {(requiring-resolve 'futon2.aif.mission-registry/load-tickets)
+     (constantly {:tickets [{:id "T-live" :status-class :live}
+                           {:id "T-done" :status-class :complete}]})
+     #'live/current-selection (constantly {:status :experiment-only})}
+    (fn []
+      (is (= 200 (:status (post-strategic-selection {:scheduler-habit-ranking ["T-live"]}))))
+      (is (= :experiment-only (:status (live/validated-selection {:scheduler-habit-ranking ["T-live"]}))))
+      (is (= 400 (:status (post-strategic-selection {:scheduler-habit-ranking ["T-done"]}))))
+      (is (= :invalid-strategic-selection-request
+             (try (live/validated-selection {:scheduler-habit-ranking ["T-done"]})
+                  (catch clojure.lang.ExceptionInfo e (:err (ex-data e))))))
+      (is (= {:open? true :open-hole-count 1}
+             ((requiring-resolve 'futon3c.wm.guardrails/default-mission-status) "T-live")))
+      (is (nil? ((requiring-resolve 'futon3c.wm.guardrails/guardrail-rule)
+                 {:type :advance-ticket :target "T-live"} {})))
+      (is (= :open-mission-no-holes
+             ((requiring-resolve 'futon3c.wm.guardrails/guardrail-rule)
+              {:type :advance-ticket :target "T-done"} {}))))))

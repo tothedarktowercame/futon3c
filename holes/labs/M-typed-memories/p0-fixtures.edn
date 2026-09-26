@@ -1,0 +1,247 @@
+;; M-typed-memories P0 fixture suite — 14 hand-written memory_record payloads
+;; Written 2026-07-22 (DERIVE, examples-first discipline: shape must express
+;; these naturally BEFORE any code; invariant I-M5 = first-try acceptance of
+;; all 14). Sources: TN-zai2-session-notes-2026-07-22 Part 2 (M1-M8, math,
+;; from zai-1's a94J06 session zai-b14ff8a657ec476dbe375a0339d5da3a) and
+;; Part 3 (O1-O6, ops, from zai-2's session zai-188835e2ae3d433195f20b3ec9c8d882).
+;;
+;; PAYLOAD CONTRACT (P0, act fixed = :assert; agent sends this, server stamps
+;; :evidence/author :evidence/session-id :evidence/at and auto-links the
+;; current turn-round — see Finding F3):
+;;   :name         kebab slug (identity hint; server may suffix for uniqueness)
+;;   :hook         one line, ≤80 chars — THE projection/index column (Stage 1)
+;;   :kind         :feedback | :reference | :project | :user  (see Finding F2)
+;;   :body         the fact, prose; self-contained
+;;   :why          because-clause (encouraged for :feedback; optional)
+;;   :how-to-apply retrieval predicate / application condition (optional)
+;;   :subjects     REQUIRED, ≥1 ArtifactRef {:ref/type kw :ref/id str};
+;;                 FIRST = primary (entry subject), rest = extra endpoints
+;;                 (see Finding F1; requiredness settled at review 2026-07-22:
+;;                 EvidenceEntry demands a subject, so the schema says so
+;;                 up front rather than erroring after acceptance)
+;;   :distills     optional vector of evidence ids the memory distills;
+;;                 "@current-round" = server resolves to the in-flight
+;;                 turn-round (agents don't know their own evidence ids —
+;;                 Finding F3); placeholders marked for ingest-test resolution
+;;   :facets       vector of facet path strings (P0: stored in props;
+;;                 promoted to facet entities at P3)
+;;   :volatile?    optional; true = valid-until-changed (Finding F4; P2's
+;;                 natural retract candidates)
+;;
+;; ============================================================
+;; MATH (a94J06, Putnam 1994 A6 — zai-1)
+;; ============================================================
+
+[{:name "mul-inv-rev-for-inverse-products"
+  :hook "(a*b)⁻¹ needs mul_inv_rev; mul_comm only reorders separate inverses"
+  :kind :feedback
+  :body "To rewrite (ζ-z)⁻¹ * ζ⁻¹ into (ζ*(ζ-z))⁻¹ use mul_inv_rev. mul_comm merely swaps the factors, giving ζ⁻¹ * (ζ-z)⁻¹, which is not the inverse-of-product shape the goal wants."
+  :why "mul_comm proved the wrong equality — the goal needed the inverse of a product, not a reordered product of inverses; caught as a ✘ self-correction."
+  :how-to-apply "When a Lean goal equates a product of inverses with an inverse of a product, reach for mul_inv_rev (and mul_inv/inv_inv variants) before commutativity lemmas."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}
+             {:ref/type :problem :ref/id "apm/a94J06"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/mathlib-api" "math/complex-analysis"]}
+
+ {:name "no-rw-under-circle-integral-notation"
+  :hook "rw cannot pattern-match inside ∮ notation — convert/simp or restate in ⁻¹ form"
+  :kind :feedback
+  :body "rw with circleIntegral.integral_congr fails to pattern-match integrands inside the circle-integral binder. Working alternatives: simp only [one_div] to normalize first, convert instead of rw, or — the durable fix — state all integrands in ⁻¹ form throughout the development so lemma forms match syntactically."
+  :why "Adopted mid-proof as an architectural convention after repeated rw failures; the 1/x vs x⁻¹ mismatch was the recurring cause."
+  :how-to-apply "When rewriting under ∮/circleIntegral (or any binder-heavy notation), do not rw; normalize the statement's integrand form at declaration time."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}
+             {:ref/type :problem :ref/id "apm/a94J06"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics" "math/complex-analysis/contour-integration"]}
+
+ {:name "integral-congr-needs-everywhere-equality"
+  :hook "integral_congr wants equality at EVERY point — thread the excluding hypothesis"
+  :kind :feedback
+  :body "circleIntegral.integral_congr requires pointwise equality on the whole circle, not a.e. When the integrand identity fails at exactly one point (ζ = z), do not abandon the strategy: carry the hypothesis that keeps the bad point off the circle (‖z‖ ≠ 1) into the helper lemma."
+  :why "The first partial-fractions attempt failed at the single point ζ = z, was abandoned for direct evaluation (which dead-ended), then re-adopted successfully once ‖z‖ ≠ 1 was threaded — the failure was never the algebra. (The A → B → A′ route of a94J06.)"
+  :how-to-apply "Before abandoning an integrand-rewrite strategy over a pointwise failure, check whether an available hypothesis excludes the failing point; thread the hypothesis instead of switching strategies."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}
+             {:ref/type :problem :ref/id "apm/a94J06"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics" "math/complex-analysis/contour-integration" "math/proof-strategy"]}
+
+ {:name "field-simp-can-close-goals-via-sorry"
+  :hook "field_simp may 'close' a goal by inserting sorry — recount after"
+  :kind :feedback
+  :body "field_simp can report a goal closed while having introduced a sorry (observed once in a94J06: goal gone, sorry count up). A tactic 'success' is not proof progress until the sorry count and clean build confirm it."
+  :why "Trust calibration: the tactic's apparent success masked a hole; only the grep -c sorry check exposed it."
+  :how-to-apply "After any field_simp that closes a goal unexpectedly easily, re-run the sorry count and a clean compile before moving on."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}
+             {:ref/type :problem :ref/id "apm/a94J06"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics"]}
+
+ {:name "ring-does-not-handle-inv"
+  :hook "ring fails on goals containing ⁻¹ — clear inverses first or ring_nf"
+  :kind :reference
+  :body "The ring tactic does not know inv: goals containing ⁻¹ fail. Clear inverses first (field_simp with the needed ≠ 0 hypotheses) or use ring_nf."
+  :how-to-apply "Seeing ring fail on a field identity: check for ⁻¹ in the goal before doubting the identity."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics"]}
+
+ {:name "zpow-form-not-defeq-product-form"
+  :hook "ζ^(-2) ≠defeq (ζ*ζ)⁻¹ — rfl fails across zpow/product forms; ring_nf"
+  :kind :reference
+  :body "ζ^(-2) is not definitionally equal to (ζ*(ζ-0))⁻¹ even after sub_zero: zpow unfolds to (ζ^2)⁻¹ and ζ^2 is not syntactically ζ*ζ. rfl fails; ring_nf normalizes both sides."
+  :how-to-apply "When rfl fails between algebraically-equal zpow and product-of-inverses forms, use ring_nf before hunting for a bridging lemma."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics" "math/lean/defeq"]}
+
+ {:name "rw-direction-for-equality-hypotheses"
+  :hook "h : a = b — rw [h] sends a→b; rw [← h] sends b→a; check goal side first"
+  :kind :reference
+  :body "With h : a = b, rw [h] rewrites occurrences of a into b; rw [← h] rewrites b into a. Before writing the rw, identify which side actually occurs in the goal."
+  :why "This confusion recurred three times in one session (a94J06) — a first-occurrence memory would have paid for itself twice before the proof closed."
+  :how-to-apply "Any rw with an equality hypothesis: name the side present in the goal, then choose the arrow."
+  :subjects [{:ref/type :library :ref/id "Lean4"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/tactics"]}
+
+ {:name "negate-le-with-not-le-of-gt"
+  :hook "contradicting ≤ (closedBall gives ≤) needs not_le_of_gt, not not_lt_of_gt"
+  :kind :reference
+  :body "mem_closedBall_zero_iff yields ‖w‖ ≤ 1. To contradict it with 1 < ‖w‖ use not_le_of_gt; not_lt_of_gt negates a strict <, which is not what closedBall membership gives."
+  :how-to-apply "Match the negation lemma to the relation in the hypothesis being contradicted: ≤ pairs with not_le_of_gt, < with not_lt_of_gt (ball strict, closedBall non-strict)."
+  :subjects [{:ref/type :library :ref/id "Mathlib"}]
+  :distills ["@current-round"]
+  :facets ["math/lean/mathlib-api"]}
+
+;; ============================================================
+;; OPS (futon ecosystem — zai-2)
+;; ============================================================
+
+ {:name "clj-file-underscore-ns-hyphen"
+  :hook "file zai_api.clj ↔ ns zai-api — reflect takes ns form, file tools take path form"
+  :kind :reference
+  :body "Clojure munging: namespace futon3c.agents.zai-api lives in file agents/zai_api.clj. reflect_ns and friends take the namespace spelling (hyphens); read_file/search take the path spelling (underscores). 'Namespace not found: futon3c.agents.zai_api' means a filename-shaped string was passed as a namespace."
+  :how-to-apply "Translate _ ↔ - at the tool boundary: hyphens for reflection tools, underscores for file tools."
+  :subjects [{:ref/type :language :ref/id "clojure"}
+             {:ref/type :tool :ref/id "reflect_ns"}]
+  :distills ["@current-round"]
+  :facets ["ops/clojure" "ops/zai-tools"]}
+
+ {:name "search-tool-is-java-regex-escape-braces"
+  :hook "search compiles Java regex — literal { } must be escaped or 'Illegal repetition'"
+  :kind :reference
+  :body "The zai search tool compiles its pattern as a Java regex. Literal braces — e.g. searching Clojure/EDN source for {:name — parse as repetition quantifiers and fail with 'Illegal repetition'. Escape them (\\{) or drop them from the pattern."
+  :how-to-apply "Searching for EDN/Clojure map literals: escape { } (and other regex metacharacters) in the search pattern."
+  :subjects [{:ref/type :tool :ref/id "search"}]
+  :distills ["@current-round"]
+  :facets ["ops/zai-tools"]}
+
+ {:name "run-readonly-heuristic-false-positives"
+  :hook "run_readonly rejects innocuous compound commands — fall back to run_shell"
+  :kind :feedback
+  :body "run_readonly's destructive-command heuristic rejects some genuinely read-only compound commands (redirects/heredocs pattern-match as destructive). The fallback is run_shell. Hit zai-1 and zai-2 independently on the same day (2026-07-22)."
+  :why "First concrete cross-agent case in the corpus: an environment memory either agent could have contributed and both would consume."
+  :how-to-apply "For read-only compound shell with redirection, go straight to run_shell; keep run_readonly for simple single-purpose reads."
+  :subjects [{:ref/type :tool :ref/id "run_readonly"}]
+  :distills ["@current-round"]
+  :facets ["ops/zai-tools"]}
+
+ {:name "futon1b-http-on-7073-not-7074"
+  :hook "futon1b store HTTP = 127.0.0.1:7073; :7074 (backend default) not listening"
+  :kind :reference
+  :volatile? true
+  :body "The futon1b store JVM serves HTTP/EDN on 127.0.0.1:7073. Port 7074 — the default-url in futon3c's futon1b_backend.clj — is not listening. An evidence query against the wrong port returns empty/unreachable while the data exists (zai-2: 0 entries via :7074, 100 via the in-process store). Empty result ≠ no data; check the path first."
+  :why "Diagnosed retrospectively in-session: 'the earlier query failed because I was querying via the wrong path.'"
+  :how-to-apply "Before concluding 'no evidence', verify the topology (ss -tlnp | grep 707, or query in-process via drawbridge)."
+  :subjects [{:ref/type :service :ref/id "futon1b"}]
+  :distills ["@current-round"]
+  :facets ["ops/futon1b/topology"]}
+
+ {:name "zai-quota-two-token-windows"
+  :hook "z.ai quota: two TOKENS_LIMIT windows; unit-6 binds the 50% cron gate"
+  :kind :reference
+  :volatile? true
+  :body "The z.ai quota API reports two TOKENS_LIMIT windows. The unit-6/number-1 window is the one apm_formal_zai_cron's MIN_AVAILABLE_PERCENT=50 gate binds on; the unit-3/number-5 window can show 95% available while dispatch is still gated."
+  :how-to-apply "Reading the quota for dispatch decisions: check the unit-6 window, not the healthiest-looking one."
+  :subjects [{:ref/type :service :ref/id "z.ai-quota"}
+             {:ref/type :script :ref/id "futon3c/scripts/apm_formal_zai_cron.py"}]
+  :distills ["@current-round"]
+  :facets ["ops/zai-quota"]}
+
+ {:name "restored-agents-not-invoke-ready"
+  :hook "Agency :restored ≠ dispatchable — flip to :idle via drawbridge before belling"
+  :kind :feedback
+  :body "Agents in :restored status on the Agency roster are not selectable for dispatch (not :idle, no invoke-ready). Flip the registry entry to :idle via drawbridge eval so invoke-ready? true / invoke-route local holds, then bell."
+  :why "The a94J06 dispatch stalled on this until zai-1 was flipped; the failure mode is silent (bell accepted, nothing runs)."
+  :how-to-apply "Pre-dispatch checklist: roster status must be :idle (invoke-ready), not :restored; check GET /api/alpha/agents before any bell to an agent you have not belled recently."
+  :subjects [{:ref/type :service :ref/id "futon3c-agency"}]
+  :distills ["@current-round"]
+  :facets ["ops/agency"]}]
+
+;; ============================================================
+;; STORE-SIDE EXPANSION (shown once, for fixture 1) — what the server
+;; writes; NOT part of the agent payload:
+;;
+;; evidence entry:
+;;   {:evidence/id "e-<minted>"
+;;    :evidence/type :memory
+;;    :evidence/claim-type :assert            ; the IATC act
+;;    :evidence/subject {:ref/type :library :ref/id "Mathlib"}  ; PRIMARY subject
+;;    :evidence/author "zai-1"                ; server-stamped
+;;    :evidence/session-id "zai-b14ff..."     ; server-stamped
+;;    :evidence/at "2026-07-22T..."           ; server-stamped
+;;    :evidence/body {:name "mul-inv-rev-for-inverse-products"
+;;                    :hook "..." :kind :feedback
+;;                    :body "..." :why "..." :how-to-apply "..."}
+;;    :evidence/tags [:memory :memory/assert]}
+;;
+;; hyperedge:
+;;   {:hx/id "hx-mem-<minted>"
+;;    :hx/type :memory/assert
+;;    :hx/endpoints ["e-<entry>" "Mathlib" "apm/a94J06"
+;;                   "e-<turn-round resolved from @current-round>"
+;;                   "zai-b14ff..." "<mission-id if clocked>"]
+;;    :hx/props {:roles {:entry "e-<entry>"
+;;                       :subjects ["Mathlib" "apm/a94J06"]
+;;                       :distills ["e-<turn-round>"]
+;;                       :session "zai-b14ff..."
+;;                       :mission "<mission-id>"}
+;;               :kind :feedback
+;;               :name "mul-inv-rev-for-inverse-products"
+;;               :hook "..."
+;;               :volatile? false}}
+;;
+;; ============================================================
+;; SHAPE FINDINGS forced by writing these 14 (DERIVE q4 output):
+;;
+;; F1 SUBJECT MULTIPLICITY. EvidenceEntry has ONE :evidence/subject; half
+;;    the fixtures naturally want two (library + problem, tool + language).
+;;    Resolution: payload :subjects is a vector; first = primary (entry
+;;    subject), all become hyperedge endpoints. No schema change needed —
+;;    multiplicity lives where it belongs (the edge).
+;;
+;; F2 KIND BOUNDARY RULE. feedback-vs-reference was fuzzy for tactic facts
+;;    until this rule settled every case: derived-from-a-failure-with-a-why
+;;    → :feedback; documented contract/scope fact → :reference. The rule
+;;    belongs in the tool description. (M4/M5 are the boundary pair: same
+;;    domain, different kinds, both natural under the rule.)
+;;
+;; F3 AGENTS CANNOT KNOW EVIDENCE IDS. :distills wants the turn-round id,
+;;    but the agent never sees its own persist-round! ids — demanding them
+;;    would recreate the psr/pur "Invalid evidence shape" failure class.
+;;    Resolution: "@current-round" sentinel resolved server-side; explicit
+;;    ids allowed when the agent has them (from memory_search results).
+;;
+;; F4 VALIDITY HORIZON WANTS A HINT. Both volatile fixtures (O4, O5) begged
+;;    for a marker distinguishing valid-until-changed from ~timeless.
+;;    :volatile? true is the minimal P0 hint; P2 turns it into real
+;;    valid-time handling (volatile memories are the natural first retract
+;;    candidates — O4 will be superseded by the very hardening/wiring work
+;;    in flight).
+;;
+;; F5 (negative finding) NOTHING NEEDED :act IN THE PAYLOAD. All 14 are
+;;    natural asserts; P0's act-fixed design is confirmed. The A→B→A′
+;;    story fit inside M3's :why without needing retract edges — the
+;;    retract belongs to P2, when the *next* session contradicts a memory,
+;;    not to the initial recording.
+;; ============================================================

@@ -1,0 +1,19 @@
+{:schema :wm/run4-live-install-receipt-v1
+ :installed-at "2026-09-11T11:22Z"
+ :operator-authority "Joe direct live-loading and successor trial authorization"
+ :template-sha256 "212177ef460c6012c17e7a19e8ea7f3bc4b24f6a15ac149c03cb747277b0bd50"
+ :series-ref "holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/series-pin.edn"
+ :series-sha256 "21eff0bb7db8e6d1db04af61bfef827a3d6228c529710a076d3e4d22acb73254"
+ :casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-12"}
+ :execution-cohort {:cohort-id :run4-u88-production-successor-20260911-v2
+                    :preregistration-sha256 "0fd6cea04489a3974a69605895871fd1b7f14536bd5b75141b1ae95a927cae83"
+                    :activation-sha256 "1ef64a71db32d316818e9bd6a73aaa5b3727ac867608d35340c08d657d256e47"
+                    :target 1 :remaining-at-install 1}
+ :historical-authority {:repair-id "repair-attempt-057-untyped-failure"
+                        :verification-id "repair-057-revalidation-20260911-v1"
+                        :raw-attempt "attempt-001"
+                        :qualified-attempt "run4-repair057-admission-20260911-v1--attempt-001"
+                        :bundle-schema :wm/run4-historical-admission-bundle-v1}
+ :effective-flags true
+ :handler {:status :handler-reconfigured :run4-configured? true}
+ :series-step {:submitted? false}}

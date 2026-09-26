@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "u",
+    "to" : "x"
+  }, {
+    "from" : "u",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "john-snow-instrumental-variable",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "john-snow-instrumental-variable.json"
+  },
+  "variables" : [ {
+    "id" : "u",
+    "kind" : "latent-unobserved",
+    "name" : "Miasma, Poverty, etc."
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Water Company"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Water Purity"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Cholera"
+  } ]
+}

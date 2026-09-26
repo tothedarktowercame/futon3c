@@ -1,0 +1,51 @@
+{:paper/id "1005.2653"
+ :passage/id "1005.2653:fourier-basic-properties:90-100"
+ :source {:lines [90 100] :kind :expository-proof}
+ :nodes
+ [{:id :khat
+   :kind :object
+   :text "the prospective Fourier transformation functor K-hat on [H,Vect_k]"
+   :source {:lines [90 92]}}
+  {:id :khat-formula
+   :kind :definition
+   :text "K-hat(f)(a,b) is the coend over (x,y) in H of f(x,y) tensor A(tau(y,x,a),b)"
+   :source {:lines [90 92]}}
+  {:id :adjunction
+   :kind :claim
+   :text "K-hat is left adjoint to K-check"
+   :source {:lines [94 98]}}
+  {:id :multiplicative
+   :kind :claim
+   :text "the cocontinuous functor K-hat is multiplicative"
+   :source {:lines [99 99]}}
+  {:id :induced-duality
+   :kind :definition
+   :text "the induced duality is f^*(x,y)=f(y,x)^*"
+   :source {:lines [99 99]}}
+  {:id :preserves-duality
+   :kind :claim
+   :text "K-hat preserves the induced duality on [H,Vect_f]"
+   :source {:lines [99 99]}}
+  {:id :conservative
+   :kind :claim
+   :text "K-hat is conservative"
+   :source {:lines [100 100]}}
+  {:id :required-in-2
+   :kind :meta
+   :text "conservativity is required in [2]"
+   :source {:lines [100 100]}}]
+ :edges
+ [{:id :e-basic-properties
+   :kind :infer
+   :relation :given-by
+   :given [:khat-formula :adjunction]
+   :premise :khat
+   :warrant {:kind :missing-warrant
+             :text "the coend definition and adjunction supply the stated functorial properties"}
+   :conclusion [:multiplicative :preserves-duality :conservative]
+   :meta [:required-in-2]
+   :source {:lines [90 100]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-basic-properties
+   :wanted :verification-of-multiplicativity-duality-preservation-and-conservativity}]}

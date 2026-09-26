@@ -1,0 +1,1 @@
+{:at "2026-07-28", :mode :commit, :patterns {}, :results [{:name "derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus", :status :skipped-existing} {:name "audit-the-hidden-typeclass-preconditions-of-the-proof-engine", :status :skipped-existing}]}

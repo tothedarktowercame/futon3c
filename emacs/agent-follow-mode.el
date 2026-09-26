@@ -1,0 +1,567 @@
+;;; agent-follow-mode.el --- Follow Agency invoke jobs in agent REPL buffers -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;; A buffer-local minor mode for agent-chat REPL buffers (zai-repl,
+;; codex-repl, claude-repl instances) that replays turns the agent performs
+;; OUTSIDE this REPL — inter-agent bells, direct HTTP invokes — into the
+;; REPL buffer, by polling the Agency invoke-jobs ledger
+;; (GET /api/alpha/invoke/jobs).
+;;
+;; Motivation (M-custom-harness, 2026-07-04): a bell-seeded zai turn ran
+;; entirely server-side; the operator watching *zai-repl:zai-7* saw nothing.
+;; The server side records text/tool_use events into the job ledger (see
+;; record-job-stream-event! in transport/http.clj); this mode is the Emacs
+;; half that renders them.  While a followed job is running, the REPL's
+;; progress line shows who is invoking and the last tool used.
+;;
+;; Usage: M-x agent-follow-mode in a *zai-repl:...* buffer.  Turns seeded
+;; by the local user are skipped by default (the REPL already streams
+;; those live); set `agent-follow-include-own' to follow everything.
+
+;;; Code:
+
+(require 'json)
+(require 'subr-x)
+
+(defgroup agent-follow nil
+  "Replay Agency invoke-job events into agent REPL buffers."
+  :group 'tools)
+
+(defface agent-follow-marker-face
+  '((t :inherit shadow))
+  "Face for agent-follow job marker lines (⟲ …)."
+  :group 'agent-follow)
+
+(defcustom agent-follow-poll-interval 10
+  "Seconds between FALLBACK polls of the Agency invoke-jobs ledger.
+With the WS doorbell connected (`futon-agency-ws'), pushes trigger an
+immediate poll, so this only paces gap-repair; 10s is plenty. Without
+the doorbell it is the render latency — lower it if you disable WS."
+  :type 'integer
+  :group 'agent-follow)
+
+(defcustom agent-follow-min-poll-gap 2.0
+  "Hard floor (seconds) between polls of one buffer, doorbell included.
+The doorbell must never convert event RATE into poll rate: 726 stacked
+curls (2026-07-05) taught that lesson. Frames arriving inside the gap
+coalesce into ONE trailing poll at the gap boundary."
+  :type 'number
+  :group 'agent-follow)
+
+(defvar-local agent-follow--last-poll-at 0.0
+  "float-time of the most recent poll spawn for this buffer.")
+
+(defvar-local agent-follow--doorbell-pending nil
+  "Non-nil while a trailing doorbell poll is already scheduled.")
+
+(defun agent-follow--doorbell-poll (buffer)
+  "Trailing-edge doorbell poll: runs at the gap boundary."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq agent-follow--doorbell-pending nil))
+    (condition-case nil
+        (agent-follow--poll buffer)
+      (error nil))))
+
+(defun agent-follow--doorbell (frame)
+  "WS push handler: an invoke event landed for some agent.
+If it is ours, poll — but never more often than
+`agent-follow-min-poll-gap' per buffer; bursts coalesce into one
+trailing poll. Filter by this buffer's agent id."
+  (let ((aid (alist-get 'agent-id frame)))
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (when (and (bound-and-true-p agent-follow-mode)
+                   agent-follow--agent-id
+                   (equal aid agent-follow--agent-id)
+                   (not agent-follow--doorbell-pending))
+          (let* ((buffer (current-buffer))
+                 (since (- (float-time) agent-follow--last-poll-at))
+                 (delay (max 0.2 (- agent-follow-min-poll-gap since))))
+            (setq agent-follow--doorbell-pending t)
+            (run-at-time delay nil #'agent-follow--doorbell-poll buffer)))))))
+
+(defun agent-follow--doorbell-ensure ()
+  "Connect the shared Agency WS and subscribe the doorbell, if available.
+Safe no-op when `futon-agency-ws' or websocket.el is missing — the
+fallback poll carries the mode alone, just slower."
+  (when (require 'futon-agency-ws nil t)
+    (condition-case nil
+        (progn
+          (futon-agency-ws-subscribe "invoke_event" #'agent-follow--doorbell)
+          (unless (and futon-agency-ws--ws (websocket-openp futon-agency-ws--ws))
+            (futon-agency-ws-connect)))
+      (error nil))))
+
+(defcustom agent-follow-jobs-limit 10
+  "How many recent jobs to fetch per poll (filtered client-side by agent).
+Lowered 30→10 (2026-07-05): job records now carry full events + result
+texts; 30 made each poll heavy enough to convoy the endpoint."
+  :type 'integer
+  :group 'agent-follow)
+
+(defcustom agent-follow-include-own nil
+  "When non-nil, also replay jobs whose caller is the local user.
+By default those are skipped: the REPL already streams its own turns."
+  :type 'boolean
+  :group 'agent-follow)
+
+(defcustom agent-follow-overrun-grace 900
+  "Seconds a non-done job may stay quiet before follow-mode stops pinning it.
+The Agency's job cap marks long jobs \"failed\" while the lane keeps
+executing (capped-but-alive, observed 2026-07-19); such jobs are followed —
+pinned and fetched individually when they fall out of the windowed poll —
+until they reach \"done\" or go quiet for this long."
+  :type 'integer
+  :group 'agent-follow)
+
+(defvar-local agent-follow--live-jobs nil
+  "Hash of job-id → wallclock time of the last NEW event we rendered.
+Jobs land here while streaming (any state but \"done\"); they are dropped
+on \"done\" or after `agent-follow-overrun-grace' seconds of silence.
+Used to fetch capped-but-alive jobs individually when job traffic pushes
+them out of the windowed poll response.")
+
+(declare-function futon-agency-ws-subscribe "futon-agency-ws" (type handler))
+(declare-function futon-agency-ws-connect "futon-agency-ws" ())
+(declare-function websocket-openp "websocket" (websocket))
+(defvar futon-agency-ws--ws)
+
+(defvar-local agent-follow--agent-id nil
+  "Agent id this buffer follows.")
+
+(defvar-local agent-follow--timer nil
+  "Repeating poll timer for this buffer.")
+
+(defvar-local agent-follow--seen nil
+  "Hash table: job-id -> highest event seq already rendered.")
+
+(defvar-local agent-follow--progress-jobs nil
+  "Job-ids currently running that drive the progress line.")
+
+(defun agent-follow--agency-url ()
+  "Base URL of the Agency server."
+  (string-remove-suffix
+   "/"
+   (or (and (boundp 'zai-repl-agency-url) zai-repl-agency-url)
+       (and (boundp 'agent-chat-agency-base-url) agent-chat-agency-base-url)
+       "http://localhost:7070")))
+
+(defun agent-follow--detect-agent-id ()
+  "Agent id for the current buffer: the repl's buffer-local id, else
+parse a *foo-repl:AGENT* style buffer name."
+  (or (and (boundp 'zai-repl-agent-id)
+           (local-variable-p 'zai-repl-agent-id)
+           zai-repl-agent-id)
+      (and (string-match ":\\([^:*]+\\)\\*\\'" (buffer-name))
+           (match-string 1 (buffer-name)))))
+
+(defun agent-follow--event-lines (event)
+  "Render one ledger EVENT alist as a list of display lines (maybe empty)."
+  (let ((type (alist-get 'type event)))
+    (cond
+     ((equal type "text")
+      (let ((txt (string-trim (or (alist-get 'text event) ""))))
+        (unless (string-empty-p txt) (list txt))))
+     ((equal type "tool_use")
+      (let ((previews (alist-get 'previews event))
+            (tools (alist-get 'tools event)))
+        (cond
+         ;; Collapse embedded newlines: previews must stay single display
+         ;; lines or line-based fontification breaks on the tail.
+         (previews (mapcar (lambda (p)
+                             (format "[%s]"
+                                     (replace-regexp-in-string "[\n\r]+" " ⏎ " p)))
+                           (append previews nil)))
+         (tools (list (format "[%s]" (mapconcat (lambda (x) (format "%s" x))
+                                                (append tools nil) ", ")))))))
+     ((member type '("done" "failed"))
+      (list (format "⟲ %s%s" type
+                    (let ((msg (alist-get 'message event)))
+                      (if (and msg (not (string-empty-p (format "%s" msg))))
+                          (format " (%s)" msg)
+                        "")))))
+     ((equal type "running")
+      (list "⟲ turn started"))
+     (t nil))))
+
+(defun agent-follow--insert-message (name lines)
+  "Insert LINES above the prompt as a message from NAME.
+Like `agent-chat-insert-message', but tool-preview lines ([tool …]) get
+`agent-chat-tool-line-face' and ⟲ marker lines get
+`agent-follow-marker-face'."
+  (let ((inhibit-read-only t)
+        (at-end (>= (point) (marker-position agent-chat--input-start))))
+    (save-excursion
+      (goto-char (marker-position agent-chat--prompt-marker))
+      (let ((name-start (point)))
+        (insert (format "%s: " name))
+        (put-text-property name-start (point) 'face 'agent-chat-prompt-face))
+      (dolist (line lines)
+        (let ((start (point)))
+          (insert line "\n")
+          (put-text-property
+           start (point) 'face
+           (cond ((string-prefix-p "[" line) 'agent-chat-tool-line-face)
+                 ((string-prefix-p "⟲" line) 'agent-follow-marker-face)
+                 (t 'agent-chat-text-face)))))
+      (insert "\n"))
+    (when at-end (agent-chat-scroll-to-bottom))))
+
+(defun agent-follow--last-tool-preview (events)
+  "Return the last tool preview string in EVENTS, or nil."
+  (let (result)
+    (dolist (e events result)
+      (when (equal (alist-get 'type e) "tool_use")
+        (let ((previews (append (alist-get 'previews e) nil)))
+          (when previews
+            (setq result (car (reverse previews)))))))))
+
+(defun agent-follow--update-progress (job-id caller running? last-tool)
+  "Show/clear the REPL progress line for a followed JOB-ID.
+Never touches the progress line while the REPL streams its own turn."
+  (unless (and (boundp 'agent-chat--streaming-started)
+               agent-chat--streaming-started)
+    (if running?
+        (progn
+          (unless (member job-id agent-follow--progress-jobs)
+            (push job-id agent-follow--progress-jobs))
+          (agent-chat-update-progress
+           (format "⟲ %s invoking (bell from %s)%s"
+                   agent-follow--agent-id caller
+                   (if last-tool (format ": [%s]" last-tool) " …"))
+           'agent-chat-prompt-face))
+      (when (member job-id agent-follow--progress-jobs)
+        (setq agent-follow--progress-jobs
+              (delete job-id agent-follow--progress-jobs))
+        (unless agent-follow--progress-jobs
+          (agent-chat-remove-thinking))))))
+
+(defun agent-follow--render-jobs (jobs)
+  "Render new events from JOBS (a list of job alists) into this buffer."
+  (dolist (job (reverse jobs)) ; oldest first
+    (let* ((job-id (alist-get 'job-id job))
+           (agent (alist-get 'agent-id job))
+           (caller (or (alist-get 'caller job) "?"))
+           (own (equal caller (user-login-name)))
+           (state (alist-get 'state job))
+           (events (append (alist-get 'events job) nil)))
+      (when (and job-id
+                 (equal agent agent-follow--agent-id)
+                 (or agent-follow-include-own (not own)))
+        (let* ((last-seen (gethash job-id agent-follow--seen 0))
+               (new-events (seq-filter
+                            (lambda (e) (> (or (alist-get 'seq e) 0) last-seen))
+                            events))
+               (lines (apply #'append
+                             (mapcar #'agent-follow--event-lines new-events)))
+               (max-seq (apply #'max last-seen
+                               (mapcar (lambda (e) (or (alist-get 'seq e) 0))
+                                       events))))
+          (when (and lines (zerop last-seen))
+            (push (format "⟲ following job %s (from %s)" job-id caller) lines))
+          (when lines
+            (agent-follow--insert-message
+             (format "%s⇐%s" agent-follow--agent-id caller)
+             lines))
+          (puthash job-id max-seq agent-follow--seen)
+          ;; Pin any job still emitting events, whatever its state — the cap
+          ;; marks jobs "failed" while the lane keeps working. Unpin on done.
+          (when agent-follow--live-jobs
+            (cond
+             ((equal state "done")
+              (remhash job-id agent-follow--live-jobs))
+             (new-events
+              (puthash job-id (float-time) agent-follow--live-jobs))))
+          (agent-follow--update-progress
+           job-id caller (equal state "running")
+           (agent-follow--last-tool-preview events)))))))
+
+(defun agent-follow--fetch-pinned-job (buffer job-id)
+  "Fetch pinned JOB-ID and render its current state into BUFFER."
+  (let ((url (format "%s/api/alpha/invoke/jobs/%s"
+                     (agent-follow--agency-url) job-id))
+        (outbuf (generate-new-buffer " *agent-follow-pin*")))
+    (make-process
+     :name "agent-follow-pin"
+     :buffer outbuf
+     :command (list "curl" "-sS" "--max-time" "10" url)
+     :noquery t
+     :sentinel
+     (lambda (process _event)
+       (unless (process-live-p process)
+         (let* ((process-buffer (process-buffer process))
+                (out (when (buffer-live-p process-buffer)
+                       (with-current-buffer process-buffer (buffer-string)))))
+           (when (buffer-live-p process-buffer)
+             (kill-buffer process-buffer))
+           (when (and out (buffer-live-p buffer))
+             (with-current-buffer buffer
+               (condition-case nil
+                   (let* ((data (json-parse-string
+                                 out :object-type 'alist
+                                 :array-type 'list
+                                 :null-object nil
+                                 :false-object nil))
+                          (job (alist-get 'job data)))
+                     (when job
+                       (agent-follow--render-jobs (list job))))
+                 (error nil))))))))))
+
+(defun agent-follow--fetch-pinned-missing (buffer present-ids)
+  "Individually fetch pinned live jobs absent from PRESENT-IDS.
+Capped-but-alive jobs drop out of the windowed poll as newer jobs arrive;
+this keeps them streaming. Expired pins (quiet longer than
+`agent-follow-overrun-grace') are dropped instead of fetched. At most
+three fetches per poll."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when agent-follow--live-jobs
+        (let ((now (float-time))
+              (fetched 0))
+          (maphash
+           (lambda (job-id last-event-at)
+             (cond
+              ((member job-id present-ids) nil)
+              ((> (- now last-event-at) agent-follow-overrun-grace)
+               (remhash job-id agent-follow--live-jobs))
+              ((>= fetched 3) nil)
+              (t
+               (setq fetched (1+ fetched))
+               (agent-follow--fetch-pinned-job buffer job-id))))
+           agent-follow--live-jobs))))))
+
+(defun agent-follow--handle-response (buffer json-string)
+  "Parse JSON-STRING and render into BUFFER."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (condition-case nil
+          (let* ((data (json-parse-string json-string
+                                          :object-type 'alist
+                                          :array-type 'list
+                                          :null-object nil
+                                          :false-object nil))
+                 (jobs (alist-get 'jobs data)))
+            (when jobs (agent-follow--render-jobs jobs))
+            (agent-follow--fetch-pinned-missing
+             buffer (mapcar (lambda (j) (alist-get 'job-id j)) jobs)))
+        (error nil)))))
+
+(defvar-local agent-follow--inflight nil
+  "The live curl process for this buffer's current poll, or nil.
+SINGLE-FLIGHT: polls are skipped while this process is live (found live
+2026-07-05: doorbell bursts stacked 726 concurrent curls — `too many open
+files'.  Storing the process, rather than a Boolean latch, lets later polls
+recover when process creation or sentinel delivery is lost.")
+
+(defvar-local agent-follow--queued nil
+  "Non-nil when a poll was requested while one was in flight;
+exactly one follow-up poll runs on completion so no events are missed.")
+
+(defun agent-follow--finish-poll (buffer process)
+  "Render and release PROCESS's completed poll for BUFFER.
+Only PROCESS may release its single-flight slot; a late completion from an
+orphaned process must not disturb a replacement poll."
+  (let* ((process-buffer (process-buffer process))
+         (out (when (buffer-live-p process-buffer)
+                (with-current-buffer process-buffer (buffer-string)))))
+    (when (buffer-live-p process-buffer)
+      (kill-buffer process-buffer))
+    ;; Release the slot and run a queued follow-up regardless of render errors.
+    (unwind-protect
+        (when out
+          (condition-case nil
+              (agent-follow--handle-response buffer out)
+            (error nil)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (when (or (eq agent-follow--inflight process)
+                    (eq agent-follow--inflight 'starting))
+            (setq agent-follow--inflight nil)
+            (when agent-follow--queued
+              (setq agent-follow--queued nil)
+              (run-at-time 0.3 nil #'agent-follow--poll buffer))))))))
+
+(defun agent-follow--poll (buffer)
+  "Fetch recent invoke jobs and render new events into BUFFER.
+Single-flight: if a poll is already running, queue ONE follow-up.
+An in-flight value without a live process is orphaned state and is replaced
+by this poll, so a lost sentinel cannot wedge the buffer indefinitely."
+  (when (buffer-live-p buffer)
+    (let* ((process (buffer-local-value 'agent-follow--inflight buffer))
+           (live? (and (processp process) (process-live-p process))))
+      (if live?
+          (with-current-buffer buffer (setq agent-follow--queued t))
+        (with-current-buffer buffer
+          ;; A stale transport cannot support a truthful progress display.
+          ;; Clear both halves of the state before starting the recovery poll.
+          (when (or process agent-follow--queued)
+            (setq agent-follow--progress-jobs nil)
+            (unless (and (boundp 'agent-chat--streaming-started)
+                         agent-chat--streaming-started)
+              (when (fboundp 'agent-chat-remove-thinking)
+                (condition-case nil
+                    (agent-chat-remove-thinking)
+                  (error nil)))))
+          ;; `starting' owns the slot until `make-process' returns.  Clear a
+          ;; stale queued bit here: this poll is the requested recovery poll.
+          (setq agent-follow--inflight 'starting
+                agent-follow--queued nil
+                agent-follow--last-poll-at (float-time)))
+        (let (outbuf)
+          (condition-case err
+              (let* ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
+                                  (with-current-buffer buffer
+                                    (agent-follow--agency-url))
+                                  agent-follow-jobs-limit))
+                     (_ (setq outbuf
+                              (generate-new-buffer " *agent-follow*")))
+                     (process
+                      (make-process
+                       :name "agent-follow"
+                       :buffer outbuf
+                       :command (list "curl" "-sS" "--max-time" "10" url)
+                       :noquery t
+                       :sentinel
+                       (lambda (p _event)
+                         (unless (process-live-p p)
+                           (agent-follow--finish-poll buffer p))))))
+                ;; A very short-lived process may finish before control returns
+                ;; from `make-process'.  Its sentinel then owns and clears the
+                ;; `starting' slot; do not resurrect the completed process.
+                (when (buffer-live-p buffer)
+                  (with-current-buffer buffer
+                    (when (eq agent-follow--inflight 'starting)
+                      (setq agent-follow--inflight process)))))
+            (error
+             (when (buffer-live-p outbuf)
+               (kill-buffer outbuf))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 (when (eq agent-follow--inflight 'starting)
+                   (setq agent-follow--inflight nil))))
+             (signal (car err) (cdr err)))))))))
+
+(defun agent-follow--mark-history-seen ()
+  "Mark all finished jobs as fully seen so enabling the mode replays only
+jobs still in flight plus anything new."
+  (let ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
+                     (agent-follow--agency-url) agent-follow-jobs-limit))
+        (buffer (current-buffer)))
+    (make-process
+     :name "agent-follow-init"
+     :buffer (generate-new-buffer " *agent-follow-init*")
+     :command (list "curl" "-sS" "--max-time" "10" url)
+     :noquery t
+     :sentinel
+     (lambda (p _event)
+       (when (memq (process-status p) '(exit signal))
+         (let ((out (when (buffer-live-p (process-buffer p))
+                      (with-current-buffer (process-buffer p) (buffer-string)))))
+           (when (buffer-live-p (process-buffer p))
+             (kill-buffer (process-buffer p)))
+           (when (and out (buffer-live-p buffer))
+             (with-current-buffer buffer
+               (condition-case nil
+                   (let* ((data (json-parse-string out :object-type 'alist
+                                                   :array-type 'list
+                                                   :null-object nil
+                                                   :false-object nil)))
+                     (dolist (job (alist-get 'jobs data))
+                       (let* ((job-id (alist-get 'job-id job))
+                              (state (alist-get 'state job))
+                              (events (append (alist-get 'events job) nil))
+                              (last-at (let ((at (alist-get
+                                                  'at (car (last events)))))
+                                         (when at
+                                           (ignore-errors
+                                             (float-time (date-to-time at))))))
+                              ;; A "failed" job with recent events is likely
+                              ;; capped-but-alive — do NOT swallow its history;
+                              ;; it renders and gets pinned like a live job.
+                              (capped-alive?
+                               (and (equal state "failed") last-at
+                                    (< (- (float-time) last-at)
+                                       agent-follow-overrun-grace))))
+                         (when (and job-id
+                                    (member state '("done" "failed"))
+                                    (not capped-alive?))
+                           (puthash job-id
+                                    (apply #'max 0
+                                           (mapcar (lambda (e)
+                                                     (or (alist-get 'seq e) 0))
+                                                   events))
+                                    agent-follow--seen)))))
+                 (error nil))
+               (agent-follow--start-timer)))))))))
+
+(defun agent-follow--start-timer ()
+  "Start (or restart) the poll timer for the current buffer.
+Always cancels any existing timer first — a stale timer object must
+never block creation (found live 2026-07-05: a buffer-recreate race
+left a buffer with mode on but no ticking timer). The tick self-cancels
+when its buffer dies."
+  (agent-follow--stop-timer)
+  (let ((buffer (current-buffer)) timer)
+    (setq timer
+          (run-at-time 0 agent-follow-poll-interval
+                       (lambda ()
+                         (if (not (buffer-live-p buffer))
+                             ;; buffer is gone: self-cancel by identity
+                             ;; (the buffer-local var died with the buffer)
+                             (when timer (cancel-timer timer))
+                           (condition-case nil
+                               (agent-follow--poll buffer)
+                             (error nil))))))
+    (setq agent-follow--timer timer)
+    (add-hook 'kill-buffer-hook #'agent-follow--stop-timer nil t)))
+
+(defun agent-follow--stop-timer ()
+  "Cancel this buffer's poll timer."
+  (when agent-follow--timer
+    (cancel-timer agent-follow--timer)
+    (setq agent-follow--timer nil)))
+
+;;;###autoload
+(define-minor-mode agent-follow-mode
+  "Replay this agent's out-of-REPL turns (bells, HTTP invokes) into the buffer.
+Polls the Agency invoke-jobs ledger and renders text/tool events; while a
+followed job runs, the REPL progress line shows the caller and last tool.
+History is not replayed: on enable, finished jobs are marked seen; only
+in-flight and future turns stream in.  Jobs the cap marked \"failed\" that
+are still emitting events (capped-but-alive) count as in-flight: their
+history renders and they stay pinned — fetched individually if job traffic
+pushes them out of the poll window — until done or quiet past
+`agent-follow-overrun-grace'."
+  :lighter " ⟲follow"
+  (if agent-follow-mode
+      (let ((aid (agent-follow--detect-agent-id)))
+        (if (not aid)
+            (progn
+              (setq agent-follow-mode nil)
+              (message "agent-follow-mode: could not determine agent id for %s"
+                       (buffer-name)))
+          (setq agent-follow--agent-id aid)
+          (setq agent-follow--seen (make-hash-table :test 'equal))
+          (setq agent-follow--live-jobs (make-hash-table :test 'equal))
+          (setq agent-follow--progress-jobs nil)
+          ;; Marker-line highlighting via font-lock (insert-time face
+          ;; properties get stripped by refontification).
+          (font-lock-add-keywords
+           nil '(("^⟲.*$" 0 'agent-follow-marker-face t)))
+          (when font-lock-mode (font-lock-flush))
+          (add-hook 'kill-buffer-hook #'agent-follow--stop-timer nil t)
+          ;; Mark finished history seen (async), but ALSO start the timer
+          ;; synchronously — the sentinel's later start-timer just restarts
+          ;; it (idempotent-fresh). Relying on the async sentinel alone left
+          ;; a race where enable completed with no ticking timer (2026-07-05).
+          (agent-follow--mark-history-seen)
+          (agent-follow--start-timer)
+          ;; WS doorbell: push-triggered immediate polls; the timer above
+          ;; becomes the gap-repair fallback (see agent-follow-poll-interval).
+          (agent-follow--doorbell-ensure)
+          (message "agent-follow-mode: following %s" aid)))
+    (agent-follow--stop-timer)))
+
+(provide 'agent-follow-mode)
+;;; agent-follow-mode.el ends here

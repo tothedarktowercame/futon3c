@@ -1,0 +1,21 @@
+{
+  "example_id": "scurvy-vitamin-c-mediator",
+  "title": "The corrected vitamin C mediator for scurvy",
+  "topology_basis": "explicit_textual_edge_list",
+  "content": "The book's corrected model is Citrus Fruits -> Vitamin C -> Scurvy. Cooking lime juice disabled the true mediator, explaining why acidity-preserving substitutions failed.",
+  "variables": [
+    {"key": "citrus", "name": "Citrus Fruits", "content": "The preventive treatment."},
+    {"key": "vitamin_c", "name": "Vitamin C", "content": "The true mediator isolated after the historical acidity model failed."},
+    {"key": "scurvy", "name": "Scurvy", "content": "The disease outcome prevented through vitamin C."}
+  ],
+  "arrows": [
+    {"source": "citrus", "target": "vitamin_c", "because": "Citrus fruits supply vitamin C."},
+    {"source": "vitamin_c", "target": "scurvy", "because": "The source identifies vitamin C as the nutrient that prevents scurvy."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:6d760551f1b19f59",
+    "ta-book-of-why-2018:11284d8fe51296a5",
+    "ta-book-of-why-2018:099ebd635eb44819"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0316"]
+}

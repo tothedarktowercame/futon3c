@@ -1,0 +1,21 @@
+{
+  "futon3c-head": "636a276a32a40e922c80588ce2ade4c3625e2468",
+  "apm-lean-origin-master": "c787406b41dc0303debc09f4cb21dae618e6b652",
+  "source-sha256": {
+    "src/futon3c/apm/conductor.clj": "1919432c3792bebf31e1669ff6cde0b8c57f753781c2cc10d5b1baaccf1ca33e",
+    "src/futon3c/apm/live_learning_phases.clj": "92e297311721044d91ee98e7822d5cc624003df00a08c77d3f0f9f31b0cbcb9b",
+    "src/futon3c/apm/role_memory_search.clj": "83904ba25c30afb6a57db5d995031d6bf1f80b60880e4bc4f1335b004dde61f7",
+    "src/futon3c/apm/memory_snapshot.clj": "3db00a3b48e685beece90814fb151812c44871249c4776309b826ddb4b0a4122",
+    "src/futon3c/apm/frame_fingerprint_audit.clj": "525201d3cf107aecbbf3ccece60b4fbe830d55730a1e4e5c6baa909f4dfadbea",
+    "holes/labs/M-apm-demonstration/analysis/fingerprint_audit.py": "ea67952f19b28fa9a74230930b44b5b0b75a1c45ff39144f1055f213804f3cdd",
+    "src/futon3c/peripheral/memory_lifecycle.clj": "009ac441f369ec3fcd2755a8817953101cdc83138ddc2f869f6a1bd3706781a7"
+  },
+  "artifact-sha256": {
+    "census.bb": "7af9126b269ca81a0624dd1e2d1796e57d40014f519cc28eb3af1690138b6d0d",
+    "census.json": "7ef940209841c760bd97aee939aa4c7019dde443d08357f3b02bac2d845cf947",
+    "checks.txt": "0c3098a23b771d8e2ee0c023f955b8f7a30155546361346fa746cf25f8c21443",
+    "fingerprint.json": "a0dab78ea5067ee835e9961af30255badd32e579bbe4142b30a3a9b279f25942",
+    "readback.json": "5d750d79ca89af6eec88c5648da4ce35b6bee6f87d6ef2e693e3a77fa29a44a2",
+    "summary.json": "6a380bdf6390ff5f4836e849fc84ba484efe8ae0f3d4fab4547b6e2ddc2a341d"
+  }
+}

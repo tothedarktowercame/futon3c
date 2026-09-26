@@ -1,0 +1,29 @@
+{:schema :wm/execution-receipts-v1
+ :tree-sha "7e99b6da6624ce759019bbd2deb0859b6c12717a"
+ :at "2026-09-13T16:11:03Z"
+ :runs
+ [{:gate :focused-test-attempt-1
+   :command "clojure -M:test -n futon3c.transport.invoke-ingress-integration-test"
+   :exit 1 :tests 6 :assertions 21 :failures 1 :errors 1
+   :tree-sha "4138319f"
+   :stdout "test-attempt1.stdout" :stderr "test-attempt1.stderr"
+   :finding "non-test durable controller encodes test-only? as nil, not false"}
+  {:gate :focused-tests
+   :command "clojure -M:test -n futon3c.transport.invoke-ingress-integration-test"
+   :exit 0 :tests 6 :assertions 21
+   :stdout "test-final.stdout" :stderr "test-final.stderr"}
+  {:gate :clj-kondo
+   :command "clj-kondo --lint src/futon3c/transport/http.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :errors 0 :warnings 0
+   :stdout "kondo.stdout" :stderr "kondo.stderr"}
+  {:gate :check-parens
+   :command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/transport/http.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :stdout "parens.stdout" :stderr "parens.stderr"}
+  {:gate :induced-runner-attempt-1
+   :command "clojure -Sdeps '{:paths [\"/tmp\"]}' -M:test -m cognitect.test-runner -d /tmp -n codex23-http-ingress-induced-test"
+   :exit 1 :stdout "induced-attempt1.stdout" :stderr "induced-attempt1.stderr"
+   :finding "the :test alias already supplies -m; corrected with explicit deps"}
+  {:gate :induced-runner-failure
+   :command "clojure -Sdeps '{:paths [\"/tmp\"] :deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :git/sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}}}' -M -m cognitect.test-runner -d /tmp -n codex23-http-ingress-induced-test"
+   :exit 1 :tests 1 :assertions 1 :failures 1
+   :stdout "induced-final.stdout" :stderr "induced-final.stderr"}]}

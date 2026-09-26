@@ -1,5 +1,7 @@
 # M-substrate-metric OR Sample - bounded E1 curvature
 
+Status: complete
+
 **Date:** 2026-06-01  
 **Scope:** sampled/capped hop-distance Ollivier-Ricci calculation over the live E1 `feeds-mu?` graph.  
 **Guardrail:** read-only E1 relation fetches only; no corpus entity load, embeddings, BGE, JAX, or Fisher-Rao run.

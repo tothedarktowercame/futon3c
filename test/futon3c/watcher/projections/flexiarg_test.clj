@@ -1,11 +1,34 @@
 (ns futon3c.watcher.projections.flexiarg-test
   (:require [clojure.string :as str]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
+            [babashka.http-client :as http]
             [futon3c.watcher.file-ingest :as file-ingest]
             [futon3c.watcher.projections.flexiarg :as sut]))
 
 (def orchestration-pattern-path
   "/home/joe/code/futon3/library/orchestration/state-in-substrate-deltas-in-messages.flexiarg")
+
+(def fulab-multiarg-path
+  "/home/joe/code/futon3/library/fulab/fulab-patterns.multiarg")
+
+(def proof-architecture-path
+  "/home/joe/code/futon3/library/math-strategy/proof-architecture.flexiarg")
+
+(deftest collect-multiarg-projects-every-declared-pattern
+  (testing ".multiarg is watched and every @arg block becomes a pattern var"
+    (is (contains? sut/src-exts "multiarg"))
+    (let [{:keys [vars]} (sut/collect-file fulab-multiarg-path)]
+      (is (= 11 (count vars)))
+      (is (= "fulab/clock-in" (:pattern/id (first vars))))
+      (is (= "fulab/tradeoff-record" (:pattern/id (last vars)))))))
+
+(deftest collect-file-exposes-semantic-pattern-fields
+  (let [v (-> (sut/collect-file proof-architecture-path) :vars first)]
+    (is (= ["math-informal/separate-into-independent-pieces"]
+           (:pattern/why v)))
+    (is (= [] (:pattern/see-also v)))
+    (is (= ["CA" "FA"] (:pattern/cross-list v)))))
 
 (deftest collect-file-projects-canonical-pattern-packet
   (testing "the watcher reuses the canonical parser and keeps structured slots"
@@ -23,6 +46,7 @@
              (:pattern/id v)))
       (is (= "Lift State Into Shared Substrate; Keep Messages As Deltas"
              (:pattern/title v)))
+      (is (map? (:pattern/directives v)))
       (is (= ["📁/?"] (:pattern/sigils-raw v)))
       (is (true? (:pattern/sigil-pending v)))
       (is (= 10 (count (:pattern/slots v))))
@@ -52,7 +76,7 @@
               var-call (some #(when (= "code/v05/var" (:hx-type %)) %) @hx-calls)
               contains-call (some #(when (= "code/v05/contains" (:hx-type %)) %) @hx-calls)
               first-slot (first @doc-calls)]
-          (is (= {:vertices 2 :edges 11 :failed 0} stats))
+          (is (= {:vertices 2 :edges 11 :failed 0 :retracted 0} stats))
           (is (= ["futon3/flexiarg.orchestration/state-in-substrate-deltas-in-messages"]
                  (:endpoints var-call)))
           (is (= "Lift State Into Shared Substrate; Keep Messages As Deltas"
@@ -75,3 +99,118 @@
           (is (= "conclusion" (get-in first-slot [:props "slot/name-key"])))
           (is (str/includes? (get-in first-slot [:props "slot/text"])
                              "lift state into a shared substrate")))))))
+
+(deftest watcher-reports-only-unknown-directives-per-file
+  (let [file (io/file (System/getProperty "java.io.tmpdir")
+                      (str "flexiarg-directives-" (java.util.UUID/randomUUID)
+                           ".flexiarg"))]
+    (try
+      (spit file (str "@flexiarg demo/reporter\n"
+                      "@bits 01010101\n"
+                      "@wibble invented\n"
+                      "! conclusion:\n  reporter fixture\n"))
+      (let [result (atom nil)
+            output (with-out-str (reset! result (sut/collect-file file)))
+            directives (get-in @result [:vars 0 :pattern/directives])]
+        (is (not (contains? directives :bits)))
+        (is (not (contains? directives :wibble)))
+        (is (str/includes? output "FLEXIARG DIRECTIVE UNKNOWN"))
+        (is (str/includes? output "@wibble=1"))
+        (is (not (str/includes? output "@bits=")))
+        (is (not (str/includes? output "known-not-ingested"))))
+      (finally (.delete file)))))
+
+(deftest flexiarg-dispatch-emits-canonical-entities-and-relations-only
+  (let [path "/home/joe/code/futon3/library/baldwin/two-claims-not-one.flexiarg"
+        entities (atom [])
+        relations (atom [])
+        hyperedges (atom [])]
+    (with-redefs [file-ingest/post-entities-batch!
+                  (fn [payload]
+                    (swap! entities into payload)
+                    {:ok? true :count (count payload)
+                     :entities (mapv #(assoc % :id (:name %)) payload)})
+                  file-ingest/post-relations-batch!
+                  (fn [payload]
+                    (swap! relations into payload)
+                    {:ok? true :count (count payload) :relations payload})
+                  file-ingest/post-hyperedge!
+                  (fn [& args]
+                    (swap! hyperedges conj args)
+                    {:ok? true})
+                  file-ingest/post-hyperedge-doc!
+                  (fn [& args]
+                    (swap! hyperedges conj args)
+                    {:ok? true})]
+      (let [result (file-ingest/dispatch! {:path path
+                                           :root "/home/joe/code/futon3"
+                                           :label "futon3-d"})
+            names (set (map :name @entities))
+            relation-types (set (map :type @relations))
+            pid "baldwin/two-claims-not-one"
+            facets #{"conclusion" "context" "if" "however"
+                     "then" "because" "next-steps"}]
+        (is (= :pattern (:status result)))
+        (is (= facets (set (:facets result))))
+        (is (= (conj (set (map #(str pid "/" %) facets)) pid) names))
+        (is (= (set (map #(str ":pattern/has-" %) facets)) relation-types))
+        (is (= 7 (count @relations)))
+        (is (not (contains? names (str pid "/counterfactual"))))
+        (is (empty? @hyperedges))))))
+
+(deftest flexiarg-ingest-emits-semantic-relations-and-cross-list-property
+  (let [entities (atom [])
+        relations (atom [])]
+    (with-redefs [sut/collect-file
+                  (fn [_]
+                    {:vars [{:pattern/id "demo/source"
+                             :pattern/title "Source"
+                             :pattern/cross-list ["CA" "FA"]
+                             :pattern/why ["demo/general"]
+                             :pattern/see-also ["demo/peer"]
+                             :pattern/slots
+                             [{:slot/name-key "conclusion" :slot/text "Claim"}]}]})
+                  file-ingest/post-entities-batch!
+                  (fn [payload]
+                    (swap! entities into payload)
+                    {:ok? true :count (count payload)
+                     :entities (mapv #(assoc % :id (:id %)) payload)})
+                  file-ingest/post-relations-batch!
+                  (fn [payload]
+                    (swap! relations into payload)
+                    {:ok? true :count (count payload) :relations payload})]
+      (let [result (file-ingest/ingest-flexiarg! {:path "unused"})
+            pattern (first @entities)]
+        (is (= ["CA" "FA"] (get-in pattern [:props "pattern/cross-list"])))
+        (is (= #{[":pattern/has-conclusion" "demo/source/conclusion"]
+                 [":pattern/has-semantic-why" "demo/general"]
+                 [":pattern/has-semantic-see-also" "demo/peer"]}
+               (set (map (juxt :type :dst) @relations))))
+        (is (= 3 (:relations result)))))))
+
+(deftest clojure-dispatch-keeps-code-ingest-path
+  (let [calls (atom [])]
+    (with-redefs [file-ingest/collect-repo (fn [_] {:root :context})
+                  file-ingest/ingest-one-file!
+                  (fn [args]
+                    (swap! calls conj args)
+                    {:vertices 1 :edges 0 :failed 0})
+                  file-ingest/ingest-flexiarg!
+                  (fn [_]
+                    (throw (ex-info "flexiarg path must not handle Clojure" {})))]
+      (let [path "/home/joe/code/futon3c/src/futon3c/watcher/projections/flexiarg.clj"
+            result (file-ingest/dispatch! {:path path
+                                           :root "/home/joe/code/futon3c"
+                                           :label "futon3c-d"})]
+        (is (= :ingested (:status result)))
+        (is (= path (:path result)))
+        (is (= 1 (count @calls)))))))
+
+(deftest relation-batch-failure-is-not-silently-dropped
+  (with-redefs [http/post
+                (fn [& _]
+                  {:status 400 :body "{\"error\":\"missing endpoint\"}"})]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo #"relation batch write failed"
+         (file-ingest/post-relations-batch!
+         [{:type ":pattern/has-if" :src "missing" :dst "also-missing"}])))))

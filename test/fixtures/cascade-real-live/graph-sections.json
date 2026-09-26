@@ -1,0 +1,2808 @@
+{
+"arrows": [
+{
+"delta-g": -0.000791,
+"have": "futon0-d/mission/capability-star-map",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/capability-star-map-document"
+},
+{
+"delta-g": -0.000834,
+"have": "futon0-d/mission/futonzero-capability",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/futonzero-capability-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon0-d/mission/futonzero-generative",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/futonzero-generative-map"
+},
+{
+"delta-g": -0.000986,
+"have": "futon0-d/mission/futonzero-mvp",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/futonzero-mvp-head"
+},
+{
+"delta-g": -0.000793,
+"have": "futon0-d/mission/futonzero-prelim-practice",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/futonzero-prelim-practice-head"
+},
+{
+"delta-g": -0.00073,
+"have": "futon0-d/mission/patterns-done-right",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/patterns-done-right-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon0-d/mission/stack-hud-refactor",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/stack-hud-refactor-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon0-d/mission/the-futon-stack-q6-r12-design-choices",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/the-futon-stack-q6-r12-design-choices-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon0-d/mission/the-futon-stack",
+"move-class": ":close-hole",
+"want": "futon0-d/mission/the-futon-stack-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon2-d/mission/aif4iad",
+"move-class": ":close-hole",
+"want": "futon2-d/mission/aif4iad-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon2-d/mission/open-learning-system",
+"move-class": ":close-hole",
+"want": "futon2-d/mission/open-learning-system-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon2-d/mission/reflective-discipline",
+"move-class": ":close-hole",
+"want": "futon2-d/mission/reflective-discipline-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/agency-forum",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/agency-forum-head"
+},
+{
+"delta-g": -0.000751,
+"have": "futon3-d/mission/agency-rebuild",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/agency-rebuild-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3-d/mission/agency-unified-routing",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/agency-unified-routing-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/arxana-graph-persistence",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/arxana-graph-persistence-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/codex-parity",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/codex-parity-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/drawbridge-multi-agent",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/drawbridge-multi-agent-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon3-d/mission/f6-agents",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/f6-agents-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/f6-arxiv",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/f6-arxiv-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/f6-eval",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/f6-eval-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3-d/mission/f6-ingest",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/f6-ingest-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/f6-recursive",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/f6-recursive-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3-d/mission/forum-organization",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/forum-organization-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/fucodex-parity",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/fucodex-parity-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/futon1a-evidence",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/futon1a-evidence-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/futon1a-rebuild-scoping-review",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/futon1a-rebuild-scoping-review-head"
+},
+{
+"delta-g": -0.000995,
+"have": "futon3-d/mission/futon1a-rebuild",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/futon1a-rebuild-head"
+},
+{
+"delta-g": -0.000751,
+"have": "futon3-d/mission/futon1a-workplan",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/futon1a-workplan-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3-d/mission/graph-unification",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/graph-unification-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/labs-integration",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/labs-integration-head"
+},
+{
+"delta-g": -0.000995,
+"have": "futon3-d/mission/live-geometric-stack",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/live-geometric-stack-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/make-agency-work-properly",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/make-agency-work-properly-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/mission-control-scoping",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/mission-control-scoping-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3-d/mission/native-plan-coherence",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/native-plan-coherence-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/par-session-punctuation",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/par-session-punctuation-head"
+},
+{
+"delta-g": -0.000939,
+"have": "futon3-d/mission/pattern-application-diagnostic",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/pattern-application-diagnostic-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/pattern-inference-engine",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/pattern-inference-engine-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon3-d/mission/pattern-ingest",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/pattern-ingest-head"
+},
+{
+"delta-g": -0.000939,
+"have": "futon3-d/mission/pattern-mining",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/pattern-mining-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/plan-mermaid-viewer",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/plan-mermaid-viewer-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/understand-fucodex",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/understand-fucodex-head"
+},
+{
+"delta-g": -0.000828,
+"have": "futon3-d/mission/weird-modernism",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/weird-modernism-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3-d/mission/ws-emacs-log-stream",
+"move-class": ":close-hole",
+"want": "futon3-d/mission/ws-emacs-log-stream-head"
+},
+{
+"delta-g": -0.000986,
+"have": "futon3b-d/mission/coordination-rewrite",
+"move-class": ":close-hole",
+"want": "futon3b-d/mission/coordination-rewrite-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/agency-hardening",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/agency-hardening-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3c-d/mission/agency-refactor",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/agency-refactor-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/alfworld-pattern-discovery",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/alfworld-pattern-discovery-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3c-d/mission/apm-solutions",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/apm-solutions-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/archaeology-control",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/archaeology-control-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon3c-d/mission/autoclock-in",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/autoclock-in-argue"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/autonomous-pattern-lifecycle",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/autonomous-pattern-lifecycle-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/bounded-disposition",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/bounded-disposition-head"
+},
+{
+"delta-g": -0.000751,
+"have": "futon3c-d/mission/bounded-in-flight-state",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/bounded-in-flight-state-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon3c-d/mission/codex-agent-behaviour",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/codex-agent-behaviour-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon3c-d/mission/codex-irc-execution",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/codex-irc-execution-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3c-d/mission/cyder",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/cyder-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon3c-d/mission/diagramprover",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/diagramprover-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/dispatch-peripheral-bridge",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/dispatch-peripheral-bridge-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/forum-refactor-qa",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/forum-refactor-qa-head"
+},
+{
+"delta-g": -0.000791,
+"have": "futon3c-d/mission/forum-refactor",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/forum-refactor-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/fulab-logic",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/fulab-logic-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/futon3-last-mile",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/futon3-last-mile-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/futon3c-codex",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/futon3c-codex-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/improve-irc",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/improve-irc-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/intent-curvature",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/intent-curvature-map"
+},
+{
+"delta-g": -0.000816,
+"have": "futon3c-d/mission/invariant-queue-extend",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/invariant-queue-extend-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon3c-d/mission/invariant-queue-unstuck",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/invariant-queue-unstuck-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/invariant-violations",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/invariant-violations-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3c-d/mission/irc-stability",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/irc-stability-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon3c-d/mission/mission-control",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/mission-control-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon3c-d/mission/mission-scopes-into-substrate-2",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/mission-scopes-into-substrate-2-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/mission-wiring",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/mission-wiring-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/operational-readiness-traceability",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/operational-readiness-traceability-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/operational-readiness",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/operational-readiness-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon3c-d/mission/peripheral-behavior",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/peripheral-behavior-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/peripheral-gauntlet",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/peripheral-gauntlet-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/peripheral-model",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/peripheral-model-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/peripheral-phenomenology",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/peripheral-phenomenology-head"
+},
+{
+"delta-g": -0.000828,
+"have": "futon3c-d/mission/portfolio-inference",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/portfolio-inference-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/proof-peripheral",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/proof-peripheral-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/psr-pur-mesh-peripheral",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/psr-pur-mesh-peripheral-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/reachable-from-boot",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/reachable-from-boot-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/repl-wins-over-cli",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/repl-wins-over-cli-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/single-entry-point",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/single-entry-point-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/single-locus",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/single-locus-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/sliding-blackboard",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/sliding-blackboard-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/social-exotype",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/social-exotype-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/state-snapshot-witness",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/state-snapshot-witness-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/stepper-calibration",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/stepper-calibration-head"
+},
+{
+"delta-g": -0.000995,
+"have": "futon3c-d/mission/structural-law",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/structural-law-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/substrate-metric-or-sample",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/substrate-metric-or-sample-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/substrate-metric-r1-report",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/substrate-metric-r1-report-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/substrate-metric-r2-curvature-full-report",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/substrate-metric-r2-curvature-full-report-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/substrate-metric-r2-curvature-report",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/substrate-metric-r2-curvature-report-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon3c-d/mission/the-perfect-crime",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/the-perfect-crime-map"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/tickle-overnight",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/tickle-overnight-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/transport-adapters",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/transport-adapters-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon3c-d/mission/walkie-talkie",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/walkie-talkie-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon3c-d/mission/war-machine-first-outing-expectations",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/war-machine-first-outing-expectations-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon3c-d/mission/war-machine-first-outing",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/war-machine-first-outing-head"
+},
+{
+"delta-g": -0.000828,
+"have": "futon3c-d/mission/war-machine-pilot",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/war-machine-pilot-document"
+},
+{
+"delta-g": -0.000793,
+"have": "futon3c-d/mission/war-machine-tuning",
+"move-class": ":close-hole",
+"want": "futon3c-d/mission/war-machine-tuning-head"
+},
+{
+"delta-g": -0.000751,
+"have": "futon4-d/mission/arxana-roundtrip",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/arxana-roundtrip-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon4-d/mission/editorial-assistant",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/editorial-assistant-derive"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/essays-diachronic-model",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/essays-diachronic-model-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/essays-edit-cycle",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/essays-edit-cycle-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/essays-retraction-visibility",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/essays-retraction-visibility-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/evidence-viewer-refinements",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/evidence-viewer-refinements-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon4-d/mission/futon-enrichment",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/futon-enrichment-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/interest-network-coupling-aif-wiring",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/interest-network-coupling-aif-wiring-head"
+},
+{
+"delta-g": -0.000995,
+"have": "futon4-d/mission/or-training-as-learning-system-v1",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/or-training-as-learning-system-v1-head"
+},
+{
+"delta-g": -0.00073,
+"have": "futon4-d/mission/or-training-as-learning-system",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/or-training-as-learning-system-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon4-d/mission/peeragogy-rewrite",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/peeragogy-rewrite-head"
+},
+{
+"delta-g": -0.000995,
+"have": "futon4-d/mission/self-representing-stack",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/self-representing-stack-head"
+},
+{
+"delta-g": -0.000793,
+"have": "futon4-d/mission/simulating-or-training-as-learning-system",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/simulating-or-training-as-learning-system-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon4-d/mission/three-column-stack",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/three-column-stack-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon4-d/mission/vsatarcs-invariants-integration-witness-vsatarcs-fresh",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/vsatarcs-invariants-integration-witness-vsatarcs-fresh-head"
+},
+{
+"delta-g": -0.000793,
+"have": "futon4-d/mission/vsatarcs-invariants-integration",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/vsatarcs-invariants-integration-document"
+},
+{
+"delta-g": -0.000793,
+"have": "futon4-d/mission/vsatarcs-writer",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/vsatarcs-writer-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon4-d/mission/war-machine-vsatarcs-interop",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/war-machine-vsatarcs-interop-derive"
+},
+{
+"delta-g": -0.000824,
+"have": "futon4-d/mission/web-arxana-missions",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/web-arxana-missions-argue"
+},
+{
+"delta-g": -0.000816,
+"have": "futon4-d/mission/web-arxana-ui-improvements",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/web-arxana-ui-improvements-argue"
+},
+{
+"delta-g": -0.000834,
+"have": "futon4-d/mission/webarxana",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/webarxana-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon4-d/mission/writing-ethics",
+"move-class": ":close-hole",
+"want": "futon4-d/mission/writing-ethics-head"
+},
+{
+"delta-g": -0.00073,
+"have": "futon5-d/mission/categorical-code",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/categorical-code-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/coupling-as-constraint",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/coupling-as-constraint-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/diagram-composition",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/diagram-composition-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/fulab-wiring-survey",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/fulab-wiring-survey-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/pattern-exotype-bridge",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/pattern-exotype-bridge-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/sci-detection-pipeline",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/sci-detection-pipeline-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/tpg-coupling-evolution",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/tpg-coupling-evolution-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5-d/mission/xor-coupling-probe",
+"move-class": ":close-hole",
+"want": "futon5-d/mission/xor-coupling-probe-head"
+},
+{
+"delta-g": -0.000948,
+"have": "futon5a-d/mission/a-sorry-enterprise",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/a-sorry-enterprise-head"
+},
+{
+"delta-g": -0.000791,
+"have": "futon5a-d/mission/explore-aiqa",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/explore-aiqa-verify"
+},
+{
+"delta-g": -0.000771,
+"have": "futon5a-d/mission/landing-practice",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/landing-practice-head"
+},
+{
+"delta-g": -0.000793,
+"have": "futon5a-d/mission/learning-loop",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/learning-loop-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon5a-d/mission/self-improvement-loop",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/self-improvement-loop-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon5a-d/mission/stack-geometry",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/stack-geometry-head"
+},
+{
+"delta-g": -0.000793,
+"have": "futon5a-d/mission/stack-stereolithography",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/stack-stereolithography-head"
+},
+{
+"delta-g": -0.000781,
+"have": "futon5a-d/mission/trip-journal",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/trip-journal-head"
+},
+{
+"delta-g": -0.000834,
+"have": "futon5a-d/mission/war-machine-wiring",
+"move-class": ":close-hole",
+"want": "futon5a-d/mission/war-machine-wiring-head"
+},
+{
+"delta-g": -0.000948,
+"have": "futon6-d/mission/artificial-stack-exchange",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/artificial-stack-exchange-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/bayesian-structure-learning",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/bayesian-structure-learning-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/canon-fingerprint-store",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/canon-fingerprint-store-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/differentiable-math",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/differentiable-math-head"
+},
+{
+"delta-g": -0.000824,
+"have": "futon6-d/mission/differentiable-substrate",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/differentiable-substrate-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/distributed-frontiermath",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/distributed-frontiermath-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/hyperreal-dictionary-planning",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/hyperreal-dictionary-planning-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon6-d/mission/p3-rational-reconstruction",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/p3-rational-reconstruction-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon6-d/mission/p7-rational-reconstruction",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/p7-rational-reconstruction-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon6-d/mission/p8-rational-reconstruction",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/p8-rational-reconstruction-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/paper-reverse-morphogenesis",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/paper-reverse-morphogenesis-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/prior-mathematics",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/prior-mathematics-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/superpod-mark2",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/superpod-mark2-head"
+},
+{
+"delta-g": -0.000939,
+"have": "futon6-d/mission/superpod-mark3",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/superpod-mark3-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon6-d/mission/symbol-grounding-scaling-plan",
+"move-class": ":close-hole",
+"want": "futon6-d/mission/symbol-grounding-scaling-plan-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/another-university",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/another-university-head"
+},
+{
+"delta-g": -0.00082,
+"have": "futon7-d/mission/autonomous-doc-maintenance",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/autonomous-doc-maintenance-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/buyer-discovery",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/buyer-discovery-map"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/daily-scan-multi-axis-queue",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/daily-scan-multi-axis-queue-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon7-d/mission/daily-scan",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/daily-scan-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon7-d/mission/descriptive-essay-of-the-stack",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/descriptive-essay-of-the-stack-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon7-d/mission/f7-lead-report",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/f7-lead-report-head"
+},
+{
+"delta-g": -0.000939,
+"have": "futon7-d/mission/futon-forward-model",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/futon-forward-model-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/interim-director-long-tail",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/interim-director-long-tail-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon7-d/mission/interim-director-proxy-metric-inventory",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/interim-director-proxy-metric-inventory-head"
+},
+{
+"delta-g": -0.000781,
+"have": "futon7-d/mission/interim-director",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/interim-director-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/pudding-peradams",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/pudding-peradams-head"
+},
+{
+"delta-g": -0.000816,
+"have": "futon7-d/mission/self-documenting-stack",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/self-documenting-stack-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/signal-roll-up",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/signal-roll-up-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon7-d/mission/stack-essay-code-alignment",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/stack-essay-code-alignment-head"
+},
+{
+"delta-g": -0.000645,
+"have": "futon7-d/mission/stack-morphogenetic-rewrite",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/stack-morphogenetic-rewrite-head"
+},
+{
+"delta-g": -0.000741,
+"have": "futon7-d/mission/war-machine-aif-completion",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/war-machine-aif-completion-head"
+},
+{
+"delta-g": -0.000771,
+"have": "futon7-d/mission/war-machine-aif-last-mile",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/war-machine-aif-last-mile-head"
+},
+{
+"delta-g": -0.000751,
+"have": "futon7-d/mission/war-machine-frontend-upgrade1",
+"move-class": ":close-hole",
+"want": "futon7-d/mission/war-machine-frontend-upgrade1-head"
+}
+],
+"as-of-ms": 1790358124816,
+"clusters": [
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3-d/mission/futon1a-evidence"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3-d/mission/futon1a-rebuild"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3-d/mission/futon1a-workplan"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3-d/mission/pattern-ingest"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3c-d/mission/forum-refactor"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon3c-d/mission/transport-adapters"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon4-d/mission/essay-corpus-substrate"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon7-d/mission/daily-scan"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon7-d/mission/demonstration-foundry"
+},
+{
+"cluster": "cascade/cluster/00-futon1a-daily",
+"mission": "futon7-d/mission/f7-lead-report"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon2-d/mission/evaluate-policies"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon2-d/mission/zaif-harness"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3-d/mission/agency-unified-routing"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/bounded-disposition"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/cyder"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/first-flights"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/invariant-queue-unstuck"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/portfolio-inference"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/reachable-from-boot"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/single-locus"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/state-snapshot-witness"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon3c-d/mission/structural-law"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon4-d/mission/evidence-viewer-refinements"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon4-d/mission/self-representing-stack"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon4-d/mission/vsatarcs-invariants-integration"
+},
+{
+"cluster": "cascade/cluster/01-agency-unified",
+"mission": "futon5a-d/mission/trip-journal"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/irc-stability"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/operational-readiness"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/pilot-appearance"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/typed-holes"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/typed-holes-argue"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon3c-d/mission/typed-holes-example-first-flights"
+},
+{
+"cluster": "cascade/cluster/02-typed-holes",
+"mission": "futon5a-d/mission/explore-aiqa"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3-d/mission/live-geometric-stack"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/bounded-in-flight-state"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/chipwitz-corps"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/mission-scopes-into-substrate-2"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/populate-substrate-2"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/substrate-metric-r1-report"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon4-d/mission/web-arxana-ui-improvements"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon5a-d/mission/war-machine-wiring"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon6-d/mission/e-mission-head"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon6-d/mission/live-efe-map"
+},
+{
+"cluster": "cascade/cluster/03-substrate-live",
+"mission": "futon6-d/mission/metric-harness"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon0-d/mission/futonzero-capability"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon0-d/mission/patterns-done-right"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon0-d/mission/the-futon-stack"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon2-d/mission/aif-head"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon2-d/mission/text-sidecar"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon3-d/mission/agency-rebuild"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon3-d/mission/futon3x-e2e"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon3a-d/mission/memes-arrows-patterns-diagrams"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon3c-d/mission/stack-inhabitation"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon4-d/mission/three-column-stack"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon5-d/mission/categorical-code"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon5-d/mission/differentiable-code"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon5a-d/mission/a-sorry-enterprise"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon5a-d/mission/self-improvement-loop"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon5a-d/mission/stack-geometry"
+},
+{
+"cluster": "cascade/cluster/04-stack-code",
+"mission": "futon6-d/mission/artificial-stack-exchange"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon0-d/mission/futonzero-mvp"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon2-d/mission/custom-harness"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon2-d/mission/futon1b-port"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon2-d/mission/points-de-fuite"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon2-d/mission/wm-policies-documented-run-2026-06-24"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon3c-d/mission/mission-peripheral"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon3c-d/mission/single-entry-point"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon3c-d/mission/smart-emacs-cursor"
+},
+{
+"cluster": "cascade/cluster/05-custom-harness",
+"mission": "futon4-d/mission/vsatarcs-writer"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon0-d/mission/capability-star-map"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon2-d/mission/a4a-structure-node"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon2-d/mission/g-over-cascades"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon3-d/mission/mission-coherence-patterns"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon3-d/mission/pattern-application-diagnostic"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon3-d/mission/pattern-mining"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon3-d/mission/pattern-retrieval-calibration"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon3a-d/mission/pattern-posteriors"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon4-d/mission/or-training-as-learning-system"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon4-d/mission/peeragogy-rewrite"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon4-d/mission/simulating-or-training-as-learning-system"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon4-d/mission/writing-ethics"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon5a-d/mission/learning-loop"
+},
+{
+"cluster": "cascade/cluster/06-pattern-learning",
+"mission": "futon6-d/mission/superpod-mark3"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon2-d/mission/fold-ansatz"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon3-d/mission/f6-arxiv"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon3-d/mission/f6-eval"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon3-d/mission/weird-modernism"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon3c-d/mission/peripheral-phenomenology"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon4-d/mission/futon-enrichment"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon4-d/mission/interest-network-coupling"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon5a-d/mission/expressions-of-interest"
+},
+{
+"cluster": "cascade/cluster/07-interest-expressions",
+"mission": "futon5a-d/mission/hypergraph-operator"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon3c-d/mission/diagramprover"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon3c-d/mission/stepper-calibration"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon5a-d/mission/stack-stereolithography"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon6-d/mission/p3-rational-reconstruction"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon6-d/mission/p7-rational-reconstruction"
+},
+{
+"cluster": "cascade/cluster/08-rational-reconstruction",
+"mission": "futon6-d/mission/p8-rational-reconstruction"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon2-d/mission/aif2"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon2-d/mission/goals-and-holes"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon2-d/mission/operational-vocabulary"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon2-d/mission/wm-policies"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon3c-d/mission/action-cost-modelling"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon3c-d/mission/war-machine"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon3c-d/mission/war-machine-pilot"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon3c-d/mission/war-machine-tuning"
+},
+{
+"cluster": "cascade/cluster/09-war-machine",
+"mission": "futon5a-d/mission/recommendation-bindings"
+},
+{
+"cluster": "cascade/cluster/10-codex-irc",
+"mission": "futon3c-d/mission/codex-agent-behaviour"
+},
+{
+"cluster": "cascade/cluster/10-codex-irc",
+"mission": "futon3c-d/mission/codex-irc-execution"
+},
+{
+"cluster": "cascade/cluster/10-codex-irc",
+"mission": "futon3c-d/mission/improve-irc"
+},
+{
+"cluster": "cascade/cluster/10-codex-irc",
+"mission": "futon3c-d/mission/typed-bells"
+},
+{
+"cluster": "cascade/cluster/11-coordination-rewrite",
+"mission": "futon3-d/mission/coordination-rewrite"
+},
+{
+"cluster": "cascade/cluster/11-coordination-rewrite",
+"mission": "futon3-d/mission/f6-agents"
+},
+{
+"cluster": "cascade/cluster/11-coordination-rewrite",
+"mission": "futon3-d/mission/f6-ingest"
+},
+{
+"cluster": "cascade/cluster/11-coordination-rewrite",
+"mission": "futon3-d/mission/f6-recursive"
+},
+{
+"cluster": "cascade/cluster/11-coordination-rewrite",
+"mission": "futon3c-d/mission/peripheral-gauntlet"
+}
+],
+"held": [
+{
+"held": "held/item/prose/h1003283572",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Scope*: unification of state model. The graph view uses datascript hyperedge data; mission-search uses a separate :mission-search state. Click-to-pin from mission-search adds a mission to graph's \u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1012661903",
+"mission": "futon7-d/mission/demonstration-foundry",
+"reason": "owner/repo#456 \u2014 useful but maintainer inactive",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1017711208",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Scaffolds future: calibration signal \u2014 single-item \"including\" is not always scope-mush when the single item is a formal title or well-known proper referent. Pattern scope-mush could carry a \"prope\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h102579293",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Scope*: small CLJS edits in client/mission_search.cljs to add (a) confidence-threshold slider (0.0-1.0; default 0.4); (b) top-K stepper (3-15); (c) binary toggle \"show only agreement\" (filters to \u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h10324688",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: tiny polish; bundle with T-1 sliders",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1042932925",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Cost*: ~30 min ranking tweak + new test cases",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1070025754",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Rationale: Preserves the substantive content (this IS what UKRN-S sustains \u2014 the post-ORP work) without looking like scope-mush. The earlier ORP-title introduction also grounds the paper's central \u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1181846326",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "References list (Engelbart 1995 entry added): mechanical addition, pattern-irrelevant. \u2713 clean.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1221015463",
+"mission": "futon6-d/mission/live-efe-map",
+"reason": "T1 chartered as follow-on: M-pheromone-field.md (same directory) \u2014 deposit /",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1222726760",
+"mission": "futon2-d/mission/futon1b-port",
+"reason": "2026-07-04). Follow-on: E-futon1a-to-futon1b-migration-pipeline.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1260483046",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Forked annotation (new id, inherited metadata) \u2014 makes",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1276711937",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 0 can start now with existing data (39 partials, 12 patterns)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1278758132",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: future ARGUE input; deserves its own pattern-survey + design pass before any implementation. Not LC1 scope. Worth recording as a named future-mission candidate (M-mission-landscape-p\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1307095505",
+"mission": "futon6-d/mission/p3-rational-reconstruction",
+"reason": "Other problems: P7 (critical), P8 (critical), P2 (critical) are",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1308669098",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Scaffolds future: calibration signal \u2014 in any case in a parenthetical conceding-then-asserting position (\"while X, Y in any case\") is idiomatic and not strawman-filler. Lexical grep could be refine\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1310968890",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Whether annotations should be tracked by content + field name +",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1353609239",
+"mission": "futon3c-d/mission/apm-solutions",
+"reason": "M-x apm-browse EDN response fix (Emacs store module)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1366157017",
+"mission": "futon2-d/mission/aif-head",
+"reason": "Structure learning: Automated generative model revision from evidence",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1381464344",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Execution: \u00a73 Worked example opening now reads \"Two institutional profiles illustrate how the model works \u2014 FG2A-P1 (...) and FG3-A (...) \u2014 across the delivery-viability (D) and architectural-susta\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1413729868",
+"mission": "futon2-d/mission/aif-faithfulness",
+"reason": "| claude-5 | B-2a+B-2b DONE ac60874, reviewed-PASS claude-12 2026-07-04. :G-core + named :augmentation-terms/:G-augmentation (signs as-they-enter); graph mask/value split additive, :G-total express\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1441889734",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "\u00a73 Worked example (\"Two institutional profiles illustrate how the model works \u2014 ...\"): subject is the profiles, not the paper; not meta-lede. Lightweight narrative form. \u2713 clean.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1443365218",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Option chosen: (b) 1995 CACM paper. In-text citation updated to \"(1995)\".",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1497717230",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Cost*: moderate; touches offline ingestion pipeline + a new viz mode",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1519388889",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Cut-yank / copy-paste movement of an annotated passage.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1520971218",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Item unblocked: Engelbart citation in \u00a71 Bootstrap-sequence fold had no corresponding References entry.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1538385947",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "\u00a70 para 2 (simplified to \"including efforts building on the work carried out in the ORP\"): \"including\" now references a proper named referent (the ORP with its title established in para 1). \u2713 clean\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h156905956",
+"mission": "futon2-d/mission/aif-faithfulness",
+"reason": "(calendar days) strengthens or revisits. Still gated on more burn-in:",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1574324561",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decided-by: joe. Executed-by: claude. Sweep-status: pending.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1587592986",
+"mission": "futon3c-d/mission/federated-agency-hardening",
+"reason": "limitation of both paths. Candidate follow-on: thread incremental assistant",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1596306386",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Scope*: offline UMAP/t-SNE reduction of the unified MiniLM corpus embeddings \u2192 mission_projection_2d.json artifact; WebArxana page rendering it as a zoomable scatter plot (d3-zoom) coloured by pha\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1625866309",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Option chosen: (c) leave as-is.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1658080790",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Cluster-level meta-pattern for the recursion-cheque / missing-mechanism / unearned-essentially / floating-formalism family (\"paying for rhetorical force unearned\"). Could live as an ARGUMENT.flexia\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1671572581",
+"mission": "futon3c-d/mission/codex-agent-behaviour",
+"reason": "Enforcement metrics: Track enforcement trigger rate over time to",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h16730814",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Lexical checks as CHECK-section entries on patterns. Each pattern's CHECK could carry its DL-1 lexical-grep signature as a first-class field, so the sweep runs systematically rather than from a sin\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1679126995",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Question: cut to cold open / tighten the frame / leave as sub-genre exception?",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1689945616",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decision ID: engelbart-1995-reference",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1702195781",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 1 requires Pass 1 \u2265200 problems (currently ~76)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1718515513",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Whether the source-flexiarg link should follow the flexiarg's",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1728848969",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Execution: (i) \u00a71 Bootstrap sequence fold: \"Engelbart's (1962) sense\" \u2192 \"Engelbart's (1995) sense\"; (ii) References section: new entry \"Engelbart, D. C. (1995). Toward augmenting the human intellec\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1732839178",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "\u00a70 para 1 (ORP-title parenthetical added): architectural claim still load-bearing in sentence 1; parenthetical is informative, not announcement. \u2713 clean.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1739174496",
+"mission": "futon6-d/mission/p3-rational-reconstruction",
+"reason": "futon1a ingestion: the provenance JSON could be ingested as",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1743505015",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Item unblocked: B1 (\u00a70 para 2 scope-mush-adjacent \"including efforts to grow and embed...\").",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1761522031",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 3a requires LeanDojo-v2 installation (check with Rob)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1766429520",
+"mission": "futon2-d/mission/g-over-cascades",
+"reason": "*through the substrate* until that is fixed. Follow-on: version code/v05/edits per-commit (the M-live-",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h176949472",
+"mission": "futon3c-d/mission/apm-solutions",
+"reason": "Scale to all 489 APM problems",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1781087548",
+"mission": "futon2-d/mission/aif-head",
+"reason": "Lean integration: The epistemic action repertoire names formal",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1789816035",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Sketch* (extracted from the live discussion): axes-of-improvement are *interactive* (zoom/pan/filter/drill vs static); *semantic + structural* (embedding proximity overlaid on explicit edges); *mu\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1797339598",
+"mission": "futon5a-d/mission/a-sorry-enterprise",
+"reason": "Mined items are candidates only \u2014 no dedup/promotion/witness pipeline, no quality scoring, and not yet emitted into substrate-2 as typed :sorry events (still gated on E-substrate-2-sorry-typing shi\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1808849044",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 2 requires ~50+ sorry boundary observations for model A",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1833430991",
+"mission": "futon3c-d/mission/apm-solutions",
+"reason": "C2/C3 notes re-run with LaTeX math",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1842426016",
+"mission": "futon3c-d/mission/codex-agent-behaviour",
+"reason": "Full IRC end-to-end: Run the modified bridge against Linode Agency",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1845574984",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decided-by: joe. Executed-by: (no edit). Sweep-status: n/a (not closed as regression, accepted as borderline).",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1854653317",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: v2 ships the per-query missions-slice subgraph, but operators want to see the *whole landscape* \u2014 the ~195-mission corpus as a 2D map showing semantic-proximity clusters",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1889836953",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Execution: (i) \u00a70 para 1 sentence 1 now reads \"The UK Reproducibility Network's Open Research Programme (ORP; *Growing and Embedding Open Research in Institutional Culture and Practice*) has just c\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1899779014",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Rationale: 1995 \"Toward Augmenting the Human Intellect and Boosting Our Collective IQ\" develops the bootstrapping-as-strategy claim more explicitly than the 1962 framework, per author preference.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1910791049",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decided-by: joe. Executed-by: claude. Sweep-status: n/a (reference-list addition, not pattern-relevant).",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h196956873",
+"mission": "futon6-d/mission/p3-rational-reconstruction",
+"reason": "Actual P3 repair: fixing the 3 gaps is a separate mission. This",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h1971977271",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: Mission Search and Graph Search are separate surfaces; operator can't pin a mission from search \u2192 see its neighbourhood in the main graph view",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2014399562",
+"mission": "futon6-d/mission/p3-rational-reconstruction",
+"reason": "Tooling: the vPSR/vPUR format could be generated semi-automatically",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2024242920",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Cost*: medium; touches state architecture",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2058674138",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Rationale: \"Better than a cold open, better than the current meta-lede\" per author. Preserves a small amount of narrative flow suited to the worked-example sub-genre without retaining the workshop-\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2082454146",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 3b requires futon5 TPG + Pantograph integration",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2085007602",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Option chosen: neither (a) nor (b) straight \u2014 nuanced. The original \"grow and embed open research in institutional culture and practice\" is not filler; it is the formal title of the ORP. Reader can\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2094561785",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: live walk-through showed mission-search returns ~8 results by default; \"lots of stuff\" when cosine is hallucinating; operator needs filter affordances",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2096333786",
+"mission": "futon3c-d/mission/war-machine-first-outing",
+"reason": "single session \u2014 path-limited commits suffice). R-C follow-on: a small spike",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2098397452",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Engelbart (1962) citation \u2014 the fold of \u00a71's Bootstrap sequence cites Engelbart informally; the reference list at \u00a7References needs an explicit entry. Mechanical fix, INSTANTIATE-scope miss.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2098600146",
+"mission": "futon0-d/mission/capability-star-map",
+"reason": "Falsification \u2014 a mission whose output wire claims capability X but has no code grounding is",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h2103056128",
+"mission": "futon3c-d/mission/apm-solutions",
+"reason": "Stage 9b R-GCN training with harder negative sampling",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h217267833",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: candidate for its own sibling mission M-mission-landscape-projection; closes M-stack-geometry's full topology aim more completely than v2's missions-slice subgraph",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h217428555",
+"mission": "futon3c-d/mission/agency-hardening-datapoints",
+"reason": "Deferred behind the drainer fix. Evidence above is the spec for the build.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h217459777",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Refined hypothesis on tacit-required items. C3's \"fold\" outcome was almost pre-determined by plain-language-thesis + Bootstrap sequence context; might have been scaffold-augmentable under a tighter\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h218082411",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Question: 1962 framework reference / 1995 CACM paper / both?",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h225545999",
+"mission": "futon4-d/mission/three-column-stack",
+"reason": "Automatic invariant enforcement: Currently invariants run on demand via",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h289189440",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Scope*: tune the rank-fusion in missions.clj (combine-rankings or similar) to down-weight v1 results when v1 confidence is low (e.g., v1-only results without v1.1 corroboration get demoted)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h293719469",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Cost*: ~25-30 min CLJS edit + small build",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h311041103",
+"mission": "futon3c-d/mission/diagramprover",
+"reason": "Phase 4 requires superpod GPU access (non-blocking)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h332880940",
+"mission": "futon4-d/mission/three-column-stack",
+"reason": "Invariant-to-wiring-diagram mapping: The ARGUE phase describes how each",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h342322371",
+"mission": "futon3c-d/mission/typed-bells",
+"reason": "holes/tickets/T-typed-bell-arse-write-async.md (WATCH) \u2014 the synchronous",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h352418708",
+"mission": "futon3c-d/mission/war-machine-first-outing",
+"reason": "stack-annotations) carry currency until the post-grind regen. Follow-on: the",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h388792171",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Silent un-annotation of the copy \u2014 matches the \"cut is the",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h393501329",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Option chosen: (b) tighten \u2014 drop the meta-verb \"we will use it to trace\", keep the \"illustrate\" framing as lightweight narrative.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h395680196",
+"mission": "futon2-d/mission/points-de-fuite",
+"reason": "*Candidate follow-on:* an excursion/mission for per-mission thread\u2192pattern map-reduce (improve / invalidate at close).  Recorded here as the realisation; not built.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h455464829",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Scaffolds future: none specific; mechanical miss closed.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h457253012",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decision ID: B3-in-any-case-keep",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h497156741",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decision ID: B2-worked-example-tighten",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h509067733",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: LC1.x polish; can land as standalone PR",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h559599241",
+"mission": "futon4-d/mission/self-representing-stack",
+"reason": "System book chapter (INSTANTIATE item 2): producing a navigable Arxana",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h565419413",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Dual-display (same id, both runs overlaid, markers disambiguated",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h582174101",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Item unblocked: B2 (\u00a73 worked-example-intro meta-lede-adjacent \"To illustrate how the model works, we will use it to trace...\").",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h588588496",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Scope*: ~5 lines in core.cljs/init to read window.location.pathname and route to :mission-search page if the pathname matches; OR add a small server-side redirect that rewrites /mission-search \u2192 /\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h60354560",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: either LC1.x or a small M-mission-graph-integration standalone mission",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h620180851",
+"mission": "futon3c-d/mission/codex-agent-behaviour",
+"reason": "Option C consolidation: Move detection predicates and enforcement",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h63947512",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Author-comments (Google-Docs-style sticky notes).",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h655340445",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Cost*: ~10 min",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h670504740",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Question: drop \"including\", expand into a named list, or leave as-is?",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h685700973",
+"mission": "futon0-d/mission/capability-star-map",
+"reason": "Attribution \u2014 *which real mission shipped which feature* (Joe's \"very useful going forward\").",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h686236863",
+"mission": "futon2-d/mission/aif-head",
+"reason": "Phase 2 peripheral rollout: AIF heads for chat, explore, edit, deploy,",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h727229253",
+"mission": "futon2-d/mission/aif-head",
+"reason": "I5 composition diagram: Verify compositional closure across the full",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h727635761",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: walk-through \"a sorry enterprise\" showed M-a-sorry-enterprise buried at combined #3 despite v1.1 ranking it #1 (with v1 silent). Fusion gives weight to cosine even when cosine is artifact.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h731291299",
+"mission": "futon3c-d/mission/war-machine-first-outing",
+"reason": "Foreword was written \u2192 follow-on: fold it into the Foreword (VSATARCS \u00a70).",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h744645964",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Disposition*: LC1.x; addresses the root cause of \"too much stuff\"",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h757805415",
+"mission": "futon4-d/mission/three-column-stack",
+"reason": "Protocol/defmethod reflection: The code column currently reflects",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h802181294",
+"mission": "futon2-d/mission/custom-harness",
+"reason": "follow-on: Zai itself as a candidate co-builder of its own successor",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h837114660",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Item unblocked: B3 (\u00a71 line 60 lexical-sweep hit \"(while not strictly easy, Step 1 is now on track to happen in any case)\").",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h851623685",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "\"Governance debt\" concept dropped from W5 \u2014 filed as candidate for a future mission if the WP's argument space needs it downstream.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h859251102",
+"mission": "futon4-d/mission/three-column-stack",
+"reason": "Proof Peripheral integration (INV-5: FALSIFY before CONSTRUCT): Requires",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h864452607",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Question: drop / replace with \"regardless\" / leave as-is?",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h891286490",
+"mission": "futon3c-d/mission/apm-solutions",
+"reason": ".sty semantic colours (fontspec compatibility)",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h908331904",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: Rob's GraphViz proof-plan visualisation is a benchmark; Joe wants \"even better\" but the specification of *better* is open",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h928810753",
+"mission": "futon4-d/mission/essays-edit-cycle",
+"reason": "Whether the manifest format should remain Elisp or migrate to",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h930100753",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Second-dataset validation. The scaffolding hypothesis is scored confirmed on this dataset only. Running the workflow on a second corpus (e.g., a co-author's draft, a prior paper) would test cross-d\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h946554357",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Rationale: Parenthetical usage is grammatical and not a strict pattern violation; the lexical sweep's hit is a mild false positive. Joe ratified leaving it.",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h958217617",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Decision ID: B1-orp-title-and-reference",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h996137550",
+"mission": "futon4-d/mission/writing-ethics",
+"reason": "Scaffolds future: calibration signal \u2014 meta-lede has a partial exception for worked-example intros, but the exception is *lightweight narrative* (\"X illustrates Y\") not *meta-verb-plus-we-will* (\"w\u2026",
+"registry": "prose"
+},
+{
+"held": "held/item/prose/h999247988",
+"mission": "futon7-d/mission/self-documenting-stack",
+"reason": "*Problem*: client-side routing is hash-based; http://localhost:3100/mission-search silently lands on the GRAPH page",
+"registry": "prose"
+},
+{
+"held": "held/item/sorry/first-flights-phase-b-policy-grade-G",
+"mission": "futon3c-d/mission/first-flights",
+"reason": "Phase B policy-grade G(s, \u03c0): flight records must carry derivations, ghosts, and warrants",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/pattern-measure-never-target",
+"mission": "futon3a-d/mission/memes-arrows-patterns-diagrams",
+"reason": "Mint the A1 discipline as a library pattern (third live instance today)",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/pattern-typed-theme-liberates-the-solo",
+"mission": "futon3a-d/mission/memes-arrows-patterns-diagrams",
+"reason": "Mint the Gantt-ification defense \u2014 load-bearing in two missions, not in the library",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/pudding-g1-arrow-witness-binding",
+"mission": "futon0-d/mission/futonzero-generative",
+"reason": "G-REWARD's named open home: bind arrow-witness to the per-turn affect detector",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/pudding-g1-arrow-witness-binding",
+"mission": "futon7-d/mission/pudding-peradams",
+"reason": "G-REWARD's named open home: bind arrow-witness to the per-turn affect detector",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/wm-aif-substrate-addressability",
+"mission": "futon3-d/mission/live-geometric-stack",
+"reason": "WM action types need addressable substrate; meta-sorry registers itself as the first sorry",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/wm-aif-substrate-addressability",
+"mission": "futon7-d/mission/stack-essay-code-alignment",
+"reason": "WM action types need addressable substrate; meta-sorry registers itself as the first sorry",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/wm-aif-substrate-addressability",
+"mission": "futon7-d/mission/war-machine-aif-completion",
+"reason": "WM action types need addressable substrate; meta-sorry registers itself as the first sorry",
+"registry": "sorrys"
+},
+{
+"held": "held/item/sorry/wm-realised-on-merge-binding",
+"mission": "futon0-d/mission/futonzero-generative",
+"reason": "\u03b3 loss stream needs realised-G bound to EXECUTED actions, tagged independent",
+"registry": "sorrys"
+}
+],
+"holes": [],
+"lineage": [
+{
+"agent": "agent:claude-4",
+"at": 1790358070361,
+"session": "6cf867e9-6bab-452d-ba2d-67a561959d12",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-10",
+"at": 1790357972897,
+"session": "158bb5ed-3985-4627-878d-c8babeaeb9d8",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-8",
+"at": 1790357448451,
+"session": "9824b707-fdaf-40c6-886e-9ce6eed1cee9",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-11",
+"at": 1790353450258,
+"session": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+"target": "futon3c-d/mission/diagramprover"
+},
+{
+"agent": "agent:claude-13",
+"at": 1790352530708,
+"session": "3a0c9fc1-005a-421d-b8be-8d308f774065",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-1",
+"at": 1790350425013,
+"session": "cb1be3dd-5b2d-4986-911c-74c178f84408",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-3",
+"at": 1790350373703,
+"session": "355a71b9-163b-4f96-bebe-0497607deff0",
+"target": "futon3c-d/mission/wm-wiring"
+},
+{
+"agent": "agent:claude-12",
+"at": 1790349128323,
+"session": "df410037-e8b2-4493-86fc-2bce92d5179a",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:claude-6",
+"at": 1790342231448,
+"session": "14ebf970-6e85-4f6f-a8bc-968cabb1394a",
+"target": "futon2-d/excursion/kimi-task-28"
+},
+{
+"agent": "agent:kimi-12",
+"at": 1790342120263,
+"session": "kimi-b9c1f6ac-e49b-4308-b6c7-dbbb2d7a587e",
+"target": "futon2-d/excursion/kimi-task-28"
+},
+{
+"agent": "agent:kimi-11",
+"at": 1790342115252,
+"session": "kimi-22fbafb8-0bf2-43af-abd0-ed57f946eaf1",
+"target": "futon2-d/excursion/kimi-task-28"
+},
+{
+"agent": "agent:kimi-25",
+"at": 1790340961244,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-24",
+"at": 1790334536839,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-23",
+"at": 1790333857546,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-22",
+"at": 1790332565725,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-21",
+"at": 1790332089137,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-20",
+"at": 1790331493535,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-19",
+"at": 1790330560452,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-18",
+"at": 1790329992805,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-17",
+"at": 1790327960591,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-16",
+"at": 1790327880576,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-15",
+"at": 1790326189530,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-14",
+"at": 1790326172702,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-13",
+"at": 1790308038496,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-7",
+"at": 1790307650159,
+"session": "kimi-e5bfef66-525a-4fba-af1b-7130a5c18593",
+"target": "futon2-d/excursion/kimi-task-28"
+},
+{
+"agent": "agent:kimi-5",
+"at": 1790307221732,
+"session": "kimi-83865847-b667-4e10-8cd3-8021ad4c7ae8",
+"target": "futon2-d/excursion/kimi-task-27"
+},
+{
+"agent": "agent:kimi-1",
+"at": 1790306631895,
+"session": "kimi-gate-test-1790276487",
+"target": "futon2-d/excursion/proof2a-holes"
+},
+{
+"agent": "agent:kimi-10",
+"at": 1790305529376,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:kimi-6",
+"at": 1790304419712,
+"session": "kimi-20954c21-7e99-4bd2-b915-f15958db454c",
+"target": "futon2-d/excursion/cascade-real"
+},
+{
+"agent": "agent:kimi-4",
+"at": 1790304028918,
+"session": "kimi-da33900b-4d7c-41b1-afc0-75239d84a528",
+"target": "futon2-d/excursion/cascade-real"
+},
+{
+"agent": "agent:kimi-2",
+"at": 1790304025353,
+"session": "kimi-55a94d9c-cdda-4911-8a91-4c251b25ce33",
+"target": "futon2-d/excursion/cascade-real"
+},
+{
+"agent": "agent:kimi-3",
+"at": 1790296997264,
+"session": "kimi-f536da7e-a54b-4e61-8422-1ad60b857054",
+"target": "futon2-d/excursion/kimi-task-1"
+},
+{
+"agent": "agent:claude-9",
+"at": 1790289170146,
+"session": "402e0cbd-0cf8-40d3-a986-ed1e0cb1e7de",
+"target": "futon2-d/excursion/cascade-real"
+},
+{
+"agent": "agent:claude-2",
+"at": 1790288594812,
+"session": "c0992d61-3649-4e58-9b53-3f00e8e0a29e",
+"target": "futon2-d/mission/f11-find-production-successor"
+},
+{
+"agent": "agent:claude-5",
+"at": 1790288575523,
+"session": "de4c2047-bf32-4b18-bd55-8f97e94c6252",
+"target": "futon2-d/excursion/cascade-real"
+},
+{
+"agent": "agent:codex-14",
+"at": 1790227283862,
+"session": "01a0c489-1ec2-7553-9e83-52d0f2bea66e",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:zai-2",
+"at": 1790227204866,
+"session": "zai-0f6a8e07-17d2-4bc6-80e2-015a56869e23",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-10",
+"at": 1790227203764,
+"session": "01a0c430-22c7-7142-97f7-f169061cd9ad",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-1",
+"at": 1790226894167,
+"session": "01a0d113-03d6-7281-a49f-d763dbf0a16b",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-2",
+"at": 1790226891976,
+"session": "01a0ba4b-15ed-7143-99be-3d2876afb09d",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-13",
+"at": 1790225038414,
+"session": "01a0c431-cb93-7cd3-a50e-2c03f99d120d",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-4",
+"at": 1790223760080,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-3",
+"at": 1790221036604,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:zai-1",
+"at": 1790114956071,
+"session": "zai-7e12e334-63b7-4518-821f-065359c09051",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-20",
+"at": 1790102422985,
+"session": "01a0c688-227d-79f2-92ab-6d8bc042a048",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-12",
+"at": 1790083648258,
+"session": "01a0c431-ae24-7cb2-beab-a8731bc14d1c",
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-18",
+"at": 1790024252832,
+"session": null,
+"target": "futon3c-d/mission/the-perfect-crime"
+},
+{
+"agent": "agent:codex-17",
+"at": 1790019226247,
+"session": "01a0c4f5-d9c3-7653-b641-3c9ed105b119",
+"target": "futon3c-d/mission/autoclock-in"
+},
+{
+"agent": "agent:claude-19",
+"at": 1789427137797,
+"session": "50b99b03-3e13-4853-81d0-c5efab15ef13",
+"target": "futon3c-d/mission/turns-first"
+},
+{
+"agent": "agent:codex-8",
+"at": 1788431117367,
+"session": "01a01962-97ba-7191-b38d-70b22115437f",
+"target": "futon2-d/mission/zaif-harness-v1"
+},
+{
+"agent": "agent:codex-22",
+"at": 1788377878800,
+"session": "01a03f37-ae6a-7553-b438-bf7d9cd47285",
+"target": "futon2-d/mission/zaif-harness-v1"
+},
+{
+"agent": "agent:codex-7",
+"at": 1788374941305,
+"session": "01a05e43-8c09-7a10-86a3-98df48c96d8b",
+"target": "futon2-d/mission/zaif-harness-v1"
+},
+{
+"agent": "agent:war-machine",
+"at": 1788357789880,
+"session": null,
+"target": "futon5a-d/mission/expressions-of-interest"
+},
+{
+"agent": "agent:f15-scribe",
+"at": 1787160680673,
+"session": "01a01af0-63df-79e1-be84-77953f8b1c44",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f15-student",
+"at": 1787159501052,
+"session": "zai-622671d8-43c1-476e-8807-92955b3b62f8",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f15-solver",
+"at": 1787157085636,
+"session": "01a01aa9-edd2-7212-a321-0b19620e4a8b",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f13-scribe",
+"at": 1787140788644,
+"session": "01a019da-3efe-7663-8d87-e795c16c028c",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f13-solver",
+"at": 1787139403375,
+"session": "01a019c8-8928-7450-b11f-73d67c2ff9ea",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f12-scribe",
+"at": 1787126668198,
+"session": "01a018ef-1cbc-76c0-a17a-9fac2a91d6a2",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f12-student",
+"at": 1787125861534,
+"session": "zai-621aa86d-6051-4736-814e-68658aaf2474",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f12-solver",
+"at": 1787123999648,
+"session": "01a018ab-c1e2-7581-9bbf-d1ad72fcdef5",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f11-scribe",
+"at": 1787074324467,
+"session": "01a015c5-3dc2-7ef0-9543-14c96f202253",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f11-student",
+"at": 1787073304763,
+"session": "zai-60a0951e-87a3-4134-bac2-6b603cf51791",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f11-solver",
+"at": 1787070524432,
+"session": "01a015a2-6df8-7de0-8749-2298af433cdd",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f10-scribe",
+"at": 1787052994472,
+"session": "01a01470-bda1-7572-a426-a569894e9499",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f10-student",
+"at": 1787052431018,
+"session": "zai-297152bf-1725-40d3-abe1-792fc171012f",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f10-solver",
+"at": 1787048667628,
+"session": "01a01440-4021-7900-94f4-87b8a1239174",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f9-scribe",
+"at": 1787042603221,
+"session": "01a013f3-0c57-7963-890d-3f4ac3ff4f88",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f9-student",
+"at": 1787041973137,
+"session": "zai-0682f426-50ef-4ff6-9d97-f39f79b1ee92",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f9-solver",
+"at": 1787040400110,
+"session": "01a013d8-2d9b-7ce2-b4ab-d2d5514062b5",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f8-student",
+"at": 1786952364331,
+"session": "zai-fb739ef6-3735-455a-bc07-206404c8c464",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f8-scribe",
+"at": 1786951385795,
+"session": "01a00e90-717b-7211-b0f5-603674607b46",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f8-solver",
+"at": 1786950250658,
+"session": "01a00e7b-ece3-75f1-b24f-6d31d273b832",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f7-student",
+"at": 1786910939953,
+"session": "zai-f44980cd-a82c-482d-9724-640dd7d09c4a",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:f7-solver",
+"at": 1786910098585,
+"session": "01a00bf3-7755-76b0-ab8a-2c3bf9330eb5",
+"target": "futon3c-d/mission/apm-demonstration"
+},
+{
+"agent": "agent:ams-codex-1",
+"at": 1786534821783,
+"session": "019ff2d6-072c-7083-bcc3-6757ea31dbb5",
+"target": "futon3c-d/mission/zai-learning-loop"
+},
+{
+"agent": "agent:ams-codex-2",
+"at": 1786485810386,
+"session": "019ff2d5-f680-7da1-b02d-d75bd2d213d0",
+"target": "futon3c-d/mission/zai-learning-loop"
+},
+{
+"agent": "agent:codex-9",
+"at": 1785592791371,
+"session": "019fadc0-2b39-7360-a502-cf4a4dbf39f5",
+"target": "futon3c-d/mission/codex-sorry-loop"
+},
+{
+"agent": "agent:lon-codex-1",
+"at": 1785583315580,
+"session": "019fbcce-6473-7951-b083-8f21fa728224",
+"target": "futon3c-d/mission/codex-sorry-loop"
+},
+{
+"agent": "agent:codex-5",
+"at": 1785583240488,
+"session": "019f9ac9-724f-7751-8071-b5c8864e4d01",
+"target": "futon3c-d/mission/codex-sorry-loop"
+},
+{
+"agent": "agent:codex-6",
+"at": 1785583157515,
+"session": "019f9b12-3f1e-7471-a926-94d7c2003a09",
+"target": "futon3c-d/mission/codex-sorry-loop"
+},
+{
+"agent": "agent:zai-6",
+"at": 1785162356984,
+"session": "zai-d86a4c4e2d654f8a93a0b983c64ad6ed",
+"target": "futon3c-d/mission/zai-learning-loop"
+},
+{
+"agent": "agent:zai-5",
+"at": 1785135014487,
+"session": "zai-b2874285f2db4b4f870b90c87605d0c1",
+"target": "futon3c-d/mission/zai-learning-loop"
+},
+{
+"agent": "agent:zai-7",
+"at": 1784800467847,
+"session": "zai-982cb7cd-faa2-4120-b2ba-724191b9065a",
+"target": "futon3c-d/mission/shared-memory-control-build-test"
+},
+{
+"agent": "agent:codex-6",
+"at": 1784200308346,
+"session": "019f5d78-9d90-7731-886a-25b042472c9c",
+"target": "futon5a-d/mission/learning-loop"
+},
+{
+"agent": "agent:claude-7",
+"at": 1784200166215,
+"session": "e898eb1a-3ef4-4eca-a2ef-a09023a803ed",
+"target": "futon5a-d/mission/learning-loop"
+},
+{
+"agent": "agent:zai-9",
+"at": 1784066751400,
+"session": "zai-9278d1caa14c4f41954de92d0059751a",
+"target": "futon2-d/mission/aif-ants-port"
+},
+{
+"agent": "agent:zai-4",
+"at": 1783846452914,
+"session": "zai-a6d2b9cf7d6f4339b4f696b171d9d3bc",
+"target": "futon2-d/mission/zaif-harness"
+}
+]
+}

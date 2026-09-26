@@ -1,0 +1,34 @@
+{:schema :wm/run4-disabled-deployment-template-v1 :enabled? false
+ :activation :operator-provisioned-only
+ :credential {:state :unprovisioned :format :lowercase-hex-256-bit
+              :principal "Joe" :value-present? false}
+ :casting {:author "codex-20" :reviewer "zai-1" :repair-reviewer "zai-1"}
+ :authority-root "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/authority"
+ :manifest {:ref "holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/series-pin.edn"
+            :sha256 "aa37408ee98079c96b44cf773332bff13d13fbb8ba4dde55a36b59f555039901"}
+ :pin-allowlist #{"holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/task-pin.edn"}
+ :source-allowlist
+ #{"holes/missions/M-u88-contextual-preferences.md"
+   "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md"
+   "src/futon2/aif/mission_registry.clj"
+   "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json"
+   "holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/run-config.edn"
+   "holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/cohort.edn"
+   "resources/run4/seeded-c.edn" "resources/run4/checkpoint-kernel.edn"}
+ :stores {:controller-and-admission "/home/joe/run4/U88-codex20-v2-20260911/controller"
+          :bindings "/home/joe/run4/U88-codex20-v2-20260911/bindings"
+          :projections "/home/joe/run4/U88-codex20-v2-20260911/projections"
+          :run-records "/home/joe/run4/U88-codex20-v2-20260911/run-records"
+          :recordings "/home/joe/run4/U88-codex20-v2-20260911/recordings"
+          :visibility "/home/joe/run4/U88-codex20-v2-20260911/visibility"}
+ :reserved-unwired {:battery "/home/joe/run4/U88-codex20-v2-20260911/battery"
+                    :control-map-root "/home/joe/code/p4ng"
+                    :control-map-ref "empirics-futon/control-map-edges.edn"
+                    :control-map-sha256 "161d0abffd21551078ac2d7a87427e6cacafbfca0695c09a496260be21fafdec"}
+ :serving {:route "/api/alpha/wm/run4/series/step"
+           :request {:run4-series-ref "holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/series-pin.edn"}
+           :single-flight :existing-runner-service-cas :automatic-start? false}
+ :mission {:id "M-u88-contextual-preferences" :state :open
+           :activated-on "2026-09-11"
+           :activation-authority "Joe-authorized U88 task execution with Codex-20 and Zai-1"
+           :activation-permitted? true}}

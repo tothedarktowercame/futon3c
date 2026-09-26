@@ -15,7 +15,8 @@
    {:id "M-capability-star-map" :path "/home/joe/code/futon0/holes/missions/M-capability-star-map.md" :status-class :active :open-hole-count 10}])
 
 (deftest wm-region-graph-verifies-and-reproduces-keystone
-  (let [graph (extractor/build-graph {:missions fixture-missions})
+  (let [graph (extractor/build-graph {:missions fixture-missions
+                                      :structural-holes? false})
         verify (extractor/run-verify-equivalent graph)
         keystone (extractor/keystone-path-report graph)]
     (is (:verified? verify) (pr-str (:violations verify)))
@@ -32,7 +33,8 @@
            (set (keys (:capabilities graph)))))))
 
 (deftest held-ascent-capabilities-carry-pre-witness-candidates
-  (let [graph (extractor/build-graph {:missions fixture-missions})
+  (let [graph (extractor/build-graph {:missions fixture-missions
+                                      :structural-holes? false})
         efe-witness (get-in graph [:capabilities
                                    :efe-trustworthy-over-starmap
                                    :pre-witness
@@ -53,7 +55,8 @@
     (is (seq (:hard-gates overnight-witness)))))
 
 (deftest mission-mapping-distinguishes-real-missions-from-non-mission-builders
-  (let [graph (extractor/build-graph {:missions fixture-missions})
+  (let [graph (extractor/build-graph {:missions fixture-missions
+                                      :structural-holes? false})
         missions (:missions graph)
         real (filter (comp true? :real-mission? val) missions)
         builders (filter (comp false? :real-mission? val) missions)]
@@ -68,6 +71,35 @@
                         [:builder :built-under :real-mission?])))
     (is (empty? (filter #(re-matches #"M-wm.*|M-war-machine-(input-sources|hole-counter|gate-runner)" %)
                         (keys missions))))))
+
+(deftest structural-hole-count-is-separate-from-lexical-open-hole-count
+  (let [graph (extractor/build-graph {:missions fixture-missions
+                                      :structural-hole-fn (fn [mission-id]
+                                                           (when (= "M-war-machine-pilot" mission-id)
+                                                             {:structural-hole-count 7}))})
+        mission (get-in graph [:missions "M-war-machine-pilot"])]
+    (is (= 8 (:open-hole-count mission))
+        "lexical open-hole-count stays unchanged")
+    (is (= 7 (:structural-hole-count mission)))))
+
+(deftest structural-hole-report-counts-ghost-vacuous-and-open-question-holes
+  (let [frame (fn [id binder sub-count]
+                {:id id
+                 :type "scope/frame"
+                 :props {:scope/id id
+                         :scope/binder binder
+                         :fold/sub-count sub-count}})
+        report (extractor/structural-hole-report-from-frames
+                [(frame "demo/head" "eightfold-phase" 3)
+                 (frame "demo/identify" "eightfold-phase" 2)
+                 (frame "demo/map" "eightfold-phase" 0)
+                 (frame "demo/open-questions" "loose-section" 4)])]
+    (is (= ["head" "identify"] (:phase/written report)))
+    (is (= ["map"] (:phase/vacuous report)))
+    (is (= ["derive" "argue" "verify" "instantiate" "document"]
+           (:phase/ghost report)))
+    (is (= 1 (:loose/open-question-count report)))
+    (is (= 7 (:structural-hole-count report)))))
 
 (deftest toposort-rejects-requires-cycle
   (let [graph {:capabilities {:a {} :b {}}

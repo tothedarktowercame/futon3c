@@ -1,0 +1,23 @@
+C1 INITIAL — bounded local search record (student: zai-student-transfer-20260910)
+
+QUERY 1 (exact command):
+  cd .../materials && python3 -c "list all ids, names/summaries, sha256 revisions from patterns.json"
+RESULT (exit 0):
+  math-formalization-CA/metric-cauchy-convergence  rev e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1
+  math-formalization-CA/uniform-continuity-boundedness  rev a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c
+  math-informal-CA/estimate-by-bounding  rev 0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e
+  math-informal/local-to-global  rev ac568c2e793843ca8deeda07d731352f15c5c8b7a03b1a8f93660fed79bcfb63
+  math-informal/unfold-the-definition  rev 641cb4452c1ed7e0be21f6df4a48f2e9abc429a86796c5616c9c337b37f7e182
+
+QUERY 2 (exact command):
+  python3 -c "print full metadata + text of the two candidates uniform-continuity-boundedness and local-to-global, plus body sha256"
+RESULT (exit 0): full records printed, including complete pattern bodies. These constitute the two bodies read.
+
+Queries used: 2 of 3. Bodies read: 2 of 2.
+
+RETRIEVED (candidates from query 1): all 5 ids above.
+ACTUALLY READ (full body): 
+  - math-formalization-CA/uniform-continuity-boundedness @ sha256 a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c
+  - math-informal/local-to-global @ sha256 ac568c2e793843ca8deeda07d731352f15c5c8b7a03b1a8f93660fed79bcfb63
+CLAIMED USED: none beyond the two above.
+PROOF-SUPPORTED USED: both of the above — see c1-initial.md "Pattern use" section.

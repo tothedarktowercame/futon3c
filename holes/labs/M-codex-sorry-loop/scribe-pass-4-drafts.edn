@@ -1,0 +1,222 @@
+[{:name "represent-disk-zero-count-with-meromorphic-divisor"
+  :lane :solve-lane
+  :level :representation
+  :status :draft
+  :body
+  {:problem-class
+   "Represent the zero count of a holomorphic function on a closed complex disk in the existing meromorphic-divisor API."
+   :definition
+   "def zeroCountInClosedBall (f : ℂ → ℂ) (c : ℂ) (R : ℝ) : ℤ := ∑ᶠ z, divisor f (closedBall c R) z"
+   :pattern
+   "Use the integer-valued finsum of `MeromorphicOn.divisor` over the closed ball; under the analytic/nonzero hypotheses used by the construction target, its nonzero terms encode root multiplicities."
+   :key-api
+   ["MeromorphicOn.divisor"
+    "finsum"]
+   :witness
+   {:declaration "ConstructionTargets.Rouche.zeroCountInClosedBall"
+    :commit "8814807"}
+   :boundary
+   "The definition supplies a root-count representation, not the argument-principle or homotopy-invariance theorem needed to transfer that count."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :lean-definition, :id "zeroCountInClosedBall"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer" "a92J05"]
+   :artifacts ["ConstructionTargets/Rouche.lean:zeroCountInClosedBall"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "straight-line-rouche-homotopy-stays-nonzero-on-boundary"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Show that the straight-line homotopy from `f` to `f + g` never vanishes on the boundary where `‖g z‖ < ‖f z‖`."
+   :statement
+   "∀ t : Set.Icc (0 : ℝ) 1, ∀ z ∈ sphere c R, f z + (t.1 : ℂ) * g z ≠ 0"
+   :proof-shape
+   ["For `t ∈ [0,1]`, establish `‖(t : ℂ)‖ ≤ 1`."
+    "If `f z + t * g z = 0`, then norm arithmetic gives `‖f z‖ = ‖t * g z‖ ≤ ‖g z‖`."
+    "This contradicts the strict boundary hypothesis `‖g z‖ < ‖f z‖`."]
+   :witness
+   {:declaration
+    "ConstructionTargets.Rouche.rouche_homotopy_ne_zero_on_sphere"
+    :axioms ["propext"]
+    :sorryAx false}
+   :boundary
+   "Boundary nonvanishing is the elementary half of the route. It does not by itself prove that the total divisor is constant along the homotopy."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :proof-strategy, :id "straight-line-rouche-homotopy"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer" "a92J05"]
+   :artifacts
+   ["ConstructionTargets/Rouche.lean:rouche_homotopy_ne_zero_on_sphere"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "import-jensen-and-open-meromorphicon-for-complex-divisor"
+  :lane :arc-lane
+  :level :api-location
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A complex-analysis construction needs the divisor API with the complex instances and its namespace-visible declarations."}
+   :before
+   "Import the generic meromorphic-divisor file and refer to divisor declarations without opening their namespace."
+   :failure
+   "The runner encountered missing complex instances and a namespace-resolution failure."
+   :after
+   "Import `Mathlib.Analysis.Complex.JensenFormula` and add `MeromorphicOn` to the opened namespaces."
+   :rule
+   "For this complex divisor construction, the JensenFormula import brings the required specialization into scope, while the divisor declarations themselves live under `MeromorphicOn`."
+   :boundary
+   "This is an observed fix for the current target and Mathlib snapshot, not a claim that every use of complex divisors requires the Jensen import."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :lean-namespace, :id "MeromorphicOn"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer"]
+   :artifacts ["ConstructionTargets/Rouche.lean"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "simplify-complex-norm-of-real-subtype-coercion"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "`t : Set.Icc (0 : ℝ) 1` and the proof needs `‖(t.1 : ℂ)‖ ≤ 1`."}
+   :before
+   "Try to rewrite the goal with `Real.norm_eq_abs`; the expression is already a complex norm after coercion, so the real-norm rewrite does not match."
+   :after
+   "Use `simpa [abs_of_nonneg t.2.1] using t.2.2` so simplification handles the real-to-complex coercion and complex norm."
+   :rule
+   "When a real interval parameter has been coerced to `ℂ`, simplify the coercion and complex norm together instead of applying a theorem whose left-hand side is a real norm."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :lean-pattern, :id "complex-norm-real-coercion"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer"]
+   :artifacts
+   ["ConstructionTargets/Rouche.lean:rouche_homotopy_ne_zero_on_sphere"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "zeroCountInClosedBall-homotopy-invariant"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :literature
+  :demand 2
+  :body
+  {:frontier/kind :missing-proof
+   :statement
+   "zeroCountInClosedBall_homotopy_invariant
+  (F : Set.Icc (0 : ℝ) 1 → ℂ → ℂ)
+  (hF : ∀ t, AnalyticOnNhd ℂ (F t) (closedBall c R))
+  (hboundary : ∀ t z, z ∈ sphere c R → F t z ≠ 0) :
+  zeroCountInClosedBall (F 1) c R =
+    zeroCountInClosedBall (F 0) c R"
+   :route
+   "Supply the argument-principle bridge showing that the total divisor inside the disk is invariant under an analytic homotopy that remains nonzero on the boundary."
+   :literature
+   {:source "leanprover-community Zulip archive"
+    :runner-locator "116395-maths/Argument principle.json"
+    :archive-path "116395-maths/Argument.20principle.json"
+    :use-status :found-and-used
+    :contribution
+    "The thread identified the argument-principle/residue/winding-number infrastructure as the relevant bridge and warned that older Mathlib lacked a ready theorem."}
+   :near-miss
+   "`Complex.JensenFormula` is available, but its identity weights the divisor by radius/distance and does not state invariance of the unweighted total zero multiplicity."
+   :unblocks
+   [#:ref{:type :lean-theorem, :id "zeroCountInClosedBall_add_eq"}
+    #:ref{:type :apm-problem, :id "a92J05"}]
+   :boundary
+   "The committed file proves the straight-line boundary nonvanishing lemmas but leaves this bridge as the sole `sorry`; the archive anchor does not itself provide the missing Lean theorem."
+   :capture-kind :runner-narrated}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :mathlib-gap,
+         :id "zeroCountInClosedBall-homotopy-invariant"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :receipt-ids ["e339fa94-8b39-43d6-8dfd-8b2cda73c704"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer" "a92J05"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path "116395-maths/Argument principle.json"}]
+   :artifacts
+   ["ConstructionTargets/Rouche.lean:zeroCountInClosedBall_add_eq"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "diagnose-recall-empty-before-declaring-terrain-gap"
+  :lane :trajectory-lane
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :recall-empty
+   :target "rouche-root-count-transfer"
+   :observed
+   {:surfaced-count 0
+    :used-count 0
+    :offered-query
+    ["rouche-root-count-transfer"
+     "Build a reusable Rouché root-count transfer theorem for holomorphic functions on a closed disk under the strict boundary norm inequality."
+     "target"
+     "final"
+     "found"
+     "only"
+     "probe"
+     "work"
+     "anchor"
+     "axiom-clean"]}
+   :diagnosis
+   "The statement hint was passed as one unsplit phrase and the query was polluted by template boilerplate. This row's empty result is therefore evidence of a dispatch/tokenization defect, not clean evidence of an uncovered complex-analysis terrain."
+   :fix
+   {:status :reported-applied
+    :change
+    "`subjects_for` now tokenizes the statement hint into twelve mathematical terms for subsequent cron rows."
+    :verification
+    "Not independently verified in this scribe pass; the next dispatched row is the intended behavioral test."}
+   :inference
+   "Because the proposal query was malformed, no conclusion about the absence of relevant stored memories follows from the empty surfaced set."
+   :capture-kind :receipt-observation-plus-scoped-inference}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :dispatch-defect, :id "unsplit-statement-hint"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t013"]
+   :receipt-ids
+   ["e-99ba9b71-8e7c-4a83-95b3-16d44633b34c"
+    "e339fa94-8b39-43d6-8dfd-8b2cda73c704"]
+   :commits ["8814807"]
+   :problems ["rouche-root-count-transfer"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

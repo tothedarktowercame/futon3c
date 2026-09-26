@@ -11,12 +11,12 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.common :as common]
-            [futon3c.peripheral.issue-holes :as issue-holes]
             [futon3c.peripheral.mission-control :as mc]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.peripheral.round-trip :as rt]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
+            [futon3c.evidence.backend :as evidence-backend]
             [futon3c.evidence.store :as evidence-store]
             [futon3c.social.shapes :as shapes])
   (:import [java.io File]))
@@ -389,6 +389,32 @@
           (is (= 1 (get-in by-id ["mission-control" :mission/turn-count])))
           (is (= 6 (:total-turns telemetry))))))))
 
+(deftest live-mission-turn-counts-uses-bounded-recent-query
+  (testing "live turn telemetry does not issue the old 50k all-coordination scan"
+    (let [seen-query (atom nil)
+          store (reify evidence-backend/EvidenceBackend
+                  (-append [_ _] nil)
+                  (-get [_ _] nil)
+                  (-exists? [_ _] false)
+                  (-query [_ q]
+                    (reset! seen-query q)
+                    [{:evidence/id "e-user-1"
+                      :evidence/type :coordination
+                      :evidence/body {:event "chat-turn"
+                                      :role "user"
+                                      :mission-id "mission-control"
+                                      :turn-id "turn-1"}}])
+                  (-count [_ _] 0)
+                  (-forks-of [_ _] [])
+                  (-delete! [_ _] {:compacted 0})
+                  (-all [_] []))
+          result (#'mcb/live-mission-turn-counts store)]
+      (is (= :coordination (:query/type @seen-query)))
+      (is (= 2000 (:query/limit @seen-query)))
+      (is (string? (:query/since @seen-query)))
+      (is (= 1 (:total-live-turns result)))
+      (is (= 1 (get-in result [:mission-counts "mission-control" :live-turn-count]))))))
+
 ;; =============================================================================
 ;; Peripheral lifecycle
 ;; =============================================================================
@@ -431,27 +457,6 @@
           (is (= :conclusion (:evidence/claim-type (:evidence stop-result))))
           ;; Fruit should record steps taken
           (is (= 1 (:steps-taken (:fruit stop-result)))))))))
-
-(deftest peripheral-mc-issue-holes-step
-  (testing "mission-control can project open issues into EDN issue-hole export"
-    (let [spec {:peripheral/id :mission-control
-                :peripheral/tools #{:mc-issue-holes}
-                :peripheral/scope :full-codebase}
-          p (mc/make-mission-control spec (tools/make-mock-backend))
-          start-result (runner/start p {:session-id "test-mc-issue-holes"
-                                        :author "tester"})]
-      (is (:ok start-result))
-      (with-redefs [issue-holes/build-issue-hole-export
-                    (fn [_opts]
-                      {:issue-hole-export/version 1
-                       :summary {:open-issues 2}
-                       :issues [{:issue/id "x#1"} {:issue/id "x#2"}]})]
-        (let [step-result (runner/step p (:state start-result)
-                                       {:tool :mc-issue-holes
-                                        :args [{:limit 20}]})]
-          (is (:ok step-result))
-          (is (= 2 (get-in step-result [:result :summary :open-issues])))
-          (is (= 2 (count (get-in step-result [:result :issues])))))))))
 
 (deftest peripheral-mc-review-stores-in-state
   (testing "mc-review result is captured in state as latest-review"

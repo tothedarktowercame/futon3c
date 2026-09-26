@@ -1,0 +1,82 @@
+{
+  "schema": "wm/run4-historical-live-readback-v1",
+  "click-id": "wm-click-da355286-dd65-4a28-9ce6-cc5fcbc14787",
+  "run-id": "08121653-1d4e-44be-bd2e-14543fd3bb77",
+  "verification-id": "repair-057-revalidation-20260911-v1",
+  "verification-attempt": {
+    "kind": "runner-execution",
+    "id": "attempt-001"
+  },
+  "cohort-id": "run4-repair057-admission-20260911-v1",
+  "controller-attempt-id": "historical-verification-admission-001",
+  "observation-response": {
+    "http-status": 200,
+    "body": {
+      "status": "awaiting-terminal-evidence",
+      "ordinal": 1,
+      "click-id": "wm-click-da355286-dd65-4a28-9ce6-cc5fcbc14787",
+      "run4/series": true
+    }
+  },
+  "outcome": "historical-verification-awaiting-validation",
+  "task-verdict": "unknown",
+  "resolved": false,
+  "sources": [
+    {
+      "path": "/home/joe/code/futon2/data/wm-repair-obligations/verifications/repair-attempt-057-untyped-failure.edn",
+      "sha256": "d9c57daf78a680751cd8bd6ae9ffde39bad3d495abd7ca73a8f6e1ece63d13dc"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/bindings/click-run-binding-wm-click-da355286-dd65-4a28-9ce6-cc5fcbc14787.edn",
+      "sha256": "3661645a88f312bf9204fc2d056957dbf92b9f113f7458f5badea1b4c279301c"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/activation.edn",
+      "sha256": "76ab2572bbf27cf8f366bccf5c92a322e2e21dce17f11e3a2086f18a85439df9"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/001-time-step.edn",
+      "sha256": "009782616af38280a6128d784668bf919c10fb0eadb1a4b9607f02b46b5c83d8"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/002-selection.edn",
+      "sha256": "c0d51baf8a4318c21b6e9c430504e92b22e6ea69b2359d13b62ce2374b18ee4c"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/003-construction.edn",
+      "sha256": "778511b2de41c7256f4ba4460fc90557a583cbebe2cf23719f37f5813a8f53ff"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/004-dispatch.edn",
+      "sha256": "aa211f794442173d8b51c91110d7fe147a5ca93133397e80935c6a63a2f99517"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/005-build.edn",
+      "sha256": "7671113c8bed27de808676bc2d9adcb6a27940a01c8b383017f2d84c790c2dff"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/006-adjudication.edn",
+      "sha256": "22c23da5844699ea60074317cf92017590e2a84e009e7b1d8dd76481d0da462d"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/cohort-data/run4-repair057-admission-20260911-v1/attempt-001/007-closed.edn",
+      "sha256": "b3b37347534c138977c596908f3b99c36643a9311dee895813a05d5f3ba1988c"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/controller/001-started.edn",
+      "sha256": "47e9e1b33df96bc5d13d790cbc19ba11b8f52127b35c7b4cc032e9320bda626d"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/projections/run4-historical-projection-wm-click-da355286-dd65-4a28-9ce6-cc5fcbc14787.edn",
+      "sha256": "cf2955d8143581523272925454d128d2368a830e82a5060472407992ee578fc4"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/recordings/run4-historical-observation-historical-verification-admission-001.edn",
+      "sha256": "68d87c55baa1f1421e2f063db553a6edda6dec59f9da1c6b6804e3bbed0fcf55"
+    },
+    {
+      "path": "/home/joe/run4/repair057-admission/run-records/tick-run-record-08121653-1d4e-44be-bd2e-14543fd3bb77.edn",
+      "sha256": "b005ed3a9140e326d38485cc916a77fa2eec75d3bdb9a1cabb31e3b5d939f202"
+    }
+  ]
+}

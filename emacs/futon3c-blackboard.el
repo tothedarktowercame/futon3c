@@ -45,8 +45,10 @@ If nil, reads from `.admintoken' in a nearby project root at first use."
     (and raw
          (not (member (downcase (string-trim raw))
                       '("0" "false" "no" "off")))))
-  "When non-nil, route `*agents*' and `*invoke:*' interaction through a
-dedicated terminal HUD instead of local side windows."
+  "When non-nil, keep automatically updated HUD buffers out of editing frames.
+`*agents*', `*mission...*', `*proof*', `*problem: ...*', `*processes*',
+`*context*', and `*invoke:*' remain available as ordinary buffers and may be
+shown in the dedicated terminal HUD."
   :type 'boolean
   :group 'futon3c-blackboard)
 
@@ -431,8 +433,11 @@ When disabling, also dismiss any existing local `*agents*' windows."
   "Return non-nil if BUFFER should be routed to the HUD frame."
   (let ((name (if (bufferp buffer) (buffer-name buffer) buffer)))
     (or (string= name "*agents*")
+        (string-prefix-p "*mission" name)
+        (string= name "*proof*")
         (string= name "*processes*")
         (string= name "*context*")
+        (string-prefix-p "*problem:" name)
         (string-prefix-p "*invoke:" name))))
 
 (defun futon3c-blackboard--suppress-hud-side-window (orig-fn buffer alist &rest args)

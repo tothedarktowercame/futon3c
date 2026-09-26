@@ -1,0 +1,15 @@
+
+Running tests in #{"test"}
+
+Testing futon3c.transport.invoke-ingress-integration-test
+
+FAIL in (execution-terminal-and-delivery-transitions-are-idempotent) (invoke_ingress_integration_test.clj:171)
+expected: (false? ((var http/mark-invoke-job-running!) id))
+  actual: (not (false? nil))
+
+FAIL in (execution-terminal-and-delivery-transitions-are-idempotent) (invoke_ingress_integration_test.clj:171)
+expected: (false? ((var http/mark-invoke-job-running!) id))
+  actual: (not (false? nil))
+
+Ran 8 tests containing 54 assertions.
+2 failures, 0 errors.

@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Headless Agency worker profile for zone-joe (Amsterdam).
+#
+# TWO JVMs are expected here (standard revised 2026-08-10, Joe): the main
+# serving JVM started by fdev, AND a separate futon1b-server. The previous
+# note here said no separate futon1b-server may run — that is obsolete, and
+# it actively misleads: it reads as a hard constraint and stops you bringing
+# the substrate up on this box.
+
+export FUTON3C_ROLE="${FUTON3C_ROLE:-zone}"
+export FUTON3C_SITE="${FUTON3C_SITE:-ams}"
+export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://104.243.39.24:7070}"
+
+export FUTON3C_HEAP="${FUTON3C_HEAP:-12g}"
+export FUTON3C_DIRECT="${FUTON3C_DIRECT:-4g}"
+
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+export FUTON3C_RELAY_CLAUDE="${FUTON3C_RELAY_CLAUDE:-false}"
+export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-false}"
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
+export FUTON3C_REGISTER_CLAUDE2="${FUTON3C_REGISTER_CLAUDE2:-false}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
+export FUTON3C_REGISTER_VSCODE_CODEX="${FUTON3C_REGISTER_VSCODE_CODEX:-false}"
+# Agent identity and IRC nick are local names.  The `ams-` area code is added
+# only at federation boundaries when another site addresses this lane.
+export FUTON3C_CODEX_AGENT_ID="${FUTON3C_CODEX_AGENT_ID:-codex-1}"
+export FUTON3C_CODEX_NICK="${FUTON3C_CODEX_NICK:-codex-1}"
+
+# A ZAI lane is created through Agency's public auto-registration boundary by
+# systemd's ExecStartPost helper. This keeps one registration implementation.
+export FUTON3C_BOOTSTRAP_AGENT_TYPES="${FUTON3C_BOOTSTRAP_AGENT_TYPES:-zai}"
+export FUTON3C_BOOTSTRAP_AGENT_CWD="${FUTON3C_BOOTSTRAP_AGENT_CWD:-${HOME}/code}"
+export FUTON3C_AGENT_ROSTER_FILE="${FUTON3C_AGENT_ROSTER_FILE:-${HOME}/.local/state/futon3c/ams-agent-roster.edn}"
+export FUTON3C_DURABLE_QUEUE_PATH="${FUTON3C_DURABLE_QUEUE_PATH:-${HOME}/.local/state/futon3c/ams-turn-queue.edn}"
+# Park-and-ride (parks completable on ANY dep via POST /api/alpha/park/complete,
+# commit 9657075d): enabled on Zone 2026-08-10 for ground-control task chaining.
+export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-1}"
+# Guidance uses Agency's reviewed typed-bell protocol. Keep the zone serving
+# profile aligned with dev-laptop-env; without this flag the server deliberately
+# treats :type as inert legacy payload and the guidance contract cannot hold.
+export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Warm pouches (M-kangaroo). Was never set on zone, so every turn ran as a cold
+# `claude -p --resume` (found 2026-08-22 while wiring /agents/:id/compact).
+# Joe: enable, effective at the NEXT restart. The joey gate
+# (FUTON3C_KANGAROO_JOEY_MAX_BYTES, 2 MiB default) still keeps big sessions cold.
+export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
+# Only the serving JVM may project peripheral state into the operator's Emacs.
+# Test and CLI JVMs intentionally do not inherit this explicit opt-in.
+export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
+# Watcher mission-scope lane (futon3c.watcher.multi). Written long ago and
+# never armed: the gate defaulted OFF "so the lane can be loaded dark", and
+# nothing ever turned it on, so mission/excursion/campaign docs were never
+# enqueued for reingest on doc-land and substrate-2 held 8 mission entities
+# against 242 mission docs. Joe 2026-09-17: substrate-2 holds ALL the
+# missions and the watcher keeps it up to date -- so the lane is part of this
+# server's configuration, not something the operator re-enables per restart.
+# Arming also runs futon2's mission-record writer on each land, which is what
+# keeps the machine's status/provenance read current.
+# In-process override for an incident: (futon3c.watcher.multi/disarm-scope-lane!).
+export FUTON3C_WATCHER_SCOPE_LANE="${FUTON3C_WATCHER_SCOPE_LANE:-1}"
+# Inbox-zero turn-end machinery (futon0/README-inbox-zero.md, slices 1-6 landed
+# 2026-08-21 but activated nowhere: dev-laptop-env got the exports with ENABLED
+# defaulting false, this file got nothing, so the 2026-08-23 restart changed
+# nothing — found 2026-08-24 tracing a live case).
+# Joe: enable, effective at the NEXT restart. BOTH vars are load-bearing:
+# bootstrap gates the watcher lifecycle on ENABLED, while the exact-seat edit
+# witness producer (dev.clj record-inbox-zero-tool-results!) reads WITNESS_DIR
+# raw with no code fallback — ENABLED alone observes dirt but writes no claims,
+# leaving every path :unattributed with zero followups, which looks like working.
+export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-true}"
+export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${HOME}/code/storage/inbox-zero/witnesses}"
+export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${HOME}/code/storage/inbox-zero/state.edn}"
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
+# Turn-end promotion (futon3c.inbox-zero.turn-promotion, wired 2026-08-24).
+# "propose" = full pipeline with ZERO git writes (shakedown mode, 08-24/25);
+# "execute" = commit + ordinary-vs-outlier push at turn end. Flipped to execute
+# 2026-08-25 (Joe: "turn it on in production") once the attribution arc closed.
+# Live flip without restart: (turn-promotion/set-mode! :execute) via proof-eval.
+# codex-19 set this to "off" on 2026-08-26 while the routing/attribution
+# design was repaired (seats were being spammed with stale notices). Repairs
+# landed the same morning (actionable-only routing, ledger-only propose,
+# delivery-time validity, sweeper propose-once, claims cleaned by a commit,
+# attested-only corroboration, idle-gated launch) and execute was re-enabled
+# live via set-mode!; this default keeps it on across the next restart.
+export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-execute}"
+# Commit notices (futon3c.inbox-zero.sweeper). Counts each watched repo's
+# dirty files; over the threshold it tells the agents whose turns wrote them
+# to commit. Attribution is file mtime against invoke windows, NOT the agent
+# tool stream: the 2026-08-24 attribution-proposal lane keyed on Edit/Write
+# witnesses and proposed nothing in three weeks, because run output is
+# written by processes agents launch, not by their editor tools.
+# This lane only informs: it never stages, commits or pushes.
+# First run one interval after boot, then every 30 min.
+export FUTON3C_INBOX_ZERO_SWEEPER="${FUTON3C_INBOX_ZERO_SWEEPER:-true}"
+export FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS="${FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS:-1800000}"
+export FUTON3C_INBOX_ZERO_THRESHOLD="${FUTON3C_INBOX_ZERO_THRESHOLD:-10}"
+
+# The wrappers move child CLI processes out of the protected server cgroup and
+# into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.
+export FUTON_CLAUDE_BIN_REAL="${FUTON_CLAUDE_BIN_REAL:-${HOME}/.local/bin/claude}"
+export FUTON_CODEX_BIN_REAL="${FUTON_CODEX_BIN_REAL:-${HOME}/.nvm/versions/node/v24.9.0/bin/codex}"
+export PATH="${HOME}/.nvm/versions/node/v24.9.0/bin:${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+export CLAUDE_BIN="${CLAUDE_BIN:-${HOME}/code/futon3c/scripts/systemd/scoped-claude}"
+export CODEX_BIN="${CODEX_BIN:-${HOME}/code/futon3c/scripts/systemd/scoped-codex}"
+export CODEX_CWD="${CODEX_CWD:-${HOME}/code}"
+export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
+export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
+export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
+
+export FUTON1A_PORT="${FUTON1A_PORT:-0}"
+export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
+# Substrate lives in the STANDALONE futon1b-server (two-JVM standard, 2026-08-10),
+# not embedded here. Previously this embedded futon1b on 7074 with a store dir
+# `ams-store` that DOES NOT EXIST — so every text-search 500'd, dispatch recall
+# returned `store-unavailable`, and recall looked like a query-semantics bug for
+# most of 2026-08-10. Diagnosed by ams-claude-1; the healthy store is
+# migration-store-21, served on 7073 by the standalone process.
+export FUTON1B_EMBED="${FUTON1B_EMBED:-0}"
+export FUTON1B_PORT="${FUTON1B_PORT:-7073}"
+export FUTON1B_BIND_HOST="${FUTON1B_BIND_HOST:-127.0.0.1}"
+export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/migration-store-21}"
+export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:${FUTON1B_PORT}}"
+export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1B_URL}}"
+export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-${FUTON1A_URL}/api/alpha}"
+
+# This is a headless worker, not a frontend build or operator HUD host.
+export FUTON5_PORT="${FUTON5_PORT:-0}"
+export FUTON3C_WEBARXANA_SERVER_AUTOSTART="${FUTON3C_WEBARXANA_SERVER_AUTOSTART:-false}"
+export FUTON3C_SHADOW_AUTOSTART="${FUTON3C_SHADOW_AUTOSTART:-false}"
+export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-0}"
+export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
+
+export FUTON3C_PEERS="${FUTON3C_PEERS:-lon=http://172.236.28.208:7070,chi=http://172.236.108.82:7070}"
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon,chi}"
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
+
+if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  echo "[zone] refusing to embed futon1b while futon1b-server.service is active" >&2
+  exit 1
+fi
+for required in "${FUTON_CLAUDE_BIN_REAL}" "${FUTON_CODEX_BIN_REAL}" .admintoken; do
+  if [[ ! -s "${required}" ]]; then
+    echo "[zone] required deployment input missing or empty: ${required}" >&2
+    exit 1
+  fi
+done
+if [[ "$(<.admintoken)" == "change-me" ]]; then
+  echo "[zone] refusing insecure fallback admin token" >&2
+  exit 1
+fi
+
+exec make dev "$@"

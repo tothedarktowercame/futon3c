@@ -1,0 +1,44 @@
+;; An enactment in futon2 flight-runner/enact-fn's shape for the reduced run record's candidate :C1.
+;; Its grain is click-001's role grain (no pattern on the run record declares one), so the gate
+;; re-run can pass; without a grain attempt every enactment fails X_c(d). claude-10, 2026-09-25.
+{:schema :wm/enactment-v1,
+ :run-record {:click-id "run-fixture", :present true},
+ :candidate :C1,
+ :conformance {:deviations []},
+ :publication-observed
+ {:absent :no-repair-obligation-for-target,
+  :target "M-aif-policy-conditioned-eig"},
+ :attempts
+ [{:n 1,
+   :pattern :apparatus/one-authority-per-question,
+   :commit "fixture-commit",
+   :produced :hole/h6378c65a4012,
+   :grain
+   {:keyed-by :role,
+    :statement
+    "The resolver takes a ROLE and answers which seat plays it. That is the grain instance-4.edn chose; the first attempt built a lookup keyed by an agent id, which is the provider grain.",
+    :evidence
+    {:fn "futon3c.agency.roles/seat-for",
+     :path "src/futon3c/agency/roles.clj",
+     :arglist "[role]",
+     :sha256
+     "617f7fe810e3408f4ccee7dec29f47a35ae88ee418be246d717e5dc862b0ffe3"},
+    :checked-by "scripts/grain_check.py"},
+   :grain-gate {:status :pass},
+   :check {:class :fixture, :result {:observed true}},
+   :success true}],
+ :decision-candidate :C1,
+ :grain-attempt {:pattern :apparatus/one-authority-per-question},
+ :click "run-fixture",
+ :flight "flight-fixture",
+ :grain
+ {:keyed-by :role,
+  :statement
+  "The resolver takes a ROLE and answers which seat plays it. That is the grain instance-4.edn chose; the first attempt built a lookup keyed by an agent id, which is the provider grain.",
+  :evidence
+  {:fn "futon3c.agency.roles/seat-for",
+   :path "src/futon3c/agency/roles.clj",
+   :arglist "[role]",
+   :sha256
+   "617f7fe810e3408f4ccee7dec29f47a35ae88ee418be246d717e5dc862b0ffe3"},
+  :checked-by "scripts/grain_check.py"}}

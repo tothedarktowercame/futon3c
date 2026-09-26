@@ -39,6 +39,7 @@
    INSTANTIATE-4 (multi-source projection wave taps)."
   (:require [futon3c.agency.logic :as agency-logic]
             [futon3c.agents.tickle-logic :as tickle-logic]
+            [futon3c.evidence.boundary :as evidence]
             [futon3c.portfolio.logic :as portfolio-logic]))
 
 ;; ---------------------------------------------------------------------------
@@ -71,6 +72,108 @@
 ;; Agency tap — wraps futon3c.agency.logic/check-registry
 ;; ---------------------------------------------------------------------------
 
+(defn- agency-state->logic-state
+  "Normalize agency state source values.
+
+   Historical callers pass the raw registry map or registry atom. Newer callers
+   can pass the full agency logic snapshot:
+     {:registry ... :routing ... :connections ... :server-accept ...}"
+  [state]
+  (if (and (map? state) (contains? state :registry))
+    state
+    {:registry (or state {})}))
+
+(defn- agency-violations
+  [state]
+  (-> state
+      agency-state->logic-state
+      agency-logic/build-db
+      agency-logic/query-violations))
+
+(defn registry-status->routing
+  "Project `futon3c.agency.registry/registry-status` into agency.logic routing facts."
+  [registry-status]
+  (into {}
+        (map (fn [[aid info]]
+               [aid (select-keys info [:invoke-route :invoke-ready? :invoke-diagnostic])]))
+        (:agents registry-status)))
+
+(defn pouch-snapshot->live-writers
+  "Project warm-pouch snapshot rows into AG-1 live-writer facts.
+
+   Only alive pouches with a session id are writers. The inhabitant-id is stable
+   enough for diagnostics: pid when available, otherwise `pouch:<agent-id>`."
+  [pouch-snapshot]
+  (->> pouch-snapshot
+       (keep (fn [[aid {:keys [alive? session-id pid]}]]
+               (when (and alive? session-id)
+                 {:agent-id aid
+                  :session-id session-id
+                  :inhabitant-id (or pid (str "pouch:" aid))})))
+       vec))
+
+(defn- optional-supplier
+  [x]
+  (cond
+    (nil? x) nil
+    (fn? x) (x)
+    :else x))
+
+(defn- default-local-point []
+  (or (some-> (System/getProperty "FUTON3C_SITE") not-empty keyword)
+      (some-> (System/getenv "FUTON3C_SITE") not-empty keyword)
+      :local))
+
+(defn make-live-agency-state-source
+  "Return a zero-arg source for the full agency.logic snapshot.
+
+   Defaults read live Agency registry/status/pouches via requiring-resolve.
+   Probe facts that need active external checks are supplied optionally:
+     :connections, :remote-health, :session-capacity, :server-accept
+   Each option may be a literal collection or a zero-arg function."
+  ([] (make-live-agency-state-source {}))
+  ([{:keys [registry registry-status pouch-snapshot local-point
+            connections remote-health session-capacity server-accept]
+     :or {local-point ::default}}]
+   (fn []
+     (let [registry-atom (or registry
+                             @(requiring-resolve 'futon3c.agency.registry/!registry))
+           registry-status-fn (or registry-status
+                                  (requiring-resolve 'futon3c.agency.registry/registry-status))
+           pouch-snapshot-fn (or pouch-snapshot
+                                 (requiring-resolve 'futon3c.agency.agent-pouch/snapshot))
+           status (when registry-status-fn (registry-status-fn))
+           pouches (when pouch-snapshot-fn (pouch-snapshot-fn))]
+       (cond-> {:registry @registry-atom
+                :routing (registry-status->routing status)
+                :local-point (if (= ::default local-point)
+                               (default-local-point)
+                               local-point)
+                :live-writers (pouch-snapshot->live-writers pouches)}
+         connections (assoc :connections (optional-supplier connections))
+         remote-health (assoc :remote-health (optional-supplier remote-health))
+         session-capacity (assoc :session-capacity (optional-supplier session-capacity))
+         server-accept (assoc :server-accept (optional-supplier server-accept)))))))
+
+(defn emit-agency-backtrace!
+  "Append a non-fatal Agency invariant backtrace evidence entry.
+
+   This deliberately writes evidence instead of invoking an Agency-managed
+   agent. The operator can feed the emitted payload to an out-of-band agent
+   without risking recursive Agency failure."
+  [evidence-store {:keys [violations total-violations checked-categories]}]
+  (evidence/append!
+   evidence-store
+   {:subject {:ref/type :agent :ref/id "backtrace"}
+    :type :coordination
+    :claim-type :observation
+    :author "agency-backtrace"
+    :body {:event :agency-invariant-backtrace
+           :checked-categories checked-categories
+           :total-violations total-violations
+           :violations violations}
+    :tags [:agency :agency-invariants :backtrace :violation]}))
+
 (defn make-agency-tap
   "Build a probe check-fn for the agency invariant layer.
 
@@ -89,14 +192,14 @@
   ([state-source]
    (make-agency-tap state-source nil))
   ([state-source category]
+   (make-agency-tap state-source category {}))
+  ([state-source category {:keys [backtrace?]
+                           :or {backtrace? false}}]
    (let [informational? #{:proxy-agents :agents-invoking}]
      (fn [_evidence-store]
        (try
          (let [state (resolve-state state-source)
-               registry-atom (if (instance? clojure.lang.IAtom state-source)
-                               state-source
-                               (atom (or (:registry state) state)))
-               all-violations (agency-logic/check-registry registry-atom)
+               all-violations (agency-violations state)
                focus (if category
                        (select-keys all-violations [category])
                        all-violations)
@@ -106,9 +209,15 @@
              {:outcome :ok
               :detail {:checked-categories (set (keys focus))
                        :total-violations 0}}
-             {:outcome :violation
-              :detail {:violations focus
-                       :total-violations total}}))
+             (let [detail {:violations focus
+                           :checked-categories (set (keys focus))
+                           :total-violations total}
+                   receipt (when backtrace?
+                             (emit-agency-backtrace! _evidence-store detail))]
+               {:outcome :violation
+                :detail (cond-> detail
+                          backtrace? (assoc :backtrace-emitted? (true? (:ok receipt))
+                                            :backtrace-evidence/id (:evidence/id receipt)))})))
          (catch Throwable t
            {:outcome :violation
             :detail {:exception (str (.getName (class t)) ": " (.getMessage t))}}))))))

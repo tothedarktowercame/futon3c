@@ -1,0 +1,15 @@
+{
+  "id": "monty-hall",
+  "variables": [
+    {"id": "choice", "kind": "observed"},
+    {"id": "prize", "kind": "observed"},
+    {"id": "host-opens", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "choice", "to": "host-opens"},
+    {"from": "prize", "to": "host-opens"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-MONTY", "question": "Are choice and prize independent marginally but dependent after observing the host?"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-09-10T17:13:54.139542+00:00",
+  "agent_id": "zai-student-transfer-20260910",
+  "registered": true,
+  "held": false,
+  "pending": 0,
+  "draining": false,
+  "session_id": "zai-1715421a-aa9b-4807-a824-2738669b1b5c",
+  "disposition": "Pilot complete; Student retained registered and idle with session intact for audit/follow-up, no remaining hold; not an exclusive scheduler reservation. No unrelated queue conflict observed at inspected boundaries."
+}

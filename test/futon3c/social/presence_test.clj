@@ -76,3 +76,30 @@
       (presence/verify conn registry)
       (is (= registry (fix/mock-registry registry)))))) ; registry is immutable; equality check guards accidental assoc
 
+
+(deftest zai-typed-roster-agent-does-not-poison-handshakes
+  ;; Regression (2026-07-12, live on the hub): S-presence validates the WHOLE
+  ;; AgentRegistryShape per handshake, so zai-1 [:type :zai] — absent from the
+  ;; AgentType enum — made EVERY WS ready frame fail :invalid-registry before
+  ;; the connecting agent (laptop codex-3) was even looked up.
+  (testing "a :zai-typed agent in the roster leaves other agents' handshakes valid"
+    (let [registry (fix/mock-registry
+                    {:agents {"claude-1" {:capabilities [:explore :edit :test]
+                                          :type :claude}
+                              "codex-3"  {:capabilities [:edit]
+                                          :type :codex}
+                              "zai-1"    {:capabilities [:explore :edit]
+                                          :type :zai}}})
+          conn (fix/make-connection {:conn/agent-id (fix/make-agent-id "codex-3" :continuity)
+                                     :conn/metadata {:ready true}})
+          result (presence/verify conn registry)]
+      (fix/assert-valid! shapes/PresenceRecord result)
+      (is (true? (:presence/ready? result)))))
+  (testing "the zai agent itself can also complete the ready handshake"
+    (let [registry (fix/mock-registry
+                    {:agents {"zai-1" {:capabilities [:explore :edit]
+                                       :type :zai}}})
+          conn (fix/make-connection {:conn/agent-id (fix/make-agent-id "zai-1" :continuity)
+                                     :conn/metadata {:ready true}})
+          result (presence/verify conn registry)]
+      (fix/assert-valid! shapes/PresenceRecord result))))

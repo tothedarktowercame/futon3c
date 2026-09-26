@@ -1,0 +1,25 @@
+{
+  "job-id": "store-repair-bad82e9694d2ba65a3e0c6f9769f5bffd3863413fa38fcdeb273e0016bf05cdc",
+  "agent-id": "codex-16",
+  "caller": "apm-store-read-monitor",
+  "state": "failed",
+  "execution": {
+    "executed": false,
+    "tool-events": 0,
+    "command-events": 0
+  },
+  "delivery": {
+    "status": "delivery-failed",
+    "surface": "poll",
+    "destination": "/api/alpha/invoke/jobs/store-repair-bad82e9694d2ba65a3e0c6f9769f5bffd3863413fa38fcdeb273e0016bf05cdc",
+    "recorded-at": "2026-09-11T19:52:48.014588633Z",
+    "note": "caller-not-a-registered-seat"
+  },
+  "terminal-code": "invoke-error",
+  "terminal-message": "Exit 1: 2026-09-11T19:52:45.808018Z ERROR codex_core::session::session: failed to initialize thread persistence: thread-store conflict: thread 01a08be0-9a22-7433-986c-2afe13ea9c36 already has an active writer\n2026-09-11T19:52:45.808354Z ERROR codex_core::session: Failed to create session: thread-store conflict: thread 01a08be0-9a22-7433-986c-2afe13ea9c36 already has an active writer\nError: thread/resume: thread/resume failed: thread 01a08be0-9a22-7433-986c-2afe13ea9c36 already has an active writer (code -32600)",
+  "created-at": "2026-09-11T19:52:41.232579554Z",
+  "started-at": "2026-09-11T19:52:44.253184318Z",
+  "finished-at": "2026-09-11T19:52:46.074337877Z",
+  "observed-at": "2026-09-11T20:10:29.172207+00:00",
+  "scope": "Read-only diagnosis; no repair execution or queue resume claimed"
+}

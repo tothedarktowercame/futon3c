@@ -1,0 +1,55 @@
+{
+  "arrows" : [ {
+    "from" : "u1",
+    "to" : "w"
+  }, {
+    "from" : "u1",
+    "to" : "y"
+  }, {
+    "from" : "u2",
+    "to" : "w"
+  }, {
+    "from" : "u2",
+    "to" : "x"
+  }, {
+    "from" : "w",
+    "to" : "z"
+  }, {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "new-napkin-problem",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "new-napkin-problem.json"
+  },
+  "variables" : [ {
+    "id" : "u1",
+    "kind" : "latent-unobserved",
+    "name" : "U1"
+  }, {
+    "id" : "u2",
+    "kind" : "latent-unobserved",
+    "name" : "U2"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "W"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Z"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "X"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Y"
+  } ]
+}

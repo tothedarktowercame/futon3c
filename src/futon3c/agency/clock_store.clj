@@ -34,6 +34,9 @@
 
 (defn empty-clock
   []
+  ;; A ticket clock (Joe, 2026-09-24: tickets are clock targets, since a kimi
+  ;; requisition may name one) adds :ticket-id; it is absent otherwise, so
+  ;; existing clock maps keep their shape.
   {:campaign-id nil
    :mission-id nil
    :excursion-id nil})
@@ -58,7 +61,7 @@
       :else (recur (.getParentFile f)))))
 
 (defn resolve-clock-target-file
-  "Resolve FILE-PATH to an existing C-/M-/E-.md doc target by exact basename.
+  "Resolve FILE-PATH to an existing C-/M-/E-/T-.md doc target by exact basename.
    Returns a single-active clock target map, or nil when the path is not a
    witnessed mission/campaign/excursion doc."
   [file-path]
@@ -67,7 +70,7 @@
       (when (and (.exists file)
                  (.isFile file)
                  (parent-segment? file "holes"))
-        (when-let [[_ id] (re-matches #"^([CME]-[^/]+)\.md$" (.getName file))]
+        (when-let [[_ id] (re-matches #"^([CMET]-[^/]+)\.md$" (.getName file))]
           (let [canonical (.getCanonicalPath file)]
             (case (first id)
               \C {:id id
@@ -82,14 +85,31 @@
                   :kind :excursion
                   :file canonical
                   :clock {:campaign-id nil :mission-id nil :excursion-id id}}
+              \T {:id id
+                  :kind :ticket
+                  :file canonical
+                  :clock {:campaign-id nil :mission-id nil :excursion-id nil
+                          :ticket-id id}}
               nil)))))))
 
 (defn- clock-label
   [clock]
-  (or (:excursion-id clock)
+  (or (:ticket-id clock)
+      (:excursion-id clock)
       (:mission-id clock)
       (:campaign-id clock)
       "no mission"))
+
+(defn- dispatch-clock
+  [target-id]
+  (let [target-id (if (re-matches #"^[MECT]-.+" target-id)
+                    target-id
+                    (str "M-" target-id))]
+    (case (first target-id)
+      \C {:campaign-id target-id :mission-id nil :excursion-id nil}
+      \E {:campaign-id nil :mission-id nil :excursion-id target-id}
+      \T {:campaign-id nil :mission-id nil :excursion-id nil :ticket-id target-id}
+      {:campaign-id nil :mission-id target-id :excursion-id nil})))
 
 (defn- prune-events
   [events now-ms window-ms]
@@ -180,12 +200,9 @@
   "Secondary signal: an explicit dispatch mission-id clocks this agent session to
    that mission immediately."
   [agent-id session-id mission-id]
-  (when-let [mission (some-> mission-id str str/trim not-empty)]
-    (let [mission (if (str/starts-with? mission "M-")
-                    mission
-                    (str "M-" mission))
-          k (session-key agent-id session-id)
-          new-clock {:campaign-id nil :mission-id mission :excursion-id nil}]
+  (when-let [target-id (some-> mission-id str str/trim not-empty)]
+    (let [k (session-key agent-id session-id)
+          new-clock (dispatch-clock target-id)]
       (get
        (swap! !sessions update k
               (fn [state]
@@ -193,12 +210,28 @@
                       old-clock (:clock state)]
                   (assoc state
                          :clock new-clock
+                         ;; An explicit dispatch is a hard re-clock: clear the
+                         ;; edit-activity anti-thrash baseline so subsequent edits
+                         ;; can reclock back to the dispatched-away target (else a
+                         ;; dispatch permanently pins the session — the stuck-clock
+                         ;; bug behind C-cascade-real D1's repl display).
+                         :last-reclock-target nil
                          :last-auto-clock-witness
                          {:rule "dispatch-mission-id"
                           :source "invoke-receipt"
                           :old-target (clock-label old-clock)
                           :new-target (clock-label new-clock)}))))
        k))))
+
+(defn stored-state
+  "Exact session state, without the legacy agent-wide fallback."
+  [agent-id session-id]
+  (get @!sessions (session-key agent-id session-id)))
+
+(defn decision-order
+  "Total chronological order shared by recovery and live publication."
+  [decision]
+  [(java.time.Instant/parse (:decided-at decision)) (:decision-id decision)])
 
 (defn current-state
   [agent-id session-id]
@@ -212,13 +245,30 @@
   [agent-id session-id]
   (:clock (current-state agent-id session-id)))
 
+(defn set-decision!
+  "Project a verified decision. Retried older events cannot undo a newer clock."
+  [agent-id session-id decision]
+  (swap! !sessions update (session-key agent-id session-id)
+         (fn [state]
+           (let [prior (:decision state)]
+             (if (and prior
+                      (pos? (compare (decision-order prior)
+                                     (decision-order decision))))
+               state
+               (assoc (merge (empty-session-state) state)
+                      :clock (merge (empty-clock) (:clock decision))
+                      :last-auto-clock-witness nil
+                      :decision decision))))))
+
 (defn evidence-clock-fields
   "String-keyed fields suitable for invoke evidence bodies."
   [agent-id session-id]
-  (let [{:keys [clock last-auto-clock-witness]} (current-state agent-id session-id)]
+  (let [{:keys [clock last-auto-clock-witness decision]} (current-state agent-id session-id)]
     (cond-> {}
+      decision (assoc "clock-decision-id" (:decision-id decision))
       (:campaign-id clock) (assoc "clocked-campaign" (:campaign-id clock))
       (:mission-id clock) (assoc "mission-id" (:mission-id clock)
                                  "clocked-mission" (:mission-id clock))
       (:excursion-id clock) (assoc "clocked-excursion" (:excursion-id clock))
+      (:ticket-id clock) (assoc "clocked-ticket" (:ticket-id clock))
       last-auto-clock-witness (assoc "auto-clock-witness" last-auto-clock-witness))))

@@ -1,0 +1,176 @@
+[{:name "specialize-affine-dslope-equality-at-the-disk-center"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Prove the equality case of Schwarz's lemma for a holomorphic unit-disk self-map fixing zero and satisfying `‖deriv h 0‖ = 1`."
+   :lemma
+   "`Complex.affine_of_mapsTo_ball_of_norm_dslope_eq_div`"
+   :location
+   "`Mathlib.Analysis.Complex.Schwarz`"
+   :general-statement-shape
+   "If a differentiable map sends `ball c R₁` into `closedBall (f c) R₂` and its `dslope` attains norm `R₂ / R₁` at an interior point, then it agrees on the ball with the corresponding affine map."
+   :specialization
+   ["Convert the open-unit-ball codomain hypothesis to `MapsTo h (ball 0 1) (closedBall (h 0) 1)`."
+    "Use the center itself as the equality point: `hzero : 0 ∈ ball 0 1`."
+    "Establish `‖dslope h 0 0‖ = 1 / 1` by simplification from `‖deriv h 0‖ = 1`."
+    "Apply the general affine theorem and simplify `h 0 = 0`, subtraction from zero, scalar multiplication, and multiplication order."]
+   :result
+   "`EqOn h (fun z ↦ deriv h 0 * z) (ball 0 1)`."
+   :boundary
+   "This is a specialization of a stronger theorem already present in the checked Mathlib revision; no new maximum-modulus or Schwarz machinery is required."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "schwarz-equality-case"}
+   #:ref{:type :mathlib-lemma,
+         :id "Complex.affine_of_mapsTo_ball_of_norm_dslope_eq_div"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t003"]
+   :commits ["61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems ["schwarz-equality-case"]
+   :artifacts ["ConstructionTargets/SchwarzEquality.lean:eqOn_deriv_mul"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "convert-unit-complex-coefficient-to-an-angle-rotation"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "A disk-map equality proof has reached `h z = c * z` with `‖c‖ = 1`, but the downstream statement requires the coefficient in the form `exp (I * α)`."
+   :lemma
+   "`Complex.norm_mul_exp_arg_mul_I`"
+   :location
+   "`Mathlib.Analysis.SpecialFunctions.Complex.Arg`"
+   :library-statement
+   "`‖x‖ * Complex.exp (x.arg * Complex.I) = x`."
+   :proof-shape
+   ["Choose `α = c.arg`."
+    "Use the unit-norm hypothesis to simplify the leading `‖c‖` factor to 1."
+    "Commute the scalar product in the exponential exponent from `c.arg * I` to `I * c.arg`."
+    "Use the library equality in the direction required by the coefficient goal."]
+   :observed-use
+   "The committed `exists_rotation` theorem takes `c = deriv h 0` after `eq_deriv_mul`."
+   :boundary
+   "The lemma supplies the polar representation of one complex coefficient; the preceding Schwarz specialization is what proves the function is multiplication by that coefficient."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "schwarz-equality-case"}
+   #:ref{:type :mathlib-lemma, :id "Complex.norm_mul_exp_arg_mul_I"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t003"]
+   :commits ["61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems ["schwarz-equality-case"]
+   :artifacts ["ConstructionTargets/SchwarzEquality.lean:exists_rotation"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "check-general-dslope-equality-before-building-schwarz-machinery"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:trigger
+   "A downstream comment or census says that Mathlib has the Schwarz inequality but lacks its equality characterization."
+   :rule
+   ["Treat the absence claim as revision-scoped."
+    "Inspect the current Schwarz source for the more general vocabulary `affine`, `dslope`, and `mapsTo_ball`, not only theorem names containing `Schwarz equality`."
+    "Before reconstructing a maximum-modulus proof, try specializing `Complex.affine_of_mapsTo_ball_of_norm_dslope_eq_div` at the disk center."]
+   :observed-correction
+   "The current Mathlib source explicitly documents that theorem as the equality case in Schwarz's lemma. Specializing it produced four axiom-clean construction-target declarations."
+   :negative-result
+   "The bounded Zulip probe returned no relevant thread; that absence did not imply the library theorem was absent."
+   :taxonomy
+   {:prior-label :missing-mathlib-lemma
+    :observed-current-state :existing-general-lemma-needs-specialization
+    :frontier-required? false}
+   :inference
+   "The reusable search rule is inferred from one successful correction of stale downstream comments; the theorem discovery and compiled specialization are directly witnessed."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "schwarz-equality-case"}
+   #:ref{:type :process-pattern, :id "search-general-form-before-rebuilding"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t003"]
+   :commits ["61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems ["schwarz-equality-case"]
+   :artifacts
+   ["Mathlib/Analysis/Complex/Schwarz.lean:affine_of_mapsTo_ball_of_norm_dslope_eq_div"
+    "ConstructionTargets/SchwarzEquality.lean"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "reverse-polar-identity-when-the-coefficient-goal-points-outward"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "The rotation proof needs `c = exp (I * c.arg)` after simplifying `‖c‖ = 1`, while `Complex.norm_mul_exp_arg_mul_I c` is oriented from the polar expression to `c`."}
+   :before
+   "Use `Complex.norm_mul_exp_arg_mul_I c` directly against the reversed coefficient goal."
+   :after
+   "Use `(Complex.norm_mul_exp_arg_mul_I c).symm`, together with `simpa [heq]` after commuting the exponent factors."
+   :rule
+   "Check which side of the polar identity matches the current coefficient goal; apply `.symm` rather than introducing a second equality or changing the target."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "schwarz-equality-case"}
+   #:ref{:type :mathlib-lemma, :id "Complex.norm_mul_exp_arg_mul_I"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t003"]
+   :commits ["61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems ["schwarz-equality-case"]
+   :artifacts ["ConstructionTargets/SchwarzEquality.lean:exists_rotation"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "record-unrelated-recall-as-honest-non-use-and-a-terrain-gap"
+  :lane :trajectory-lane
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :reasoned-memory-non-use
+   :surfaced
+   ["e-3c8277ed-f830-4578-b69c-ef5ace0a1b24"
+    "e-9e32e848-089b-4ec7-8aff-63d6558e7db6"
+    "e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7"
+    "e-d0b4ed4d-98ac-4f50-a3ca-daf64abc14b0"
+    "e-d9b1739f-7820-4949-afb0-d63146b71508"]
+   :runner-judgment
+   "All five concerned unrelated antiderivative, denominator-normalization, or topology issues, so none was used."
+   :rule
+   "Record surfaced-but-unrelated memories as explicit non-use. Do not cite lexical overlap as mathematical contribution, and do not force a memory into a proof merely to improve a use-rate metric."
+   :terrain-gap
+   {:terrain :complex-analysis
+    :observed-state
+    "No surfaced memory addressed the Schwarz equality case; this successful session supplies the lane's first directly relevant complex-analysis construction memory."
+    :curriculum-signal
+    "Promote and attach the general-dslope specialization memory so future equality-case work has a relevant route."
+    :inference-status
+    "The gap is inferred from the offered set plus ground-control's stated corpus context. It is not claimed as a fresh exhaustive store census."}
+   :receipt
+   {:provided-prefix "5efcc598"
+    :read-status :unresolved
+    :detail
+    "Exact bounded GETs for `5efcc598` and `e-5efcc598` returned 404; no store scan was performed."}
+   :capture-kind :runner-narrated}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "schwarz-equality-case"}
+   #:ref{:type :curriculum-terrain, :id "complex-analysis"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t003"]
+   :commits ["61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems ["schwarz-equality-case"]
+   :receipt-id-prefixes ["5efcc598"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}]

@@ -1,0 +1,48 @@
+{
+  "arrows" : [ {
+    "from" : "a",
+    "to" : "x"
+  }, {
+    "from" : "a",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "y"
+  }, {
+    "from" : "b",
+    "to" : "x"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "deconfounding-game-5",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "deconfounding-game-5.json"
+  },
+  "variables" : [ {
+    "id" : "a",
+    "kind" : "observed",
+    "name" : "Parental Smoking (A)"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Smoking (X)"
+  }, {
+    "id" : "b",
+    "kind" : "observed",
+    "name" : "Childhood Asthma (B)"
+  }, {
+    "id" : "c",
+    "kind" : "latent-unobserved",
+    "name" : "Asthma Predisposition (C)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Adult Asthma (Y)"
+  } ]
+}

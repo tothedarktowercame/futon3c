@@ -1,0 +1,223 @@
+diff --git a/problems/a01A01/lean/Main.lean b/problems/a01A01/lean/Main.lean
+index 426c465..9c33ede 100644
+--- a/problems/a01A01/lean/Main.lean
++++ b/problems/a01A01/lean/Main.lean
+@@ -71,18 +71,19 @@ lemma apm_a01A01_typewriter1d_nonneg (k : ℕ) (x : ℝ) :
+   · exact mul_nonneg (Real.sqrt_nonneg _) zero_le_one
+   · simp
+ 
+-lemma apm_a01A01_typewriter1d_integrable (k : ℕ) :
++lemma apm_a01A01_typewriter1d_integrableOn (k : ℕ) :
+     IntegrableOn (apm_a01A01_typewriter1d k) (Icc (0 : ℝ) 1) volume := by
++  let C := Icc ((apm_a01A01_position k : ℝ) / apm_a01A01_stage k)
++    (((apm_a01A01_position k + 1 : ℕ) : ℝ) / apm_a01A01_stage k)
++  have hC : MeasurableSet C := measurableSet_Icc
++  have hCfin : volume C ≠ ⊤ := measure_Icc_lt_top.ne
++  have hi : Integrable (C.indicator
++      (fun _ : ℝ => Real.sqrt (apm_a01A01_stage k))) volume :=
++    (integrableOn_const hCfin).integrable_indicator hC
++  apply hi.integrableOn.congr_fun _ measurableSet_Icc
++  intro x _
+   unfold apm_a01A01_typewriter1d
+-  have hconst : IntegrableOn
+-      (fun _ : ℝ ↦ Real.sqrt (apm_a01A01_stage k)) (Icc (0 : ℝ) 1) volume :=
+-    integrableOn_const measure_Icc_lt_top.ne
+-  have hind := hconst.indicator
+-    (measurableSet_Icc : MeasurableSet
+-      (Icc ((apm_a01A01_position k : ℝ) / apm_a01A01_stage k)
+-        (((apm_a01A01_position k + 1 : ℕ) : ℝ) / apm_a01A01_stage k)))
+-  convert hind using 1
+-  funext x
++  dsimp [C]
+   rw [Set.indicator_apply, Set.indicator_apply]
+   split_ifs <;> ring
+ 
+@@ -165,70 +166,59 @@ lemma apm_a01A01_integral_typewriter1d_tendsto :
+     field_simp [hspos.ne', hkpos.ne']
+     simpa [pow_two] using hsq
+ 
+-/-- Every point of the unit interval lies in one cell of each positive stage. -/
+-lemma apm_a01A01_exists_cell (n : ℕ) (hn : 0 < n) {x : ℝ}
+-    (hx : x ∈ Icc (0 : ℝ) 1) :
+-    ∃ j : ℕ, j < n ∧ x ∈ Icc ((j : ℝ) / n) (((j + 1 : ℕ) : ℝ) / n) := by
+-  by_cases hx1 : x = 1
+-  · subst x
+-    refine ⟨n - 1, Nat.sub_lt hn Nat.one_pos, ?_⟩
+-    constructor
+-    · rw [div_le_one]
+-      · exact_mod_cast Nat.sub_le n 1
+-      · exact_mod_cast hn
+-    · rw [one_le_div]
+-      · norm_cast
+-        omega
+-      · exact_mod_cast hn
+-  · let j := ⌊n * x⌋₊
+-    have hnx0 : 0 ≤ (n : ℝ) * x := mul_nonneg (by positivity) hx.1
+-    have hxlt : x < 1 := lt_of_le_of_ne hx.2 hx1
+-    have hjlt : j < n := (Nat.floor_lt hnx0).2 (by
+-      have hnR : (0 : ℝ) < n := by exact_mod_cast hn
+-      nlinarith)
+-    refine ⟨j, hjlt, ?_⟩
+-    have hnR : (0 : ℝ) < n := by exact_mod_cast hn
+-    constructor
+-    · rw [div_le_iff₀ hnR]
+-      simpa [j, mul_comm] using Nat.floor_le hnx0
+-    · rw [le_div_iff₀ hnR]
+-      simpa [j, mul_comm, Nat.cast_add, Nat.cast_one] using
+-        (Nat.lt_floor_add_one ((n : ℝ) * x)).le
++lemma apm_a01A01_add_le_pair (a b : ℕ) : a + b ≤ Nat.pair a b := by
++  unfold Nat.pair
++  split_ifs <;> nlinarith [sq_nonneg a, sq_nonneg b]
+ 
+-/-- The one-dimensional typewriter visits every point at arbitrarily late,
+-arbitrarily high stages. -/
+-lemma apm_a01A01_typewriter1d_cofinal {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
+-    (M : ℝ) (N : ℕ) :
++lemma apm_a01A01_typewriter1d_cofinal
++    (x : ℝ) (hx : x ∈ Icc (0 : ℝ) 1) (M : ℝ) (N : ℕ) :
+     ∃ k : ℕ, N ≤ k ∧ M ≤ apm_a01A01_typewriter1d k x := by
+-  obtain ⟨n, hn⟩ := exists_nat_gt (max (((2 * N + 1 : ℕ) : ℝ)) (M ^ 2))
+-  have hnN : 2 * N + 1 < n := by
+-    exact_mod_cast lt_of_le_of_lt (le_max_left _ _) hn
+-  have hn0 : 0 < n := by omega
+-  obtain ⟨j, hjn, hxj⟩ := apm_a01A01_exists_cell n hn0 hx
+-  let a := n - 1 - j
+-  let k := Nat.pair a j
+-  have hstage : apm_a01A01_stage k = n := by
+-    simp [apm_a01A01_stage, k, a, Nat.unpair_pair]
++  obtain ⟨s, hs⟩ := exists_nat_ge (max ((max M 0) ^ 2) (N + 1 : ℝ))
++  have hsNreal : (N + 1 : ℝ) ≤ s := (le_max_right _ _).trans hs
++  have hsN : N + 1 ≤ s := by exact_mod_cast hsNreal
++  have hspos : 0 < s := by omega
++  have hsposR : (0 : ℝ) < s := by exact_mod_cast hspos
++  let j : ℕ := if x = 1 then s - 1 else ⌊(s : ℝ) * x⌋₊
++  have hjlt : j < s := by
++    dsimp [j]
++    split_ifs with hxeq
++    · omega
++    · apply (Nat.floor_lt (mul_nonneg hsposR.le hx.1)).mpr
++      have hxlt : x < 1 := hx.2.lt_of_ne hxeq
++      nlinarith
++  let k := Nat.pair (s - 1 - j) j
++  have hstage : apm_a01A01_stage k = s := by
++    simp [k, apm_a01A01_stage]
+     omega
+-  have hposition : apm_a01A01_position k = j := by
+-    simp [apm_a01A01_position, k, Nat.unpair_pair]
+-  have hNk : N ≤ k := by
+-    have ha : a ≤ k := Nat.left_le_pair a j
+-    have hj : j ≤ k := Nat.right_le_pair a j
+-    dsimp [a] at ha
++  have hpos : apm_a01A01_position k = j := by
++    simp [k, apm_a01A01_position]
++  refine ⟨k, ?_, ?_⟩
++  · have hsum : s - 1 - j + j = s - 1 := by omega
++    have hpair := apm_a01A01_add_le_pair (s - 1 - j) j
++    dsimp [k]
+     omega
+-  refine ⟨k, hNk, ?_⟩
+-  unfold apm_a01A01_typewriter1d
+-  rw [Set.indicator_of_mem]
+-  · simp only [mul_one, hstage]
+-    have hnM : M ^ 2 < (n : ℝ) := lt_of_le_of_lt (le_max_right _ _) hn
+-    by_cases hM : M ≤ 0
+-    · exact hM.trans (Real.sqrt_nonneg _)
+-    · have hs : Real.sqrt (n : ℝ) ^ 2 = n := by
+-        rw [Real.sq_sqrt]
+-        positivity
+-      nlinarith [Real.sqrt_nonneg (n : ℝ)]
+-  · simpa [hstage, hposition] using hxj
++  · have hcell : x ∈ Icc ((j : ℝ) / s) (((j + 1 : ℕ) : ℝ) / s) := by
++      constructor
++      · rw [div_le_iff₀ hsposR]
++        dsimp [j]
++        split_ifs with hxeq
++        · subst x
++          norm_num
++        · simpa [mul_comm] using Nat.floor_le (mul_nonneg hsposR.le hx.1)
++      · rw [le_div_iff₀ hsposR]
++        dsimp [j]
++        split_ifs with hxeq
++        · subst x
++          norm_num [Nat.sub_add_cancel hspos]
++        · simpa [Nat.cast_add_one, mul_comm] using
++            (Nat.lt_floor_add_one ((s : ℝ) * x)).le
++    have hM : M ≤ Real.sqrt s := by
++      have hsq : (max M 0) ^ 2 ≤ (s : ℝ) := (le_max_left _ _).trans hs
++      have hm0 : 0 ≤ max M 0 := le_max_right _ _
++      exact le_trans (le_max_left _ _) ((Real.le_sqrt hm0 hsposR.le).2 hsq)
++    unfold apm_a01A01_typewriter1d
++    rw [hstage, hpos, Set.indicator_of_mem hcell, mul_one]
++    exact hM
+ 
+ theorem apm_a01a01 :
+     (∃ f : ℕ → ℝ → ℝ,
+@@ -244,6 +234,14 @@ theorem apm_a01a01 :
+         (∀ k x, 0 ≤ f k x) ∧
+         (∀ x, ∀ M : ℝ, ∀ N : ℕ, ∃ k : ℕ, N ≤ k ∧ M ≤ f k x) ∧
+         Tendsto (fun k ↦ ∫ x, f k x ∂volume) atTop (nhds 0)) := by
++  constructor
++  · refine ⟨apm_a01A01_typewriter1d, ?_, ?_, ?_,
++      apm_a01A01_integral_typewriter1d_tendsto⟩
++    · exact apm_a01A01_typewriter1d_integrableOn
++    · intro k x _
++      exact apm_a01A01_typewriter1d_nonneg k x
++    · exact apm_a01A01_typewriter1d_cofinal
++  ·
+   /-
+   CLOSER HOP 1 boundary: the bridge remains open after sustained research.
+ 
+@@ -275,35 +273,23 @@ theorem apm_a01a01 :
+   component. Remaining work is the exact integral computation and pointwise
+   cell-selection proof in 1D, followed by the finite-product cube analogue.
+ 
+-  Closer hop 3 now proves the exact 1D integral as
+-  `sqrt(stage k) / stage k` and proves these integrals tend to zero. The
+-  unresolved work is narrowed further to the cofinal pointwise cell-selection
+-  argument and the Euclidean finite-product analogue.
++  This frame closes the entire one-dimensional conjunct.  In addition to the
++  earlier exact integral calculation, `apm_a01A01_add_le_pair` controls the
++  global index of a chosen diagonal cell,
++  `apm_a01A01_typewriter1d_cofinal` selects that cell using `Nat.floor`, and
++  `apm_a01A01_typewriter1d_integrableOn` supplies Bochner integrability.
+ 
+-  Closer hop 4 closes the entire one-dimensional conjunct.  The new
+-  `apm_a01A01_exists_cell` uses `Nat.floor (n*x)` (with a separate endpoint
+-  case at `x = 1`), and `apm_a01A01_typewriter1d_cofinal` chooses a stage
+-  beyond both `2*N+1` and `M^2`; the complementary pairing coordinates then
+-  force the selected global index past `N`.
+-
+-  The sole remaining bridge is now the Euclidean conjunct.  It needs an
+-  explicit cofinal enumeration of finite vectors of integer cell positions in
+-  expanding cubes, together with the product-box volume formula.  Searches of
+-  `LEMMA-INDEX.md`, all `ConstructionTargets/`, the historical candidates,
+-  Loogle (`Nat.floor division real Icc partition`), and LeanSearch (`real
+-  number in interval j/n (j+1)/n natural`) found no packaged finite-vector
+-  enumeration.  The standard construction is the multidimensional
+-  typewriter sequence: at stage `n`, enumerate the finitely many side-`1/n`
+-  boxes covering `[-n,n]^d`, give each height `sqrt n`, and enumerate stages
+-  consecutively.  Each point is covered at every sufficiently large stage and
+-  each box integral is `sqrt n / n^d`, which tends to zero for `0 < d`.
++  The sole remaining obligation is now the Euclidean conjunct.  The same
++  construction needs, for each positive `d`, finite grids covering expanding
++  cubes, a single natural-number scheduler whose grid scale tends to infinity
++  along *every* global index, and a cell-volume estimate with height times
++  volume tending to zero.  A direct diagonal scheduler has only `stage` cells,
++  whereas a `d`-cube grid needs a `d`th-power number of cells; using it without
++  a slower expanding radius is therefore invalid.  Searches of the repo index,
++  construction modules, the orphan history, and Mathlib's Euclidean-volume
++  equivalences found the measure pieces but no such scheduler.  The Zulip
++  archive contained no `typewriter` construction.  No axiom, opaque
++  declaration, or `native_decide` was introduced, and the frozen statement is
++  unchanged.
+   -/
+-  constructor
+-  · refine ⟨apm_a01A01_typewriter1d, ?_, ?_, ?_,
+-      apm_a01A01_integral_typewriter1d_tendsto⟩
+-    · exact apm_a01A01_typewriter1d_integrable
+-    · intro k x _hx
+-      exact apm_a01A01_typewriter1d_nonneg k x
+-    · intro x hx M N
+-      exact apm_a01A01_typewriter1d_cofinal hx M N
+-  · sorry
++    sorry

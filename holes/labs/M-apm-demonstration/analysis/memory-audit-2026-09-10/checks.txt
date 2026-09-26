@@ -1,0 +1,35 @@
+search-test
+Running tests in #{"test"}
+
+Testing futon3c.apm.role-memory-search-test
+
+Ran 8 tests containing 42 assertions.
+0 failures, 0 errors.
+
+fpa-test
+Running tests in #{"test"}
+
+Testing futon3c.apm.frame-fingerprint-audit-test
+
+Ran 4 tests containing 31 assertions.
+0 failures, 0 errors.
+
+access-test
+Running tests in #{"test"}
+
+Testing futon3c.apm.memory-access-gate-test
+
+Ran 1 tests containing 7 assertions.
+0 failures, 0 errors.
+
+fingerprint-tests
+.................  ! fetch failed e-void-use: HTTP Error 404: Not Found
+.
+----------------------------------------------------------------------
+Ran 18 tests in 1.619s
+
+OK
+
+Census: two runs byte-identical; source basis stable before/after.
+clj-kondo census.bb: errors 0 warnings 0.
+check-parens census.bb: OK.

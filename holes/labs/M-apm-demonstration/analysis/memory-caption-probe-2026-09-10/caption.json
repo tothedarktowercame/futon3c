@@ -1,0 +1,15 @@
+{
+  "schema": "memory-caption/proposed-v1",
+  "status": "draft-not-published",
+  "memory-id": "e-apm-promotion-5fdb99169bd788313841375c797c302c",
+  "caption": "ODE uniqueness from equal initial values when derivatives are known only in the interior of an interval. Compare two continuous solutions away from the initial endpoint, apply a Gronwall distance bound, and pass to a one-sided limit to recover the endpoint estimate. Useful when the available uniqueness theorem requires an endpoint derivative that has not been established. Requires an appropriate Lipschitz bound and continuity at the endpoint.",
+  "source-context": "m00A05/f196: nonlinear initial-value problem; retained attempt-1 endpoint uniqueness proof.",
+  "scope-limit": "A uniqueness/endpoint step; does not prove global existence or attraction to equilibrium.",
+  "analyst-validated-application": "m96J04 Volterra eigenvector uniqueness implication in memory-first-probe-2026-09-10/EndpointTransfer.lean; reference adaptation, not a student transfer result.",
+  "basis": [
+    "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f196/live/student-attempt-1-source/18d4b2817a50d66c328c2fbaa4c6787048987cd0-Main.lean:55",
+    "holes/labs/M-apm-demonstration/analysis/memory-first-probe-2026-09-10/memory.json",
+    "holes/labs/M-apm-demonstration/analysis/memory-first-probe-2026-09-10/EndpointTransfer.lean"
+  ],
+  "review-required": "Caption entailment, prerequisites, source-use versus proposed applicability; author not reviewer."
+}

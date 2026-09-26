@@ -1,5 +1,7 @@
 # M-agency-hardening — live datapoints (2026-06-10 claude-4 ↔ claude-3 co-build)
 
+Status: archived
+
 Source: handed to claude-6 via bell during a long claude-4↔claude-3 session.
 "The session itself is the test case." Filed + verified by claude-6 (in-flight
 mechanic). Companion evidence to `M-agency-hardening.md`.

@@ -1,0 +1,77 @@
+{
+  "schema": "wm/repair058-live-observation-review-v1",
+  "at": "2026-09-11T13:15:25.571201+00:00",
+  "response": {
+    "http-status": 200,
+    "body": {
+      "status": "awaiting-terminal-evidence",
+      "ordinal": 1,
+      "click-id": "wm-click-53f7d985-489f-48eb-a8fc-607c9cbab779",
+      "run4/series": true
+    }
+  },
+  "strict-historical-reader": "passed",
+  "strict-closed-execution-reader": "passed",
+  "attempt-count": 1,
+  "closed-count": 1,
+  "task-verdict": "unknown",
+  "repair-resolved": false,
+  "sources": [
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/001-time-step.edn",
+      "sha256": "66fb6083c634a0aad542777e868858f7322d13a06c5226052b3f2343da91e054"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/003-construction.edn",
+      "sha256": "eab99164e003fa2a9387dc7670964f98222e45b60376a103f2f086620f708ece"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/004-dispatch.edn",
+      "sha256": "78158ac9c27e4692070a57e9fc2773a651f183600d4404d12b1725e79d33b621"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/005-build.edn",
+      "sha256": "ff0e23652a776d79d024e412a6c905adf5a64f8a7a4c0fe61b1b482f9e752f35"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/002-selection.edn",
+      "sha256": "8dfa817e8cfbce871375ddca483d12fb6f7df92e3f0d9342194200bc9a494bf7"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/006-adjudication.edn",
+      "sha256": "749dca62ade332bb805f9fa8b5dbb8aa2a9a253de301312252d678df92bdd016"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/cohort/run4-repair058-admission-20260911-v1/attempt-001/007-closed.edn",
+      "sha256": "a01e7617db7c3748fcc504cfcddd42538ae4e9b7c0e3a259cfcc68e37f083222"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/controller/001-started.edn",
+      "sha256": "55f4f5cbef6084d5353468b3fd387937bbf5f2485ef45c479cfd6d688b411b8a"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/bindings/click-run-binding-wm-click-53f7d985-489f-48eb-a8fc-607c9cbab779.edn",
+      "sha256": "002654491ed6e0720e299daf40099b5b504d46d654bf9e48357af1144a0fd757"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/run-records/tick-run-record-92a46da7-c02c-4177-a535-ac9d91e933e0.edn",
+      "sha256": "a7ade947608f9b9c134e744b8f6a0b9e4beba25f5d5a1e1e1369078d6063e5fe"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/projections/run4-historical-projection-wm-click-53f7d985-489f-48eb-a8fc-607c9cbab779.edn",
+      "sha256": "ecac0aa52de200ffe8e7b519365fa9d4c3133d3f8130888e1a10f86158a25143"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/recordings/run4-historical-observation-repair058-historical-verification-admission-001.edn",
+      "sha256": "35b93bc6eb8fb9c2c1100a3d3ca673719c4bb6d37d57dfef150a0f5eb8cfe184"
+    },
+    {
+      "path": "/home/joe/run4/repair058-admission/visibility/run-visibility.json",
+      "sha256": "4a6e54390e20ba0f165fc423a7a2f17bdf71764dd826ee7b54ec27ece35c6205"
+    },
+    {
+      "path": "/home/joe/code/futon2/data/wm-repair-obligations/verifications/repair-attempt-058-untyped-failure.edn",
+      "sha256": "66feb42b168b0b4cfc9bf69fbf622163a7e32e521fcbaa522fc99a7a366d9983"
+    }
+  ]
+}

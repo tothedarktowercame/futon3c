@@ -1,5 +1,7 @@
 # M-typed-holes — worked example (IDENTIFY): E-mission-head, BV-typed
 
+Status: complete
+
 *Semi-formalisation of a clean, completed historical mission as a BV-typed
 wiring diagram. Driven informally while the mathlib audit is out. Companion to
 `M-typed-holes.md`; method from the BV-combs excursion (futon6 `9cd66b5`).

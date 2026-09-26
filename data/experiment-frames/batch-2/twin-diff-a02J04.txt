@@ -1,0 +1,184 @@
+diff --git a/problems/a02J04/lean/Main.lean b/problems/a02J04/lean/Main.lean
+index 99e4d03..7417995 100644
+--- a/problems/a02J04/lean/Main.lean
++++ b/problems/a02J04/lean/Main.lean
+@@ -1,5 +1,4 @@
+ import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+-import Mathlib.MeasureTheory.Measure.Decomposition.Lebesgue
+ import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
+ 
+ /-!
+@@ -117,25 +116,17 @@ lemma apm_a02J04_tau_eq_withDensity :
+   · simp [apm_a02J04_P, hx, apm_a02J04_lintegral_g_right]
+   · simp [apm_a02J04_P, hx]
+ 
+-lemma apm_a02J04_tau_compl_Icc :
+-    apm_a02J04_tau ((Icc (0 : ℝ) 1)ᶜ) = 0 := by
+-  rw [apm_a02J04_tau_eq_withDensity,
+-    withDensity_apply _ measurableSet_Icc.compl, lintegral_eq_zero_iff]
+-  · filter_upwards [ae_restrict_mem measurableSet_Icc.compl] with x hx
+-    exact apm_a02J04_tauDensity_of_not_mem hx
+-  · exact apm_a02J04_measurable_tauDensity
+-
+ lemma apm_a02J04_tau_eq_restrict_withDensity :
+     apm_a02J04_tau =
+       (volume.restrict (Icc (0 : ℝ) 1)).withDensity
+-        (fun x => ENNReal.ofReal (apm_a02J04_tauDensity x)) := by
+-  have htau_mem : ∀ᵐ x ∂apm_a02J04_tau, x ∈ Icc (0 : ℝ) 1 := by
+-    show Icc (0 : ℝ) 1 ∈ ae apm_a02J04_tau
+-    rw [mem_ae_iff]
+-    exact apm_a02J04_tau_compl_Icc
+-  have htau_restrict := Measure.restrict_eq_self_of_ae_mem htau_mem
+-  rw [← restrict_withDensity measurableSet_Icc,
+-    ← apm_a02J04_tau_eq_withDensity, htau_restrict]
++        (fun x ↦ ENNReal.ofReal (apm_a02J04_tauDensity x)) := by
++  rw [apm_a02J04_tau_eq_withDensity,
++    ← restrict_withDensity measurableSet_Icc]
++  exact (Measure.restrict_eq_self_of_ae_mem
++    ((ae_withDensity_iff apm_a02J04_measurable_tauDensity).2
++      (Filter.Eventually.of_forall fun x hx ↦ by
++        by_contra hmem
++        exact hx (apm_a02J04_tauDensity_of_not_mem hmem)))).symm
+ 
+ /-- Why this unblocks `apm_a02j04`: positivity of the compiled density on
+ `[0,1] \ {0}`, together with nullity of the exceptional singleton, makes
+@@ -144,26 +135,15 @@ marginal.  This is the second conjunct of the main theorem. -/
+ theorem apm_a02J04_bridge_restrict_absolutelyContinuous :
+     (volume.restrict (Icc (0 : ℝ) 1)).AbsolutelyContinuous
+       apm_a02J04_tau := by
+-  let d : ℝ → ℝ≥0∞ := fun x => ENNReal.ofReal (apm_a02J04_tauDensity x)
+-  have hdne : ∀ᵐ x ∂volume.restrict (Icc (0 : ℝ) 1), d x ≠ 0 := by
++  rw [apm_a02J04_tau_eq_restrict_withDensity]
++  apply withDensity_absolutelyContinuous'
++  · exact apm_a02J04_measurable_tauDensity.aemeasurable.restrict
++  · have hx0 : ∀ᵐ x : ℝ ∂volume, x ≠ 0 := by
++      rw [ae_iff]
++      simp
+     filter_upwards [ae_restrict_mem measurableSet_Icc,
+-      (volume.restrict (Icc (0 : ℝ) 1)).ae_ne 0] with x hx hx0
++      ae_restrict_of_ae hx0] with x hx hx0
+     exact apm_a02J04_tauDensity_ne_zero hx hx0
+-  have hac : volume.restrict (Icc (0 : ℝ) 1) ≪
+-      (volume.restrict (Icc (0 : ℝ) 1)).withDensity d :=
+-    withDensity_absolutelyContinuous'
+-      apm_a02J04_measurable_tauDensity.aemeasurable.restrict hdne
+-  have htau_mem : ∀ᵐ x ∂apm_a02J04_tau, x ∈ Icc (0 : ℝ) 1 := by
+-    show Icc (0 : ℝ) 1 ∈ ae apm_a02J04_tau
+-    rw [mem_ae_iff]
+-    exact apm_a02J04_tau_compl_Icc
+-  have htau_restrict : apm_a02J04_tau.restrict (Icc (0 : ℝ) 1) =
+-      apm_a02J04_tau := Measure.restrict_eq_self_of_ae_mem htau_mem
+-  have heq : (volume.restrict (Icc (0 : ℝ) 1)).withDensity d =
+-      apm_a02J04_tau := by
+-    rw [← restrict_withDensity measurableSet_Icc,
+-      ← apm_a02J04_tau_eq_withDensity, htau_restrict]
+-  rwa [heq] at hac
+ 
+ /-- Why this unblocks `apm_a02j04`: the compiled density vanishes off
+ `[0,1]`, so the marginal is concentrated on that interval and is mutually
+@@ -174,7 +154,9 @@ theorem apm_a02J04_bridge_compl_mutuallySingular :
+       (volume.restrict ((Icc (0 : ℝ) 1)ᶜ)) apm_a02J04_tau := by
+   refine ⟨Icc (0 : ℝ) 1, measurableSet_Icc, ?_, ?_⟩
+   · simp
+-  · exact apm_a02J04_tau_compl_Icc
++  · rw [apm_a02J04_tau_eq_withDensity, withDensity_apply _ measurableSet_Icc.compl]
++    exact setLIntegral_eq_zero measurableSet_Icc.compl fun x hx ↦
++      apm_a02J04_tauDensity_of_not_mem hx
+ 
+ /-- Why this unblocks `apm_a02j04`: this is the specialization of
+ `Measure.rnDeriv_withDensity_right` to the positive density `2*x` on
+@@ -184,32 +166,32 @@ theorem apm_a02J04_bridge_rnDeriv :
+     (volume.restrict (Icc (0 : ℝ) 1)).rnDeriv apm_a02J04_tau
+       =ᵐ[apm_a02J04_tau]
+         fun x ↦ ENNReal.ofReal (1 / (2 * x)) := by
+-  let ν : Measure ℝ := volume.restrict (Icc (0 : ℝ) 1)
+-  let d : ℝ → ℝ≥0∞ := fun x => ENNReal.ofReal (apm_a02J04_tauDensity x)
+-  have hdmeas : AEMeasurable d ν :=
+-    apm_a02J04_measurable_tauDensity.aemeasurable.restrict
+-  have hdne : ∀ᵐ x ∂ν, d x ≠ 0 := by
+-    filter_upwards [ae_restrict_mem measurableSet_Icc,
+-      (volume.restrict (Icc (0 : ℝ) 1)).ae_ne 0] with x hx hx0
+-    exact apm_a02J04_tauDensity_ne_zero hx hx0
+-  have hdtop : ∀ᵐ x ∂ν, d x ≠ ∞ := by
+-    exact ae_of_all ν fun x => ENNReal.ofReal_ne_top
+-  have hrn := Measure.rnDeriv_withDensity_right ν ν hdmeas hdne hdtop
+-  have hrn_inv : ν.rnDeriv (ν.withDensity d) =ᵐ[ν] fun x => (d x)⁻¹ := by
+-    filter_upwards [hrn, Measure.rnDeriv_self ν] with x hx hself
+-    simpa [hself] using hx
+-  have hinv : (fun x => (d x)⁻¹) =ᵐ[ν]
+-      fun x => ENNReal.ofReal (1 / (2 * x)) := by
+-    filter_upwards [ae_restrict_mem measurableSet_Icc,
+-      (volume.restrict (Icc (0 : ℝ) 1)).ae_ne 0] with x hx hx0
+-    have hxpos : 0 < 2 * x := mul_pos (by norm_num) (lt_of_le_of_ne hx.1 (Ne.symm hx0))
+-    rw [show d x = ENNReal.ofReal (2 * x) by
+-      exact apm_a02J04_tauDensity_of_mem hx]
+-    simpa [one_div] using (ENNReal.ofReal_inv_of_pos hxpos).symm
+-  have hν : ν.rnDeriv (ν.withDensity d) =ᵐ[ν]
+-      fun x => ENNReal.ofReal (1 / (2 * x)) := hrn_inv.trans hinv
+   rw [apm_a02J04_tau_eq_restrict_withDensity]
+-  exact (withDensity_absolutelyContinuous ν d).ae_eq hν
++  let μ := volume.restrict (Icc (0 : ℝ) 1)
++  let d := fun x : ℝ ↦ ENNReal.ofReal (apm_a02J04_tauDensity x)
++  have hx0 : ∀ᵐ x : ℝ ∂μ, x ≠ 0 := by
++    apply ae_restrict_of_ae
++    rw [ae_iff]
++    simp
++  have hd0 : ∀ᵐ x ∂μ, d x ≠ 0 := by
++    filter_upwards [ae_restrict_mem measurableSet_Icc, hx0] with x hx hx0
++    exact apm_a02J04_tauDensity_ne_zero hx hx0
++  have hdtop : ∀ᵐ x ∂μ, d x ≠ ∞ := by
++    filter_upwards with x
++    exact ENNReal.ofReal_ne_top
++  have hcalc := Measure.rnDeriv_withDensity_right μ μ
++    (apm_a02J04_measurable_tauDensity.aemeasurable.restrict) hd0 hdtop
++  have hself := Measure.rnDeriv_self μ
++  have hac : μ.withDensity d ≪ μ := withDensity_absolutelyContinuous μ d
++  apply hac.ae_eq
++  filter_upwards [hcalc, hself, ae_restrict_mem measurableSet_Icc, hx0]
++    with x hcalc hself hx hx0
++  rw [hcalc, hself, mul_one]
++  rw [apm_a02J04_tauDensity_of_mem hx]
++  have hxpos : 0 < 2 * x := mul_pos (by norm_num) (lt_of_le_of_ne hx.1 (Ne.symm hx0))
++  rw [← ENNReal.ofReal_inv_of_pos hxpos]
++  congr 1
++  simp [one_div]
+ 
+ theorem apm_a02j04 :
+     apm_a02J04_tau =
+@@ -219,36 +201,6 @@ theorem apm_a02j04 :
+     (volume.restrict (Icc (0 : ℝ) 1)).rnDeriv apm_a02J04_tau
+       =ᵐ[apm_a02J04_tau]
+         fun x ↦ ENNReal.ofReal (1 / (2 * x)) := by
+-  /-
+-  Closer hop 3 builds on the measurable-density prerequisites compiled by
+-  hop 1. In particular, the planar and proposed marginal densities are measurable,
+-  the latter vanishes off `[0,1]`, and it is nonzero on `[0,1] \ {0}`.  These
+-  are exactly the support and reciprocal-density facts needed by Mathlib's
+-  `rnDeriv_withDensity_right` API after the marginal identity is known.
+-
+-  Going beyond that boundary, `apm_a02J04_volume_verticalSection` proves the
+-  exact interval measure `volume {y | 0 ≤ y ∧ y ≤ x} = ofReal x`, including
+-  negative `x`. `apm_a02J04_lintegral_g_right` then performs the complete
+-  inner Tonelli calculation and identifies it pointwise with the proposed
+-  marginal density, treating both `x ∈ [0,1]` and the zero-density complement.
+-  Thus the vertical-section calculation is no longer open.
+-
+-  Going beyond hop 2, `apm_a02J04_tau_eq_withDensity` now closes the full
+-  measure-level bridge. It applies `Measure.ext`, expands `Measure.map` and
+-  both `withDensity` measures on an arbitrary measurable set, rewrites ambient
+-  product volume with `Measure.volume_eq_prod`, applies `lintegral_prod`, and
+-  substitutes `apm_a02J04_lintegral_g_right`. Thus the exact first-coordinate
+-  marginal identity is compiled.
+-
+-  Renewed searches of `LEMMA-INDEX.md`, every `ConstructionTargets/` module,
+-  prior measure-decomposition artifacts (especially `a01J03`), Mathlib's marginal,
+-  product-measure, `withDensity`, and Radon--Nikodym sources, and git history
+-  found no higher-level marginal theorem, so the local Tonelli proof was used.
+-  The final bridges derive absolute continuity and mutual singularity from the
+-  density's support/positivity (with exceptional null point `{0}`), then
+-  specialize `Measure.rnDeriv_withDensity_right` to the displayed reciprocal.
+-  The frozen statement is unchanged.
+-  -/
+   exact ⟨apm_a02J04_tau_eq_withDensity,
+     apm_a02J04_bridge_restrict_absolutelyContinuous,
+     apm_a02J04_bridge_compl_mutuallySingular,

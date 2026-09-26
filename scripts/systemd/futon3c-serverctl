@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+unit="futon3c-server.service"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+cgroup_processes() {
+  local control_group="$1" root="/sys/fs/cgroup${control_group}"
+  [[ -n "$control_group" ]] || return 0
+  [[ -d "$root" ]] || return 0
+  find "$root" -name cgroup.procs -type f -print0 2>/dev/null \
+    | xargs -0 -r cat 2>/dev/null | sort -nu
+}
+
+assert_previous_scope_empty() {
+  local control_group="$1" pids
+  pids="$(cgroup_processes "$control_group")"
+  if [[ -n "$pids" ]]; then
+    echo "FAIL lifecycle boundary: old $unit cgroup still contains processes:" >&2
+    ps -ww -o pid=,ppid=,rss=,etimes=,cmd= -p "${pids//$'\n'/,}" >&2 || true
+    return 1
+  fi
+  echo "PASS lifecycle boundary: previous server cgroup is empty"
+}
+
+case "${1:-}" in
+  start)
+    "${script_dir}/server-guard" assert-zero
+    systemctl --user start "$unit"
+    "${script_dir}/server-guard" assert-one --wait 90
+    ;;
+  stop)
+    control_group="$(systemctl --user show "$unit" -p ControlGroup --value)"
+    systemctl --user stop "$unit"
+    assert_previous_scope_empty "$control_group"
+    ;;
+  restart)
+    control_group="$(systemctl --user show "$unit" -p ControlGroup --value)"
+    systemctl --user stop "$unit"
+    assert_previous_scope_empty "$control_group"
+    "${script_dir}/server-guard" assert-zero
+    systemctl --user start "$unit"
+    "${script_dir}/server-guard" assert-one --wait 90
+    ;;
+  status)
+    systemctl --user status "$unit" --no-pager
+    "${script_dir}/server-guard" assert-one
+    ;;
+  logs)
+    exec journalctl --user -u "$unit" -f
+    ;;
+  *)
+    echo "usage: futon3c-serverctl {start|stop|restart|status|logs}" >&2
+    exit 2
+    ;;
+esac

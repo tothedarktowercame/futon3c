@@ -1,0 +1,119 @@
+{:paper/id "0905.0595"
+ :passage/id "0905.0595:th0.4:rectification-contradiction:210-232"
+ :source {:lines [210 232] :kind :proof}
+ :nodes
+ [{:id :assume-qe
+   :kind :claim
+   :text "Assume that the trivial model category A is Quillen equivalent to a combinatorial model category M."
+   :source {:lines [210 210]}}
+  {:id :homotopy-category-properties
+   :kind :claim
+   :text "Since Ho M is equivalent to A, Ho M shares the properties (1) and (2)."
+   :source {:lines [211 211]}}
+  {:id :rectified-diagram
+   :kind :object
+   :text "Let overline D_lambda be a lambda-filtered diagram in M such that D_lambda = P overline D_lambda."
+   :source {:lines [212 214]}}
+  {:id :replacement-preserves
+   :kind :claim
+   :text "There is a regular cardinal lambda_0 such that the replacement functor R preserves lambda_0-filtered colimits."
+   :source {:lines [215 215]}}
+  {:id :projection-factor
+   :kind :definition
+   :text "R sends objects to fibrant and cofibrant ones, and the projection P from M to Ho M is Q R."
+   :source {:lines [216 216]}}
+  {:id :r-delta-colimit
+   :kind :claim
+   :text "If lambda > lambda_0, R overline delta_lambda is a colimit cocone of R overline D_lambda."
+   :source {:lines [220 226]}}
+  {:id :rm-is-one
+   :kind :claim
+   :text "Following (1), R overline M_lambda is isomorphic to 1 in A."
+   :source {:lines [226 228]}}
+  {:id :presentable-rm
+   :kind :claim
+   :text "R overline M_lambda0 is mu-presentable for some regular lambda_0 < mu."
+   :source {:lines [229 229]}}
+  {:id :homotopy-map
+   :kind :object
+   :text "Because R overline M_lambda0 and R overline M_mu are homotopy equivalent, there is a morphism f : R overline M_mu -> R overline M_lambda0."
+   :source {:lines [230 230]}}
+  {:id :factor-through-component
+   :kind :claim
+   :text "f factorizes through some R overline delta_mu d."
+   :source {:lines [231 231]}}
+  {:id :id1-factorizes
+   :kind :claim
+   :text "id_1 factorizes through some component of delta_mu."
+   :source {:lines [231 232]}}
+  {:id :contradicts-ar2
+   :kind :claim
+   :text "This contradicts (2)."
+   :source {:lines [232 232]}}]
+ :edges
+ [{:id :e-transfer-properties
+   :kind :infer
+   :relation :since
+   :premise :assume-qe
+   :warrant {:kind :missing-warrant
+             :text "The equivalence Ho M ~= A transfers properties (1) and (2) to Ho M."}
+   :conclusion :homotopy-category-properties
+   :source {:lines [210 211]}}
+  {:id :e-rectify
+   :kind :infer
+   :relation :because
+   :given :homotopy-category-properties
+   :warrant {:kind :missing-warrant
+             :text "Diagrams in the homotopy category of a combinatorial model category can be rectified."}
+   :conclusion :rectified-diagram
+   :source {:lines [212 214]}}
+  {:id :e-colimit-after-r
+   :kind :infer
+   :relation :since
+   :given [:replacement-preserves :projection-factor :rectified-diagram]
+   :warrant {:kind :missing-warrant
+             :text "A replacement functor preserving sufficiently filtered colimits carries the chosen colimit cocones to colimit cocones."}
+   :conclusion :r-delta-colimit
+   :source {:lines [215 226]}}
+  {:id :e-following-one
+   :kind :infer
+   :relation :following
+   :given [:homotopy-category-properties :r-delta-colimit]
+   :conclusion :rm-is-one
+   :source {:lines [226 228]}}
+  {:id :e-presentability-factor
+   :kind :infer
+   :relation :factorizes
+   :given [:presentable-rm :r-delta-colimit]
+   :premise :homotopy-map
+   :warrant {:kind :missing-warrant
+             :text "Presentability with respect to the filtered colimit makes the morphism f factor through a cocone component."}
+   :conclusion :factor-through-component
+   :source {:lines [229 231]}}
+  {:id :e-id1-factor
+   :kind :infer
+   :relation :consequently
+   :premise [:rm-is-one :factor-through-component]
+   :conclusion :id1-factorizes
+   :source {:lines [226 232]}}
+  {:id :e-contradiction
+   :kind :infer
+   :relation :contradicts
+   :given [:homotopy-category-properties]
+   :premise :id1-factorizes
+   :contradicts :homotopy-category-properties
+   :conclusion :contradicts-ar2
+   :source {:lines [231 232]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-transfer-properties
+   :wanted :equivalence-transfers-ar-properties}
+  {:kind :missing-warrant
+   :edge :e-rectify
+   :wanted :rectification-of-filtered-homotopy-category-diagrams}
+  {:kind :missing-warrant
+   :edge :e-colimit-after-r
+   :wanted :replacement-functor-preserves-filtered-colimit-cocones}
+  {:kind :missing-warrant
+   :edge :e-presentability-factor
+   :wanted :presentability-factorization-through-filtered-colimit}]}

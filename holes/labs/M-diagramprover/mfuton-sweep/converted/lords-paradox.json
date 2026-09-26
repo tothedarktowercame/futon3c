@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "s",
+    "to" : "wi"
+  }, {
+    "from" : "s",
+    "to" : "wf"
+  }, {
+    "from" : "wi",
+    "to" : "wf"
+  }, {
+    "from" : "wi",
+    "to" : "y"
+  }, {
+    "from" : "wf",
+    "to" : "y"
+  } ],
+  "id" : "lords-paradox",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "lords-paradox.json"
+  },
+  "variables" : [ {
+    "id" : "s",
+    "kind" : "observed",
+    "name" : "Sex"
+  }, {
+    "id" : "wi",
+    "kind" : "observed",
+    "name" : "Initial Weight"
+  }, {
+    "id" : "wf",
+    "kind" : "observed",
+    "name" : "Final Weight"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Gain"
+  } ]
+}

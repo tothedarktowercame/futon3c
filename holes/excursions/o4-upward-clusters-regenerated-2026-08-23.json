@@ -1,0 +1,450 @@
+{
+  "schema": "o4-upward-clusters-inspection/v1",
+  "generated-at": "2026-08-23T13:56:56.486445+00:00",
+  "write-mode": "inspection-only; no substrate rows written",
+  "generator": {
+    "cascade-selector": "futon3a/holes/labs/M-memes-arrows/cascade_construct.py",
+    "cluster-method": "historical O4 agglomerative cosine/average linkage",
+    "cluster-count-parameter": 12,
+    "parameter-provenance": "existing fixed mission_k in futon3c/scripts/stack_semilattice_clusters.py; not tuned for this run",
+    "mission-representation": "MiniLM embedding of canonical mission id plus its live cited pattern ids and anchor passages"
+  },
+  "input": {
+    "endpoint": "GET http://localhost:7073/api/alpha/hyperedges?type=mission-scope/pattern&limit=200",
+    "snapshot-sha256": "b5e20511bcca926baaf53f376c3d8baf44371ff5b991c4e25d29b8366826ae8b",
+    "hyperedges": 115,
+    "extracted-citations": 115,
+    "distinct-missions": 28,
+    "distinct-patterns": 83
+  },
+  "counts": {
+    "clusters": 12,
+    "distinct-mission-nodes-covered": 28,
+    "canonical-mission-nodes-covered": 28,
+    "historical-clusters-2026-06-30": 12,
+    "historical-shared-mission-nodes-2026-06-30": 171
+  },
+  "comparison": {
+    "cluster-delta": 0,
+    "mission-node-delta-vs-historical-shared": -143,
+    "reading": "Cluster count matches because the historical fixed k=12 parameter was preserved. Mission coverage is far lower because the current live mission-scope/pattern layer cites only 28 missions; this run does not synthesize uncited missions."
+  },
+  "missing-flexiarg-files": [
+    "math-formalization/hilbert-projection-properties",
+    "math-formalization/measure-restrict-simplify",
+    "math-formalization/rpow-exponent-limit",
+    "math-informal/estimate-by-bounding",
+    "math-informal/pass-to-a-subsequence",
+    "math-strategy/construct-through-a-finite-correspondence"
+  ],
+  "clusters": [
+    {
+      "cluster": 0,
+      "member-missions": [
+        "futon3c-d/mission/e-apm-halftime-pre-go-live",
+        "futon3c-d/mission/e-compression-conductor-runbook",
+        "futon3c-d/mission/e-memory-latency",
+        "futon3c-d/mission/e-memory-whitepaper-v2-plan",
+        "futon3c-d/mission/typed-memories"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "math-formalization/tactic-algebra-interference",
+          "citations": 3
+        },
+        {
+          "pattern": "math-formalization/close-bijectivity-by-counting-not-inverting",
+          "citations": 2
+        },
+        {
+          "pattern": "math-formalization/hilbert-projection-properties",
+          "citations": 1
+        },
+        {
+          "pattern": "math-informal-CT/verify-universal-property",
+          "citations": 1
+        },
+        {
+          "pattern": "math-informal/pass-to-a-subsequence",
+          "citations": 1
+        },
+        {
+          "pattern": "math-strategy/construct-through-a-finite-correspondence",
+          "citations": 1
+        },
+        {
+          "pattern": "pattern-discipline/pattern-to-code-receipts",
+          "citations": 1
+        },
+        {
+          "pattern": "pattern-mining/probe-the-claimed-property-not-the-acceptance-proxy",
+          "citations": 1
+        }
+      ],
+      "citation-count": 11,
+      "distinct-pattern-count": 8
+    },
+    {
+      "cluster": 1,
+      "member-missions": [
+        "futon0-d/mission/e-post-commit-hooks-for-web",
+        "futon3c-d/mission/e-apm-bundle-sorry-drift",
+        "futon3c-d/mission/e-futon1b-latency-inventory"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "math-strategy/corpus-trust-protocol",
+          "citations": 2
+        },
+        {
+          "pattern": "war-room/wr-8-typed-files-are-sources-of-truth",
+          "citations": 1
+        }
+      ],
+      "citation-count": 3,
+      "distinct-pattern-count": 2
+    },
+    {
+      "cluster": 2,
+      "member-missions": [
+        "futon5a-d/mission/expressions-of-interest",
+        "futon5a-d/mission/learning-loop"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "structure/whose-question-is-this",
+          "citations": 2
+        },
+        {
+          "pattern": "capability/capability-signature-vector",
+          "citations": 1
+        },
+        {
+          "pattern": "capability/capability-vocabulary-v0",
+          "citations": 1
+        },
+        {
+          "pattern": "capability/hinge-capability-extraction",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/all-or-nothing",
+          "citations": 1
+        },
+        {
+          "pattern": "pattern-discipline/patterns-as-categorical-objects",
+          "citations": 1
+        },
+        {
+          "pattern": "structure/hinge-entry-slots",
+          "citations": 1
+        },
+        {
+          "pattern": "structure/interest-event-vocabulary",
+          "citations": 1
+        },
+        {
+          "pattern": "structure/unresolved-tensions-at-closure",
+          "citations": 1
+        },
+        {
+          "pattern": "structure/what-problem-is-this-actually-solving",
+          "citations": 1
+        }
+      ],
+      "citation-count": 14,
+      "distinct-pattern-count": 13
+    },
+    {
+      "cluster": 3,
+      "member-missions": [
+        "futon3c-d/mission/apm-demonstration",
+        "futon3c-d/mission/diagramprover",
+        "futon3c-d/mission/e-apm-f11-defects",
+        "futon3c-d/mission/e-apm-f12-defects"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "math-formalization/notation-semantics-traps",
+          "citations": 3
+        },
+        {
+          "pattern": "math-formalization-CA/layer-cake-crossover-split",
+          "citations": 2
+        },
+        {
+          "pattern": "math-formalization-CA/measure-integration-api",
+          "citations": 2
+        },
+        {
+          "pattern": "math-formalization/separate-proof-transfer-from-artifact-replay",
+          "citations": 2
+        },
+        {
+          "pattern": "math-formalization/tactic-algebra-interference",
+          "citations": 2
+        },
+        {
+          "pattern": "math-strategy/structural-obstruction-as-theorem",
+          "citations": 2
+        },
+        {
+          "pattern": "aif/candidate-pattern-action-space",
+          "citations": 1
+        },
+        {
+          "pattern": "baldwin/ablation-axes-must-not-disable-the-instrument",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/all-or-nothing",
+          "citations": 1
+        },
+        {
+          "pattern": "invariant-coherence/reachable-from-boot",
+          "citations": 1
+        }
+      ],
+      "citation-count": 41,
+      "distinct-pattern-count": 34
+    },
+    {
+      "cluster": 4,
+      "member-missions": [
+        "futon0-d/mission/futon-problems",
+        "futon2-d/mission/patchboard-viz",
+        "futon2-d/mission/pattern-authority-gate",
+        "futon5a-d/mission/a-sorry-enterprise"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "ants/cargo-return-discipline",
+          "citations": 2
+        },
+        {
+          "pattern": "peripherals/inhabitation-feeds-evolution",
+          "citations": 2
+        },
+        {
+          "pattern": "agent/evidence-over-assertion",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/candidate-pattern-action-space",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/expected-free-energy-scorecard",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/stop-the-line",
+          "citations": 1
+        },
+        {
+          "pattern": "peripherals/surface-earns-inhabitation",
+          "citations": 1
+        },
+        {
+          "pattern": "structure/interest-event-vocabulary",
+          "citations": 1
+        }
+      ],
+      "citation-count": 10,
+      "distinct-pattern-count": 8
+    },
+    {
+      "cluster": 5,
+      "member-missions": [
+        "futon3c-d/mission/e-pattern-census-and-orphans"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "math-formalization-CA/layer-cake-crossover-split",
+          "citations": 1
+        },
+        {
+          "pattern": "math-informal-RA/construct-through-a-finite-correspondence",
+          "citations": 1
+        }
+      ],
+      "citation-count": 2,
+      "distinct-pattern-count": 2
+    },
+    {
+      "cluster": 6,
+      "member-missions": [
+        "futon7-d/mission/demonstration-foundry"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "correspondence-coherence/mission-unlocks-eoi",
+          "citations": 1
+        },
+        {
+          "pattern": "equity/contribution-pathways-merged",
+          "citations": 1
+        },
+        {
+          "pattern": "equity/shared-maintenance-merged",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/crime-relocates-to-a-scarcer-witness",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/task-as-arrow",
+          "citations": 1
+        },
+        {
+          "pattern": "orchestration/pattern-warranted-choice-point",
+          "citations": 1
+        },
+        {
+          "pattern": "scan-coherence/mission-anchored-scan",
+          "citations": 1
+        },
+        {
+          "pattern": "sidecar/tri-store-separation",
+          "citations": 1
+        },
+        {
+          "pattern": "sidecar/typed-kolmogorov-arrows",
+          "citations": 1
+        },
+        {
+          "pattern": "system-coherence/turn-design-into-checks",
+          "citations": 1
+        }
+      ],
+      "citation-count": 12,
+      "distinct-pattern-count": 12
+    },
+    {
+      "cluster": 7,
+      "member-missions": [
+        "futon3c-d/mission/e-apm-f10-defects",
+        "futon3c-d/mission/e-cascade-assembly"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "math-formalization-CA/measure-integration-api",
+          "citations": 2
+        },
+        {
+          "pattern": "math-strategy/missing-dependency-protocol",
+          "citations": 2
+        },
+        {
+          "pattern": "math-formalization-CA/riemann-darboux-api",
+          "citations": 1
+        },
+        {
+          "pattern": "math-formalization-FA/weak-convergence-hilbert",
+          "citations": 1
+        },
+        {
+          "pattern": "math-informal/local-to-global",
+          "citations": 1
+        },
+        {
+          "pattern": "math-informal/reduce-to-known-result",
+          "citations": 1
+        }
+      ],
+      "citation-count": 8,
+      "distinct-pattern-count": 6
+    },
+    {
+      "cluster": 8,
+      "member-missions": [
+        "futon2-d/mission/wm-aif-policy-grain-compliance",
+        "futon2-d/mission/zaif-harness",
+        "futon3c-d/mission/shared-memory-control-build-test"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "aif/no-self-certification",
+          "citations": 3
+        },
+        {
+          "pattern": "futon-theory/stop-the-line",
+          "citations": 1
+        },
+        {
+          "pattern": "math-formalization/tactic-algebra-interference",
+          "citations": 1
+        }
+      ],
+      "citation-count": 5,
+      "distinct-pattern-count": 3
+    },
+    {
+      "cluster": 9,
+      "member-missions": [
+        "futon2-d/mission/aif-a-matrix-faithfulness"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "aif/expected-free-energy-scorecard",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/no-self-certification",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/predictive-coding-belief-update",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/predictive-entropy-as-ambiguity",
+          "citations": 1
+        },
+        {
+          "pattern": "aif/two-layer-calibration",
+          "citations": 1
+        },
+        {
+          "pattern": "measurement/warrant-travels-with-the-number",
+          "citations": 1
+        }
+      ],
+      "citation-count": 6,
+      "distinct-pattern-count": 6
+    },
+    {
+      "cluster": 10,
+      "member-missions": [
+        "futon2-d/mission/points-de-fuite"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "futon-theory/derive-exits-on-a-minted-sorry",
+          "citations": 1
+        },
+        {
+          "pattern": "futon-theory/the-woven-form",
+          "citations": 1
+        }
+      ],
+      "citation-count": 2,
+      "distinct-pattern-count": 2
+    },
+    {
+      "cluster": 11,
+      "member-missions": [
+        "futon3c-d/mission/e-batch-operator-runbook"
+      ],
+      "most-cited-patterns": [
+        {
+          "pattern": "futon-theory/stop-the-line",
+          "citations": 1
+        }
+      ],
+      "citation-count": 1,
+      "distinct-pattern-count": 1
+    }
+  ]
+}

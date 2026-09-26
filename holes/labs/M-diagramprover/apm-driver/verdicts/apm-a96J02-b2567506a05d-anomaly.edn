@@ -1,0 +1,4 @@
+{"verdict": "resume",
+ "reviewer": "claude-10",
+ "at": "2026-08-04T15:22:00+01:00",
+ "notes": "FALSE POSITIVE of the boundary-conformance heuristic, not a defective artifact. The phase-B session completed honestly: build exit 0, 1 sorry, and a COMPLETE protocol write-up (exact bridge = L1 translation continuity for indicators; 4 APIs searched by name; routes tried with block reasons; routes not investigated) - placed in the theorem DOCSTRING rather than at the sorry site, which the H3 heuristic did not scan. Instrument fixed (gates.py docstring-conformance, committed) and verified against this artifact. Resume -> GATE: re-gate under the fixed heuristic should classify PARTIAL-conforming and proceed to the closer hop, which this problem deserves - one well-documented bridge in a rich neighborhood."}

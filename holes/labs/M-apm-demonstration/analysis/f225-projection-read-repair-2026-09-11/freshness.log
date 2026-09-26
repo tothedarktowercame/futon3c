@@ -1,0 +1,13 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[memory-projection] {:operation-id "b87f7b69-576d-4854-8883-d90e864a8a02", :stage :waiting-for-lock, :http-task nil}
+[memory-projection] {:operation-id "b87f7b69-576d-4854-8883-d90e864a8a02", :stage :lock-acquired, :lock-wait-ms 1.324108}
+WARNING: A restricted method in java.lang.foreign.MemorySegment has been called
+WARNING: java.lang.foreign.MemorySegment::reinterpret has been called by the unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for this module
+
+[memory-projection] {:operation-id "b87f7b69-576d-4854-8883-d90e864a8a02", :stage :selected, :attempt 1, :quiescence-wait-ms 400.176045, :selected-count 0, :elapsed-ms 455.555891}
+[memory-projection] {:operation-id "b87f7b69-576d-4854-8883-d90e864a8a02", :stage :hydrated, :attempt 1, :source-moved? false, :elapsed-ms 481.763529}
+{:test 1, :pass 10, :fail 0, :error 0}

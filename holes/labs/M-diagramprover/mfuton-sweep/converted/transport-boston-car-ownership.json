@@ -1,0 +1,53 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "z",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "w"
+  }, {
+    "from" : "w",
+    "to" : "y"
+  }, {
+    "from" : "z",
+    "to" : "v"
+  }, {
+    "from" : "s",
+    "to" : "v"
+  } ],
+  "id" : "transport-boston-car-ownership",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "selection/regime annotations are graph-only" ],
+    "source-file" : "transport-boston-car-ownership.json"
+  },
+  "variables" : [ {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Advertisement (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Purchase Decision (Y)"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Age (Z)"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "Click-through Rate (W)"
+  }, {
+    "id" : "v",
+    "kind" : "observed",
+    "name" : "Car Ownership (V)"
+  }, {
+    "id" : "s",
+    "kind" : "observed",
+    "mfuton_selection" : true,
+    "name" : "Population Difference (S)"
+  } ]
+}

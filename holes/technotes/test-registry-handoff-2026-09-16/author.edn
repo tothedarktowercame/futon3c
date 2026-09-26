@@ -1,0 +1,9 @@
+{:agency-url "http://localhost:7070"
+ :origin "futon3c-agency:7070"
+ :repo-root "/home/joe/code/futon3c"
+ :code-paths ["src/futon3c/agency/warrant.clj"]
+ :test-paths ["test/futon3c/agency/warrant_test.clj"]
+ :command ["clojure" "-M:test-pure" "-n" "futon3c.agency.warrant-test"]
+ :test-environment {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}
+ :author "zai-8"
+ :artifact-dir "/home/joe/code/storage/test-registry/artifacts"}

@@ -1,0 +1,50 @@
+@flexiarg process-coherence/separate-evidence-history-from-verdict-state
+@title Separate Evidence History from Verdict State
+@keywords evidence, verdict, provenance, status, append-only, review, overwrite, bitemporal, approval
+@audience workflow designers, review-pipeline authors, artifact custodians
+@tone corrective
+@style pattern
+@grade principle
+@provenance slice-1 compression mining (2026-08-12): 7 marks, 4 independent read transcripts, 4 distinct problems (b97A02 b98A03 b00J02 b96J01)
+
+! conclusion:
+  Store observations and provenance as append-only evidence, and store current
+  approval as a separate, revisable verdict that names the evidence and
+  contract version it judged.
+
+  + context:
+    Automated checks, human review, migrations, re-freezes, and cross-repo
+    merges all update records about the same artifact.  A single status field
+    is tempting because every consumer can ask for one latest value.
+
+  + IF:
+    Different writers have different authority or semantics: a gate reports an
+    observation, a reviewer grants approval, and a migration changes identity
+    or contract metadata.
+
+  + HOWEVER:
+    Separation alone does not resolve disagreement.  Append-only evidence can
+    preserve bad observations forever, while multiple live verdicts can leave
+    consumers unsure which one governs.  The design therefore needs explicit
+    authority, supersession, and as-of rules; otherwise two tables merely
+    replace one ambiguous field.
+
+  + THEN:
+    Append each observation with source, time, artifact identity, and contract
+    version.  Record verdicts separately with reviewer authority and pointers
+    to the evidence judged.  Supersede verdicts explicitly rather than
+    overwriting them.  Compute current eligibility from the governing verdict
+    and its referenced evidence, never from the last writer to touch a shared
+    status cell.
+
+  + BECAUSE:
+    Evidence answers what happened; a verdict answers what is currently
+    believed or permitted.  Conflating them lets a re-freeze erase a rejection,
+    an automated gate overwrite human review, or a merge promote whichever row
+    was written last.  Separate histories preserve both auditability and
+    revisability.
+
+  + NEXT-STEPS:
+    next[Inventory status fields written by both automated gates and human reviewers.]
+    next[Split observations from verdicts and add explicit evidence and supersession references.]
+    next[Test that a bulk metadata refresh cannot change approval eligibility.]

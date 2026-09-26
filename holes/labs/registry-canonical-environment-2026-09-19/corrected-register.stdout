@@ -1,0 +1,4 @@
+evidence-id test-registry-0bd83851e1a42d3179048e558e55423b31988615bbf807ee15d8f3a921d3bf08
+warrant? true
+results {:assertions 20, :duration-ms 2043, :errors 0, :exit 0, :failures 0, :tests 4}
+bound test-registry/canonical-environment -> test-registry-0bd83851e1a42d3179048e558e55423b31988615bbf807ee15d8f3a921d3bf08

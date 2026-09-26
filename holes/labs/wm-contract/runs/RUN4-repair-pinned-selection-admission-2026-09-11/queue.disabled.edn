@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-repair-pinned-selection-queue-20260911-v1"
+ :state-root "/home/joe/run4/repair-pinned-selection-admission/queue"
+ :visibility-file "/home/joe/run4/repair-pinned-selection-admission/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "repair-pinned-selection-historical-admission"
+         :series-id "run4-repair-pinned-selection-admission-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-repair-pinned-selection-admission-2026-09-11/series-pin.edn"
+         :manifest-sha256 "b3a617410ed81a5ed0f9f6e1774fd9a4ace9bff9d7457d750915a29fa2f4b9f0"
+         :cohort-id :run4-repair-pinned-selection-admission-20260911-v1
+         :cohort-sha256 "efa8758f500e39bb7e9a5dc3b0783042aed90a317abc708a0294d2811edc576a"}
+ :activation :not-performed}

@@ -20,21 +20,27 @@
    Design: emacsclient is the transport. No protocol to design, no
    endpoint to build. Emacs IS the sliding blackboard."
   (:require [clojure.string :as str]
+            [cheshire.core :as json]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.dev.config :as config]
-            [futon3c.evidence.store :as estore])
+            [futon3c.dev.config :as config])
   (:import [java.util UUID]))
 
 (declare emit-blackboard-evidence!)
 
 ;; =============================================================================
-;; Enable/disable — bind *enabled* to false in tests or non-interactive contexts
+;; Enable/disable — serving JVMs opt in; tests and CLI JVMs default denied
 ;; =============================================================================
 
+(defn- environment-opted-in? []
+  (contains? #{"1" "true" "yes"}
+             (some-> (System/getenv "FUTON3C_BLACKBOARD_PROJECT")
+                     str/lower-case)))
+
 (def ^:dynamic *enabled*
-  "When false, project! is a no-op. Defaults to true.
-   Bind to false in tests to avoid spawning emacsclient processes."
-  true)
+  "When false, project! is a no-op. Defaults to the serving-JVM-only
+   FUTON3C_BLACKBOARD_PROJECT opt-in. Tests may bind true around a projection
+   assertion; ordinary test and CLI JVMs cannot reach the operator's Emacs."
+  (environment-opted-in?))
 
 (defn- detect-emacs-socket
   "Auto-detect Emacs server socket from the process tree.
@@ -161,6 +167,54 @@
         (into (or extra-args []))
         (into ["--eval" elisp]))))
 
+(defn- emacsclient-target-key
+  [socket-override]
+  (or socket-override
+      @!emacs-socket
+      (System/getenv "FUTON3C_EMACS_SOCKET")
+      (System/getenv "EMACS_SOCKET_NAME")
+      ::default))
+
+;; Target sockets with an accepted async emacsclient still alive.
+;;
+;; Blackboard projections are idempotent snapshots. If Emacs is slow, spawning
+;; a new emacsclient every ticker pass creates a FIFO backlog that can starve
+;; interactive requests such as `cr new'. Keep one outstanding snapshot per
+;; target; the next ticker will refresh after that client exits.
+(defonce ^:private !async-emacsclient-inflight (atom #{}))
+
+(def ^:private async-emacsclient-reap-grace-ms
+  "Additional grace after the caller's one-second wait. An async projection
+  must never retain a target's in-flight claim indefinitely: one wedged
+  emacsclient otherwise freezes every later *agents* snapshot for that socket."
+  1000)
+
+(declare reap-emacsclient!)
+
+(defn- claim-async-emacsclient! [target-key]
+  (loop []
+    (let [current @!async-emacsclient-inflight]
+      (cond
+        (contains? current target-key) false
+        (compare-and-set! !async-emacsclient-inflight
+                          current
+                          (conj current target-key)) true
+        :else (recur)))))
+
+(defn- clear-async-emacsclient-inflight! [target-key proc]
+  (future
+    (try
+      (when-not (.waitFor proc async-emacsclient-reap-grace-ms
+                          java.util.concurrent.TimeUnit/MILLISECONDS)
+        (println (str "[bb] async emacsclient pid="
+                      (try (.pid proc) (catch Throwable _ "?"))
+                      " exceeded bounded grace; reaping target=" target-key))
+        (flush)
+        (reap-emacsclient! proc))
+      (catch Throwable _ nil)
+      (finally
+        (swap! !async-emacsclient-inflight disj target-key)))))
+
 (defn- reap-emacsclient!
   "Finally-guard for emacsclient processes: force-kill if still alive,
    then wait briefly so the child is reaped and the file descriptors close."
@@ -203,23 +257,36 @@
    immediately without waiting for a reply. Returns {:ok bool :output nil|str}.
    The next poll will redo the projection if this one is dropped.
 
-   Does NOT forcibly kill the child on timeout: with -n the client should
-   exit in milliseconds, and a >1s wait means Emacs is briefly wedged.
-   Killing emacsclient mid-handshake makes Emacs log
-   \"Process server <PID> no longer connected to pipe; closed it\" — letting
-   the client complete on its own avoids that noise; the process exits
-   naturally once Emacs unwedges."
-  ([elisp] (run-emacsclient-async! elisp nil))
-  ([elisp socket-override]
+   A timed-out child receives a short additional grace period, then is reaped
+   and its per-target in-flight claim is cleared. With -n the client normally
+   exits in milliseconds; bounding the exceptional path prevents one wedged
+   handshake from freezing all later snapshots for that Emacs socket."
+  ([elisp] (run-emacsclient-async! elisp nil nil))
+  ([elisp socket-override] (run-emacsclient-async! elisp socket-override nil))
+  ([elisp socket-override coalesce-key]
    (try
-     (let [pb (doto (ProcessBuilder. ^java.util.List
-                                     (build-emacsclient-cmd elisp socket-override ["-n"]))
-              (.redirectErrorStream true))
-           proc (.start pb)
-           finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
-       (if finished?
-         {:ok (zero? (.exitValue proc)) :output nil}
-         {:ok false :output "timeout"}))
+     (let [socket-key (emacsclient-target-key socket-override)
+           target-key (if coalesce-key
+                        [socket-key coalesce-key]
+                        socket-key)]
+       (if-not (claim-async-emacsclient! target-key)
+         {:ok false :output "inflight"}
+         (try
+           (let [pb (doto (ProcessBuilder. ^java.util.List
+                                           (build-emacsclient-cmd elisp socket-override ["-n"]))
+                      (.redirectErrorStream true))
+                 proc (.start pb)
+                 finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
+             (if finished?
+               (do
+                 (swap! !async-emacsclient-inflight disj target-key)
+                 {:ok (zero? (.exitValue proc)) :output nil})
+               (do
+                 (clear-async-emacsclient-inflight! target-key proc)
+                 {:ok false :output "timeout"})))
+           (catch Throwable t
+             (swap! !async-emacsclient-inflight disj target-key)
+             (throw t)))))
      (catch Exception e
        {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))}))))
 
@@ -236,6 +303,8 @@
    :slot    — side-window slot index (keeps multiple panels stable)
    :no-display — if true, update buffer but don't force-display it
    :emacs-socket — target a specific Emacs daemon socket (e.g. \"workspace2\")
+
+   :async-key gives an async live panel an independent coalescing lane.
 
    Returns {:ok bool :output str}."
   ([buffer-name content]
@@ -275,8 +344,10 @@
                     "))"
                     (or display-form "")
                     "nil)")
-         runner (if (:async? opts) run-emacsclient-async! run-emacsclient!)]
-     (runner elisp (:emacs-socket opts)))))
+         async? (:async? opts)]
+     (if async?
+       (run-emacsclient-async! elisp (:emacs-socket opts) (:async-key opts))
+       (run-emacsclient! elisp (:emacs-socket opts))))))
 
 (defn blackboard-eval!
   "Run arbitrary elisp via emacsclient. For cases where text content
@@ -475,6 +546,231 @@
 
 (defmethod render-blackboard :proof [_ state]
   (format-proof-state state))
+
+;; -----------------------------------------------------------------------------
+;; :problem — APM problem-cycle state, staffing, attempts, live dispatch
+;; -----------------------------------------------------------------------------
+
+(defn- problem-phase-order []
+  ;; Do not require problem at namespace load time: problem -> cycle ->
+  ;; blackboard is the live dependency direction. Resolve only when rendering,
+  ;; after the problem peripheral has loaded, while keeping it the single source
+  ;; of truth for the phase chain.
+  (var-get (requiring-resolve 'futon3c.peripheral.problem/phase-order)))
+
+(defn- staffed [seat]
+  (if (and (some? seat) (not (str/blank? (str seat)))) seat "unstaffed"))
+
+(defn- attempt-count [attempts]
+  (cond
+    (nil? attempts) 0
+    (sequential? attempts) (count attempts)
+    :else 1))
+
+(defn- indexed-steps [state]
+  (mapv (fn [index step] (assoc step ::index index))
+        (range) (:steps state)))
+
+(defn- relative-step [step-count index]
+  (let [distance (- (dec step-count) index)]
+    (cond
+      (zero? distance) "now"
+      (= 1 distance) "1 step ago"
+      :else (str distance " steps ago"))))
+
+(defn- role-dispatches [steps role]
+  (let [tool (case role
+               :solver :dispatch-solver
+               :student :dispatch-student-fresh)]
+    (filterv #(= tool (:tool %)) steps)))
+
+(defn- pending-dispatches [steps outputs]
+  (mapcat
+   (fn [[role attempts]]
+     (let [dispatches (role-dispatches steps role)
+           completed (attempt-count attempts)]
+       (map #(assoc % ::role role) (drop completed dispatches))))
+   [[:solver (:solver-attempt outputs)]
+    [:student (:student-attempts outputs)]]))
+
+(defn- latest-tool-step [steps tool]
+  (some #(when (= tool (:tool %)) %) (reverse steps)))
+
+(def ^:private guide-action-tools
+  #{:dispatch-solver :guide-solver :dispatch-student-fresh
+    :write-disposition :write-use :promote-artifact})
+
+(defn- latest-guide-step [steps]
+  (some #(when (contains? guide-action-tools (:tool %)) %)
+        (reverse steps)))
+
+(defn- seat-last-action [role steps outputs completed?]
+  (let [step-count (count steps)]
+    (case role
+      (:solver :student)
+      (let [dispatches (role-dispatches steps role)
+            attempts (if (= role :solver)
+                       (:solver-attempt outputs)
+                       (:student-attempts outputs))
+            completed (min (attempt-count attempts) (count dispatches))
+            pending (when-not completed?
+                      (drop completed dispatches))
+            pending-step (last pending)
+            completed-step (when (pos? completed)
+                             (nth dispatches (dec completed)))]
+        (cond
+          pending-step
+          (str "working (job "
+               (or (get-in pending-step [:result :job-id]) "unknown") ")")
+
+          (pos? (attempt-count attempts))
+          (str "attempt recorded"
+               (when completed-step
+                 (str " (" (relative-step step-count (::index completed-step))
+                      ")")))
+
+          :else nil))
+
+      :guide
+      (when-let [step (latest-guide-step steps)]
+        (str (name (:tool step)) " ("
+             (relative-step step-count (::index step)) ")"))
+
+      :scribe
+      (when-let [step (latest-tool-step steps :record-scribe-lanes)]
+        (str "record-scribe-lanes ("
+             (relative-step step-count (::index step)) ")"))
+
+      :proctor nil)))
+
+(defn- format-seat-activity [seats state outputs completed?]
+  (let [steps (indexed-steps state)
+        pending (->> (if completed?
+                       []
+                       (pending-dispatches steps outputs))
+                     (sort-by ::index)
+                     vec)
+        latest-pending (last pending)]
+    (str
+     "Seat activity:\n"
+     (apply str
+            (for [role [:solver :guide :student :proctor :scribe]
+                  :let [seat (get seats role)
+                        staffed? (and (some? seat)
+                                      (not (str/blank? (str seat))))
+                        action (when staffed?
+                                 (seat-last-action role steps outputs
+                                                   completed?))]]
+              (format "  %-8s %-16s %s\n"
+                      (name role) (staffed seat)
+                      (or action (if staffed? "quiet" "unstaffed")))))
+     "In-flight: "
+     (if latest-pending
+       (let [role (::role latest-pending)
+             seat (staffed (get seats role))
+             job-id (or (get-in latest-pending [:result :job-id]) "unknown")]
+         (str "awaiting " seat " (job " job-id ")"))
+       "quiet")
+     "\n")))
+
+(defn- problem-cycle-id [state]
+  (or (:current-cycle-id state)
+      (some (fn [{:keys [tool result]}]
+              (when (= :begin-problem-cycle tool)
+                (:cycle/id result)))
+            (reverse (:steps state)))))
+
+(defn- short-cycle-id [cycle-id]
+  (when cycle-id
+    (let [s (str cycle-id)]
+      (if (<= (count s) 12) s (subs s (- (count s) 7))))))
+
+(defn- problem-save-version [state]
+  (some (fn [{:keys [tool result]}]
+          (when (= :problem-save tool)
+            (:version result)))
+        (reverse (:steps state))))
+
+(defn- frame-id-from-seats [seats]
+  (let [staffed-seats (->> (vals seats)
+                           (keep #(when-not (str/blank? (str %)) (str %))))
+        frame-ids (map #(second (re-find #"^(f\d+)-" %)) staffed-seats)]
+    (when (and (seq staffed-seats)
+               (every? some? frame-ids)
+               (apply = frame-ids))
+      (first frame-ids))))
+
+(defn- format-problem-state [state]
+  (let [problem-id (or (:problem-id state) "unknown")
+        cycle-id (problem-cycle-id state)
+        cycle-short (or (short-cycle-id cycle-id) "none")
+        save-version (problem-save-version state)
+        rendered-step (count (:steps state))
+        mode (or (:cycle/mode state) "unknown")
+        phases (vec (butlast (problem-phase-order)))
+        phase (:current-phase state)
+        phase-index (when phase (.indexOf phases phase))
+        completed? (and (nil? phase) (pos? (:cycles-completed state 0)))
+        phase-label (cond
+                      completed? (str "COMPLETED (sentinel): " problem-id "/"
+                                      cycle-short)
+                      (nil? phase) "setup"
+                      (and phase-index (<= 0 phase-index))
+                      (str (name phase) " (" (inc phase-index) "/"
+                           (count phases) ")")
+                      :else (name phase))
+        outputs (:cycle/outputs state)
+        registration (:registration outputs)
+        conductor (:conductor state)
+        latest-dispatch
+        (some (fn [{:keys [tool result]}]
+                (when (#{:dispatch-solver :dispatch-student-fresh} tool)
+                  {:tool tool :job-id (:job-id result)
+                   :recipient (:ground-control/recipient result)}))
+              (reverse (:steps state)))
+        latest-student-dispatch
+        (some (fn [{:keys [tool result]}]
+                (when (= :dispatch-student-fresh tool)
+                  (:ground-control/recipient result)))
+              (reverse (:steps state)))
+        seats {:solver (or (:reg/solver-seat registration)
+                           (:solver-seat conductor))
+               :guide (or (:reg/guide-seat registration)
+                          (:guide conductor) (:agent conductor))
+               :student (or (:reg/student-seat registration)
+                            (:student conductor) latest-student-dispatch)
+               :proctor (or (:reg/proctor-seat registration)
+                            (:proctor conductor))
+               :scribe (or (:reg/scribe-seat registration)
+                           (:scribe conductor))}
+        frame-id (or (:reg/frame-id registration)
+                     (frame-id-from-seats seats))
+        caps (:reg/attempt-caps registration)
+        solver-count (attempt-count (:solver-attempt outputs))
+        student-count (attempt-count (:student-attempts outputs))]
+    (str (when frame-id (str "Frame: " frame-id "  "))
+         "Problem: " problem-id
+         "  Cycle: " cycle-short
+         "  Save: " (if save-version (str "v" save-version) "unsaved")
+         "  Rendered-at: step " rendered-step "\n"
+         "Mode: " (name mode) "\n"
+         "Phase: " phase-label ": "
+         (str/join " > " (map name phases)) "\n"
+         "Seats: solver=" (staffed (:solver seats))
+         "  guide=" (staffed (:guide seats))
+         "  student=" (staffed (:student seats))
+         "  proctor=" (staffed (:proctor seats))
+         "  scribe=" (staffed (:scribe seats)) "\n"
+         "Attempts: solver " solver-count "/"
+         (or (:s-frontier caps) "?")
+         "  student " student-count "/" (or (:s-student caps) "?") "\n"
+         (format-seat-activity seats state outputs completed?)
+         (when latest-dispatch
+           (str "Latest dispatch: " (name (:tool latest-dispatch))
+                "  job=" (or (:job-id latest-dispatch) "unknown") "\n")))))
+
+(defmethod render-blackboard :problem [_ state]
+  (format-problem-state state))
 
 ;; -----------------------------------------------------------------------------
 ;; :mentor — observation state, trigger status, interventions
@@ -772,8 +1068,152 @@
         :else (str (quot secs 86400) "d ago")))
     (catch Exception _ nil)))
 
+(defn- parked-suffix
+  "Extra *agents* line(s) under an agent with outstanding parked
+   continuations (README-park): one '⧗ parked …' line per record, showing
+   age, outstanding/total deps, absolute-deadline countdown, and a payload
+   preview. Resolved dynamically (requiring-resolve) and never throws —
+   the roster must render even if the parked-on engine is absent. With the
+   flag off no parks exist, so this renders nothing."
+  [agent-name]
+  (try
+    (when-let [snap (requiring-resolve 'futon3c.agency.parked-on/snapshot)]
+      (let [recs (->> (vals (:records (snap)))
+                      (filter #(and (= (str (:agent %)) (str agent-name))
+                                    (not (:released? %)))))]
+        (when (seq recs)
+          (apply str
+                 (for [r recs]
+                   (let [now (System/currentTimeMillis)
+                         outstanding (remove (set (keys (:arrived r))) (:awaiting r))
+                         age (format-elapsed-secs
+                              (quot (- now (long (or (:parked-at-ms r) now))) 1000))
+                         deadline (when-let [d (:deadline-ms r)]
+                                    ;; absolute epoch ms (sweep-deadlines! compares to now)
+                                    (let [left (quot (- (long d) now) 1000)]
+                                      (if (pos? left)
+                                        (str ", deadline in " (format-elapsed-secs left))
+                                        ", deadline PASSED")))
+                         preview (let [p (str (or (:payload r) ""))]
+                                   (if (> (count p) 56) (str (subs p 0 56) "…") p))]
+                     (str "\n    ⧗ parked " age
+                          " on " (count outstanding) "/" (count (:awaiting r)) " dep(s)"
+                          deadline
+                          (when (seq preview) (str " — " preview)))))))))
+    (catch Throwable _ nil)))
+
+(defn vitality-state-path
+  "Location written by the existing futon1b vitality timer."
+  []
+  (str (or (System/getenv "XDG_STATE_HOME")
+           (str (System/getProperty "user.home") "/.local/state"))
+       "/futon1b/vitality-state.json"))
+
+(defn- long-setting
+  [property-name default]
+  (try
+    (Long/parseLong
+     (or (System/getProperty property-name)
+         (System/getenv property-name)
+         (str default)))
+    (catch Throwable _ default)))
+
+(defn vitality-max-age-seconds
+  "Age limit expressed as N producer intervals; defaults to three minutes."
+  []
+  (* (long-setting "FUTON1B_VITALITY_INTERVAL_SECONDS" 60)
+     (long-setting "FUTON1B_VITALITY_MISSED_INTERVALS" 3)))
+
+(defn evidence-flow-status
+  "Read the sampler's latest persisted result. This never samples futon1b.
+   Missing or stale producer output is itself an operator-visible alert."
+  ([] (evidence-flow-status (vitality-state-path)
+                            (System/currentTimeMillis)
+                            (vitality-max-age-seconds)))
+  ([path now-ms max-age-seconds]
+   (try
+     (let [state (json/parse-string (slurp path) true)
+           sampled-at (long (or (:sampled_at_epoch state) 0))
+           age-seconds (max 0 (quot (- now-ms (* 1000 sampled-at)) 1000))
+           record (:latest_record state)
+           alerts (vec (or (:alerts record) []))
+           alerts (if (> age-seconds max-age-seconds)
+                    (conj alerts "no-recent-sample")
+                    alerts)]
+       {:alerts (vec (distinct alerts))
+        :sample-age-seconds age-seconds
+        :record record})
+     (catch Throwable t
+       {:alerts ["no-recent-sample"]
+        :sample-age-seconds nil
+        :error (or (.getMessage t) (.. t getClass getSimpleName))}))))
+
+(defn- evidence-flow-banner
+  []
+  (let [{:keys [alerts sample-age-seconds record]} (evidence-flow-status)]
+    (when (seq alerts)
+      (str "\n\nEVIDENCE FLOW ALERTS"
+           (when sample-age-seconds (str " (sample " sample-age-seconds "s old)"))
+           ":\n"
+           (str/join
+            "\n"
+            (for [alert alerts]
+              (str "  ⚠ " alert
+                   (case alert
+                     "dual-write-disabled"
+                     (when-let [reason (get-in record [:dual_write :reason])]
+                       (str " — " reason))
+                     "evidence-write-stale"
+                     (str " — no accepted write within "
+                          (or (get-in record [:evidence_writes :window_seconds]) "?")
+                          "s")
+                     "no-recent-sample"
+                     " — vitality producer is absent or late"
+                     nil))))))))
+
+(defn- local-site
+  "This box's site code (FUTON3C_SITE property or env), or nil when
+   undecorated."
+  []
+  (some-> (or (System/getProperty "FUTON3C_SITE")
+              (System/getenv "FUTON3C_SITE"))
+          str/trim
+          str/lower-case
+          not-empty))
+
+(defn- id-site-prefix
+  "Site code embedded in a qualified agent id (lon-claude-1 -> \"lon\")."
+  [aid]
+  (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$"
+                                  (str aid))]
+    (str/lower-case site)))
+
+(defn agent-site
+  "Site an agent is homed at, for roster grouping: proxy :home-site metadata
+   first, then a site-qualified id prefix, then this box's site. \"?\" when
+   nothing is known (undecorated box, unqualified id)."
+  [aid info]
+  (or (some-> (get-in info [:metadata :home-site]) name str/lower-case not-empty)
+      (id-site-prefix (name aid))
+      (local-site)
+      "?"))
+
+(defn- site-local-name
+  "Agent id with its own site prefix stripped for display (lon-claude-1
+   shown as claude-1 inside the lon group)."
+  [aid site]
+  (let [aid (str aid)
+        prefix (str site "-")]
+    (if (and site (str/starts-with? aid prefix))
+      (subs aid (count prefix))
+      aid)))
+
 (defn format-agent-status
-  "Format agent registry status for blackboard display.
+  "Format agent registry status for blackboard display, grouped by home
+   site (roster completeness view, M-federated-agency-hardening): every
+   federation point's agents render as `site | name` rows, one block per
+   site; an agent is addressable by the bare name within its own site and
+   globally as site-name.
    Takes the registry-status map from registry/registry-status."
   [registry-status]
   (let [agents (:agents registry-status)
@@ -792,10 +1232,13 @@
          unreachable-count " unreachable"
          (when (seq ws-connected)
            (str ", " (count ws-connected) " inbound-ws-connected"))
-         ")\n"
-         (str/join "\n"
-                   (map (fn [[aid info]]
-                          (let [status (or (:status info) :idle)
+         ") — rendered "
+         (.format (java.time.LocalTime/now)
+                  (java.time.format.DateTimeFormatter/ofPattern "HH:mm:ss"))
+         "\n"
+         (let [row (fn [[aid info]]
+                     (let [site (agent-site aid info)
+                           status (or (:status info) :idle)
                                 type-str (some-> (:type info) name)
                                 metadata (:metadata info)
                                 remote? (:remote? metadata)
@@ -803,6 +1246,7 @@
                                 route-label (case route
                                               :local "local"
                                               :ws "ws"
+                                              :inbox "inbox"
                                               "unreachable")
                                 surface (:surface metadata)
                                 lane (:lane metadata)
@@ -819,6 +1263,7 @@
                                               (format-elapsed-secs secs))
                                             (catch Exception _ nil)))
                                 activity (:invoke-activity info)
+                                quiet-ms (:invoke-quiet-ms info)
                                 readiness (case route
                                             :local "ready"
                                             :ws "ready"
@@ -833,10 +1278,17 @@
                                               :else nil)
                                 last-active-str (format-relative-time
                                                   (:last-active info) now-ms)]
-                            (str "  " (name aid) " [" type-str
+                            (str "  " site " | " (site-local-name (name aid) site)
+                                 " [" type-str
                                  (when remote? " remote")
                                  ", " route-label
-                                 (when ws-bridge? ", ws-bridge")
+                                 ;; Annotate ws-bridge only when the agent is
+                                 ;; actually invoked via the bridge. A locally
+                                 ;; invocable agent (e.g. the laptop's codex-1,
+                                 ;; which also exposes an outbound bridge to the
+                                 ;; hub) is `local` — the ws-bridge? metadata flag
+                                 ;; documents the bridge, it is not the route.
+                                 (when (and ws-bridge? (not= route :local)) ", ws-bridge")
                                  (when surface (str ", " surface))
                                  (when lane (str ", lane=" lane))
                                  (when role (str ", role=" role))
@@ -864,12 +1316,28 @@
                                                ")"))
                                         " — " readiness
                                         (when session-tag
-                                          (str ", " session-tag)))
-                                   (name status)))))
-                        (sort-by key agents)))
+                                          (str ", " session-tag))
+                                        ;; An idle agent with fresh activity is a
+                                        ;; live turn the registry lost track of
+                                        ;; (2026-08-15: claude-2 mid-turn rendered
+                                        ;; as plain idle). Surface it, with age.
+                                        (when (and activity quiet-ms
+                                                   (< (long quiet-ms) 180000))
+                                          (str "\n    ⚠ " activity
+                                               " (" (quot (long quiet-ms) 1000)
+                                               "s ago, but status=idle)")))
+                                   (name status))
+                                 (parked-suffix (name aid)))))]
+           (->> agents
+                (group-by (fn [[aid info]] (agent-site aid info)))
+                (sort-by key)
+                (map (fn [[_site entries]]
+                       (str/join "\n" (map row (sort-by key entries)))))
+                (str/join "\n\n")))
          (when (seq ws-unregistered)
            (str "\n\nWS Connected (Unregistered):\n"
                 (str/join "\n" (map #(str "  " %) ws-unregistered))))
+         (evidence-flow-banner)
          "\n")))
 
 (defn project-agents!
@@ -1059,7 +1527,15 @@
        (when-let [content (render-blackboard peripheral-id state)]
          (let [buf-name (str "*" (name peripheral-id) "*")
                opts (merge {:async? true} opts)]
-           (blackboard! buf-name content opts)
+           ;; Problem cycles are independently inspectable and must not contend
+           ;; with the APM campaign's authoritative singleton `*problem*`.
+           (when (and (= :problem peripheral-id) (problem-cycle-id state))
+             (blackboard!
+              (str "*problem: " (or (:problem-id state) "unknown") "-"
+                   (short-cycle-id (problem-cycle-id state)) "*")
+              content opts))
+           (when-not (= :problem peripheral-id)
+             (blackboard! buf-name content opts))
            (emit-blackboard-evidence! peripheral-id state content)
            nil))
        (catch Throwable _

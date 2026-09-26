@@ -1,5 +1,6 @@
 (ns futon3c.runtime.agents-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.runtime.agents :as runtime]
             [futon3c.agency.registry :as reg]
@@ -9,7 +10,7 @@
             [futon3c.social.test-fixtures :as fix]))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (f)))

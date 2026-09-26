@@ -1,0 +1,10 @@
+{:schema :wm/historical-qualification-plan-v1
+ :verification-id "repair-initialization38690-revalidation-20260911-v1"
+ :repair-id "repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed"
+ :sources [{:path "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed.edn" :sha256 "89a55521db658dc04499e4c43f7fde5af49fca632aad8c6311639ccdc16df68e"}
+{:path "/home/joe/code/futon2/src/futon2/aif/full_loop_cohort.clj" :sha256 "7819b2da811344979355ed9188ccfb2a181d94882bb58cd3c560de282bf4cda7"}
+{:path "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj" :sha256 "0b2a8ddc3f3e16b1e7e522c0b818a4ad3627c32734b9005e8419afff4a5a3ea2"}
+{:path "/home/joe/code/futon2/src/futon2/aif/repair_obligation.clj" :sha256 "7bc42ed3be4bdccf99bb88e485d86e71cef2a781683dbea6c518d4ab91c49dff"}
+{:path "/home/joe/code/futon2/src/futon2/aif/tripwire.clj" :sha256 "4a1e3424655d7a3aed624c1710a0177edd55ef6acb854a9846103e42c93ddac3"}
+{:path "/home/joe/code/futon2/test/futon2/aif/full_loop_runner_test.clj" :sha256 "ca173724b82c601964ddabd9dced0637220cf7b2f2593235160b1ccad374b619"}]
+ :checks [{:id :distinct-root-runner-regression :argv ["bash" "-lc" "cd /home/joe/code/futon2 && exec clojure -M:test -m cognitect.test-runner -n futon2.aif.full-loop-runner-test -v futon2.aif.full-loop-runner-test/same-declared-cohort-in-distinct-authority-roots-cannot-alias-findings"] :timeout-ms 120000}]}

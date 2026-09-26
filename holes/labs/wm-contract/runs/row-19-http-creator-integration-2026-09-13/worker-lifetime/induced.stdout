@@ -1,0 +1,11 @@
+
+Running tests in #{"/tmp"}
+
+Testing codex23-worker-lifetime-induced-test
+
+FAIL in (deliberate-failure) (codex23_worker_lifetime_induced_test.clj:5)
+expected: (= :worker-exited :worker-alive)
+  actual: (not (= :worker-exited :worker-alive))
+
+Ran 1 tests containing 1 assertions.
+1 failures, 0 errors.

@@ -17,12 +17,16 @@ Environment variables:
     IRC_COMMAND_OWNER_AGENT_MAP
                     (optional: #channel:agent-id,#channel2:agent-id)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
+    EVIDENCE_BASE   (default: INVOKE_BASE)  — where IRC evidence is recorded
     BRIDGE_BOTS     (default: claude,codex)  - comma-separated bot nicks
+    BRIDGE_BOTS_FROM_ROSTER
+                    (default: false)         — when true, local non-proxy
+                    Agency agents also get IRC bots dynamically from /agents
     FUTON3C_MATRIX_REPLY_NO_LIMITS
                     (default: false)         — when enabled, Matrix-backed
                     clean-output evolver replies use full IRC-safe line
                     splitting instead of bridge-level clipping/cap notices
-    INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
+    INVOKE_TIMEOUT_SECONDS (default: 3600)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
@@ -217,8 +221,16 @@ IRC_CHANNELS = _dedupe_channels(
     ]
 )
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
+EVIDENCE_BASE = _normalize_base(os.environ.get("EVIDENCE_BASE")) or INVOKE_BASE
 PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
+BRIDGE_BOTS_FROM_ROSTER = bool_env("BRIDGE_BOTS_FROM_ROSTER", False)
+BRIDGE_ROSTER_SYNC_INTERVAL_SECONDS = int_env("BRIDGE_ROSTER_SYNC_INTERVAL_SECONDS", 10, minimum=1)
+BRIDGE_ROSTER_BOT_TYPES = {
+    item.strip().lower()
+    for item in os.environ.get("BRIDGE_ROSTER_BOT_TYPES", "claude,codex,zai").split(",")
+    if item.strip()
+}
 IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
     os.environ.get("IRC_COMMAND_OWNER_AGENT_MAP", "")
 )
@@ -234,6 +246,7 @@ INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
 ARSE_ASK_URL = f"{INVOKE_BASE}/api/alpha/arse/ask"
 ARSE_ANSWER_URL = f"{INVOKE_BASE}/api/alpha/arse/answer"
 ARSE_UNANSWERED_URL = f"{INVOKE_BASE}/api/alpha/arse/unanswered"
+EVIDENCE_URL = f"{EVIDENCE_BASE}/api/alpha/evidence"
 PSR_URL = f"{INVOKE_BASE}/api/alpha/evidence/psr"
 PUR_URL = f"{INVOKE_BASE}/api/alpha/evidence/pur"
 PAR_URL = f"{INVOKE_BASE}/api/alpha/evidence/par"
@@ -245,9 +258,9 @@ MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
-    int_env("INVOKE_TIMEOUT", 1800, minimum=60),
+    int_env("INVOKE_TIMEOUT", 3600, minimum=60),
     minimum=60,
-)  # seconds; aligns with futon3c hard invoke timeout (30 min)
+)  # seconds; aligns with futon3c hard invoke timeout (60 min)
 INVOKE_CLIENT_TIMEOUT_SECONDS = int_env(
     "INVOKE_CLIENT_TIMEOUT_SECONDS",
     INVOKE_TIMEOUT_SECONDS + 15,
@@ -439,8 +452,140 @@ def api_get(url, timeout=CMD_TIMEOUT):
         return {"ok": False, "error": str(e)}
 
 
+def _clean_csv(values):
+    return [item.strip() for item in values if isinstance(item, str) and item.strip()]
+
+
+def static_bridge_bot_nicks(static_bots=None):
+    """Return the configured static bot nicks, preserving existing BRIDGE_BOTS behavior."""
+    return set(_clean_csv(static_bots if static_bots is not None else BRIDGE_BOTS))
+
+
+def _agent_type(agent):
+    if not isinstance(agent, dict):
+        return ""
+    value = agent.get("type") or agent.get("agent/type") or agent.get("agent_type")
+    return str(value or "").strip().lower().lstrip(":")
+
+
+def _truthy(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() not in {"", "0", "false", "no", "off", "nil", "none"}
+
+
+def _metadata(agent):
+    if not isinstance(agent, dict):
+        return {}
+    meta = agent.get("metadata") or agent.get("agent/metadata") or {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def _agent_is_proxy(agent):
+    meta = _metadata(agent)
+    for key in ("proxy?", "proxy", "remote?", "remote", "remote-proxy?", "remote_proxy"):
+        if _truthy(agent.get(key)) or _truthy(meta.get(key)):
+            return True
+    return False
+
+
+def _iter_roster_agents(roster_json):
+    if not isinstance(roster_json, dict):
+        return
+    agents = roster_json.get("agents") or {}
+    if isinstance(agents, dict):
+        for agent_id, agent in agents.items():
+            if isinstance(agent, dict):
+                yield str(agent_id), agent
+    elif isinstance(agents, list):
+        for agent in agents:
+            if not isinstance(agent, dict):
+                continue
+            agent_id = (
+                agent.get("agent-id")
+                or agent.get("agent_id")
+                or agent.get("id")
+                or agent.get("name")
+            )
+            if agent_id:
+                yield str(agent_id), agent
+
+
+def desired_bot_nicks(roster_json, type_allowlist=None):
+    """Return local non-proxy Agency agent ids that should have IRC bots.
+
+    Pure function: no I/O, no global mutation. A bot is desired only for the
+    agent's home bridge, so proxies/remote mirrors are excluded.
+    """
+    allowed = {
+        str(item).strip().lower().lstrip(":")
+        for item in (type_allowlist if type_allowlist is not None else BRIDGE_ROSTER_BOT_TYPES)
+        if str(item).strip()
+    }
+    desired = set()
+    for agent_id, agent in _iter_roster_agents(roster_json):
+        if not agent_id.strip() or _agent_is_proxy(agent):
+            continue
+        if allowed and _agent_type(agent) not in allowed:
+            continue
+        desired.add(agent_id.strip())
+    return desired
+
+
+def selected_bot_nicks(roster_json, *, bots_from_roster=None,
+                       static_bots=None, type_allowlist=None):
+    """Return final bot nick set under the roster flag.
+
+    Flag off preserves static BRIDGE_BOTS exactly. Flag on unions static pinned
+    bots with live local non-proxy roster agents.
+    """
+    static = static_bridge_bot_nicks(static_bots)
+    if not (BRIDGE_BOTS_FROM_ROSTER if bots_from_roster is None else bots_from_roster):
+        return static
+    return static | desired_bot_nicks(roster_json, type_allowlist)
+
+
+def post_transport_evidence(transport, channel, author, text, direction, via_nick=None):
+    """Record a transcript turn without blocking the transport loop."""
+    channel = (channel or IRC_CHANNEL).strip() or IRC_CHANNEL
+    author = (author or "unknown").strip() or "unknown"
+    text = text or ""
+    if not text.strip():
+        return
+    payload = {
+        "subject": {"ref/type": "thread", "ref/id": f"{transport}/{channel}"},
+        "type": "forum-post",
+        "claim-type": "observation",
+        "author": author,
+        "body": {
+            "text": text,
+            "transport": transport,
+            "channel": channel,
+            "direction": direction,
+        },
+        "tags": [transport, "turn"],
+    }
+    if via_nick:
+        payload["body"]["via"] = via_nick
+
+    def worker():
+        result = api_post(EVIDENCE_URL, payload, timeout=2)
+        if not result.get("ok"):
+            log("bridge", f"{transport.upper()} evidence write failed: {result.get('err') or result.get('error')}")
+
+    threading.Thread(target=worker, name=f"{transport}-evidence", daemon=True).start()
+
+
+def post_irc_evidence(channel, author, text, direction, via_nick=None):
+    """Compatibility entry point for IRC transcript recording."""
+    return post_transport_evidence("irc", channel, author, text, direction, via_nick)
+
 class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
+
+    transport_name = "irc"
 
     def __init__(self, nick, agent_id, channel, host, port, password,
                  handle_commands=False, channels=None,
@@ -466,6 +611,7 @@ class IRCBot:
         self._job_seq = 0
         self._job_seq_lock = threading.Lock()
         self._send_lock = threading.Lock()
+        self._stop_event = threading.Event()
         self._worker = threading.Thread(
             target=self._invoke_worker_loop,
             name=f"{self.nick}-invoke-worker",
@@ -721,6 +867,8 @@ class IRCBot:
 
     def connect(self):
         """Connect to IRC server, authenticate, join channel."""
+        if self._stop_event.is_set():
+            raise ConnectionError("bot stopped")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(300)  # 5 min read timeout
         self.sock.connect((self.host, self.port))
@@ -751,6 +899,24 @@ class IRCBot:
             self._send(f"JOIN {ch}")
             log(self.nick, f"Joined {ch}")
         self.connected = True
+
+    def stop(self, reason="roster reconciliation"):
+        """Ask the bot to PART/QUIT and stop reconnecting."""
+        self._stop_event.set()
+        sock = self.sock
+        if sock is not None:
+            try:
+                for ch in self.channels:
+                    self._send(f"PART {ch} :{reason}")
+                self._send(f"QUIT :{reason}")
+            except Exception:
+                pass
+            try:
+                sock.close()
+            except Exception:
+                pass
+        self.sock = None
+        self.connected = False
 
     def _send(self, line):
         """Send a raw IRC line."""
@@ -942,7 +1108,7 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "invoke-trace-id": trace_id,
-            "surface": "irc",
+            "surface": self.transport_name,
             "destination": f"{self._reply_channel or self.channel} as <{self.nick}>",
             "delivered": bool(delivered),
             "note": note,
@@ -1186,8 +1352,8 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "prompt": full_prompt,
-            "caller": f"irc:{sender}",
-            "surface": f"irc ({reply_channel or self.channel})",
+            "caller": f"{self.transport_name}:{sender}",
+            "surface": f"{self.transport_name} ({reply_channel or self.channel})",
             "job-id": requested_job_id,
         }
         if mission_id:
@@ -1223,6 +1389,7 @@ class IRCBot:
             "reply_channel": reply_channel or self.channel,
             "queued_at": time.time(),
             "multi_message": bool(multi_message),
+            "transport_context": self._transport_context(),
         }
         try:
             self._invoke_queue.put_nowait(task)
@@ -1244,6 +1411,7 @@ class IRCBot:
             reply_ch = task.get("reply_channel") or self.channel
             multi_message = bool(task.get("multi_message"))
             self._reply_channel = reply_ch  # for delivery receipt
+            self._set_transport_context(task.get("transport_context"))
             response = {"ok": False}
             invoke_meta = None
             try:
@@ -1296,6 +1464,7 @@ class IRCBot:
                 )
                 log(self.nick, f"Worker exception for {job_id}: {traceback.format_exc()}")
             finally:
+                self._set_transport_context(None)
                 self._invoke_queue.task_done()
 
     def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
@@ -1312,8 +1481,8 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "prompt": prompt,
-            "caller": f"irc:{caller}",
-            "surface": f"irc ({active_channel})",
+            "caller": f"{self.transport_name}:{caller}",
+            "surface": f"{self.transport_name} ({active_channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if job_id:
@@ -1455,6 +1624,10 @@ class IRCBot:
         and a truncation notice is appended."""
         thread_channel = getattr(self._thread_context, "reply_channel", None)
         channel = channel or thread_channel or self._reply_channel or self.channel
+        # Single-writer: only the channel's owner records evidence -- its
+        # own sends here (outbound), others' messages via the inbound path.
+        # Non-owner bots record nothing, so each turn => exactly one entry.
+        record_outbound = self._handles_bare_command(channel)
         text = self._sanitize_for_irc(text)
         try:
             limit = None if max_lines is None else int(max_lines)
@@ -1476,11 +1649,15 @@ class IRCBot:
         truncated = (not unlimited) and len(lines) > limit
         for line in send_lines:
             self._send(f"PRIVMSG {channel} :{line}")
+            if record_outbound:
+                post_irc_evidence(channel, self.nick, line, "outbound", via_nick=self.nick)
             time.sleep(0.1)  # gentle rate limit
         if truncated:
-            self._send(f"PRIVMSG {channel} :"
-                       f"[truncated {len(lines) - limit} more lines — "
-                       f"post details to mfuton gitlab issue instead]")
+            line = (f"[truncated {len(lines) - limit} more lines — "
+                    f"post details to mfuton gitlab issue instead]")
+            self._send(f"PRIVMSG {channel} :{line}")
+            if record_outbound:
+                post_irc_evidence(channel, self.nick, line, "outbound", via_nick=self.nick)
             time.sleep(0.1)
 
     def _multiline_result_for_irc(self, result_text):
@@ -2153,12 +2330,37 @@ class IRCBot:
             msg += f" since={started.strip()}"
         self._say(msg)
 
+    def _transport_context(self):
+        return None
+
+    def _set_transport_context(self, context):
+        pass
+
+    def _start_message_handler(self, handler, sender, text, channel):
+        threading.Thread(target=handler, args=(sender, text, channel), daemon=True).start()
+
+    def _dispatch_message(self, sender, text, channel):
+        """Shared routing rules; transports admit senders/rooms before this point."""
+        if text.startswith("!") and self._handles_bare_command(channel):
+            handler = self._handle_command
+        elif self._is_mention(text):
+            if self._is_frontiermath_room_control_message(text, channel):
+                log(self.nick, f"Rerouting FrontierMath room control mention through ungated path from {sender} on {channel}: {text[:80]}")
+                handler = self._handle_ungated
+            else:
+                handler = self._handle_mention
+        elif self.nick.rstrip("_").lower() in ungated_nicks:
+            handler = self._handle_ungated
+        else:
+            return
+        self._start_message_handler(handler, sender, text, channel)
+
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
-        while True:
+        while not self._stop_event.is_set():
             try:
                 self.connect()
-                while True:
+                while not self._stop_event.is_set():
                     line = self._readline()
                     if line is None:
                         log(self.nick, "Connection closed by server")
@@ -2200,46 +2402,14 @@ class IRCBot:
                                 and sender.lower() != self.nick.lower()):
                             # Track which channel this message came from
                             self._reply_channel = target
+                            # Record inbound evidence at most once per channel:
+                            # only the room-owner bot writes. Otherwise every bot
+                            # joined to the channel records the same message =>
+                            # N duplicate forum-posts (via:codex, via:claude, ...).
+                            if self.handle_commands and self._handles_bare_command(target):
+                                post_irc_evidence(target, sender, text, "inbound", via_nick=self.nick)
 
-                            # ! commands - room owner when configured,
-                            # otherwise fallback to first bot.
-                            if text.startswith("!") and self._handles_bare_command(target):
-                                t = threading.Thread(
-                                    target=self._handle_command,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
-
-                            # @mentions — each bot handles its own
-                            elif self._is_mention(text):
-                                if self._is_frontiermath_room_control_message(text, target):
-                                    log(
-                                        self.nick,
-                                        f"Rerouting FrontierMath room control mention through ungated path from {sender} on {target}: {text[:80]}",
-                                    )
-                                    t = threading.Thread(
-                                        target=self._handle_ungated,
-                                        args=(sender, text, target),
-                                        daemon=True,
-                                    )
-                                    t.start()
-                                else:
-                                    t = threading.Thread(
-                                        target=self._handle_mention,
-                                        args=(sender, text, target),
-                                        daemon=True,
-                                    )
-                                    t.start()
-
-                            # Ungated mode — respond to all messages
-                            elif self.nick.rstrip("_").lower() in ungated_nicks:
-                                t = threading.Thread(
-                                    target=self._handle_ungated,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
+                            self._dispatch_message(sender, text, target)
 
             except Exception as e:
                 log(self.nick, f"Error: {e}")
@@ -2254,8 +2424,10 @@ class IRCBot:
                     pass
                 self.sock = None
 
-            log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
-            time.sleep(RECONNECT_DELAY)
+            if not self._stop_event.is_set():
+                log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
+                time.sleep(RECONNECT_DELAY)
+        log(self.nick, "Stopped")
 
 
 def _write_health(bots, started_at):
@@ -2331,10 +2503,18 @@ def _make_say_handler(bots_by_nick):
     return SayHandler
 
 
-def _start_bridge_http(bots):
+def _start_bridge_http(bots, bots_by_nick=None):
     """Start a tiny HTTP server on BRIDGE_HTTP_PORT for /say."""
-    bots_by_nick = {b.nick: b for b in bots}
-    handler = _make_say_handler(bots_by_nick)
+    routes = bots_by_nick
+    if routes is None:
+        routes = {b.nick: b for b in bots}
+        # Also route by agent id: harness-side senders (e.g. zai's irc_send)
+        # default `from` to their AGENT id, which need not equal the IRC nick.
+        for b in bots:
+            agent_id = getattr(b, "agent_id", None)
+            if agent_id and agent_id not in routes:
+                routes[agent_id] = b
+    handler = _make_say_handler(routes)
     try:
         server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)
     except OSError as e:
@@ -2346,37 +2526,173 @@ def _start_bridge_http(bots):
     return server
 
 
-def main():
-    _pidfile_fd = acquire_pidfile()  # noqa: F841 — must stay open
-
+def _nick_to_agent_map_from_env():
     nick_to_agent = {
         "claude": "claude-1",
         "claude-2": "claude-2",
         "codex": "codex-1",
     }
-    # NICK_AGENT_MAP overrides: "zcodex:codex-1,zclaude:claude-1"
     for pair in os.environ.get("NICK_AGENT_MAP", "").split(","):
         pair = pair.strip()
         if ":" in pair:
             n, a = pair.split(":", 1)
             nick_to_agent[n.strip()] = a.strip()
+    return nick_to_agent
+
+
+def _agent_id_for_nick(nick, nick_to_agent, from_roster=False):
+    if from_roster:
+        return nick
+    return nick_to_agent.get(nick, f"{nick}-1")
+
+
+def _make_bot(nick, *, nick_to_agent, handle_commands=False, from_roster=False):
+    return IRCBot(
+        nick=nick,
+        agent_id=_agent_id_for_nick(nick, nick_to_agent, from_roster=from_roster),
+        channel=IRC_CHANNEL,
+        host=IRC_HOST,
+        port=IRC_PORT,
+        password=IRC_PASSWORD,
+        handle_commands=handle_commands,
+        channels=IRC_CHANNELS,
+        command_owner_agent_map=IRC_COMMAND_OWNER_AGENT_MAP,
+    )
+
+
+def _register_bot_routes(bots_by_nick, bot):
+    bots_by_nick[bot.nick] = bot
+    if bot.agent_id and bot.agent_id not in bots_by_nick:
+        bots_by_nick[bot.agent_id] = bot
+
+
+def _unregister_bot_routes(bots_by_nick, bot):
+    for key in {bot.nick, bot.desired_nick, bot.agent_id}:
+        if key and bots_by_nick.get(key) is bot:
+            bots_by_nick.pop(key, None)
+
+
+def _start_bot_thread(bot, threads_by_nick):
+    t = threading.Thread(target=bot.run, name=f"bot-{bot.nick}", daemon=True)
+    t.start()
+    threads_by_nick[bot.desired_nick] = t
+    return t
+
+
+def _fetch_roster_for_bots():
+    data = api_get(AGENTS_URL, timeout=CMD_TIMEOUT)
+    if not isinstance(data, dict) or data.get("ok") is False:
+        return None
+    return data
+
+
+def _reconcile_bots_from_roster(
+    *,
+    bots,
+    bots_by_nick,
+    threads_by_nick,
+    nick_to_agent,
+    lock,
+    roster_json,
+):
+    desired = selected_bot_nicks(
+        roster_json,
+        bots_from_roster=BRIDGE_BOTS_FROM_ROSTER,
+        static_bots=BRIDGE_BOTS,
+        type_allowlist=BRIDGE_ROSTER_BOT_TYPES,
+    )
+    with lock:
+        current = {bot.desired_nick for bot in bots}
+        added = sorted(desired - current)
+        removed = sorted(current - desired)
+        for nick in removed:
+            bot = next((b for b in bots if b.desired_nick == nick), None)
+            if bot is None:
+                continue
+            log("bridge", f"Roster removed {nick}; parting IRC bot")
+            bot.stop("agent departed from Agency roster")
+            bots.remove(bot)
+            _unregister_bot_routes(bots_by_nick, bot)
+            threads_by_nick.pop(nick, None)
+        command_owner_present = any(bot.handle_commands for bot in bots)
+        for nick in added:
+            from_roster = nick not in static_bridge_bot_nicks(BRIDGE_BOTS)
+            bot = _make_bot(
+                nick,
+                nick_to_agent=nick_to_agent,
+                from_roster=from_roster,
+                handle_commands=(not IRC_COMMAND_OWNER_AGENT_MAP and not command_owner_present),
+            )
+            command_owner_present = command_owner_present or bot.handle_commands
+            bots.append(bot)
+            _register_bot_routes(bots_by_nick, bot)
+            _start_bot_thread(bot, threads_by_nick)
+            log("bridge", f"Roster added {nick}; started IRC bot for {bot.agent_id}")
+            time.sleep(0.5)
+    return {"desired": sorted(desired), "added": added, "removed": removed}
+
+
+def _start_roster_reconciler(bots, bots_by_nick, threads_by_nick, nick_to_agent, lock):
+    if not BRIDGE_BOTS_FROM_ROSTER:
+        return None
+
+    def loop():
+        while True:
+            try:
+                roster = _fetch_roster_for_bots()
+                if roster is None:
+                    log("bridge", "Roster reconcile skipped: Agency roster unavailable")
+                    time.sleep(BRIDGE_ROSTER_SYNC_INTERVAL_SECONDS)
+                    continue
+                _reconcile_bots_from_roster(
+                    bots=bots,
+                    bots_by_nick=bots_by_nick,
+                    threads_by_nick=threads_by_nick,
+                    nick_to_agent=nick_to_agent,
+                    lock=lock,
+                    roster_json=roster,
+                )
+            except Exception as e:
+                log("bridge", f"Roster reconcile failed: {e}")
+                traceback.print_exc()
+            time.sleep(BRIDGE_ROSTER_SYNC_INTERVAL_SECONDS)
+
+    t = threading.Thread(target=loop, name="bridge-roster-reconcile", daemon=True)
+    t.start()
+    return t
+
+
+def main():
+    _pidfile_fd = acquire_pidfile()  # noqa: F841 — must stay open
+
+    nick_to_agent = _nick_to_agent_map_from_env()
+    initial_roster = (
+        (_fetch_roster_for_bots() or {"ok": True, "agents": {}})
+        if BRIDGE_BOTS_FROM_ROSTER
+        else {"ok": True, "agents": {}}
+    )
+    static_nicks = _clean_csv(BRIDGE_BOTS)
+    if BRIDGE_BOTS_FROM_ROSTER:
+        desired_nicks = selected_bot_nicks(
+            initial_roster,
+            bots_from_roster=BRIDGE_BOTS_FROM_ROSTER,
+            static_bots=BRIDGE_BOTS,
+            type_allowlist=BRIDGE_ROSTER_BOT_TYPES,
+        )
+        initial_nicks = static_nicks + sorted(desired_nicks - set(static_nicks))
+    else:
+        initial_nicks = static_nicks
 
     bots = []
-    for i, nick in enumerate(BRIDGE_BOTS):
+    for i, nick in enumerate(initial_nicks):
         nick = nick.strip()
         if not nick:
             continue
-        agent_id = nick_to_agent.get(nick, f"{nick}-1")
-        bot = IRCBot(
-            nick=nick,
-            agent_id=agent_id,
-            channel=IRC_CHANNEL,
-            host=IRC_HOST,
-            port=IRC_PORT,
-            password=IRC_PASSWORD,
+        bot = _make_bot(
+            nick,
+            nick_to_agent=nick_to_agent,
+            from_roster=(BRIDGE_BOTS_FROM_ROSTER and nick not in static_bridge_bot_nicks(BRIDGE_BOTS)),
             handle_commands=(i == 0),  # fallback bare ! owner when no room map is configured
-            channels=IRC_CHANNELS,
-            command_owner_agent_map=IRC_COMMAND_OWNER_AGENT_MAP,
         )
         bots.append(bot)
 
@@ -2412,20 +2728,32 @@ def main():
         print(f"Bare ! commands handled by fallback owner: {fallback_owner}")
 
     threads = []
+    threads_by_nick = {}
+    bots_by_nick = {}
+    bots_lock = threading.RLock()
     for bot in bots:
-        t = threading.Thread(target=bot.run, name=f"bot-{bot.nick}", daemon=True)
-        t.start()
+        _register_bot_routes(bots_by_nick, bot)
+        t = _start_bot_thread(bot, threads_by_nick)
         threads.append(t)
         time.sleep(0.5)  # stagger connections
 
-    _bridge_http = _start_bridge_http(bots)  # noqa: F841
+    _bridge_http = _start_bridge_http(bots, bots_by_nick=bots_by_nick)  # noqa: F841
+    _roster_reconciler = _start_roster_reconciler(
+        bots,
+        bots_by_nick,
+        threads_by_nick,
+        nick_to_agent,
+        bots_lock,
+    )  # noqa: F841
 
     sd_notify("READY=1")
 
     # Health-write loop (replaces plain sleep)
     try:
         while True:
-            _write_health(bots, started_at)
+            with bots_lock:
+                health_bots = list(bots)
+            _write_health(health_bots, started_at)
             sd_notify("WATCHDOG=1")
             time.sleep(HEALTH_INTERVAL)
     except KeyboardInterrupt:

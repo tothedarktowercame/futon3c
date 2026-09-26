@@ -1,0 +1,24 @@
+{
+  "example_id": "deconfounding-game-3",
+  "title": "Deconfounding Game 3: an unobserved confounder and its proxy",
+  "topology_basis": "printed_diagram",
+  "content": "B confounds the proposed effect of X on Y but cannot be observed. A is an observed consequence of both X and B; adjusting for this proxy neither blocks the true back-door path nor avoids collider bias.",
+  "variables": [
+    {"key": "x", "name": "Treatment (X)", "content": "The proposed cause whose effect on Y is sought."},
+    {"key": "y", "name": "Outcome (Y)", "content": "The outcome caused by X and confounded by B."},
+    {"key": "b", "name": "Unobserved Confounder (B)", "content": "The unobservable common cause of X and Y.", "observed": false},
+    {"key": "a", "name": "Observed Proxy (A)", "content": "An observed consequence of both X and B, hence a collider and imperfect proxy."}
+  ],
+  "arrows": [
+    {"source": "b", "target": "x", "because": "B is a common cause of treatment X."},
+    {"source": "b", "target": "y", "because": "B independently causes outcome Y."},
+    {"source": "b", "target": "a", "because": "A is an observed proxy descended from B."},
+    {"source": "x", "target": "a", "because": "A is also caused by X, making it a collider."},
+    {"source": "x", "target": "y", "because": "This is the proposed causal effect."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:2e3750ac3e33ebad",
+    "ta-book-of-why-2018:32747f1f3b0aadf4"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0172"]
+}

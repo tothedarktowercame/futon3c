@@ -3,7 +3,8 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.logic.arxana-bridge :as bridge]
             [futon3c.logic.invariant-runner :as runner]
-            [futon1a.system :as sys])
+            [futon1b-server :as f1b]
+            [xtdb.node :as xtn])
   (:import (java.net URI)
            (java.net URLEncoder)
            (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
@@ -69,14 +70,13 @@
                     (get-in % [:props :label]))
                 hyperedges)))))
 
-(deftest emit-aggregate-roundtrips-through-futon1a
+(deftest emit-aggregate-roundtrips-through-futon1b
   (testing "bridge emits invariant/violation hyperedges queryable by type"
     (let [dir (temp-dir)
           client (http-client)
-          sys1 (sys/start! {:data-dir dir
-                            :port 0
-                            :allowed-penholders #{"tester"}})
-          base (str "http://127.0.0.1:" (:http/port sys1))]
+          node (xtn/start-node)
+          server (f1b/start-server! {:store-dir dir :node node :port 0})
+          base (str "http://127.0.0.1:" (.getPort (.getAddress server)))]
       (try
         (let [aggregate (runner/run-aggregate
                          {:mission true
@@ -91,7 +91,7 @@
                                     {:orphan-announcements [["a-1" "missing-job"]]
                                      :running-session-mismatches [["job-1" "codex-1" "sid-job" "sid-reg"]]})}])
               emitted (bridge/emit-aggregate! aggregate {:futon1a-url base
-                                                         :penholder "tester"
+                                                         :penholder "api"
                                                          :client client})
               queried (http-get-json client (str base "/api/alpha/hyperedges?type=invariant/violation"))]
           (is (= 3 (:count emitted)))
@@ -104,16 +104,16 @@
                     (get-in queried [:body :hyperedges]))
               "stored hyperedges keep the rule in :hx/props on readback"))
         (finally
-          ((:stop! sys1)))))))
+          (f1b/stop-server! server)
+          (.close node))))))
 
 (deftest reconcile-aggregate-marks-cleared-hyperedges-inactive
   (testing "previously emitted violations that disappear from the aggregate are deactivated rather than left live"
     (let [dir (temp-dir)
           client (http-client)
-          sys1 (sys/start! {:data-dir dir
-                            :port 0
-                            :allowed-penholders #{"tester"}})
-          base (str "http://127.0.0.1:" (:http/port sys1))]
+          node (xtn/start-node)
+          server (f1b/start-server! {:store-dir dir :node node :port 0})
+          base (str "http://127.0.0.1:" (.getPort (.getAddress server)))]
       (try
         (let [aggregate-1 (runner/run-aggregate
                            {:mission true
@@ -129,7 +129,7 @@
               emitted-1 (bridge/reconcile-aggregate!
                          aggregate-1
                          {:futon1a-url base
-                          :penholder "tester"
+                          :penholder "api"
                           :client client})
               aggregate-2 (runner/run-aggregate
                            {:codex true}
@@ -141,7 +141,7 @@
                          aggregate-2
                          {:previous-hyperedges (:current-hyperedges emitted-1)
                           :futon1a-url base
-                          :penholder "tester"
+                          :penholder "api"
                           :client client})
               mission-hx-id "hx:invariant/violation:inv:existence/missing-blockers|mission-cycle:C1|mission-obligation:O-x"
               mission-hx (http-get-json client (str base "/api/alpha/hyperedge/"
@@ -157,4 +157,5 @@
           (is (= 2 (get-in queried [:body :count]))
               "query still returns both docs; inactive filtering is a browser concern"))
         (finally
-          ((:stop! sys1)))))))
+          (f1b/stop-server! server)
+          (.close node))))))

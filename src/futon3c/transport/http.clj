@@ -17,6 +17,12 @@
      GET  /api/alpha/coordination/edges — list social-layer mesh edges
      GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/invoke/jobs/:id/ack — acknowledge an inbox delivery
+     POST /api/alpha/invoke/jobs/:id/cancel — end THAT job by explicit request
+                     (job grain: never interrupts a different job of the agent)
+     GET  /api/alpha/agency/queue — operator view of the per-agent turn queues
+     POST /api/alpha/agency/queue/hold — pause a queue after the turn in flight
+     POST /api/alpha/agency/queue/release — lift a hold, resume the backlog
      POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
      POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
@@ -50,30 +56,55 @@
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
   (:require [futon3c.transport.protocol :as proto]
+            [futon3c.apm.conductor-binding :as conductor-binding]
+            [futon3c.apm.conductor-open :as conductor-open]
+            [futon3c.apm.conductor-surface :as conductor-surface]
+            [futon3c.apm.campaign-machine :as campaign-machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
+            [futon3c.apm.role-memory-search :as role-memory-search]
+            [futon3c.apm.typed-role-submission :as role-submission]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roles :as roles]
+            [futon3c.agency.warrant :as warrant]
+            [futon3c.agency.inbox :as agency-inbox]
+            [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
+            [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.bell-router :as bell-router]
+            [futon3c.agency.clock-decision :as clock-decision]
+            [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.parked-on :as parked-on]
+            [futon3c.agency.followup-queue :as followup-queue]
+            [futon3c.inbox-zero.followup-validity :as followup-validity]
+            [futon3c.dev.config :as dev-config]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
             [futon3c.social.persist :as persist]
-            [futon3c.social.whistles :as whistles]
             [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
+            [futon3c.agents.zai-api :as zai-api]
+            [futon3c.agents.kimi-api :as kimi-api]
+            [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.peripheral-events :as peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
+            [futon3c.wm.run4-attempt-admission :as run4-admission]
+            [futon3c.wm.run4-series-service :as run4-series-service]
+            [futon3c.wm.run4-trusted-entry :as run4-entry]
+            [futon3c.wm.ordinary-click-budget :as ordinary-budget]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -89,8 +120,11 @@
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
+           [java.io BufferedWriter FileOutputStream OutputStreamWriter PushbackReader]
            [java.net Socket InetSocketAddress]
-           [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
+           [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException FileChannel]
+           [java.nio.charset StandardCharsets]
+           [java.nio.file Files Path StandardCopyOption StandardOpenOption]
            [java.util UUID]
            [java.util.concurrent Executors ExecutorService RejectedExecutionException]
            [org.httpkit.logger ContextLogger]))
@@ -142,7 +176,8 @@
    rather than letting the exception propagate and wedge the server."
   [status body]
   {:status status
-   :headers {"Content-Type" "application/json"}
+   :headers {"Content-Type" "application/json"
+             "Access-Control-Allow-Origin" "*"}
    :body (if (string? body)
            body
            (try
@@ -194,6 +229,23 @@
       (int (Long/parseLong s))
       (catch Exception _ nil))))
 
+(defn- coerce-epoch-ms
+  "Coerce a JSON integer or decimal integer string to a non-negative long.
+   Returns {:ok true :value nil} when absent, or {:ok false} when invalid."
+  [v]
+  (cond
+    (nil? v) {:ok true :value nil}
+    (integer? v) (if (and (<= 0 v) (<= v Long/MAX_VALUE))
+                   {:ok true :value (long v)}
+                   {:ok false})
+    (string? v) (let [s (str/trim v)]
+                  (if (re-matches #"[0-9]+" s)
+                    (try
+                      {:ok true :value (Long/parseLong s)}
+                      (catch NumberFormatException _ {:ok false}))
+                    {:ok false}))
+    :else {:ok false}))
+
 (defn- parse-bool
   "Parse boolean query values.
    Accepts true/false, 1/0, yes/no."
@@ -206,6 +258,138 @@
         :else nil))))
 
 (defonce ^:private !invoke-jobs-ledger (atom nil))
+(defonce ^:private invoke-jobs-writer-lock (Object.))
+(defonce ^:private invoke-lifecycle-order-lock (Object.))
+
+(defonce ^:private !invoke-ingress-controller-config
+  ;; Loading this namespace preserves the existing serving behaviour. Only
+  ;; explicit reviewed service configuration activates creation accounting.
+  (atom {:status :inactive}))
+
+(defn configure-invoke-ingress-controller!
+  "Install the service-owned controller at the common invoke creator.
+
+  This activates creation accounting only. Execution, final delivery,
+  deferred-resume recovery, and startup reconciliation remain separate, so
+  this function never reports drain or restart readiness."
+  [{:keys [schema controller] :as config}]
+  (when-not (= #{:schema :controller} (set (keys config)))
+    (throw (ex-info "invoke ingress configuration is incomplete"
+                    {:refusal :ingress/http-config-invalid})))
+  (when-not (= :agency/invoke-ingress-http-v1 schema)
+    (throw (ex-info "invoke ingress configuration schema is invalid"
+                    {:refusal :ingress/http-config-invalid :schema schema})))
+  (when-not (and (map? controller)
+                 (:deferred-store controller)
+                 (not (:test-only? controller))
+                 (instance? clojure.lang.IAtom (:state controller))
+                 (instance? clojure.lang.IAtom (:released? controller))
+                 (false? @(:released? controller)))
+    (throw (ex-info "service invoke ingress controller is not durable"
+                    {:refusal :ingress/http-controller-invalid})))
+  (let [installed {:status :active
+                   :controller controller
+                   :restart-authorized? false
+                   :lifecycle-wiring :creation-only}]
+    (locking !invoke-ingress-controller-config
+      (when-not (= {:status :inactive} @!invoke-ingress-controller-config)
+        (throw (ex-info "invoke ingress controller is already configured"
+                        {:refusal :ingress/http-controller-already-configured})))
+      (reset! !invoke-ingress-controller-config installed)
+      installed)))
+
+(defn- configured-invoke-ingress-controller []
+  (let [config @!invoke-ingress-controller-config]
+    (case (:status config)
+      :inactive nil
+      :active (let [controller (:controller config)]
+                (when-not (and (= #{:status :controller :restart-authorized?
+                                    :lifecycle-wiring}
+                                   (set (keys config)))
+                               (map? controller)
+                               (false? (:restart-authorized? config))
+                               (= :creation-only (:lifecycle-wiring config)))
+                  (throw (ex-info "partial invoke ingress configuration"
+                                  {:refusal :ingress/http-config-partial})))
+                controller)
+      (throw (ex-info "unknown invoke ingress configuration state"
+                      {:refusal :ingress/http-config-partial
+                       :status (:status config)})))))
+
+(def ^:dynamic *invoke-jobs-persist-stage-hook*
+  "Test/fault-injection seam called at durable commit boundaries. Production
+   leaves this nil. Stages are :temp-forced (before rename) and :renamed
+   (after the authoritative replacement, before directory force)."
+  nil)
+(defonce ^:private !active-invoke-job-index
+  ;; Derived, process-local projection. The durable ledger remains the sole
+  ;; authority; this index is rebuilt from it on load and is never persisted.
+  (atom nil))
+
+(def ^:private active-invoke-job-states
+  "The producer's OWN state vocabulary, declared once. Every predicate below
+   is defined over these sets rather than over its own literal, because the
+   two that were not could not agree: terminal-invoke-state? allow-listed the
+   finished states while invoke-job-terminal-state? deny-listed the open ones,
+   and the deny-list omitted \"activating\" -- a state this ledger really does
+   persist. A job mid-activation therefore read as terminal to the whistle
+   stream, which answers {:type done :ok false} and hangs up."
+  #{"queued" "activating" "running" "overrun" "delivered"})
+
+(def ^:private finished-invoke-job-states
+  "The job's own work has ended. Delivery may still be outstanding.
+
+   Must cover everything finalize-invoke-job! can write, because the invoke
+   skip-guard refuses to re-run a job only when this says it finished.
+   \"deduped\" was missing: 13 jobs carry it in the live ledger, and the guard
+   would have re-run any of them the queue reached."
+  #{"done" "succeeded" "failed" "error" "timeout" "cancelled" "deduped"})
+
+(def finalizer-written-states
+  "The terminal states finalize-invoke-job! is actually called with: the four
+   literal call sites (timeout, failed, deduped, cancelled) plus everything
+   classify-terminal can return (done, cancelled, timeout, failed). Pinned
+   here so the fence can check the vocabulary against what the producer
+   WRITES rather than against what it declares. Public for the same reason
+   known-invoke-job-states is: it is half of a contract another namespace's
+   test checks."
+  #{"done" "failed" "cancelled" "timeout" "deduped"})
+
+(def ^:private settling-invoke-job-states
+  "Finished, but the result has not reached its caller yet. Presented by the
+   public view, never persisted (see the delivering rewrite in public-job)."
+  #{"delivering"})
+
+(def known-invoke-job-states
+  "Public deliberately: this is the producer half of the vocabulary contract
+   that futon3c.apm.job-state must cover, and the conformance test compares
+   the two directly rather than reaching around a private var."
+  (into #{} (concat active-invoke-job-states
+                    finished-invoke-job-states
+                    settling-invoke-job-states)))
+
+(defn- active-invoke-job?
+  [job]
+  (and (some-> (:agent-id job) str str/trim not-empty)
+       (contains? active-invoke-job-states (some-> (:state job) str))))
+
+(defn- rebuild-active-invoke-job-index!
+  [ledger]
+  (let [index {:ledger ledger
+               :job-ids (into #{}
+                              (keep (fn [[job-id job]]
+                                      (when (active-invoke-job? job) job-id)))
+                              (:jobs ledger))}]
+    (reset! !active-invoke-job-index index)
+    index))
+
+(defn- active-invoke-jobs
+  [ledger]
+  (let [cached @!active-invoke-job-index
+        index (if (identical? ledger (:ledger cached))
+                cached
+                (rebuild-active-invoke-job-index! ledger))]
+    (keep #(get-in ledger [:jobs %]) (:job-ids index))))
 
 (declare invoke-execution-evidence)
 (declare record-invoke-job-delivery!)
@@ -226,7 +410,8 @@
 (defn reset-invoke-jobs!
   "Test/dev helper: clear in-memory invoke-job ledger so next access reloads from disk."
   []
-  (reset! !invoke-jobs-ledger nil))
+  (reset! !invoke-jobs-ledger nil)
+  (reset! !active-invoke-job-index nil))
 
 (defn- invoke-jobs-store-path
   []
@@ -241,28 +426,327 @@
    :trace->job {}
    :jobs {}})
 
+(declare terminal-invoke-state?)
+
+(def ^:private invoke-terminal-detail-retention-ms
+  "Keep terminal job transcripts for one day; thereafter retain a small
+   identity/state tombstone. Non-terminal jobs and jobs named by a live parked
+   continuation are never compacted."
+  (* 24 60 60 1000))
+
+(def ^:private invoke-terminal-tombstone-retention-ms
+  "Drop unreferenced terminal jobs after seven days. Active jobs and terminal
+   jobs named by a live parked continuation are retained without an age limit."
+  (* 7 24 60 60 1000))
+
+(def ^:dynamic *invoke-ledger-now*
+  "Clock seam for deterministic retention tests."
+  #(Instant/now))
+
+(defn- parked-invoke-job-ids
+  []
+  (-> (parked-on/snapshot) :index keys set))
+
+(defn- expired-terminal-job?
+  ([job now]
+   (expired-terminal-job? job now invoke-terminal-detail-retention-ms))
+  ([job now retention-ms]
+   (and (terminal-invoke-state? (:state job))
+        (when-let [finished-at (:finished-at job)]
+          (try
+            (not (.isAfter (Instant/parse (str finished-at))
+                           (.minusMillis now retention-ms)))
+            (catch Throwable _ false))))))
+
+(defn- compact-terminal-job
+  [job]
+  (let [event-edge (fn [event]
+                     (some-> event
+                             (select-keys [:seq :type :at :code :message])
+                             (update :message #(when % (subs (str %) 0 (min 220 (count (str %))))))))
+        events (:events job)]
+    (-> (select-keys job [:job-id :agent-id :caller :surface :request-digest
+                          :request-commission
+                          :bellback-of :mode :state :created-at :started-at :finished-at
+                          :terminal-code :terminal-message :session-id :trace-id
+                          :result-summary :artifact-ref :execution :invocation/model
+                          :delivery :event-seq :auto-bellback])
+        (update :terminal-message #(when % (subs (str %) 0 (min 220 (count (str %))))))
+        (assoc :events (->> [(first events) (last events)]
+                            (keep event-edge)
+                            distinct
+                            vec)
+               :events-trimmed :d13/rolling-expiry))))
+
+(defn- request-commission-archive-record
+  [job archived-at]
+  (when-let [commission (:request-commission job)]
+    (let [record {:schema :agency/invoke-request-commission-archive-v1
+                  :job-id (:job-id job)
+                  :request-digest (:request-digest job)
+                  :commission commission
+                  :job-join (select-keys
+                             job [:agent-id :caller :surface :artifact-ref
+                                  :trace-id :created-at :started-at :finished-at
+                                  :state :terminal-code :execution :delivery
+                                  :invocation/model])
+                  :archived-at (str archived-at)}]
+      (assoc record :archive-digest
+             (campaign-machine/ledger-digest [record])))))
+
+(defn- invoke-commission-archive-dir []
+  (or (System/getenv "FUTON3C_INVOKE_COMMISSION_ARCHIVE_DIR")
+      (str (invoke-jobs-store-path) ".commissions")))
+
+(defn- commission-archive-path [job-id]
+  (let [file-id (campaign-machine/ledger-digest [(str job-id)])]
+    (Path/of (invoke-commission-archive-dir)
+             (into-array String [(str file-id ".edn")]))))
+
+(defn- validate-commission-archive!
+  [job-id record]
+  (let [job-id (str job-id)
+        archive-digest (:archive-digest record)
+        observed-archive (campaign-machine/ledger-digest
+                          [(dissoc record :archive-digest)])
+        observed-request (when (map? (:commission record))
+                           (campaign-machine/ledger-digest
+                            [(:commission record)]))]
+    (when-not (and (= :agency/invoke-request-commission-archive-v1
+                      (:schema record))
+                   (= job-id (str (:job-id record)))
+                   (map? (:commission record))
+                   (map? (:job-join record)))
+      (throw (ex-info "invoke commission archive is malformed"
+                      {:refusal :request-commission-archive-malformed
+                       :job-id job-id})))
+    (when-not (= archive-digest observed-archive)
+      (throw (ex-info "invoke commission archive digest mismatch"
+                      {:refusal :request-commission-archive-tampered
+                       :job-id job-id :expected archive-digest
+                       :observed observed-archive})))
+    (when-not (= (:request-digest record) observed-request)
+      (throw (ex-info "archived request commission digest mismatch"
+                      {:refusal :request-commission-digest-mismatch
+                       :job-id job-id :expected (:request-digest record)
+                       :observed observed-request})))
+    record))
+
+(defn- read-commission-archive [job-id]
+  (let [path (commission-archive-path job-id)]
+    (when (Files/exists path (make-array java.nio.file.LinkOption 0))
+      (with-open [reader (PushbackReader. (io/reader (.toFile path)))]
+        (let [eof (Object.)
+              record (edn/read {:eof eof} reader)
+              trailing (edn/read {:eof eof} reader)]
+          (when (or (identical? record eof) (not (identical? trailing eof)))
+            (throw (ex-info "invoke commission archive is malformed"
+                            {:refusal :request-commission-archive-malformed
+                             :job-id (str job-id) :path (str path)})))
+          (validate-commission-archive! job-id record))))))
+
+(defn- force-directory! [path]
+  (with-open [directory (FileChannel/open
+                         path
+                         (into-array StandardOpenOption
+                                     [StandardOpenOption/READ]))]
+    (.force directory true)))
+
+(defn- force-commission-archive-directories!
+  "Durability barrier for both the archive-file rename and creation of its
+  containing directory. It is deliberately repeated on idempotent retry."
+  [archive-dir]
+  (force-directory! archive-dir)
+  (when-let [container (.getParent archive-dir)]
+    (force-directory! container)))
+
+(def ^:dynamic *force-commission-archive-directories!*
+  force-commission-archive-directories!)
+
+(defn- persist-commission-archive!
+  "Create one immutable, keyed archive record. Identical retry is a no-op;
+  conflicting content refuses. The file and containing directory are forced
+  before hot-ledger deletion may proceed."
+  [record]
+  (let [job-id (str (:job-id record))
+        target (.toAbsolutePath (commission-archive-path job-id))
+        parent (.getParent target)]
+    (Files/createDirectories parent
+                             (make-array java.nio.file.attribute.FileAttribute 0))
+    (if-let [existing (read-commission-archive job-id)]
+      (if (= (dissoc existing :archived-at :archive-digest)
+             (dissoc record :archived-at :archive-digest))
+        (do (*force-commission-archive-directories!* parent)
+            existing)
+        (throw (ex-info "invoke commission archive conflict"
+                        {:refusal :request-commission-archive-conflict
+                         :job-id job-id :path (str target)})))
+      (let [tmp (Files/createTempFile parent ".commission-" ".tmp"
+                                      (make-array java.nio.file.attribute.FileAttribute 0))]
+        (try
+          (with-open [stream (FileOutputStream. (.toFile tmp))
+                      writer (BufferedWriter.
+                              (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+            (binding [*out* writer] (pr record))
+            (.flush writer)
+            (.sync (.getFD stream)))
+          (Files/move tmp target
+                      (into-array StandardCopyOption
+                                  [StandardCopyOption/ATOMIC_MOVE]))
+          (*force-commission-archive-directories!* parent)
+          record
+          (finally (Files/deleteIfExists tmp)))))))
+
+(def ^:dynamic *persist-commission-archive!* persist-commission-archive!)
+
+(defn- archive-expired-jobs!
+  [dropped now]
+  (doseq [[_ job] (sort-by key dropped)]
+    (when-let [record (request-commission-archive-record job now)]
+      (*persist-commission-archive!* record))))
+
+(defn- compact-invoke-jobs-ledger
+  "Bound terminal-job retention in two stages: compact transcript payload
+   after 24h, then drop the unreferenced tombstone after seven days. Active
+   jobs and park dependencies survive both horizons. :job-order and
+   :trace->job are pruned with :jobs so neither contains dangling job ids."
+  [ledger]
+  (let [now (*invoke-ledger-now*)
+        protected (parked-invoke-job-ids)
+        drop? (fn [[job-id job]]
+                (and (not (contains? protected job-id))
+                     (expired-terminal-job?
+                      job now invoke-terminal-tombstone-retention-ms)))
+        retained-jobs* (into {} (remove drop?) (:jobs ledger))
+        ;; A persisted ledger with no jobs is rejected as probable truncation.
+        ;; Preserve the newest tombstone only when expiry would otherwise make
+        ;; a previously populated ledger indistinguishable from corruption.
+        sentinel-id (when (and (empty? retained-jobs*) (seq (:jobs ledger)))
+                      (or (some #(when (contains? (:jobs ledger) %) %)
+                                (reverse (:job-order ledger)))
+                          (first (keys (:jobs ledger)))))
+        retained-jobs (cond-> retained-jobs*
+                        sentinel-id (assoc sentinel-id (get-in ledger [:jobs sentinel-id])))
+        retained-ids (set (keys retained-jobs))
+        dropped-jobs (apply dissoc (:jobs ledger) retained-ids)]
+    ;; Archive durability precedes removal. Any failure throws before this
+    ;; compacted value can replace or persist over the hot ledger.
+    (archive-expired-jobs! dropped-jobs now)
+    (-> ledger
+        (assoc :jobs
+               (into {}
+                     (map (fn [[job-id job]]
+                            [job-id (if (and (not (contains? protected job-id))
+                                             (expired-terminal-job? job now))
+                                      (compact-terminal-job job)
+                                      job)]))
+                     retained-jobs))
+        (update :job-order #(into [] (filter retained-ids) %))
+        (update :trace->job
+                #(into {} (filter (fn [[_ job-id]] (contains? retained-ids job-id))) %)))))
+
 (defn- persist-invoke-jobs-ledger!
   [ledger]
-  (try
-    (spit (invoke-jobs-store-path) (pr-str ledger))
-    (catch Throwable t
-      (println (str "[invoke-jobs] persist failed: " (.getMessage t)))
-      (flush)))
-  ledger)
+  (locking invoke-jobs-writer-lock
+    (let [target (-> (Path/of (invoke-jobs-store-path) (make-array String 0))
+                     .toAbsolutePath)
+          parent (.getParent target)
+          _ (Files/createDirectories parent (make-array java.nio.file.attribute.FileAttribute 0))
+          tmp (Files/createTempFile parent ".invoke-jobs-" ".tmp"
+                                    (make-array java.nio.file.attribute.FileAttribute 0))
+          renamed? (volatile! false)]
+      (try
+        ;; D15: FileChannel.write of a heap ByteBuffer borrows a per-thread
+        ;; cached direct buffer. Legacy live threads exhausted that pool even
+        ;; after D13 capped each new cache at 1MB. This payload path stays on
+        ;; the heap; FileDescriptor.sync preserves the pre-rename durability
+        ;; boundary formerly supplied by FileChannel.force.
+        (with-open [stream (FileOutputStream. (.toFile tmp))
+                    writer (BufferedWriter.
+                            (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+          (binding [*out* writer]
+            (pr ledger))
+          (.flush writer)
+          (.sync (.getFD stream)))
+        (when *invoke-jobs-persist-stage-hook*
+          (*invoke-jobs-persist-stage-hook* :temp-forced
+                                            {:target target :temp tmp}))
+        (Files/move tmp target
+                    (into-array StandardCopyOption
+                                [StandardCopyOption/ATOMIC_MOVE
+                                 StandardCopyOption/REPLACE_EXISTING]))
+        (vreset! renamed? true)
+        (when *invoke-jobs-persist-stage-hook*
+          (*invoke-jobs-persist-stage-hook* :renamed
+                                            {:target target :temp tmp}))
+        ;; Persist the directory entry as well as the file contents. Without
+        ;; this force, a power loss may forget the rename after acknowledgement.
+        (with-open [directory (FileChannel/open
+                               parent
+                               (into-array StandardOpenOption
+                                           [StandardOpenOption/READ]))]
+          (.force directory true))
+        ledger
+        (catch Throwable t
+          (throw (ex-info (if @renamed?
+                            "invoke-jobs ledger committed but durability confirmation failed"
+                            "invoke-jobs ledger persistence failed")
+                          {:path (str target)
+                           :temporary-path (str tmp)
+                           :committed? @renamed?
+                           :durability (if @renamed? :unconfirmed :not-committed)}
+                          t)))
+        (finally
+          (Files/deleteIfExists tmp))))))
+
+(defn- validate-invoke-jobs-ledger!
+  [ledger]
+  (let [required {:version integer?
+                  :next-seq integer?
+                  :job-order vector?
+                  :trace->job map?
+                  :jobs map?}
+        missing (into [] (remove #(contains? ledger %)) (keys required))
+        wrong (into []
+                    (keep (fn [[k pred]]
+                            (when (and (contains? ledger k)
+                                       (not (pred (get ledger k))))
+                              k)))
+                    required)]
+    (when (or (seq missing)
+              (seq wrong)
+              (not= 1 (:version ledger))
+              (neg? (:next-seq ledger))
+              (empty? (:jobs ledger)))
+      (throw (ex-info "invoke-jobs ledger schema is incomplete"
+                      {:missing missing
+                       :wrong-type wrong
+                       :version (:version ledger)
+                       :empty-jobs? (and (map? (:jobs ledger))
+                                         (empty? (:jobs ledger)))})))
+    ledger))
 
 (defn- load-invoke-jobs-ledger
   []
   (let [f (io/file (invoke-jobs-store-path))]
     (if (.exists f)
       (try
-        (let [parsed (edn/read-string (slurp f))]
-          (if (map? parsed)
-            (merge (default-invoke-jobs-ledger) parsed)
-            (default-invoke-jobs-ledger)))
+        (with-open [reader (PushbackReader. (io/reader f))]
+          (let [eof (Object.)
+                parsed (edn/read {:eof eof} reader)
+                trailing (edn/read {:eof eof} reader)]
+            (when (identical? parsed eof)
+              (throw (ex-info "invoke-jobs ledger is empty" {})))
+            (when-not (identical? trailing eof)
+              (throw (ex-info "invoke-jobs ledger contains trailing forms" {})))
+            (when-not (map? parsed)
+              (throw (ex-info "invoke-jobs ledger root is not a map"
+                              {:root-type (some-> parsed class .getName)})))
+            (validate-invoke-jobs-ledger! parsed)))
         (catch Throwable t
-          (println (str "[invoke-jobs] load failed: " (.getMessage t)))
-          (flush)
-          (default-invoke-jobs-ledger)))
+          (throw (ex-info "invoke-jobs ledger is unreadable; refusing empty fallback"
+                          {:path (.getAbsolutePath f)}
+                          t))))
       (default-invoke-jobs-ledger))))
 
 (defn- append-job-event
@@ -280,7 +764,11 @@
   [ledger]
   (let [failed-at (str (Instant/now))
         recover-one (fn [job]
-                      (if (#{"queued" "running"} (str (:state job)))
+                      ;; A queued job is the durable pre-announcement.  It has no
+                      ;; worker to lose and must remain activatable after restart.
+                      ;; Only jobs which had crossed the activation boundary can
+                      ;; become orphaned when the process dies.
+                      (if (#{"activating" "running"} (str (:state job)))
                         (-> job
                             (assoc :state "failed"
                                    :finished-at failed-at
@@ -296,17 +784,170 @@
 
 (defn- ensure-invoke-jobs-ledger!
   []
-  (when (nil? @!invoke-jobs-ledger)
-    (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
-      (reset! !invoke-jobs-ledger loaded)
-      (persist-invoke-jobs-ledger! loaded)))
+  (locking invoke-jobs-writer-lock
+    (when (nil? @!invoke-jobs-ledger)
+      (let [store-existed? (.exists (io/file (invoke-jobs-store-path)))
+            loaded (-> (load-invoke-jobs-ledger)
+                       recover-inflight-jobs
+                       compact-invoke-jobs-ledger)]
+        (try
+          ;; Absence means a genuinely fresh installation. Do not manufacture
+          ;; an existing-but-empty authority that would be ambiguous on restart.
+          (when store-existed?
+            (persist-invoke-jobs-ledger! loaded))
+          (reset! !invoke-jobs-ledger loaded)
+          (rebuild-active-invoke-job-index! loaded)
+          (catch Throwable t
+            (if (:committed? (ex-data t))
+              (do (reset! !invoke-jobs-ledger loaded)
+                  (rebuild-active-invoke-job-index! loaded))
+              (do (reset! !invoke-jobs-ledger nil)
+                  (reset! !active-invoke-job-index nil)))
+            (throw t))))))
+  (when-not (identical? @!invoke-jobs-ledger
+                        (:ledger @!active-invoke-job-index))
+    (rebuild-active-invoke-job-index! @!invoke-jobs-ledger))
   @!invoke-jobs-ledger)
 
 (defn- update-invoke-jobs-ledger!
   [f]
-  (ensure-invoke-jobs-ledger!)
-  (let [updated (swap! !invoke-jobs-ledger f)]
-    (persist-invoke-jobs-ledger! updated)))
+  (locking invoke-jobs-writer-lock
+    (ensure-invoke-jobs-ledger!)
+    (let [[before updated] (swap-vals! !invoke-jobs-ledger
+                                       (comp compact-invoke-jobs-ledger f))]
+      (try
+        (persist-invoke-jobs-ledger! updated)
+        (rebuild-active-invoke-job-index! updated)
+        (catch Throwable t
+          (let [authoritative (if (:committed? (ex-data t)) updated before)]
+            (reset! !invoke-jobs-ledger authoritative)
+            (rebuild-active-invoke-job-index! authoritative))
+          (throw t))))))
+
+(defn- update-invoke-jobs-ledger-vals!
+  "Like update-invoke-jobs-ledger!, but returns [ledger-before ledger-after].
+
+   Use this wherever the caller must know whether ITS OWN attempt was the one
+   that committed. Deciding that from a flag set inside the function passed to
+   swap! is unsound: swap! re-runs that function on CAS contention, and the
+   side effects of an attempt that is then discarded have already happened, so
+   a losing thread comes away holding the winner's flag."
+  [f]
+  (locking invoke-jobs-writer-lock
+    (ensure-invoke-jobs-ledger!)
+    (let [[before after] (swap-vals! !invoke-jobs-ledger
+                                     (comp compact-invoke-jobs-ledger f))]
+      (try
+        (persist-invoke-jobs-ledger! after)
+        (rebuild-active-invoke-job-index! after)
+        [before after]
+        (catch Throwable t
+          (let [authoritative (if (:committed? (ex-data t)) after before)]
+            (reset! !invoke-jobs-ledger authoritative)
+            (rebuild-active-invoke-job-index! authoritative))
+          (throw t))))))
+
+(defn- trim-stream-event
+  "Compact a live invoke event for the durable job ledger. Text is
+   truncated; tool inputs reduce to short previews; tool outputs retain a
+   bounded first/last window and are joined to the preceding tool_use."
+  [event]
+  (let [etype (str (:type event))]
+    (case etype
+      "text"
+      (let [t (str (or (:text event) ""))]
+        (when-not (str/blank? t)
+          {:event-type "text"
+           :payload {:text (if (> (count t) 2000)
+                             (str (subs t 0 2000) " …[trimmed]")
+                             t)}}))
+      ;; The inbound user/caller prompt, recorded at job start so sessions
+      ;; can rehydrate turns from the ledger (M-custom-harness D-7) — before
+      ;; 2026-07-04 prompts were not persisted anywhere.
+      "prompt"
+      (let [t (str (or (:text event) ""))]
+        (when-not (str/blank? t)
+          {:event-type "prompt"
+           :payload {:text (if (> (count t) 1500)
+                             (str (subs t 0 1500) " …[trimmed]")
+                             t)}}))
+      "tool_use"
+      {:event-type "tool_use"
+       :payload {:tools (mapv str (or (:tools event) []))
+                 :previews (mapv (fn [d]
+                                   (let [input (:input d)
+                                         hint (when (map? input)
+                                                (some input [:path :command :pattern
+                                                             :query :repo :namespace]))
+                                         ;; single display line: collapse
+                                         ;; newlines/whitespace runs (heredoc
+                                         ;; commands break line-based
+                                         ;; fontification downstream)
+                                         hint (some-> hint str
+                                                      (str/replace #"\s+" " "))
+                                         hint (when hint
+                                                (if (> (count hint) 120)
+                                                  (subs hint 0 120)
+                                                  hint))]
+                                     (str (:name d) (when hint (str " " hint)))))
+                                 (or (:tool_details event) []))}}
+      "tool_result"
+      (let [bounded
+            (fn [value]
+              (let [s (str (or value ""))]
+                (if (<= (count s) 4608)
+                  s
+                  (str (subs s 0 512) " …[trimmed]… "
+                       (subs s (- (count s) 4096))))))]
+        {:event-type "tool_result"
+         :payload {:outputs (mapv (comp bounded :content)
+                                  (or (:results event) []))}})
+      nil)))
+
+(defn- record-job-stream-event!
+  "Append a live text/tool_use event to a job's ledger record so bell-seeded
+   turns are observable via GET /api/alpha/invoke/jobs (agent-follow-mode).
+   Deliberately does NOT persist per-event — finalize persists; this is a
+   live observability feed, acceptable to lose on restart."
+  [job-id event]
+  (when-let [{:keys [event-type payload]} (trim-stream-event event)]
+    (locking invoke-jobs-writer-lock
+      (ensure-invoke-jobs-ledger!)
+      (let [[before after]
+            (swap-vals!
+             !invoke-jobs-ledger
+             (fn [ledger]
+               (if-let [job (get-in ledger [:jobs job-id])]
+                 (assoc-in ledger [:jobs job-id]
+                           (if (= "tool_result" event-type)
+                             (let [events (:events job)
+                                   idx (last (keep-indexed
+                                              (fn [i e]
+                                                (when (= "tool_use" (:type e)) i))
+                                              events))]
+                               (if (some? idx)
+                                 (assoc-in job [:events idx :output]
+                                           (:outputs payload))
+                                 job))
+                             (append-job-event job event-type payload)))
+                 ledger)))
+            cached @!active-invoke-job-index]
+        ;; Stream events cannot change lifecycle state. Carry the active ids
+        ;; to the new immutable ledger value without rescanning job history.
+        (if (identical? before (:ledger cached))
+          (reset! !active-invoke-job-index (assoc cached :ledger after))
+          (rebuild-active-invoke-job-index! after))))
+    ;; WS doorbell (2026-07-05): tell connected observers an event landed so
+    ;; follow-mode can poll NOW instead of on its fallback interval. Tiny
+    ;; frame — ids only, no payload; the poll fetches content (and repairs
+    ;; any dropped frames, so this is latency-only, never correctness).
+    (try
+      (when-let [bc (requiring-resolve 'futon3c.transport.ws.invoke/broadcast-frame!)]
+        (bc {"type" "invoke_event"
+             "agent-id" (str (get-in @!invoke-jobs-ledger [:jobs job-id :agent-id]))
+             "job-id" job-id
+             "event-type" event-type}))
+      (catch Throwable _))))
 
 (defn- next-invoke-job-id
   [ledger]
@@ -315,16 +956,25 @@
     [(str "invoke-" (System/currentTimeMillis) "-" next-seq "-" rand-sfx)
      next-seq]))
 
-(defn- invoke-job-mode
-  [prompt]
-  (let [p (str (or prompt ""))]
-  (cond
-    (or (re-find #"(?i)\bmode:\s*task\b" p)
-        (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b" p))
-    "work"
+(def ^:private invoke-job-modes #{"work" "brief"})
 
-    :else
-    "brief")))
+(defn- normalize-invoke-job-mode
+  [mode]
+  (let [mode' (some-> (cond
+                        (keyword? mode) (name mode)
+                        (some? mode) (str mode))
+                      str/lower-case str/trim)]
+    (when (contains? invoke-job-modes mode') mode')))
+
+(defn- invoke-job-mode
+  ([prompt] (invoke-job-mode prompt nil))
+  ([prompt explicit-mode]
+   (or (normalize-invoke-job-mode explicit-mode)
+       (let [p (str (or prompt ""))]
+         (if (or (re-find #"(?i)\bmode:\s*task\b" p)
+                 (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b" p))
+           "work"
+           "brief")))))
 
 (defn- extract-trace-id
   [invoke-meta]
@@ -334,15 +984,10 @@
               v)))
         [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
 
+;; Keep this out of extended/comments mode: `#` is data in the PR alternative,
+;; not a regex comment. Ordinary words beginning with "pr" must not match.
 (def ^:private artifact-ref-re
-  #"(?ix)
-    (https?://github\.com/\S+/(?:pull|issues)/\d+)
-    |
-    (\bPR\s*#\d+\b)
-    |
-    (\b[0-9a-f]{7,40}\b)
-    |
-    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
+  #"(?i)(https?://github\.com/\S+/(?:pull|issues)/\d+)|(\bPR\s*#\d+\b)|(\b[0-9a-f]{7,40}\b)|((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
 
 #_{:clj-kondo/ignore [:unused-private-var]}
 (defn- first-matching-ref
@@ -382,13 +1027,16 @@
   "Bell-router slice (E-crossed-bells): make a bellback an EXPLICIT, self-describing
    reply — carry `:bellback-of <original-job>` for the conversation graph, and frame
    the prompt as 'RE: your bell …' so the receiving agent can thread it instead of
-   mis-reading a context-free 'auto-bellback'. Default OFF; load-dark."
+   mis-reading a context-free 'auto-bellback'. **Default ON 2026-06-27 (Joe)** — proven
+   + composes with the reply-auto-routes dedup (the NEW-request thread line then says
+   'just respond' rather than instructing a manual reply-bell). Explicit
+   `FUTON3C_BELL_ROUTER=0/false/no/off` (system property or env) still disables it."
   []
   (let [prop (System/getProperty "FUTON3C_BELL_ROUTER")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
       (let [raw (some-> (System/getenv "FUTON3C_BELL_ROUTER") str/trim str/lower-case)]
-        (boolean (and raw (not (#{"0" "false" "no" "off" ""} raw))))))))
+        (not (#{"0" "false" "no" "off"} raw))))))
 
 (def ^:private allowed-bell-types
   #{:query :answer :assert :challenge :agree :define :retract :suggest :request})
@@ -416,8 +1064,10 @@
   (some-> x str str/trim not-empty))
 
 (defn- terminal-invoke-state?
+  "Has the job's own work ended? A job still delivering has, so this is
+   deliberately narrower than invoke-job-terminal-state?."
   [state]
-  (#{"done" "succeeded" "failed" "error" "timeout" "cancelled"} (str state)))
+  (contains? finished-invoke-job-states (str state)))
 
 (defn- auto-bellback-job?
   [job]
@@ -439,20 +1089,51 @@
    turns complete silently on the warm-pouch path unless THEY remember to
    bell — the completion contract should be structural, not behavioral.
    Loop-safety is unchanged: bellback jobs carry caller \"auto-bellback\"
-   (unregistered + excluded), so a bellback never bellbacks."
-  #{:codex :claude})
+   (unregistered + excluded), so a bellback never bellbacks.
+   Widened to :zai 2026-07-04 (M-custom-harness slice-2 live test: a zai
+   bell completed but no completion bell routed back to the caller).
+   Widened to :kimi 2026-09-23: same harness, same silent-completion hazard."
+  #{:codex :claude :zai :kimi})
+
+(defn- same-agent-id?
+  [a b]
+  (= (some-> a str str/trim) (some-> b str str/trim)))
+
+(defn- auto-bellback-suppressing-park
+  [job released-park-records]
+  (let [caller (:caller job)]
+    (some #(when (same-agent-id? caller (:agent %)) %) released-park-records)))
+
+(defn- log-auto-bellback-suppressed!
+  [job park]
+  (println (str "[parked-on] auto-bellback suppressed for " (:job-id job)
+                ": park " (:id park) " will wake " (:agent park))))
+
+(defn- cancelled-before-start?
+  "A job cancelled while still queued: the worker did nothing, and whoever
+   cancelled it already knows. Bellbacks for these carry no information;
+   claude-12 cancelling 27 queued kimi-1 jobs drew 27 turns of \"another
+   cancellation notice; nothing to do\" (Joe, 2026-09-25). A job cancelled
+   mid-run still bellbacks: its partial work is news."
+  [job]
+  (and (= "cancelled" (some-> (:state job) str))
+       (nil? (:started-at job))))
 
 (defn should-auto-bellback?
   "Pure auto-bellback decision predicate. Recipient type and caller registration
    are passed in so tests and future recipient widening stay local."
-  [job recipient-type caller-registered? enabled?]
-  (boolean
-   (and enabled?
-        (terminal-invoke-state? (:state job))
-        (contains? auto-bellback-recipient-types recipient-type)
-        (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
-        (not (auto-bellback-job? job))
-        (not (true? (get-in job [:auto-bellback :sent?]))))))
+  ([job recipient-type caller-registered? enabled?]
+   (should-auto-bellback? job recipient-type caller-registered? enabled? nil))
+  ([job recipient-type caller-registered? enabled? released-park-records]
+   (boolean
+    (and enabled?
+         (terminal-invoke-state? (:state job))
+         (contains? auto-bellback-recipient-types recipient-type)
+         (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
+         (not (auto-bellback-job? job))
+         (nil? (:auto-bellback job))
+         (not (cancelled-before-start? job))
+         (not (auto-bellback-suppressing-park job released-park-records))))))
 
 (defn- auto-bellback-recipient-type
   [agent-id]
@@ -463,9 +1144,27 @@
   [caller]
   (boolean (reg/get-agent (str caller))))
 
+(defn- reply-auto-routes?
+  "True when RECIPIENT-AGENT-ID's response this turn will be auto-delivered back to
+   CALLER as a completion bell — so the agent must NOT also manually bell/whistle CALLER
+   to answer (that double-delivers; the 2026-06-26 claude-11 bifurcation). Mirrors
+   should-auto-bellback?'s eligibility minus the terminal-state check (which is always
+   true once the turn finishes)."
+  [recipient-agent-id caller]
+  (boolean
+   (and (auto-bellback-enabled?)
+        (auto-bellback-recipient-type recipient-agent-id)
+        (valid-auto-bellback-caller? caller recipient-agent-id
+                                     (auto-bellback-caller-registered? caller)))))
+
 (defn- auto-bellback-prompt
-  [{:keys [job-id agent-id state result-summary terminal-message]}]
-  (let [summary (or (some-> result-summary str str/trim not-empty)
+  [{:keys [job-id agent-id state result-summary result-text terminal-message]}]
+  ;; Prefer the (bounded) FULL result text over the 220-char display summary:
+  ;; bellbacks are OPERATIVE replies — a truncated dispatch inside one cost a
+  ;; driver a whole held turn (zai-2, 2026-07-05). The summary stays for list
+  ;; views; the bellback carries the words.
+  (let [summary (or (some-> result-text str str/trim not-empty)
+                    (some-> result-summary str str/trim not-empty)
                     (some-> terminal-message str str/trim not-empty)
                     "No result summary recorded.")]
     (if (bell-router-enabled?)
@@ -481,19 +1180,58 @@
            summary
            "\nDetails: /api/alpha/invoke/jobs/" job-id))))
 
+(declare inbox-agent?)
+(declare invoke-job-terminal-state?)
+
+(defn- inbox-completion-bellback?
+  "A pull-only caller needs a completion inbox record even when the worker's
+   type is outside the push auto-bellback allowlist. Preserve the loop,
+   identity, duplicate, and parked-continuation guards used by push routing."
+  [job released-park-records]
+  (and (invoke-job-terminal-state? (:state job))
+       (inbox-agent? (:caller job))
+       (valid-auto-bellback-caller? (:caller job) (:agent-id job) true)
+       (not (auto-bellback-job? job))
+       (nil? (:auto-bellback job))
+       (not (cancelled-before-start? job))
+       (not (auto-bellback-suppressing-park job released-park-records))))
+
 (defn- auto-bellback-request
-  [job]
+  ([job] (auto-bellback-request job nil))
+  ([job released-park-records]
   (let [recipient-type (auto-bellback-recipient-type (:agent-id job))
         caller-registered? (auto-bellback-caller-registered? (:caller job))]
-    (when (should-auto-bellback? job recipient-type caller-registered? (auto-bellback-enabled?))
+    (when (or (should-auto-bellback? job recipient-type caller-registered?
+                                    (auto-bellback-enabled?) released-park-records)
+              (inbox-completion-bellback? job released-park-records))
       {:caller (str/trim (str (:caller job)))
        :bell-job-id (str "auto-bellback-" (:job-id job))
        :reply-to (str (:job-id job))   ;; the original bell this answers (bell-router)
-       :prompt (auto-bellback-prompt job)})))
+       :prompt (auto-bellback-prompt job)}))))
 
 (declare create-invoke-job!)
 (declare run-invoke-job!)
 (declare record-invoke-job-delivery-by-job-id!)
+
+(defn- inbox-agent?
+  [agent-id]
+  (= :inbox (:agent/delivery-mode (reg/get-agent (str agent-id)))))
+
+(defn- deliver-invoke-job-to-inbox!
+  [job-id prompt]
+  (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+        inbox-path (agency-inbox/deliver-to-inbox!
+                    (assoc job :prompt prompt))]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [current (get-in ledger [:jobs job-id])]
+         (assoc-in ledger [:jobs job-id]
+                   (-> current
+                       (assoc :state "delivered"
+                              :inbox-path inbox-path)
+                       (append-job-event "delivered" {:inbox-path inbox-path})))
+         ledger)))
+    inbox-path))
 
 (defn- enqueue-auto-bellback!
   [{:keys [caller bell-job-id prompt reply-to]}]
@@ -506,24 +1244,201 @@
                                     ;; the reframed prompt (bell-router).
                                     :caller auto-bellback-caller
                                     :surface auto-bellback-caller
-                                    :bellback-of (when (bell-router-enabled?) reply-to)})]
-    (.submit invoke-executor
-             ^Runnable
-             (fn []
-               (let [result (run-invoke-job! {:job-id job-id
-                                               :agent-id caller
-                                               :prompt prompt
-                                               :caller auto-bellback-caller
-                                               :surface auto-bellback-caller})]
-                 (record-invoke-job-delivery-by-job-id!
-                  job-id
-                  {:surface auto-bellback-caller
-                   :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                   :delivered? true
-                   :note (if (:ok result) "auto-bellback-ready" "auto-bellback-error")}))))
+                                    :bellback-of (when (bell-router-enabled?) reply-to)})
+        run-job (fn []
+                  (run-invoke-job! {:job-id job-id
+                                    :agent-id caller
+                                    :prompt prompt
+                                    :caller auto-bellback-caller
+                                    :surface auto-bellback-caller}))
+        deliver-result (fn [result]
+                         (record-invoke-job-delivery-by-job-id!
+                          job-id
+                          {:surface auto-bellback-caller
+                           :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                           :delivered? true
+                           :note (if (:ok result) "auto-bellback-ready" "auto-bellback-error")}))]
+    ;; I-1 — "single identity is sequential execution." Route the bellback through the
+    ;; RECIPIENT agent's dedicated per-agent drainer so it serializes with that agent's
+    ;; other turns (bells / repl) on ONE single-flight lane, instead of racing them on
+    ;; the shared invoke-executor pool. Mirrors the proven bell-dispatch path above.
+    ;;
+    ;; Incident 2026-06-26: an auto-bellback to claude-11 ran on invoke-worker-2 while a
+    ;; turn-drainer-claude-11 bell ran concurrently — two invoke pipelines for one
+    ;; identity. The warm-pouch lock (agent-pouch/feed-turn!) kept the session intact
+    ;; downstream (the "transaction"), but two concurrent dispatches for one agent is the
+    ;; upstream defect this closes. Gated on drainer-v2 (default on) like the bell path;
+    ;; the legacy lane stays as the flag-off fallback.
+    (if (inbox-agent? caller)
+      (deliver-invoke-job-to-inbox! job-id prompt)
+      (if (turn-queue/drainer-v2-enabled?)
+      (let [r (turn-queue/accept-async!
+               {:to caller :from auto-bellback-caller :surface auto-bellback-caller
+                :prompt prompt
+                :process-fn (fn [_entry]
+                              (binding [turn-queue/*drained-by-outer* true]
+                                (run-job)))
+                :finalize-fn deliver-result})]
+        (when (= :deduped (:status r))
+          (deliver-result {:ok true :deduped true})))
+        (.submit invoke-executor
+               ^Runnable
+               (fn [] (deliver-result (run-job))))))
     job-id))
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
+
+;; --- E-repl-continuations Car 2: parked-on join release wiring -----------------
+;; A job reaching terminal state folds into any parked-on continuation awaiting it;
+;; when a join completes, ONE resume turn is enqueued for the parked agent. The hook
+;; is flag-gated DEFAULT-OFF (load-dark) so reloading this ns is behaviorally inert
+;; until FUTON3C_PARKED_ON is explicitly enabled.
+(def ^:private parked-resume-caller "parked-resume")
+
+(defn- parked-on-enabled?
+  []
+  (let [prop (or (System/getProperty "FUTON3C_PARKED_ON")
+                 (System/getenv "FUTON3C_PARKED_ON"))]
+    (boolean (#{"1" "true" "on" "yes"} (some-> prop str/trim str/lower-case)))))
+
+;; Ready-inbox: a buffer-surfaced park whose join completed parks its assembled
+;; resume prompt for the repl buffer to POLL (GET /api/alpha/parked/ready),
+;; alongside the WS push. Now DURABLE — lives in parked_on.clj's disk-backed
+;; atom (survives JVM restart). Delivery is LEASE-BASED: a pop marks the item
+;; leased (not consumed); the repl buffer ACKs after successful injection, and
+;; expired unacked leases are returned to the queue front for redelivery
+;; (E-park-delivery-losses bugs 2-3, 2026-07-13).
+
+(defn- parked-ready-push! [agent session park-id prompt mode]
+  (parked-on/ready-push! agent session park-id prompt mode))
+
+(defn parked-ready-pop!
+  "Lease ONE ready resume for AGENT/SESSION (FIFO, pop-one per call). Returns the
+   leased item {:park-id :prompt :lease-deadline-ms} or nil. The item stays leased
+   until the buffer ACKs via POST /api/alpha/parked/ready/ack; the 30s sweep
+   returns expired unacked leases for redelivery."
+  [agent session]
+  (parked-on/ready-lease-one! agent session))
+
+(defn- assemble-resume-prompt [rec]
+  (str (:payload rec)
+       (if (:deadline-expired? rec)
+         (str "\n\n--- resumed: DEADLINE EXPIRED with " (count (:arrived rec))
+              " of " (+ (count (:arrived rec)) (count (:awaiting rec)))
+              " dependencies complete — the awaited work did NOT finish ---\n")
+         (str "\n\n--- resumed: parked dependencies complete ("
+              (count (:arrived rec)) ") ---\n"))
+       (str/join "\n" (for [[dep summ] (:arrived rec)]
+                        (str "• " dep ": " (or summ "(no summary)"))))))
+
+(defn- buffer-surface?
+  "A surface whose resume should be RUN BY the agent's repl buffer (streamed in place),
+   not server-side — i.e. an Emacs repl surface (emacs-repl / emacs-codex-repl)."
+  [surface]
+  (and surface (str/starts-with? (str surface) "emacs")))
+
+(defn- parked-resume!
+  "Resume a parked agent. For a BUFFER-surfaced park, the durable ready-inbox is
+   the ONLY delivery path (every resume flows through lease → deliver → ACK, so
+   the busy gate, redelivery, and dedup all apply); a targeted `park-ready` WS
+   frame is then sent as a wake-up POKE that makes the buffer poll immediately
+   instead of waiting out the poll interval. The frame carries no authoritative
+   payload — losing it costs latency, never the resume. For a headless/
+   bell-surfaced park, enqueue a fresh turn on the agent's OWN drainer lane
+   (mirrors enqueue-auto-bellback!'s I-1 routing)."
+  [rec]
+  (let [agent (:agent rec)
+        prompt (assemble-resume-prompt rec)]
+    ;; the *agents* pane shows parked lines (blackboard/parked-suffix) —
+    ;; re-project on resume so the line clears promptly.
+    (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
+    (if (buffer-surface? (:surface rec))
+      (do
+        (parked-ready-push! agent (:session rec) (:id rec) prompt
+                            (or (:mode rec) :within-turn))
+        (let [poked? (ws-invoke/send-frame! (str agent)
+                                            {:type "park-ready"
+                                             :agent (str agent)
+                                             :session (str (:session rec))
+                                             :park-id (:id rec)
+                                             :surface (str (:surface rec))
+                                             :mode (name (or (:mode rec) :within-turn))})]
+          (str "park-ready-inbox" (when poked? "+poke") ":" (:id rec))))
+      (let [job-id (create-invoke-job! {:agent-id agent :prompt prompt
+                                        :caller parked-resume-caller :surface parked-resume-caller})
+            run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
+                                             :caller parked-resume-caller :surface parked-resume-caller}))]
+        (if (turn-queue/drainer-v2-enabled?)
+          (turn-queue/accept-async! {:to agent :from parked-resume-caller :surface parked-resume-caller
+                                     :prompt prompt
+                                     :process-fn (fn [_entry]
+                                                   (binding [turn-queue/*drained-by-outer* true]
+                                                     (run-job)))})
+          (.submit invoke-executor ^Runnable (fn [] (run-job))))
+        job-id))))
+
+(defn parked-job-lookup
+  "Ledger view for parked-on reconcile/rehydrate. :result is the complete reply;
+   legacy ledgers stored it as :result-text. :result-summary remains only as a
+   fallback for records with neither full field."
+  [job-id]
+  (when-let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
+    {:state (:state job)
+     :result (let [result (:result job)]
+               (if (or (nil? result)
+                       (and (string? result) (str/blank? result)))
+                 (:result-text job)
+                 result))
+     :result-summary (:result-summary job)}))
+
+(defn parked-on-notify!
+  "Hot-path hook (flag-gated): job JOB-ID reached terminal state -> fold it into
+   any parked-on join awaiting it. Returns the records that actually released so
+   finalize can suppress the duplicate auto-bellback only after a resume was
+   enqueued. Never throws into finalize."
+  [job-id result]
+  (when (parked-on-enabled?)
+    (try
+      (parked-on/note-completion! job-id result
+                                  {:resume! parked-resume!
+                                   :now-ms (System/currentTimeMillis)})
+      (catch Throwable t
+        (println (str "[parked-on] notify failed for " job-id ": "
+                      (.getMessage t)))
+        {:released [] :released-records []}))))
+(defn- parked-on-sweep-tick []
+  (try
+    (parked-on/sweep-deadlines!
+     {:now-ms (System/currentTimeMillis)
+      :resume! parked-resume!
+      :on-expire (fn [rec] (println (str "[parked-on] deadline expired, retracted: " (:id rec))))})
+    ;; Bug 3: return expired unacked ready-leases to their queue front for redelivery.
+    (parked-on/sweep-leased!
+     {:now-ms (System/currentTimeMillis)
+      :on-expire (fn [park-id] (println (str "[parked-on] lease expired, requeued: " park-id)))})
+    (catch Throwable t (println (str "[parked-on] sweep failed: " (.getMessage t))))))
+
+;; defonce so a Drawbridge reload of this ns never orphans the daemon thread.
+(defonce ^:private parked-on-sweeper (atom nil))
+
+(defn start-parked-on!
+  "Boot the parked-on subsystem: rehydrate persisted records against the recovered
+   ledger (R3), then start ONE daemon ticking sweep-deadlines! (R4 — its own thread,
+   NOT the Arxana Clock). Idempotent + flag-gated: a no-op unless FUTON3C_PARKED_ON."
+  []
+  (when (parked-on-enabled?)
+    (parked-on/rehydrate! {:ledger-lookup parked-job-lookup :resume! parked-resume!
+                           :now-ms (System/currentTimeMillis)})
+    (when (nil? @parked-on-sweeper)
+      (let [exec (java.util.concurrent.Executors/newSingleThreadScheduledExecutor
+                  (reify java.util.concurrent.ThreadFactory
+                    (newThread [_ r] (doto (Thread. ^Runnable r "parked-on-sweeper")
+                                       (.setDaemon true)))))]
+        (.scheduleAtFixedRate exec ^Runnable parked-on-sweep-tick
+                              30 30 java.util.concurrent.TimeUnit/SECONDS)
+        (reset! parked-on-sweeper exec)))
+    {:rehydrated true :sweeper (some? @parked-on-sweeper)}))
+;; --- end parked-on Car 2 wiring -----------------------------------------------
 
 (defn- auto-record-direct-delivery-surface?
   "True when /api/alpha/invoke should auto-record delivery to the caller.
@@ -554,16 +1469,18 @@
     (when-let [trace-id (extract-trace-id (:invoke-meta result))]
       (let [receipt {:surface (direct-delivery-surface-label surface)
                      :destination (str "caller " (or caller "http-caller"))
-                     :delivered? true
-                     :note "http-direct-response"}]
+                     ;; Constructing a Ring response proves neither that the
+                     ;; server wrote it nor that the caller consumed it.
+                     :delivered? false
+                     :note "http-response-consumption-unconfirmed"}]
         (record-invoke-job-delivery! trace-id receipt)
         (when-let [record-fn (*resolve-delivery-recorder*)]
           (try
             (record-fn (str agent-id) (str trace-id)
                        {:surface (direct-delivery-surface-label surface)
                         :destination (str "caller " (or caller "http-caller"))
-                        :delivered? true
-                        :note "http-direct-response"})
+                        :delivered? false
+                        :note "http-response-consumption-unconfirmed"})
             (catch Throwable _)))))))
 
 (defn- classify-terminal
@@ -590,18 +1507,90 @@
        (name code)
        msg])))
 
-(defn- create-invoke-job!
-  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref]}]
+(defn- normalized-invoke-commission
+  "Return the exact normalized invoke request that Agency hashes. This value is
+  retained before prompt events can be trimmed; it is evidence, not a prompt
+  reconstruction."
+  [agent-id prompt caller surface model]
+  (cond-> {:agent-id (str agent-id)
+           :prompt (str prompt)
+           :caller (str (or caller "http-caller"))
+           :surface (str (or surface "http"))}
+    model (assoc :model model)))
+
+(defn- invoke-job-request-digest
+  [agent-id prompt caller surface model]
+  (campaign-machine/ledger-digest
+   [(normalized-invoke-commission agent-id prompt caller surface model)]))
+
+(defn invoke-job-request-commission
+  "Read the durable request-digest preimage for JOB-ID and verify its join.
+
+  Missing legacy retention and any tampering refuse rather than reconstructing
+  a prompt from lossy events. This is the read boundary used by R9's later
+  producer/reviewer join; it does not authenticate a bootstrap anchor."
+  [job-id]
+  (let [ledger (ensure-invoke-jobs-ledger!)
+        job-id (str job-id)
+        job (get-in ledger [:jobs job-id])
+        archived (read-commission-archive job-id)
+        hot-commission (:request-commission job)
+        commission (or hot-commission (:commission archived))]
+    (when-not (or job archived)
+      (throw (ex-info "invoke job and commission archive are missing"
+                      {:refusal :invoke-job-missing :job-id job-id})))
+    (when-not (map? commission)
+      (throw (ex-info "invoke request commission was not retained"
+                      {:refusal :request-commission-missing
+                       :job-id job-id})))
+    (when (and job archived
+               (not= (dissoc (request-commission-archive-record
+                              job (:archived-at archived))
+                             :archive-digest)
+                     (dissoc archived :archive-digest)))
+      (throw (ex-info "hot job and commission archive disagree"
+                      {:refusal :request-commission-hot-archive-disagreement
+                       :job-id job-id})))
+    (let [observed (campaign-machine/ledger-digest [commission])]
+      (when-not (= (or (:request-digest job) (:request-digest archived)) observed)
+        (throw (ex-info "invoke request commission digest mismatch"
+                        {:refusal :request-commission-digest-mismatch
+                         :job-id job-id
+                         :expected (or (:request-digest job)
+                                       (:request-digest archived))
+                         :observed observed})))
+      {:schema :agency/invoke-request-commission-v1
+       :job-id job-id
+       :request-digest observed
+       :commission commission
+       :job-join (if archived
+                   (:job-join archived)
+                   (select-keys job [:agent-id :caller :surface :artifact-ref
+                                     :trace-id :created-at :started-at :finished-at
+                                     :state :terminal-code :execution :delivery
+                                     :invocation/model]))
+       :source (if job :hot-ledger :commission-archive)})))
+
+(defn- create-invoke-job-ledger!
+  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
+           model inherited-clock]}]
   (let [created-id (atom nil)]
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (let [requested (some-> requested-job-id str str/trim)
-             ;; Dedup: if the requested job-id already exists and is non-terminal,
-             ;; reuse it instead of creating a duplicate.
+    (try
+      (update-invoke-jobs-ledger!
+       (fn [ledger]
+         (let [requested (some-> requested-job-id str str/trim)
+             ;; Dedup active requested jobs. Callers needing durable replay of a
+             ;; terminal identity must validate the immutable request first.
+             archived (when (seq requested) (read-commission-archive requested))
+             _ (when archived
+                 (throw (ex-info "archived invoke job id cannot be reused"
+                                 {:refusal :archived-invoke-job-id-reuse
+                                  :job-id requested})))
              existing (when (seq requested)
                         (get-in ledger [:jobs requested]))
              reuse? (and existing
-                         (#{"queued" "running"} (str (:state existing))))]
+                         (#{"queued" "activating" "running" "delivered"}
+                          (str (:state existing))))]
          (if reuse?
            (do (reset! created-id requested)
                ledger)  ;; no mutation — return existing job
@@ -611,11 +1600,16 @@
                                        requested)
                  job-id (or usable-requested auto-id)
                  created-at (str (Instant/now))
-                 mode (invoke-job-mode prompt)
+                 mode (invoke-job-mode prompt mode)
+                 commission (normalized-invoke-commission
+                             agent-id prompt caller surface model)
                  job (cond-> {:job-id job-id
                                :agent-id (str agent-id)
                                :caller (str (or caller "http-caller"))
                                :surface (str (or surface "http"))
+                               :request-digest
+                               (campaign-machine/ledger-digest [commission])
+                               :request-commission commission
                                :bellback-of (some-> bellback-of str)   ;; bell-router: this job is a reply to <job-id>
                                :mode mode
                                :state "queued"
@@ -629,157 +1623,545 @@
                                :result-summary nil
                                :artifact-ref nil
                                :execution {:executed? false :tool-events 0 :command-events 0}
+                               :inherited-clock inherited-clock
+                               :invocation/model model
                                :delivery {:status "pending"}
                                :event-seq 0
                                :events []}
                         bell-type (assoc :bell-type bell-type)
                         (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
-             (-> ledger
-                 (assoc :next-seq next-seq)
-                 (update :job-order (fnil conj []) job-id)
-                 (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+               (-> ledger
+                   (assoc :next-seq next-seq)
+                   (update :job-order (fnil conj []) job-id)
+                   (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+      @created-id
+      (catch Throwable t
+        ;; After the atomic rename, update-invoke-jobs-ledger! deliberately
+        ;; preserves the new ledger in memory. Carry that identity through the
+        ;; error so the controller cannot report the retained job as drained.
+        (if (and (:committed? (ex-data t)) @created-id)
+          (throw (ex-info (.getMessage t)
+                          (assoc (ex-data t) :committed-invoke-job-id @created-id)
+                          t))
+          (throw t))))))
+
+(defn- create-invoke-job!
+  [request]
+  (let [evidence-store (coordination-ledger/mesh-evidence-store (:evidence-store request))
+        request (assoc request :inherited-clock
+                       (clock-decision/dispatch-inheritance
+                        evidence-store (:caller request) (:surface request)))
+        controller (configured-invoke-ingress-controller)
+        job-id (if controller
+                 (let [ticket (invoke-ingress/begin-creation! controller)
+                       accepted-id (atom nil)]
+                   (locking invoke-lifecycle-order-lock
+                     (try
+                       (let [id (create-invoke-job-ledger! request)]
+                         ;; The ledger replacement is durable before this point.
+                         ;; Reused stable ids are already durable, and the
+                         ;; controller preserves their actual lifecycle set.
+                         (reset! accepted-id id)
+                         id)
+                       (catch Throwable t
+                         (when-let [id (:committed-invoke-job-id (ex-data t))]
+                           (reset! accepted-id id))
+                         (throw t))
+                       (finally
+                         (invoke-ingress/creation-finished!
+                          controller ticket @accepted-id)))))
+                 (create-invoke-job-ledger! request))
+        {:keys [caller agent-id surface warrants]} request]
+    ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
+    ;; (from→to) edge keyed by job-id so the in-band `Edge:` join-key resolves to a stored
+    ;; edge for EVERY job (not just wrapped social-dispatch invokes). Never break the hot path.
+    (try
+      (coordination-ledger/record-invoke-edge!
+       (cond-> {:from (or caller "http-caller") :to (str agent-id)
+                :surface (or surface "http") :kind :invoke :edge-id job-id
+                :evidence-store evidence-store}
+         ;; Warrant rides the handoff: the durable edge carries the handoff's
+         ;; warrant status and entry ids, so the ledger answers "which handoffs
+         ;; were warranted" without opening the registry.
+         (some? warrants) (assoc :warrant-status (:handoff/warrant-status warrants)
+                                 :warrant-entry-ids (mapv :entry-id (:warrants warrants)))))
+      (catch Throwable _))
     (bb/project-agents! (reg/registry-status))
-    @created-id))
+    job-id))
+
+(defn bind-unbound-invoke-request!
+  "Bind the exact request digest to a legacy queued invoke job which was
+   durably announced before request digests were stored.
+
+   This is an explicit migration boundary, not an activation fallback.  It
+   refuses jobs that are absent, non-queued, already bound, or whose retained
+   agent/caller/surface/mode identity differs.  A successful bind is persisted
+   and recorded in the job event stream; normal activation must still pass the
+   resulting digest check."
+  [{:keys [job-id agent-id prompt caller surface mode]}]
+  (let [job-id (some-> job-id str)
+        authority (normalized-invoke-commission agent-id prompt caller surface nil)
+        normalized-mode (normalize-invoke-job-mode mode)
+        digest (campaign-machine/ledger-digest [authority])
+        result (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [job (get-in ledger [:jobs job-id])
+             identity-match? (and (= (:agent-id authority) (:agent-id job))
+                                  (= (:caller authority) (:caller job))
+                                  (= (:surface authority) (:surface job))
+                                  (or (nil? normalized-mode)
+                                      (= normalized-mode (:mode job))))]
+         (cond
+           (nil? job)
+           (do (reset! result {:ok false :error :job-not-found}) ledger)
+
+           (not= "queued" (:state job))
+           (do (reset! result {:ok false :error :job-not-queued
+                               :state (:state job)}) ledger)
+
+           (some? (:request-digest job))
+           (do (reset! result {:ok false :error :request-already-bound}) ledger)
+
+           (not identity-match?)
+           (do (reset! result {:ok false :error :retained-identity-mismatch}) ledger)
+
+           :else
+           (let [bound (-> job
+                           (assoc :request-digest digest
+                                  :request-commission authority)
+                           (append-job-event "request-bound"
+                                             {:migration "legacy-unbound-request"}))]
+             (reset! result {:ok true :job-id job-id :request-digest digest})
+             (assoc-in ledger [:jobs job-id] bound))))))
+    @result))
+
+(defn- canonical-job-agent-id
+  "Resolve a job's addressed agent id to its single registry identity.
+
+   Invoke jobs retain the address used by the caller (for example
+   `ams-zai-1`), while the local registry deliberately stores that lane once
+   under its bare id (`zai-1`).  Counts are registry state, so keying them by
+   the unnormalised address makes a live qualified job invisible to the
+   canonical roster row.  Exact peer ids remain unchanged because get-agent
+   resolves exact registrations before considering a local-site alias."
+  [agent-id]
+  (let [addressed (some-> agent-id str str/trim not-empty)]
+    (or (some-> addressed reg/get-agent :agent/id :id/value str)
+        addressed)))
+
+(defn- summarize-active-invoke-jobs
+  ([jobs]
+   (summarize-active-invoke-jobs jobs (System/currentTimeMillis)))
+  ([jobs now-ms]
+    (reduce
+   (fn [acc job]
+     (let [aid (canonical-job-agent-id (:agent-id job))
+           state (some-> (:state job) str)
+           delivered? (= "delivered" state)
+           created-ms (when delivered?
+                        (try
+                          (.toEpochMilli (Instant/parse (str (:created-at job))))
+                          (catch Throwable _ now-ms)))
+           age-ms (when created-ms (max 0 (- now-ms created-ms)))]
+       (if-not (and aid (contains? active-invoke-job-states state))
+         acc
+         (cond-> (-> acc
+                     (update-in [aid :queued-jobs] (fnil + 0)
+                                (if (#{"queued" "activating"} state) 1 0))
+                     (update-in [aid :running-jobs] (fnil + 0)
+                                (if (#{"running" "overrun"} state) 1 0))
+                     (update-in [aid :nonterminal-jobs] (fnil inc 0)))
+           delivered?
+           (-> (update-in [aid :unconsumed-count] (fnil inc 0))
+               (update-in [aid :oldest-unconsumed-age-ms]
+                          (fn [oldest] (max (long (or oldest 0)) age-ms))))))))
+   {}
+     jobs)))
+
+(defn active-invoke-job-counts-full-scan
+  "Control implementation: derive active counts by scanning authoritative
+   job history. Kept as an executable falsifier for the indexed read path."
+  []
+  (let [ledger (ensure-invoke-jobs-ledger!)]
+    (summarize-active-invoke-jobs (vals (:jobs ledger)))))
 
 (defn active-invoke-job-counts
-  "Return canonical non-terminal invoke-job counts keyed by agent-id.
+  "Return canonical non-terminal counts and inbox age keyed by agent-id.
+   After initialization, cost is proportional to active jobs, not history.
    Example:
    {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
   []
-  (ensure-invoke-jobs-ledger!)
-  (reduce
-   (fn [acc job]
-     (let [aid (some-> (:agent-id job) str str/trim not-empty)
-           state (some-> (:state job) str)]
-       (if-not (and aid (#{"queued" "running"} state))
-         acc
-         (-> acc
-             (update-in [aid :queued-jobs] (fnil + 0) (if (= "queued" state) 1 0))
-             (update-in [aid :running-jobs] (fnil + 0) (if (= "running" state) 1 0))
-             (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
-   {}
-   (vals (get @!invoke-jobs-ledger :jobs {}))))
+  (let [ledger (ensure-invoke-jobs-ledger!)]
+    (summarize-active-invoke-jobs (active-invoke-jobs ledger))))
+
+(defn active-invoke-job-counts-consistency
+  "Compare indexed and authoritative full-scan counts at one observation time.
+   This is the index's executable falsifier; differing wall clocks would make
+   delivered-job age fields differ even when both populations are correct."
+  []
+  (let [ledger (ensure-invoke-jobs-ledger!)
+        now-ms (System/currentTimeMillis)
+        indexed (summarize-active-invoke-jobs
+                 (active-invoke-jobs ledger) now-ms)
+        full-scan (summarize-active-invoke-jobs (vals (:jobs ledger)) now-ms)]
+    {:pass? (= indexed full-scan)
+     :indexed indexed
+     :full-scan full-scan
+     :indexed-jobs (count (:job-ids @!active-invoke-job-index))
+     :history-jobs (count (:jobs ledger))}))
+
+(defn- inbox-health-summary
+  [job-counts]
+  (reduce-kv
+   (fn [summary agent-id {:keys [unconsumed-count oldest-unconsumed-age-ms]}]
+     (let [count* (long (or unconsumed-count 0))
+           age-ms (long (or oldest-unconsumed-age-ms 0))]
+       (cond-> (update summary :unconsumed-count + count*)
+         (and (pos? count*)
+              (>= age-ms (long (or (:oldest-unconsumed-age-ms summary) -1))))
+         (assoc :oldest-unconsumed-age-ms age-ms
+                :oldest-unconsumed-agent-id agent-id))))
+   {:unconsumed-count 0
+    :oldest-unconsumed-age-ms nil
+    :oldest-unconsumed-agent-id nil}
+   job-counts))
 
 (defn- running-invoke-job-for-agent
   [agent-id]
   (ensure-invoke-jobs-ledger!)
-  (let [aid (some-> agent-id str str/trim)]
+  (let [aid (canonical-job-agent-id agent-id)]
     (->> (get @!invoke-jobs-ledger :job-order [])
          reverse
          (keep (fn [job-id]
                  (let [job (get-in @!invoke-jobs-ledger [:jobs job-id])]
-                   (when (and (= aid (some-> job :agent-id str str/trim))
+                   (when (and (= aid (canonical-job-agent-id (:agent-id job)))
                               (= "running" (some-> job :state str)))
                      job))))
          first)))
 
+(def ^:private process-owning-job-states
+  "Job states whose turn owns the agent's invoke subprocess tree. `queued` has
+   started no process and `delivered` is an inbox drop, so neither authorises a
+   process-tree kill."
+  #{"running" "overrun"})
+
+(defn- executing-invoke-job-ids-for-agent
+  "Job-ids that own AGENT-ID's invoke subprocess tree right now, newest first.
+
+   The cancel path needs this to stay at JOB grain. futon3c.dev's interrupt
+   control is registered per agent, so an interrupt aimed at a queued job used
+   to destroy whichever process tree the agent happened to be running (F8
+   slice-7 incident, 2026-09-05: a cancel of a redundant queued job killed the
+   owner's running continuation mid-turn)."
+  [agent-id]
+  (ensure-invoke-jobs-ledger!)
+  (let [aid (canonical-job-agent-id agent-id)
+        ledger @!invoke-jobs-ledger]
+    (->> (get ledger :job-order [])
+         reverse
+         (keep (fn [jid]
+                 (let [job (get-in ledger [:jobs jid])]
+                   (when (and (= aid (canonical-job-agent-id (:agent-id job)))
+                              (contains? process-owning-job-states
+                                         (some-> job :state str)))
+                     (str (:job-id job))))))
+         vec)))
+
 (defn- mark-invoke-job-running!
   [job-id]
-  (update-invoke-jobs-ledger!
-   (fn [ledger]
-     (if-let [job (get-in ledger [:jobs job-id])]
-       (assoc-in ledger [:jobs job-id]
-                 (-> job
-                     (assoc :state "running"
-                            :started-at (or (:started-at job) (str (Instant/now))))
-                     (append-job-event "running" {})))
-       ledger))))
+  (locking invoke-lifecycle-order-lock
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (if (#{"queued" "activating"} (str (:state job)))
+                 (assoc-in ledger [:jobs job-id]
+                           (-> job
+                               (assoc :state "running"
+                                      :started-at (or (:started-at job) (str (Instant/now))))
+                               (append-job-event "running" {})))
+                 ledger)
+               ledger)))
+          started? (boolean
+                    (and (#{"queued" "activating"}
+                           (str (get-in before [:jobs job-id :state])))
+                         (= "running" (get-in after [:jobs job-id :state]))))]
+      (when started?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/start-execution! controller job-id)))
+      started?)))
+
+(defn- finish-controller-execution! [job-id]
+  (when-let [controller (configured-invoke-ingress-controller)]
+    (locking invoke-lifecycle-order-lock
+      ;; A worker that unwinds before its terminal ledger publication succeeds
+      ;; is unresolved work, not a completed execution. Keep it conservatively
+      ;; counted until reconciliation or a successful terminal retry.
+      (let [state (some-> (get-in (ensure-invoke-jobs-ledger!)
+                                  [:jobs job-id :state]) str)]
+        (when (terminal-invoke-state? state)
+          (invoke-ingress/finish-execution! controller job-id)
+          true)))))
 
 (defn- finalize-invoke-job!
   [job-id terminal-state terminal-code terminal-message result sid]
-  (let [invoke-meta (:invoke-meta result)
-        execution (invoke-execution-evidence result)
+  (locking invoke-lifecycle-order-lock
+    (let [invoke-meta (:invoke-meta result)
+        execution (invoke-execution-evidence result job-id)
         trace-id (extract-trace-id invoke-meta)
         result-text (when (string? (:result result)) (:result result))
+        ;; Bounded full text for the auto-bellback (operative reply channel);
+        ;; whitespace preserved. 8000 chars covers any sane dispatch.
+        bellback-text (when result-text
+                        (if (<= (count result-text) 8000)
+                          result-text
+                          (str (subs result-text 0 7997) "...")))
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
                          (first-artifact-ref summary))
-        bellback-request (atom nil)]
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job (get-in ledger [:jobs job-id])]
-         (let [finished-at (str (Instant/now))
-               updated-job (-> job
-                               (assoc :state terminal-state
-                                      :finished-at finished-at
-                                      :terminal-code terminal-code
-                                      :terminal-message terminal-message
-                                      :session-id sid
-                                      :trace-id trace-id
-                                      :result-summary summary
-                                      :artifact-ref artifact-ref
-                                      :execution execution)
-                               (append-job-event terminal-state
-                                                 {:code terminal-code
-                                                  :message terminal-message}))
-               request (auto-bellback-request updated-job)
-               updated-job (if request
-                             (do
-                               (reset! bellback-request request)
-                               (assoc updated-job
-                                      :auto-bellback {:sent? true
-                                                      :bell-job-id (:bell-job-id request)
-                                                      :at finished-at}))
-                             updated-job)]
-           (cond-> (assoc-in ledger [:jobs job-id] updated-job)
-             (and (string? trace-id) (not (str/blank? trace-id)))
-             (assoc-in [:trace->job trace-id] job-id)))
-         ledger)))
-    (when-let [request @bellback-request]
-      (try
-        (*enqueue-auto-bellback!* request)
-        (catch Throwable t
-          (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
-                        (.getMessage t)))
-          (flush))))))
+        non-terminal-states active-invoke-job-states
+        [ledger-before ledger-after]
+        (update-invoke-jobs-ledger-vals!
+         (fn [ledger]
+           (if-let [job (get-in ledger [:jobs job-id])]
+             ;; First terminal transition wins: if the ceiling reaper already
+             ;; force-terminated this job ("timeout"), the interrupted worker's
+             ;; own finalize must not overwrite it (no timeout->failed flip,
+             ;; no double delivery). Open states (active-invoke-job-states)
+             ;; finalize normally -- "activating" among them, which this
+             ;; literal used to omit, silently dropping the finalize of a job
+             ;; that completed before its running transition landed.
+             (if (not (contains? active-invoke-job-states (str (:state job))))
+               ledger
+               (let [finished-at (str (Instant/now))
+                     updated-job (-> job
+                                   (assoc :state terminal-state
+                                          :finished-at finished-at
+                                          :terminal-code terminal-code
+                                          :terminal-message terminal-message
+                                          :session-id sid
+                                          :trace-id trace-id
+                                          :result result-text
+                                          :result-summary summary
+                                          :result-text bellback-text
+                                          :artifact-ref artifact-ref
+                                          :execution execution)
+                                   (append-job-event terminal-state
+                                                     {:code terminal-code
+                                                      :message terminal-message}))]
+               (cond-> (assoc-in ledger [:jobs job-id] updated-job)
+                 (and (string? trace-id) (not (str/blank? trace-id)))
+                 (assoc-in [:trace->job trace-id] job-id))))
+             ledger)))
+        ;; Whether THIS call performed the transition is read from the ledger
+        ;; value that was in place before the successful CAS — not from a flag
+        ;; written inside the swap function, which a retried attempt would also
+        ;; have written. Only one caller can observe the job non-terminal here.
+        updated-terminal-job (when (non-terminal-states
+                                    (str (get-in ledger-before [:jobs job-id :state])))
+                               (get-in ledger-after [:jobs job-id]))]
+    (when updated-terminal-job
+      (when-let [controller (configured-invoke-ingress-controller)]
+        (invoke-ingress/finish-job! controller job-id)))
+    (when updated-terminal-job
+      (let [released-park-records
+            (:released-records (parked-on-notify! job-id result-text))
+            bellback-request (atom nil)]
+        (update-invoke-jobs-ledger!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (let [finished-at (or (:finished-at job) (str (Instant/now)))
+                     recipient-type (auto-bellback-recipient-type (:agent-id job))
+                     caller-registered? (auto-bellback-caller-registered? (:caller job))
+                     suppressing-park (auto-bellback-suppressing-park job released-park-records)]
+                 (cond
+                   (and suppressing-park
+                        (should-auto-bellback? job recipient-type caller-registered?
+                                               (auto-bellback-enabled?)))
+                   (do
+                     (log-auto-bellback-suppressed! job suppressing-park)
+                     (assoc-in ledger [:jobs job-id :auto-bellback]
+                               {:suppressed? true
+                                :reason :parked-on
+                                :park-id (:id suppressing-park)
+                                :at finished-at}))
+
+                   :else
+                   (if-let [request (auto-bellback-request job)]
+                     (do
+                       (reset! bellback-request request)
+                       (assoc-in ledger [:jobs job-id :auto-bellback]
+                                 {:sent? true
+                                  :bell-job-id (:bell-job-id request)
+                                  :at finished-at}))
+                     ledger)))
+               ledger)))
+        (when-let [request @bellback-request]
+          (try
+            (*enqueue-auto-bellback!* request)
+            (catch Throwable t
+              (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
+                            (.getMessage t)))
+              (flush))))))
+    ;; A caller with no registered push or inbox route can never leave the
+    ;; polling-only state. Record that terminal disposition here; unlike seat
+    ;; receipts, it does not depend on a later delivery action.
+    (when (and updated-terminal-job
+               (not= auto-bellback-caller (:caller updated-terminal-job))
+               (not (inbox-agent? (:caller updated-terminal-job)))
+               (nil? (reg/get-agent (:caller updated-terminal-job))))
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "poll"
+        :destination (str "/api/alpha/invoke/jobs/" job-id)
+        :delivered? false
+        :note "caller-not-a-registered-seat"}))
+      (boolean updated-terminal-job))))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
-  (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job-id (get-in ledger [:trace->job invoke-trace-id])]
-         (if-let [job (get-in ledger [:jobs job-id])]
-           (let [delivered (boolean delivered?)
+  (locking invoke-lifecycle-order-lock
+    (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job-id (get-in ledger [:trace->job invoke-trace-id])]
+               (if-let [job (get-in ledger [:jobs job-id])]
+                 (if (not= "pending" (get-in job [:delivery :status]))
+                   ledger
+                   (let [delivered (boolean delivered?)
                  receipt {:status (if delivered "delivered" "delivery-failed")
                           :surface (str (or surface "unknown"))
                           :destination (str (or destination "unknown"))
                           :recorded-at (str (Instant/now))
                           :note (str (or note ""))}
+                 trace-observation
+                 (campaign-trace/validate-authoritative-observation
+                  :delivery
+                 {:terminal-job-id job-id
+                  :delivery-status (:status receipt)
+                  :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
+                  :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
+                  :polling-available? true})
                  updated-job (-> job
                                  (assoc :delivery receipt)
+                                 (assoc :trace/delivery-observation trace-observation)
                                  (append-job-event "delivery-recorded" receipt))]
-             (assoc-in ledger [:jobs job-id] updated-job))
-           ledger)
-         ledger)))))
+                     (assoc-in ledger [:jobs job-id] updated-job)))
+                 ledger)
+               ledger)))
+          job-id (get-in before [:trace->job invoke-trace-id])
+          transitioned? (and job-id
+                             (= "pending" (get-in before [:jobs job-id :delivery :status]))
+                             (not= "pending" (get-in after [:jobs job-id :delivery :status])))]
+      (when transitioned?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/finish-delivery! controller job-id)))
+      transitioned?))))
 
 (defn- record-invoke-job-delivery-by-job-id!
   [job-id {:keys [surface destination delivered? note]}]
-  (when (and (string? job-id) (not (str/blank? job-id)))
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job (get-in ledger [:jobs job-id])]
-         (let [delivered (boolean delivered?)
+  (locking invoke-lifecycle-order-lock
+    (when (and (string? job-id) (not (str/blank? job-id)))
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (if (not= "pending" (get-in job [:delivery :status]))
+                 ledger
+                 (let [delivered (boolean delivered?)
                receipt {:status (if delivered "delivered" "delivery-failed")
                         :surface (str (or surface "unknown"))
                         :destination (str (or destination "unknown"))
                         :recorded-at (str (Instant/now))
                         :note (str (or note ""))}
+               trace-observation
+               (campaign-trace/validate-authoritative-observation
+                :delivery
+               {:terminal-job-id job-id
+                :delivery-status (:status receipt)
+                :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
+                :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
+                :polling-available? true})
                updated-job (-> job
                                (assoc :delivery receipt)
+                               (assoc :trace/delivery-observation trace-observation)
                                (append-job-event "delivery-recorded" receipt))]
-           (assoc-in ledger [:jobs job-id] updated-job))
-         ledger)))))
+                   (assoc-in ledger [:jobs job-id] updated-job)))
+               ledger)))
+          transitioned? (and (= "pending" (get-in before [:jobs job-id :delivery :status]))
+                             (not= "pending" (get-in after [:jobs job-id :delivery :status])))]
+      (when transitioned?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/finish-delivery! controller job-id)))
+      transitioned?))))
+
+(declare get-invoke-job)
+
+(defn- record-bell-completion-delivery!
+  "Record the delivery action performed after an asynchronous bell completes.
+
+   Pull-only callers are delivered through their completion bellback's atomic
+   inbox file. Registered push callers retain the existing callback receipt.
+   An absent caller has only a polling URL, which is explicitly not delivery."
+  [job-id caller result]
+  (let [caller (some-> caller str str/trim)
+        job (get-invoke-job job-id)
+        status-url (str "/api/alpha/invoke/jobs/" job-id)]
+    (cond
+      (inbox-agent? caller)
+      (let [bell-job-id (get-in job [:auto-bellback :bell-job-id])
+            inbox-path (some-> bell-job-id get-invoke-job :inbox-path)]
+        (record-invoke-job-delivery-by-job-id!
+         job-id
+         {:surface "inbox"
+          :destination (or inbox-path status-url)
+          :delivered? (boolean inbox-path)
+          :note (cond
+                  inbox-path "bell-job-ready-inbox"
+                  bell-job-id "bell-job-inbox-write-missing"
+                  :else "bell-job-inbox-delivery-not-created")}))
+
+      (reg/get-agent caller)
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "bell"
+        :destination (str "caller " caller " via " status-url)
+        :delivered? true
+        :note (if (:ok result) "bell-job-ready" "bell-job-error")})
+
+      :else
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "poll"
+        :destination status-url
+        :delivered? false
+        :note "caller-not-a-registered-seat"}))))
 
 (defn- invoke-job-public-view
   [job]
-  (select-keys job [:job-id :agent-id :caller :surface :mode :state
-                    :created-at :started-at :finished-at
-                    :terminal-code :terminal-message
-                    :session-id :trace-id
-                    :result-summary :artifact-ref
-                    :execution :delivery :events]))
+  ;; :result is the complete reply (capped at 8000 at finalize) and is what
+  ;; downstream contract parsers must read; :result-summary is a 220-char
+  ;; whitespace-collapsed list-view digest and truncates structured payloads
+  ;; (attempt-051 feature-card incident, 2026-07-25).
+  (let [view
+        (select-keys job [:job-id :agent-id :caller :surface :mode :state
+                          :created-at :started-at :finished-at
+                          :terminal-code :terminal-message
+                          :session-id :trace-id :invocation/model
+                          :result :result-summary :artifact-ref
+                          :execution :auto-bellback :delivery
+                          ;; D13 review: a rolling-expiry tombstone must SAY so.
+                          ;; Without this the compacted job's :result nil is
+                          ;; indistinguishable from a job that never produced one.
+                          :events-trimmed
+                          :trace/delivery-observation :events])]
+    (if (and (terminal-invoke-state? (:state job))
+             (= "pending" (get-in job [:delivery :status])))
+      (assoc view :state "delivering")
+      view)))
 
 (defn- get-invoke-job
   [job-id]
@@ -796,50 +2178,211 @@
          (map #(get-in ledger [:jobs %]))
          (remove nil?))))
 
-(def ^:const stale-job-threshold-ms
-  "Jobs running longer than this are considered stale and will be reaped."
-  (* 35 60 1000))  ;; 35 minutes
+(defn- ms-setting
+  "Raw millisecond setting for NAME: a System property first (settable on a
+   live JVM over Drawbridge, which env vars are not), then the process env.
+   Returns ::unset when neither is present or parseable."
+  [name]
+  (try
+    (let [raw (or (System/getProperty name) (System/getenv name))]
+      (if (or (nil? raw) (str/blank? (str/trim raw)))
+        ::unset
+        (long (Long/parseLong (str/trim raw)))))
+    (catch Exception _ ::unset)))
+
+(defn- parse-env-ms
+  "Parse a millisecond duration from NAME, falling back to DEFAULT."
+  [name default]
+  (let [v (ms-setting name)]
+    (if (= ::unset v) default v)))
+
+(def ^:private default-job-cap-ms
+  "Soft cap: jobs running longer than this enter the 'overrun' state.
+   The lane keeps executing (supervised); this is NOT a terminal state.
+   2026-08-12 (Joe): raised 35min -> 24h — if a codex job needs the
+   time, it can have it. The 35-min label produced a false-death
+   misread (mining slice 3: supervisor dispatched recovery against a
+   live job). FUTON3C_JOB_CAP_MS still overrides."
+  (* 24 60 60 1000))
+
+(defn job-cap-ms
+  "Current job cap in ms. Overridable via FUTON3C_JOB_CAP_MS."
+  []
+  (parse-env-ms "FUTON3C_JOB_CAP_MS" default-job-cap-ms))
+
+(defn job-ceiling-ms
+  "Hard ceiling in ms, or nil for no wall-clock ceiling (the default).
+
+   Wall clock is an SLA signal, not evidence of stuckness. A bell that is
+   still streaming events is working, and force-terminating it discards work
+   the supervisor could have harvested — the failure this cap has produced
+   repeatedly (README-agency-cap.md). A turn now ends on explicit cancel,
+   confirmed process death, or an operator-configured ceiling; not on a clock.
+
+   Set FUTON3C_JOB_CEILING_MS (System property or env) to restore a hard
+   ceiling. 0 or a negative value means the same as unset: no ceiling."
+  []
+  (let [v (ms-setting "FUTON3C_JOB_CEILING_MS")]
+    (when (and (not= ::unset v) (pos? v))
+      v)))
+
+(defn- mark-invoke-job-overrun!
+  "Atomically move JOB-ID from running to overrun. Returns true only to the
+   caller that won the transition."
+  [job-id timeout-ms]
+  (let [transitioned? (atom false)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [job (get-in ledger [:jobs job-id])]
+         (if (= "running" (str (:state job)))
+           (do
+             (reset! transitioned? true)
+             (assoc-in ledger [:jobs job-id]
+                       (-> job
+                           (assoc :state "overrun"
+                                  :overrun-at (str (Instant/now)))
+                           (append-job-event "overrun"
+                                             {:code "job-timeout-exceeded"
+                                              :timeout-ms timeout-ms}))))
+           ledger)
+         ledger)))
+    @transitioned?))
+
+;; Keep the old const for backward compatibility.
+(def ^:const stale-job-threshold-ms default-job-cap-ms)
+
+;; Worker thread tracking for ceiling enforcement. Maps job-id -> {:thread Thread :future Future}.
+(defonce ^:private !job-workers (atom {}))
+
+(defn- register-job-worker!
+  "Track the worker thread/future for JOB-ID so the ceiling reaper can interrupt it."
+  [job-id thread future]
+  (swap! !job-workers assoc job-id {:thread thread :future future}))
+
+(defn- unregister-job-worker!
+  [job-id]
+  (swap! !job-workers dissoc job-id))
+
+(defn- interrupt-job-worker!
+  "Interrupt the worker thread for JOB-ID if tracked. Returns true if interrupted."
+  [job-id]
+  (when-let [{:keys [thread future]} (get @!job-workers job-id)]
+    (swap! !job-workers dissoc job-id)
+    (try
+      (when future (future-cancel future))
+      (catch Throwable _))
+    (try
+      (when thread (.interrupt thread))
+      (catch Throwable _))
+    true))
+
+(defn- ceiling-timeout-message
+  [ceiling-ms]
+  (str "Turn terminated at the hard job ceiling after " ceiling-ms "ms"))
+
+(defn- finalize-job-at-ceiling!
+  "Try the single terminal transition for JOB-ID, then interrupt its worker.
+   Returns true only when this caller won finalization."
+  [job-id ceiling-ms]
+  (let [message (ceiling-timeout-message ceiling-ms)
+        result {:ok false
+                :error {:error/code :timeout
+                        :error/message message}}]
+    (when (finalize-invoke-job! job-id "timeout" "job-ceiling-exceeded"
+                                message result nil)
+      (interrupt-job-worker! job-id)
+      (when-let [agent-id (:agent-id (get-invoke-job job-id))]
+        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))
+      true)))
+
+(def ^:private default-async-invoke-timeout-ms
+  (* 60 60 1000))
+
+(defn- supervise-invoke-future!
+  "Run INVOKE-FN once and supervise its future for a durable async job.
+
+   This is the sole lifecycle authority for an async turn. Inner layers (WS
+   invoke, the registry deadline, the codex process adapter) must not
+   independently destroy the worker — an inner kill is what made every
+   previous ceiling raise ineffective (README-agency-cap.md).
+
+   The soft cap is observational: the job becomes 'overrun', the same future
+   stays authoritative, and a late result finalizes normally. Termination is
+   terminal only when an operator has configured a ceiling; then exactly one
+   finalizer wins and the worker is interrupted."
+  [job-id timeout-ms invoke-fn]
+  (let [soft-ms (long (or (when (and timeout-ms (pos? (long timeout-ms)))
+                            timeout-ms)
+                          default-async-invoke-timeout-ms))
+        ceiling-ms (job-ceiling-ms)
+        started-ms (System/currentTimeMillis)
+        worker-thread (promise)
+        turn-future (future
+                      (deliver worker-thread (Thread/currentThread))
+                      (invoke-fn))]
+    (register-job-worker! job-id (deref worker-thread 1000 nil) turn-future)
+    (let [initial-wait-ms (max 1 (if ceiling-ms (min soft-ms ceiling-ms) soft-ms))
+          initial-result (deref turn-future initial-wait-ms ::invoke-overrun)]
+      (if (not= ::invoke-overrun initial-result)
+        initial-result
+        (do
+          ;; Checkpoint, not a verdict. The reaper marks the same transition
+          ;; from the cap side, so a caller passing a long timeout still gets
+          ;; an 'overrun' event on the ledger at the cap.
+          (mark-invoke-job-overrun! job-id soft-ms)
+          (if-not ceiling-ms
+            ;; No ceiling: the worker remains authoritative until it finishes,
+            ;; is cancelled (POST .../cancel), or its process dies. Silence is
+            ;; an alert — the job sits visibly in 'overrun' — never a kill.
+            @turn-future
+            (let [elapsed-ms (- (System/currentTimeMillis) started-ms)
+                  remaining-ms (max 0 (- ceiling-ms elapsed-ms))
+                  late-result (if (pos? remaining-ms)
+                                (deref turn-future remaining-ms ::invoke-ceiling)
+                                ::invoke-ceiling)]
+              (if (not= ::invoke-ceiling late-result)
+                late-result
+                (let [message (ceiling-timeout-message ceiling-ms)]
+                  (finalize-job-at-ceiling! job-id ceiling-ms)
+                  {:ok false
+                   :error {:error/code :timeout
+                           :error/message message}
+                   :job-id job-id
+                   :overrun true
+                   :ceiling-ms ceiling-ms})))))))))
 
 (defn reap-stale-invoke-jobs!
-  "Finalize jobs stuck in 'running' state past the stale threshold.
-   Returns the count of reaped jobs."
-  ([] (reap-stale-invoke-jobs! stale-job-threshold-ms))
+  "Transition running jobs past the cap to 'overrun' (non-terminal, supervised).
+   Force-terminate overrun jobs past the ceiling to 'timeout' (terminal) —
+   only when an operator has configured a ceiling; by default overrun jobs are
+   left alone to finish, and are ended by cancel rather than by clock.
+   Returns the count of jobs transitioned."
+  ([] (reap-stale-invoke-jobs! (job-cap-ms)))
   ([threshold-ms]
    (ensure-invoke-jobs-ledger!)
-   (let [now-ms (System/currentTimeMillis)
-         reaped (atom 0)]
-     (update-invoke-jobs-ledger!
-      (fn [ledger]
-        (let [jobs (:jobs ledger)
-              updated-jobs
-              (reduce-kv
-               (fn [acc jid job]
-                 (if (and (= "running" (str (:state job)))
-                          (let [started (:started-at job)]
-                            (when (string? started)
-                              (try
-                                (let [started-ms (.toEpochMilli (Instant/parse started))
-                                      age-ms (- now-ms started-ms)]
-                                  (> age-ms threshold-ms))
-                                (catch Exception _ false)))))
-                   (do
-                     (swap! reaped inc)
-                     (let [finished-at (str (Instant/now))]
-                       (assoc acc jid
-                              (-> job
-                                  (assoc :state "failed"
-                                         :finished-at finished-at
-                                         :terminal-code "stale-job-reaped"
-                                         :terminal-message (str "Job stuck in running state; reaped after "
-                                                                (/ threshold-ms 60000) " minutes"))
-                                  (append-job-event "failed" {:code "stale-job-reaped"})))))
-                   (assoc acc jid job)))
-               {}
-               jobs)]
-          (assoc ledger :jobs updated-jobs))))
-     (let [n @reaped]
+   (let [ceiling-ms (job-ceiling-ms)
+         now-ms (System/currentTimeMillis)
+         transitioned (atom 0)]
+     (doseq [[jid job] (:jobs @!invoke-jobs-ledger)]
+       (let [started (:started-at job)
+             age-ms (when (string? started)
+                      (try
+                        (- now-ms (.toEpochMilli (Instant/parse started)))
+                        (catch Exception _ nil)))]
+         (cond
+           (and (= "running" (str (:state job)))
+                (some? age-ms) (> age-ms threshold-ms))
+           (when (mark-invoke-job-overrun! jid threshold-ms)
+             (swap! transitioned inc))
+
+           (and (some? ceiling-ms)
+                (= "overrun" (str (:state job)))
+                (some? age-ms) (> age-ms ceiling-ms))
+           (when (finalize-job-at-ceiling! jid ceiling-ms)
+             (swap! transitioned inc)))))
+     (let [n @transitioned]
        (when (pos? n)
-         (println (str "[invoke-jobs] Reaped " n " stale job(s)"))
+         (println (str "[invoke-jobs] Transitioned " n " stale/overrun job(s)"))
          (flush))
        n))))
 
@@ -891,11 +2434,199 @@
       {:ref/type subject-type
        :ref/id (str subject-id)})))
 
+(defn- default-evidence-since
+  "Default lower bound for broad evidence pages.
+   Session/pattern-specific views keep exact history; unfiltered latest pages
+   should never force the backing store into a full chronological scan."
+  []
+  (str (.minusSeconds (Instant/now) (* 48 60 60))))
+
 (defn- evidence-store-for-config
   "Resolve configured evidence store from runtime config."
   [config]
   (or (:evidence-store config)
       (get-in config [:registry :peripheral-config :evidence-store])))
+
+(def ^:private default-test-registry-root "/home/joe/code/futon3c")
+(def ^:private test-registry-report-cache-ms 30000)
+(defonce ^:private test-registry-report-cache (atom nil))
+
+(declare parse-json-map)
+
+(defn- test-registry-validation-options
+  "Bind validation reads to this server's evidence store and canonical ledgers."
+  [config]
+  (let [root (io/file (or (:test-registry-root config)
+                          default-test-registry-root))]
+    {:backend (evidence-store-for-config config)
+     :index-file (str (io/file root "data/test-registry-validation/subjects.ednlog"))
+     :queue-file (str (io/file root "data/test-registry-validation/revalidation.ednlog"))}))
+
+(defn- test-registry-report-signature [{:keys [backend index-file queue-file]}]
+  [(System/identityHashCode backend)
+   (mapv (fn [path]
+           (let [file (io/file path)]
+             [path (when (.isFile file) (.lastModified file)) (.length file)]))
+         [index-file queue-file])])
+
+(defn- cached-test-registry-report! [config]
+  (let [options (test-registry-validation-options config)
+        signature (test-registry-report-signature options)
+        now (System/currentTimeMillis)
+        cached @test-registry-report-cache]
+    (if (and (= signature (:signature cached))
+             (< (- now (:stored-at-ms cached)) test-registry-report-cache-ms))
+      (:report cached)
+      (let [report! (requiring-resolve 'futon3c.test-registry.validation/report!)
+            report (report! options)]
+        (reset! test-registry-report-cache
+                {:signature signature :stored-at-ms now :report report})
+        report))))
+
+(defn handle-test-registry-check
+  "POST /api/alpha/test-registry/check — read one existing warrant."
+  [request config]
+  (if-let [payload (parse-json-map (read-body request))]
+    (try
+      (let [check! (requiring-resolve 'futon3c.test-registry/check-record!)
+            result (check! (evidence-store-for-config config)
+                           (select-keys payload [:entry-id :repo-root :changed-paths]))]
+        ;; The evidence lookup route exposes the mint-time payload, including
+        ;; its recorded :warrant?.  This route answers a different question:
+        ;; whether that warrant still holds after re-hashing now.  Nest the
+        ;; authority's result unchanged so clients cannot confuse the two.
+        (json-response
+         200
+         {:check result
+          :meaning (str "validity-now, not the recorded mint verdict. "
+                        "Uncommitted drift usually means a lane is mid-edit; "
+                        "wait, do not re-dispatch.")}))
+      (catch Throwable throwable
+        (json-response 500 {:record/type :test-registry/refusal
+                            :reason :check-endpoint-failed
+                            :details {:message (.getMessage throwable)}})))
+    (json-response 400 {:record/type :test-registry/refusal
+                        :reason :invalid-json})))
+
+(defn handle-test-registry-latest
+  "GET /api/alpha/test-registry/latest?namespace=<ns>[&limit=<n>] — which record
+  covers a namespace (AR-42); or ?command=<edn vector> — which record covers an
+  exact logical command (a gate run — bb, sh, lake build — names no -n
+  namespace, so without this it is never lookupable).
+
+  A question the registry could not be asked before: /check answers whether a
+  record it is GIVEN still holds, so a consumer needed the entry id already.
+  This returns the newest :run record for the namespace or command REGARDLESS of
+  :warrant?, because a lookup that returned only warranted runs would let a
+  later failing run hide behind an earlier green one.
+
+  It names the record; it does not judge it. The body carries the entry id and
+  not the record, so the consumer reads the record through the evidence API and
+  verifies its digest itself rather than trusting this re-encoding — futon2's
+  :C8 observation class does exactly that. An absent run is 200 with
+  :found false and a typed reason, because a read that establishes absence
+  succeeded; only a malformed request is 4xx."
+  [request config]
+  (try
+    (let [params (parse-query-params request)
+          raw-limit (get params "limit")
+          limit (when (seq (str raw-limit)) (enc/parse-int raw-limit 0))
+          raw-command (get params "command")
+          command (when (seq (str raw-command))
+                    (try (edn/read-string raw-command)
+                         (catch Exception _ ::invalid-command)))]
+      (if (= ::invalid-command command)
+        (json-response 400 {:record/type "test-registry/refusal"
+                            :reason "invalid-command"})
+        (let [lookup (requiring-resolve
+                      (if command
+                        'futon3c.test-registry/latest-run-for-command
+                        'futon3c.test-registry/latest-run-for-namespace))
+              ledger-path (requiring-resolve 'futon3c.test-registry/namespace-ledger-path)
+              ;; The ledger path is a server option, not request input: the
+              ;; :test-registry-root option locates the checkout, and the resolved
+              ;; default under its data directory is the same file the registry
+              ;; CLI's register subcommand writes to, so live registrations are
+              ;; ledgered where this lookup reads.
+              root (:test-registry-root config default-test-registry-root)
+              result (lookup (evidence-store-for-config config)
+                             (cond-> (if command {:command command} {:namespace (get params "namespace")})
+                               true (assoc :namespace-ledger-file (ledger-path {:futon3c-root root}))
+                               (and limit (pos? limit)) (assoc :limit limit)))]
+          (cond
+            (:record/type result)
+            (json-response 400 {:record/type (str (symbol (:record/type result)))
+                                :reason (name (:reason result))})
+
+            (= :none (:status result))
+            (json-response 200 {:latest (cond-> {:found false
+                                                 :reason (name (:reason result))
+                                                 :scanned (:scanned result)
+                                                 :registry-entries (:registry-entries result)}
+                                          (:limit result) (assoc :limit (:limit result)))})
+
+            :else
+            (json-response 200 {:latest (cond-> {:found true
+                                                 :entry-id (:evidence/id result)
+                                                 :ran-at (get-in result [:payload :ran-at])
+                                                 :scanned (:scanned result)}
+                                          (seq (:undecodable result))
+                                          (assoc :undecodable (mapv #(str (:evidence/id %))
+                                                                    (:undecodable result))))})))))
+    (catch Throwable throwable
+      (json-response 500 {:record/type :test-registry/refusal
+                          :reason :latest-endpoint-failed
+                          :details {:message (.getMessage throwable)}}))))
+
+(defn handle-test-registry-run
+  "POST /api/alpha/test-registry/run — register a mechanical test run.
+  The registry executes the command itself (register-run! sets :warrant?
+  from the run it actually performed), so the body names what to run,
+  never what happened: any caller-supplied outcome key is refused."
+  [request config]
+  (if-let [payload (parse-json-map (read-body request))]
+    (if (some #(contains? payload %) [:warrant? :results :outcome :exit :status])
+      (json-response 400 {:record/type :test-registry/refusal
+                          :reason :caller-supplied-outcome-refused})
+      (let [spec (select-keys payload [:repo-root :command :author :artifact-dir
+                                       :code-paths :test-paths])]
+        (if (and (string? (:repo-root spec)) (not (str/blank? (:repo-root spec)))
+                 (vector? (:command spec)) (seq (:command spec))
+                 (string? (:author spec)) (not (str/blank? (:author spec)))
+                 (string? (:artifact-dir spec)) (not (str/blank? (:artifact-dir spec))))
+          (try
+            (let [register! (requiring-resolve 'futon3c.test-registry/register-run!)
+                  record (register! (evidence-store-for-config config) spec)]
+              (json-response 200 {:evidence/id (:evidence/id record)
+                                  :warrant? (boolean (get-in record [:payload :warrant?]))
+                                  :postcheck (get-in record [:payload :postcheck])
+                                  :record record}))
+            (catch clojure.lang.ExceptionInfo throwable
+              (let [data (ex-data throwable)]
+                (if (= :test-registry/refusal (:record/type data))
+                  (json-response 200 data)
+                  (json-response 500 {:record/type :test-registry/refusal
+                                      :reason :run-endpoint-failed
+                                      :details {:message (.getMessage throwable)}}))))
+            (catch Throwable throwable
+              (json-response 500 {:record/type :test-registry/refusal
+                                  :reason :run-endpoint-failed
+                                  :details {:message (.getMessage throwable)}})))
+          (json-response 400 {:record/type :test-registry/refusal
+                              :reason :run-spec-invalid
+                              :details {:required [:repo-root :command :author :artifact-dir]}}))))
+    (json-response 400 {:record/type :test-registry/refusal
+                        :reason :invalid-json})))
+
+(defn handle-test-registry-report
+  "GET /api/alpha/test-registry/report — conformance over default bindings."
+  [_request config]
+  (try
+    (json-response 200 (cached-test-registry-report! config))
+    (catch Throwable throwable
+      (json-response 500 {:record/type :test-registry.validation/refusal
+                          :reason :report-endpoint-failed
+                          :details {:message (.getMessage throwable)}}))))
 
 (defn- expected-http-kit-shutdown-close?
   "True when `http-kit` accept-loop emitted an expected close exception while stopping."
@@ -1077,16 +2808,18 @@
       {"status" "absent"})))
 
 (defn- handle-health
-  "GET /health — return agent, session, and evidence counts.
-   Reads both live registry and config snapshot, reports the larger count.
+  "GET /health — return agent + session counts, uptime, bridge health.
+   Reads both live registry and config snapshot, reports the larger agent count.
    Live registry reflects HTTP-registered and federated agents;
-   config snapshot reflects agents wired at startup."
+   config snapshot reflects agents wired at startup.
+   (Evidence total-count removed 2026-07-04 — unbounded XTDB scan, futon1a#5.)"
   [config started-at]
   (let [now (Instant/now)
         uptime-seconds (max 0 (.getSeconds (java.time.Duration/between started-at now)))
         live-status (reg/registry-status)
         live-count (:count live-status)
         config-count (count (get-in config [:registry :agents]))
+        inbox-health (inbox-health-summary (:agents live-status))
         agent-summary (into {}
                             (map (fn [[id info]]
                                    [id {:type (:type info)
@@ -1095,17 +2828,54 @@
                                         :invoke-route (:invoke-route info)
                                         :invoke-ready? (:invoke-ready? info)}]))
                             (:agents live-status))
-        evidence-store (evidence-store-for-config config)
-        ;; Best-effort count: a full unbounded evidence scan can time out as the
-        ;; store grows and would otherwise make /health throw on every poll.
-        ;; Run it off-thread with a short deadline; report -1 if slow/erroring so
-        ;; /health stays fast and quiet rather than spamming TimeoutException.
-        evidence-count (let [f (future (try (count (estore/query* evidence-store {}))
-                                            (catch Throwable _ -1)))]
-                         (deref f 800 -1))
+        ;; NOTE (futon1a#5, 2026-07-04): /health no longer reports a total evidence
+        ;; count. `count* {}` is an UNBOUNDED full-store XTDB count (O(store)); on the
+        ;; grown store it blew the 15s query-timeout, and /health is polled often
+        ;; (liveness), so it flooded WARNs and blocked agent attach. The stat had NO
+        ;; consumer and always degraded to -1 anyway. If store-size observability is
+        ;; wanted later, add a cheap maintained/estimated counter as its own signal —
+        ;; do NOT full-scan on a hot health poll. (Prior comment here noted the same
+        ;; class of bug for the earlier future-based path; count* didn't go far enough.)
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
         queue-hardening (agency-invariants/queue-hardening-status)
+        ;; Cheap JVM memory readout. O(1) MXBean reads, no store access -- see
+        ;; the count* note above for why anything unbounded must not live on
+        ;; this hot path.
+        ;;
+        ;; On 2026-09-07 this JVM silently consumed 4095 MB of its 4096 MB
+        ;; direct-buffer limit over 8.8 days (Arrow/Netty; two forced GCs
+        ;; reclaimed nothing). The first symptom anyone saw was the
+        ;; jit-all-open-v3 campaign halting twice, once through a
+        ;; JsonParseException on "Cannot reserve 309 bytes of direct buffer
+        ;; memory" reaching a JSON reader. Nothing surfaced the exhaustion
+        ;; itself, so it was diagnosed backwards from the crash. This makes the
+        ;; number readable before it becomes an outage.
+        direct-pool (first (filter #(= "direct" (.getName ^java.lang.management.BufferPoolMXBean %))
+                                   (java.lang.management.ManagementFactory/getPlatformMXBeans
+                                    java.lang.management.BufferPoolMXBean)))
+        heap (.getHeapMemoryUsage (java.lang.management.ManagementFactory/getMemoryMXBean))
+        mb (fn [^long b] (long (/ b 1048576)))
+        jvm {"direct-used-mb" (when direct-pool (mb (.getMemoryUsed ^java.lang.management.BufferPoolMXBean direct-pool)))
+             "direct-count" (when direct-pool (.getCount ^java.lang.management.BufferPoolMXBean direct-pool))
+             ;; jdk.internal.misc.VM/maxDirectMemory is not reachable from
+             ;; application code here, so read the cap the JVM was actually
+             ;; started with (e.g. "-XX:MaxDirectMemorySize=4g"). O(1) and
+             ;; always available.
+             "direct-max-mb"
+             (some->> (.getInputArguments
+                       (java.lang.management.ManagementFactory/getRuntimeMXBean))
+                      (keep (fn [a]
+                              (when-let [[_ n u] (re-find #"-XX:MaxDirectMemorySize=(\d+)([kKmMgG]?)" a)]
+                                (let [v (parse-long n)]
+                                  (case (str/lower-case (or u ""))
+                                    "g" (* v 1024)
+                                    "k" (long (/ v 1024))
+                                    v)))))
+                      first)
+             "heap-used-mb" (mb (.getUsed heap))
+             "heap-max-mb" (mb (.getMax heap))
+             "uptime-seconds" uptime-seconds}
         bridge (read-bridge-health)]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
@@ -1113,8 +2883,11 @@
                          "agent-summary" agent-summary
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
-                         "evidence" evidence-count
                          "queue-hardening" queue-hardening
+                         "jvm" jvm
+                         "unconsumed-count" (:unconsumed-count inbox-health)
+                         "oldest-unconsumed-age-ms" (:oldest-unconsumed-age-ms inbox-health)
+                         "oldest-unconsumed-agent-id" (:oldest-unconsumed-agent-id inbox-health)
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds
                          "bridge" bridge})))
@@ -1151,7 +2924,7 @@
   "GET /api/alpha/evidence — query evidence entries."
   [request config]
   (let [params (parse-query-params request)
-        limit (parse-int (get params "limit"))
+        limit (or (parse-int (get params "limit")) 100)
         subject (parse-subject params)
         evidence-type (parse-keyword (get params "type"))
         claim-type (parse-keyword (get params "claim-type"))
@@ -1160,16 +2933,32 @@
         tags (parse-tags (get params "tag"))
         author (non-blank-string (get params "author"))
         session-id (non-blank-string (get params "session-id"))
+        explicit-since (get params "since")
+        explicit-before (get params "before")
+        broad-page? (and (nil? explicit-since)
+                         (nil? explicit-before)
+                         (nil? session-id)
+                         (nil? pattern-id))
         query (cond-> {}
                 subject (assoc :query/subject subject)
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
-                (get params "since") (assoc :query/since (get params "since"))
+                author (assoc :query/author author)
+                session-id (assoc :query/session-id session-id)
+                pattern-id (assoc :query/pattern-id pattern-id)
+                (or explicit-since broad-page?)
+                (assoc :query/since (or explicit-since (default-evidence-since)))
+                explicit-before
+                (assoc :query/before explicit-before)
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
+        backend-query (cond-> query
+                        (and (int? limit)
+                             (pos? limit))
+                        (assoc :query/limit limit))
         evidence-store (evidence-store-for-config config)
-        entries (cond->> (estore/query* evidence-store query)
+        entries (cond->> (estore/query* evidence-store backend-query)
                   true
                   (filter (fn [entry]
                             (and
@@ -1182,9 +2971,18 @@
                   (and (int? limit) (pos? limit))
                   (take limit)
                   true
-                  vec)]
+                  vec)
+        ;; Stamp every default this read applied (AR-43): a broad page with no
+        ;; explicit since/before is silently bounded to the newest 48h, and a
+        ;; 200 that does not SAY so reads as a complete empty result.
+        defaulted? broad-page?
+        applied-since (or explicit-since (when broad-page? (default-evidence-since)))]
     (json-response 200 {:ok true
                         :count (count entries)
+                        :count-post-window? (or defaulted? (some? explicit-since) (some? explicit-before))
+                        :window {:since applied-since
+                                 :before explicit-before
+                                 :defaulted? defaulted?}
                         :entries entries})))
 
 (defn- handle-evidence-count
@@ -1203,21 +3001,15 @@
                 subject (assoc :query/subject subject)
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
+                author (assoc :query/author author)
+                session-id (assoc :query/session-id session-id)
+                pattern-id (assoc :query/pattern-id pattern-id)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
         evidence-store (evidence-store-for-config config)
-        count* (->> (estore/query* evidence-store query)
-                    (filter (fn [entry]
-                              (and
-                               (or (nil? author)
-                                   (= author (:evidence/author entry)))
-                               (or (nil? session-id)
-                                   (= session-id (:evidence/session-id entry)))
-                               (or (nil? pattern-id)
-                                   (= pattern-id (:evidence/pattern-id entry))))))
-                    count)]
+        count* (estore/count* evidence-store query)]
     (json-response 200 {:ok true
                         :count count*})))
 
@@ -1265,7 +3057,33 @@
     :fork-not-found 409
     :invalid-entry 400
     :invalid-input 400
+    :store-serialization 400
+    :store-timeout 503
+    :store-unreachable 503
+    :store-rejected 503
     400))
+
+(defonce ^:private !evidence-appends-in-flight (atom #{}))
+
+(defn- claim-evidence-append!
+  "Claim EVIDENCE-ID for one compatibility-route append. A timed-out caller
+  does not cancel its server-side work, so retries for the same stable id must
+  receive a fast retryable response rather than starting duplicate store IO."
+  [evidence-id]
+  (let [[before _] (swap-vals! !evidence-appends-in-flight conj evidence-id)]
+    (not (contains? before evidence-id))))
+
+(defn- normalize-evidence-body
+  "Normalize the small set of typed enums accepted inside generic evidence
+   bodies. JSON cannot carry Clojure keywords, so leaving these as strings
+   makes an otherwise valid independently witnessed outcome unusable by PUR."
+  [body]
+  (cond-> body
+    (and (map? body) (contains? body :memory-outcome/witness-status))
+    (update :memory-outcome/witness-status parse-keyword)
+
+    (and (map? body) (contains? body :memory/witness-status))
+    (update :memory/witness-status parse-keyword)))
 
 (defn- normalize-evidence-payload
   "Normalize write payload (string fields to keywords where needed)."
@@ -1281,7 +3099,8 @@
                :type (parse-keyword (or (:type payload) (get payload "type")))
                :claim-type (parse-keyword (or (:claim-type payload) (get payload "claim-type")))
                :author (or (:author payload) (get payload "author"))
-               :body (or (:body payload) (get payload "body"))
+               :body (normalize-evidence-body
+                      (or (:body payload) (get payload "body")))
                :pattern-id (parse-keyword (or (:pattern-id payload) (get payload "pattern-id")))
                :session-id (or (:session-id payload) (get payload "session-id"))
                :in-reply-to (or (:in-reply-to payload) (get payload "in-reply-to"))
@@ -1314,6 +3133,27 @@
         (cond-> (empty? (:tags entry))
           (dissoc :tags)))))
 
+(defn- operator-clock-decision!
+  [evidence-store entry]
+  (let [body (:body entry)
+        field (fn [k] (or (get body k) (get body (name k))))]
+    (when (and (= "chat-turn" (field :event)) (= "user" (field :role)))
+      (let [sid (:session-id entry)
+            agent (some (fn [id]
+                          (let [a (reg/get-agent id)]
+                            (when (and sid (= sid (:agent/session-id a)))
+                              (get-in a [:agent/id :id/value]))))
+                        (reg/addressable-names))
+            agent (or agent (field :agent-id)
+                      (second (re-matches #"(.+)-turn-[0-9]+" (or (field :turn-id) ""))))]
+        (clock-decision/record!
+         {:agent-id agent :session-id sid :turn-id (or (field :turn-id) (:evidence-id entry))
+          :surface (field :transport) :phase :operator
+          :text (field :text)
+          :mission-id (or (field :mission-id) (field :clocked-mission)
+                          (field :clocked-excursion) (field :clocked-campaign))
+          :evidence-store evidence-store})))))
+
 (defn- handle-evidence-create
   "POST /api/alpha/evidence — append one evidence entry."
   [request config]
@@ -1324,15 +3164,31 @@
                           :message "Request body must be a JSON object"})
       (let [evidence-store (evidence-store-for-config config)
             normalized (normalize-evidence-payload payload)
-            result (boundary/append! evidence-store normalized)]
-        (if (:ok result)
-          (json-response 201 {:ok true
-                              :evidence/id (get-in result [:entry :evidence/id])
-                              :entry (:entry result)})
-          (json-response (append-error-status (:error/code result))
-                         {:ok false
-                          :err (name (:error/code result))
-                          :error result}))))))
+            evidence-id (:evidence-id normalized)]
+        (if (and evidence-id (not (claim-evidence-append! evidence-id)))
+          (json-response 503 {:ok false
+                              :err "evidence-append-in-flight"
+                              :evidence-id evidence-id
+                              :retry-after-seconds 5})
+          (try
+            (let [_ (operator-clock-decision! evidence-store normalized)
+                  result (boundary/append! evidence-store normalized)]
+              (if (:ok result)
+                (json-response 201 {:ok true
+                                    :evidence/id (get-in result [:entry :evidence/id])
+                                    :trace-id (:trace-id result)
+                                    :entry (:entry result)})
+                (json-response (append-error-status (:error/code result))
+                               {:ok false
+                                :err (name (:error/code result))
+                                :trace-id (:trace-id result)
+                                :error result})))
+            (catch clojure.lang.ExceptionInfo e
+              (json-response 503 {:ok false :err (:error/code (ex-data e))
+                                  :message (.getMessage e)}))
+            (finally
+              (when evidence-id
+                (swap! !evidence-appends-in-flight disj evidence-id)))))))))
 
 ;; =============================================================================
 ;; ArSE (Artificial Stack Exchange) endpoints — walkie-talkie surface
@@ -1803,12 +3659,26 @@
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
+   :zai    [:explore :edit :test :coordination/execute]
+   :kimi   [:explore :edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
 
+(defn- project-dir-slug
+  "Claude Code project-directory slug for an absolute path (/ and . become -)."
+  [path]
+  (str/replace (str path) #"[/.]" "-"))
+
 (defn- claude-session-cwd
-  "Return Claude's recorded cwd for SESSION-ID, if the local Claude transcript
-   store has it. Claude resume lookup is project-directory scoped, so restoring
-   a session with the wrong cwd makes an existing transcript appear missing."
+  "Return the cwd Claude resume needs for SESSION-ID, if the local transcript
+   store has it. Claude resume lookup is project-directory scoped, so the
+   returned cwd must be the one whose project slug matches the directory the
+   transcript file LIVES IN — not necessarily the :cwd recorded inside the
+   transcript: sessions that cd mid-conversation record child dirs there, and
+   resuming from those looks in the wrong project directory and finds nothing
+   (found live 2026-07-04: claude-10 post-crash-restore returned empty turns).
+   Algorithm: walk the internal cwd's ancestors (self first) and return the
+   first whose slug equals the transcript's parent directory name; fall back
+   to the internal cwd when nothing matches (pre-fix behavior)."
   ([session-id]
    (claude-session-cwd
     (io/file (System/getProperty "user.home") ".claude" "projects")
@@ -1821,17 +3691,26 @@
        (some
         (fn [^java.io.File f]
           (when (and (.isFile f) (= filename (.getName f)))
-            (with-open [r (io/reader f)]
-              (some (fn [line]
-                      (try
-                        (let [parsed (json/parse-string line true)
-                              cwd (:cwd parsed)]
-                          (when (and (string? cwd)
-                                     (not (str/blank? cwd))
-                                     (.isDirectory (io/file cwd)))
-                            cwd))
-                        (catch Exception _ nil)))
-                    (line-seq r)))))
+            (let [slug (.getName (.getParentFile f))
+                  internal-cwd
+                  (with-open [r (io/reader f)]
+                    (some (fn [line]
+                            (try
+                              (let [parsed (json/parse-string line true)
+                                    cwd (:cwd parsed)]
+                                (when (and (string? cwd)
+                                           (not (str/blank? cwd))
+                                           (.isDirectory (io/file cwd)))
+                                  cwd))
+                              (catch Exception _ nil)))
+                          (line-seq r)))]
+              (when internal-cwd
+                (or (loop [d (io/file internal-cwd)]
+                      (when d
+                        (if (= slug (project-dir-slug (.getPath d)))
+                          (.getPath d)
+                          (recur (.getParentFile d)))))
+                    internal-cwd)))))
         (file-seq ^java.io.File projects-root))))))
 
 (defn- default-session-file-for-agent
@@ -1840,6 +3719,8 @@
   (case agent-type
     :claude (format "/tmp/futon-session-id-%s" agent-id)
     :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
+    :zai (format "/tmp/futon-zai-session-id-%s" agent-id)
+    :kimi (format "/tmp/futon-kimi-session-id-%s" agent-id)
     nil))
 
 (defn- make-session-id-atom
@@ -1868,7 +3749,9 @@
 
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
-  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model]}]
+  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
+                      evidence-store irc-send-fn memory-domain
+                      request-timeout-ms turn-timeout-ms]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -1881,6 +3764,7 @@
                              :session-id-atom sid-atom}
                       emacs-socket (assoc :emacs-socket emacs-socket)
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -1892,10 +3776,163 @@
                              :session-file session-file
                              :session-id-atom sid-atom}
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
+                      memory-domain (assoc :memory-domain memory-domain)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
+      :zai
+      (try
+        (zai-api/make-invoke-fn
+         (cond-> {:agent-id agent-id
+                  :session-file session-file
+                  :session-id-atom sid-atom
+                  :initial-session-id initial-session-id
+                  :evidence-store evidence-store
+                  :irc-send-fn irc-send-fn
+                  ;; Frame seats pin a logical turn envelope explicitly. The
+                  ;; per-request HTTP timeout is a separate constructor field.
+                  :request-timeout-ms (or request-timeout-ms
+                                          zai-api/default-request-timeout-ms)
+                  :turn-timeout-ms (or turn-timeout-ms
+                                       zai-api/default-turn-timeout-ms)}
+           model (assoc :model model)
+           memory-domain (assoc :memory-domain memory-domain)
+           requested-cwd (assoc :cwd requested-cwd)))
+        (catch Throwable t
+          (println (str "[zai] failed to build invoke-fn for " agent-id ": " (.getMessage t)))
+          (flush)
+          nil))
+
+      :kimi
+      (try
+        (kimi-api/make-invoke-fn
+         (cond-> {:agent-id agent-id
+                  :session-file session-file
+                  :session-id-atom sid-atom
+                  :initial-session-id initial-session-id
+                  :evidence-store evidence-store
+                  :irc-send-fn irc-send-fn
+                  :request-timeout-ms (or request-timeout-ms
+                                          zai-api/default-request-timeout-ms)
+                  :turn-timeout-ms (or turn-timeout-ms
+                                       zai-api/default-turn-timeout-ms)}
+           model (assoc :model model)
+           memory-domain (assoc :memory-domain memory-domain)
+           requested-cwd (assoc :cwd requested-cwd)))
+        (catch Throwable t
+          (println (str "[kimi] failed to build invoke-fn for " agent-id ": " (.getMessage t)))
+          (flush)
+          nil))
+
       nil)))
+
+(defn- frame-seat-timeout-policy [agent-id agent-type]
+  ;; :kimi runs the same harness as :zai, so it carries the same per-request
+  ;; HTTP envelope and the same source stamp.
+  {:request-timeout-ms (if (#{:zai :kimi} agent-type)
+                         zai-api/default-request-timeout-ms
+                         :not-applicable)
+   :turn-timeout-ms (if (str/ends-with? agent-id "-student")
+                      1800000
+                      zai-api/default-turn-timeout-ms)
+   :request/source (if (#{:zai :kimi} agent-type)
+                     :zai-api/default-request-timeout-ms
+                     :not-applicable)
+   :turn/source (if (str/ends-with? agent-id "-student")
+                  :apm-contract/student-turn-timeout-ms
+                  :frame-seat/code-default)})
+
+(defn- prepare-frame-seat
+  [config {:keys [agent-id agent-type model memory-domain]}]
+  (let [session-file (default-session-file-for-agent agent-type agent-id)
+        stale-file (some-> session-file java.io.File.)
+        timeout-policy (frame-seat-timeout-policy agent-id agent-type)]
+    ;; A newly minted identity must not inherit an orphaned session left by an
+    ;; earlier process incarnation with the same deterministic frame seat id.
+    (if (and stale-file
+             (.exists ^java.io.File stale-file)
+             (not (.delete ^java.io.File stale-file)))
+      {:invoke-fn nil
+       :reason :stale-session-file-not-cleared
+       :session-file session-file}
+      (let [session-id-atom (make-session-id-atom nil session-file)]
+        {:invoke-fn (make-local-agent-invoke-fn
+                     agent-type
+                     (cond-> {:agent-id agent-id
+                              :session-file session-file
+                              :session-id-atom session-id-atom
+                              :evidence-store (evidence-store-for-config config)
+                              :irc-send-fn (:irc-send-fn config)
+                              :request-timeout-ms
+                              (:request-timeout-ms timeout-policy)
+                              :turn-timeout-ms
+                              (:turn-timeout-ms timeout-policy)}
+                       model (assoc :model model)
+                       memory-domain (assoc :memory-domain memory-domain)))
+         :session-reset-fn (make-session-reset-fn session-file session-id-atom)
+         :metadata {:session-file session-file
+                    :effective-timeouts timeout-policy}}))))
+
+(defn mint-frame-seats!
+  "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."
+  ([config frame-id]
+   (mint-frame-seats! config frame-id nil nil))
+  ([config frame-id model]
+   (mint-frame-seats! config frame-id model nil))
+  ([config frame-id model cast]
+   (frame-seats/mint-seats!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model)
+      (some? cast) (assoc :cast cast))
+    frame-id)))
+
+(defn- handle-frame-seat-mint
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not payload
+      (json-response 400 {:ok false :error "invalid-json"})
+      (let [result (mint-frame-seats!
+                    config
+                    (or (:frame-id payload) (get payload "frame-id"))
+                    (or (:model payload) (get payload "model"))
+                    (or (:cast payload) (get payload "cast")))]
+        (json-response (cond
+                         (:ok result) 200
+                         (= :invalid-seat-cast (:error result)) 400
+                         :else 409)
+                       result)))))
+
+(defn mint-analyst-seat!
+  "Mint the fresh, invoke-ready Agency Analyst for TENURE."
+  ([config tenure]
+   (mint-analyst-seat! config tenure nil))
+  ([config tenure model]
+   (frame-seats/mint-analyst!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model))
+    tenure)))
+
+(defn- handle-analyst-seat-mint
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not payload
+      (json-response 400 {:ok false :error "invalid-json"})
+      (let [result (mint-analyst-seat!
+                    config
+                    (or (:tenure payload) (get payload "tenure"))
+                    (or (:model payload) (get payload "model")))]
+        (json-response (if (:ok result) 200 409) result)))))
+
+(defn- remote-home-refusal-response
+  [agent-id]
+  (json-response 409 {:ok false
+                      :err "remote-home-local-registration-refused"
+                      :message (str "Refusing to register remote-homed agent locally: "
+                                    agent-id)
+                      :agent-id agent-id}))
 
 (defn- handle-agents-register
   "POST /api/alpha/agents — register an agent via HTTP.
@@ -1913,6 +3950,10 @@
       (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
             agent-type-str (or (:type payload) (get payload "type"))
             agent-type (parse-keyword agent-type-str)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)
             origin-url (or (:origin-url payload) (get payload "origin-url"))
             proxy? (or (:proxy payload) (get payload "proxy") (some? origin-url))
             ws-bridge? (boolean (or (:ws-bridge payload)
@@ -1922,7 +3963,12 @@
             caps-raw (or (:capabilities payload) (get payload "capabilities"))
             capabilities (if (sequential? caps-raw)
                            (mapv keyword caps-raw)
-                           (get default-capabilities agent-type []))]
+                           (get default-capabilities agent-type []))
+            ;; the registrant's declared home federation point (e.g. the
+            ;; laptop's codex-3 ws-bridge presence on the hub declares "oxf")
+            ;; — drives site-grouping in the *agents* roster (AG-8 display)
+            home-site (some-> (or (:home-site payload) (get payload "home-site"))
+                              str str/trim str/lower-case not-empty)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -1930,156 +3976,233 @@
 
           (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
-                              :message "type is required (claude, codex, tickle, mock)"})
+                              :message "type is required (claude, codex, zai, tickle, mock)"})
+
+          (not (#{:push :inbox} delivery-mode))
+          (json-response 400 {:ok false :err "invalid-delivery-mode"
+                              :message "delivery-mode must be push or inbox"})
+
+          (and proxy? (str/blank? (str origin-url)))
+          (json-response 400 {:ok false :err "missing-origin-url"
+                              :message "proxy registration requires origin-url"})
+
+          (and (not origin-url)
+               (federation/remote-homed-agent-id? agent-id))
+          (remote-home-refusal-response agent-id)
 
           :else
-          (let [invoke-fn (cond
-                            (and proxy? origin-url (not (str/blank? origin-url)))
-                            (federation/make-proxy-invoke-fn origin-url agent-id)
-
-                            ws-bridge?
-                            nil
-
-                            :else
-                            (fn [_prompt _session-id]
-                              {:result "registered-via-http" :session-id nil}))
-                result (reg/register-agent!
-                        {:agent-id {:id/value (str agent-id) :id/type :continuity}
-                         :type agent-type
-                         :invoke-fn invoke-fn
-                         :capabilities capabilities
-                         :metadata (cond-> {}
-                                     proxy? (assoc :proxy? true)
-                                     ws-bridge? (assoc :ws-bridge? true)
-                                     origin-url (assoc :origin-url origin-url))})]
-            (if (and (map? result) (= false (:ok result)))
-              (json-response 409 {:ok false
-                                  :err "duplicate-registration"
-                                  :message (str "Agent already registered: " agent-id)
-                                  :detail result})
-              (if (and (map? result) (:agent/id result))
-                (json-response 201 {:ok true
-                                    :agent-id (get-in result [:agent/id :id/value])
-                                    :type (name (:agent/type result))
-                                    :proxy proxy?
-                                    :ws-bridge ws-bridge?})
+          (if (and proxy? origin-url (not (str/blank? origin-url)))
+            (let [result (federation/register-proxy-agent!
+                          origin-url
+                          agent-id
+                          (merge
+                           {:type agent-type
+                            :capabilities capabilities
+                            ;; origin's declared site (announce-to-peer! sends it) —
+                            ;; the home-site source for bare, unqualified ids
+                            :home-site home-site}
+                           (select-keys payload
+                                        [:status
+                                         :session-id
+                                         :campaign-id
+                                         :mission-id
+                                         :excursion-id
+                                         :invoke-started-at
+                                         :invoke-prompt-preview
+                                         :invoke-activity])))]
+              (if (:ok result)
+                (do
+                  ;; A proxy refresh changes operator-visible runtime state.
+                  ;; Publish it so local HUDs and any downstream WS uplink see
+                  ;; the transition instead of retaining the boot snapshot.
+                  (reg/publish-agents-status!)
+                  (json-response (if (= :registered (:action result)) 201 200)
+                                 {:ok true
+                                  :agent-id (:agent-id result)
+                                  :type (name agent-type)
+                                  :proxy true
+                                  :origin-url origin-url
+                                  :action (name (:action result))}))
                 (json-response 409 {:ok false
-                                    :err "registration-failed"
-                                    :message (str "Could not register: " agent-id)
-                                    :detail result})))))))))
+                                    :err (name (or (:action result) :registration-failed))
+                                    :message (str "Could not register proxy: " agent-id)
+                                    :detail result})))
+            (let [invoke-fn (if ws-bridge?
+                              nil
+                              (fn [_prompt _session-id]
+                                {:result "registered-via-http" :session-id nil}))
+                  result (reg/register-agent!
+                          {:agent-id {:id/value (str agent-id) :id/type :continuity}
+                           :type agent-type
+                           :delivery-mode delivery-mode
+                           :invoke-fn invoke-fn
+                           :capabilities capabilities
+                           :metadata (cond-> {}
+                                       ws-bridge? (assoc :ws-bridge? true)
+                                       home-site (assoc :home-site (keyword home-site)))})]
+              (if (and (map? result) (= false (:ok result)))
+                (json-response 409 {:ok false
+                                    :err "duplicate-registration"
+                                    :message (str "Agent already registered: " agent-id)
+                                    :detail result})
+                (if (and (map? result) (:agent/id result))
+                  (json-response 201 {:ok true
+                                      :agent-id (get-in result [:agent/id :id/value])
+                                      :type (name (:agent/type result))
+                                      :delivery-mode (name (:agent/delivery-mode result))
+                                      :proxy false
+                                      :ws-bridge ws-bridge?})
+                  (json-response 409 {:ok false
+                                      :err "registration-failed"
+                                      :message (str "Could not register: " agent-id)
+                                      :detail result}))))))))))
 
 (defn- handle-agents-auto-register
   "POST /api/alpha/agents/auto — allocate and register next available agent.
-   Body: {\"type\": \"claude\", \"session-id\": \"...\", \"cwd\": \"...\"} — type is required.
+   Body: {\"type\": \"claude\", \"session-id\": \"...\", \"cwd\": \"...\",
+          \"model\": \"fable\"} — type is required, model is optional
+   (CLI alias or full id; nil leaves the runtime's own default).
    Finds the next unused ID (e.g. claude-2 if claude-1 exists) and registers it
    with a real invoke-fn (resolved from dev.clj's local factories).
    Each call creates a new, independent agent (I-1: one agent = one identity)."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
-    (if (nil? payload)
+    (cond
+      (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
+
+      :else
       (let [agent-type-str (or (:type payload) (get payload "type"))
-            agent-type (parse-keyword agent-type-str)]
+            agent-type (parse-keyword agent-type-str)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)]
         (if (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
+          (if-not (#{:push :inbox} delivery-mode)
+            (json-response 400 {:ok false :err "invalid-delivery-mode"
+                                :message "delivery-mode must be push or inbox"})
           (let [prefix (name agent-type)
-                ;; Ghost reclamation: reclaim the lowest-numbered idle,
-                ;; session-less, auto-registered agent of this type rather
-                ;; than allocating ever-increasing nicks.
-                agent-id (if-let [ghost (reg/find-reclaimable-agent agent-type)]
-                           (do
-                             ;; Clean up stale session file before unregistering
-                             (let [stale-sf (case agent-type
-                                             :claude (format "/tmp/futon-session-id-%s" ghost)
-                                             :codex (format "/tmp/futon-codex-session-id-%s" ghost)
-                                             nil)]
-                               (when (and stale-sf (.exists (java.io.File. stale-sf)))
-                                 (.delete (java.io.File. stale-sf))))
-                             (reg/unregister-agent! ghost)
-                             ghost)
-                           (let [matching-ids (->> (reg/registered-agents)
-                                                   (map :id/value)
-                                                   (filter #(str/starts-with? (str %) (str prefix "-")))
-                                                   set)
-                                 next-n (loop [n 1]
-                                          (if (contains? matching-ids (str prefix "-" n))
-                                            (recur (inc n))
-                                            n))]
-                             (str prefix "-" next-n)))
-                initial-session-id (some-> (or (:session-id payload)
-                                               (get payload "session-id"))
-                                           str
-                                           str/trim
-                                           not-empty)
-                requested-cwd (some-> (or (:cwd payload)
-                                          (get payload "cwd"))
-                                      str
-                                      str/trim
-                                      not-empty)
-                campaign-id (some-> (or (:campaign-id payload)
-                                        (get payload "campaign-id"))
-                                    str
-                                    str/trim
-                                    not-empty)
-                mission-id (some-> (or (:mission-id payload)
-                                       (get payload "mission-id"))
-                                   str
-                                   str/trim
-                                   not-empty)
-                excursion-id (some-> (or (:excursion-id payload)
-                                         (get payload "excursion-id"))
-                                     str
-                                     str/trim
-                                     not-empty)
-                emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
-                session-file (default-session-file-for-agent agent-type agent-id)
-                ;; I-1: a fresh auto-register (no initial-session-id) must
-                ;; NOT silently inherit orphan session state from a prior
-                ;; incarnation of this agent-id. Delete stale file before
-                ;; seeding so Claude CLI mints a new session on first invoke.
-                _ (when (and session-file (nil? initial-session-id))
-                    (let [f (java.io.File. session-file)]
+                ghost (reg/find-reclaimable-agent agent-type)
+                agent-id (or ghost
+                             (let [matching-ids (->> (reg/registered-agents)
+                                                     (map :id/value)
+                                                     (filter #(str/starts-with? (str %) (str prefix "-")))
+                                                     set)
+                                   next-n (loop [n 1]
+                                            (if (contains? matching-ids (str prefix "-" n))
+                                              (recur (inc n))
+                                              n))]
+                               (str prefix "-" next-n)))]
+            (if (federation/remote-homed-agent-id? agent-id)
+              (remote-home-refusal-response agent-id)
+              (let [initial-session-id (some-> (or (:session-id payload)
+                                                   (get payload "session-id"))
+                                               str
+                                               str/trim
+                                               not-empty)
+                    requested-cwd (some-> (or (:cwd payload)
+                                              (get payload "cwd"))
+                                          str
+                                          str/trim
+                                          not-empty)
+                    memory-domain (or
+                                   (some-> (or (:memory-domain payload)
+                                               (get payload "memory-domain"))
+                                           parse-keyword)
+                                   ((requiring-resolve
+                                     'futon3c.agents.memory-provisioning/domain-for)
+                                    agent-id))
+                    campaign-id (some-> (or (:campaign-id payload)
+                                            (get payload "campaign-id"))
+                                        str
+                                        str/trim
+                                        not-empty)
+                    mission-id (some-> (or (:mission-id payload)
+                                           (get payload "mission-id"))
+                                       str
+                                       str/trim
+                                       not-empty)
+                    excursion-id (some-> (or (:excursion-id payload)
+                                             (get payload "excursion-id"))
+                                         str
+                                         str/trim
+                                         not-empty)
+                    emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
+                    ;; Which model this seat runs on. /agents/restore has always
+                    ;; taken it; without it here a caller that wanted a Fable or
+                    ;; Sonnet seat had to register first and then restore the same
+                    ;; id purely to rebuild the invoke-fn.
+                    model (some-> (or (:model payload) (get payload "model"))
+                                  str
+                                  str/trim
+                                  not-empty)
+                    session-file (default-session-file-for-agent agent-type agent-id)]
+                (when ghost
+                  ;; Same table as the fresh path: a second copy here drifted
+                  ;; (it never learned :kimi) the moment a type was added.
+                  (when-let [stale-sf (default-session-file-for-agent
+                                       agent-type ghost)]
+                    (let [f (java.io.File. stale-sf)]
                       (when (.exists f) (.delete f))))
-                sid-atom (make-session-id-atom initial-session-id session-file)
-                session-reset-fn (make-session-reset-fn session-file sid-atom)
-                invoke-fn (make-local-agent-invoke-fn
-                           agent-type
-                           {:agent-id agent-id
-                            :session-file session-file
-                            :initial-session-id initial-session-id
-                            :session-id-atom sid-atom
-                            :requested-cwd requested-cwd
-                            :emacs-socket emacs-socket})
-                result (reg/register-agent!
-                        {:agent-id {:id/value agent-id :id/type :continuity}
-                         :type agent-type
-                         :invoke-fn invoke-fn
-                         :session-reset-fn session-reset-fn
-                         :capabilities (get default-capabilities agent-type [])
-                         :metadata (cond-> {:auto-registered? true}
-                                     (= agent-type :codex) (assoc :require-execution? true)
-                                     requested-cwd (assoc :cwd requested-cwd)
-                                     campaign-id (assoc :campaign-id campaign-id)
-                                     mission-id (assoc :mission-id mission-id)
-                                     excursion-id (assoc :excursion-id excursion-id)
-                                     emacs-socket (assoc :emacs-socket emacs-socket))})]
-            (when (and invoke-fn (map? result) (:agent/id result))
-              (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
-              (when initial-session-id
-                (when session-file
-                  (spit session-file initial-session-id))
-                (reg/update-agent! agent-id :agent/session-id initial-session-id)))
-            (if (and (map? result) (:agent/id result))
-              (json-response 201 {:ok true
-                                  :agent-id agent-id
-                                  :type (name agent-type)
-                                  :session-id initial-session-id
+                  (reg/unregister-agent! ghost))
+                ;; I-1: a fresh auto-register (no initial-session-id) must not
+                ;; silently inherit orphan session state from a prior incarnation.
+                (when (and session-file (nil? initial-session-id))
+                  (let [f (java.io.File. session-file)]
+                    (when (.exists f) (.delete f))))
+                (let [sid-atom (make-session-id-atom initial-session-id session-file)
+                      session-reset-fn (make-session-reset-fn session-file sid-atom)
+                      invoke-fn (make-local-agent-invoke-fn
+                                 agent-type
+                                 {:agent-id agent-id
                                   :session-file session-file
-                                  :cwd requested-cwd})
-              (json-response 409 {:ok false
-                                  :err "registration-failed"
-                                  :message (str "Could not register: " agent-id)}))))))))
+                                  :initial-session-id initial-session-id
+                                  :session-id-atom sid-atom
+                                  :requested-cwd requested-cwd
+                                  :memory-domain memory-domain
+                                  :emacs-socket emacs-socket
+                                  :model model
+                                  :evidence-store (evidence-store-for-config config)
+                                  :irc-send-fn (:irc-send-fn config)})
+                      result (when invoke-fn
+                               (reg/register-agent!
+                                {:agent-id {:id/value agent-id :id/type :continuity}
+                                 :type agent-type
+                                 :delivery-mode delivery-mode
+                                 :invoke-fn invoke-fn
+                                 :session-reset-fn session-reset-fn
+                                 :capabilities (get default-capabilities agent-type [])
+                                 :metadata (cond-> {:auto-registered? true}
+                                             (= agent-type :codex) (assoc :require-execution? true)
+                                             requested-cwd (assoc :cwd requested-cwd)
+                                             model (assoc :model model)
+                                             memory-domain (assoc :memory-domain memory-domain)
+                                             campaign-id (assoc :campaign-id campaign-id)
+                                             mission-id (assoc :mission-id mission-id)
+                                             excursion-id (assoc :excursion-id excursion-id)
+                                             emacs-socket (assoc :emacs-socket emacs-socket))}))]
+                  (when (and (map? result) (:agent/id result))
+                    (when invoke-fn
+                      (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
+                    (when initial-session-id
+                      (when session-file
+                        (spit session-file initial-session-id))
+                      (reg/update-agent! agent-id :agent/session-id initial-session-id)))
+                  (if (and (map? result) (:agent/id result))
+                    (json-response 201 {:ok true
+                                        :agent-id agent-id
+                                        :type (name agent-type)
+                                        :session-id initial-session-id
+                                        :session-file session-file
+                                        :cwd requested-cwd
+                                        :model model
+                                        :memory-domain memory-domain})
+                    (json-response 409 {:ok false
+                                        :err "registration-failed"
+                                        :message (str "Could not register: " agent-id)}))))))))))))
 
 (defn- handle-agent-restore
   "POST /api/alpha/agents/restore — rehydrate or refresh an exact agent identity.
@@ -2088,7 +4211,7 @@
           \"emacs-socket\": \"server\"}
    If the agent is already live, refresh its invoke-fn/session metadata.
    If it is missing, recreate the exact identity instead of allocating a new one."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
@@ -2096,6 +4219,10 @@
                              str str/trim not-empty)
             agent-type (some-> (or (:type payload) (get payload "type"))
                                parse-keyword)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)
             initial-session-id (some-> (or (:session-id payload)
                                            (get payload "session-id"))
                                        str str/trim not-empty)
@@ -2113,8 +4240,15 @@
             emacs-socket (some-> (or (:emacs-socket payload)
                                      (get payload "emacs-socket"))
                                  str str/trim not-empty)
-            model (some-> (or (:model payload) (get payload "model"))
-                          str str/trim not-empty)
+            requested-model (some-> (or (:model payload) (get payload "model"))
+                                    str str/trim not-empty)
+            memory-domain (or
+                           (some-> (or (:memory-domain payload)
+                                       (get payload "memory-domain"))
+                                   parse-keyword)
+                           ((requiring-resolve
+                             'futon3c.agents.memory-provisioning/domain-for)
+                            agent-id))
             raw-metadata (or (:metadata payload) (get payload "metadata") {})
             raw-contracts (or (:agency/contracts payload)
                               (get payload "agency/contracts")
@@ -2122,11 +4256,25 @@
                               (get raw-metadata "agency/contracts"))
             restored-detached? (true? (or (:restored-detached? payload)
                                           (get payload "restored-detached?")))
-            session-file (some-> (or (:session-file payload)
-                                     (get payload "session-file")
-                                     (default-session-file-for-agent agent-type agent-id))
-                                 str str/trim not-empty)
+            apparatus? (= :wm agent-type)
+            session-file (when-not apparatus?
+                           (some-> (or (:session-file payload)
+                                       (get payload "session-file")
+                                       (default-session-file-for-agent
+                                        agent-type agent-id))
+                                   str str/trim not-empty))
             existing (when agent-id (reg/get-agent agent-id))
+            ;; A restore that says nothing about the model keeps the one the seat
+            ;; already runs on. Most callers omit it — claude-repl.el's attach and
+            ;; emacs-agency-restore both send agent-id/type/cwd and no model — and
+            ;; rebuilding the invoke-fn without it moved the seat to the CLI's
+            ;; default while the merged metadata still read "fable": the roster,
+            ;; the voxterm chip and the operator all agreed on a model the process
+            ;; was not running (2026-08-29). Silent, and invisible until a bill.
+            model (or requested-model
+                      (let [m (:agent/metadata existing)]
+                        (some-> (or (:model m) (get m "model"))
+                                str str/trim not-empty)))
             restore-session-id (or initial-session-id
                                    (:agent/session-id existing))
             effective-cwd (or (when (= :claude agent-type)
@@ -2141,20 +4289,32 @@
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
 
+          (not (#{:push :inbox} delivery-mode))
+          (json-response 400 {:ok false :err "invalid-delivery-mode"
+                              :message "delivery-mode must be push or inbox"})
+
+          (federation/remote-homed-agent-id? agent-id)
+          (remote-home-refusal-response agent-id)
+
           :else
           (let [sid-atom (make-session-id-atom initial-session-id session-file)
                 session-reset-fn (make-session-reset-fn session-file sid-atom)
-                invoke-fn (make-local-agent-invoke-fn
-                           agent-type
-                           {:agent-id agent-id
-                            :session-file session-file
-                            :initial-session-id initial-session-id
-                            :session-id-atom sid-atom
-                            :requested-cwd effective-cwd
-                            :emacs-socket emacs-socket
-                            :model model})
+                invoke-fn (when-not apparatus?
+                            (make-local-agent-invoke-fn
+                             agent-type
+                             {:agent-id agent-id
+                              :session-file session-file
+                              :initial-session-id initial-session-id
+                              :session-id-atom sid-atom
+                              :requested-cwd effective-cwd
+                              :emacs-socket emacs-socket
+                              :model model
+                              :memory-domain memory-domain
+                              :evidence-store (evidence-store-for-config config)
+                              :irc-send-fn (:irc-send-fn config)}))
                 metadata (cond-> (merge {:auto-registered? true}
                                         (when (map? raw-metadata) raw-metadata))
+                           apparatus? (assoc :apparatus? true)
                            (= agent-type :codex) (assoc :require-execution? true)
                            session-file (assoc :session-file session-file)
                            effective-cwd (assoc :cwd effective-cwd)
@@ -2163,10 +4323,11 @@
                            excursion-id (assoc :excursion-id excursion-id)
                            emacs-socket (assoc :emacs-socket emacs-socket)
                            model (assoc :model model)
+                           memory-domain (assoc :memory-domain memory-domain)
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]
-            (if (nil? invoke-fn)
+            (if (and (nil? invoke-fn) (not apparatus?))
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
@@ -2190,6 +4351,7 @@
                         result (reg/update-agent!
                                 agent-id
                                 :agent/type agent-type
+                                :agent/delivery-mode delivery-mode
                                 :agent/invoke-fn invoke-fn
                                 :agent/session-reset-fn session-reset-fn
                                 :agent/capabilities (get default-capabilities agent-type [])
@@ -2215,6 +4377,7 @@
                   (let [result (reg/register-agent!
                                 {:agent-id {:id/value agent-id :id/type :continuity}
                                  :type agent-type
+                                 :delivery-mode delivery-mode
                                  :invoke-fn invoke-fn
                                  :session-reset-fn session-reset-fn
                                  :capabilities (get default-capabilities agent-type [])
@@ -2258,7 +4421,15 @@
                                 {:agent-id agent-id
                                  :session-file (default-session-file-for-agent :claude agent-id)
                                  :initial-session-id (:agent/session-id agent)
-                                 :emacs-socket emacs-socket})]
+                                 :emacs-socket emacs-socket
+                                 ;; Carry the seat's model across the rebuild, for
+                                 ;; the same reason /agents/restore does: this
+                                 ;; endpoint is about the socket, and moving a
+                                 ;; Fable seat back to the default model as a side
+                                 ;; effect of rebinding it would be silent.
+                                 :model (let [m (:agent/metadata agent)]
+                                          (some-> (or (:model m) (get m "model"))
+                                                  str str/trim not-empty))})]
               (do
                 (reg/update-agent! agent-id
                                    :agent/invoke-fn invoke-fn
@@ -2318,6 +4489,28 @@
         (catch Exception e
           (println (str "[review] snapshot emit warning: " (.getMessage e))))))))
 
+;; --- Provenance edge (E-patch-agent-evidence-leaks) ---------------------------
+;; Every mesh-injected turn is born carrying its coordination edge so no downstream
+;; consumer can mistake a non-operator turn for an operator one. From/To/Origin are
+;; TOTAL (always stamped); the keep/drop rule is the single predicate
+;; "operator ∈ {From,To}". Origin resolves the role of From and never returns nil.
+(def ^:private harness-callers
+  #{"auto-bellback" "auto" "system" "cron" "heartbeat" "apm-harvest" "claude-loop"})
+
+(defn- resolve-origin
+  "Resolve the provenance role of a turn's author (the From endpoint):
+   \"operator\" (Joe) | \"harness\" (automated agency/harness senders) | \"agent\"
+   (a named agent, or any other programmatic caller — the safe non-operator default).
+   Total: always returns one of the three."
+  [caller surface]
+  (let [c (some-> caller str str/trim str/lower-case)
+        s (some-> surface str str/trim str/lower-case)]
+    (cond
+      (or (= c "joe") (= c "joe-repl"))                 "operator"
+      (or (contains? harness-callers c)
+          (= s "auto-bellback"))                        "harness"
+      :else                                             "agent")))
+
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
@@ -2331,17 +4524,52 @@
    (if (and surface (not (str/blank? (str surface))))
      (let [backpack (when agent-id
                       (some-> (get @reg/!registry (str agent-id))
-                              :agent/metadata :backpack seq))]
+                              :agent/metadata :backpack seq))
+           ;; Will this turn's response be auto-delivered back to the caller? If so,
+           ;; the agent must NOT also manually bell the caller (double-delivery — the
+           ;; 2026-06-26 claude-11 dup). Drives the reply contract below.
+           auto-routes? (and (:bell-id thread)
+                             (reply-auto-routes? agent-id caller))]
        (str "--- CURRENT TURN ---\n"
             "Surface: " surface "\n"
+            ;; Provenance edge (E-patch-agent-evidence-leaks): From/To/Origin are TOTAL —
+            ;; always stamped, so an unmarked turn can never default to operator. Edge is the
+            ;; join-key into the durable coordination ledger (= job-id; see record-invoke-edge!).
+            "From: " (let [c (some-> caller str str/trim)]
+                       (if (str/blank? c) "unknown-agent" c)) "\n"
+            "To: " (let [t (some-> agent-id str str/trim)]
+                     (if (str/blank? t) "unknown-agent" t)) "\n"
+            "Origin: " (resolve-origin caller surface) "\n"
+            (when-let [edge (:edge thread)]
+              (str "Edge: " edge "\n"))
+            ;; Caller retained as a legacy alias of From for back-compat with existing parsers.
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
+            ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
+            ;; and forbid a manual re-send — independent of bell-router, since the dup
+            ;; happened with bell-router off (the agent re-sent defensively).
+            (when auto-routes?
+              (str "Reply delivery: your response this turn is delivered back to " caller
+                   " automatically as a completion bell. Just respond — do NOT also "
+                   "bell/whistle " caller " to deliver the same answer (that double-delivers; "
+                   "bell " caller " yourself only to open a genuinely NEW thread).\n"))
+            ;; Warrant rides the handoff (test-registry): render the handoff's
+            ;; warrant status right after the caller/reply-delivery lines so the
+            ;; reviewer sees entry ids, lanes and base shas without searching.
+            (when-let [w (:warrants thread)]
+              (warrant/render-warrant-lines w))
             ;; bell-router: thread context so the recipient can thread the bell and
-            ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to.
+            ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to —
+            ;; but only instructs a MANUAL reply-bell when the response won't auto-route.
             (when (and (bell-router-enabled?) (:bell-id thread))
-              (if (:in-reply-to thread)
+              (cond
+                (:in-reply-to thread)
                 (str "Thread: bell `" (:bell-id thread) "` — REPLY to bell `"
                      (:in-reply-to thread) "`\n")
+                auto-routes?
+                (str "Thread: bell `" (:bell-id thread) "` — NEW request from " caller
+                     ". Just respond to answer in-thread (auto-routes back).\n")
+                :else
                 (str "Thread: bell `" (:bell-id thread) "` — NEW request. To answer "
                      "in-thread, bell/whistle " caller " with in-reply-to=`"
                      (:bell-id thread) "`.\n")))
@@ -2400,6 +4628,23 @@
            "- E2E script command: `MINIBUFFER: {\"command\":\"run-script\",\"steps\":[{\"op\":\"switch-buffer\",\"buffer\":\"*codex-repl:codex-8*\"},{\"op\":\"forward-line\",\"count\":2},{\"op\":\"snapshot\"}]}`.\n"
            "- Example: `MINIBUFFER: {\"command\":\"refresh-context\"}` or `MINIBUFFER: Inspect current defun`.\n\n"))))
 
+(defn- problem-conductor-contract-block
+  "Render factual transport metadata for an agent's live conductor binding."
+  [agent-id]
+  (when-let [session-id (some-> (reg/get-agent (str agent-id))
+                                :agent/session-id)]
+    (let [{:keys [bound? problem-id cycle-id phase version]}
+          (conductor-binding/status (str agent-id) session-id)]
+      (when bound?
+        (str "Problem-conductor surface contract:\n"
+             "- Problem: " problem-id "\n"
+             "- Cycle: " cycle-id "\n"
+             ;; a cycle completed outside the route can leave a nil phase
+             ;; momentarily; prompt assembly must never throw
+             "- Current phase: " (if phase (name phase) "completed (sentinel)") "\n"
+             "- Version: " version "\n"
+             "- Delivery rule: effectful conductor operations are submitted as typed problem actions via /api/alpha/conductor/action with your action-id/cycle-id/version; reads are unrestricted.\n\n")))))
+
 (defn- wrap-agent-facing-surface
   "Apply authoritative surface header plus any live agent-facing projection."
   ([prompt surface caller agent-id]
@@ -2407,6 +4652,7 @@
   ([prompt surface caller agent-id thread]
    (str (wrap-surface-header "" surface caller agent-id thread)
         (or (surface-projection-block agent-id) "")
+        (or (problem-conductor-contract-block agent-id) "")
         prompt)))
 
 (defn- parse-minibuffer-directive
@@ -2489,49 +4735,132 @@
 (def ^:private planning-only-re
   #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
 
+(def ^:private bash-tool-name-re
+  "Matches tool names that represent shell/command execution (Bash, bash, etc.)."
+  #"(?i)\bbash\b")
+
+(defn- tool-use-event?
+  "True when a recorded job event is a tool_use event."
+  [event]
+  (= "tool_use" (str (:type event))))
+
+(defn- event-names-bash?
+  "True when a tool_use event's payload names a Bash-ish tool."
+  [event]
+  (let [tools (:tools event)
+        previews (:previews event)]
+    (or (some #(re-find bash-tool-name-re (str %)) tools)
+        (some #(re-find bash-tool-name-re (str %)) previews))))
+
+(defn- count-tool-use-events
+  "Count tool_use events in EVENTS (a job's :events vector).
+   Returns {:tool-events n :command-events m} where command-events is the
+   subset of tool_use events whose payload names a Bash-ish tool."
+  [events]
+  (let [tool-events (filter tool-use-event? events)
+        tool-count (count tool-events)
+        command-count (count (filter event-names-bash? tool-events))]
+    {:tool-events (long tool-count)
+     :command-events (long command-count)}))
+
+(defn- execution-evidence-from-ledger
+  "Best-effort: derive execution evidence from a job's recorded stream events.
+   Returns nil when the job is unknown or has no tool_use events. The ledger
+   is in-memory and lost on restart — this is corroboration only."
+  [job-id]
+  (when (some? job-id)
+    (let [events (:events (get-in @!invoke-jobs-ledger [:jobs job-id]))
+          {:keys [tool-events command-events]} (count-tool-use-events events)]
+      (when (pos? tool-events)
+        {:executed true
+         :tool-events tool-events
+         :command-events command-events}))))
+
 (defn- invoke-execution-evidence
-  "Extract execution evidence map from invoke result metadata."
-  [result]
-  (let [invoke-meta (:invoke-meta result)
-        execution (or (:execution invoke-meta) (get invoke-meta "execution"))
-        raw-executed (or (:executed? execution) (get execution "executed?")
+  "Extract execution evidence map from invoke result metadata.
+
+   When JOB-ID is supplied and the self-reported execution evidence (from
+   :invoke-meta) is absent or reports zero tool-events, consult the job's
+   recorded stream events as a best-effort fallback. The fallback may only
+   UPGRADE evidence (absent/zero -> observed-positive), never downgrade."
+  ([result]
+   (invoke-execution-evidence result nil))
+  ([result job-id]
+   (let [invoke-meta (:invoke-meta result)
+         execution (or (:execution invoke-meta) (get invoke-meta "execution"))
+         raw-executed (or (:executed? execution) (get execution "executed?")
                          (:executed execution) (get execution "executed"))
-        executed (cond
-                   (boolean? raw-executed) raw-executed
-                   (string? raw-executed) (boolean (parse-bool raw-executed))
-                   :else (boolean raw-executed))
-        tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
-        command-events (long (or (:command-events execution) (get execution "command-events") 0))]
-    {:executed executed
-     :tool-events tool-events
-     :command-events command-events}))
+         executed (cond
+                    (boolean? raw-executed) raw-executed
+                    (string? raw-executed) (boolean (parse-bool raw-executed))
+                    :else (boolean raw-executed))
+         tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
+         command-events (long (or (:command-events execution) (get execution "command-events") 0))
+         self-reported-positive? (or executed
+                                     (pos? tool-events)
+                                     (pos? command-events))
+         fallback (when (not self-reported-positive?)
+                    (execution-evidence-from-ledger job-id))]
+     (cond
+       (some? fallback) fallback
+       :else {:executed executed
+              :tool-events tool-events
+              :command-events command-events}))))
+
+(defn- enrich-result-with-stream-execution
+  "Layer-1 source fix: populate :invoke-meta :execution on RESULT from the
+   job's recorded tool_use stream events when the lane did not self-report
+   execution telemetry (the claude lane currently does not; codex does).
+
+   This runs BEFORE the execution gate (codex-task-no-execution?) so that an
+   honest claude review that DID run tools is not refused. The ledger events
+   are in-memory; on a fresh JVM the events are absent and this is a no-op,
+   leaving the result unchanged. Mirrors the shape codex populates:
+   {:executed true :tool-events n :command-events m}.
+
+   Only UPGRADES — never overwrites existing self-reported execution evidence."
+  [job-id result]
+  (let [existing (or (get-in result [:invoke-meta :execution])
+                     (get-in result [:invoke-meta "execution"]))
+        existing-positive? (or (:executed? existing) (:executed existing)
+                               (pos? (long (or (:tool-events existing) 0)))
+                               (pos? (long (or (:command-events existing) 0))))]
+    (if existing-positive?
+      result
+      (if-let [evidence (execution-evidence-from-ledger job-id)]
+        (update result :invoke-meta
+                #(assoc (or % {}) :execution evidence))
+        result))))
 
 (defn- agent-requires-execution?
-  "Return true when the agent metadata requests execution evidence enforcement."
+  "Return true when AGENT-ID's declared role requires execution evidence.
+   Reads the registered provider and metadata (futon3c.agency.roles), not the
+   id's prefix: an id beginning \"codex\" is not evidence of anything."
   [agent-id]
-  (let [record (reg/get-agent agent-id)
-        metadata (:agent/metadata record)
-        aid (some-> agent-id str str/lower-case)]
-    (boolean (or (get metadata :require-execution?)
-                 (get metadata "require-execution?")
-                 (and (string? aid)
-                      (str/starts-with? aid "codex"))))))
+  (roles/requires-execution? agent-id))
 
 (defn- codex-task-no-execution?
   "True when an execution-enforced agent returns a task-mode reply with no evidence.
-   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests."
+   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests. JOB-MODE,
+   when supplied, is authoritative; prompt inference remains the legacy fallback."
   ([agent-id prompt result]
    (codex-task-no-execution? agent-id prompt result nil))
   ([agent-id prompt result require-execution?]
+   (codex-task-no-execution? agent-id prompt result require-execution? nil))
+  ([agent-id prompt result require-execution? job-mode]
    (let [text (some-> (:result result) str str/trim)
          {:keys [executed tool-events command-events]} (invoke-execution-evidence result)
          enforced? (if (some? require-execution?)
                      (boolean require-execution?)
-                     (agent-requires-execution? agent-id))]
+                     (agent-requires-execution? agent-id))
+         work-mode? (if (some? job-mode)
+                      (= "work" (normalize-invoke-job-mode job-mode))
+                      (let [p (str (or prompt ""))]
+                        (or (boolean (re-find task-mode-re p))
+                            (boolean (re-find mission-work-re p)))))]
     (and enforced?
          (string? prompt)
-         (or (boolean (re-find task-mode-re prompt))
-             (boolean (re-find mission-work-re prompt)))
+         work-mode?
          (string? text)
          (not (str/blank? text))
          (not (boolean (re-find planning-only-re text)))
@@ -2551,7 +4880,7 @@
   [agent-id result]
   (and (not (:ok result))
        (string? agent-id)
-       (str/starts-with? (str/lower-case agent-id) "claude")
+       (roles/provider? agent-id :claude)
        (boolean
         (re-find #"No conversation found with session ID:"
                  (result-error-message result)))))
@@ -2562,13 +4891,15 @@
    The retry is intentionally narrow. File/incoming session precedence remains
    unchanged for normal invokes; only the Claude CLI's authoritative
    \"No conversation found\" response clears backing continuity."
-  [agent-id prompt timeout-ms]
+  [agent-id prompt invoke-options dispatch-id]
   (let [aid (str agent-id)
-        first-result (reg/invoke-agent! aid prompt timeout-ms)]
+        invoke-options (assoc (or invoke-options {})
+                              :dispatch-id (str dispatch-id))
+        first-result (reg/invoke-agent! aid prompt invoke-options)]
     (if (claude-missing-conversation-result? aid first-result)
       (let [reset-result (reg/reset-session! aid)]
         (if (:ok reset-result)
-          (let [retry-result (reg/invoke-agent! aid prompt timeout-ms)]
+          (let [retry-result (reg/invoke-agent! aid prompt invoke-options)]
             (cond-> retry-result
               (map? retry-result)
               (assoc :session-recovery
@@ -2590,20 +4921,59 @@
         mission-id (or (:mission-id payload) (get payload "mission-id"))
         timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                            long)
+        model (some-> (or (:model payload) (get payload "model"))
+                      str str/trim not-empty)
         ev-opts (when mission-id [:mission-id mission-id])
-        job-id (create-invoke-job! {:requested-job-id requested-job-id
+        execution-started? (atom false)
+        job-id (create-invoke-job! {:evidence-store evidence-store
+                                    :requested-job-id requested-job-id
                                     :agent-id agent-id
                                     :prompt prompt
                                     :caller caller
-                                    :surface surface})]
+                                    :surface surface
+                                    :model model})]
     (try
-      (mark-invoke-job-running! job-id)
+      (when-not (mark-invoke-job-running! job-id)
+        (throw (ex-info "invoke job is already running or terminal"
+                        {:refusal :invoke-job-execution-reuse :job-id job-id})))
+      (reset! execution-started? true)
+      (register-job-worker! job-id (Thread/currentThread) nil)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
+            ;; Announced jobs reach this direct-invoke boundary from the agent's
+            ;; turn drainer. Give them the same ledger observability as bell jobs:
+            ;; compose with a stream consumer already installed by another surface,
+            ;; and restore that exact consumer after this invoke finishes.
+            aid (str agent-id)
+            prev-sink (reg/get-invoke-event-sink aid)
+            _ (reg/set-invoke-event-sink!
+               aid
+               (fn [event]
+                 (try (record-job-stream-event! job-id event) (catch Throwable _))
+                 (when prev-sink (try (prev-sink event) (catch Throwable _)))))
+            _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
+                   (catch Throwable _))
+            raw-result (try
+                         (invoke-agent-with-session-recovery!
+                          aid effective-prompt
+                          {:timeout-ms timeout-ms :model model
+                           :mission-id mission-id :evidence-store evidence-store
+                           ;; Requisition-gated seats (kimi) exempt replies
+                           ;; to their own bells and remind the caller.
+                           :caller caller
+                           :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
+                                                    [:jobs job-id :inherited-clock])} job-id)
+                         (finally
+                           (if prev-sink
+                             (reg/set-invoke-event-sink! aid prev-sink)
+                             (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
+            result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
-                              (codex-task-no-execution? agent-id effective-prompt result))
+                              (codex-task-no-execution?
+                               agent-id effective-prompt result nil
+                               (:mode (get-in (ensure-invoke-jobs-ledger!)
+                                              [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
@@ -2641,31 +5011,92 @@
                               :error (name code)
                               :message msg})))))
       (catch Throwable t
-        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
-        (json-response 500 {:ok false
-                            :job-id job-id
-                            :error "invoke-error"
-                            :message (.getMessage t)})))))
+        (if @execution-started?
+          (do
+            (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+            (json-response 500 {:ok false
+                                :job-id job-id
+                                :error "invoke-error"
+                                :message (.getMessage t)}))
+          (json-response 409 {:ok false
+                              :job-id job-id
+                              :error "invoke-job-execution-reuse"
+                              :message (.getMessage t)})))
+      (finally
+       (when @execution-started?
+         (unregister-job-worker! job-id)
+         (finish-controller-execution! job-id)
+         ;; Only the execution owner may reset the agent status.
+         (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))))))
 
-(defn- run-invoke-job!
+(defn- run-invoke-job-body!
   "Execute a queued invoke job to terminal state.
-   Used by async bell worker and can be reused by other async surfaces."
-  [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store]}]
-  (let [ev-opts (when mission-id [:mission-id mission-id])]
+   Used by async bell worker and can be reused by other async surfaces.
+   Call run-invoke-job! rather than this: the wrapper refuses jobs that already
+   reached a terminal state while they sat in the queue."
+  [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
+           model reasoning-effort warrants]}]
+  (let [ev-opts (when mission-id [:mission-id mission-id])
+        execution-started? (atom false)]
     (try
-      (mark-invoke-job-running! job-id)
-      (let [thread (when (= "bell" (some-> surface str str/trim))
-                     (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
-                       {:bell-id job-id
-                        :in-reply-to (:bellback-of job)
-                        :type (:bell-type job)
-                        :ref (:ref job)}))
+      (when-not (mark-invoke-job-running! job-id)
+        (throw (ex-info "invoke job is already running or terminal"
+                        {:refusal :invoke-job-execution-reuse :job-id job-id})))
+      (reset! execution-started? true)
+      (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
+                         job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
+                     ;; :edge (= job-id) is the join-key, carried on ALL surfaces; bell-router /
+                     ;; typed-bell fields stay bell-only and flag-gated as before.
+                     (cond-> {:edge job-id}
+                       bell? (assoc :bell-id job-id
+                                    :in-reply-to (:bellback-of job)
+                                    :type (:bell-type job)
+                                    :ref (:ref job))
+                       ;; Warrant rides the handoff: the reviewer meets the
+                       ;; warrant in the delivered turn header (see
+                       ;; wrap-surface-header), without searching the registry.
+                       (some? warrants) (assoc :warrants warrants)))
             effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
-            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
+            ;; Install a ledger-appending event sink for the duration of the
+            ;; invoke so bell-seeded turns record text/tool_use events (the
+            ;; invoke-stream path installs its own sink; bells had none, so
+            ;; they ran unobservably). Composes with and restores any
+            ;; existing sink rather than clobbering it.
+            aid (str agent-id)
+            prev-sink (reg/get-invoke-event-sink aid)
+            _ (reg/set-invoke-event-sink!
+               aid
+               (fn [event]
+                 (try (record-job-stream-event! job-id event) (catch Throwable _))
+                 (when prev-sink (try (prev-sink event) (catch Throwable _)))))
+            ;; Persist the raw caller prompt (not the surface-wrapped one)
+            ;; into the job record for D-7 session rehydration.
+            _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
+                   (catch Throwable _))
+            raw-result (try
+                         (supervise-invoke-future!
+                          job-id timeout-ms
+                          #(invoke-agent-with-session-recovery!
+                            aid effective-prompt
+                            {:timeout-ms timeout-ms
+                             :model model :reasoning-effort reasoning-effort
+                             :mission-id mission-id :evidence-store evidence-store
+                             :caller caller
+                             :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
+                                                      [:jobs job-id :inherited-clock])}
+                            job-id))
+                         (finally
+                           (if prev-sink
+                             (reg/set-invoke-event-sink! aid prev-sink)
+                             (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
+            result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
-                              (codex-task-no-execution? agent-id effective-prompt result))
+                              (codex-task-no-execution?
+                               agent-id effective-prompt result nil
+                               (:mode (get-in (ensure-invoke-jobs-ledger!)
+                                              [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
@@ -2688,11 +5119,46 @@
          :terminal-code terminal-code
          :terminal-message terminal-message})
       (catch Throwable t
-        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+        (if @execution-started?
+          (do
+            (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+            {:ok false
+             :job-id job-id
+             :error "invoke-error"
+             :message (.getMessage t)})
+          {:ok false
+           :job-id job-id
+           :error "invoke-job-execution-reuse"
+           :message (.getMessage t)}))
+      (finally
+       (when @execution-started?
+         ;; Only the owner registered for this execution may remove it.
+         (unregister-job-worker! job-id)
+         (finish-controller-execution! job-id)
+         ;; Guarantee: every owned terminal outcome resets agent status.
+         (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))))))
+
+(defn- run-invoke-job!
+  "Run JOB-ID unless it already ended while queued.
+
+   POST /api/alpha/invoke/jobs/:id/cancel finalizes the ledger row immediately,
+   but a queued job also sits in its agent's turn-queue, and the drainer used to
+   reach it later and mark it running again — resurrecting a job the operator
+   had stopped and putting the seat back to work under a `cancelled` row. The
+   state read here is the same single-finalizer ledger the cancel writes."
+  [{:keys [job-id agent-id] :as opts}]
+  (let [state (some-> (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]) :state str)]
+    (if (terminal-invoke-state? state)
+      (do
+        (println (str "[invoke] skipping " job-id " for " agent-id
+                      ": already " state " before execution began"))
         {:ok false
          :job-id job-id
-         :error "invoke-error"
-         :message (.getMessage t)}))))
+         :error "invoke-job-already-terminal"
+         :state state
+         :message (str "Job " job-id " was already " state
+                       " when the queue reached it; not run.")})
+      (run-invoke-job-body! opts))))
 
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
@@ -2845,9 +5311,245 @@
 
     {:ok true :ref ref}))
 
+(defn- req-query-param [request k]
+  (when-let [qs (:query-string request)]
+    (some-> (re-find (re-pattern (str "(?:^|&)" (java.util.regex.Pattern/quote k) "=([^&]*)")) qs)
+            second
+            (java.net.URLDecoder/decode "UTF-8"))))
+
+(defn- agent-in-flight-turn?
+  "True when AGENT currently has an in-flight turn (the authoritative busy signal).
+   Source of truth: registry-status computes :invoking from ALL turn paths —
+   server-side warm-pouch invoke, cold fallback, bell-drained turns, REPL-streamed
+   turns, and external codex surfaces. This is the reliable idle signal the elisp
+   poller's agent-chat--streaming-started flag was not (E-park-delivery-losses bug 2)."
+  [agent]
+  (try
+    (= :invoking (get-in (reg/registry-status) [:agents (str agent) :status]))
+    (catch Throwable _ false)))
+
+(defn- exact-agent-session? [agent session]
+  (= (str session) (some-> (reg/get-agent (str agent)) :agent/session-id str)))
+
+(defn- handle-followup-enqueue [request]
+  (let [body (parse-json-map (read-body request))
+        agent (or (:agent body) (get body "agent"))
+        session (or (:session body) (get body "session"))
+        type (parse-keyword (or (:type body) (get body "type")))
+        dedupe-key (or (:dedupe-key body) (get body "dedupe-key"))
+        prompt (or (:prompt body) (get body "prompt"))]
+    (cond
+      (not (exact-agent-session? agent session))
+      (json-response 409 {:ok false :error "agent-session-mismatch"})
+      :else
+      (try
+        (json-response 200 (assoc (followup-queue/enqueue!
+                                   {:agent agent :session session :type type
+                                    :dedupe-key dedupe-key :prompt prompt
+                                    :metadata (or (:metadata body) (get body "metadata"))})
+                                  :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 400 {:ok false :error "invalid-followup"
+                              :message (.getMessage e)}))))))
+
+(defn- handle-followup-ready [request]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")
+        now (System/currentTimeMillis)
+        ttl-ms (try (Long/parseLong (or (dev-config/env "FUTON3C_FOLLOWUP_TTL_MS")
+                                        "21600000"))
+                    (catch Throwable _ 21600000))
+        current? (followup-validity/validator {})]
+    (cond
+      (agent-in-flight-turn? agent)
+      (json-response 200 {:ok true :ready [] :withheld true})
+      :else
+      (let [item (followup-queue/lease-one!
+                  agent session
+                  (fn [queued]
+                    (cond
+                      (not (exact-agent-session? (:agent queued) (:session queued)))
+                      :revalidation-failed
+
+                      (< (+ (long (or (:created-at-ms queued) 0)) ttl-ms) now)
+                      :expired
+
+                      (not (current? queued)) :stale
+                      :else true)))]
+        (json-response 200 {:ok true :ready (if item [item] [])
+                            :leased (some? item)})))))
+
+(defn- handle-followup-ack [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true :acked (boolean (followup-queue/ack! id))}))))
+
+(defn- handle-followup-cancel [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true
+                          :cancelled (followup-queue/cancel!
+                                      id (or (:reason body) (get body "reason")
+                                             :sender-cancelled))}))))
+
+(defn- handle-parked-ready
+  "GET /api/alpha/parked/ready?agent=&session= — poll-and-lease the ready resume
+   prompts for a repl buffer (E-park-continuations Car 2b, polling path).
+
+   Bug 2 fix (server-side busy gate): if the agent has an in-flight turn, WITHHOLD
+   all ready items (return empty :ready with :withheld true) WITHOUT popping — the
+   items are retained and delivered on a later poll when idle. This is the robust
+   idle signal: the registry knows whether the session is mid-turn across ALL paths.
+   Bug 3 fix (lease): pop is non-destructive — the item is leased until ACKed."
+  [request _config]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")]
+    (if (and (parked-on-enabled?) agent (agent-in-flight-turn? agent))
+      ;; Bug 2: agent is mid-turn — withhold items, don't pop. They'll be
+      ;; delivered on a later poll when the agent is idle.
+      (json-response 200 {:ok true :ready [] :withheld true})
+      (let [leased (if (and (parked-on-enabled?) agent)
+                     (parked-ready-pop! agent (or session ""))
+                     nil)]
+        (json-response 200 {:ok true
+                            :ready (if leased [leased] [])
+                            :leased (some? leased)})))))
+
+(defn- handle-parked-ready-ack
+  "POST /api/alpha/parked/ready/ack — confirm delivery of a leased ready resume
+   (clear its lease so it is not redelivered). Body: {\"park-id\":\"...\"} or query
+   param ?park-id=. Returns {:ok true :acked bool}."
+  [request _config]
+  (let [body (parse-json-map (read-body request))
+        park-id (or (:park-id body) (get body "park-id")
+                    (req-query-param request "park-id"))]
+    (cond
+      (not (parked-on-enabled?))
+      (json-response 503 {:ok false :error "parked-on-disabled"})
+      (str/blank? (str park-id))
+      (json-response 400 {:ok false :error "park-id-required"})
+      :else
+      (let [acked (parked-on/ready-ack! park-id)]
+        (json-response 200 {:ok true :acked acked})))))
+
+(defn- handle-parked
+  "GET /api/alpha/parked?agent=&session=&mode= — outstanding (unreleased) parks.
+
+   The default view remains :within-turn because this endpoint also supplies the
+   turn-finalization :more-pending signal.  mode=all is the operator visibility
+   view and includes background parks, without letting them defer finalization."
+  [request _config]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")
+        mode (req-query-param request "mode")
+        operator-view? (str/blank? (str agent))
+        all-modes? (or operator-view?
+                       (= "all" (some-> mode str/trim str/lower-case)))
+        recs (when (parked-on-enabled?)
+               (->> (vals (:records (parked-on/snapshot)))
+                    (filter (fn [r] (and (or operator-view?
+                                                (= (str (:agent r)) (str agent)))
+                                         (or (str/blank? (str session))
+                                             (= (str (:session r)) (str session)))
+                                         (not (:released? r))
+                                         (or all-modes?
+                                             (= (or (:mode r) :within-turn)
+                                                :within-turn)))))
+                    (mapv (fn [r] {:id (:id r)
+                                   :agent (:agent r)
+                                   :session (:session r)
+                                   :surface (:surface r)
+                                   :awaiting (vec (:awaiting r))
+                                   :deadline-ms (:deadline-ms r)
+                                   :mode (or (:mode r) :within-turn)}))))
+        ;; A ready resume already in the inbox (dep completed, poller not yet fired)
+        ;; also means "more is coming" — so the check is race-free even for a fast dep.
+        inbox-pending (and (parked-on-enabled?) agent
+                           (parked-on/ready-inbox-pending? agent (or session "")
+                                                           :within-turn))
+        within-turn-pending (some #(= (:mode %) :within-turn) recs)]
+    (json-response 200 {:ok true :parked (vec (or recs []))
+                        :more-pending (boolean (or (and operator-view? (seq recs))
+                                                   within-turn-pending
+                                                   inbox-pending))})))
+
+(defn- handle-park
+  "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
+   park AGENT's turn on a JOIN of AWAITING dep-ids; resume once all are terminal.
+   Body: {\"agent\":\"claude-1\",\"awaiting\":[\"<bell/job-id>\"...],\"payload\":\"...\",
+          \"deadline-ms\":N,\"timer-due-ms\":N,\"budget\":{...}}. Flag-gated."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))
+        timer-result (coerce-epoch-ms
+                      (or (:timer-due-ms payload) (get payload "timer-due-ms")))
+        deadline-result (coerce-epoch-ms
+                         (or (:deadline-ms payload) (get payload "deadline-ms")))]
+    (cond
+      (not (parked-on-enabled?))
+      (json-response 503 {:ok false :error "parked-on-disabled"
+                          :message "set FUTON3C_PARKED_ON to enable"})
+      (nil? payload)
+      (json-response 400 {:ok false :error "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (str/blank? (str (or (:agent payload) (get payload "agent"))))
+      (json-response 400 {:ok false :error "agent-required"})
+      (not (:ok timer-result))
+      (json-response 400 {:ok false :error "invalid-timer-due-ms"
+                          :message "timer-due-ms must be a non-negative integer or decimal integer string"})
+      (not (:ok deadline-result))
+      (json-response 400 {:ok false :error "invalid-deadline-ms"
+                          :message "deadline-ms must be a non-negative integer or decimal integer string"})
+      :else
+      (let [result (parked-on/park!
+                    {:agent (str (or (:agent payload) (get payload "agent")))
+                     :session (or (:session payload) (get payload "session"))
+                     :surface (or (:surface payload) (get payload "surface"))
+                     :awaiting (or (:awaiting payload) (get payload "awaiting") [])
+                     :payload (or (:payload payload) (get payload "payload"))
+                     :mode (or (parse-keyword (or (:mode payload) (get payload "mode")))
+                               :within-turn)
+                     :timer-due-ms (:value timer-result)
+                     :deadline-ms (:value deadline-result)
+                     :budget (or (:budget payload) (get payload "budget"))}
+                    {:ledger-lookup parked-job-lookup :resume! parked-resume!
+                     :now-ms (System/currentTimeMillis)})]
+        ;; show the new park in the *agents* pane immediately
+        (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
+        (json-response 200 (assoc result :ok true))))))
+
+(defn- handle-park-complete
+  "POST /api/alpha/park/complete — mark an arbitrary parked-on dependency complete."
+  [request _config]
+  (if-not (parked-on-enabled?)
+    (json-response 503 {:ok false :error "parked-on-disabled"})
+    (let [payload (parse-json-map (read-body request))]
+      (cond
+        (nil? payload)
+        (json-response 400 {:ok false :error "invalid-json"})
+
+        (str/blank? (str (or (:dep-id payload) (get payload "dep-id"))))
+        (json-response 400 {:ok false :error "dep-id-required"})
+
+        :else
+        (let [dep-id (or (:dep-id payload) (get payload "dep-id"))
+              result (or (:result payload) (get payload "result"))
+              completion (parked-on/note-completion!
+                          dep-id result
+                          {:resume! parked-resume!
+                           :now-ms (System/currentTimeMillis)})
+              released (vec (:released completion))]
+          (json-response 200 {:ok true
+                              :dep-id dep-id
+                              :released released
+                              :released-count (count released)}))))))
+
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
-   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
+   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":3600000}
    Returns immediately with accepted job-id while execution proceeds on invoke-executor."
   [request config]
   (let [payload (parse-json-map (read-body request))]
@@ -2864,6 +5566,8 @@
                         "bell")
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))
+            raw-mode (or (:mode payload) (get payload "mode"))
+            mode (normalize-invoke-job-mode raw-mode)
             mission-id (or (:mission-id payload) (get payload "mission-id"))
             ;; bell-router: a bell that answers another bell carries its id, so the
             ;; conversation graph correlates the reply (not just auto-bellbacks).
@@ -2871,11 +5575,26 @@
                             (:in_reply_to payload) (get payload "in_reply_to")
                             (:reply-to payload) (get payload "reply-to"))
             raw-bell-type (bell-type-payload payload)
+            ;; Warrant rides the handoff (test-registry): validate the optional
+            ;; "warrants" vector here; a malformed element is a typed 400 before
+            ;; any job is created. ABSENT key means no warrant header and no edge
+            ;; status (ordinary handoffs are untouched); an explicit [] means
+            ;; :unwarranted (typed, routed to full rerun). Record validation
+            ;; stays with the reviewer's check.
+            warrant-normalized
+            (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+              (warrant/normalize-warrants raw-warrants))
             typed? (typed-bells-enabled?)
             bell-type (when typed? (normalize-bell-type raw-bell-type))
             ref (when typed? (nonblank-str (bell-ref-payload payload)))
             timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                                long)
+            model (some-> (or (:model payload) (get payload "model"))
+                          str str/trim not-empty)
+            reasoning-effort
+            (some-> (or (:reasoning-effort payload)
+                        (get payload "reasoning-effort"))
+                    str str/trim not-empty)
             evidence-store (evidence-store-for-config config)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
@@ -2886,6 +5605,15 @@
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
 
+          (not (reg/agent-registered? (str agent-id)))
+          (json-response 404 {:ok false
+                              :error "agent-not-found"
+                              :message (str "Agent not registered: " agent-id)})
+
+          (and (some? raw-mode) (nil? mode))
+          (json-response 400 {:ok false :err "invalid-invoke-mode"
+                              :message "mode must be work or brief"})
+
           (and typed? (nil? bell-type))
           (json-response 400 {:ok false :err "invalid-bell-type"
                               :message (str "type must be one of "
@@ -2894,6 +5622,12 @@
           (and typed? (= :answer bell-type) (nil? ref))
           (json-response 400 {:ok false :err "answer-ref-required"
                               :message "type=answer requires ref"})
+
+          (:handoff/refusal warrant-normalized)
+          (json-response 400 {:ok false :err "warrant-invalid"
+                              :message "warrants must be valid test-registry entries"
+                              :field (name (:field warrant-normalized))
+                              :value (:value warrant-normalized)})
 
           :else
           (if-let [existing-job (when (and typed? (nonblank-str requested-job-id))
@@ -2918,33 +5652,47 @@
               (if-not (:ok bridge)
                 (json-response (or (:status bridge) 400)
                                (select-keys bridge [:ok :err :message :thread-id :evidence-id]))
-                (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                (let [job-id (create-invoke-job! {:evidence-store evidence-store
+                                                  :requested-job-id requested-job-id
                                                   :agent-id agent-id
                                                   :prompt prompt
                                                   :caller caller
                                                   :surface surface
+                                                  :mode mode
                                                   :bellback-of (when (bell-router-enabled?) in-reply-to)
                                                   :bell-type (when typed? bell-type)
-                                                  :ref (when typed? ref')})
+                                                  :ref (when typed? ref')
+                                                  :warrants warrant-normalized})
                       run-job (fn []
                                 (run-invoke-job! {:job-id job-id
                                                   :agent-id agent-id
                                                   :prompt prompt
                                                   :caller caller
                                                   :surface surface
+                                                  :warrants warrant-normalized
                                                   :timeout-ms timeout-ms
+                                                  :model model
+                                                  :reasoning-effort reasoning-effort
                                                   :mission-id mission-id
                                                   :evidence-store evidence-store}))
                       deliver-result (fn [result]
-                                       ;; Bell delivery means caller can obtain terminal result via canonical job query.
-                                       (record-invoke-job-delivery-by-job-id!
-                                        job-id
-                                        {:surface "bell"
-                                         :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                                         :delivered? true
-                                         :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
+                                       (record-bell-completion-delivery!
+                                        job-id caller result))]
                   (try
-                    (if (turn-queue/drainer-v2-enabled?)
+                    (if (inbox-agent? agent-id)
+                      (let [inbox-path (deliver-invoke-job-to-inbox! job-id prompt)]
+                        (json-response 202 (cond-> {:ok true
+                                                    :accepted true
+                                                    :job-id job-id
+                                                    :state "delivered"
+                                                    :inbox-path inbox-path
+                                                    :mode (invoke-job-mode prompt mode)
+                                                    :status-url (str "/api/alpha/invoke/jobs/" job-id)}
+                                             typed? (assoc :bell-type bell-type
+                                                           :ref ref'
+                                                           :arse (:arse bridge)))))
+                      (do
+                        (if (turn-queue/drainer-v2-enabled?)
                       ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
                       ;; return — never hold a shared invoke-executor lane for the turn.
                       (let [r (turn-queue/accept-async!
@@ -2957,18 +5705,18 @@
                           (finalize-invoke-job! job-id "deduped" "duplicate-msg-id" nil
                                                 {:ok true :deduped true} nil)))
                       ;; Legacy path: run on the shared invoke-executor pool.
-                      (.submit invoke-executor
+                          (.submit invoke-executor
                                ^Runnable
                                (fn [] (deliver-result (run-job)))))
-                    (json-response 202 (cond-> {:ok true
+                        (json-response 202 (cond-> {:ok true
                                                 :accepted true
                                                 :job-id job-id
                                                 :state "queued"
-                                                :mode (invoke-job-mode prompt)
+                                                :mode (invoke-job-mode prompt mode)
                                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)}
                                          typed? (assoc :bell-type bell-type
                                                        :ref ref'
-                                                       :arse (:arse bridge))))
+                                                       :arse (:arse bridge))))))
                     (catch Throwable t
                       (finalize-invoke-job! job-id "failed" "invoke-submit-failed" (.getMessage t) {:ok false} nil)
                       (json-response 503 {:ok false
@@ -2981,8 +5729,9 @@
    external surface announces acceptance.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"job-id\":\"optional\"}
    Returns immediately with the canonical queued job id and status URL."
-  [request _config]
-  (let [payload (parse-json-map (read-body request))]
+  [request config]
+  (let [evidence-store (evidence-store-for-config config)
+        payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
                           :message "Request body must be a JSON object"})
@@ -2994,8 +5743,19 @@
             surface (or (some-> payload :surface str)
                         (some-> payload (get "surface") str)
                         "announce")
+            raw-mode (or (:mode payload) (get payload "mode"))
+            mode (normalize-invoke-job-mode raw-mode)
+            model (some-> (or (:model payload) (get payload "model"))
+                          str str/trim not-empty)
             requested-job-id (or (:job-id payload) (get payload "job-id")
-                                 (:job_id payload) (get payload "job_id"))]
+                                 (:job_id payload) (get payload "job_id"))
+            requested-job-id (some-> requested-job-id str str/trim not-empty)
+            existing (when requested-job-id
+                       (get-in (ensure-invoke-jobs-ledger!)
+                               [:jobs requested-job-id]))
+            expected-digest (when (and agent-id prompt)
+                              (invoke-job-request-digest
+                               agent-id prompt caller surface model))]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -3005,27 +5765,116 @@
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
 
+          (and (some? raw-mode) (nil? mode))
+          (json-response 400 {:ok false :err "invalid-invoke-mode"
+                              :message "mode must be work or brief"})
+
           (nil? (reg/get-agent (str agent-id)))
           (json-response 404 {:ok false :err "agent-not-found"
                               :message (str "Agent not registered: " agent-id)})
 
+          (and existing
+               (or (not= (str agent-id) (:agent-id existing))
+                   (not= expected-digest (:request-digest existing))
+                   (and mode (not= mode (:mode existing)))))
+          (json-response 409 {:ok false :err "announced-job-conflict"
+                              :job-id requested-job-id
+                              :state (:state existing)})
+
           :else
-          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
-                                            :agent-id agent-id
-                                            :prompt prompt
-                                            :caller caller
-                                            :surface surface})
+          (let [job-id (if existing
+                         requested-job-id
+                         (create-invoke-job! {:evidence-store evidence-store
+                                              :requested-job-id requested-job-id
+                                              :agent-id agent-id
+                                              :prompt prompt
+                                              :caller caller
+                                              :surface surface
+                                              :mode mode
+                                              :model model}))
                 queued-jobs (get-in (active-invoke-job-counts)
-                                    [(str agent-id) :queued-jobs]
+                                    [(canonical-job-agent-id agent-id) :queued-jobs]
                                     0)
                 job (some-> job-id get-invoke-job invoke-job-public-view)]
             (json-response 202 {:ok true
                                 :accepted true
+                                :reused? (boolean existing)
                                 :job-id job-id
-                                :state "queued"
+                                :state (:state job)
                                 :queued-jobs queued-jobs
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)
                                 :job job})))))))
+
+(defn- claim-invoke-activation! [job-id]
+  (let [claimed (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [state (get-in ledger [:jobs job-id :state])]
+         (reset! claimed state)
+         (if (= "queued" state)
+           (assoc-in ledger [:jobs job-id :state] "activating")
+           ledger))))
+    @claimed))
+
+(defn- handle-invoke-activate
+  "POST /api/alpha/invoke/activate — atomically activate one pre-announced job.
+   Returns 202 after executor submission; completion remains authoritative only
+   at /api/alpha/invoke/jobs/:id. Repeated activation is idempotent."
+  [request config]
+  (let [payload (parse-json-map (read-body request))
+        agent-id (or (:agent-id payload) (get payload "agent-id"))
+        prompt (or (:prompt payload) (get payload "prompt"))
+        job-id (or (:job-id payload) (get payload "job-id"))
+        caller (or (some-> payload :caller str)
+                   (some-> payload (get "caller") str) "http-caller")
+        surface (or (some-> payload :surface str)
+                    (some-> payload (get "surface") str) "http")
+        raw-mode (or (:mode payload) (get payload "mode"))
+        mode (normalize-invoke-job-mode raw-mode)
+        model (some-> (or (:model payload) (get payload "model"))
+                      str str/trim not-empty)
+        job (when job-id (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)]))
+        expected-digest (when (and agent-id prompt)
+                          (invoke-job-request-digest
+                           agent-id prompt caller surface model))]
+    (cond
+      (nil? payload) (json-response 400 {:ok false :error "invalid-json"})
+      (or (str/blank? (str agent-id)) (nil? prompt) (str/blank? (str job-id)))
+      (json-response 400 {:ok false :error "activation-fields-required"})
+      (and (some? raw-mode) (nil? mode))
+      (json-response 400 {:ok false :error "invalid-invoke-mode"})
+      (nil? job) (json-response 404 {:ok false :error "announced-job-not-found"})
+      (not= (str agent-id) (:agent-id job))
+      (json-response 409 {:ok false :error "activation-agent-mismatch"})
+      (not= expected-digest (:request-digest job))
+      (json-response 409 {:ok false :error "activation-request-mismatch"})
+      (and mode (not= mode (:mode job)))
+      (json-response 409 {:ok false :error "activation-mode-mismatch"})
+      (#{"done" "failed" "error" "cancelled" "timeout"} (:state job))
+      (json-response 409 {:ok false :error "activation-job-terminal"
+                          :state (:state job)})
+      :else
+      (let [prior-state (claim-invoke-activation! (str job-id))]
+        (if (not= "queued" prior-state)
+          (json-response 202 {:ok true :accepted true :reused? true
+                              :job-id (str job-id) :state prior-state
+                              :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+          (try
+            (.submit invoke-executor
+                     ^Runnable
+                     (fn []
+                       (build-invoke-response
+                        {:payload (assoc payload :job-id (str job-id))
+                         :agent-id (str agent-id) :prompt prompt
+                         :evidence-store (evidence-store-for-config config)})))
+            (json-response 202 {:ok true :accepted true :reused? false
+                                :job-id (str job-id) :state "activating"
+                                :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+            (catch Throwable t
+              (finalize-invoke-job! (str job-id) "failed" "invoke-submit-failed"
+                                    (.getMessage t) {:ok false} nil)
+              (json-response 503 {:ok false :error "invoke-submit-failed"
+                                  :job-id (str job-id)}))))))))
 
 (defn repl-through-queue?
   "E2 (turn-delivery-invariants.md): route /invoke-stream (REPL/operator turns) through the
@@ -3036,14 +5885,59 @@
   []
   (agency-invariants/repl-through-queue-enabled?))
 
+(defn- stamp-turn-event
+  "Attach TURN-ID to one SSE/NDJSON event, including terminal events."
+  [turn-id event]
+  (assoc event :turn-id turn-id))
+
+
+(defn- queued-turn-activity
+  "Human-readable status for a REPL turn that has just been enqueued behind an
+   in-flight drain on AGENT-ID: what the agent is working on and where TURN-ID
+   sits in the queue. Nil when the turn is at the head with nothing running
+   (it will start immediately). Joe, 2026-08-23: the REPL showed a bare
+   \"starting 881s\" while codex-15 was busy with another caller's bell — the
+   queue position was invisible from the operator seat."
+  [agent-id turn-id]
+  (try
+    (let [queue (get-in (turn-queue/snapshot) [:queues (str agent-id)] [])
+          position (let [i (.indexOf ^java.util.List (vec queue) turn-id)]
+                     (when (>= i 0) (inc i)))
+          job (running-invoke-job-for-agent agent-id)
+          agent (reg/get-agent (str agent-id))
+          activity (some-> agent :agent/invoke-activity str not-empty)
+          running-ms (when-let [s (:started-at job)]
+                       (try (- (System/currentTimeMillis)
+                               (.toEpochMilli (Instant/parse (str s))))
+                            (catch Throwable _ nil)))]
+      (when (or job (and position (> position 1)))
+        {:type "invoke.activity"
+         :activity (str "queued #" (or position "?")
+                       (when job
+                         (str " behind " (:job-id job)
+                              " (from " (or (:caller job) "?")
+                              (when running-ms
+                                (format ", running %dm%02ds"
+                                        (quot running-ms 60000)
+                                        (quot (mod running-ms 60000) 1000)))
+                              (when activity (str ", " activity))
+                              ")")))
+         :queue-position position
+         :behind-job-id (:job-id job)
+         :behind-caller (:caller job)
+         :behind-started-at (:started-at job)
+         :agent-activity activity}))
+    (catch Throwable _ nil)))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
      {\"type\":\"text\",\"text\":\"...\"}
      {\"type\":\"tool_use\",\"tools\":[\"Read\"]}
      {\"type\":\"done\",\"ok\":true,\"result\":\"...\",\"session-id\":\"...\"}
-   The event sink is installed on the agent registry so the NDJSON parse loop
-   in make-claude-invoke-fn emits events as they arrive."
+   Authoritative registry progress is emitted as an invoke.activity event.
+   The event sink is installed on the agent registry so agent adapters emit
+   events as they arrive."
   [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -3061,22 +5955,22 @@
                               :message "prompt is required"})
 
           :else
-          #_{:clj-kondo/ignore [:deprecated-var]}
-          (hk/with-channel request channel
-            ;; Send initial response with a keepalive comment to start chunked stream
-            (hk/send! channel
-              {:status 200
-               :headers {"Content-Type" "application/x-ndjson"
-                         "Cache-Control" "no-cache"
-                         "X-Accel-Buffering" "no"}
-               :body (str (json/generate-string {:type "started"}) "\n")}
-              false)
-            (let [aid (str agent-id)
+          (let [aid (str agent-id)]
+            (hk/as-channel
+             request
+             {:on-close (fn [_channel _status]
+                          (reg/clear-invoke-event-sink! aid))
+              :on-open
+              (fn [channel]
+                (let [turn-id (str (or (:turn-id payload) (get payload "turn-id")
+                                       (:turn_id payload) (get payload "turn_id")
+                                       (str "turn-" (UUID/randomUUID))))
                   ;; Create sink-fn that writes NDJSON lines to the channel
                   sink-fn (fn [event]
                             (try
                               (hk/send! channel
-                                (str (json/generate-string event) "\n")
+                                (str (json/generate-string
+                                      (stamp-turn-event turn-id event)) "\n")
                                 false)
                               (catch Throwable _)))
                   caller (or (some-> payload :caller str)
@@ -3111,10 +6005,16 @@
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]
                           (sink-fn {:type "done" :ok false :error (name code) :message msg})))))]
-              ;; Clean up on client disconnect
-              (hk/on-close channel
-                (fn [_status]
-                  (reg/clear-invoke-event-sink! aid)))
+              ;; Start the chunked response only after its canonical identity is
+              ;; known. sink-fn adds that identity to EVERY later event too.
+              (hk/send! channel
+                        {:status 200
+                         :headers {"Content-Type" "application/x-ndjson"
+                                   "Cache-Control" "no-cache"
+                                   "X-Accel-Buffering" "no"}
+                         :body (str (json/generate-string
+                                     (stamp-turn-event turn-id {:type "started"})) "\n")}
+                        false)
               (if (and (repl-through-queue?) (turn-queue/drainer-v2-enabled?))
                 ;; E2: route the REPL/operator turn through the durable turn-queue so it gets
                 ;; the SAME guarantees as a bell — single-writer (the agent's drainer, no
@@ -3122,17 +6022,24 @@
                 ;; back to THIS channel. The event sink is installed INSIDE process-fn (drainer
                 ;; thread, exclusive to this turn) so a bell drained just before it cannot
                 ;; cross-talk onto this channel.
+                (do
                 (turn-queue/accept-async!
-                 {:to aid :from caller :surface (or surface "repl")
+                 {:id turn-id :msg-id turn-id
+                  :to aid :from caller :surface (or surface "repl")
                   :prompt effective-prompt
                   :process-fn
-                  (fn [_entry]
+                  (fn [entry]
                     (reg/set-invoke-event-sink! aid sink-fn)
                     (try
-                      (binding [turn-queue/*drained-by-outer* true]
+                      (binding [turn-queue/*drained-by-outer* true
+                                turn-queue/*turn-id* (:id entry)]
                         (maybe-route-surface-writes
                          agent-id
-                         (reg/invoke-agent! aid effective-prompt timeout-ms)))
+                         (reg/invoke-agent! aid effective-prompt
+                                            {:timeout-ms timeout-ms :turn-id turn-id
+                                             :surface surface :mission-id mission-id
+                                             :caller caller
+                                             :evidence-store evidence-store})))
                       (finally
                         (reg/clear-invoke-event-sink! aid))))
                   :finalize-fn
@@ -3144,26 +6051,41 @@
                                   :message (.getMessage t)}))
                       (finally
                         (hk/close channel))))})
+                ;; Tell the operator what the turn is waiting on (if anything).
+                (when-let [ev (queued-turn-activity aid turn-id)]
+                  (sink-fn ev)))
                 ;; Legacy (flag OFF / no drainer-v2): direct invoke on a shared lane.
                 (.submit invoke-executor
                   ^Runnable
                   (fn []
                     (reg/set-invoke-event-sink! aid sink-fn)
                     (try
-                      (emit-terminal!
-                       (maybe-route-surface-writes
-                        agent-id
-                        (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)))
+                      (binding [turn-queue/*turn-id* turn-id]
+                        (emit-terminal!
+                         (maybe-route-surface-writes
+                          agent-id
+                          (reg/invoke-agent! (str agent-id) effective-prompt
+                                             {:timeout-ms timeout-ms :turn-id turn-id
+                                              :surface surface :mission-id mission-id
+                                              :caller caller
+                                              :evidence-store evidence-store}))))
                       (catch Throwable t
                         (sink-fn {:type "done" :ok false :error "invoke-error"
                                   :message (.getMessage t)}))
                       (finally
                         (reg/clear-invoke-event-sink! aid)
-                        (hk/close channel)))))))))))))
+                        (hk/close channel))))))))})))))))
 
 (defn- invoke-job-terminal-state?
+  "Is there nothing further to wait for? Broader than terminal-invoke-state?:
+   a settling job is done waiting even though its work has ended only just
+   now, and an unrecognised state is treated as terminal so a stream watching
+   a job that has vanished closes rather than heartbeating forever.
+
+   The one state this must NOT call terminal is an open one -- which is the
+   defect it carried while its literal omitted \"activating\"."
   [state]
-  (not (#{"queued" "running"} (str state))))
+  (not (contains? active-invoke-job-states (str state))))
 
 (defn- stream-flag?
   [payload]
@@ -3207,7 +6129,12 @@
         mission-id (or (:mission-id payload) (get payload "mission-id"))
         poll-ms (sanitize-ms (or (:poll-ms payload) (get payload "poll-ms")) 1000 100 10000)
         heartbeat-ms (sanitize-ms (or (:heartbeat-ms payload) (get payload "heartbeat-ms")) 5000 500 60000)
-        evidence-store (evidence-store-for-config config)]
+        evidence-store (evidence-store-for-config config)
+        ;; Warrant rides the handoff: same validation as handle-bell; the stream
+        ;; path refuses malformed warrants before the channel opens.
+        warrant-normalized
+        (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+          (warrant/normalize-warrants raw-warrants))]
     (cond
       (or (nil? agent-id) (str/blank? (str agent-id)))
       (json-response 400 {:ok false :err "missing-agent-id"
@@ -3217,36 +6144,46 @@
       (json-response 400 {:ok false :err "missing-prompt"
                           :message "prompt is required"})
 
+      (:handoff/refusal warrant-normalized)
+      (json-response 400 {:ok false :err "warrant-invalid"
+                          :message "warrants must be valid test-registry entries"
+                          :field (name (:field warrant-normalized))
+                          :value (:value warrant-normalized)})
+
       :else
-      (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+      (let [job-id (create-invoke-job! {:evidence-store evidence-store
+                                        :requested-job-id requested-job-id
                                         :agent-id agent-id
                                         :prompt prompt
                                         :caller caller
-                                        :surface "whistle"})
+                                        :surface "whistle"
+                                        :warrants warrant-normalized})
             mode (invoke-job-mode prompt)
-            started-ms (System/currentTimeMillis)]
-        #_{:clj-kondo/ignore [:deprecated-var]}
-        (hk/with-channel request channel
-          (let [closed? (atom false)
-                delivery-recorded? (atom false)
-                mark-delivery!
-                (fn [delivered? note]
-                  (when (compare-and-set! delivery-recorded? false true)
-                    (record-invoke-job-delivery-by-job-id!
-                     job-id
-                     {:surface "whistle-stream"
-                      :destination (str "caller " caller " (stream)")
-                      :delivered? (boolean delivered?)
-                      :note (str note)})))
-                close-channel!
+            started-ms (System/currentTimeMillis)
+            closed? (atom false)
+            delivery-recorded? (atom false)
+            mark-delivery!
+            (fn [delivered? note]
+              (when (compare-and-set! delivery-recorded? false true)
+                (record-invoke-job-delivery-by-job-id!
+                 job-id
+                 {:surface "whistle-stream"
+                  :destination (str "caller " caller " (stream)")
+                  :delivered? (boolean delivered?)
+                  :note (str note)})))]
+        (hk/as-channel
+         request
+         {:on-close
+          (fn [_channel _status]
+            (reset! closed? true)
+            (mark-delivery! false "whistle-stream-client-closed"))
+          :on-open
+          (fn [channel]
+            (let [close-channel!
                 (fn []
                   (try
                     (hk/close channel)
                     (catch Throwable _)))]
-            (hk/on-close channel
-              (fn [_]
-                (reset! closed? true)
-                (mark-delivery! false "whistle-stream-client-closed")))
             (when-not (send-ndjson! channel
                                     {:type "started"
                                      :ok true
@@ -3265,6 +6202,7 @@
                                          :prompt prompt
                                          :caller caller
                                          :surface "whistle"
+                                         :warrants warrant-normalized
                                          :timeout-ms timeout-ms
                                          :mission-id mission-id
                                          :evidence-store evidence-store})))
@@ -3326,8 +6264,8 @@
                                  :else
                                  (do
                                    (Thread/sleep poll-ms)
-                                   (recur next-seq next-heartbeat-ms)))))))))))))
-        ))
+                                   (recur next-seq next-heartbeat-ms)))))))))))})
+        ))))
 
 (defn- handle-whistle-stream
   "POST /api/alpha/whistle-stream — NDJSON streaming whistle endpoint."
@@ -3340,8 +6278,9 @@
 
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
-   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 1800000}
-   Delegates to whistles/whistle! which wraps invoke-agent! with evidence."
+   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 3600000}
+   Uses the canonical supervised invoke-job engine. At the strict response
+   timeout the caller receives a pollable overrun job instead of losing it."
   [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -3354,7 +6293,10 @@
             caller (or (some-> payload :caller str)
                        (some-> payload (get "caller") str)
                        "http-caller")
-            evidence-store (evidence-store-for-config config)]
+            evidence-store (evidence-store-for-config config)
+            warrant-normalized
+            (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+              (warrant/normalize-warrants raw-warrants))]
         (if (stream-flag? payload)
           (handle-whistle-stream* request config payload)
           (cond
@@ -3366,43 +6308,101 @@
             (json-response 400 {:ok false :err "missing-prompt"
                                 :message "prompt is required"})
 
+            (:handoff/refusal warrant-normalized)
+            (json-response 400 {:ok false :err "warrant-invalid"
+                                :message "warrants must be valid test-registry entries"
+                                :field (name (:field warrant-normalized))
+                                :value (:value warrant-normalized)})
+
             :else
-            #_{:clj-kondo/ignore [:deprecated-var]}
-            (hk/with-channel request channel
-              (.submit invoke-executor
+            (hk/as-channel
+             request
+             {:on-open
+              (fn [channel]
+                (.submit invoke-executor
                        ^Runnable
                        (fn []
                          (try
-                           (let [result (whistles/whistle!
-                                         {:agent-id (str agent-id)
-                                          :prompt prompt
-                                          :author caller
-                                          :timeout-ms timeout-ms
-                                          :evidence-store evidence-store})]
-                             (if (:whistle/ok result)
-                               (hk/send! channel
-                                         (json-response 200 (cond-> {:ok true
-                                                                     :response (:whistle/response result)
-                                                                     :agent-id (:whistle/agent-id result)
-                                                                     :session-id (:whistle/session-id result)}
-                                                              (:whistle/invoke-trace-id result)
-                                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result)))))
-                               (let [err (:whistle/error result)]
-                                 (hk/send! channel
-                                           (json-response
-                                            (if (and (string? err) (.contains ^String err "not registered")) 404 502)
-                                            (cond-> {:ok false
-                                                     :error err
-                                                     :agent-id (:whistle/agent-id result)}
-                                              (:whistle/invoke-trace-id result)
-                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result))))))))
+                           (let [wait-ms (long (or timeout-ms default-async-invoke-timeout-ms))
+                                 job-id (create-invoke-job! {:evidence-store evidence-store
+                                                            :agent-id agent-id
+                                                            :prompt prompt
+                                                            :caller caller
+                                                            :surface "whistle"
+                                                            :warrants warrant-normalized})
+                                 completed (promise)
+                                 run-job #(run-invoke-job! {:job-id job-id
+                                                           :agent-id agent-id
+                                                           :prompt prompt
+                                                           :caller caller
+                                                           :surface "whistle"
+                                                           :warrants warrant-normalized
+                                                           :timeout-ms wait-ms
+                                                           :evidence-store evidence-store})
+                                 deliver! #(deliver completed %)]
+                             (if (turn-queue/drainer-v2-enabled?)
+                               (turn-queue/accept-async!
+                                {:to (str agent-id)
+                                 :from caller
+                                 :surface "whistle"
+                                 :prompt prompt
+                                 :process-fn (fn [_entry]
+                                               (binding [turn-queue/*drained-by-outer* true]
+                                                 (run-job)))
+                                 :finalize-fn deliver!})
+                               (future (deliver! (run-job))))
+                             (let [outcome (deref completed wait-ms ::whistle-overrun)]
+                               (if (= ::whistle-overrun outcome)
+                                 (do
+                                   (mark-invoke-job-overrun! job-id wait-ms)
+                                   (hk/send! channel
+                                             (json-response
+                                              504
+                                              {:ok false
+                                               :error "timeout"
+                                               :overrun true
+                                               :job-id job-id
+                                               :state "overrun"
+                                               :status-url (str "/api/alpha/invoke/jobs/" job-id)})))
+                                 (let [result (:result outcome)
+                                       err (:error result)
+                                       code (if (map? err) (:error/code err) :invoke-failed)
+                                       msg (if (map? err) (:error/message err) (str err))]
+                                   (record-invoke-job-delivery-by-job-id!
+                                    job-id
+                                    {:surface "whistle"
+                                     :destination (str "caller " caller)
+                                     :delivered? true
+                                     :note (if (:ok result)
+                                             "whistle-response"
+                                             "whistle-error")})
+                                   (hk/send! channel
+                                             (if (:ok result)
+                                               (json-response
+                                                200
+                                                (cond-> {:ok true
+                                                         :job-id job-id
+                                                         :response (:result result)
+                                                         :agent-id (str agent-id)
+                                                         :session-id (:session-id result)}
+                                                  (extract-trace-id (:invoke-meta result))
+                                                  (assoc :invoke-trace-id
+                                                         (extract-trace-id
+                                                          (:invoke-meta result)))))
+                                               (json-response
+                                                (if (= :agent-not-found code) 404 502)
+                                                {:ok false
+                                                 :job-id job-id
+                                                 :error msg
+                                                 :agent-id (str agent-id)})))))))
                            (catch Throwable t
                              (println (str "[whistle] async error: " (.getMessage t)))
                              (flush)
                              (hk/send! channel
                                        (json-response 500 {:ok false
                                                            :error "whistle-error"
-                                                           :message (.getMessage t)})))))))))))))
+                                                           :message (.getMessage t)})))))))})
+            ))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
@@ -3456,10 +6456,11 @@
   "GET /api/alpha/coordination/edges?limit=N — social-layer mesh edges.
    These are projected as outgoing coordination edges for mesh_trace.py; they
    complement the invoke-jobs ledger without replacing it."
-  [request]
+  [request config]
   (let [params (parse-query-params request)
         limit (or (parse-int (get params "limit")) 50)
-        edges (coordination-ledger/recent-mesh-edges limit)]
+        edges (coordination-ledger/recent-mesh-edges
+               limit (evidence-store-for-config config))]
     (json-response 200 {:ok true
                         :count (count edges)
                         :edges edges})))
@@ -3495,6 +6496,225 @@
     (json-response 404 {:ok false
                         :error "invoke-job-not-found"
                         :job-id (str job-id)})))
+
+(defn- handle-ack-invoke-job
+  "POST /api/alpha/invoke/jobs/:id/ack — acknowledge consumption of one inbox job."
+  [job-id request]
+  (let [payload (or (parse-json-map (read-body request)) {})
+        note (some-> (or (:note payload) (get payload "note")) str)
+        result-text (some-> (or (:result payload) (get payload "result")) str)
+        job (get-invoke-job job-id)]
+    (cond
+      (nil? job)
+      (json-response 404 {:ok false
+                          :error "invoke-job-not-found"
+                          :job-id (str job-id)})
+
+      (nil? (:inbox-path job))
+      (json-response 409 {:ok false
+                          :error "not-inbox-job"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      (not= "delivered" (str (:state job)))
+      (json-response 409 {:ok false
+                          :error "invoke-job-not-delivered"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      :else
+      (let [finalized? (finalize-invoke-job!
+                        (str job-id) "done" nil nil
+                        (cond-> {:ok true}
+                          result-text (assoc :result result-text))
+                        (:session-id job))]
+        (if-not finalized?
+          (let [current (get-invoke-job job-id)]
+            (json-response 409 {:ok false
+                                :error "invoke-job-not-delivered"
+                                :job-id (str job-id)
+                                :state (str (:state current))}))
+          (do
+            (record-invoke-job-delivery-by-job-id!
+             (str job-id)
+             {:surface "inbox"
+              :destination (:inbox-path job)
+              :delivered? true
+              :note "inbox-consumed-ack"})
+            ;; An ack IS the liveness signal for a pull-only seat, and the only
+            ;; one it can emit. invoke-agent! refuses such a seat before it
+            ;; reaches the last-active update, and nothing on the inbox path
+            ;; touched it -- so :agent/last-active froze at registration and the
+            ;; seat aged monotonically however much traffic it consumed. The
+            ;; idle reaper reads last-active, so a busy pull-only seat was
+            ;; reapable by construction; claude-clink-1 was reaped mid-watch on
+            ;; 2026-08-26 and its bells then failed agent-not-found in silence.
+            (try (reg/update-agent! (str (:agent-id job)))
+                 (catch Throwable t
+                   (println (str "[agency-inbox] last-active touch failed for "
+                                 (:agent-id job) ": " (.getMessage t)))))
+            (update-invoke-jobs-ledger!
+             (fn [ledger]
+               (if-let [current (get-in ledger [:jobs (str job-id)])]
+                 (assoc-in ledger [:jobs (str job-id)]
+                           (append-job-event current "acked" {:note note}))
+                 ledger)))
+            (try
+              (agency-inbox/move-to-consumed! (:inbox-path job) job-id)
+              (catch Throwable t
+                (println (str "[agency-inbox] consumed-file move failed for " job-id
+                              ": " (.getMessage t)))
+                (flush)))
+            (json-response 200 {:ok true
+                                :job-id (str job-id)
+                                :state "done"
+                                :delivery (:delivery (get-invoke-job job-id))})))))))
+
+(defn- handle-agency-queue
+  "GET /api/alpha/agency/queue?all=1 — operator view of the per-agent turn
+   queues: pending depth, the queued turns themselves, who is mid-drain, and
+   which queues are held. The queue is what the jobs window cannot show: a
+   bell sitting behind a slow turn has no job yet."
+  [request]
+  (let [params (parse-query-params request)
+        all? (contains? #{"1" "true" "yes"} (str/lower-case (str (get params "all" ""))))]
+    (json-response 200 (assoc (turn-queue/queue-view all?) :ok true))))
+
+(defn- queue-agent-param [request]
+  (let [payload (or (parse-json-map (read-body request)) {})]
+    {:payload payload
+     :agent (some-> (or (:agent payload) (get payload "agent")
+                        (:agent-id payload) (get payload "agent-id"))
+                    str str/trim not-empty)}))
+
+(defn- handle-agency-queue-hold
+  "POST /api/alpha/agency/queue/hold {agent, reason, by, ttl-minutes|ttl-ms}
+   — hold a queue. The turn already in flight finishes; nothing new is popped
+   until release. Bells keep queueing behind the hold."
+  [request]
+  (let [{:keys [payload agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (let [ttl-ms (or (some-> (or (:ttl-ms payload) (get payload "ttl-ms")) str parse-int)
+                       (some-> (or (:ttl-minutes payload) (get payload "ttl-minutes"))
+                               str parse-int (* 60000)))
+            hold (turn-queue/hold!
+                  agent
+                  {:reason (some-> (or (:reason payload) (get payload "reason")) str str/trim not-empty)
+                   :by (some-> (or (:by payload) (get payload "by")) str str/trim not-empty)
+                   :ttl-ms ttl-ms})
+            pending (count (get-in (turn-queue/snapshot) [:queues agent]))]
+        (json-response 200 {:ok true :agent-id agent :hold hold :pending pending})))))
+
+(defn- handle-agency-queue-release
+  "POST /api/alpha/agency/queue/release {agent} — lift a hold and wake the
+   drainer so the backlog resumes immediately."
+  [request]
+  (let [{:keys [agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (json-response 200 (assoc (turn-queue/release! agent) :ok true)))))
+
+(defn- interrupt-agent-process-tree!
+  "Best-effort termination of AGENT-ID's live invoke subprocess tree.
+   Returns a result map; never throws."
+  [agent-id]
+  (try
+    (require 'futon3c.dev)
+    (if-let [interrupt-fn (resolve 'futon3c.dev/interrupt-agent-invoke!)]
+      (interrupt-fn (str agent-id))
+      {:ok false :error "interrupt-unavailable"})
+    (catch Throwable t
+      {:ok false :error "interrupt-error" :message (.getMessage t)})))
+
+(defn- handle-cancel-invoke-job
+  "POST /api/alpha/invoke/jobs/:id/cancel — end THAT job by explicit request.
+
+   This is the intended way to stop a long-running turn now that the wall-clock
+   ceiling is opt-in (see job-ceiling-ms). Order matters: take the terminal
+   transition FIRST so this cancellation wins the single-finalizer race, then
+   kill the process tree and interrupt the supervising worker. Finalizing after
+   the kill would let the worker's own error path record 'failed' instead.
+
+   The kill is at JOB grain: the process tree is destroyed only when the job
+   named in the URL is the one the agent is executing (see
+   executing-invoke-job-ids-for-agent). Cancelling a queued job therefore ends
+   that job and leaves the agent's running turn alone — the F8 slice-7 incident
+   (2026-09-05) is the case this refuses."
+  [job-id request]
+  (let [payload (or (parse-json-map (read-body request)) {})
+        caller (or (some-> (or (:caller payload) (get payload "caller")) str str/trim not-empty)
+                   "http-caller")
+        reason (some-> (or (:reason payload) (get payload "reason")) str str/trim not-empty)
+        job (get-invoke-job job-id)]
+    (cond
+      (nil? job)
+      (json-response 404 {:ok false
+                          :error "invoke-job-not-found"
+                          :job-id (str job-id)})
+
+      (not (contains? active-invoke-job-states (str (:state job))))
+      (json-response 409 {:ok false
+                          :error "invoke-job-already-terminal"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      :else
+      (let [agent-id (str (:agent-id job))
+            ;; JOB grain, not agent grain. The ledger transition and the worker
+            ;; interrupt below are already per-job; the process-tree kill was
+            ;; not, and futon3c.dev/interrupt-agent-invoke! has no job to check
+            ;; against because its control is registered per agent. So decide
+            ;; here: the tree may only be destroyed when the job named in the
+            ;; URL is the one — the only one — the agent is executing.
+            executing (executing-invoke-job-ids-for-agent agent-id)
+            other-executing (vec (remove #(= (str job-id) %) executing))
+            owns-process? (and (contains? (set executing) (str job-id))
+                               (empty? other-executing))
+            message (str "Cancelled by " caller
+                         (when reason (str ": " reason)))
+            finalized? (finalize-invoke-job!
+                        job-id "cancelled" "operator-cancelled" message
+                        {:ok false
+                         :error {:error/code :cancelled
+                                 :error/message message}}
+                        (:session-id job))
+            interrupt (cond
+                        owns-process?
+                        (interrupt-agent-process-tree! agent-id)
+
+                        (empty? executing)
+                        {:ok false
+                         :agent-id agent-id
+                         :action :no-executing-job
+                         :message (str agent-id " is executing no job; "
+                                       job-id " was ended in the ledger without "
+                                       "a process interrupt.")}
+
+                        :else
+                        {:ok false
+                         :agent-id agent-id
+                         :action :refused-not-the-executing-job
+                         :executing-job-ids other-executing
+                         :message (str "Refusing to interrupt " agent-id ": it is "
+                                       "executing " (str/join ", " other-executing)
+                                       ", not " job-id ". The named job was ended "
+                                       "in the ledger; no process was killed.")})
+            worker-interrupted? (boolean (interrupt-job-worker! job-id))]
+        ;; Only free the seat when nothing else of its own is still running —
+        ;; marking it idle mid-turn is how a cancelled duplicate used to hand
+        ;; the agent's live turn away to the next queued dispatch.
+        (when (empty? other-executing)
+          (try (reg/mark-agent-idle! agent-id) (catch Throwable _)))
+        (json-response 200 {:ok true
+                            :job-id (str job-id)
+                            :agent-id agent-id
+                            :state "cancelled"
+                            :finalized finalized?
+                            :worker-interrupted worker-interrupted?
+                            :process-interrupted owns-process?
+                            :preserved-job-ids other-executing
+                            :process-interrupt interrupt})))))
 
 (defn- relay-invoke-delivery-over-ws!
   "Best-effort relay of a delivery receipt to a WS-connected agent node."
@@ -3623,11 +6843,65 @@
                         :count (:count status)
                         :agents (:agents status)})))
 
+(defn- handle-agent-clock
+  "GET /api/alpha/agent-clock?agent-id=X&session-id=Y — the live auto-clock for
+   that agent session (campaign/mission/excursion + witness). The repl buffer polls
+   this on turn-end so its display reflects the durable clock the agent's tool-edits
+   feed, instead of a disconnected Emacs-side clock (C-cascade-real D1/O3 sync).
+   Without session-id, the agent's registered session is used: clocks are kept
+   per session, so the session-less key alone read as unclocked."
+  [request]
+  (let [params (parse-query-params request)
+        agent-id (get params "agent-id")
+        session-id (or (not-empty (str/trim (str (get params "session-id"))))
+                       (some-> (reg/get-agent (str agent-id)) :agent/session-id str))]
+    (if (str/blank? (str agent-id))
+      (json-response 400 {:ok false :error "agent-id required"})
+      (let [state (clock-store/current-state agent-id session-id)
+            clock (:clock state)]
+        (json-response 200 {:ok true
+                            :agent-id agent-id
+                            :session-id session-id
+                            :campaign-id (:campaign-id clock)
+                            :mission-id (:mission-id clock)
+                            :excursion-id (:excursion-id clock)
+                            :ticket-id (:ticket-id clock)
+                            :witness (:last-auto-clock-witness state)})))))
+
+(declare handle-agent-get*)
+
+(defn- handle-agent-pouch
+  "GET /api/alpha/agents/:id/pouch — is this seat running in a warm pouch?
+   For the REPL Cooked line (Joe, 2026-08-22): under the joey gate most seats
+   are cold even with kangaroo on, and the operator could not see which."
+  [agent-id]
+  (let [snap (get (agent-pouch/snapshot) agent-id)]
+    (json-response 200
+                   {:ok true
+                    :agent-id agent-id
+                    :kangaroo-enabled (agent-pouch/enabled?)
+                    :warm (boolean (:alive? snap))
+                    :in-flight (boolean (:in-flight? snap))
+                    :joey (:joey? snap)
+                    :session-bytes (:session-bytes snap)
+                    :turn-count (:turn-count snap)})))
+
 (defn- handle-agent-get
-  "GET /api/alpha/agents/:id — return a single agent's details."
+  "GET /api/alpha/agents/:id — return a single agent's details.
+   Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
+   captures that path in the closure built at startup, and this var is the
+   reload-safe point behind it."
   [_config agent-id]
-  (let [status (reg/registry-status)
-        agent (get-in status [:agents agent-id])]
+  (if (str/ends-with? agent-id "/pouch")
+    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))))
+    (handle-agent-get* agent-id)))
+
+(defn- handle-agent-get*
+  [agent-id]
+  (let [record (reg/get-agent agent-id)
+        registered-id (some-> record :agent/id :id/value str)
+        status (reg/registry-status)
+        agent (when registered-id (get-in status [:agents registered-id]))]
     (if agent
       (json-response 200 {:ok true :agent-id agent-id :agent agent})
       (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
@@ -3726,6 +7000,191 @@
                               :agent-id (str agent-id)
                               :error "interrupt-error"
                               :message (.getMessage t)}))))))
+
+(def ^:private compact-cold-timeout-ms
+  ;; Compacting ~500k of context took claude-13 >2 min on 2026-08-22 (the 1M
+  ;; auto-compactions in ground control ran 115-184 s), so 120 s answered 202
+  ;; on exactly the sessions this exists for. The Emacs caller is async.
+  300000)
+
+(defn- compact-turn-queue-busy? [agent-id]
+  ;; A cold compaction runs as a turn-queue entry and never flips the registry
+  ;; to :invoking, so a second POST while one was draining queued a redundant
+  ;; compaction instead of answering 409 (claude-14, 2026-08-23).
+  (let [state (turn-queue/snapshot)
+        aid (str agent-id)]
+    (or (contains? (set (:draining state)) aid)
+        (pos? (count (get-in state [:queues aid] []))))))
+
+(defonce ^:private !running-compacts
+  ;; agent-id -> turn-id of the compact executing now. pop-next! takes an entry
+  ;; off :queues as it starts, so the queue alone cannot see a running compact
+  ;; and a POST during one would queue a redundant second compaction.
+  (atom {}))
+
+(defn- pending-compact-entry [agent-id]
+  (let [state (turn-queue/snapshot)
+        aid (str agent-id)]
+    (or (some (fn [id]
+                (let [entry (get-in state [:entries id])]
+                  (when (and (= "compact-control" (:from entry))
+                             (= "control" (:surface entry))
+                             (= "/compact" (:prompt entry)))
+                    entry)))
+              (get-in state [:queues aid] []))
+        (when-let [id (get @!running-compacts aid)]
+          {:id id}))))
+
+(defn- compact-agent-busy? [agent agent-id]
+  ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
+  ;; (invoke-stream) only shows as registry status :invoking (claude-13 was
+  ;; mid-turn with both counts nil, 2026-08-22).
+  (or (contains? #{:invoking "invoking"} (:agent/status agent))
+      (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
+               (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0))))
+      (compact-turn-queue-busy? agent-id)))
+
+(defn- compact-witness
+  "Did the CLI write a manual compact_boundary for SESSION-ID at/after START-MS?
+   Fallback for invoke-fn closures built before the stream parser learned to
+   surface compact_result (registered seats keep their old closure across a
+   dev.clj reload). Reads the tail of ~/.claude/projects/*/<sid>.jsonl."
+  [session-id start-ms]
+  (try
+    (let [root (io/file (System/getProperty "user.home") ".claude" "projects")
+          f (->> (.listFiles root)
+                 (filter #(.isDirectory ^java.io.File %))
+                 (map #(io/file % (str session-id ".jsonl")))
+                 (filter #(.exists ^java.io.File %))
+                 first)]
+      (when f
+        (let [len (.length ^java.io.File f)
+              from (max 0 (- len 262144))
+              raf (java.io.RandomAccessFile. ^java.io.File f "r")
+              buf (byte-array (- len from))]
+          (try (.seek raf from) (.readFully raf buf) (finally (.close raf)))
+          (->> (str/split-lines (String. buf "UTF-8"))
+               (filter #(str/includes? % "\"compact_boundary\""))
+               (keep #(try (json/parse-string % true) (catch Throwable _ nil)))
+               (filter #(= "manual" (get-in % [:compactMetadata :trigger])))
+               (filter #(some-> (:timestamp %) java.time.Instant/parse .toEpochMilli
+                                (>= (- start-ms 5000))))
+               last))))
+    (catch Throwable _ nil)))
+
+(defn- cold-compact-result [result start-ms]
+  (let [witness (when (nil? (:compact-result result))
+                  (compact-witness (:session-id result) start-ms))
+        result (cond-> result
+                 witness (assoc :compact-result "success"
+                                :compact-witness (:compactMetadata witness)))]
+    (cond-> {:ok (= "success" (:compact-result result))
+             :compact-result (:compact-result result)
+             :compact-error (:compact-error result)
+             :session-id (:session-id result)
+             :usage (:usage result)
+             :total-cost-usd (:total-cost-usd result)
+             :path "cold"}
+      (:compact-witness result) (assoc :compact-witness (:compact-witness result)))))
+
+(def ^:private compact-heartbeat-ms
+  ;; voxterm counts an agent chip's activity as live for 120 s (server.py); a
+  ;; compaction of a large session runs 2-3 min, so a single stamp at the start
+  ;; would blank the chip partway through.
+  30000)
+
+(defn- stamp-compacting! [aid]
+  (try (reg/update-invoke-activity! aid "compacting context")
+       (catch Throwable _ nil)))
+
+(defn- perform-queued-compact! [agent-id entry]
+  ;; A compaction bypasses reg/invoke-agent!, so the roster read :idle with no
+  ;; activity for its whole run and voxterm's chip went blank; a park resume
+  ;; queued behind one looked lost (Joe, 2026-09-12).
+  (let [aid (str agent-id)
+        done (promise)]
+    (swap! !running-compacts assoc aid (:id entry))
+    (stamp-compacting! aid)
+    (let [heartbeat (future
+                      (loop []
+                        (when (= ::beat (deref done compact-heartbeat-ms ::beat))
+                          (stamp-compacting! aid)
+                          (recur))))]
+      (try
+        (binding [turn-queue/*drained-by-outer* true
+                  turn-queue/*turn-id* (:id entry)]
+          (let [warm-result (agent-pouch/compact-pouch! aid {:wait? true})]
+            (if (not= "no warm pouch" (:error warm-result))
+              (assoc warm-result :path "warm")
+              (let [agent (reg/get-agent aid)
+                    invoke-fn (:agent/invoke-fn agent)]
+                (if (fn? invoke-fn)
+                  (let [start-ms (System/currentTimeMillis)]
+                    (cold-compact-result
+                     (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
+                  {:ok false :error "no local agent" :path "cold"})))))
+        (finally
+          ;; Stop the heartbeat before going idle, so no stamp lands after.
+          (deliver done true)
+          (try @heartbeat (catch Throwable _ nil))
+          (try (reg/mark-agent-idle! aid) (catch Throwable _ nil))
+          (swap! !running-compacts dissoc aid))))))
+
+(defn- enqueue-compact! [agent-id]
+  (let [turn-id (str "compact-" (UUID/randomUUID))]
+    (turn-queue/accept-async!
+     {:id turn-id
+      :msg-id turn-id
+      :to (str agent-id)
+      :from "compact-control"
+      :surface "control"
+      :prompt "/compact"
+      :process-fn #(perform-queued-compact! agent-id %)
+      :finalize-fn
+      (fn [result]
+        (println
+         (str "[compact-control] agent-id=" agent-id
+              " turn-id=" turn-id
+              " path=" (:path result)
+              " compact-result=" (pr-str result))))})))
+
+(defn- handle-agent-compact
+  "POST /api/alpha/agents/:id/compact — compact through a warm or cold seat."
+  [_config agent-id _request]
+  (let [aid (str agent-id)
+        pending (pending-compact-entry aid)
+        agent (reg/get-agent aid)
+        warm (get (agent-pouch/snapshot) aid)
+        job-counts (get (active-invoke-job-counts)
+                        (canonical-job-agent-id aid) {})
+        agent (merge job-counts agent)]
+    (cond
+      pending
+      (json-response 202 {:ok true :queued true :deduped true
+                          :turn-id (:id pending) :path "queued"})
+
+      (and (not (:alive? warm)) (not (fn? (:agent/invoke-fn agent))))
+      (json-response 404 {:ok false :error "no local agent"})
+
+      :else
+      (let [busy? (or (:in-flight? warm) (compact-agent-busy? agent aid))
+            state-before (turn-queue/snapshot)
+            ahead (+ (count (get-in state-before [:queues aid] []))
+                     (if (contains? (:draining state-before) aid) 1 0))
+            {:keys [waiter entry]} (enqueue-compact! aid)
+            turn-id (:id entry)]
+        (if busy?
+          (json-response 202 {:ok true :queued true :turn-id turn-id
+                              :ahead ahead :path "queued"})
+          (let [result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
+            (if (= ::compact-timeout result)
+              (json-response 202 {:ok false :error "compaction pending"
+                                  :turn-id turn-id :path "queued"})
+              ;; mark-terminal! decorates the waiter value with the whole queue
+              ;; entry; the client gets the compact outcome only.
+              (json-response 200 (dissoc result :turn-queue/status
+                                         :turn-queue/entry
+                                         :turn-queue/reply-route)))))))))
 
 ;; =============================================================================
 ;; CYDER process endpoints
@@ -3909,14 +7368,23 @@
 
 (defn- handle-missions
   "GET /api/alpha/missions — cross-repo mission inventory with per-mission
-  turn-count telemetry. Telemetry is computed once over the live runtime store
-  and both attached per-mission and surfaced top-level."
-  [_request config]
-  (let [turn-counts (mcb/mission-turn-count-telemetry (evidence-store-for-config config))
-        missions (mcb/attach-turn-counts (mcb/build-inventory) turn-counts)]
+  turn-count telemetry. Pass include-turn-counts=false when the caller needs
+  only the strategic inventory; telemetry is ancillary and can be expensive."
+  [request config]
+  (let [include-turn-counts? (not= "false"
+                                   (get (parse-query-params request)
+                                        "include-turn-counts"))
+        inventory (mcb/build-inventory)
+        turn-counts (when include-turn-counts?
+                      (mcb/mission-turn-count-telemetry
+                       (evidence-store-for-config config)))
+        missions (if turn-counts
+                   (mcb/attach-turn-counts inventory turn-counts)
+                   inventory)]
     (json-response 200 {:ok true
                         :missions missions
                         :count (count missions)
+                        :turn-counts-included? include-turn-counts?
                         :turn-counts turn-counts})))
 
 (defn- handle-mission-detail
@@ -4106,7 +7574,8 @@
     (if (or (nil? path) (str/blank? (str path)))
       (json-response 400 {:ok false :error "missing-path"
                            :message "path query parameter is required"})
-      (let [futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071")
+      (let [futon1a-url (or (System/getenv "FUTON_SUBSTRATE_URL")
+                            (System/getenv "FUTON1A_URL") "http://localhost:7071")
             result (enrich/enrich-file (str path) {:futon1a-url futon1a-url})]
         (json-response 200 (assoc result :ok true))))))
 
@@ -4258,7 +7727,7 @@
   (let [evidence-store (evidence-store-for-config config)
         payload (or (parse-json-map (read-body request)) {})
         opts (cond-> {}
-               (:emit-evidence payload)
+               (contains? payload :emit-evidence)
                (assoc :emit-evidence? (boolean (:emit-evidence payload)))
                (:agenda-id payload)
                (assoc :agenda-id (:agenda-id payload))
@@ -4542,7 +8011,21 @@
     (let [since-ms (when (and (int? days) (pos? days))
                      (- (System/currentTimeMillis) (* days 24 60 60 1000)))
           live-store (or (:evidence-store @mcs/!config) estore/!store)
-          entries (estore/query* live-store {:query/tags [:context-retrieval]})
+          ;; Push the window into the query. Without :query/since this walked
+          ;; the ENTIRE context-retrieval history through the backend's
+          ;; page-until-exhaustion cursor loop on every 300s WM snapshot —
+          ;; 20-60s of store CPU per page, growing with every agent turn —
+          ;; and only then filtered to the window in memory. That walk was
+          ;; the standing :7073 saturation behind the cohort-44/45 preflight
+          ;; and selection timeouts (diagnosed 2026-07-26 via the
+          ;; futon1b-request journal). The client-side recent? filter stays
+          ;; as a belt over the server-side window.
+          entries (estore/query*
+                   live-store
+                   (cond-> {:query/tags [:context-retrieval]}
+                     since-ms
+                     (assoc :query/since
+                            (str (java.time.Instant/ofEpochMilli since-ms)))))
           recent? (fn [e]
                     (or (nil? since-ms)
                         (when-let [at (:evidence/at e)]
@@ -4572,7 +8055,14 @@
            (mapcat results-of)
            (keep collection-of)
            frequencies))
-    (catch Throwable _ {})))
+    (catch Throwable t
+      ;; Stay quiet toward the endpoint (a malformed store must not break
+      ;; the WM snapshot) but never SILENTLY quiet: an expensive-read-busy
+      ;; rejection here used to render as honest-looking zero activation
+      ;; counts (observed 2026-07-26). The tag is greppable in the JVM log.
+      (println (str "[wm-activations-degraded] " (.getName (class t)) ": "
+                    (.getMessage t)))
+      {})))
 
 (defn enrich-patterns-with-activations
   "Given the WM `data` map and a days window, attach an :activations-Nd count
@@ -4836,11 +8326,23 @@
               "scheduler" scheduler
               "vsatarcs-status" vsatarcs-status)))))
 
+(defn- wm-scheduler-autostart? []
+  ;; Default OFF.  Reading GET /api/alpha/war-machine used to arm the
+  ;; 300-second snapshot scheduler as a side effect (ensure-started! on
+  ;; every read), so any viewer, curl, or agent probe silently started a
+  ;; recurring tick loop that ran until the JVM restarted and flooded the
+  ;; Morning Brief loss ledger with :wm-scheduler-tick failures (288/day
+  ;; on 2026-08-01; ghost ticks on 2026-08-23).  Opt in explicitly with
+  ;; -Dfuton.wm.scheduler.autostart=true; otherwise the scheduler is only
+  ;; started deliberately via futon3c.wm.scheduler/start!.
+  (= "true" (System/getProperty "futon.wm.scheduler.autostart")))
+
 (defn- wm-scheduler-ensure-started! []
-  (try
-    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/ensure-started!)]
-      (f))
-    (catch Throwable _ nil)))
+  (when (wm-scheduler-autostart?)
+    (try
+      (when-let [f (requiring-resolve 'futon3c.wm.scheduler/ensure-started!)]
+        (f))
+      (catch Throwable _ nil))))
 
 (defn- wm-scheduler-status-snapshot []
   (try
@@ -4859,6 +8361,39 @@
     (when-let [f (requiring-resolve 'futon3c.wm.scheduler/snapshot-for-days)]
       (f days))
     (catch Throwable _ nil)))
+
+(defn- wm-live-recommendation
+  [snapshot]
+  (let [payload (:payload snapshot)
+        judgement (or (:judgement payload)
+                      (get payload "judgement"))]
+    (when (map? judgement)
+      (live-recommendation/project judgement))))
+
+(defn- r14-gamma-summary
+  "The selection-gain γ route is DELETED (H3, SPEC-flat-removal-and-cascade-
+   decision, 2026-09-17): γ modulated the flat softmax's τ_eff, and the flat
+   decision is removed and impossible to run. Its replacement — a learned
+   cascade β per context — arrives with H5. Until H5 lands, this slot answers
+   a typed :not-yet-wired, never the old gain. The calibration readout below
+   is a distinct signal (predicted-vs-realised DISCHARGE over repl-traces) and
+   is retained unchanged."
+  []
+  (let [base {:status :not-yet-wired
+              :controller-kind :cascade-beta
+              :note (str "selection-gain γ deleted with the flat decision "
+                         "(H3, 2026-09-17); the replacement — learned cascade β "
+                         "per context — arrives with H5. Until then this route "
+                         "answers :not-yet-wired, never the old gain.")}]
+    (try
+      (let [report ((requiring-resolve 'futon3c.aif.calibration/calibration-report)
+                    ((requiring-resolve 'futon3c.aif.calibration/load-evidence)))]
+        (assoc base :calibration-signal
+               {:paired (:paired-count report)
+                :independent (or (:independent-paired-count report) 0)
+                :verdict (:verdict report)
+                :note "predicted-vs-realised DISCHARGE over repl-traces — a distinct readout, unrelated to the deleted gain feed"}))
+      (catch Throwable t (assoc base :calibration-signal {:error (.getMessage t)})))))
 
 (defn- handle-war-machine
   "GET /api/alpha/war-machine[?days=N] — return cached WM JSON snapshot.
@@ -4891,7 +8426,18 @@
           snapshot (wm-scheduler-snapshot-for-days days)]
       (if snapshot
         (let [scheduler (wm-scheduler-status-snapshot)
-              body (wm-prebuilt-response-body snapshot scheduler)]
+              ;; wm-prebuilt-response-body returns a pre-rendered JSON STRING (to avoid
+              ;; re-encoding the 10MB+ payload) — splice the lightweight control
+              ;; projections into it rather than assoc'ing onto a map.
+              s    (wm-prebuilt-response-body snapshot scheduler)
+              recommendation (wm-live-recommendation snapshot)
+              body (if (and (string? s) (str/starts-with? s "{"))
+                     (str "{\"live-recommendation\":"
+                          (json/generate-string recommendation)
+                          ",\"r14-gamma\":"
+                          (json/generate-string (r14-gamma-summary))
+                          "," (subs s 1))
+                     s)]
           (-> (json-response 200 body)
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
         (do
@@ -4902,6 +8448,7 @@
                               :days days
                               :retry-after-seconds 60
                               :scheduler (wm-scheduler-status-snapshot)
+                              :r14-gamma (r14-gamma-summary)
                               :message "war-machine snapshot not ready yet; background warmup started"})
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
               (assoc-in [:headers "Retry-After"] "60")))))
@@ -5083,6 +8630,425 @@
       (olane-cors (json-response 500 {:ok false :error "forward-model-failed"
                                       :message (.getMessage e)})))))
 
+(defn handle-cascade-real
+  "GET /api/alpha/cascade-real — a live snapshot of the composing cascade (the
+   'real data' the pipeline-pattern-cascade view renders): per-dimension counts,
+   cross-dimension shared-node overlaps, honest holes, the canonical spine, and
+   :consistent?. CORS-enabled so the file:// HTML can fetch it."
+  [_request _config]
+  (try
+    (let [summary ((requiring-resolve 'futon3c.logic.cascade-real-live/cascade-real-summary))]
+      (olane-cors (json-response 200 summary)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "cascade-real-failed"
+                                      :message (.getMessage e)})))))
+
+(defn handle-cascade-real-graph
+  "GET /api/alpha/cascade-real/graph — the per-section STRUCTURE (nodes+edges) the
+   pipeline-pattern-cascade BODY renders (lineage / clusters / holes / arrows / held +
+   the honest patterns gap), so the cascade regenerates from live data instead of the
+   hand-built sketch (C-cascade-real §7 DISSOLUTION, Checklist B). CORS-enabled for the
+   file:// HTML fetch. Complements /cascade-real (which gives the header metadata)."
+  [_request _config]
+  (try
+    (let [graph ((requiring-resolve 'futon3c.logic.cascade-real-live/cascade-real-graph))]
+      (olane-cors (json-response 200 graph)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "cascade-real-graph-failed"
+                                      :message (.getMessage e)})))))
+
+(def ^:private jvm-incident-symbols
+  {:incidents 'futon3c.runtime.incidents/incidents
+   :health 'futon3c.runtime.incidents/health})
+
+(defn- resolve-jvm-incident-fns
+  [ks]
+  (let [resolved
+        (into {}
+              (for [k ks]
+                [k (try
+                     (requiring-resolve (get jvm-incident-symbols k))
+                     (catch Throwable _ nil))]))]
+    (when (every? ifn? (vals resolved)) resolved)))
+
+(defn- jvm-incidents-unavailable-response []
+  (json-response
+   501
+   {:ok false
+    :err "jvm-incidents-unavailable"
+    :message "The serving JVM cannot resolve futon3c.runtime.incidents"}))
+
+(defn handle-jvm-incidents
+  "GET /api/alpha/jvm/incidents — newest durable uncaught JVM failures."
+  [request]
+  (if-let [{read-incidents :incidents}
+           (resolve-jvm-incident-fns [:incidents])]
+    (let [requested (or (parse-int (get (parse-query-params request) "limit")) 50)
+          limit (-> requested (max 0) (min 500))
+          records (read-incidents limit)]
+      (json-response 200 {:ok true
+                          :incidents records
+                          :count (count records)}))
+    (jvm-incidents-unavailable-response)))
+
+(defn handle-jvm-health
+  "GET /api/alpha/jvm/health — current JVM health plus durable incident count."
+  [_request]
+  (if-let [{health :health} (resolve-jvm-incident-fns [:health])]
+    (json-response 200 (assoc (health) :ok true))
+    (jvm-incidents-unavailable-response)))
+
+(def ^:private morning-brief-symbols
+  {:queue-item! 'futon2.aif.morning-brief/queue-item!
+   :review! 'futon2.aif.morning-brief/review!
+   :addendum! 'futon2.aif.morning-brief/addendum!
+   :items 'futon2.aif.morning-brief/items
+   :reviews 'futon2.aif.morning-brief/reviews
+   :addenda 'futon2.aif.morning-brief/addenda
+   :item-objectives 'futon2.aif.morning-brief/item-objectives})
+
+(defn- resolve-morning-brief-fns
+  [ks]
+  (let [resolved
+        (into {}
+              (for [k ks]
+                [k (try
+                     (requiring-resolve (get morning-brief-symbols k))
+                     (catch Throwable _ nil))]))]
+    ;; `requiring-resolve` returns Vars, which are invokable but not `fn?`.
+    (when (every? ifn? (vals resolved)) resolved)))
+
+(defn- morning-brief-unavailable-response []
+  (json-response
+   501
+   {:ok false
+    :err "morning-brief-unavailable"
+    :message "The serving JVM cannot resolve futon2.aif.morning-brief; Morning Brief storage is unavailable"}))
+
+(defn- nonblank-string? [x]
+  (and (string? x) (not (str/blank? x))))
+
+(defn- duplicate-morning-brief-review-error? [e]
+  (or (instance? java.nio.file.FileAlreadyExistsException e)
+      (some? (:review-id (ex-data e)))
+      (str/includes? (or (.getMessage e) "") "already reviewed")))
+
+(defn handle-morning-brief-review
+  "POST /api/alpha/morning-brief/review — append one typed operator review
+   through futon2.aif.morning-brief/review!."
+  [request]
+  (if-let [{review! :review!} (resolve-morning-brief-fns [:review!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          objective (:objective payload)
+          answer (:answer payload)
+          note (:note payload)
+          reviewer (:reviewer payload)]
+      (if-not (and payload
+                   (every? nonblank-string?
+                           [attempt-id objective answer note reviewer]))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-review"
+          :message "attempt-id, objective, answer, note, and reviewer must be non-blank strings"})
+        (try
+          (let [review (review! attempt-id (keyword objective) (keyword answer)
+                                note reviewer)]
+            (json-response 200 {:ok true :review review}))
+          (catch Exception e
+            (json-response
+             (if (duplicate-morning-brief-review-error? e) 409 400)
+             {:ok false
+              :err (if (duplicate-morning-brief-review-error? e)
+                     "morning-brief-review-conflict"
+                     "invalid-morning-brief-review")
+              :message (or (.getMessage e) "Morning Brief review failed")})))))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-item
+  "POST /api/alpha/morning-brief/item — append one typed machine attempt.
+
+   This is the loss-ledger ingress used when selection fails before the
+   full-loop runner can own an attempt."
+  [request]
+  (if-let [{queue-item! :queue-item!}
+           (resolve-morning-brief-fns [:queue-item!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          failure (:failure payload)]
+      (if-not (and payload
+                   (nonblank-string? attempt-id)
+                   (map? failure)
+                   (nonblank-string? (:kind failure))
+                   (= "selection" (:stage failure)))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-item"
+          :message "selection failure item requires attempt-id and typed failure"})
+        (try
+          (json-response 200
+                         {:ok true
+                          :attempt-id attempt-id
+                          :item-ref (queue-item! payload)})
+          (catch Exception e
+            (json-response 400
+                           {:ok false
+                            :err "morning-brief-item-write-failed"
+                            :message (or (.getMessage e)
+                                         "Morning Brief item failed")})))))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-addendum
+  "POST /api/alpha/morning-brief/addendum — append one notebook record
+   through futon2.aif.morning-brief/addendum!."
+  [request]
+  (if-let [{addendum! :addendum!} (resolve-morning-brief-fns [:addendum!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          kind (:kind payload)
+          title (:title payload)
+          body (:body payload)
+          author (:author payload)]
+      (if-not (and payload
+                   (every? nonblank-string?
+                           [attempt-id kind title body author]))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-addendum"
+          :message "attempt-id, kind, title, body, and author must be non-blank strings"})
+        (try
+          (json-response 200 {:ok true
+                              :addendum (addendum! attempt-id (keyword kind)
+                                                   title body author)})
+          (catch Exception e
+            (json-response 400 {:ok false
+                                :err "invalid-morning-brief-addendum"
+                                :message (or (.getMessage e)
+                                             "Morning Brief addendum failed")})))))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-pending
+  "GET /api/alpha/morning-brief/pending — return items with applicable and
+   answered objective sets and sorted addenda, resolved from the canonical
+   futon2 store API."
+  [_request]
+  (if-let [{items :items reviews :reviews addenda :addenda
+            item-objectives :item-objectives}
+           (resolve-morning-brief-fns [:items :reviews :addenda
+                                      :item-objectives])]
+    (try
+      (let [review-records (reviews)
+            addenda-by-attempt
+            (->> (addenda)
+                 (group-by :attempt-id)
+                 (map (fn [[attempt-id records]]
+                        [attempt-id (vec (sort-by :created-at records))]))
+                 (into {}))
+            answered-by-attempt
+            (reduce (fn [acc review]
+                      (update acc (:attempt-id review) (fnil conj [])
+                              (:objective review)))
+                    {} review-records)
+            item-records
+            (mapv (fn [item]
+                    (assoc item
+                           :applicable-objectives (vec (item-objectives item))
+                           :answered-objectives
+                           (vec (distinct
+                                 (get answered-by-attempt (:attempt-id item) [])))
+                           :addenda (get addenda-by-attempt
+                                         (:attempt-id item) [])))
+                  (items))]
+        (json-response 200 {:ok true :items item-records
+                            :count (count item-records)}))
+      (catch Exception e
+        (json-response 500 {:ok false :err "morning-brief-read-failed"
+                            :message (.getMessage e)})))
+    (morning-brief-unavailable-response)))
+
+(defn handle-wm-strategic-selection
+  "POST /api/alpha/war-machine/strategic-selection — run the authoritative
+   cache-gated selector for the standalone Futon2 click runner."
+  [request]
+  (let [payload (parse-json-map (read-body request))
+        ranking (:scheduler-habit-ranking payload)]
+    (if-not payload
+      (json-response
+       400
+       {:ok false
+        :err "invalid-strategic-selection-request"
+        :message "scheduler-habit-ranking must be a non-empty vector of mission ids"})
+      (try
+        ;; Validation authority lives with the selector
+        ;; (live-wm-selection/validated-selection) so the in-process
+        ;; runner-service caller (M-omni-wm-runner) and this endpoint
+        ;; refuse identically — the allow-list is the bounded-autonomy
+        ;; boundary (919d975), not a transport nicety.
+        (if-let [select
+                 (try
+                   (requiring-resolve
+                    'futon3c.peripheral.live-wm-selection/validated-selection)
+                   (catch Throwable _ nil))]
+          (try
+            (json-response
+             200
+             {:ok true
+              :selection
+              (select {:scheduler-habit-ranking ranking
+                       :trace-id (:trace-id payload)})})
+            (catch clojure.lang.ExceptionInfo e
+              (if (= :invalid-strategic-selection-request (:err (ex-data e)))
+                (json-response
+                 400
+                 {:ok false
+                  :err "invalid-strategic-selection-request"
+                  :message "scheduler-habit-ranking must be a non-empty vector of mission ids"})
+                (throw e))))
+          (json-response
+           503
+           {:ok false :err "strategic-selector-unavailable"}))
+        (catch Throwable e
+          (json-response
+           503
+           {:ok false
+            :err "strategic-selection-failed"
+            :message (or (.getMessage e) "Strategic selection failed")
+            :data (ex-data e)}))))))
+
+(defn- handle-wm-click-start
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:error "invalid-json"})
+      (try
+        (let [issuer-provenance {:status :present
+                                 :identity (if (nonblank-string? (:issuing-caller payload))
+                                             (:issuing-caller payload)
+                                             :caller-unknown)
+                                 :source :wm-click-http-boundary}
+              legacy-opts (cond-> {}
+                     (nonblank-string? (:author payload))
+                     (assoc :author (:author payload))
+
+                     (nonblank-string? (:reviewer payload))
+                     (assoc :reviewer (:reviewer payload))
+
+                     (nonblank-string? (:repair-reviewer payload))
+                     (assoc :repair-reviewer (:repair-reviewer payload))
+
+                     (nonblank-string? (:run-id payload))
+                     (assoc :run-id (:run-id payload))
+
+                     (nonblank-string? (:trigger payload))
+                     (assoc :trigger (keyword (:trigger payload)))
+
+                     (true? (:measured-acquisition payload))
+                     (assoc :measured-acquisition? true)
+
+                     ;; A flight (futon2.aif.flight): the click assembles
+                     ;; only the flight's target with the flight's wants.
+                     ;; Sent as an EDN string so keyword tokens survive the
+                     ;; JSON boundary; read with clojure.edn (no eval).
+                     (nonblank-string? (:flight-edn payload))
+                     (assoc :flight (let [f (edn/read-string (:flight-edn payload))]
+                                      (when-not (and (map? f) (nonblank-string? (:target f))
+                                                     (vector? (:wants f)))
+                                        (throw (ex-info "flight-edn must be a map with :target and :wants"
+                                                        {:status 400 :error :invalid-flight-edn})))
+                                      f)))
+              _ (when (and (true? (:r10-commissioned payload))
+                           (contains? payload :run4-pin-ref))
+                  (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
+                                  {:status 400
+                                   :error :r10-commissioned-with-run4-pin-ref})))
+              prepared (when (contains? payload :run4-pin-ref)
+                         (run4-entry/prepare config (:headers request) payload))
+              _ (when (and prepared (not (:ok prepared)))
+                  (throw (ex-info "RUN4 click refused" prepared)))
+              admission (when prepared
+                          (run4-admission/reserve!
+                           (get-in config [:run4 :admission-root])
+                           (:admission-request prepared)))
+              _ (when (and admission (not (:ok admission)))
+                  (throw (ex-info "RUN4 attempt admission refused" admission)))]
+          (if (and admission (not (:new? admission)))
+            (json-response 200 {:run4/admission (:admission admission)})
+            (let [commissioned? (true? (:r10-commissioned payload))
+                  click! (requiring-resolve
+                          (if commissioned?
+                            'futon3c.wm.r10-click-adapter/commissioned-click!
+                            'futon3c.wm.runner-service/click!))
+                  opts (cond-> (assoc (merge legacy-opts (:opts prepared))
+                                      :issuer-provenance issuer-provenance)
+                         (and (not commissioned?) (not prepared))
+                         (assoc :ordinary-click/issue!
+                                (fn [click-id issued-at]
+                                  (ordinary-budget/consume!
+                                   click-id issued-at
+                                   (when (nonblank-string? (:issuing-caller payload))
+                                     (:issuing-caller payload))))))
+                  ;; A rationed click must not be spent on a run that cannot
+                  ;; reach selection for a reason knowable now: every cast
+                  ;; seat on the roster and invoke-ready BEFORE the issue
+                  ;; callback (and its budget append) can fire.
+                  _ (when (and (not commissioned?) (not prepared))
+                      (when-let [refusal ((requiring-resolve
+                                           'futon3c.wm.runner-service/cast-preflight-refusal)
+                                          legacy-opts)]
+                        (throw (ex-info "WM click refused: a cast seat cannot be invoked"
+                                        refusal))))
+                  result (if commissioned?
+                           (click! {:config config :issuer-provenance issuer-provenance})
+                           (click! opts))
+                  admission-status
+                  (when admission
+                    (run4-admission/record-click!
+                     (get-in config [:run4 :admission-root])
+                     (get-in prepared [:admission-request :attempt-id]) result))
+                  response (cond-> result
+                             admission-status
+                             (assoc :run4/admission admission-status))]
+              (if (= :already-running (:rejected result))
+                (json-response 409 response)
+                (json-response 200 response)))))
+        (catch Throwable throwable
+          (let [data (ex-data throwable)]
+            (json-response (or (:status data) 500)
+                           {:error (or (some-> (:error data) name)
+                                       "wm-click-start-failed")
+                            :message (.getMessage throwable)
+                            :details (select-keys data [:authorization :allocated :consumed :renewal
+                                                        :unready :cause])})))))))
+
+(defn- handle-wm-click-status
+  []
+  (try
+    (json-response
+     200
+     ((requiring-resolve 'futon3c.wm.runner-service/status)))
+    (catch Throwable throwable
+      (json-response 500
+                     {:error "wm-click-status-failed"
+                      :message (.getMessage throwable)}))))
+
+(defn- handle-wm-run4-series-step [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:error "invalid-json"})
+      (try
+        (json-response 200
+                       (run4-series-service/step! config (:headers request) payload))
+        (catch Throwable throwable
+          (let [data (ex-data throwable)]
+            (json-response (or (:status data) 500)
+                           {:error (or (some-> (:error data) name)
+                                       "run4-series-step-failed")
+                            :reason (some-> (:reason data) name)
+                            :message (.getMessage throwable)})))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -5090,6 +9056,257 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :post method) (= "/api/alpha/test-registry/check" uri))
+      (handle-test-registry-check request config)
+
+      (and (= :post method) (= "/api/alpha/test-registry/run" uri))
+      (handle-test-registry-run request config)
+
+      (and (= :get method) (= "/api/alpha/test-registry/latest" uri))
+      (handle-test-registry-latest request config)
+
+      (and (= :get method) (= "/api/alpha/test-registry/report" uri))
+      (handle-test-registry-report request config)
+
+      ;; POST /api/alpha/agents/:id/compact — raw /compact control for a warm
+      ;; pouch (handoff 4, 2026-08-22). Lives here, not in make-handler's cond,
+      ;; so a plain Drawbridge reload activates it (reload-safe route contract).
+      (and (= :post method) (string? uri)
+           (str/starts-with? uri "/api/alpha/agents/")
+           (str/ends-with? uri "/compact"))
+      (let [raw (subs uri (count "/api/alpha/agents/")
+                     (- (count uri) (count "/compact")))]
+        (handle-agent-compact config (enc/decode-uri-component raw) request))
+
+      (and (= :get method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            token (get (parse-query-params request) "token")
+            result (role-submission/schema job-id token)]
+        (cond
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-submission/submit! job-id (:token payload)
+                                              (:payload payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (contains? #{:role-submission-token-mismatch
+                       :role-submission-conflict}
+                     (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-search" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-search" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/search!
+                      job-id (:token payload) (:query payload)
+                      (or (:limit payload) 10)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          (= :role-memory-search-not-authorized (:error/code result))
+          (json-response 403 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-applicability" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-applicability" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/observe-applicability!
+                      job-id (:token payload) (:observation payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-caption" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-caption" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/propose-caption!
+                      job-id (:token payload) (:caption payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-caption-review" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-caption-review" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/review-caption!
+                      job-id (:token payload) (:review payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      ;; Durable activation is deliberately mounted at the reload-safe boundary:
+      ;; countdown launch must not require restarting the Agency-routed JVM.
+      (and (= :post method) (= "/api/alpha/invoke/activate" uri))
+      (handle-invoke-activate request config)
+
+      (and (= :post method) (= "/api/alpha/conductor/action" uri))
+      (let [payload (parse-json-map (read-body request))
+            agent-id (or (:agent-id payload) (get payload "agent-id"))
+            session-id (or (:session-id payload) (get payload "session-id"))
+            result (when payload
+                     (conductor-surface/execute-action!
+                      agent-id session-id
+                      {:action-id (or (:action-id payload) (get payload "action-id"))
+                       :cycle-id (or (:cycle-id payload) (get payload "cycle-id"))
+                       :version (or (:version payload) (get payload "version"))
+                       :operation (or (:operation payload) (get payload "operation"))
+                       :args (or (:args payload) (get payload "args") [])}))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method) (= "/api/alpha/conductor/open" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-open/open!
+                      payload (:conductor-open-options config)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :get method) (= "/api/alpha/conductor/status" uri))
+      (let [params (parse-query-params request)]
+        (json-response 200
+                       (conductor-surface/status (get params "agent-id")
+                                                 (get params "session-id"))))
+
+      (and (= :post method) (= "/api/alpha/conductor/abandon" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/abandon!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method) (= "/api/alpha/conductor/takeover" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/takeover!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method) (= "/api/alpha/conductor/resume" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/resume-parked!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      ;; Operator queue control (2026-08-11): see what is queued behind an
+      ;; agent, hold that queue, release it. Mounted here rather than in
+      ;; make-handler's cond so a Drawbridge reload activates it without
+      ;; re-mounting the server — the running turn must not be disturbed.
+      (and (= :get method) (= "/api/alpha/agency/queue" uri))
+      (handle-agency-queue request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/hold" uri))
+      (handle-agency-queue-hold request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/release" uri))
+      (handle-agency-queue-release request)
+
+      (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
+      (handle-jvm-incidents request)
+
+      (and (= :get method) (= "/api/alpha/jvm/health" uri))
+      (handle-jvm-health request)
+
+      (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
+      (handle-morning-brief-review request)
+
+      (and (= :post method) (= "/api/alpha/morning-brief/item" uri))
+      (handle-morning-brief-item request)
+
+      (and (= :post method) (= "/api/alpha/morning-brief/addendum" uri))
+      (handle-morning-brief-addendum request)
+
+      (and (= :get method) (= "/api/alpha/morning-brief/pending" uri))
+      (handle-morning-brief-pending request)
+
+      (and (= :post method)
+           (= "/api/alpha/war-machine/strategic-selection" uri))
+      (handle-wm-strategic-selection request)
+
+      (and (= :post method) (= "/api/alpha/wm/click" uri))
+      (handle-wm-click-start request config)
+
+      (and (= :post method) (= "/api/alpha/wm/run4/series/step" uri))
+      (handle-wm-run4-series-step request config)
+
+      (and (= :get method) (= "/api/alpha/wm/click" uri))
+      (handle-wm-click-status)
+
+      (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
+      (handle-cascade-real-graph request config)
+
+      (and (= :get method) (= "/api/alpha/cascade-real" uri))
+      (handle-cascade-real request config)
+
       (and (= :get method) (= "/api/alpha/war-machine/operator-bulletin" uri))
       (handle-operator-bulletin request config)
 
@@ -5097,7 +9314,7 @@
       (handle-forward-model request config)
 
       (and (= :get method) (= "/api/alpha/coordination/edges" uri))
-      (handle-coordination-edges request)
+      (handle-coordination-edges request config)
 
       (and (= :get method) (= "/api/alpha/coordination/qa" uri))
       (handle-coordination-qa request)
@@ -5105,7 +9322,168 @@
       (and (= :get method) (= "/api/alpha/coordination/threads" uri))
       (handle-coordination-threads request)
 
+      ;; C-cascade-real D1/O3: durable auto-clock for the repl buffer to poll.
+      (and (= :get method) (= "/api/alpha/agent-clock" uri))
+      (handle-agent-clock request)
+
+      ;; Typed external followups share busy-safe polling semantics with parks,
+      ;; but retain their own identity, queue, lease, ACK, and cancellation.
+      (and (= :post method) (= "/api/alpha/followups" uri))
+      (handle-followup-enqueue request)
+
+      (and (= :get method) (= "/api/alpha/followups/ready" uri))
+      (handle-followup-ready request)
+
+      (and (= :post method) (= "/api/alpha/followups/ready/ack" uri))
+      (handle-followup-ack request)
+
+      (and (= :post method) (= "/api/alpha/followups/cancel" uri))
+      (handle-followup-cancel request)
+
+      (and (= :post method) (= "/api/alpha/inbox-zero/confirm-attribution" uri))
+      (let [body (parse-json-map (read-body request))
+            raw-key (or (:path-key body) (get body "path-key"))
+            input {:agent (or (:agent body) (get body "agent"))
+                   :session (or (:session body) (get body "session"))
+                   :response-id (or (:response-id body) (get body "response-id"))
+                   :path-key {:repo/id (or (:repo-id raw-key) (get raw-key "repo-id"))
+                              :worktree/id (or (:worktree-id raw-key)
+                                               (get raw-key "worktree-id"))
+                              :path (or (:path raw-key) (get raw-key "path"))}}]
+        (try
+          (let [confirm! (requiring-resolve
+                          'futon3c.inbox-zero.confirm-intake/confirm-attribution!)
+                result (confirm! input {})]
+            (json-response (if (:ok result) 200 409) result))
+          (catch clojure.lang.ExceptionInfo error
+            (json-response 400 {:ok false :error (name (:error/type (ex-data error)))
+                                :message (.getMessage error)}))))
+
+      ;; M-live-efe-map VERIFY: read-only live join over agents, WM ticks,
+      ;; clocks, invoke jobs, and the frozen EFE coordinate set.
+      (and (= :get method) (= "/api/alpha/live-efe-map" uri))
+      (let [f (requiring-resolve 'futon3c.live-efe-map/build-response)]
+        (-> (json-response 200
+                           (f {:registry (reg/registry-status)
+                               :invoke-jobs (recent-invoke-jobs 200)
+                               :evidence-store (evidence-store-for-config config)
+                               :wm-limit 25}))
+            (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
+
+      ;; E-repl-continuations Car 2b: register a parked-on continuation.
+      (and (= :post method) (= "/api/alpha/park" uri))
+      (handle-park request config)
+
+      (and (= :post method) (= "/api/alpha/park/complete" uri))
+      (handle-park-complete request config)
+
+      ;; E-repl-continuations Car 2b: repl buffer polls for ready resumes.
+      (and (= :get method) (= "/api/alpha/parked/ready" uri))
+      (handle-parked-ready request config)
+
+      ;; E-park-delivery-losses bug 3: ACK a leased ready resume (confirm delivery).
+      (and (= :post method) (= "/api/alpha/parked/ready/ack" uri))
+      (handle-parked-ready-ack request config)
+
+      ;; E-repl-continuations: outstanding parks (within-turn unification).
+      (and (= :get method) (= "/api/alpha/parked" uri))
+      (handle-parked request config)
+
       :else nil)))
+
+(defonce ^:private !installed-handler
+  ;; The server retains `installed-handler` across Drawbridge namespace reloads;
+  ;; defonce keeps the live target reachable instead of orphaning its atom.
+  (atom nil))
+
+(defonce ^:private !handler-builder
+  (atom nil))
+
+(defonce ^:private !handler-config
+  ;; Private serving construction state. It may contain credentials and must
+  ;; never be returned from an HTTP route, status map or log message.
+  (atom nil))
+
+(defonce ^:private handler-reconfiguration-lock (Object.))
+
+(declare make-handler)
+
+(defn compose-http-websocket-handler
+  "Retain the existing WebSocket handler while rebuilding only HTTP config.
+
+  The factory is captured by the composed handler, so reconfiguration and
+  subsequent rebuilds preserve the same WebSocket connections and callbacks."
+  [http-handler websocket-handler]
+  (let [config (::handler-config (meta http-handler))
+        factory (or (::config-builder (meta http-handler)) #(make-handler %))]
+    (when-not (and (map? config) (fn? websocket-handler))
+      (throw (ex-info "HTTP/WebSocket composition requires captured HTTP config"
+                      {:reason :composition-config-unavailable})))
+    (letfn [(build [updated]
+              (compose-http-websocket-handler (factory updated) websocket-handler))]
+      (with-meta
+        (fn [request]
+          (if (:websocket? request)
+            (websocket-handler request)
+            (http-handler request)))
+        {::handler-config config
+         ::config-builder build
+         ::rebuild-fn #(build config)}))))
+
+(defn- installed-handler
+  [request]
+  (if-let [handler @!installed-handler]
+    (handler request)
+    (json-response 503 {:ok false :error "handler-not-installed"})))
+
+(defn rebuild-handler!
+  "Atomically replace the handler served by `start-server!`.
+
+   With no argument, rebuild from the original `make-handler` config captured
+   at server installation. With an explicit handler, install that value and
+  retain its rebuild function when it was produced by `make-handler`."
+  ([]
+   (locking handler-reconfiguration-lock
+     (if-let [build @!handler-builder]
+       (rebuild-handler! (build))
+       (throw (ex-info "installed handler has no rebuild function" {})))))
+  ([handler]
+   (when-not (fn? handler)
+     (throw (ex-info "handler must be invocable" {:handler handler})))
+   (locking handler-reconfiguration-lock
+     (reset! !installed-handler handler)
+     (reset! !handler-builder (::rebuild-fn (meta handler)))
+     (reset! !handler-config (::handler-config (meta handler))))
+   handler))
+
+(defn reconfigure-handler!
+  "Apply a server-owned CONFIG-TRANSFORM to the installed handler config.
+
+  The transform and fresh `make-handler` construction both finish before the
+  live handler is swapped. On any exception the handler, config and subsequent
+  rebuild source remain unchanged. This is an in-process operator API, not an
+  HTTP endpoint. The return value deliberately contains no configuration."
+  [config-transform]
+  (when-not (fn? config-transform)
+    (throw (ex-info "config transform must be invocable"
+                    {:reason :config-transform-invalid})))
+  (locking handler-reconfiguration-lock
+    (let [current @!handler-config]
+      (when-not (map? current)
+        (throw (ex-info "installed handler has no captured configuration"
+                        {:reason :handler-config-unavailable})))
+      (let [updated (config-transform current)]
+        (when-not (map? updated)
+          (throw (ex-info "config transform must return a map"
+                          {:reason :handler-config-invalid})))
+        (let [factory (or (::config-builder (meta @!installed-handler)) make-handler)
+              handler (factory updated)]
+          (reset! !installed-handler handler)
+          (reset! !handler-builder (::rebuild-fn (meta handler)))
+          (reset! !handler-config updated)
+          {:ok true
+           :status :handler-reconfigured
+           :run4-configured? (map? (:run4 updated))})))))
 
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.
@@ -5116,8 +9494,11 @@
 
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
-  (let [started-at (Instant/now)]
-    (fn [request]
+  (let [started-at (Instant/now)
+        _ (when-let [backend (evidence-store-for-config config)]
+            (clock-decision/restore-registered! backend))]
+    (with-meta
+      (fn [request]
       (try
         (let [method (:request-method request)
               uri (:uri request)]
@@ -5199,14 +9580,26 @@
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)
 
-          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
+          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-invoke-job job-id))
 
           (and (= :post method) (= "/api/alpha/invoke/jobs/reap" uri))
           (let [n (reap-stale-invoke-jobs!)]
             (json-response 200 {:ok true :reaped n}))
+
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)/ack" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)/ack" uri)
+                job-id (enc/decode-uri-component raw-id)]
+            (handle-ack-invoke-job job-id request))
+
+          ;; Explicit operator termination — the replacement for the wall-clock
+          ;; ceiling (README-agency-cap.md).
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri)
+                job-id (enc/decode-uri-component raw-id)]
+            (handle-cancel-invoke-job job-id request))
 
           (and (= :post method) (= "/api/alpha/invoke-stream" uri))
           (handle-invoke-stream request config)
@@ -5264,6 +9657,10 @@
           (and (= :get method) (= "/api/alpha/war-machine" uri))
           (handle-war-machine request)
 
+          (and (= :post method)
+               (= "/api/alpha/war-machine/strategic-selection" uri))
+          (handle-wm-strategic-selection request)
+
           (and (= :get method) (= "/api/alpha/aif-stack/live" uri))
           (handle-aif-stack-live request config)
 
@@ -5294,6 +9691,12 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
+
+          (and (= :post method) (= "/api/alpha/frames/mint-seats" uri))
+          (handle-frame-seat-mint request config)
+
+          (and (= :post method) (= "/api/alpha/frames/mint-analyst" uri))
+          (handle-analyst-seat-mint request config)
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
@@ -5430,7 +9833,9 @@
           ;; interrupted). Convert to a clean 503 instead of letting an
           ;; ERROR log + stacktrace surface during graceful shutdown.
           (Thread/interrupted)  ; clear the interrupt flag
-          (json-response 503 {:ok false :error "shutting-down"}))))))
+          (json-response 503 {:ok false :error "shutting-down"}))))
+      {::rebuild-fn #(make-handler config)
+       ::handler-config config})))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.
@@ -5443,7 +9848,8 @@
   [handler port]
   (let [!server (atom nil)
         !stopped? (atom false)
-        server (hk/run-server handler {:port port
+        _ (rebuild-handler! handler)
+        server (hk/run-server installed-handler {:port port
                                        :legacy-return-value? false
                                        :error-logger (make-http-kit-error-logger !server)})
         _ (reset! !server server)
@@ -5465,7 +9871,10 @@
                        true)
                      (catch Exception _ false))]
     (if listening?
-      {:server stop-fn :port port :started-at (str (Instant/now))}
+      (do
+        (try (start-parked-on!) (catch Throwable t
+                                  (println (str "[parked-on] boot failed: " (.getMessage t)))))
+        {:server stop-fn :port port :started-at (str (Instant/now))})
       (do (stop-fn)
           (throw (ex-info "Server started but port is not listening (L7: verify-after-start)"
                           {:port port}))))))

@@ -1,0 +1,7 @@
+{
+  "article": "https://zone.hyperreal.enterprises/2026-09-11-pattern-first-ta.html",
+  "source_commit": "c0bb93b7",
+  "index_before_sha256": "0f5d1d9dec5f742dccc35dfc676309ad4a186ec8ccd609f305524b1bcac5964f",
+  "index_after_sha256": "ae2acf5a5688dc38020f6d3cb7845ab857007943b3f0d156c4839cdccd38a00a",
+  "caddy_restart_required": false
+}

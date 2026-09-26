@@ -1,0 +1,457 @@
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+import gates
+
+
+APM_REPO = Path("/home/joe/code/apm-lean")
+GOLDENS = {
+    "a96J04": {
+        "revision": "33575db",
+        "outcome": "closed",
+        "theorem": "ac_monotone_maps_null_to_null",
+        "sorries": 0,
+        "boundary": True,
+        "sorry-axiom": False,
+        "statement-hash": "sha256:3621ac37a02bb85a3a779bfacd2984b728b5aece2555e4c895ff5a20426754fe",
+    },
+    "a96J08": {
+        "revision": "37192e1",
+        "outcome": "partial",
+        "theorem": "apm_a96J08",
+        "sorries": 1,
+        "boundary": True,
+        "sorry-axiom": True,
+        "statement-hash": "sha256:df0a2dedcc57f5d7dd3e9b2888d2417fbb86a98c5dfa6f5632a5581563e17ae4",
+    },
+    "a96J07": {
+        "revision": "462b48a",
+        "outcome": "closed",
+        "theorem": "apm_a96J07",
+        "sorries": 0,
+        "boundary": True,
+        "sorry-axiom": False,
+        "statement-hash": "sha256:83e07f98c3c9e0e7516c7682e4cb437f00cedc5217952b4793e9a66dbfc234f6",
+    },
+}
+
+
+class StaticGateTests(unittest.TestCase):
+    def test_comment_stripped_sorry_count(self):
+        source = """theorem demo : True := by
+  -- sorry
+  /- outer sorry /- nested sorry -/ still comment -/
+  have text : String := "not-a-hole -- /-"
+  sorry
+"""
+        self.assertEqual(1, gates.count_sorries(source))
+        self.assertEqual([5], gates.sorry_sites(source))
+
+    def test_statement_hash_is_stable_under_whitespace_reformatting(self):
+        compact = "theorem demo (n : Nat) : n = n := by rfl\n"
+        reformatted = """theorem   demo
+    (n : Nat) :
+    n = n    := by
+  rfl
+"""
+        self.assertEqual(gates.statement_hash(compact)[2], gates.statement_hash(reformatted)[2])
+
+    def test_first_theorem_not_first_lemma_is_main(self):
+        source = "lemma helper : True := by trivial\n\ntheorem main_result : True := by trivial\n"
+        name, normalized = gates.extract_main_statement(source)
+        self.assertEqual("main_result", name)
+        self.assertEqual("theorem main_result : True :=", normalized)
+
+    def test_theorem_name_is_qualified_after_namespace_closes(self):
+        source = """namespace Outer.Inner
+theorem result : True := by trivial
+end Outer.Inner
+"""
+        self.assertEqual("Outer.Inner.result", gates.qualified_theorem_name(source, "result"))
+
+    def test_conforming_boundary(self):
+        source = """theorem demo : True := by
+  -- Searched Mathlib for `missing_bridge`.
+  -- Tried the direct route first.
+  -- The blocker is the absent conversion lemma.
+  -- It requires a local finite-sum bridge.
+  -- The remaining route is induction on the cover.
+  sorry
+"""
+        result = gates.boundary_conformance(source)
+        self.assertTrue(result["conforming"])
+        self.assertEqual(5, result["sites"][0]["comment-lines"])
+
+    def test_thin_boundary_is_nonconforming(self):
+        source = """theorem demo : True := by
+  -- blocker: `missing_bridge`
+  -- searched Mathlib
+  sorry
+"""
+        self.assertFalse(gates.boundary_conformance(source)["conforming"])
+
+    def test_unterminated_comment_is_rejected(self):
+        with self.assertRaises(gates.GateError):
+            gates.strip_comments("theorem demo : True := by /- sorry")
+
+    def test_sorry_axiom_contradiction_is_defective(self):
+        build = {"exit-code": 0}
+        boundary = {"conforming": True}
+        with self.subTest("zero-sorries-with-sorryAx"):
+            outcome, reasons = gates._classify(
+                build,
+                0,
+                boundary,
+                {"exit-code": 0, "line": "'demo' depends on axioms: [sorryAx]"},
+            )
+            self.assertEqual("defective", outcome)
+            self.assertEqual(["sorry-count-axiom-contradiction"], reasons)
+        with self.subTest("sorries-without-sorryAx-is-not-a-contradiction"):
+            # Chain-3 fix: a sorried helper with a clean main theorem is a
+            # partial, not a contradiction (discovery guarantees the checked
+            # theorem is the problem statement).
+            outcome, reasons = gates._classify(
+                build,
+                1,
+                boundary,
+                {"exit-code": 0, "line": "'demo' depends on axioms: [propext]"},
+            )
+            self.assertEqual("partial", outcome)
+            self.assertEqual([], reasons)
+
+
+class HistoricalIntegrationTests(unittest.TestCase):
+    maxDiff = None
+
+    def run_golden(self, problem_id):
+        expected = GOLDENS[problem_id]
+        repository_path = f"problems/{problem_id}/lean/Main.lean"
+        shown = subprocess.run(
+            ["git", "show", f"{expected['revision']}:{repository_path}"],
+            cwd=APM_REPO,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+        with tempfile.TemporaryDirectory(prefix=f"apm-driver-{problem_id}-") as directory:
+            lean_file = Path(directory) / "Main.lean"
+            lean_file.write_text(shown.stdout, encoding="utf-8")
+            result = gates.gate_path(lean_file, repo_root=APM_REPO, timeout_seconds=900)
+        gate_results = result["gate-results"]
+        actual = {
+            "outcome": result["outcome"],
+            "theorem": gate_results["theorem-name"],
+            "sorries": gate_results["sorries"],
+            "boundary": gate_results["boundary-conforming"],
+            "sorry-axiom": "sorryAx" in (gate_results["axioms"]["line"] or ""),
+            "statement-hash": result["statement-hash"],
+        }
+        self.assertEqual(
+            {key: value for key, value in expected.items() if key != "revision"},
+            actual,
+        )
+        self.assertEqual(0, gate_results["build"]["exit-code"])
+        self.assertEqual(0, gate_results["axioms"]["exit-code"])
+        self.assertEqual([], gate_results["reasons"])
+        return result
+
+    def test_a96j04_closed_at_33575db(self):
+        self.run_golden("a96J04")
+
+    def test_a96j08_partial_at_37192e1(self):
+        self.run_golden("a96J08")
+
+    def test_a96j07_closed_at_462b48a(self):
+        self.run_golden("a96J07")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class DocstringBoundaryTest(unittest.TestCase):
+    """Trial chain 2 shape: full protocol in the theorem docstring."""
+
+    SOURCE = '''/-- **Steinhaus's theorem**: statement summary here.
+
+**Boundary (1 sorry):** the remaining bridge is L1 translation
+continuity. APIs searched: `Continuous.convolution`,
+`tendsto_integral_of_dominated_convergence`.
+Routes tried: direct DCT (blocked). Routes NOT investigated:
+`Convolution` namespace with bilinear maps. -/
+theorem demo (A : Set Real) : True := by
+  sorry
+'''
+
+    def test_docstring_protocol_conforms(self):
+        result = gates.boundary_conformance(self.SOURCE)
+        self.assertTrue(result["conforming"])
+        self.assertTrue(result["docstring-conforming"])
+
+    def test_bare_sorry_without_docstring_still_fails(self):
+        bare = "theorem demo : True := by\n  sorry\n"
+        self.assertFalse(gates.boundary_conformance(bare)["conforming"])
+
+
+class MainTheoremDiscoveryTest(unittest.TestCase):
+    """Chain-3 fix: problem-named theorem wins; multi-theorem without one raises."""
+
+    def test_problem_named_theorem_wins_over_first(self):
+        src = ("theorem helper_lemma : True := trivial\n"
+               "theorem apm_a96X01 (n : Nat) : n = n := rfl\n")
+        name, _ = gates.extract_main_statement(src, "a96X01")
+        self.assertEqual("apm_a96X01", name)
+
+    def test_single_theorem_needs_no_name_match(self):
+        src = "theorem anything_at_all : True := trivial\n"
+        name, _ = gates.extract_main_statement(src, "a96X01")
+        self.assertEqual("anything_at_all", name)
+
+    def test_multi_theorem_without_problem_name_raises(self):
+        src = ("theorem helper_one : True := trivial\n"
+               "theorem helper_two : True := trivial\n")
+        with self.assertRaisesRegex(gates.GateError, "no-main-statement"):
+            gates.extract_main_statement(src, "a96X01")
+
+
+class ModuleBlockBoundaryTest(unittest.TestCase):
+    """Chain-4 fix: a conforming boundary in a /-! module block counts."""
+
+    SOURCE = '''/-!
+# Header
+
+## Boundary: remaining bridge
+
+APIs searched: `lintegral_iSup_ae` FOUND, `lintegral_indicator` FOUND.
+Routes tried: direct `ofReal_integral_eq_lintegral_ofReal` — requires
+integrability on each piece; assembly did not compose smoothly.
+Routes NOT investigated: inner regularity.
+-/
+theorem demo : True := by
+  sorry
+'''
+
+    def test_module_block_boundary_conforms(self):
+        result = gates.boundary_conformance(self.SOURCE)
+        self.assertTrue(result["conforming"])
+        self.assertTrue(result["docstring-conforming"])
+
+
+class DiscoveryFailureClassifiesTest(unittest.TestCase):
+    """Chain-5 fix: no-main-statement gates defective, never raises."""
+
+    def test_gate_path_returns_defective_on_multi_theorem(self, ):
+        import tempfile, pathlib
+        src = ("theorem helper_one : True := trivial\n"
+               "theorem helper_two : True := by\n  sorry\n")
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d) / "Main.lean"
+            f.write_text(src)
+            r = gates.gate_path(f, problem_id="a96X01")
+        self.assertEqual("defective", r["outcome"])
+        self.assertTrue(any("statement-discovery-failed" in x
+                            for x in r["gate-results"]["reasons"]))
+
+
+class FrozenNameDiscoveryTest(unittest.TestCase):
+    """Chain-6 fix: re-gates find the frozen main theorem among helpers."""
+
+    SOURCE = ("theorem helper_added_by_closer : True := trivial\n"
+              "theorem the_main_one (n : Nat) : n = n := rfl\n"
+              "theorem another_helper : True := trivial\n")
+
+    def test_frozen_name_wins_over_ambiguity(self):
+        name, _ = gates.extract_main_statement(
+            self.SOURCE, "a97X99", expected_name="the_main_one")
+        self.assertEqual("the_main_one", name)
+
+    def test_missing_frozen_name_raises(self):
+        with self.assertRaisesRegex(gates.GateError, "frozen main theorem"):
+            gates.extract_main_statement(
+                self.SOURCE, "a97X99", expected_name="vanished_theorem")
+
+
+class FrozenNameDiscoveryTest(unittest.TestCase):
+    """Chain-6 fix: re-gates find the frozen main theorem among helpers."""
+
+    SOURCE = ("theorem helper_added_by_closer : True := trivial\n"
+              "theorem the_main_one (n : Nat) : n = n := rfl\n"
+              "theorem another_helper : True := trivial\n")
+
+    def test_frozen_name_wins_over_ambiguity(self):
+        name, _ = gates.extract_main_statement(
+            self.SOURCE, "a97X99", expected_name="the_main_one")
+        self.assertEqual("the_main_one", name)
+
+    def test_missing_frozen_name_raises(self):
+        with self.assertRaisesRegex(gates.GateError, "frozen main theorem"):
+            gates.extract_main_statement(
+                self.SOURCE, "a97X99", expected_name="vanished_theorem")
+
+
+def test_named_argument_colon_equals_does_not_end_the_declaration():
+    """m99A05, 2026-08-06: `(𝕜 := ℂ)` inside a statement truncated the
+    declaration, so the hash covered only a prefix and tampering past the cut
+    was invisible."""
+
+    source = (
+        "import Mathlib\n"
+        "theorem apm_x00a01 (X : Type) :\n"
+        "    (Foo (k := 1) X) ∧ (Bar X) := by\n"
+        "  sorry\n"
+    )
+    _name, decl = gates.extract_main_statement(source, "x00A01")
+    assert "Bar X" in decl, decl
+    assert decl.count("(") == decl.count(")"), decl
+
+
+def test_tampering_after_a_named_argument_moves_the_hash():
+    base = (
+        "import Mathlib\n"
+        "theorem apm_x00a01 (X : Type) :\n"
+        "    (Foo (k := 1) X) ∧ (Bar X) := by\n"
+        "  sorry\n"
+    )
+    tampered = base.replace("(Bar X)", "True")
+    _n, _x, h1 = gates.statement_hash(base, "x00A01")
+    _n, _x, h2 = gates.statement_hash(tampered, "x00A01")
+    assert h1 != h2
+
+
+# --- declaration-set contract (2026-08-07) -------------------------------
+# The 120 pre-campaign closes have no theorem named for their problem, so
+# `extract_main_statement` raises and they were reviewable but not protected.
+# The set contract is what makes substitution detectable in them.
+
+MULTI = (
+    "import Mathlib\n"
+    "lemma helper (a : Nat) : a = a := rfl\n"
+    "theorem part_a (f : Nat → Nat) : Monotone f ∨ True := by simp\n"
+    "theorem part_b (f : Nat → Nat) : f 0 = f 0 := rfl\n"
+)
+
+
+def test_declaration_hashes_covers_lemmas_and_theorems():
+    frozen = gates.declaration_hashes(MULTI)
+    assert set(frozen) == {"helper", "part_a", "part_b"}
+
+
+def test_pre_campaign_file_has_no_main_statement_but_does_have_a_contract():
+    try:
+        gates.extract_main_statement(MULTI, "a01A11")
+        raise AssertionError("expected GateError")
+    except gates.GateError:
+        pass
+    assert gates.declaration_hashes(MULTI)
+
+
+def test_weakening_a_reviewed_claim_is_drift():
+    frozen = gates.declaration_hashes(MULTI)
+    weakened = MULTI.replace("Monotone f ∨ True", "True")
+    assert gates.declaration_set_drift(frozen, weakened) == ["part_a: CHANGED"]
+
+
+def test_deleting_a_reviewed_claim_is_drift():
+    frozen = gates.declaration_hashes(MULTI)
+    deleted = MULTI.replace("theorem part_b (f : Nat → Nat) : f 0 = f 0 := rfl\n", "")
+    assert gates.declaration_set_drift(frozen, deleted) == ["part_b: REMOVED"]
+
+
+def test_adding_a_helper_is_not_drift():
+    """A closer that factors out a lemma must not trip the contract — the
+    asymmetry (additions legal, weakening not) is what keeps the gate usable."""
+
+    frozen = gates.declaration_hashes(MULTI)
+    extended = MULTI + "lemma newly_factored (b : Nat) : b + 0 = b := by simp\n"
+    assert gates.declaration_set_drift(frozen, extended) == []
+
+
+def test_a_comment_that_looks_like_a_theorem_is_not_a_claim():
+    commented = MULTI + "/- theorem ghost : False := by sorry -/\n"
+    assert "ghost" not in gates.declaration_hashes(commented)
+
+
+def test_native_decide_axioms_are_impure():
+    """The defect that reached `proved` three times: a zero-sorry artifact
+    trusted to the compiler rather than checked by the kernel."""
+
+    out = ("'apm_b95j01' depends on axioms: [propext, Classical.choice, "
+           "apm_b95j01._native.native_decide.ax_1_4]")
+    assert gates.impure_axioms(out, "apm_b95j01") == [
+        "apm_b95j01._native.native_decide.ax_1_4"]
+
+
+def test_the_accepted_kernel_set_is_pure():
+    out = "'apm_x' depends on axioms: [propext, Classical.choice, Quot.sound]"
+    assert gates.impure_axioms(out, "apm_x") == []
+
+
+def test_a_wrapped_axiom_list_is_read_whole():
+    """Lean wraps a long list across lines. Matching one line truncates it, and
+    stripping spaces instead of per-element leaves `\\nClassical.choice`, which
+    fails the whitelist and marks every artifact defective."""
+
+    out = ("'apm_x' depends on axioms: [propext,\n Classical.choice,\n"
+           " Quot.sound,\n apm_x._native.native_decide.ax_1_2]")
+    assert gates.impure_axioms(out, "apm_x") == ["apm_x._native.native_decide.ax_1_2"]
+
+
+def test_sorry_axiom_is_impure():
+    out = "'apm_x' depends on axioms: [propext, sorryAx]"
+    assert gates.impure_axioms(out, "apm_x") == ["sorryAx"]
+
+
+def test_axioms_of_another_theorem_are_not_read():
+    """Two probes in one output must not cross-contaminate."""
+
+    out = ("'apm_helper' depends on axioms: [sorryAx]\n"
+           "'apm_x' depends on axioms: [propext, Quot.sound]")
+    assert gates.impure_axioms(out, "apm_x") == []
+
+
+def test_missing_probe_output_is_not_a_defect():
+    """No line means the probe did not run — that is `axiom-probe-failed`,
+    decided by the caller, not a positive finding of impurity."""
+
+    assert gates.impure_axioms("", "apm_x") == []
+
+
+def test_opaque_declarations_are_found():
+    """`opaque c : T` is an uninterpreted constant; a statement over one is not
+    about the object the source names, and no axiom appears to betray it."""
+
+    source = ("opaque windingNumber (g : Nat) : Int\n"
+              "theorem apm_x (g : Nat) : windingNumber g ≠ 2 := by sorry\n")
+    assert gates.opaque_declarations(source) == ["windingNumber"]
+
+
+def test_prose_about_opacity_is_not_a_declaration():
+    """Several of these files discuss opacity in comments; a raw grep counts
+    that as a declaration and t02A08 was miscounted exactly that way."""
+
+    source = ("/-- This models an\nopaque integer-valued operation. -/\n"
+              "def real (n : Nat) : Nat := n\n")
+    assert gates.opaque_declarations(source) == []
+
+
+def test_a_prefixed_helper_does_not_capture_the_main_statement():
+    """a94J06's closer factored out `apm_a94J06_at_zero` ABOVE the main theorem.
+    The substring scan took it, so the contract silently re-keyed to a helper:
+    the statement was byte-identical yet hashed differently, the gate returned
+    void-statement-changed, and a genuine close was thrown away."""
+
+    source = ("theorem apm_x00A01_at_zero : True := trivial\n"
+              "theorem apm_x00A01 (n : Nat) : n + 0 = n := by simp\n")
+    name, _norm, _digest = gates.statement_hash(source, "x00A01")
+    assert name == "apm_x00A01"
+
+
+def test_substring_match_still_covers_legacy_names():
+    """Artifacts predating the apm_<id> convention must keep resolving."""
+
+    source = "theorem legacy_x00A01_main : True := trivial\n"
+    name, _norm, _digest = gates.statement_hash(source, "x00A01")
+    assert name == "legacy_x00A01_main"

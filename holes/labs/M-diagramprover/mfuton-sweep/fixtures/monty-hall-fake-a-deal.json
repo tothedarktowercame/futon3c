@@ -1,0 +1,32 @@
+{
+  "example_id": "monty-hall-fake-a-deal",
+  "title": "Monty Hall: Let's Fake a Deal",
+  "topology_basis": "printed_diagram",
+  "content": "The host randomly opens an unchosen door without consulting the car location. Door Opened therefore has only Your Door as a cause, and observing it cannot associate Your Door with Location of Car.",
+  "variables": [
+    {"key": "y", "name": "Your Door", "content": "The contestant's initial door choice."},
+    {"key": "c", "name": "Location of Car", "content": "The independently chosen and causally isolated location of the car."},
+    {"key": "o", "name": "Door Opened", "content": "The randomly selected unchosen door opened by the host."}
+  ],
+  "arrows": [
+    {"source": "y", "target": "o", "because": "The host still must open a door different from the contestant's choice."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:aff8c4888b4945e5",
+    "ta-book-of-why-2018:d526957f5fb0ba05",
+    "ta-book-of-why-2018:32895820be634dee",
+    "ta-book-of-why-2018:0353ce01bb563e99",
+    "ta-book-of-why-2018:f407ac123848563e",
+    "ta-book-of-why-2018:299e92da28630691",
+    "ta-book-of-why-2018:c7e78ddab1f8d54b",
+    "ta-book-of-why-2018:6089ed82569e8dac",
+    "ta-book-of-why-2018:9fc741b27ee51476",
+    "ta-book-of-why-2018:8876d19c12166db3"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0205",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0206",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0207",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0208"
+  ]
+}

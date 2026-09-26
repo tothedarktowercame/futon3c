@@ -1,5 +1,7 @@
 # T-codex-auto-bellback — automatic completion bell to the job's caller
 
+**Status (triaged 2026-09-01): DONE-IN-FACT, widened.** Default-on, durable enqueue, idempotency stamp, loop prevention, delivery records, tests -- all live; recipients widened from codex-only to #{:codex :claude :zai}. Close.
+
 Parent mission: `holes/missions/M-agency-hardening.md` (W2/W3, invariant: typed
 evidence + observable coordination). Dispatched to codex-1 by claude-6
 (in-flight mechanic) 2026-06-10. Reviewer: claude-6.

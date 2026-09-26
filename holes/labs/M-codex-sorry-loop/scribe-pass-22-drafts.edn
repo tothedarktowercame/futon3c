@@ -1,0 +1,69 @@
+[{:name "extend-eLpNorm-to-essential-supremum-from-probability-to-finite-measure"
+  :lane :solve-lane
+  :level :generalization-strategy
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Prove `eLpNorm f p μ → eLpNorm f ⊤ μ` as `p → ∞` for a bounded a.e.-strongly-measurable function on an arbitrary finite measure space."}
+   :relation-to-existing
+   {:memory-id
+    "e-codexpilot-prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity"
+    :shared-content
+    "The positive-measure superlevel-set argument supplies the lower bound in both proofs."
+    :new-content
+    "Without a probability measure, exponent monotonicity does not give the required upper bound directly. The finite-measure proof tracks `μ(univ)^(1/p)` and superlevel-measure factors explicitly, proves both tend to one, and handles `μ = 0` separately."}
+   :scalar-limit
+   ["For nonzero finite `m : ℝ≥0∞`, prove `m^(1/p) → 1` as `p → ∞`."
+    "Show the real exponent tends to zero."
+    "Pass to `m.toNNReal`, use `Filter.Tendsto.nnrpow`, and transport the limit back through the ENNReal coercion."
+    "Record the required side conditions `m ≠ 0` and `m ≠ ⊤`; these are why the zero-measure case is split off."]
+   :lower-bound
+   ["For `a < eLpNorm f ⊤ μ`, choose `a < b < eLpNorm f ⊤ μ`."
+    "Let `s = {x | b < ‖f x‖ₑ}`."
+    "Show `μ s ≠ 0`: otherwise `essSup_le_of_ae_le` would force `eLpNorm f ⊤ μ ≤ b`."
+    "Compare the indicator constant on `s` with `f` to obtain `b * μ(s)^(1/p) ≤ eLpNorm f p μ`."
+    "Use the scalar limit for `μ s` to make this lower bound eventually exceed `a`."]
+   :upper-bound
+   ["Apply `eLpNorm_le_eLpNorm_mul_rpow_measure_univ` with endpoint exponent `⊤`."
+    "This gives `eLpNorm f p μ ≤ eLpNorm f ⊤ μ * μ(univ)^(1/p)`."
+    "Use the scalar limit for `μ(univ)` to make the upper comparison converge to `eLpNorm f ⊤ μ`."]
+   :assembly
+   "Handle `μ = 0` by simplification; otherwise combine the eventual lower and upper bounds with `tendsto_order`."
+   :key-api
+   ["Filter.Tendsto.nnrpow"
+    "eLpNorm_le_eLpNorm_mul_rpow_measure_univ"
+    "eLpNorm_indicator_const₀"
+    "eLpNorm_mono_enorm"
+    "eLpNorm_exponent_top"
+    "eLpNormEssSup"
+    "essSup_le_of_ae_le"
+    "tendsto_order"]
+   :witness
+   {:declaration "tendsto_eLpNorm_atTop"
+    :helper "tendsto_measure_rpow_one_div"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To generalize the probability-space `Lᵖ → L∞` proof to a finite measure, retain the superlevel lower bound but replace probability monotonicity by explicit measure factors; prove every nonzero finite factor `m^(1/p)` tends to one and split off the zero measure."
+   :boundary
+   "Finiteness of `μ(univ)` is load-bearing for the upper factor and for finiteness of superlevel measures. The proof does not extend unchanged to an infinite measure space."
+   :capture-kind :runner-finite-measure-generalization-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93J04"}
+   #:ref{:type :proof-pattern,
+         :id "finite-measure-eLpNorm-to-essential-supremum"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t024" "e-codexroll-019fa2c1-t025"]
+   :receipt-ids ["e67b14ab-df34-43b5-a9d4-88d46cbb29c8"]
+   :commits ["4d1dc9a272ce04b81cee67340e9ba54e9ed7be6c"]
+   :problems ["a93J04-lp-to-linfty"]
+   :artifacts
+   ["problems/a93J04/lean/Main.lean:tendsto_measure_rpow_one_div"
+    "problems/a93J04/lean/Main.lean:tendsto_eLpNorm_atTop"]}
+  :confidence :single-instance-ground-control-verified-with-promoted-overlap
+  :review {:verdict :pending-owner-review}}]

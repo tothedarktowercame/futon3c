@@ -1,0 +1,134 @@
+# Excursion: the Arxana Clock — one surface for the system's time-drivers (E-arxana-clock)
+
+**Date:** 2026-06-26 · **Status:** IDENTIFY + MAP grounded in live inventory (2026-06-26) — owned end-to-end by one agent (claude-10).
+**Authored by:** claude-10.
+**Parent / relates:**
+[[README-clicks-and-ticks]] (futon2 — the clicks/ticks conceptual frame this realises) ·
+[[M-cyder]] (futon3c — the in-JVM process registry, the keystone source) ·
+[[M-autoclock-in]] (the agent clock-in / click concept) ·
+[[E-C-vector-live]] (a *consumer*: the serving-JVM belly refresh wants to ride a turn/tick trigger this excursion provides + appear on the clock).
+**Repos:** futon3c (`src/futon3c/cyder.clj` — registry; transport/http — endpoint; scripts — the aggregator CLI) · futon2 (`README-clicks-and-ticks.md` — the frame) · system (`crontab -u joe`, `systemctl --user` timers).
+
+---
+
+## HEAD
+
+The system's running is kept alive by a set of **time-drivers** — but they are scattered across **three disjoint mechanisms** with **no unified view**, and Joe can't say how many are installed (2026-06-26). The Arxana Clock is the single surface that answers, at a glance: *what keeps this system ticking, when did each last fire, and when does it fire next?* — and the place a **new** driver (e.g. an every-≈100-turns trigger) registers so it's visible rather than hidden.
+
+### The live inventory (2026-06-26, the gap made concrete)
+
+- **Ticks · wall-clock, external:** 3 cron entries (`wm-scheduled` hourly · `wm-outer-loop` daily 04:00 · futon3a corpus daily 04:30) + 3 futon systemd user timers (`mana-snapshot` every 5 min · `vitality-scanner` ~hourly · `phase-5-signatures-weekly`).
+- **Ticks · in-JVM:** `futon3c.cyder` registry holds 13 processes, but only `multi-watcher` + `process-watchdog` are actively periodic; the rest are servers/daemons/state-machines/agent-lanes. **No cyder record carries a cadence/next-fire — all "—".** The wm/portfolio/probe schedulers exist in code but aren't currently started.
+- **Clicks · engagement:** invoke-ledger (futon1a), forum posts, mission-edits, agent clock-ins — engagement-driven, not installed as triggers. "Every ≈100 turns" is a *click* trigger (the `:turn` subclass of README-clicks-and-ticks).
+
+So: ~9 active drivers, 3 mechanisms, zero unified visibility, no next-fire tracked anywhere, and no Arxana-Clock surface exists.
+
+### The question
+
+**What is the one read-only surface that normalises cron + systemd + cyder (+ clicks) into a single legible clock — and what is the minimal turn/tick-trigger mechanism a new driver (the belly refresh first) registers on so it both fires and shows up?**
+
+### Discipline this inherits (read first)
+
+- **Read-only aggregator; never fabricate a field.** If a source doesn't expose `last-fired`/`next-fire`, render `—`, don't invent it (the substrate-2 "never assert without evidence" discipline).
+- **Never restart the serving JVM** (I-0); read cyder via Drawbridge / in-process, reload via `load-file`.
+- **No heavy work in the request path** (`feedback_no_synchronous_heavy_drawbridge_calls`): the clock samples off-cycle / on demand, the turn-trigger is debounced, not a per-request scan.
+
+---
+
+## 1. IDENTIFY — the gap
+
+Three mechanisms, each with its own truth and none aware of the others; nobody computes "next fire" for the in-JVM ones; and there is no home for a turn-counted driver. The cost: drivers freeze silently (the 5-week substrate-2 freeze was exactly an unwatched tick) and new periodic work has nowhere legible to live.
+
+## 2. MAP — sources + what each already exposes
+
+| Source | Read via | Gives for free | Missing |
+|---|---|---|---|
+| cron | `crontab -l` | cadence (expr), command, log path | last-fired, next-fire (compute from expr) |
+| systemd timers | `systemctl --user list-timers --all` | **NEXT + LAST** (next/last-fire), unit, description | what-it-does (read .service ExecStart) |
+| cyder (in-JVM) | `futon3c.cyder/list-processes` | id, type, layer, last-active | cadence + next-fire (add to `:metadata`) |
+| clicks | futon1a invoke-ledger | last invoke, count | turn-count trigger (build it) |
+
+## 3. DERIVE — the design (framed)
+
+1. **The normalized driver record** (the clock's row):
+   `{:name :mechanism (cron|systemd|cyder|click) :what :cadence :last-fired :next-fire :status (live|stale|idle|unknown)}`. `—` for genuinely-absent fields.
+2. **The aggregator** — a read-only function that unions the four sources into a sorted list (by next-fire where known). Lives so both a CLI and an HTTP endpoint can call it.
+3. **The display** — an Arxana / WebArxana panel reading the aggregator (car 2).
+4. **The turn/tick trigger** — a click-counter driver (per README clicks): fires every N clicks/turns; registered in cyder so it appears on the clock. The serving-JVM **belly refresh** is its first rider (E-C-vector-live's "alive in the running system").
+5. **Cadence enrichment of cyder** — periodic cyder processes declare `:cadence` (+ optionally `:next-fire-fn`) in `:metadata` so the clock isn't all "—" for the in-JVM layer.
+
+## 4. ARGUE — decisions to ratify
+
+- **Read-only aggregator first, mechanism second** (Joe-ratified plan): the inventory/display is immediate value and risk-free; the turn-trigger is a new mechanism with its own discipline.
+- **Aggregate, don't centralise** — cron/systemd stay where they are (OS-owned); cyder stays the in-JVM registry. The clock *reads* all three; it does not become a new scheduler that owns them.
+- **The turn-trigger is a click-counter, not a new wall-clock** — it belongs to the clicks substrate; debounced; registered + visible.
+
+## 5. Exit conditions (provisional)
+
+1. A reproducible **aggregator** (not `/tmp`) emits the unified driver list across cron + systemd + cyder, with `—` for absent fields — re-runnable on demand. *(car 1)*
+2. An **Arxana Clock display** renders it (mechanism-coloured, sorted by next-fire), updating live. *(car 2)*
+3. A **turn/tick-trigger** mechanism fires a registered driver every N clicks, appears on the clock, and the **serving-JVM belly refresh** rides it. *(car 3)*
+4. No fabricated `last-fired`/`next-fire` anywhere; absent = `—`.
+
+## 6. Cars (sequence)
+
+1. **✅ Read-only aggregator** — `futon3c/scripts/arxana_clock.bb` (committed `dddb65b`). 21 drivers / 3 mechanisms / 19 futon-relevant; writes `arxana-clock-snapshot.edn`.
+2. **✅ The display** — `futon4/dev/arxana-vsatarcs-clock.el` (branch `e-arxana-clock`, commit `c3c8490`). Regular Emacs Arxana (NO WebArxana, per Joe), sibling to `arxana-vsatarcs-ledger.el`; reads the snapshot via the shared EDN reader; grouped by mechanism with cadence·next·last; `g`=refresh (re-runs aggregator), `f`=toggle non-futon. Headless-render verified (19 drivers). `M-x arxana-clock-browse`.
+3. **✅ The turn-trigger + belly-refresh rider** — `futon3c/src/futon3c/clock/turn_trigger.clj`. A click-counted driver (README `:turn` subclass): polls the invoke-jobs ledger and fires its riders every N clicks (default 100); registered in cyder so it shows on the clock **with a real cadence** ("every 100 clicks" — the first in-JVM process not "—"). Rider #1 = the serving-JVM belly refresh (`futon2.aif.c-vector/maybe-refresh!` via requiring-resolve, no compile-time dep). Live-proven: forcing the threshold fired the rider and the **belly went 0 → 139**; started for real (threshold 100, 2-min poll, baseline at 41 clicks) and shown on the clock via emacsclient. Tests 4/19, clj-kondo 0, check-parens OK.
+   **⚠ Loop RETIRED 2026-06-26 (see §8).** The perpetual poll loop froze the evidence store; `start!` no longer spawns a loop/rider. The serving-JVM belly is now kept fresh by `c-vector/ensure-belly-fresh!` (demand-driven + debounced) hooked into the existing `wm.scheduler/tick!` — not by this trigger.
+   **Remaining (named):** broaden cyder `:cadence`/next-fire enrichment to the OTHER periodic processes (watchers — still "—"); add a **stale-driver alarm** (overdue next-fire / a driver that should've fired but didn't — the 5-week-freeze lesson).
+4. **✅ Scan-primary completeness** (Joe: "a registry can be skipped; a scan is better — list the sources"). The clock was registry-incomplete — proven: live JVM tickers (`invoke-ticker`, `FileSystemWatchService`) registered nothing, so they were invisible; the cron/systemd scans were user-only. Reframed the aggregator to **scan ground truth + reconcile + manifest**:
+   - cron: ALL locations (user + `/etc/crontab` + `/etc/cron.d/*` + `/etc/cron.{hourly,daily,weekly,monthly}`) — 3 → **46**;
+   - systemd: **user AND system** — 5 → **22**;
+   - JVM: `Thread.getAllStackTraces` (ground truth a registry can't escape) → periodic threads **reconciled against cyder**; the residue is surfaced as **⚠ UNACCOUNTED** (e.g. `invoke-ticker ×2`, `FileSystemWatchService ×22`) rather than hidden;
+   - a **coverage manifest** lists every source scanned with counts (auditable — the "list what's scanned" you asked for).
+   The honesty bound (recorded): you can't prove zero hidden `(future (loop …))`, but the thread scan is ground-truth-complete for what exists and the manifest makes coverage inspectable. Committed: aggregator (futon3c) + view residue/manifest render (futon4 `e-arxana-clock`).
+
+## 7. Scope-out (named)
+
+The full perceived-time R7 convolution (clicks-and-ticks → precision) stays with futon2's R7 roadmap; making the WM an inhabitable peripheral (README §"WM as peripheral") is separate; this excursion is only the **clock surface + the turn-trigger that feeds it**.
+
+## 8. Incident & fix — the turn-trigger loop (2026-06-26)
+
+**What happened.** Car 3 (`turn_trigger/start!`) spawned a **perpetual poll loop**
+in the one shared serving JVM — `(future (while … (Thread/sleep 120000) (check!)))`
+— polling the invoke-jobs ledger every 2 min with a belly-refresh rider. At
+~17:40 the futon3c **evidence store stopped persisting** (`context-retrieval` /
+`invoke-complete`) for *all* agents. Joe caught it (loop-running? true,
+fire-count 0).
+
+**Response.** Captured the rider state then `stop!`'d the loop (loop-running?
+false, deregistered from cyder); confirmed **no wedged thread** survived; the
+invoke-jobs file resumed writing.
+
+**Mechanism — honest uncertainty.** `fire-count 0` ⇒ the rider **never fired**
+(`maybe-refresh!` never ran via the trigger), and the poll is a **cheap
+read-only deref** of the ledger atom (≤41 entries; it does not spit/write). So I
+could **not substantiate a direct mechanism** by which the poll froze the
+evidence store. The likeliest culprit is the *perpetual `future` itself* (a
+long-lived task on the shared `agent-send-off` pool, or contention I couldn't
+pin). The correlation + recovery-on-`stop!` are the evidence; the exact path is
+unconfirmed — so the fix targets the **hazard class**, not a guessed line.
+
+**Fix (a + b, ratified by Joe).**
+- **Retired the loop.** `start!` no longer spawns a `future` or adds a rider; it
+  registers only a *passive* counter (no thread). `check!` survives as a
+  manually/event-callable counter.
+- **Demand-driven, debounced replacement.** `futon2.aif.c-vector/ensure-belly-fresh!`
+  — refreshes the belly at most once per 5 min, **only when called**,
+  concurrency-safe (compare-and-set!), **no background thread**, reads
+  substrate-2 (never the evidence/invoke path).
+- **Reused safe infra.** Hooked at score time into the **existing**
+  `futon3c.wm.scheduler/tick!` (the established WM scheduler), not a new loop.
+- Verified live: loop off + deregistered; `ensure-belly-fresh!` live (belly 453);
+  debounce-skip path makes no HTTP call.
+
+**Lesson (durable).** Never run an **unproven perpetual loop in the one shared
+serving JVM** (I-0). Background work must either **reuse an existing vetted
+scheduler** or be **demand-driven + debounced** — never a fresh poll loop
+competing with the live request path. This is the operational sibling of the
+"no synchronous heavy Drawbridge calls" discipline.
+
+**Residual.** If the evidence store is *still* frozen after `stop!`, the cause is
+elsewhere and needs separate diagnosis — retiring the loop removes my hazard
+regardless.

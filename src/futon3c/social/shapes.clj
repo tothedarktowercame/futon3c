@@ -21,9 +21,11 @@
   [:or :string inst?])
 
 (def AgentIdType
-  "Typed identifier namespace — transport, continuity, or protocol.
-   R6 (identifier-separation): these are distinct namespaces."
-  [:enum :transport :continuity :protocol])
+  "Typed identifier namespace — transport, continuity, protocol, or apparatus.
+   R6 (identifier-separation): these are distinct namespaces.
+   :apparatus = non-invokable roster identities owned by harness machinery
+   (e.g. the war-machine WM snapshot identity, wm/scheduler.clj)."
+  [:enum :transport :continuity :protocol :apparatus])
 
 (def TypedAgentId
   "Agent identifier with explicit type namespace (R6).
@@ -34,8 +36,14 @@
    [:id/type AgentIdType]])
 
 (def AgentType
-  "Agent type — what kind of agent this is."
-  [:enum :claude :codex :tickle :corpus :mock :peripheral])
+  "Agent type — what kind of agent this is.
+   NB: this enum gates EVERY registry validation — S-presence validates the
+   whole AgentRegistryShape per WS handshake, so one registered agent with a
+   type outside this enum rejects ALL handshakes with :invalid-registry
+   (live failure 2026-07-12: zai-1 [:type :zai] on the hub blocked the
+   laptop codex-3 WS connect). Registering a new agent type REQUIRES adding
+   it here first."
+  [:enum :claude :codex :zai :tickle :corpus :mock :peripheral :wm])
 
 ;; =============================================================================
 ;; Pipeline input — agent connection event
@@ -276,11 +284,24 @@
   "Type of claim made by an evidence entry.
    Extended beyond futon3's 5-type set to cover Corneli (2014) Table 24 entities."
   [:enum :goal :step :evidence :conclusion :question :observation
-   :tension :correction :conjecture])
+   :tension :correction :conjecture
+   ;; IATC/typed-memory performatives. These are evidence acts, distinct from
+   ;; lifecycle projection state (:challenged/:retracted/:superseded).
+   :assert :challenge :agree :define :retract :suggest :request :query])
 
 (def ArtifactRefType
-  "Universal reference types for any artifact that can accumulate evidence."
-  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio :arse-thread])
+  "Universal reference types for any artifact that can accumulate evidence.
+
+   :git-commit added 2026-08-03. A runner recording what worked wants to name
+   the commit that witnessed it — zai-1 tried exactly that on a96J01 and the
+   write was refused, because the nearest available types (:evidence,
+   :proof-path, :script) all misdescribe a commit. E-futon-memories makes this
+   load-bearing rather than convenient: its corpus IS the stack's git history,
+   so mapping commits onto another type would put a false ref-type on every
+   memory in it and corrupt the provenance its benchmark depends on."
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence
+   :proof-path :task :portfolio :arse-thread :library :problem :language :tool
+   :service :script :memory :decision :git-commit])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -292,7 +313,7 @@
   "Typed evidence event category (distinguishes timescale/function provenance)."
   [:enum :coordination :gate-traversal :pattern-selection :pattern-outcome
    :reflection :forum-post :mode-transition :presence-event :correction :conjecture
-   :arse-qa])
+   :arse-qa :memory])
 
 (def EvidenceEntry
   "Primary evidence shape — all other evidence projections are derived from this.
@@ -323,8 +344,11 @@
    [:query/claim-type {:optional true} ClaimType]
    [:query/author {:optional true} :string]
    [:query/since {:optional true} Timestamp]
+   [:query/before {:optional true} Timestamp]
    [:query/limit {:optional true} :int]
    [:query/include-ephemeral? {:optional true} :boolean]
+   [:query/pattern-id {:optional true} :keyword]
+   [:query/session-id {:optional true} :string]
    [:query/tags {:optional true} [:vector :keyword]]])
 
 ;; =============================================================================

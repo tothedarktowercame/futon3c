@@ -7,7 +7,9 @@
            (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
            (java.time Instant)))
 
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
@@ -34,7 +36,7 @@
   (let [hx-type (str "mission-scope/" binder)
         url (str (str/replace base-url #"/$" "")
                  "/api/alpha/hyperedges?type=" (url-encode hx-type)
-                 "&limit=5000")]
+                 "&limit=5000&include-total=false")]
     (-> (http-edn client url)
         :hyperedges
         (or []))))

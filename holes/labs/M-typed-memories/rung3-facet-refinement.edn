@@ -1,0 +1,54 @@
+{:budget 3
+ :information-models
+ {"p4ng/R9-independent-witness"
+  {:cost 1
+   :prior-entropy 1.0
+   :outcomes
+   [{:label :independent-witness-found
+     :probability 0.5
+     :posterior-entropy 0.7}
+    {:label :self-certification-found
+     :probability 0.5
+     :posterior-entropy 0.9}]}
+
+  "p4ng/R6-candidate-pattern-action-space"
+  {:cost 1
+   :prior-entropy 1.0
+   :outcomes
+   [{:label :candidate-supported
+     :probability 0.5
+     :posterior-entropy 0.2}
+    {:label :coverage-challenge
+     :probability 0.5
+     :posterior-entropy 0.4}]}
+
+  "p4ng/R5-policy-evaluation"
+  {:cost 1
+   :prior-entropy 1.0
+   :outcomes
+   [{:label :policy-conditioned-evidence
+     :probability 0.5
+     :posterior-entropy 0.3}
+    {:label :policy-erasure
+     :probability 0.5
+     :posterior-entropy 0.5}]}
+
+  "p4ng/R10-liveness"
+  {:cost 1
+   :prior-entropy 1.0
+   :outcomes
+   [{:label :liveness-preserved
+     :probability 0.5
+     :posterior-entropy 0.2}
+    {:label :blocking-counterexample
+     :probability 0.5
+     :posterior-entropy 0.1}]}}
+
+ :additional-transition-warrants
+ [{:from "p4ng/R6-candidate-pattern-action-space"
+   :to "p4ng/R10-liveness"
+   :status :witnessed
+   :provenance
+   [{:kind :reviewed-rung3-fixture
+     :reviewer "independent-wm-checker"
+     :why "Permit the liveness branch in the refinement replay"}]}]}

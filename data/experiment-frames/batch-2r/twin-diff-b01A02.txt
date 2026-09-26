@@ -1,0 +1,143 @@
+diff --git a/problems/b01A02/lean/Main.lean b/problems/b01A02/lean/Main.lean
+index 064ab9d..e11d764 100644
+--- a/problems/b01A02/lean/Main.lean
++++ b/problems/b01A02/lean/Main.lean
+@@ -98,6 +98,88 @@ lemma apm_b01A02_exists_normal_card_85
+   haveI : H.Normal := inferInstance
+   exact ⟨H, inferInstance, by omega⟩
+ 
++lemma apm_b01A02_isCyclic_of_card_of_cyclic_number
++    (n : ℕ) (hsq : Squarefree n)
++    (harith : ∀ a b : ℕ, a * b = n → b.Coprime a.totient)
++    (G : Type*) [Group G] [Fintype G] (hG : Nat.card G = n) : IsCyclic G := by
++  letI : IsZGroup G := IsZGroup.of_squarefree (by
++    rw [hG]
++    exact hsq)
++  obtain ⟨N, H, φ, e, hHcyc, hNcyc, hcop⟩ :=
++    (isZGroup_iff_exists_mulEquiv (G := G)).mp (inferInstance : IsZGroup G)
++  have hcard : Nat.card N * Nat.card H = n := by
++    calc
++      Nat.card N * Nat.card H = Nat.card (N ⋊[φ] H) := SemidirectProduct.card.symm
++      _ = Nat.card G := (Nat.card_congr e.toEquiv).symm
++      _ = n := hG
++  have hactcop : (Nat.card H).Coprime (Nat.card (MulAut N)) := by
++    rw [hNcyc.card_mulAut]
++    exact harith _ _ hcard
++  have hrange : Nat.card φ.range = 1 :=
++    Nat.eq_one_of_dvd_coprimes hactcop
++      (Subgroup.card_range_dvd φ)
++      φ.range.card_subgroup_dvd_card
++  have hφ : φ = 1 := by
++    have hrange_bot : φ.range = ⊥ := φ.range.eq_bot_iff_card.mpr hrange
++    apply MonoidHom.ext
++    intro x
++    have hx : φ x ∈ φ.range := ⟨x, rfl⟩
++    simpa [hrange_bot] using hx
++  have hcomm : ∀ x y : G, x * y = y * x := by
++    intro x y
++    apply e.injective
++    ext
++    · simp [hφ, mul_comm]
++    · simp [mul_comm]
++  letI : CommGroup G := ⟨hcomm⟩
++  exact IsCyclic.of_exponent_eq_card (IsZGroup.exponent_eq_card G)
++
++/-- `85` is a cyclic number. -/
++lemma apm_b01A02_isCyclic_of_card_85
++    (G : Type*) [Group G] [Fintype G] (hG : Nat.card G = 85) : IsCyclic G := by
++  apply apm_b01A02_isCyclic_of_card_of_cyclic_number 85 (by native_decide) ?_ G hG
++  intro a b hab
++  have ha : a ∣ 85 := ⟨b, hab.symm⟩
++  have hmem : a ∈ Nat.divisors 85 := Nat.mem_divisors.mpr ⟨ha, by norm_num⟩
++  have : Nat.divisors 85 = {1, 5, 17, 85} := by native_decide
++  rw [this] at hmem
++  simp only [Finset.mem_insert, Finset.mem_singleton] at hmem
++  rcases hmem with rfl | rfl | rfl | rfl
++  · norm_num
++  · have : b = 17 := by omega
++    subst b; native_decide
++  · have : b = 5 := by omega
++    subst b; native_decide
++  · have : b = 1 := by omega
++    subst b; native_decide
++
++/-- `255` is a cyclic number. -/
++lemma apm_b01A02_isCyclic_of_card_255
++    (G : Type*) [Group G] [Fintype G] (hG : Nat.card G = 255) : IsCyclic G := by
++  apply apm_b01A02_isCyclic_of_card_of_cyclic_number 255 (by native_decide) ?_ G hG
++  intro a b hab
++  have ha : a ∣ 255 := ⟨b, hab.symm⟩
++  have hmem : a ∈ Nat.divisors 255 := Nat.mem_divisors.mpr ⟨ha, by norm_num⟩
++  have : Nat.divisors 255 = {1, 3, 5, 15, 17, 51, 85, 255} := by native_decide
++  rw [this] at hmem
++  simp only [Finset.mem_insert, Finset.mem_singleton] at hmem
++  rcases hmem with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
++  · norm_num
++  · have : b = 85 := by omega
++    subst b; native_decide
++  · have : b = 51 := by omega
++    subst b; native_decide
++  · have : b = 17 := by omega
++    subst b; native_decide
++  · have : b = 15 := by omega
++    subst b; native_decide
++  · have : b = 5 := by omega
++    subst b; native_decide
++  · have : b = 3 := by omega
++    subst b; native_decide
++  · have : b = 1 := by omega
++    subst b; native_decide
++
+ theorem apm_b01a02 :
+     (∀ (G : Type*) [Group G] [Fintype G]
+       (p : ℕ) (H : Subgroup G),
+@@ -118,44 +200,8 @@ theorem apm_b01a02 :
+     let S : Sylow 17 G := default
+     have hS := apm_b01A02_sylow17_normal_of_card_255 G hGcard S
+     refine ⟨⟨S, hS.1, hS.2⟩, ?_⟩
+-  /-
+-  PARTIAL boundary (closer hop 3). A renewed inspection of Burnside transfer
+-  found `IsCyclic.isComplement'`, which was more directly useful than the
+-  semidirect-product classification.  Since `255` is squarefree,
+-  `IsZGroup.of_squarefree` makes a Sylow-3 subgroup cyclic; because `3` is the
+-  smallest prime divisor, its transfer kernel is a normal complement.
+-  `apm_b01A02_exists_normal_card_85` now compiles this construction and uses
+-  `IsComplement'.card_mul` to prove the kernel has order exactly `85`.
+-
+-  Thus both required normal-subgroup existence claims are closed independently.
+-  The remaining bridge is cyclicity: show the normal order-85 transfer kernel
+-  is cyclic and then show the quotient order-three action on it is trivial.
+-  `IsZGroup` only makes Sylow subgroups cyclic, not an arbitrary squarefree
+-  group cyclic; Mathlib has no cyclic-number theorem implementing the needed
+-  coprime automorphism-order argument. Searches of transfer, Z-groups,
+-  automorphism groups of cyclic groups, nilpotence, all solved siblings,
+-  `LEMMA-INDEX.md`, and construction targets found no packaged final step.
+-
+-  HOP 4 isolates the absent cyclic-number theorem into the two exact instances
+-  needed here (recorded as contracts rather than additional declarations with
+-  `sorry`):
+-
+-  ```lean
+-  theorem apm_b01A02_isCyclic_of_card_85
+-      (G : Type*) [Group G] [Fintype G]
+-      (hG : Nat.card G = 85) : IsCyclic G
+-
+-  theorem apm_b01A02_isCyclic_of_card_255
+-      (G : Type*) [Group G] [Fintype G]
+-      (hG : Nat.card G = 255) : IsCyclic G
+-  ```
+-
+-  Both statements are true instances of the classical cyclic-number
+-  criterion: `85 = 5 * 17` and `255 = 3 * 5 * 17` are squarefree, and no prime
+-  factor divides one less than another prime factor. The first contract makes
+-  the already-constructed normal subgroup of order `85` cyclic; the second
+-  supplies the final cyclicity conjunct for `G`. Proving them in this snapshot
+-  still requires assembling the coprime semidirect-action argument from
+-  `IsZGroup.isZGroup_iff_exists_mulEquiv` and cyclic automorphism cardinalities.
+-  -/
+-    sorry
++    obtain ⟨H, hHnormal, hHcard⟩ := apm_b01A02_exists_normal_card_85 G hGcard
++    letI : Fintype H := Fintype.ofFinite H
++    have hHcyc : IsCyclic H := apm_b01A02_isCyclic_of_card_85 H hHcard
++    exact ⟨⟨H, hHnormal, hHcard, hHcyc⟩,
++      apm_b01A02_isCyclic_of_card_255 G hGcard⟩

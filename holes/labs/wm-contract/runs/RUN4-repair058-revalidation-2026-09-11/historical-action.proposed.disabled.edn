@@ -1,0 +1,14 @@
+{:schema :wm/run4-historical-action-configuration-v1
+ :enabled? false
+ :casting {:author "codex-10" :reviewer "codex-12"
+           :repair-reviewer "codex-12"}
+ :repair-id "repair-attempt-058-untyped-failure"
+ :verification-id "repair-058-revalidation-20260911-v1"
+ :authority
+ {:repair-root "/home/joe/code/futon2/data/wm-repair-obligations"
+  :verification-root "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair058-revalidation-2026-09-11/offline-verification"
+  :verification-path "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair058-revalidation-2026-09-11/offline-verification/repair-058-revalidation-20260911-v1.verification.edn"
+  :verification-sha256 "1367dc2c1e4fdf25c287003c3fbee35f409856fa3b8a940002d301c9132a12f3"}
+ :execution {:status :not-performed :identity nil}
+ :repair-admission {:status :not-performed}
+ :historical-successor-link {:status :unmaterialized}}

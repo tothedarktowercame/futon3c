@@ -1,0 +1,347 @@
+(ns futon3c.apm.jit-queue-coordinator-test
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is]]
+            [futon3c.apm.countdown-control :as countdown]
+            [futon3c.apm.durable-coordinator :as durable]
+            [futon3c.apm.fault-taxonomy :as fault-taxonomy]
+            [futon3c.apm.jit-queue-coordinator :as sut]
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-regulator :as regulator]
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
+
+(defn- await-until [pred]
+  (loop [attempt 0]
+    (cond (pred) true
+          (= attempt 150) false
+          :else (do (Thread/sleep 20) (recur (inc attempt))))))
+
+(deftest pending-jit-tick-carries-work-budget-deadline
+  (let [now 1000000
+        period-ms 500
+        work-timeout-minutes 30
+        work-timeout-ms (* work-timeout-minutes 60 1000)
+        config {:coordinator-id "jit-queue:q"
+                :queue-name "q"
+                :queue-id "queue-id"
+                :coordinator/period-ms period-ms
+                :tick-work-timeout-minutes work-timeout-minutes}
+        decide (:decide-fn (sut/adapter-constructor config))
+        state {:state/type :live-regulator
+               :regulator/status :running
+               :regulator/ticks 7}
+        requested (:coordinator/intent (binding [sut/*intent-now-fn* (constantly now)]
+                                          (decide state)))
+        intent (durable/make-intent "jit-queue:q" state requested)
+        observation (durable/watchdog-observation
+                     {:coordinator/id "jit-queue:q"
+                      :coordinator/enabled? true}
+                     (assoc state :coordinator/pending-intent intent))
+        watching (watchdog/evaluate nil observation now)
+        expired (watchdog/evaluate
+                 nil observation
+                 (+ now work-timeout-ms
+                    watchdog/external-deadline-grace-ms 1))]
+    (is (= work-timeout-ms
+           (get-in intent [:dispatch/parameters :permitted-duration-ms])))
+    (is (= :coordinator/tick-work-timeout-minutes
+           (get-in intent [:dispatch/parameters
+                           :permitted-duration-source])))
+    (is (= (+ now work-timeout-ms)
+           (get-in observation [:awaiting-job :deadline])))
+    (is (= :watching (:status watching)))
+    (is (= :watching
+           (:status (watchdog/evaluate
+                     nil observation
+                     (+ now period-ms
+                        watchdog/external-deadline-grace-ms 1)))))
+    (is (not= :external-job-deadline-missing
+              (get-in watching [:reason :code])))
+    (is (= :external-job-deadline-exceeded
+           (get-in expired [:reason :code])))))
+
+(deftest pending-jit-tick-defaults-to-student-role-work-budget
+  (let [now 2000000
+        decide (:decide-fn
+                (sut/adapter-constructor
+                 {:coordinator-id "jit-queue:q"
+                  :queue-name "q" :queue-id "queue-id"
+                  :coordinator/period-ms 500}))
+        intent (binding [sut/*intent-now-fn* (constantly now)]
+                 (:coordinator/intent
+                  (decide {:regulator/ticks 1})))]
+    (is (= (* 30 60 1000)
+           (get-in intent [:dispatch/parameters :permitted-duration-ms])))
+    (is (= (+ now (* 30 60 1000))
+           (get-in intent [:dispatch/parameters :deadline-ms])))))
+
+(defn- decide-with [state now-ms]
+  (let [decide (:decide-fn
+                (sut/adapter-constructor
+                 {:coordinator-id "jit-queue:q" :queue-name "q"
+                  :queue-id "queue-id" :coordinator/period-ms 500}))]
+    (binding [sut/*intent-now-fn* (constantly now-ms)]
+      (decide state))))
+
+(defn- retry-state [wake-ms]
+  {:state/type :live-regulator :regulator/id "jit-queue:q"
+   :regulator/status :running :regulator/ticks 7
+   :coordinator/delayed-retry {:retry/id "substrate-retry-x" :kind :transport
+                               :not-before-ms wake-ms :scheduled-at-ms 1000
+                               :attempt 1 :max-attempts 3 :history []}})
+
+(deftest awaiting-substrate-publishes-an-absolute-expiry
+  ;; P6: a wait that does not say when it ends is not bounded, it is only
+  ;; quiet. The expiry is absolute so no reader reconstructs it from a
+  ;; duration -- the same footgun the park protocol documents.
+  (let [now 1000
+        wake (+ now (* 10 60 1000))
+        result (decide-with (retry-state wake) now)]
+    (is (= :awaiting-substrate (:status result)))
+    (is (= wake (:retry/expires-at-ms result)))
+    (is (>= (:retry/expires-at-ms result) now)
+        "an expiry already in the past would be a wait nobody can end")))
+
+(deftest a-wake-beyond-the-horizon-is-refused-not-awaited
+  ;; The unbounded wait, and why it was invisible: the watchdog reads
+  ;; :not-before-ms AS the deadline, so a far-future wake is a deadline that
+  ;; can never be exceeded. Nothing was late; the queue simply stopped.
+  (let [now 1000
+        wake (+ now sut/substrate-wait-max-ms 1)
+        result (decide-with (retry-state wake) now)]
+    (is (false? (:ok result)))
+    (is (= :jit-transport-retry-deadline-invalid (:error/code result)))
+    (is (= wake (get-in result [:finding :not-before-ms])))
+    (is (= :frame-park
+           (:fault/disposition
+            (fault-taxonomy/classify result)))
+        "expiry must route to a decision, not to silence")))
+
+(deftest a-wake-at-the-horizon-is-still-awaited
+  ;; The boundary in the permitting direction, so the refusal above is a
+  ;; bound and not a blanket.
+  (let [now 1000
+        result (decide-with (retry-state (+ now sut/substrate-wait-max-ms))
+                            now)]
+    (is (= :awaiting-substrate (:status result)))))
+
+(deftest a-missing-wake-is-refused-rather-than-compared
+  ;; nat-int? was the only guard and it ran at scheduling time, so a retry
+  ;; persisted without one reached (< now-ms nil) and threw inside the tick.
+  (let [result (decide-with (retry-state nil) 1000)]
+    (is (false? (:ok result)))
+    (is (= :jit-transport-retry-deadline-invalid (:error/code result)))))
+
+(deftest an-elapsed-wake-proceeds-and-does-not-expire-the-queue
+  ;; A wake in the past needs no horizon: after the coordinator has been
+  ;; stopped for hours, every pending retry is overdue and must simply fire.
+  ;; Refusing those would turn a clean restart into a park storm.
+  (let [now (+ 1000 (* 6 60 60 1000))
+        result (decide-with (retry-state 1000) now)]
+    (is (true? (:ok result)))
+    (is (= :activate (:coordinator/action result)))
+    (is (nil? (get-in result [:regulator/state-updates
+                              :coordinator/delayed-retry])))))
+
+(deftest delayed-transport-retry-survives-restart-and-wakes-at-deadline
+  (let [clock (atom 1000)
+        config {:coordinator-id "jit-queue:q" :queue-name "q"
+                :queue-id "queue-id" :coordinator/period-ms 500}
+        initial {:state/type :live-regulator :regulator/id "jit-queue:q"
+                 :regulator/status :running :regulator/ticks 7}
+        adapter (sut/adapter-constructor config)
+        requested (binding [sut/*intent-now-fn* #(long @clock)]
+                    ((:decide-fn adapter) initial))
+        pending (merge initial (:regulator/state-updates requested))
+        reconciled
+        (with-redefs [durable/read-registry
+                      (constantly {:entries {"jit-queue:q"
+                                             {:coordinator/config {:launch {}}}}})
+                      countdown/autonomous-problem-list-step!
+                      (constantly
+                       {:ok true :status :transport-retry-scheduled
+                        :retry/not-before-ms 601000
+                        :transport-retry {:attempt 1 :max-attempts 3}
+                        :transport-retry/history
+                        [{:attempt 1 :failed-at-ms 1000
+                          :error/component :transport}]})]
+          (binding [sut/*intent-now-fn* #(long @clock)]
+            ((:reconcile-fn adapter)
+             (:coordinator/pending-intent pending) pending)))
+        restarted-state (-> pending
+                            (merge (:regulator/state-updates reconciled))
+                            (assoc :coordinator/pending-intent nil
+                                   :coordinator/pending-pre-state-digest nil))
+        restarted-adapter (sut/adapter-constructor config)
+        waiting (binding [sut/*intent-now-fn* #(long @clock)]
+                  (#'durable/coordinator-tick
+                   "jit-queue:q" restarted-adapter restarted-state))
+        watchdog-observation
+        (durable/watchdog-observation
+         {:coordinator/id "jit-queue:q" :coordinator/enabled? true}
+         restarted-state)]
+    (is (= :queue-tick-complete (:status reconciled)))
+    (is (= 601000
+           (get-in restarted-state
+                   [:coordinator/delayed-retry :not-before-ms])))
+    (is (= :awaiting-substrate (:status waiting)))
+    (is (= 601000 (get-in watchdog-observation [:awaiting-job :deadline])))
+    (reset! clock 601000)
+    (let [woken (binding [sut/*intent-now-fn* #(long @clock)]
+                  (#'durable/coordinator-tick
+                   "jit-queue:q" restarted-adapter restarted-state))]
+      (is (= :intent-persisted (:status woken)))
+      (is (nil? (get-in woken [:regulator/state-updates
+                               :coordinator/delayed-retry])))
+      (is (= 601000
+             (get-in woken [:regulator/state-updates
+                            :coordinator/last-woken-retry :woken-at-ms]))))))
+
+(deftest adapter-runs-without-initiator-and-survives-runner-restart
+  (let [root (Files/createTempDirectory "jit-coordinator-"
+                                        (make-array FileAttribute 0))
+        registry (str (.resolve root "registry.edn"))
+        state-path (str (.resolve root "state.edn"))
+        calls (atom [])
+        launch {:problems [{:problem/id "p1"}] :authority {:control-root "/c"}
+                :queue-name "q" :queue-id "queue-id"}
+        options {:registry-path registry :state-path state-path
+                 :coordinator-id "jit-queue:q" :launch launch :period-ms 100}]
+    (with-redefs [countdown/autonomous-problem-list-step!
+                  (fn [observed]
+                    (swap! calls conj observed)
+                    (if (= 1 (count @calls))
+                      {:ok true :status :parked :job-id "role-job"}
+                      {:ok true :status :batch-complete}))]
+      ;; The initiating future terminates immediately after registration/start.
+      (try
+        (is (:ok @(future (sut/start! options))))
+        (is (await-until
+             #(and (= 1 (count @calls))
+                   (string?
+                    (get-in (edn/read-string (slurp state-path))
+                            [:coordinator/last-settled-intent :job-id])))))
+        (is (= :stopped
+               (:status (durable/cancel-scheduler! "jit-queue:q"))))
+        (let [pending (edn/read-string (slurp state-path))]
+          (is (string? (get-in pending [:coordinator/last-settled-intent
+                                        :job-id]))))
+        (is (:ok (durable/start-registered! registry "jit-queue:q")))
+        (is (await-until #(= :complete
+                             (get-in (sut/status registry "jit-queue:q")
+                                     [:durable-state :regulator/status]))))
+        (is (= 2 (count @calls)))
+        (is (every? #(nil? (get-in % [:authority :session])) @calls))
+        (finally (durable/cancel-scheduler! "jit-queue:q"))))))
+
+(deftest autonomous-list-step-does-not-publish-a-controller-park
+  (let [park-calls (atom 0)
+        request (atom nil)]
+    (with-redefs [countdown/set-alight-problem-queue!
+                  (fn [observed _]
+                    (reset! request observed)
+                    {:ok true :status :frame-prepared})
+                  runtime/http-json
+                  (fn [& _] (swap! park-calls inc)
+                    {:ok true :http/status 200})]
+      (is (= :frame-prepared
+             (:status
+              (countdown/autonomous-problem-list-step!
+               {:problems [] :authority {:control-root "/home/joe/code/futon3c"
+                                         :apparatus-root "/home/joe/code/futon3c"}
+                :queue-name "test"}))))
+      (is (zero? @park-calls))
+      (is (= "countdown-regulator:durable-jit"
+             (get-in @request [:authority :regulator-id])))
+      (is (some? (get-in @request [:authority :regulator-capability]))))))
+
+;; Verbatim problem pin read from data/apm-coordinators/registry.edn,
+;; entry "jit-queue:jit-all-open-v3", 2026-09-10. Tests never read live data.
+(def repaired-m03j02
+  {:problem/id "m03J02", :repository "/home/joe/code/apm-lean",
+   :revision "d8d0ca3898168fb314c8e1e87418dadd3fa2eedf",
+   :path "problems/m03J02/lean/Main.lean",
+   :blob "6bc15473d584af6ac614090a5c29c170d7798a75",
+   :classification :non-excluded})
+
+(defn- with-registered-launch [f]
+  (let [root (Files/createTempDirectory "jit-launch-" (make-array FileAttribute 0))
+        registry (str (.resolve root "registry.edn"))
+        id "jit-queue:launch-test"
+        launch {:problems [{:problem/id "old-problem"}]
+                :queue-name "launch-test" :queue-id "queue-A"}
+        config {:registry-path registry :coordinator-id id :launch launch}]
+    (try
+      (is (:ok (durable/register!
+                {:registry-path registry :coordinator-id id
+                 :adapter sut/adapter-key :config config
+                 :state-path (str (.resolve root "state.edn"))})))
+      (f registry id (sut/adapter-constructor
+                      (get-in (durable/read-registry registry)
+                              [:entries id :coordinator/config])))
+      (finally
+        (doseq [file (reverse (file-seq (.toFile root)))]
+          (Files/deleteIfExists (.toPath file)))))))
+
+(deftest reconcile-uses-current-registered-plan-without-rebuilding-adapter
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [observed (atom [])
+            reconcile (:reconcile-fn adapter)
+            plan {:problems [repaired-m03j02] :queue/id "queue-B"}]
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [launch] (swap! observed conj launch)
+                        {:ok true :status :batch-complete})]
+          (is (:ok (reconcile nil {})))
+          (is (= "queue-A" (:queue-id (last @observed))))
+          (is (:ok (durable/persist-launch-plan! registry id plan)))
+          (is (:ok (reconcile nil {})))
+          (is (= [repaired-m03j02] (:problems (last @observed))))
+          (is (= "queue-B" (:queue-id (last @observed))))
+          (is (= registry (:coordinator-registry-path (last @observed))))
+          (is (= id (:coordinator-id (last @observed)))))))))
+
+(deftest reconcile-refuses-removed-entry-without-captured-launch-fallback
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [called (atom false)]
+        (spit registry (pr-str (update (durable/read-registry registry) :entries dissoc id)))
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [_] (reset! called true))]
+          (let [result ((:reconcile-fn adapter) nil {})]
+            (is (false? (:ok result)))
+            (is (= :jit-coordinator-launch-unavailable (:error/code result)))
+            (is (false? @called))))))))
+
+(deftest reconcile-refuses-missing-launch-and-unreadable-registry
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [registered (durable/read-registry registry)
+            called (atom false)]
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [_] (reset! called true))]
+          (doseq [[content reason]
+                  [[(pr-str (update-in registered [:entries id :coordinator/config]
+                                       dissoc :launch)) :missing-or-invalid-launch]
+                   ["{:broken" :registry-unreadable]]]
+            (spit registry content)
+            (let [result ((:reconcile-fn adapter) nil {})]
+              (is (false? (:ok result)))
+              (is (= :jit-coordinator-launch-unavailable (:error/code result)))
+              (is (= reason (:reason result)))
+              (is (false? @called)))))))))
+
+(deftest store-hold-release-refuses-a-running-coordinator
+  (let [writes (atom [])]
+    (with-redefs [durable/read-registry
+                  (constantly {:entries {"queue" {:coordinator/state-path "/unused/coordinator.edn"}}})
+                  durable/valid-entry? (constantly true)
+                  regulator/with-file-tick-lock (fn [_] (fn [f] (f)))
+                  runtime/read-state (constantly {:regulator/status :running
+                                                   :regulator/tick-claim {:id "active"}})
+                  runtime/atomic-persist! (fn [p v] (swap! writes conj [p v]) {:ok true})]
+      (is (= :store-read-coordinator-not-quiescent
+             (:error/code (sut/release-store-read-hold!
+                           {:coordinator-id "queue" :receipt {}}))))
+      (is (empty? @writes)))))

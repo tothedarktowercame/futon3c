@@ -278,10 +278,11 @@
               ;; Absorbs `single-live-copy` into the named single-locus sibling.
               (invariant :id single-locus/artifact-live-copy
                          :status operational-when-enabled
-                         :summary "A library/ or scripts/ artifact basename appearing in two or more repos must carry an explicit canonical-repo marker on one matching file; otherwise the same-named live copies contradict."
+                         :summary "A library/ or scripts/ artifact relative path appearing in two or more repos must carry an explicit canonical-repo marker on one matching file; otherwise the matching live copies contradict."
                          :implemented-in ("futon3c/src/futon3c/logic/locus.clj")
-                         :enforced-at "futon3c.logic.locus/check-artifact-live-copy-locus-on-load! (boot-time, runs on every JVM start). Plus probe-tap when activated via register-locus-taps!."
-                         :evidenced-by ("futon3c/test/futon3c/logic/locus_test.clj"))
+                         :enforced-at "Explicit probe-tap registered at boot via futon3c.logic.locus/register-locus-taps!; run as a one-family sweep with futon3c.logic.probe/run-probe-sweep!. Not scanned during JVM startup."
+                         :evidenced-by ("futon3c/test/futon3c/logic/locus_test.clj"
+                                        "futon3c/test/futon3c/dev/bootstrap_test.clj"))
               (invariant :id checkout-before-work
                          :summary "Active work starts from an explicit checked-out unit.")
               (invariant :id checkin-on-exit

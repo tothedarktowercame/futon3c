@@ -1,0 +1,16 @@
+{:receipt/id "bad8a24af848605c79889ce0ad4d9c59d69ad8d3e4f33a09aa11f6aae05ab85a"
+ :receipt/type :frame-preflight
+ :receipt/frame-id "f18"
+ :receipt/problem-id "a97J07"
+ :receipt/job-id "invoke-1787253798424-5302-34ba15d7"
+ :receipt/proctor "f18-proctor"
+ :receipt/result :preflight-passed
+ :receipt/repository "/home/joe/code/apm-lean"
+ :receipt/revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+ :receipt/blob "69f1a6c35eab92f234beed1697fc59d1eac12445"
+ :receipt/lean {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+ :receipt/classification :non-topology
+ :receipt/clean-before? true
+ :receipt/clean-after? true
+ :receipt/independently-rechecked-by "codex-10"
+ :receipt/job-finished-at "2026-08-20T19:23:58.721404435Z"}

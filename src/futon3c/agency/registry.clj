@@ -17,8 +17,11 @@
    Design: single registry atom with one entry per agent-id value.
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.blackboard :as bb]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
@@ -58,6 +61,34 @@
     (when-let [http-ns (find-ns 'futon3c.transport.http)]
       (ns-resolve http-ns 'active-invoke-job-counts))))
 
+(def ^:dynamic *resolve-uplink-announce*
+  "Best-effort resolver for futon3c.agency.fed-uplink/announce!.
+   Returns a 0-arity fn or nil. Kept dynamic to avoid a registry -> uplink
+   namespace dependency cycle."
+  (fn []
+    (when-let [uplink-ns (find-ns 'futon3c.agency.fed-uplink)]
+      (ns-resolve uplink-ns 'announce!))))
+
+(def ^:dynamic *resolve-peer-announce*
+  "Best-effort resolver for futon3c.agency.federation/announce!.
+   Returns a one-argument fn accepting the local agent record, or nil. This is
+   separate from the WS-uplink roster announcement: a node may have HTTP peers
+   and no uplink, as the Amsterdam worker does."
+  (fn []
+    (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
+      (ns-resolve fed-ns 'announce!))))
+
+(def ^:dynamic *resolve-site-prefix*
+  "Best-effort resolver for futon3c.agency.federation/site-prefix.
+   Returns a 0-arity fn or nil. Kept dynamic to avoid a registry -> federation
+   dependency cycle: federation already requires registry, so registry must not
+   require it back. Same idiom as *resolve-uplink-announce* above — and it keeps
+   ONE source of truth for what this site's prefix is, rather than a second
+   copy of the env read that could drift from federation's."
+  (fn []
+    (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
+      (ns-resolve fed-ns 'site-prefix))))
+
 (defonce ^{:doc "Registry of agents.
 
    Structure: {agent-id-value -> agent-record}
@@ -66,6 +97,7 @@
    {:agent/id         TypedAgentId
     :agent/type       :claude | :codex | :tickle | :mock | :peripheral
     :agent/invoke-fn  (fn [prompt session-id] -> result-map)
+    :agent/delivery-mode :push | :inbox
     :agent/capabilities [:keyword ...]
     :agent/session-id string (may be updated by invoke)
     :agent/registered-at Instant
@@ -89,8 +121,6 @@
 ;; against the still-empty registry, clobbering the saved roster before restore
 ;; could read it (the round-trip restored 0 agents). See dev/bootstrap.clj.
 
-(declare registry-status)
-
 ;; =============================================================================
 ;; Helpers
 ;; =============================================================================
@@ -105,6 +135,22 @@
     (keyword? typed-id) (name typed-id)
     :else              (str typed-id)))
 
+(defn- declares-arity?
+  "True when F is a Clojure fn that declares an invoke method of arity N.
+
+   Structural, not exception-driven: probing by catching ArityException from
+   the call itself cannot distinguish 'this fn takes fewer args' from 'the
+   body threw ArityException', and retrying in the second case dispatches the
+   turn twice. Non-AFunction callables (vars, proxies, mocks) return false and
+   take the legacy fallback chain."
+  [f n]
+  (boolean
+   (when (instance? clojure.lang.AFunction f)
+     (some (fn [^java.lang.reflect.Method m]
+             (and (= "invoke" (.getName m))
+                  (= (int n) (.getParameterCount m))))
+           (.getDeclaredMethods (class f))))))
+
 (defn- make-social-error
   "Create a SocialError map (R4)."
   [code message & {:as context}]
@@ -116,29 +162,73 @@
 
 (defn- now [] (Instant/now))
 
+(defn- session-owner
+  "Return the id of another agent that already owns SESSION-ID, if any."
+  [registry agent-id session-id]
+  (when session-id
+    (some (fn [[other-id agent]]
+            (when (and (not= other-id agent-id)
+                       (= session-id (:agent/session-id agent)))
+              other-id))
+          registry)))
+
+(defn- activity-quiet-ms
+  "Milliseconds since AT — how long an invoking lane has been silent.
+
+   This is the number that separates a working lane from a stuck one. Job
+   wall-clock age cannot: a bell past the soft cap is expected to keep running
+   (README-agency-cap.md), so age alone reads the same for both."
+  [at]
+  (when at
+    (try
+      (max 0 (- (System/currentTimeMillis) (.toEpochMilli ^Instant at)))
+      (catch Throwable _ nil))))
+
 (defn- invoke-routing-info
   "Compute invoke routing readiness for an agent record.
    Exposes whether invoke will route via local fn, WS bridge, or fail."
   [aid-val agent]
-  (let [local? (fn? (:agent/invoke-fn agent))
-        ws-available? (ws-invoke/available? aid-val)
+  (let [metadata (:agent/metadata agent)
+        stale-proxy? (and (:proxy? metadata)
+                          (:federation/stale? metadata))
+        inbox? (= :inbox (:agent/delivery-mode agent))
+        ;; A pull-only seat is reachable (a bell lands in its inbox) but is
+        ;; NEVER invocable — invoke-agent! refuses it with :pull-only-agent.
+        ;; Reporting :local here would leave the row claiming a spawn path
+        ;; that cannot fire, which is the failure E-bell-clink-adapter exists
+        ;; to prevent: a seat that reads as reachable while its inbox is unread.
+        local? (and (fn? (:agent/invoke-fn agent))
+                    (not stale-proxy?)
+                    (not inbox?))
+        ws-available? (and (ws-invoke/available? aid-val) (not inbox?))
         route (cond
+                stale-proxy? :none
+                inbox? :inbox
                 local? :local
                 ws-available? :ws
                 :else :none)
-        note (or (get-in agent [:agent/metadata :note])
-                 (get-in agent [:agent/metadata "note"]))
+        note (or (:note metadata)
+                 (get metadata "note"))
         agent-type (:agent/type agent)
         diagnostic (case route
+                     :inbox "pull-only seat — bells are written to its inbox; invoke is refused"
                      :local "local invoke-fn registered"
                      :ws "ws bridge connected"
-                     (let [base (if (= :codex agent-type)
+                     (let [base (cond
+                                  stale-proxy?
+                                  (str "federation peer unreachable"
+                                       (when-let [err (:federation/last-error metadata)]
+                                         (str " — " err)))
+
+                                  (= :codex agent-type)
                                   "ws bridge not connected — start codex bridge on laptop"
+                                  :else
                                   "no local invoke-fn and no ws bridge")]
                        (if (and (string? note) (not (str/blank? note)))
                          (str base " (" note ")")
                          base)))]
-    {:invoke-route route
+    {:delivery-mode (:agent/delivery-mode agent :push)
+     :invoke-route route
      :invoke-ready? (not= :none route)
      :invoke-local? local?
      :invoke-ws-available? ws-available?
@@ -192,6 +282,8 @@
                           (map (fn [[aid info]]
                                  [aid {:status (:status info)
                                        :type (:type info)
+                                       :invoke-started-at (:invoke-started-at info)
+                                       :invoke-prompt-preview (:invoke-prompt-preview info)
                                        :invoke-activity (:invoke-activity info)}]))
                           (:agents status))]
         (ws-invoke/broadcast-frame!
@@ -199,6 +291,86 @@
           "agents" summary
           "count" (:count status)}))
       (catch Throwable _ nil))))
+
+(defn- announce-uplink-roster!
+  []
+  (when-let [announce-fn (try
+                           (*resolve-uplink-announce*)
+                           (catch Throwable _ nil))]
+    (future
+      (try
+        (announce-fn)
+        (catch Throwable _ nil)))))
+
+(defn- announce-peer-agent!
+  "Push one local agent's current runtime state to configured HTTP peers."
+  [agent-id]
+  (when-let [agent (get @!registry agent-id)]
+    (when-not (get-in agent [:agent/metadata :proxy?])
+      (when-let [announce-fn (try
+                               (*resolve-peer-announce*)
+                               (catch Throwable _ nil))]
+        (future
+          (try
+            (announce-fn agent)
+            (catch Throwable _ nil)))))))
+
+(defonce ^:private !agents-status-publish-state
+  (atom {:phase :idle}))
+
+(defn publish-agents-status!
+  "Publish the current agent status snapshot to local and WS agent HUDs.
+   Use this after multi-agent registry updates that do not flow through
+   register-agent! or invoke-agent!.
+
+   :announce-uplink? defaults true. Set it false while importing an uplink
+   roster: announcing in response to a roster creates an announce/roster echo
+   loop on the same federation connection."
+  ([] (publish-agents-status! {}))
+  ([{:keys [announce-uplink?]
+     :or {announce-uplink? true}}]
+   (let [status (registry-status)]
+     (bb/project-agents! status)
+     (broadcast-agents-ws!)
+     (when announce-uplink?
+       (announce-uplink-roster!))
+     {:ok true
+      :count (:count status)})))
+
+(defn publish-agents-status-async!
+  "Leading-and-trailing, non-blocking variant of `publish-agents-status!`.
+
+   Status projection may contact many Emacs sockets and must not run on a
+   transport's ordered receive worker. Requests received during a publication
+   coalesce into one trailing publication using the latest options. HUD
+   projection is best-effort and does not define federation delivery semantics."
+  ([] (publish-agents-status-async! {}))
+  ([opts]
+   (let [[previous _]
+         (swap-vals! !agents-status-publish-state
+                     (fn [{:keys [phase] :as state}]
+                       (case phase
+                         :idle {:phase :running :opts opts}
+                         :running {:phase :running-dirty :opts opts}
+                         :running-dirty (assoc state :opts opts))))
+         scheduled? (= :idle (:phase previous))]
+     (when scheduled?
+       (future
+         (loop [publish-opts opts]
+           (try
+             (publish-agents-status! publish-opts)
+             (catch Throwable t
+               (println (str "[registry] async status publication failed: "
+                             (.getMessage t)))))
+           (let [[completed _]
+                 (swap-vals! !agents-status-publish-state
+                             (fn [{:keys [phase opts]}]
+                               (case phase
+                                 :running {:phase :idle}
+                                 :running-dirty {:phase :running :opts opts})))]
+             (when (= :running-dirty (:phase completed))
+               (recur (:opts completed)))))))
+     {:ok true :scheduled? scheduled?})))
 
 (def ^:private bell-file "/tmp/futon-bell.edn")
 
@@ -225,15 +397,154 @@
                (:bell-on-complete? metadata)
                (get metadata "bell-on-complete?")))))
 
+(defn- local-site-alias->bare
+  "Area codes (TN-agency-area-codes). This box registers its OWN agents bare, so
+   `claude-6` is an INDEXICAL: it names whichever claude-6 is local to the asker.
+   Our peers already carry our global name — the oxf peer holds `lon-claude-6`
+   bound to lucy's claude-6 session — but the box itself does not answer to it.
+   Your own number has an area code even when you never dial it locally.
+
+   Maps `<our-site>-<id>` back to the local `<id>`: lon-claude-6 -> claude-6.
+
+   Returns nil for ANY other prefix, which is the load-bearing half: oxf-claude-2
+   must never resolve to a local agent. That would be the AG-2 violation
+   federation/remote-homed-agent-id? exists to prevent. We only ever strip OUR
+   OWN area code."
+  [id-value]
+  (when-let [site-prefix-fn (*resolve-site-prefix*)]
+    (when-let [site (site-prefix-fn)]
+      (let [prefix (str site "-")
+            s (str id-value)]
+        (when (and (str/starts-with? s prefix)
+                   (> (count s) (count prefix)))
+          (subs s (count prefix)))))))
+
+(def ^:private agent-personas-resource "agent-personas.edn")
+
+(defonce ^:private !agent-personas (atom {}))
+
+(defn- read-agent-personas
+  []
+  (let [resource (io/resource agent-personas-resource)]
+    (when-not resource
+      (throw (ex-info "Agent persona resource not found"
+                      {:resource agent-personas-resource})))
+    (let [personas (edn/read-string (slurp resource))]
+      (when-not (and (map? personas)
+                     (every? string? (keys personas))
+                     (every? string? (vals personas)))
+        (throw (ex-info "Agent persona resource must map names to agent ids"
+                        {:resource agent-personas-resource})))
+      personas)))
+
+(defn reload-agent-personas!
+  "Reload persona-to-agent bindings from resources/agent-personas.edn.
+
+   Reloading changes lookup aliases only. It never adds registry keys or agent
+   records. A persona may name an agent that is not currently registered; that
+   binding remains configured and simply resolves to nil until the target is
+   registered."
+  []
+  (reset! !agent-personas (read-agent-personas)))
+
+(defn agent-personas
+  "Return the currently loaded persona-to-agent-id bindings."
+  []
+  @!agent-personas)
+
+(defn- init-agent-personas!
+  "Load persona bindings at namespace load time, tolerantly.
+
+   `reload-agent-personas!` throws on a missing or malformed resource. That is
+   right when an operator asks for a reload and wrong here: this call sits at the
+   top level of the registry namespace, and `(require 'futon3c.agency.registry
+   :reload)` is the sanctioned hot-load path for the shared JVM. A typo in a
+   hand-edited config file whose empty value is legitimate must not be able to
+   abort that require and take the registry with it. So: fall back to no personas
+   and say so on stdout."
+  []
+  (try
+    (reload-agent-personas!)
+    (catch Throwable t
+      (reset! !agent-personas {})
+      (println "[registry] agent personas unavailable, continuing with none:"
+               (.getMessage t)))))
+
+(init-agent-personas!)
+
+(defn- persona-agent
+  [reg id]
+  (when-let [target-id (get (agent-personas) (str id))]
+    (let [record (get reg target-id)]
+      (when-not (get-in record [:agent/metadata :proxy?])
+        record))))
+
 (defn get-agent
-  "Get agent record by typed ID, or nil if not registered."
+  "Get agent record by typed ID, or nil if not registered.
+
+   Resolves this site's area code as an ALIAS, never a second record: both
+   `claude-6` and `lon-claude-6` return the SAME record. Aliasing at LOOKUP
+   rather than indexing a second key is deliberate — a second key would double
+   the registry count and make `*agents*` misreport the roster, and a second
+   RECORD would violate I-1 (one agent = one session = one identity). lucy
+   already carries a `lon-claude-1` ghost with a null session-id beside the real
+   `claude-1`, which is what dual registration looks like when it goes wrong.
+
+   Aliases are FALLBACKS: a registered bare id wins, then this site's area-code
+   alias is consulted, then a configured orchestrator persona. Persona aliases
+   resolve only to currently registered, non-proxy agents."
   [typed-id]
-  (get @!registry (agent-id-value typed-id)))
+  (let [id (agent-id-value typed-id)
+        reg @!registry]
+    (or (get reg id)
+        (when-let [bare (local-site-alias->bare id)]
+          (get reg bare))
+        (persona-agent reg id))))
+
+(defn addressable-names
+  "Every name get-agent will resolve: registered ids, this site's area code for
+   each LOCAL agent, and configured personas whose targets are registered local
+   agents.
+
+   'Registered' and 'addressable' were the same set until aliases existed, and
+   code that conflates them now reports a caller as unreachable while the router
+   happily reaches it — mesh_qa's MQ-7 gates on a raw key set while
+   transport/http's auto-bellback-caller-registered? gates on get-agent. A QA
+   check that contradicts the router is worse than no check. So: one rule, asked
+   once, here.
+
+   Proxies are excluded, which is what keeps this honest — oxf-claude-2 is a
+   proxy (:proxy? true) and must never acquire OUR area code as lon-oxf-claude-2.
+   Already-qualified ids are excluded too, so a lon- name is never re-prefixed."
+  []
+  (let [reg @!registry
+        ids (map str (keys reg))
+        site (when-let [f (*resolve-site-prefix*)] (f))
+        area-names (when site
+                     (keep (fn [id]
+                             (let [record (get reg id)]
+                               (when (and
+                                      (not (get-in record [:agent/metadata :proxy?]))
+                                      (nil? (local-site-alias->bare id)))
+                                 (str site "-" id))))
+                           ids))
+        persona-names (keep (fn [persona]
+                              (when (persona-agent reg persona)
+                                persona))
+                            (keys (agent-personas)))]
+    (into (set ids) (concat area-names persona-names))))
 
 (defn agent-registered?
-  "Check if an agent is registered."
+  "Check if an agent is registered, by any of its names (see get-agent).
+
+   Goes through get-agent so the area code resolves here too. This is what makes
+   a qualified signature routable: auto-bellback gates on
+   `(boolean (reg/get-agent caller))` (transport/http.clj
+   auto-bellback-caller-registered?), and mesh_qa's MQ-7 says an unregistered
+   caller 'cannot auto-bell back' — so before this, signing --from lon-claude-6
+   made the sender unaddressable and silently ate the reply."
   [typed-id]
-  (contains? @!registry (agent-id-value typed-id)))
+  (some? (get-agent typed-id)))
 
 (defn register-agent!
   "Register an agent with the registry.
@@ -244,6 +555,7 @@
      :invoke-fn     - Required. Function (fn [prompt session-id] -> result-map).
      :capabilities  - Required. Vector of keyword capabilities.
      :session-id    - Optional. Initial session ID.
+     :delivery-mode - Optional. :push (default) or :inbox.
      :ttl-ms        - Optional. Bounded lifecycle in milliseconds (R5).
      :metadata      - Optional. Arbitrary metadata map.
      :session-reset-fn - Optional. Zero-arity fn that clears any backing
@@ -252,15 +564,17 @@
    Returns:
      Agent record on success (R1: typed result).
      {:ok false :error SocialError} on failure (R2: duplicate → error, not overwrite)."
-  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata
+  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata delivery-mode
            session-reset-fn]}]
   (let [aid-val (agent-id-value agent-id)
+        delivery-mode (or delivery-mode :push)
         typed-id (if (map? agent-id)
                    agent-id
                    {:id/value (str agent-id) :id/type :continuity})
         ts (now)
         agent-record {:agent/id typed-id
                       :agent/type type
+                      :agent/delivery-mode delivery-mode
                       :agent/invoke-fn invoke-fn
                       :agent/capabilities (vec (or capabilities []))
                       :agent/session-id session-id
@@ -283,7 +597,15 @@
                                              (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
         result (atom nil)]
-    (swap! !registry
+    (if-not (#{:push :inbox} delivery-mode)
+      (reset! result
+              {:ok false
+               :error (make-social-error
+                       :invalid-delivery-mode
+                       "delivery-mode must be :push or :inbox"
+                       :agent-id aid-val
+                       :delivery-mode delivery-mode)})
+      (swap! !registry
            (fn [m]
              (if (contains? m aid-val)
                (do (reset! result
@@ -293,8 +615,18 @@
                                     (str "Agent already registered: " aid-val)
                                     :existing-id aid-val)})
                    m)
-               (do (reset! result agent-record)
-                   (assoc m aid-val agent-record)))))
+               (if-let [owner (session-owner m aid-val session-id)]
+                 (do (reset! result
+                             {:ok false
+                              :error (make-social-error
+                                      :session-already-owned
+                                      (str "Session already owned by " owner)
+                                      :agent-id aid-val
+                                      :session-id session-id
+                                      :owner-id owner)})
+                     m)
+                 (do (reset! result agent-record)
+                     (assoc m aid-val agent-record)))))))
     (let [r @result]
       ;; Fire on-register hook asynchronously for federation announcement
       (when (and (map? r) (:agent/id r))
@@ -349,9 +681,25 @@
     (swap! !registry
            (fn [m]
              (if-let [agent (get m aid-val)]
-               (let [updated (merge agent updates {:agent/last-active (now)})]
-                 (reset! result updated)
-                 (assoc m aid-val updated))
+               ;; Auto-touch unless the caller supplies :agent/last-active
+               ;; explicitly (federation proxies mirror the REMOTE'S value —
+               ;; stamping sync time made every proxy reset to idle-0 each cycle).
+               (let [next-session-id (if (contains? updates :agent/session-id)
+                                       (:agent/session-id updates)
+                                       (:agent/session-id agent))]
+                 (if-let [owner (session-owner m aid-val next-session-id)]
+                   (do (reset! result
+                               {:ok false
+                                :error (make-social-error
+                                        :session-already-owned
+                                        (str "Session already owned by " owner)
+                                        :agent-id aid-val
+                                        :session-id next-session-id
+                                        :owner-id owner)})
+                       m)
+                   (let [updated (merge agent {:agent/last-active (now)} updates)]
+                     (reset! result updated)
+                     (assoc m aid-val updated))))
                (do (reset! result
                            {:ok false
                             :error (make-social-error
@@ -658,13 +1006,28 @@
      {:ok false :error SocialError} on failure (R4: typed error with component)."
   ([typed-id prompt]
    (invoke-agent! typed-id prompt nil))
-  ([typed-id prompt timeout-ms]
-   (let [aid-val (agent-id-value typed-id)]
-     (if-let [agent (get @!registry aid-val)]
+  ([typed-id prompt invoke-options]
+   (let [invoke-options (if (map? invoke-options)
+                          invoke-options
+                          {:timeout-ms invoke-options})
+         requested-aid-val (agent-id-value typed-id)
+         resolved-agent (get-agent typed-id)
+         aid-val (or (some-> resolved-agent :agent/id :id/value str)
+                     requested-aid-val)]
+     (if-let [agent resolved-agent]
+       (if (= :inbox (:agent/delivery-mode agent))
+         {:ok false
+          :error (make-social-error
+                  :pull-only-agent
+                  (str "Agent " aid-val
+                       " is pull-only (delivery-mode inbox); bells are delivered to its inbox, not by invoke.")
+                  :agent-id aid-val
+                  :delivery-mode :inbox)}
        (let [invoke-fn (:agent/invoke-fn agent)
              routing-info (invoke-routing-info aid-val agent)
              current-session (:agent/session-id agent)
-             timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
+             timeout-ms (some-> (:timeout-ms invoke-options) long)
+             timeout-ms (when (and timeout-ms (pos? timeout-ms)) timeout-ms)
              prompt-preview (let [s (str prompt)]
                               (subs s 0 (min 120 (count s))))
              _trace (when (not= "false" (System/getProperty "FUTON3C_INVOKE_TRACE"))
@@ -694,10 +1057,22 @@
                                                              (assoc :invoke-started-at (str (:agent/invoke-started-at a))
                                                                     :invoke-prompt-preview (:agent/invoke-prompt-preview a))
                                                              (:agent/invoke-activity a)
-                                                             (assoc :invoke-activity (:agent/invoke-activity a)))])
+                                                             (assoc :invoke-activity (:agent/invoke-activity a))
+                                                             (:agent/invoke-activity-at a)
+                                                             (assoc :invoke-activity-at
+                                                                    (str (:agent/invoke-activity-at a))
+                                                                    :invoke-quiet-ms
+                                                                    (activity-quiet-ms
+                                                                     (:agent/invoke-activity-at a))))])
                                                     @!registry))
                                  :count (count @!registry)})
-                               (broadcast-agents-ws!))
+                               (broadcast-agents-ws!)
+                               ;; The operator HUD may be on a federation peer.
+                               ;; Local projection alone left that proxy frozen
+                               ;; at its boot-time state while this box was
+                               ;; actively invoking the lane.
+                               (announce-uplink-roster!)
+                               (announce-peer-agent! aid-val))
              mark-invoking! (fn []
                               (swap! !registry
                                      (fn [m]
@@ -722,6 +1097,7 @@
                                                     :agent/invoke-started-at nil
                                                     :agent/invoke-prompt-preview nil
                                                     :agent/invoke-activity nil
+                                                    :agent/invoke-activity-at nil
                                                     :agent/invoke-event-sink nil}))
                                      m)))
                           (project-agents!)
@@ -729,32 +1105,70 @@
                           ;; Emacs watches this file → joe/visible-bell.
                           (future (ring-bell-file! aid-val)))]
          (mark-invoking!)
-         (let [invoke-result
+         (let [clock-context (volatile! nil)
+               invoke-result
            (try
-             (cond
+             (let [start! (requiring-resolve 'futon3c.agency.clock-decision/start!)
+                   turn-var (requiring-resolve 'futon3c.agency.clock-decision/*turn*)
+                   context (start! aid-val current-session prompt invoke-options)]
+               (vreset! clock-context context)
+               (with-bindings {turn-var context}
+                 (cond
                invoke-fn
                      (let [call-invoke (fn []
-                                   (try
-                                     (invoke-fn prompt current-session)
-                                     (catch clojure.lang.ArityException _
-                                       (invoke-fn prompt))))
+                                   ;; Prefer the 3-arity contract so the caller's
+                                   ;; deadline reaches the process itself, not just
+                                   ;; the layers that give up waiting for it.
+                                   (if (declares-arity? invoke-fn 3)
+                                     (invoke-fn prompt current-session
+                                                (assoc invoke-options :timeout-ms timeout-ms))
+                                     (try
+                                       (invoke-fn prompt current-session)
+                                       (catch clojure.lang.ArityException _
+                                         (invoke-fn prompt)))))
                      result-map (if timeout-ms
                                   (let [f (future (call-invoke))
                                         v (deref f timeout-ms ::timeout)]
                                     (if (= v ::timeout)
-                                      (do (future-cancel f)
-                                          {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
+                                      ;; Detach, do NOT cancel. future-cancel
+                                      ;; interrupts this thread but does not kill
+                                      ;; the codex child, so the old behaviour left
+                                      ;; a live orphan writing files with nobody
+                                      ;; listening, and discarded a result that
+                                      ;; often landed seconds later. The caller's
+                                      ;; deadline ends the caller's WAIT; ending
+                                      ;; the WORK is the job supervisor's call
+                                      ;; (README-agency-cap.md).
+                                      (do
+                                        ;; Keep the lane :invoking until the turn
+                                        ;; really finishes, so a detached turn is
+                                        ;; not double-dispatched, and release it
+                                        ;; with the session-id it actually returns.
+                                        (future
+                                          (let [late (try @f (catch Throwable _ nil))]
+                                            (try
+                                              ((requiring-resolve 'futon3c.agency.clock-decision/finish!)
+                                               (:session-id late))
+                                              (finally (mark-idle! (:session-id late))))))
+                                        {:error "timeout" :exit-code -1
+                                         :timeout-ms timeout-ms :detached? true})
                                       v))
                                   (call-invoke))
                      {:keys [result session-id error]} result-map]
-                 (mark-idle! session-id)
+                 (when-not (:detached? result-map)
+                   ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
+                   (mark-idle! session-id))
                  (if error
                    {:ok false
                     :error (make-social-error
                             :invoke-error
                             (str error)
                             :agent-id aid-val
-                            :timeout-ms (:timeout-ms result-map))}
+                            :timeout-ms (:timeout-ms result-map)
+                            ;; :detached? true means the turn is STILL RUNNING —
+                            ;; the caller stopped waiting, the work did not stop.
+                            ;; Callers must not read this as "no work happened".
+                            :detached? (boolean (:detached? result-map)))}
                    (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
                          final-agent (get @!registry aid-val)]
                      (when (and final-agent
@@ -771,6 +1185,7 @@
                (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
                      response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
                      session-id (when (map? response) (:session-id response))]
+                 ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
                  (mark-idle! session-id)
                  (cond
                    (= response ws-invoke/timeout-sentinel)
@@ -810,18 +1225,21 @@
                           :agent-id aid-val
                           :invoke-route (:invoke-route routing-info)
                           :invoke-local? (:invoke-local? routing-info)
-                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))
+                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))))
              (catch Exception e
                (mark-idle! nil)
                {:ok false
                 :error (make-social-error
-                        :invoke-exception
+                        (or (:error/code (ex-data e)) :invoke-exception)
                         (.getMessage e)
                         :agent-id aid-val
                         :exception-class (.getName (class e)))}))]
+           (when (and @clock-context
+                      (not (get-in invoke-result [:error :error/context :detached?])))
+             ((requiring-resolve 'futon3c.agency.clock-decision/end!) @clock-context))
            ;; Fire on-idle with outcome — after result is known.
            (fire-on-idle! aid-val invoke-result)
-           invoke-result))
+           invoke-result)))
        {:ok false
         :error (make-social-error
                 :agent-not-found
@@ -861,14 +1279,160 @@
 (defn update-invoke-activity!
   "Update the current activity string for an invoking agent.
    Called from invoke-fn stream parsers to surface tool use, thinking, etc.
-   Does NOT trigger a blackboard refresh — the ticker handles that every 5s."
+   Does NOT trigger a blackboard refresh — the ticker handles that every 5s.
+   When an invoke stream owns the agent's event sink, the same authoritative
+   update is pushed as an `invoke.activity` event. Stream progress therefore
+   cannot depend on an adapter also remembering to mirror its private raw event.
+
+   Stamps :agent/invoke-activity-at as well. An activity string with no time on
+   it cannot be told apart from a stale one: on 2026-08-03 three codex lanes
+   past the soft cap read `invoke-activity \"using bash\"` with `last-active`
+   from BEFORE the job started, and were reported wedged. They were working —
+   burning CPU on live keepalive'd sockets. The age is what distinguishes
+   `using bash (3s ago)` from `using bash (51m ago)`; without it, wall-clock
+   age of the job is the only signal left, and that is an SLA number, not
+   evidence of stuckness (see README-agency-cap.md).
+
+   An activity report is proof of a live local invoke stream, so if the agent
+   has been flipped to :idle mid-turn (reconcile-stale-invoking! after a long
+   quiet Bash, or a premature job completion — 2026-08-15, claude-2 rendered
+   idle while dispatching packets), restore :agent/status :invoking. Only :idle
+   is restored; other states (:restored etc.) are left alone."
   [agent-id-val activity-str]
-  (swap! !registry
-         (fn [m]
-           (if-let [a (get m agent-id-val)]
-             (assoc m agent-id-val
-                    (assoc a :agent/invoke-activity activity-str))
-             m))))
+  (let [activity-at (now)
+        updated
+        (swap! !registry
+               (fn [m]
+                 (if-let [a (get m agent-id-val)]
+                   (assoc m agent-id-val
+                          (cond-> (assoc a :agent/invoke-activity activity-str
+                                           :agent/invoke-activity-at activity-at)
+                            (= :idle (:agent/status a))
+                            (assoc :agent/status :invoking)))
+                   m)))]
+    (when-let [sink (get-in updated [agent-id-val :agent/invoke-event-sink])]
+      (try
+        (sink {:type "invoke.activity"
+               :agent-id agent-id-val
+               :activity activity-str
+               :at (str activity-at)})
+        (catch Throwable _)))
+    updated))
+
+(defn- with-idle-invoke-state
+  [agent now*]
+  (merge agent
+         {:agent/last-active now*
+          :agent/status :idle
+          :agent/invoke-started-at nil
+          :agent/invoke-prompt-preview nil
+          :agent/invoke-activity nil
+          :agent/invoke-activity-at nil}))
+
+(defn mark-agent-idle!
+  "Public idle-reset for use by HTTP-layer try/finally guarantees.
+   Resets :agent/status to :idle, clears invoke metadata. Idempotent —
+   safe to call when already idle. Only updates if the agent is still
+   registered (R5: no resurrect). Returns true if a transition occurred."
+  [agent-id-val]
+  (let [aid-val (agent-id-value agent-id-val)
+        transitioned? (atom false)]
+    (swap! !registry
+           (fn [m]
+             (if-let [agent* (get m aid-val)]
+               (do
+                 (when (= :invoking (:agent/status agent*))
+                   (reset! transitioned? true))
+                 (assoc m aid-val
+                        (with-idle-invoke-state agent* (now))))
+               m)))
+    @transitioned?))
+
+(defn- invoke-jobs-running-for-agent?
+  "Best-effort check: does the invoke-jobs ledger have a running/queued job
+   for AGENT-ID? Uses requiring-resolve to avoid a registry -> transport.http
+   dependency cycle. Returns false when the ledger is unavailable."
+  [agent-id]
+  (try
+    (when-let [http-ns (or (find-ns 'futon3c.transport.http)
+                           (try (require 'futon3c.transport.http)
+                                (find-ns 'futon3c.transport.http)
+                                (catch Throwable _)))]
+      (when-let [counts-fn (ns-resolve http-ns 'active-invoke-job-counts)]
+        (let [counts (counts-fn)
+              entry (get counts agent-id)]
+          (pos? (long (or (:running-jobs entry)
+                          (get entry "running-jobs")
+                          0))))))
+    (catch Throwable _ false)))
+
+(defn- turn-draining-for-agent?
+  "Best-effort check: is AGENT-ID currently draining a turn in the turn-queue?
+   Covers the turns the invoke-jobs ledger cannot see — /invoke-stream operator
+   turns and buffer-delivered park resumes create no ledger job, so the ledger
+   guard alone let reconcile-stale-invoking! flip a live turn to :idle after a
+   >120s quiet Bash (2026-08-15, claude-2 mid park-resume turn). The drainer's
+   :draining set covers every local turn shape. Uses requiring-resolve to stay
+   decoupled from the queue ns; returns false when unavailable."
+  [agent-id]
+  (try
+    (when-let [snapshot-fn (requiring-resolve 'futon3c.agency.turn-queue/snapshot)]
+      (contains? (or (:draining (snapshot-fn)) #{}) (str agent-id)))
+    (catch Throwable _ false)))
+
+(defn- stale-invoking-without-fresh-activity?
+  [agent threshold-ms now-ms]
+  (let [started-at (:agent/invoke-started-at agent)
+        last-active (:agent/last-active agent)
+        activity-at (:agent/invoke-activity-at agent)
+        ref-inst (or started-at last-active)
+        age-ms (when (instance? Instant ref-inst)
+                 (- now-ms (.toEpochMilli ^Instant ref-inst)))
+        activity-age-ms (when (instance? Instant activity-at)
+                          (- now-ms (.toEpochMilli ^Instant activity-at)))]
+    (and (= :invoking (:agent/status agent))
+         (not (get-in agent [:agent/metadata :proxy?]))
+         (some? age-ms)
+         (> age-ms (long threshold-ms))
+         (not (and (some? activity-age-ms)
+                   (<= activity-age-ms (long threshold-ms)))))))
+
+(defn reconcile-stale-invoking!
+  "Periodic repair for local agents whose :agent/status is :invoking, whose
+   invoking state and latest activity are older than THRESHOLD-MS (default
+   120s), and who have no running job in the local invoke-jobs ledger.
+
+   Federated proxies are never repaired locally: their home site owns their
+   status and job ledger. Returns a vector of repaired agent-id strings."
+  ([]
+   (reconcile-stale-invoking! 120000))
+  ([threshold-ms]
+   (let [scan-now-ms (.toEpochMilli (now))
+         candidate-ids
+         (for [[aid agent] @!registry
+               :when (stale-invoking-without-fresh-activity?
+                      agent threshold-ms scan-now-ms)]
+           aid)
+         repaired (atom [])]
+     (doseq [aid candidate-ids
+             :when (not (or (invoke-jobs-running-for-agent? aid)
+                            (turn-draining-for-agent? aid)))]
+       (let [now* (now)
+             now-ms (.toEpochMilli now*)
+             [before after]
+             (swap-vals! !registry
+                         (fn [registry]
+                           (if-let [agent (get registry aid)]
+                             (if (stale-invoking-without-fresh-activity?
+                                  agent threshold-ms now-ms)
+                               (assoc registry aid
+                                      (with-idle-invoke-state agent now*))
+                               registry)
+                             registry)))]
+         (when (and (= :invoking (get-in before [aid :agent/status]))
+                    (= :idle (get-in after [aid :agent/status])))
+           (swap! repaired conj aid))))
+     @repaired)))
 
 (defn report-external-invoke!
   "Record or clear externally-driven invoke state for AGENT-ID-VAL.
@@ -924,7 +1488,15 @@
                                   (assoc :mission-id (some-> (:mission-id state) str str/trim))
                                   (some-> (:excursion-id state) str str/trim not-empty)
                                   (assoc :excursion-id (some-> (:excursion-id state) str str/trim)))))
-                       agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
+                       ;; An external status report IS activity evidence:
+                       ;; without this stamp an apparatus that only ever
+                       ;; reports externally keeps its registration-time
+                       ;; :agent/last-active forever, so the roster renders
+                       ;; "idle (Nh ago)" minutes after a completed run
+                       ;; (war-machine, 2026-07-25).
+                       agent* (cond-> (assoc agent
+                                             :agent/external-heartbeat-at now*
+                                             :agent/last-active now*)
                                 next-external
                                 (assoc :agent/external-invokes next-external)
                                 (nil? next-external)
@@ -934,8 +1506,7 @@
                                 (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
                    (assoc m aid-val agent*))
                  m)))
-      (bb/project-agents! (registry-status))
-      (broadcast-agents-ws!))
+      (publish-agents-status!))
     {:ok true
      :agent-id aid-val
      :source source-key
@@ -1070,27 +1641,45 @@
 ;; Introspection
 ;; =============================================================================
 
+(def ^:private codex-session-scan-ttl-ms
+  "Cache TTL for running-codex-session-ids. The scan walks the whole process
+   table with a native ProcessHandle info call per process; callers (the
+   agents ticker, every registry-status, every federation roster import)
+   invoke it far more often than external codex sessions appear or vanish.
+   Uncached, it made the federation ws on-receive slower than the uplink's
+   announce cadence — see make-ws-handler in transport/ws.clj (2026-07-18)."
+  5000)
+
+(defonce ^:private !codex-session-scan
+  (atom nil))  ;; {:at-ms long, :ids #{sid ...}}
+
 (defn running-codex-session-ids
   "Best-effort detection of local `codex exec --json resume <sid>` processes.
-   Returns a set of active session IDs.
+   Returns a set of active session IDs, cached for codex-session-scan-ttl-ms.
 
    This is used to surface external Codex activity (e.g. emacs codex-repl)
    in the shared *agents* panel even when that invoke did not flow through
    registry/invoke-agent!."
   []
-  (try
-    (with-open [processes (java.lang.ProcessHandle/allProcesses)]
-      (->> (iterator-seq (.iterator processes))
-           (keep (fn [^java.lang.ProcessHandle process]
-                   (let [cmd-opt (.. process info commandLine)]
-                     (when (.isPresent cmd-opt)
-                       (let [line (.get cmd-opt)]
-                         (when (and (str/includes? line "codex exec --json")
-                                    (str/includes? line " resume "))
-                           (second (re-find #"resume\s+([0-9a-fA-F-]{36})\b" line))))))))
-           set))
-    (catch Throwable _
-      #{})))
+  (let [now-ms (System/currentTimeMillis)
+        cached @!codex-session-scan]
+    (if (and cached (< (- now-ms (:at-ms cached)) codex-session-scan-ttl-ms))
+      (:ids cached)
+      (let [ids (try
+                  (with-open [processes (java.lang.ProcessHandle/allProcesses)]
+                    (->> (iterator-seq (.iterator processes))
+                         (keep (fn [^java.lang.ProcessHandle process]
+                                 (let [cmd-opt (.. process info commandLine)]
+                                   (when (.isPresent cmd-opt)
+                                     (let [line (.get cmd-opt)]
+                                       (when (and (str/includes? line "codex exec --json")
+                                                  (str/includes? line " resume "))
+                                         (second (re-find #"resume\s+([0-9a-fA-F-]{36})\b" line))))))))
+                         set))
+                  (catch Throwable _
+                    #{}))]
+        (reset! !codex-session-scan {:at-ms now-ms :ids ids})
+        ids))))
 
 (defn- external-invoke-live?
   [entry]
@@ -1143,16 +1732,22 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
-                        campaign-id (or (:campaign-id external-invoke)
-                                        (get-in agent [:agent/metadata :campaign-id])
-                                        (get-in agent [:agent/metadata "campaign-id"]))
-                        mission-id (or (:mission-id external-invoke)
-                                       (get-in agent [:agent/metadata :mission-id])
-                                       (get-in agent [:agent/metadata "mission-id"]))
-                        excursion-id (or (:excursion-id external-invoke)
-                                         (get-in agent [:agent/metadata :excursion-id])
-                                         (get-in agent [:agent/metadata "excursion-id"]))
-                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
+                        decision (:decision (clock-store/current-state aid session-id))
+                        projected-clock (if decision (clock-store/current-clock aid session-id)
+                                            {:campaign-id (or (:campaign-id external-invoke)
+                                                              (get-in agent [:agent/metadata :campaign-id])
+                                                              (get-in agent [:agent/metadata "campaign-id"]))
+                                             :mission-id (or (:mission-id external-invoke)
+                                                             (get-in agent [:agent/metadata :mission-id])
+                                                             (get-in agent [:agent/metadata "mission-id"]))
+                                             :excursion-id (or (:excursion-id external-invoke)
+                                                               (get-in agent [:agent/metadata :excursion-id])
+                                                               (get-in agent [:agent/metadata "excursion-id"]))})
+                        campaign-id (:campaign-id projected-clock)
+                        mission-id (:mission-id projected-clock)
+                        excursion-id (:excursion-id projected-clock)
+                        {:keys [queued-jobs running-jobs nonterminal-jobs
+                                unconsumed-count oldest-unconsumed-age-ms]}
                         (get invoke-job-counts aid {})
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
@@ -1178,7 +1773,8 @@
                         invoke-activity (or (:agent/invoke-activity agent)
                                             (:activity external-invoke)
                                             (when external-codex-invoking?
-                                              "codex exec running (external surface)"))]
+                                              "codex exec running (external surface)"))
+                        invoke-activity-at (:agent/invoke-activity-at agent)]
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
@@ -1195,6 +1791,7 @@
                                   :invoke-local? (:invoke-local? routing-info)
                                   :invoke-ws-available? (:invoke-ws-available? routing-info)
                                   :invoke-diagnostic (:invoke-diagnostic routing-info)
+                                  :delivery-mode (:delivery-mode routing-info)
                                   :completion-bell-required? (completion-bell-contract? agent)
                                   :status status}
                            queued-jobs
@@ -1203,11 +1800,17 @@
                            (assoc :running-jobs running-jobs)
                            nonterminal-jobs
                            (assoc :nonterminal-jobs nonterminal-jobs)
+                           (= :inbox (:agent/delivery-mode agent))
+                           (assoc :unconsumed-count (long (or unconsumed-count 0))
+                                  :oldest-unconsumed-age-ms oldest-unconsumed-age-ms)
                            invoke-started-at
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)
                            invoke-activity
                            (assoc :invoke-activity invoke-activity)
+                           invoke-activity-at
+                           (assoc :invoke-activity-at (str invoke-activity-at)
+                                  :invoke-quiet-ms (activity-quiet-ms invoke-activity-at))
                            surface-projection
                            (assoc :surface-projection
                                   (dissoc surface-projection :started-at :updated-at)))]))
@@ -1248,6 +1851,14 @@
                           (str/starts-with? (str aid-val) (str prefix "-"))
                           (= (or (:agent/status agent) :idle) :idle)
                           (nil? (:agent/session-id agent))
+                          ;; A pull-only seat is session-less BY DESIGN -- it is
+                          ;; not spawnable, which is the whole point of the lane
+                          ;; -- so the session-less test misreads it as a ghost.
+                          ;; claude-clink-1 was reclaimed out from under a live
+                          ;; watcher on 2026-08-26; bells to it then failed
+                          ;; agent-not-found silently, which is the exact defect
+                          ;; E-bell-clink-adapter exists to remove.
+                          (not= :inbox (:agent/delivery-mode agent))
                           (or local-auto-ghost?
                               unreachable-remote-placeholder?)))))
          (sort-by #(get-in % [:agent/id :id/value]))

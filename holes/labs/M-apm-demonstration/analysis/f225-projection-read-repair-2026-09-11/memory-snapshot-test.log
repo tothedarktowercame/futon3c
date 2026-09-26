@@ -1,0 +1,19 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.apm.memory-snapshot-test
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.659853782Z", :outcome :timeout, :exception-classes ["java.util.concurrent.ExecutionException" "java.net.http.HttpTimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.663475871Z", :outcome :unavailable, :exception-classes ["java.net.ConnectException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.663708727Z", :outcome :unavailable, :exception-classes ["java.lang.RuntimeException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.663868015Z", :outcome :unavailable, :exception-classes ["java.io.IOException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.664197491Z", :outcome :malformed, :exception-classes ["clojure.lang.ExceptionInfo"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.685427635Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo"]}
+[apm-store-read-failure] {:memory-id "prior-timeout", :at "2026-09-11T20:29:34.858827308Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.863270133Z", :outcome :timeout, :exception-classes ["java.util.concurrent.TimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.863475598Z", :outcome :timeout, :exception-classes ["java.net.SocketTimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.863825122Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo" "java.util.concurrent.TimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:29:34.863969913Z", :outcome :timeout, :exception-classes ["java.lang.RuntimeException"]}
+
+Ran 24 tests containing 112 assertions.
+0 failures, 0 errors.

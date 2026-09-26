@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "a",
+    "to" : "e"
+  }, {
+    "from" : "a",
+    "to" : "c"
+  }, {
+    "from" : "e",
+    "to" : "c"
+  } ],
+  "id" : "simpsons-paradox-exercise-age-cholesterol",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "simpsons-paradox-exercise-age-cholesterol.json"
+  },
+  "variables" : [ {
+    "id" : "a",
+    "kind" : "observed",
+    "name" : "Age"
+  }, {
+    "id" : "e",
+    "kind" : "observed",
+    "name" : "Exercise"
+  }, {
+    "id" : "c",
+    "kind" : "observed",
+    "name" : "Cholesterol"
+  } ]
+}

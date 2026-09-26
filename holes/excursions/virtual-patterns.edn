@@ -1,0 +1,287 @@
+{:source
+ "mission-pattern-scopes.edn :try-candidates × pattern/library (absent)",
+ :generated-by "claude-5, 2026-07-01",
+ :note
+ "induced holes — patterns the magnet embedding-neighborhood implies but that are NOT formalized in pattern/library. Await fold ΔG-backing (impl #2/#3), per project-virtual-patterns-land-with-aif.",
+ :distinct 38,
+ :total-citations 183,
+ :virtual-patterns
+ [{:pattern "interest-event-vocabulary",
+   :induced-by-count 30,
+   :missions
+   ["M-agency-hardening"
+    "M-autoclock-in"
+    "M-bounded-disposition"
+    "M-daily-scan-multi-axis-queue"
+    "M-descriptive-essay-of-the-stack"
+    "M-essays-diachronic-model"
+    "M-evidence-viewer-refinements"
+    "M-explore-aiqa"
+    "M-expressions-of-interest"
+    "M-interim-director-long-tail"
+    "M-interim-director-proxy-metric-inventory"
+    "M-invariant-queue-extend"
+    "M-learning-loop"
+    "M-live-geometric-stack"
+    "M-mission-control"
+    "M-mission-peripheral"
+    "M-portfolio-inference"
+    "M-prior-mathematics"
+    "M-proof-peripheral"
+    "M-sci-detection-pipeline"
+    "M-single-locus"
+    "M-state-snapshot-witness"
+    "M-trip-journal"
+    "M-war-machine"
+    "M-war-machine-aif-last-mile"
+    "M-war-machine-first-outing"
+    "M-war-machine-first-outing-expectations"
+    "M-war-machine-frontend-upgrade1"
+    "M-war-machine-vsatarcs-interop"
+    "M-web-arxana-missions"]}
+  {:pattern "read-existing-seam-before-implementing",
+   :induced-by-count 20,
+   :missions
+   ["M-agency-rebuild"
+    "M-agency-unified-routing"
+    "M-autoclock-in"
+    "M-codex-irc-execution"
+    "M-drawbridge-multi-agent"
+    "M-emacs-cursor-peripheral"
+    "M-mission-control"
+    "M-mission-control-scoping"
+    "M-mission-peripheral"
+    "M-mission-wiring"
+    "M-par-session-punctuation"
+    "M-peripheral-gauntlet"
+    "M-peripheral-phenomenology"
+    "M-proof-peripheral"
+    "M-self-representing-stack"
+    "M-stack-stereolithography"
+    "M-trip-journal"
+    "M-understand-fucodex"
+    "M-war-machine-vsatarcs-interop"
+    "M-war-machine-wiring"]}
+  {:pattern "patterns-as-categorical-objects",
+   :induced-by-count 17,
+   :missions
+   ["M-a-sorry-enterprise"
+    "M-agency-refactor"
+    "M-diagram-composition"
+    "M-dispatch-peripheral-bridge"
+    "M-futon3x-e2e"
+    "M-graph-unification"
+    "M-mission-coherence-patterns"
+    "M-paper-reverse-morphogenesis"
+    "M-pattern-application-diagnostic"
+    "M-pattern-exotype-bridge"
+    "M-pattern-inference-engine"
+    "M-pattern-inference-engine-scoping-review"
+    "M-pattern-ingest"
+    "M-peripheral-behavior"
+    "M-peripheral-model"
+    "M-reflective-discipline"
+    "M-superpod-mark3"]}
+  {:pattern "campaign-as-temporary-institution",
+   :induced-by-count 10,
+   :missions
+   ["M-agency-unified-routing"
+    "M-interim-director-proxy-metric-inventory"
+    "M-make-agency-work-properly"
+    "M-mission-coherence-patterns"
+    "M-mission-control"
+    "M-mission-peripheral"
+    "M-mission-wiring"
+    "M-self-representing-stack"
+    "M-trip-journal"
+    "M-war-machine-vsatarcs-interop"]}
+  {:pattern "state-in-substrate-deltas-in-messages",
+   :induced-by-count 9,
+   :missions
+   ["M-autoclock-in"
+    "M-codex-irc-execution"
+    "M-improve-irc"
+    "M-live-geometric-stack"
+    "M-repl-wins-over-cli"
+    "M-self-representing-stack"
+    "M-sliding-blackboard"
+    "M-structural-law"
+    "M-xor-coupling-probe"]}
+  {:pattern "p4ng-agent-environments",
+   :induced-by-count 7,
+   :missions
+   ["M-agency-forum"
+    "M-agency-hardening"
+    "M-improve-irc"
+    "M-make-agency-work-properly"
+    "M-native-plan-coherence"
+    "M-pattern-application-diagnostic"
+    "M-patterns-done-right"]}
+  {:pattern "read-only-first-then-extend",
+   :induced-by-count 7,
+   :missions
+   ["M-emacs-cursor-peripheral"
+    "M-peripheral-gauntlet"
+    "M-peripheral-phenomenology"
+    "M-vsatarcs-writer"
+    "M-war-machine-first-outing"
+    "M-war-machine-first-outing-expectations"
+    "M-war-machine-tuning"]}
+  {:pattern "cross-mission-escrow",
+   :induced-by-count 7,
+   :missions
+   ["M-interim-director-long-tail"
+    "M-interim-director-proxy-metric-inventory"
+    "M-live-geometric-stack"
+    "M-mission-control"
+    "M-mission-wiring"
+    "M-single-locus"
+    "M-trip-journal"]}
+  {:pattern "logic-model-before-code",
+   :induced-by-count 7,
+   :missions
+   ["M-P8-rational-reconstruction"
+    "M-f6-recursive"
+    "M-fulab-logic"
+    "M-invariant-violations"
+    "M-portfolio-inference"
+    "M-structural-law"
+    "M-vsatarcs-invariants-integration"]}
+  {:pattern "tag-evidence-by-timescale",
+   :induced-by-count 6,
+   :missions
+   ["M-editorial-assistant"
+    "M-essays-edit-cycle"
+    "M-essays-retraction-visibility"
+    "M-evidence-viewer-refinements"
+    "M-interim-director-long-tail"
+    "M-prior-mathematics"]}
+  {:pattern "present-graph-topology-not-adjacency-lists",
+   :induced-by-count 5,
+   :missions
+   ["M-hypergraph-operator"
+    "M-interest-network-coupling"
+    "M-portfolio-inference"
+    "M-reflective-discipline"
+    "M-webarxana"]}
+  {:pattern "verified-rewrite-from-diagnostic-annotation",
+   :induced-by-count 5,
+   :missions
+   ["M-P8-rational-reconstruction"
+    "M-editorial-assistant"
+    "M-essays-edit-cycle"
+    "M-essays-retraction-visibility"
+    "M-vsatarcs-invariants-integration"]}
+  {:pattern "pattern-to-code-receipts",
+   :induced-by-count 5,
+   :missions
+   ["M-evidence-viewer-refinements"
+    "M-pattern-application-diagnostic"
+    "M-pattern-inference-engine"
+    "M-pattern-inference-engine-scoping-review"
+    "M-vsatarcs-invariants-integration.witness-vsatarcs-fresh"]}
+  {:pattern "join-up-training-indicators-and-sector-positioning",
+   :induced-by-count 5,
+   :missions
+   ["M-interim-director-long-tail"
+    "M-or-training-as-learning-system"
+    "M-or-training-as-learning-system.v1"
+    "M-signal-roll-up"
+    "M-war-machine-wiring"]}
+  {:pattern "match-region-weight-to-load",
+   :induced-by-count 4,
+   :missions
+   ["M-essay-corpus-substrate"
+    "M-interest-network-coupling"
+    "M-interim-director-long-tail"
+    "M-symbol-grounding-scaling-plan"]}
+  {:pattern "split-transport-from-embodiment",
+   :induced-by-count 4,
+   :missions
+   ["M-emacs-cursor-peripheral"
+    "M-peripheral-phenomenology"
+    "M-transport-adapters"
+    "M-ws-emacs-log-stream"]}
+  {:pattern "living-materials-stewardship",
+   :induced-by-count 4,
+   :missions
+   ["M-action-cost-modelling"
+    "M-arxana-roundtrip"
+    "M-essays-edit-cycle"
+    "M-peripheral-gauntlet"]}
+  {:pattern "hot-reload-as-default-fix-path",
+   :induced-by-count 3,
+   :missions
+   ["M-drawbridge-multi-agent"
+    "M-single-entry-point"
+    "M-war-machine-frontend-upgrade1"]}
+  {:pattern "stale-reference-after-restructure",
+   :induced-by-count 3,
+   :missions
+   ["M-editorial-assistant"
+    "M-essays-edit-cycle"
+    "M-essays-retraction-visibility"]}
+  {:pattern "conclusion-required-others-recommended",
+   :induced-by-count 3,
+   :missions
+   ["M-interim-director" "M-prior-mathematics" "M-proof-peripheral"]}
+  {:pattern "plan-as-enumeration",
+   :induced-by-count 2,
+   :missions ["M-capability-star-map" "M-native-plan-coherence"]}
+  {:pattern "mission-anchored-scan",
+   :induced-by-count 2,
+   :missions
+   ["M-daily-scan-multi-axis-queue" "M-sci-detection-pipeline"]}
+  {:pattern "shared-kernel-predictive-forward-model",
+   :induced-by-count 2,
+   :missions
+   ["M-simulating-or-training-as-learning-system"
+    "M-war-machine-pilot"]}
+  {:pattern "progress-heartbeat-distinct-from-cycle-completion",
+   :induced-by-count 2,
+   :missions
+   ["M-emacs-cursor-peripheral" "M-peripheral-phenomenology"]}
+  {:pattern "turn-design-into-checks",
+   :induced-by-count 1,
+   :missions
+   ["M-vsatarcs-invariants-integration.witness-vsatarcs-fresh"]}
+  {:pattern "name-the-decision-before-the-framework",
+   :induced-by-count 1,
+   :missions ["M-prior-mathematics"]}
+  {:pattern "mission-unlocks-eoi",
+   :induced-by-count 1,
+   :missions ["M-expressions-of-interest"]}
+  {:pattern "absence-as-evidence",
+   :induced-by-count 1,
+   :missions ["M-the-perfect-crime"]}
+  {:pattern "free-energy-as-tick-scalar",
+   :induced-by-count 1,
+   :missions ["M-war-machine-first-outing-expectations"]}
+  {:pattern "free-solo-vs-rope",
+   :induced-by-count 1,
+   :missions ["M-the-perfect-crime"]}
+  {:pattern "single-seed-results-need-multi-seed-validation",
+   :induced-by-count 1,
+   :missions ["M-structure-seed-promotion"]}
+  {:pattern "argument-as-coverage-checklist-vs-system-specification",
+   :induced-by-count 1,
+   :missions ["M-reflective-discipline"]}
+  {:pattern "shared-standard-has-no-single-owner",
+   :induced-by-count 1,
+   :missions ["M-mission-control"]}
+  {:pattern "predictive-entropy-as-ambiguity",
+   :induced-by-count 1,
+   :missions ["M-war-machine-first-outing-expectations"]}
+  {:pattern "paradigm-matched-rigour-frame",
+   :induced-by-count 1,
+   :missions ["M-editorial-assistant"]}
+  {:pattern "argue-empirically-not-persuasively",
+   :induced-by-count 1,
+   :missions ["M-writing-ethics"]}
+  {:pattern "correct-effect-claims-with-relevant-denominators",
+   :induced-by-count 1,
+   :missions ["M-prior-mathematics"]}
+  {:pattern
+   "separate-configurable-choices-from-load-bearing-couplings",
+   :induced-by-count 1,
+   :missions ["M-coupling-as-constraint"]}]}

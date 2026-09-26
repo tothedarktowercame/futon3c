@@ -136,3 +136,12 @@
                 codex-repl--runtime-state nil)
     (should (equal (codex-repl--current-progress-status)
                    "Using Bash (awaiting runtime output)"))))
+
+(ert-deftest codex-repl-invoke-activity-event-advances-starting-status ()
+  (with-temp-buffer
+    (codex-repl-mode)
+    (setq-local codex-repl--thinking-start-time (float-time)
+                codex-repl--last-progress-status "starting")
+    (codex-repl--parse-stream-event
+     "{\"type\":\"invoke.activity\",\"activity\":\"using bash\"}")
+    (should (equal codex-repl--last-progress-status "using bash"))))

@@ -200,7 +200,9 @@
 ;;
 ;; Implements the four-turn operator from holes/specs/repl.spec.edn against the
 ;; LIVE War Machine, emitting a verifiable γ frame via futon3c.aif.repl-trace:
-;;   READ  : O(1) cached judgement (pb/wm-api-query) → ranked-actions = dT
+;;   READ  : O(1) cached judgement (pb/wm-api-query) → cascade-decision
+;;           posterior marginals = dT (H3 2026-09-17: the flat :ranked-actions
+;;           grain is removed)
 ;;   EVAL  : v = top action; predicted = its G-total; mint cg-id
 ;;   PRINT : supervised-proposal — artefact = the cg intent-handshake (the
 ;;           explored candidate); substantive execution deferred to operator
@@ -253,18 +255,52 @@
       (get-in r [:result :judgement])
       (throw (ex-info "live READ failed (wm-api-query)" {:r r})))))
 
+(defn- first-acting-pattern
+  "Same rule as futon2.aif.policy/cascade-first-action and the decision gate."
+  [action]
+  (if (and (map? action) (seq (:precedence action)))
+    (first (:precedence action))
+    (if (map? action) (:type action) action)))
+
 (defn- judgement->dT
-  "Project a WM judgement's ranked-actions into a dT-snapshot
-   [{:action {:type :target} :g-total :rank} …] — the differential dT_p."
+  "H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): project the WM
+   judgement's cascade DECISION — not the removed flat :ranked-actions — into
+   a dT-snapshot: the decision's recorded cascade posterior, marginalised
+   over each candidate's first acting pattern, best-first:
+   [{:action <first-step> :posterior-mass p :rank i} …]. An abstention or an
+   absent decision yields [] — an honest empty differential, never a fallback."
   [judgement]
-  (->> (:ranked-actions judgement)
-       (mapv (fn [e]
-               (let [action (:action e)]
-                 {:action (assoc action :type (some-> (:type action) keyword))
-                  :g-total (:G-total e)
-                  ;; dual-prediction logging: frozen constant-model counterfactual
-                  :g-constant (:G-constant e)
-                  :rank    (:rank e)})))))
+  (let [decision (or (:decision judgement) (get judgement "decision"))]
+    (when (and (map? decision)
+               (= :cascade-selection-posterior
+                  (some-> (get-in decision [:selection-law :applied]) keyword)))
+      (let [posterior (get-in decision [:selection-law :posterior])
+            weights (or (get-in decision [:selection-law :softmax-weights])
+                        (:softmax-weights decision))
+            marginal-map (cond
+                           ;; live in-memory judgement: candidate maps readable
+                           (and (map? posterior)
+                                (every? #(or (map? %) (keyword? %))
+                                        (keys posterior)))
+                           (reduce (fn [m [candidate p]]
+                                     (update m (first-acting-pattern candidate)
+                                             (fnil + 0.0) p))
+                                   {} posterior)
+                           ;; JSON-parsed judgement: stringified candidate keys
+                           ;; are unreadable; use the recorded softmax-weights
+                           ;; (the same first-acting-pattern marginal map).
+                           (map? weights) weights)
+            ;; dual-prediction logging: the frozen flat constant-model
+            ;; counterfactual is gone with the flat grain; the recorded
+            ;; quantity is the posterior marginal of this first acting pattern.
+            ]
+        (->> marginal-map
+             (sort-by (fn [[_ p]] (- p)))
+             (mapv (fn [i [step p]]
+                     {:action step
+                      :posterior-mass p
+                      :rank (inc i)})
+                   (range)))))))
 
 (defn- guarded-selection
   [dT ctx]
@@ -302,7 +338,7 @@
    and had to hold by hand. Pass :guardrails? false for a raw field read."
   ([] (begin-live-cycle! {}))
   ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k
-            target]
+            target action-type]
      :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
           tick? true mode :supervised-proposal guardrails? true}}]
    (let [run-id (str "live-" (java.util.UUID/randomUUID))
@@ -316,8 +352,12 @@
          ;; to obtain (consent satisfied upstream, not bypassed). The chosen
          ;; target must exist in the live differential — predicted-G must be
          ;; the field's own number, never an invented one.
+         ;; Car-3 seam-a: disambiguate by (:type, :target), not :target alone — else an
+         ;; :apply-cascade collides with a same-:target :advance-mission picked first.
          chosen (when target
-                  (first (filter #(= target (get-in % [:action :target])) dT)))
+                  (first (filter #(and (= target (get-in % [:action :target]))
+                                       (or (nil? action-type)
+                                           (= action-type (get-in % [:action :type])))) dT)))
          _ (when (and target (nil? chosen))
              (throw (ex-info "chosen :target not in the live differential — predicted-G must come from the field"
                              {:target target :n-ranked (count dT)})))
@@ -347,9 +387,17 @@
             :n-ranked (count dT)
             :needs-you-emitted (:emitted-count emitted)
             :needs-you-path (:path emitted)})
-         {:ok false :error "no ranked-actions in live judgement"})
+         (let [decision (or (:decision j) (get j "decision"))]
+           (if (= :abstained (some-> (:status decision) keyword))
+             {:ok false
+              :reason :selector-abstained
+              :refusals (:refusals decision)
+              :note "the WM tick abstained (typed refusals) — a readiness state, not an error"}
+             {:ok false :error "no admissible cascade decision in live judgement"})))
        (let [v         (:action top)
-             predicted (:g-total top)
+             ;; H3: the recorded prediction is the enacted step's cascade
+             ;; posterior marginal (NOT a flat G-total — that grain is removed).
+             predicted (:posterior-mass top)
              stepped-past (if guardrails? (:stepped-past guarded) [])
              emitted (when guardrails?
                        (needs-you/emit-needs-you!
@@ -362,7 +410,10 @@
                                   {:intent (str "REPL EVAL: engage " (pr-str v))
                                    :scope {:action v :mode :supervised-proposal :wm-mode (:mode j)}
                                    :constraints ["supervised-proposal: no mutation; operator merges"]
-                                   :success-criteria ["γ frame emitted" "verifier conforms"]})
+                                   :success-criteria ["γ frame emitted" "verifier conforms"]
+                                   ;; Car-3 seam-b: thread the chosen action's act-gate so the
+                                   ;; gate records ΔF∧ΔG + :gate-verdict (nil for non-apply-cascade v).
+                                   :act-gate (:act-gate v)})
                                  [:result :consent-gate-event-id])
                          (str "cg-" (java.util.UUID/randomUUID)))
              tick-before (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status)))
@@ -376,7 +427,7 @@
                     :scan-as-of (some-> (:as-of j) str)
                     :wm-mode (:mode j) :mode mode
                     :pre {:dT-snapshot dT :v v :predicted-discharge predicted
-                          :predicted-constant (:g-constant top)}
+                          :predicted-semantics :cascade-posterior-marginal}
                     :cg-id cg-id
                     :artefact {:kind (if (= mode :substantive)
                                        :substantive-action
@@ -405,7 +456,7 @@
    inhabitant supplies the semantic account via :document {:did :found :pur}. Best-effort —
    a log failure must never break a turn. Returns {:turn n :path p} or nil.
      turn-data: {:agent :mode :recommendation {:target :g :rationale}
-                 :cascade {:patterns :C} :measurement {:predicted :realised :top-shift? :pre-top :post-top}
+                 :cascade {:patterns :wholeness} :measurement {:predicted :realised :top-shift? :pre-top :post-top}
                  :document {:did :found :pur}}"
   [{:keys [agent mode recommendation cascade measurement document]}]
   (try
@@ -416,14 +467,14 @@
                  (reduce max 0) inc)
           date (subs (str (java.time.Instant/now)) 0 10)
           {:keys [target g]} recommendation
-          {:keys [patterns C]} cascade
+          {:keys [patterns wholeness]} cascade
           {:keys [predicted realised top-shift? pre-top post-top]} measurement
           {:keys [did found pur]} document
           entry (str "## Turn " n " — " date " (" (or agent "pilot") ", " (name (or mode :supervised)) ")\n\n"
                      "**READ.** WM recommended `" target "`"
                      (when g (format " (G=%.2f)" (double g))) ".\n"
                      (when (seq patterns)
-                       (str "Cascade" (when C (format " (C=%.2f)" (double C))) ": "
+                       (str "Cascade" (when wholeness (format " (wholeness=%.2f)" (double wholeness))) ": "
                             (str/join " · " patterns) ".\n"))
                      "\n**EVAL / DID.** " (or did "_(not recorded — mechanical turn)_") "\n"
                      "\n**PRINT / FOUND.** " (or found "_(not recorded)_")
@@ -473,9 +524,12 @@
           post-dT    (judgement->dT post-j)
           v          (get-in b [:pre :v])
           predicted  (get-in b [:pre :predicted-discharge])
-          target     (:target v)
-          post-entry (first (filter #(= target (get-in % [:action :target])) post-dT))
-          realised   (if post-entry (:g-total post-entry) predicted)
+          ;; H3: the post-tick differential is posterior first-acting-pattern
+          ;; marginals; realised = the same step's posterior marginal in the
+          ;; post-tick decision (predicted and realised share the
+          ;; :cascade-posterior-marginal semantics).
+          post-entry (first (filter #(= v (:action %)) post-dT))
+          realised   (if post-entry (:posterior-mass post-entry) predicted)
           ;; A vanished target means the discharge SUCCEEDED but realised-G
           ;; has no measurement — the fallback copies predicted, which would
           ;; fabricate a perfect prediction-error of 0.0. Tag the source so
@@ -486,21 +540,23 @@
           ;; differential's movement — observational only (attribution on a
           ;; live multi-agent stack is unsolved; this accumulates the data to
           ;; design field-delta realised-semantics properly).
-          g-sum (fn [entries] (reduce + 0.0 (keep :g-total entries)))
+          m-sum (fn [entries] (reduce + 0.0 (keep :posterior-mass entries)))
           field-delta (when executed?
-                        {:pre-total (g-sum (get-in b [:pre :dT-snapshot]))
-                         :post-total (g-sum post-dT)
-                         :delta (- (g-sum post-dT)
-                                   (g-sum (get-in b [:pre :dT-snapshot])))
-                         :semantics :observational-not-verdict-counted})
-          pre-top    (get-in b [:pre :dT-snapshot 0 :action :target])
-          post-top   (get-in post-dT [0 :action :target])
+                        {:pre-total (m-sum (get-in b [:pre :dT-snapshot]))
+                         :post-total (m-sum post-dT)
+                         :delta (- (m-sum post-dT)
+                                   (m-sum (get-in b [:pre :dT-snapshot])))
+                         ;; H3: the field is now the posterior mass over first
+                         ;; acting patterns; still observational only.
+                         :semantics :posterior-mass-observational-not-verdict-counted})
+          pre-top    (get-in b [:pre :dT-snapshot 0 :action])
+          post-top   (get-in post-dT [0 :action])
           tr ((requiring-resolve 'futon3c.aif.repl-trace/turn-record)
               (cond-> {:step 0 :p "pre-tick"
                        :dT-snapshot (get-in b [:pre :dT-snapshot])
                        :v v :v-attribution (:v-attribution b)
                        :predicted-discharge predicted
-                       :predicted-constant (get-in b [:pre :predicted-constant])
+                       :predicted-semantics (get-in b [:pre :predicted-semantics])
                        :cg-id (:cg-id b) :artefact (:artefact b)
                        :delta-grad? false
                        :p' "post-tick" :realised-discharge realised}
@@ -540,12 +596,16 @@
                         :tick-before (:tick-before b)
                         :tick-after (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status))))
           path  ((requiring-resolve 'futon3c.aif.repl-trace/write-frame!) frame+ "data/repl-traces")
-          ;; DOCUMENT stage: append the human-readable turn to the Pilot's Log (best-effort)
-          cascade (let [c (first (filter #(= pre-top (:mission %)) (:cascade-policies post-j)))]
-                    {:patterns (:shown c) :C (:C c)})
+          ;; DOCUMENT stage: append the human-readable turn to the Pilot's Log (best-effort).
+          ;; H3: the advisory :cascade-policies lane is gone; the cascade shown
+          ;; is the post-tick decision's own chosen candidate precedence.
+          cascade (let [chosen (or (get-in post-j [:decision :action])
+                (get-in post-j ["decision" "action"]))]
+                    {:patterns (when (map? chosen) (vec (:precedence chosen)))})
           logged (log-pilot-turn!
                   {:agent (:agent b) :mode (:mode b)
-                   :recommendation {:target pre-top :g (get-in b [:pre :dT-snapshot 0 :g-total])}
+                   :recommendation {:target pre-top
+                                    :g (get-in b [:pre :dT-snapshot 0 :posterior-mass])}
                    :cascade cascade
                    :measurement {:predicted predicted :realised realised
                                  :top-shift? (not= pre-top post-top)
@@ -560,7 +620,7 @@
             (let [rec ((requiring-resolve 'futon3c.aif.flight-record/compose-flight-record)
                        {:run-id run-id :begin b :agent (:agent b)
                         :predicted predicted
-                        :predicted-constant (get-in b [:pre :predicted-constant])
+                        :predicted-semantics (get-in b [:pre :predicted-semantics])
                         :realised realised :realised-source realised-source
                         :executed? executed? :evidence-ref evidence-ref
                         :merge-event (when executed?

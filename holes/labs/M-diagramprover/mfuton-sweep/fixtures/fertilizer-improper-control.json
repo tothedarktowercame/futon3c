@@ -1,0 +1,36 @@
+{
+  "example_id": "fertilizer-improper-control",
+  "title": "Fertilizer Model 1: improperly controlled experiment",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 4.4 models five known or residual plot characteristics as common causes of fertilizer assignment and yield, mixing their back-door effects with the proposed Fertilizer -> Yield effect.",
+  "variables": [
+    {"key": "soil-fertility", "name": "Soil Fertility", "content": "A plot characteristic affecting assignment and yield."},
+    {"key": "texture", "name": "Texture", "content": "A plot characteristic affecting assignment and yield."},
+    {"key": "drainage", "name": "Drainage", "content": "A plot characteristic affecting assignment and yield."},
+    {"key": "microflora", "name": "Microflora", "content": "A plot characteristic affecting assignment and yield."},
+    {"key": "other", "name": "Other", "content": "Residual known or unknown plot causes affecting assignment and yield."},
+    {"key": "fertilizer", "name": "Fertilizer", "content": "The assigned fertilizer treatment.", "value_domain": "categorical", "domain_values": [1, 2]},
+    {"key": "yield", "name": "Yield", "content": "The crop-yield outcome."}
+  ],
+  "arrows": [
+    {"source": "soil-fertility", "target": "fertilizer", "because": "Model 1 shows this plot cause influencing ordinary fertilizer assignment."},
+    {"source": "soil-fertility", "target": "yield", "because": "Model 1 shows this plot cause influencing yield."},
+    {"source": "texture", "target": "fertilizer", "because": "Model 1 shows this plot cause influencing ordinary fertilizer assignment."},
+    {"source": "texture", "target": "yield", "because": "Model 1 shows this plot cause influencing yield."},
+    {"source": "drainage", "target": "fertilizer", "because": "Model 1 shows this plot cause influencing ordinary fertilizer assignment."},
+    {"source": "drainage", "target": "yield", "because": "Model 1 shows this plot cause influencing yield."},
+    {"source": "microflora", "target": "fertilizer", "because": "Model 1 shows this plot cause influencing ordinary fertilizer assignment."},
+    {"source": "microflora", "target": "yield", "because": "Model 1 shows this plot cause influencing yield."},
+    {"source": "other", "target": "fertilizer", "because": "Model 1 shows residual causes influencing ordinary fertilizer assignment."},
+    {"source": "other", "target": "yield", "because": "Model 1 shows residual causes influencing yield."},
+    {"source": "fertilizer", "target": "yield", "because": "This is the proposed treatment effect."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:665ed0c5240bbc1a",
+    "ta-book-of-why-2018:21d157ac106175c7",
+    "ta-book-of-why-2018:78766e7daaefe81a",
+    "ta-book-of-why-2018:597e56920e0f7605",
+    "ta-book-of-why-2018:461e1740e4d21301"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0159", "ta-page:BOOK-OF-WHY-2018:pdf-0160"]
+}

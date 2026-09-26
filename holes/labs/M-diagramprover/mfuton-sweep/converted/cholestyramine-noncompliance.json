@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "u",
+    "to" : "x"
+  }, {
+    "from" : "u",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "cholestyramine-noncompliance",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric observational distributions are not evaluated" ],
+    "source-file" : "cholestyramine-noncompliance.json"
+  },
+  "variables" : [ {
+    "id" : "u",
+    "kind" : "latent-unobserved",
+    "name" : "Confounder (U)"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Assigned (Z)"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Received (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Cholesterol (Y)"
+  } ]
+}

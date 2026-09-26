@@ -1,0 +1,4 @@
+evidence-id test-registry-6096411058158f06b4289a73b080fd670e440affcdd6041026bfe9a7d540e12e
+warrant? true
+results {:assertions 13, :duration-ms 6076, :errors 0, :exit 0, :failures 0, :tests 3}
+bound test-registry/read-endpoints -> test-registry-6096411058158f06b4289a73b080fd670e440affcdd6041026bfe9a7d540e12e

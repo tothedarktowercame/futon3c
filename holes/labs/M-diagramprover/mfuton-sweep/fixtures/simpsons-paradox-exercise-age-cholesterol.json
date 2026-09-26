@@ -1,0 +1,28 @@
+{
+  "example_id": "simpsons-paradox-exercise-age-cholesterol",
+  "title": "Simpson's paradox: exercise, age, and cholesterol",
+  "topology_basis": "source_statement",
+  "content": "Age affects both exercise and cholesterol, confounding the pooled exercise-cholesterol trend. Age-stratified data support a beneficial exercise effect after adjustment for Age.",
+  "variables": [
+    {"key": "a", "name": "Age", "content": "The confounder affecting exercise and cholesterol."},
+    {"key": "e", "name": "Exercise", "content": "Weekly exercise, the exposure whose effect is sought."},
+    {"key": "c", "name": "Cholesterol", "content": "Cholesterol level, the outcome."}
+  ],
+  "arrows": [
+    {"source": "a", "target": "e", "because": "The source states that older people in the population exercise more."},
+    {"source": "a", "target": "c", "because": "The source identifies a possible causal effect of Age on Cholesterol."},
+    {"source": "e", "target": "c", "because": "The age-stratified trend is interpreted as a beneficial exercise effect."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:8b223e9d4d5ad467",
+    "ta-book-of-why-2018:c74199504957b29b",
+    "ta-book-of-why-2018:c221ea930f1114f3",
+    "ta-book-of-why-2018:a3e94a344ece9d5d",
+    "ta-book-of-why-2018:1410ebffeb5a2c15",
+    "ta-book-of-why-2018:bda5d2f79c4937cc"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0223",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0224"
+  ]
+}

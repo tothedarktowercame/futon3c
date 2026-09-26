@@ -1,0 +1,235 @@
+[{:name "map-the-upper-half-plane-into-a-slit-wedge-by-rotation-squaring-and-fourth-root"
+  :lane :solve-lane
+  :level :construction
+  :status :draft
+  :body
+  {:hook
+   "Factor the conformal map into four geometry-preserving stages: rotate into the right half-plane, square into a slit plane, translate, and use the principal fourth root to compress arguments into the target wedge."
+   :how-to-apply
+   ["Rotate `z` by `-I`; positivity of `z.im` becomes positivity of the rotated point's real part."
+    "Square the right-half-plane point. Expand real and imaginary parts and split on whether the squared imaginary part vanishes to show the image avoids the nonpositive real ray."
+    "Translate the squared image by one and prove the result is nonzero and does not have argument `π`."
+    "Use `cpow_ofReal` and the principal-argument bounds to show the fourth root has argument in `(-π/4, π/4)`."
+    "Separately rule out the deleted real unit segment for the fourth root."
+    "Compose the four stages and discharge the wedge membership and slit exclusion independently."]
+   :problem-class
+   "Verify the image of an explicit conformal-map formula from the upper half-plane into a wedge with a deleted real segment."
+   :decomposition
+   [{:stage :rotation
+     :map "z ↦ -I*z"
+     :image "right half-plane"}
+    {:stage :squaring
+     :map "w ↦ w²"
+     :image "plane cut along the nonpositive real ray"}
+    {:stage :translation
+     :map "ζ ↦ 1+ζ"
+     :image "translated slit plane"}
+    {:stage :principal-root
+     :map "η ↦ η^(1/4)"
+     :image "wedge `|arg| < π/4`, excluding the deleted segment"}]
+   :key-api
+   ["arg_le_pi"
+    "neg_pi_lt_arg"
+    "arg_eq_pi_iff"
+    "cpow_ofReal"
+    "arg_mul_cos_add_sin_mul_I"
+    "cpow_ne_zero_iff_of_exponent_ne_zero"]
+   :formalization-arcs
+   ["When no direct `arg_cpow = arg/4` lemma is reachable, unfold principal real powers with `cpow_ofReal` and recover the argument through `arg_mul_cos_add_sin_mul_I`."
+    "Normalize real and imaginary projections of squared complex expressions before invoking order reasoning."
+    "Prove wedge membership and deleted-segment avoidance as separate obligations; argument bounds alone do not exclude the slit."]
+   :witness
+   {:declarations
+    ["step2_image"
+     "step4_to_wedge"
+     "fourthRoot_not_mem_unitSegment"
+     "conformalMap_maps_H_to_A"]
+    :statement-integrity :intact
+    :all-file-declarations 8
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For explicit conformal maps built from elementary functions, prove image control stage by stage and preserve branch-cut information as a separate invariant through the composition."
+   :boundary
+   "This verifies that the explicit map sends the upper half-plane into the target. It does not prove bijectivity or classify all conformal maps into that domain."
+   :capture-kind
+   :runner-composed-conformal-route-and-ground-control-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A12"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t048" "e-codexroll-019f9b12-t049"]
+   :receipt-ids ["4c90c60d-1040-4531-b154-e1bd159a567d"]
+   :commits
+   ["3ed025ee450a88066e19babdc70ed67d62eae335"
+    "3fa3a921d2aad03e4606df1e91801c487a8b0a76"
+    "fddc86cc3bef10cf5072fc575275591dcdf95050"]
+   :problems ["a01A12-conformal-map-wedge-slit"]
+   :artifacts
+   ["problems/a01A12/lean/Main.lean:step2_image"
+    "problems/a01A12/lean/Main.lean:step4_to_wedge"
+    "problems/a01A12/lean/Main.lean:conformalMap_maps_H_to_A"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t048" "e-codexroll-019f9b12-t049"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "exclude-the-real-unit-segment-from-a-principal-fourth-root-image"
+  :lane :arc-lane
+  :level :branch-sensitive-algebra
+  :status :draft
+  :body
+  {:hook
+   "If the principal fourth root were a real `q ∈ [0,1]`, raising it to the fourth power would force the source `η` to be real with `0 ≤ η.re ≤ 1`, contradicting the slit-plane invariant."
+   :how-to-apply
+   ["Assume `η^(1/4)` has zero imaginary part and real part `q` in `[0,1]`."
+    "Use the principal-power identity `(η^(1/4))^4 = η` under the established nonzero/branch hypotheses."
+    "Project the equality to real and imaginary parts."
+    "Show `η.im = 0` and `η.re = q^4 ≤ 1`."
+    "Contradict the incoming disjunction `1 < η.re ∨ η.im ≠ 0`."]
+   :problem-class
+   "Exclude a deleted real segment from the image of a branch-sensitive complex root when argument bounds alone only prove wedge membership."
+   :key-move
+   "Pull segment membership back through a finite power identity instead of trying to reason directly about the principal root's argument at the boundary."
+   :witness
+   {:declaration "fourthRoot_not_mem_unitSegment"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To exclude a real interval from a principal-root image, assume interval membership and push it back through the exact power identity; real/imaginary projections often expose the contradiction more cleanly than branch-argument inequalities."
+   :boundary
+   "The argument needs a valid root-power identity at the chosen branch and a source invariant strong enough to contradict the pulled-back real interval."
+   :capture-kind :runner-branch-cut-helper-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A12"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t048" "e-codexroll-019f9b12-t049"]
+   :receipt-ids ["4c90c60d-1040-4531-b154-e1bd159a567d"]
+   :commits
+   ["3ed025ee450a88066e19babdc70ed67d62eae335"
+    "3fa3a921d2aad03e4606df1e91801c487a8b0a76"
+    "fddc86cc3bef10cf5072fc575275591dcdf95050"]
+   :problems ["a01A12-conformal-map-wedge-slit"]
+   :artifacts
+   ["problems/a01A12/lean/Main.lean:fourthRoot_not_mem_unitSegment"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t048" "e-codexroll-019f9b12-t049"]}}
+  :confidence :helper-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails"
+  :lane :solve-lane
+  :level :resolved-frontier
+  :status :draft
+  :body
+  {:hook
+   "Evaluate the exponentially damped sinc integral as `arctan(1/a)`, then combine fixed-interval damping removal with a uniform Dirichlet tail bound to identify the undamped limit as `π/2`."
+   :how-to-apply
+   ["First prove convergence of the undamped positive-half-line integrals from the integration-by-parts tail estimate `|∫_A^B sinc| ≤ 2/A`."
+    "Represent `sinc x` as `∫₀¹ cos(t*x) dt`."
+    "For `a > 0`, prove product integrability and use Fubini to evaluate `∫₀∞ exp(-a*x)*sinc x dx` as `∫₀¹ a/(a²+t²) dt = arctan(1/a)`."
+    "Apply Abel summation to the primitive of `sinc` and obtain a damped tail bound uniform in `a`, here `|∫_A^B exp(-a*x)*sinc x dx| ≤ 4/A`."
+    "Pass the finite damped tail estimate to the improper tail."
+    "On a fixed interval `[0,A]`, remove the damping by dominated convergence as `a → 0+`."
+    "Use a three-error decomposition: undamped head near its limit, damped head near the undamped head, and uniformly small damped tail."
+    "Compare the resulting damped limit with `arctan(1/a) → π/2` and use uniqueness of limits."
+    "Use evenness of `Real.sinc` to double the positive-half-line limit and obtain the symmetric value `π`."]
+   :problem-class
+   "Evaluate a conditionally convergent improper oscillatory integral when Mathlib has neither the final sinc theorem nor a directly packaged Abel theorem."
+   :proof-phases
+   [{:phase :undamped-convergence
+     :result "`∫₀ᴿ sinc → L` for some `L`"
+     :engine "Dirichlet tail/Cauchy criterion"}
+    {:phase :damped-evaluation
+     :result "`∫₀∞ exp(-a*x)*sinc x = arctan(1/a)`"
+     :engine "parameter integral, Fubini, Laplace transform of cosine"}
+    {:phase :uniform-removal
+     :result "damped integral tends to the same `L` as `a → 0+`"
+     :engine "uniform Dirichlet tail plus fixed-interval dominated convergence"}
+    {:phase :identification
+     :result "`L = π/2`, symmetric limit `π`"
+     :engine "arctangent limit, uniqueness, evenness"}]
+   :key-api
+   ["cauchy_map_iff_exists_tendsto"
+    "intervalIntegral_integral_swap"
+    "integral_div_sq_add_sq"
+    "intervalIntegral.integral_mul_deriv_eq_deriv_mul"
+    "intervalIntegral_tendsto_integral_Ioi"
+    "tendsto_integral_filter_of_dominated_convergence"
+    "tendsto_nhds_unique"
+    "Real.arctan_inv_of_pos"
+    "Real.sinc_neg"]
+   :negative-search-cache
+   {:reused true
+    :mathlib
+    "Sinc and ImproperIntegrals contained no final sinc evaluation or directly applicable Abel theorem."
+    :zulip "No formalized Dirichlet-integral construction was found."
+    :arxiv
+    "The previously checked sinc papers were background only and supplied no construction anchor."
+    :effect
+    "Attempts 2 and 3 did not rerun Zulip or arXiv; they continued from the recorded construction frontier."}
+   :frontier-provenance
+   {:used-memories
+    ["e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x"
+     "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"]
+    :history
+    "Both memories were drafted from the first blocked run, used to establish convergence in attempt 2, and used again to finish the numerical identification in attempt 3."}
+   :witness
+   {:declaration "dirichlet_integral_improper"
+    :all-file-declarations 17
+    :added-declarations 11
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To remove Abel damping from a conditionally convergent integral, combine a damping-independent tail estimate with ordinary dominated convergence on a fixed compact head; neither ingredient alone controls the improper limit."
+   :boundary
+   "The direct Bochner integral of `sinc` over all of `ℝ` is not the target: conditional convergence must be stated as a `Tendsto` limit of bounded-interval integrals."
+   :capture-kind
+   :three-attempt-frontier-memory-compounding-and-ground-control-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a02J05"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :proposed-edges
+  [{:edge/type :uses
+    :edge/to
+    #:ref{:type :memory,
+          :id
+          "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x"}
+    :status :pending-owner-review}
+   {:edge/type :resolves
+    :edge/to
+    #:ref{:type :memory,
+          :id
+          "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t046" "e-codexroll-019fa2c1-t047"]
+   :receipt-ids
+   ["f8586558-7882-4ce9-b2cf-29402de797b1"
+    "1a5d2232-4c2a-4e0c-a31b-155e635899da"
+    "00cf1cdd-0bf5-47f3-ab5c-3b93c9ea331c"]
+   :commits
+   ["87e4c53220e641323ec7f6f3270d6cabddd6f82e"
+    "0671018683aaccb36e727f0080b577a1bc446347"
+    "32c53bafff982b6dbfe5d4a59e0ceb31a447664d"]
+   :problems ["a02J05-dirichlet-integral"]
+   :artifacts
+   ["problems/a02J05/lean/Main.lean:integral_exp_neg_mul_sinc_Ioi"
+    "problems/a02J05/lean/Main.lean:abs_integral_exp_neg_mul_sinc_le_four_div"
+    "problems/a02J05/lean/Main.lean:tendsto_integral_exp_neg_mul_sinc_nhdsWithin"
+    "problems/a02J05/lean/Main.lean:tendsto_integral_sinc_pi_div_two"
+    "problems/a02J05/lean/Main.lean:dirichlet_integral_improper"]
+   :harvest-status
+   {:resolved ["e-codexroll-019fa2c1-t046"]
+    :local-dry-run-awaiting-store-harvest ["e-codexroll-019fa2c1-t047"]}}
+  :confidence :three-attempt-memory-consumed-and-full-file-axiom-verified
+  :review {:verdict :pending-owner-review}}]

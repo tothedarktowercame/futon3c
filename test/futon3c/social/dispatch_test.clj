@@ -1,5 +1,6 @@
 (ns futon3c.social.dispatch-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.peripheral.registry :as preg]
             [futon3c.social.dispatch :as dispatch]
@@ -8,7 +9,7 @@
             [futon3c.social.test-fixtures :as fix]))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)

@@ -1,0 +1,564 @@
+(ns futon3c.apm.semantic-progress-watchdog-test
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.apm.durable-coordinator :as coordinator]
+            [futon3c.apm.semantic-progress-watchdog :as sut])
+  (:import [java.util.concurrent Executors ScheduledExecutorService]))
+
+(def cursor
+  {:frame-id "f49" :phase :solve :attempt-ordinal 1
+   :obligation/status :ready :active-job-id nil
+   :last-committed-event-id "event-7"})
+
+(defn- clear-runners! []
+  (let [registry (var-get #'sut/runners)]
+    (doseq [executor (vals @registry)]
+      (.shutdownNow executor))
+    (reset! registry {})))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (clear-runners!)
+    (try (test-fn) (finally (clear-runners!)))))
+
+(defn observation [& {:as overrides}]
+  (merge {:cursor cursor
+          :regulator {:regulator/status :running}
+          :supervisor/status :ready}
+         overrides))
+
+(defn run-check [watch-state observation now-ms]
+  (let [stops (atom [])
+        persisted (atom [])
+        result (sut/check!
+                {:watch-state watch-state
+                 :observation observation
+                 :now-ms now-ms
+                 :registry-path "/registry.edn"
+                 :coordinator-id "campaign"
+                 :stop-fn (fn [registry-path coordinator-id cause]
+                            (swap! stops conj [registry-path coordinator-id cause])
+                            {:ok true :status :stopped
+                             :durably-disabled? true})
+                 :persist-fn (fn [state]
+                               (swap! persisted conj state)
+                               {:ok true})})]
+    [result @stops @persisted]))
+
+(deftest unchanged-ready-cursor-halts-after-five-minutes
+  (let [prior (:state (sut/evaluate nil (observation) 1000))
+        [result stops persisted]
+        (run-check prior (observation) (+ 1000 sut/internal-progress-max-ms))]
+    (is (= :halted (:status result)))
+    (is (= :internal-semantic-progress-stalled
+           (get-in result [:reason :code])))
+    (is (= [["/registry.edn" "campaign"
+             {:stop-cause/type :fault
+              :stop-cause/fault-class :substrate
+              :stop-cause/reason-code :internal-semantic-progress-stalled
+              :stop-cause/reason
+              {:code :internal-semantic-progress-stalled
+               :last-progress-ms 1000}}]]
+           stops))
+    (is (= true (get-in result [:stop :durably-disabled?])))
+    (is (= :halted (:watchdog/status (last persisted))))))
+
+(deftest changed-cursor-resets-progress-clock
+  (let [prior (:state (sut/evaluate nil (observation) 1000))
+        changed (observation :cursor (assoc cursor :phase :verify))
+        [result stops _] (run-check prior changed 900000)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))
+    (is (= 900000 (get-in result [:state :watchdog/last-progress-ms])))))
+
+(def f203-statement-repair-id
+  "statement-repair-d6fd972b4c8b2dd896da1fde27e5ddb5536d78914a38729d0de77935beacb6e6")
+
+(def f203-statement-repair-dispatched-at-ms 1788921301781)
+
+(defn- f203-repair-observation [dispatch-status dispatched-at-ms]
+  (coordinator/watchdog-observation
+   {:coordinator/enabled? true}
+   {:state/type :live-regulator :regulator/status :running}
+   {:active nil
+    :statement-repair/handoff
+    (cond-> {:dispatch/status dispatch-status
+             :dispatch/id f203-statement-repair-id}
+      dispatched-at-ms
+      (assoc :dispatch/dispatched-at-ms dispatched-at-ms))}
+   nil))
+
+(deftest f203-dispatched-statement-repair-is-a-bounded-external-wait
+  ;; Dispatched 2026-09-09T02:35:01.781Z; the guide returned at
+  ;; 2026-09-09T02:49:22.357Z (14m20s), well inside the one-hour seat timeout.
+  (let [observed (f203-repair-observation
+                  :dispatched f203-statement-repair-dispatched-at-ms)
+        prior (:state (sut/evaluate nil observed
+                                    f203-statement-repair-dispatched-at-ms))
+        fresh (sut/evaluate prior observed
+                            (+ f203-statement-repair-dispatched-at-ms
+                               (* 10 60 1000)))
+        overdue (sut/evaluate
+                 prior observed
+                 (+ f203-statement-repair-dispatched-at-ms
+                    coordinator/guide-repair-max-ms
+                    (* 3 60 1000)))]
+    (is (= {:job-id f203-statement-repair-id
+            :deadline (+ f203-statement-repair-dispatched-at-ms
+                         coordinator/guide-repair-max-ms)}
+           (:awaiting-job observed)))
+    (is (= :watching (:status fresh))
+        "this was :halt/:internal-semantic-progress-stalled before the repair wait was observed")
+    (is (= :halt (:status overdue)))
+    (is (= :external-job-deadline-exceeded
+           (get-in overdue [:reason :code])))))
+
+(deftest pending-statement-repair-is-not-an-external-wait
+  (let [observed (f203-repair-observation
+                  :pending f203-statement-repair-dispatched-at-ms)
+        prior (:state (sut/evaluate nil observed
+                                    f203-statement-repair-dispatched-at-ms))
+        stalled (sut/evaluate
+                 prior observed
+                 (+ f203-statement-repair-dispatched-at-ms
+                    sut/internal-progress-max-ms))]
+    (is (nil? (:awaiting-job observed)))
+    (is (= :halt (:status stalled)))
+    (is (= :internal-semantic-progress-stalled
+           (get-in stalled [:reason :code])))))
+
+(deftest dispatched-statement-repair-without-timestamp-is-not-emitted
+  (let [observed (f203-repair-observation :dispatched nil)]
+    (is (nil? (:awaiting-job observed)))))
+
+(def f193-transition
+  ;; The frame's last durable transition, verbatim shape from
+  ;; jit-all-open-v3-f193/problem-transitions.edn. This is the cursor's source
+  ;; now: it is appended only when the frame transitions, so it cannot flicker
+  ;; with the coordinator's tick cycle.
+  {:frame-id "f193"
+   :phase :guide-intervention-1
+   :event/id "3f3168efa6afd"
+   :event/sequence 14
+   :ledger/event-count 15
+   :operation {:job-id "apm-role-93e78eacd865"
+               :status :waiting-for-terminal-result
+               :role :guide}})
+
+(def f193-queue-state
+  (edn/read-string
+   (slurp (io/resource "resources/apm-regressions/f193-semantic-stall/queue-state.edn"))))
+
+(def f193-durable-coordinator-state
+  (edn/read-string
+   (slurp (io/resource "resources/apm-regressions/f193-semantic-stall/coordinator.edn"))))
+
+(defn f193-coordinator-state [tick-job-id]
+  {:state/type :live-regulator
+   :regulator/status :running
+   :coordinator/pending-intent {:job-id tick-job-id}
+   :regulator/last-result
+   {:status :intent-persisted
+    :queue/result
+    {:status :parked
+     :projection
+     {:projection
+      {:frame {:phase :guide-intervention-1}
+       :operation {:status :waiting-for-terminal-result
+                   :role :guide
+                   :job-id "apm-role-93e78eacd865"}}
+      :transition {:event/id "3f3168efa6afd"}}}}})
+
+(deftest coordinator-ticks-do-not-count-as-frame-progress
+  (let [first-observation
+        (coordinator/watchdog-observation
+         {:coordinator/enabled? true}
+         (f193-coordinator-state "jit-tick-5e07a189-a")
+         f193-queue-state f193-transition)
+        next-observation
+        (coordinator/watchdog-observation
+         {:coordinator/enabled? true}
+         (f193-coordinator-state "jit-tick-5e07a189-b")
+         f193-queue-state f193-transition)
+        prior (:state (sut/evaluate nil first-observation 1000))
+        next (:state (sut/evaluate prior next-observation 2000))]
+    (is (= {:frame-id "f193"
+            :phase :guide-intervention-1
+            :attempt-ordinal 24
+            :obligation/status :waiting-for-terminal-result
+            :active-job-id "apm-role-93e78eacd865"
+            :last-committed-event-id "3f3168efa6afd"
+            :event-sequence 14}
+           (sut/progress-cursor first-observation)))
+    (is (= (sut/progress-cursor first-observation)
+           (sut/progress-cursor next-observation)))
+    (is (= 1000 (:watchdog/last-progress-ms next)))))
+
+(deftest genuinely-progressing-frame-resets-progress-clock
+  (let [before (coordinator/watchdog-observation
+                {:coordinator/enabled? true}
+                (f193-coordinator-state "jit-tick-a")
+                f193-queue-state f193-transition)
+        progressed (coordinator/watchdog-observation
+                    {:coordinator/enabled? true}
+                    (f193-coordinator-state "jit-tick-b")
+                    (assoc-in f193-queue-state [:active :frame :frame/id] "f194")
+                    f193-transition)
+        prior (:state (sut/evaluate nil before 1000))
+        next (:state (sut/evaluate prior progressed 2000))]
+    (is (= "f194" (get-in next [:watchdog/cursor :frame-id])))
+    (is (= 2000 (:watchdog/last-progress-ms next)))))
+
+(defn- commission-tree!
+  "A real campaign root on disk: queue-state.edn plus a frame's append-only
+   problem-transitions.edn. The watchdog reads both through
+   coordinator/watchdog-observation's file-reading arity, which is the path
+   production takes and the one the fixtures above bypass."
+  [transitions]
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "apm-commission" (make-array java.nio.file.attribute.FileAttribute 0)))
+        campaign (.getName root)
+        frame-dir (io/file root (str campaign "-f900"))]
+    (.mkdirs frame-dir)
+    (spit (io/file root "queue-state.edn")
+          (pr-str {:active {:frame {:frame/id "f900" :problem/id "cTEST"
+                                    :ordinal 24}}}))
+    (spit (io/file frame-dir "problem-transitions.edn")
+          (apply str (map #(str (pr-str %) "\n") transitions)))
+    {:root root
+     :frame-transitions (io/file frame-dir "problem-transitions.edn")
+     :entry {:coordinator/enabled? true
+             :coordinator/config {:launch {:authority {:campaign-root (str root)}}}}
+     :state {:state/type :live-regulator :regulator/status :running}}))
+
+(defn- append-transition! [tree transition]
+  (spit (:frame-transitions tree) (str (pr-str transition) "\n") :append true))
+
+(def ^:private t0 1788800000000)
+
+(defn- idle-transition [seq-n]
+  {:phase :solve :event/id (str "event-" seq-n) :event/sequence seq-n
+   :event/observed-at "2026-09-08T02:00:00Z"
+   :operation {:status :phase-advanced}})
+
+(defn- role-turn-transition [seq-n observed-at]
+  {:phase :student-attempt-3 :event/id (str "event-" seq-n)
+   :event/sequence seq-n :event/observed-at observed-at
+   :operation {:status :waiting-for-terminal-result :job-id "apm-role-900"}})
+
+(deftest commissioned-induced-internal-stall-fires
+  ;; DIRECTION 1a. Nothing outstanding, no transition appended: the alarm
+  ;; must fire. A watchdog that has never been seen to fire has proved
+  ;; nothing (register A10: eight green runs against a self-armed watchdog).
+  (let [tree (commission-tree! [(idle-transition 1)])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        prior (:state (sut/evaluate nil observed t0))
+        [result stops _] (run-check prior observed
+                                    (+ t0 sut/internal-progress-max-ms))]
+    (is (= "f900" (get-in observed [:cursor :frame-id]))
+        "the cursor came from the files, not from a literal")
+    (is (= 1 (get-in observed [:cursor :event-sequence])))
+    (is (nil? (:awaiting-job observed)))
+    (is (= :internal-semantic-progress-stalled (get-in result [:reason :code])))
+    (is (= :halted (:status result)))
+    (is (= 1 (count stops)))))
+
+(deftest commissioned-induced-role-turn-overrun-fires
+  ;; DIRECTION 1b. The f193 shape: a role turn outstanding that never
+  ;; terminates. Suppressed until role-turn-max-ms, then it must fire --
+  ;; otherwise outstanding-role-wait would have restored the old blindness.
+  (let [tree (commission-tree!
+              [(role-turn-transition 1 "2026-09-08T02:00:00Z")])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        started (.toEpochMilli (java.time.Instant/parse "2026-09-08T02:00:00Z"))
+        prior (:state (sut/evaluate nil observed started))
+        [result stops _]
+        (run-check prior observed (+ started coordinator/role-turn-max-ms
+                                     sut/external-deadline-grace-ms 1))]
+    (is (= "apm-role-900" (get-in observed [:awaiting-job :job-id]))
+        "a running role turn is declared as an external wait")
+    (is (= :external-job-deadline-exceeded (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
+(deftest commissioned-induced-healthy-transition-stays-silent
+  ;; DIRECTION 2a. The other half of commissioning, and the half that is
+  ;; usually skipped: an induced HEALTHY event must produce silence. Append
+  ;; one real transition and the cursor advances, so the clock resets and the
+  ;; five-minute bound is not reached.
+  (let [tree (commission-tree! [(idle-transition 1)])
+        first-observed (coordinator/watchdog-observation (:entry tree)
+                                                         (:state tree))
+        prior (:state (sut/evaluate nil first-observed t0))
+        _ (append-transition! tree (idle-transition 2))
+        second-observed (coordinator/watchdog-observation (:entry tree)
+                                                          (:state tree))
+        [result stops _] (run-check prior second-observed
+                                    (+ t0 sut/internal-progress-max-ms))]
+    (is (= 2 (get-in second-observed [:cursor :event-sequence]))
+        "the appended transition was actually read back")
+    (is (= :watching (:status result)))
+    (is (empty? stops) "a frame that made progress was halted")))
+
+(deftest commissioned-running-role-turn-stays-silent
+  ;; DIRECTION 2b. The regression that shipped: on 2026-09-08 at 01:46:31 a
+  ;; healthy f193-student turn -- 47 events, 28 tool calls, active nine
+  ;; seconds earlier -- was halted because the alarm consulted the
+  ;; coordinator's pending intent instead of the frame's own role turn.
+  (let [observed-at "2026-09-08T02:00:00Z"
+        tree (commission-tree! [(role-turn-transition 1 observed-at)])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        started (.toEpochMilli (java.time.Instant/parse observed-at))
+        prior (:state (sut/evaluate nil observed started))
+        [result stops _]
+        (run-check prior observed (+ started sut/internal-progress-max-ms 1))]
+    (is (some? (:awaiting-job observed)))
+    (is (= :watching (:status result))
+        "a student mid-turn was halted at the internal bound again")
+    (is (empty? stops))))
+
+(deftest f193-stalled-frame-halts-at-the-existing-semantic-progress-bound
+  (let [running-state (assoc f193-durable-coordinator-state
+                             :regulator/status :running)
+        observed (coordinator/watchdog-observation
+                  {:coordinator/enabled? true}
+                  running-state
+                  f193-queue-state f193-transition)
+        prior (:state (sut/evaluate nil observed 1000))
+        [result stops _]
+        (run-check prior observed (+ 1000 sut/internal-progress-max-ms))]
+    (is (= "f193" (get-in observed [:cursor :frame-id])))
+    (is (= "m00A02" (get-in f193-queue-state
+                             [:active :frame :problem/id])))
+    ;; Was :parked, which was the QUEUE TICK's status read from
+    ;; :regulator/last-result. The cursor now reports the frame's own role
+    ;; operation, verbatim from problem-transitions.edn -- what f193 is
+    ;; actually doing, not what the last tick returned.
+    (is (= :waiting-for-terminal-result
+           (get-in observed [:cursor :obligation/status])))
+    (is (= :internal-semantic-progress-stalled
+           (get-in result [:reason :code])))
+    (is (= :halted (:status result)))
+    (is (= 1 (count stops)))))
+
+(deftest external-job-inside-deadline-does-not-halt
+  (let [[result stops _]
+        (run-check nil
+                   (observation :awaiting-job
+                                {:job-id "solver-1" :deadline 600000})
+                   650000)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))))
+
+(deftest external-job-past-deadline-and-grace-halts
+  (let [[result stops _]
+        (run-check nil
+                   (observation :awaiting-job
+                                {:job-id "solver-1" :deadline 600000})
+                   (+ 600000 sut/external-deadline-grace-ms 1))]
+    (is (= :external-job-deadline-exceeded
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
+(deftest external-job-without-deadline-fails-closed
+  (let [[result stops _]
+        (run-check nil
+                   (observation :awaiting-job {:job-id "solver-1"})
+                   2000)]
+    (is (= :external-job-deadline-missing
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
+(deftest failed-regulator-halts-only-for-underlying-corruption
+  (let [[result stops _]
+        (run-check nil
+                   (observation
+                    :regulator {:regulator/status :failed
+                                :regulator/last-result
+                                {:ok false :error/code
+                                 :campaign-ledger-digest-mismatch}})
+                   0)]
+    (is (= :campaign-ledger-digest-mismatch
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops))))
+  (let [[result stops _]
+        (run-check nil
+                   (observation
+                    :regulator {:regulator/status :failed
+                                :regulator/last-result
+                                {:ok false :error/code :mundane-failure}})
+                   0)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))))
+
+(deftest stale-tick-claim-halts
+  (let [[result _ _]
+        (run-check nil
+                   (observation :tick-claim {:claimed-at 1000})
+                   (+ 1000 sut/scheduler-claim-max-ms 1))]
+    (is (= :scheduler-claim-stale (get-in result [:reason :code])))))
+
+(deftest watchdog-fault-classification-is-conservative-and-actionable
+  (doseq [code sut/integrity-fault-codes]
+    (is (= :integrity
+           (:stop-cause/fault-class (sut/fault-stop-cause {:code code})))
+        (str code " must never be automatically restarted")))
+  (doseq [code sut/substrate-fault-codes]
+    (is (= :substrate
+           (:stop-cause/fault-class (sut/fault-stop-cause {:code code})))
+        (str code " is eligible for supervised restart")))
+  (is (= :frame
+         (:stop-cause/fault-class
+          (sut/fault-stop-cause {:code :unclassified-future-fault})))
+      "unknown codes are frame-confined, not evidence of corruption"))
+
+(deftest every-current-watchdog-halt-has-a-keyword-reason-code
+  (let [prior (:state (sut/evaluate nil (observation) 1000))
+        halt-observations
+        [[nil (observation :regulator
+                           {:regulator/status :failed
+                            :regulator/last-result
+                            {:ok false :error/code
+                             :campaign-ledger-digest-mismatch}}) 1000]
+         [nil (observation :invalid-state? true :invalid-state {}) 1000]
+         [nil (observation :failed-launch-audit? true
+                           :launch-audit {}) 1000]
+         [nil (observation :impossible-transition? true
+                           :transition {}) 1000]
+         [nil (observation :awaiting-job {:job-id "job"}) 1000]
+         [nil (observation :awaiting-job {:job-id "job" :deadline 1})
+          (+ 1 sut/external-deadline-grace-ms 1)]
+         [nil (observation :tick-claim {:claimed-at 1})
+          (+ 1 sut/scheduler-claim-max-ms 1)]
+         [prior (observation) (+ 1000 sut/internal-progress-max-ms)]]]
+    (doseq [[watch-state observed now-ms] halt-observations]
+      (let [decision (sut/evaluate watch-state observed now-ms)]
+        (is (= :halt (:status decision)))
+        (is (keyword? (get-in decision [:reason :code])))))))
+
+(deftest stale-tick-claim-validly-awaiting-external-job-does-not-halt
+  (let [claimed-at 1000
+        now (+ claimed-at sut/scheduler-claim-max-ms 1)
+        [result stops _]
+        (run-check nil
+                   (observation
+                    :tick-claim {:claimed-at claimed-at}
+                    :awaiting-job {:job-id "solver-1"
+                                   :deadline (+ now 1000)})
+                   now)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))
+    (is (true? (get-in result [:state :watchdog/trace-observation
+                               :valid-external-wait?])))))
+
+(deftest stale-tick-claim-does-not-mask-expired-external-deadline
+  (let [claimed-at 1000
+        deadline 2000
+        now (+ deadline sut/external-deadline-grace-ms 1)
+        [result stops _]
+        (run-check nil
+                   (observation
+                    :tick-claim {:claimed-at claimed-at}
+                    :awaiting-job {:job-id "solver-1" :deadline deadline})
+                   now)]
+    (is (= :external-job-deadline-exceeded
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
+(deftest immediate-integrity-failures-halt
+  (doseq [[observation-key reason]
+          [[:invalid-state? :invalid-state]
+           [:failed-launch-audit? :failed-launch-audit]
+           [:impossible-transition? :impossible-transition]]]
+    (let [[result _ _]
+          (run-check nil (observation observation-key true) 0)]
+      (is (= reason (get-in result [:reason :code]))))))
+
+(deftest reconciliation-claim-supersedes-historical-launch-audit-failure
+  (let [[result stops _]
+        (run-check nil
+                   (observation
+                    :failed-launch-audit? true
+                    :tick-claim {:claimed-at 1000}
+                    :awaiting-job {:job-id "jit-repair-tick"
+                                   :deadline 600000})
+                   2000)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))))
+
+(deftest watchdog-executor-is-independent-of-dead-watched-executor
+  (let [^ScheduledExecutorService watched
+        (Executors/newSingleThreadScheduledExecutor)
+        ^ScheduledExecutorService watchdog
+        (Executors/newSingleThreadScheduledExecutor)
+        id (str "watchdog-test-" (random-uuid))]
+    (.shutdownNow watched)
+    (try
+      (let [started (sut/start! {:watchdog-id id
+                                 :watch-fn (fn [] nil)
+                                 :period-ms 60000
+                                 :executor-fn (constantly watchdog)})]
+        (is (:ok started))
+        (is (.isShutdown watched))
+        (is (not (.isShutdown watchdog)))
+        (is (identical? watchdog (:executor started))))
+      (finally
+        (sut/stop! id)
+        (.shutdownNow watchdog)))))
+
+(deftest start-replaces-stale-watchdog-executor
+  (let [first-executor (Executors/newSingleThreadScheduledExecutor)
+        second-executor (Executors/newSingleThreadScheduledExecutor)
+        executors (atom [first-executor second-executor])
+        id (str "watchdog-rearm-" (random-uuid))
+        start #(sut/start! {:watchdog-id id
+                            :watch-fn (fn [] nil)
+                            :period-ms 60000
+                            :executor-fn (fn []
+                                           (let [executor (first @executors)]
+                                             (swap! executors subvec 1)
+                                             executor))})]
+    (try
+      (is (= :started (:status (start))))
+      (.shutdownNow first-executor)
+      (let [rearmed (start)]
+        (is (= :started (:status rearmed)))
+        (is (identical? second-executor (:executor rearmed)))
+        (is (sut/running? id)))
+      (finally
+        (sut/stop! id)
+        (.shutdownNow first-executor)
+        (.shutdownNow second-executor)))))
+
+(deftest a-running-role-turn-is-not-an-internal-stall
+  ;; 2026-09-08: the honest cursor exposed a second defect. The internal
+  ;; -progress alarm is suppressed only while something is outstanding, and
+  ;; that test consulted the COORDINATOR's pending intent -- but a role job is
+  ;; not a coordinator intent. With no intent in flight the alarm fired on a
+  ;; frame whose student was mid-turn, halting jit-all-open-v3 at 01:46:31
+  ;; while f193-student was running with 47 events and 28 tool calls.
+  (let [now 1788831628017          ; 2026-09-08T01:40:28.017Z, the transition
+        running (assoc f193-transition
+                       :event/observed-at "2026-09-08T01:40:28.017Z"
+                       :operation {:job-id "apm-role-838eca6c"
+                                   :status :waiting-for-terminal-result
+                                   :role :student})
+        observed (coordinator/watchdog-observation
+                  {:coordinator/enabled? true}
+                  (dissoc (f193-coordinator-state "jit-tick-x")
+                          :coordinator/pending-intent)
+                  f193-queue-state running)]
+    (testing "the running role turn is reported as an outstanding wait"
+      (is (= "apm-role-838eca6c" (get-in observed [:awaiting-job :job-id]))))
+    (testing "no internal stall six minutes in, while the turn is running"
+      (let [prior (:state (sut/evaluate nil observed now))
+            [result _ _] (run-check prior observed
+                                    (+ now (* 6 60 1000)))]
+        (is (not= :halted (:status result)))))
+    (testing "but a turn that never terminates still trips its deadline"
+      (let [prior (:state (sut/evaluate nil observed now))
+            [result _ _] (run-check prior observed
+                                    (+ now coordinator/role-turn-max-ms
+                                       (* 5 60 1000)))]
+        (is (= :halted (:status result)))
+        (is (= :external-job-deadline-exceeded (get-in result [:reason :code])))))))

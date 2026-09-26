@@ -22,6 +22,7 @@
 (require 'url)
 (require 'url-http)
 (require 'url-util)
+(declare-function claude-repl--registry-model-for-agent "claude-repl" (agent-id))
 (load (expand-file-name "futon3c-blackboard.el"
                         (file-name-directory (or load-file-name (buffer-file-name))))
       nil t)
@@ -61,6 +62,8 @@ Set to nil to disable and send raw user text."
 
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
+      (when-let ((base (getenv "FUTON3C_EVIDENCE_BASE")))
+        (format "%s/api/alpha/evidence" (string-remove-suffix "/" base)))
       (format "%s/api/alpha/evidence"
               (string-remove-suffix "/" agent-chat-agency-base-url)))
   "Evidence API endpoint used to log codex-repl session starts."
@@ -203,6 +206,23 @@ Interpreted as width on left/right and height on top/bottom."
   "Cached invoke-routing diagnostics keyed by Agency base.")
 (defvar-local codex-repl--routing-diagnostic-cached-at 0
   "Epoch seconds when routing diagnostics were last refreshed.")
+(defvar-local codex-repl--registry-model nil
+  "Model read from this agent's registry metadata at attach time.")
+
+(defun codex-repl--refresh-displayed-model-title ()
+  "Add the cached model to an already drawn first header line."
+  (when (and (stringp codex-repl--registry-model)
+             (not (string-empty-p codex-repl--registry-model)))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward " (session:" (line-end-position) t)
+          (let* ((end (match-beginning 0))
+                 (current (buffer-substring-no-properties (point-min) end)))
+            (unless (string-suffix-p
+                     (concat " · " codex-repl--registry-model) current)
+              (goto-char end)
+              (insert (concat " · " codex-repl--registry-model)))))))))
 
 (defvar-local codex-repl--resolved-api-base-cache nil
   "Cached reachable futon3c API base URL for Codex REPL.")
@@ -1988,7 +2008,7 @@ Returns non-nil once prompt markers are installed."
       (setq-local agent-chat--prompt-marker (copy-marker (point) t))
       (setq-local agent-chat--separator-start (copy-marker (point)))
       (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
-      (insert (propertize "> " 'face 'agent-chat-prompt-face))
+      (agent-chat--insert-prompt)
       ;; Input-start must stay fixed at prompt boundary while user types.
       (setq-local agent-chat--input-start (copy-marker (point)))
       (set-marker-insertion-type agent-chat--prompt-marker t)
@@ -2763,6 +2783,11 @@ or when it is a clear suffix of the streamed assistant text."
           "using tool")))
      ((string= type "text")
       "text")
+     ((string= type "invoke.activity")
+      (let ((activity (alist-get 'activity evt)))
+        (if (and (stringp activity) (not (string-empty-p activity)))
+            activity
+          "working")))
      ((string= type "done")
       (if (alist-get 'ok evt)
           "invoke done"
@@ -2898,14 +2923,22 @@ or when it is a clear suffix of the streamed assistant text."
      ((and (string= type "text")
            (stringp (alist-get 'text evt))
            (not (string-empty-p (string-trim (alist-get 'text evt)))))
-      (unless agent-chat--streaming-started
-        (agent-chat-begin-streaming-message "codex")
-        (setq codex-repl--last-stream-summary nil))
-      (setq codex-repl--streamed-text-seen t
-            codex-repl--final-text-rendered t)
-      (codex-repl--record-invoke-timing! "first-text-event" type t)
-      (codex-repl--record-rendered-assistant-text! (alist-get 'text evt))
-      (agent-chat-stream-text (alist-get 'text evt)))
+      ;; The Codex bridge mirrors each agent_message to the sink twice: raw
+      ;; (rendered by the item.completed branch below) and as a translated
+      ;; ledger-schema "text" event. Skip the translated copy when its
+      ;; (trimmed) content is what we just rendered.
+      (let ((text (alist-get 'text evt)))
+        (unless (string-suffix-p
+                 (string-trim text)
+                 (string-trim (or codex-repl--rendered-assistant-text "")))
+          (unless agent-chat--streaming-started
+            (agent-chat-begin-streaming-message "codex")
+            (setq codex-repl--last-stream-summary nil))
+          (setq codex-repl--streamed-text-seen t
+                codex-repl--final-text-rendered t)
+          (codex-repl--record-invoke-timing! "first-text-event" type t)
+          (codex-repl--record-rendered-assistant-text! text)
+          (agent-chat-stream-text text))))
      ((string= type "item.completed")
       (let* ((item (alist-get 'item evt))
              (item-type (and (listp item) (alist-get 'type item)))
@@ -2955,6 +2988,10 @@ or when it is a clear suffix of the streamed assistant text."
          (cond
          ((string= type "started")
           (codex-repl--set-progress-status "starting"))
+         ((string= type "invoke.activity")
+          (let ((activity (alist-get 'activity evt)))
+            (when (and (stringp activity) (not (string-empty-p activity)))
+              (codex-repl--set-progress-status activity))))
          ((string= type "tool_use")
           (let* ((tools (alist-get 'tools evt))
                  (tool-list (cond
@@ -3845,6 +3882,10 @@ When FORCE is non-nil, refresh immediately."
                  :report report)))
         report))))
 
+(defun codex-repl--dispatch-clock-id ()
+  "Return the most specific buffer clock id for Agency invoke payloads."
+  (agent-chat-dispatch-clock-id))
+
 (defun codex-repl--call-codex-async (text callback &optional retry-attempt)
   "Invoke server-managed Codex asynchronously for TEXT.
 CALLBACK receives the final response text."
@@ -3854,10 +3895,13 @@ CALLBACK receives the final response text."
          (url (concat api-base
                       "/api/alpha/invoke-stream"))
          (json-body (json-serialize
-                     `(:agent-id ,codex-repl-agency-agent-id
-                       :prompt ,text
-                       :surface "emacs-repl"
-                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+                     (append
+                      `(:agent-id ,codex-repl-agency-agent-id
+                        :prompt ,text
+                        :surface "emacs-repl"
+                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                      (when-let ((clock-id (codex-repl--dispatch-clock-id)))
+                        `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *codex-repl-stream*"))
          (line-buffer ""))
     (setq codex-repl--invoke-turn-id (1+ codex-repl--invoke-turn-id))
@@ -3897,7 +3941,7 @@ CALLBACK receives the final response text."
 	           (make-process
             :name "codex-repl-stream"
             :buffer outbuf
-            :command (list "curl" "-N" "-sS" "--max-time" "1800"
+            :command (list "curl" "-N" "-sS" "--max-time" "3660"
                            "-H" "Content-Type: application/json"
                            "-d" json-body url)
             :noquery t
@@ -4022,9 +4066,9 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (format "Transports: [%s]. Current: %s."
-            (string-join labels ", ")
-            current)))
+    (format "%s Transports: [%s]. Current: %s."
+            (agent-chat-mission-segment)
+            (string-join labels ", ") current)))
 
 (defun codex-repl--world-view-string (state)
   "Return multi-line description of STATE plist."
@@ -4348,6 +4392,8 @@ nil means no mission."
 (define-key codex-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key codex-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key codex-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)
+(define-key codex-repl-mode-map (kbd "C-c .") #'agent-chat-mark-menu)
+(define-key codex-repl-mode-map (kbd "C-c ,") #'agent-chat-mark-menu-2)
 (define-key codex-repl-mode-map "🍒" #'agent-chat-clock-menu)
 (define-key codex-repl-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key codex-repl-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
@@ -4455,6 +4501,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
 (defun codex-repl--init ()
   "Initialize buffer UI."
   (setq codex-repl--cached-irc-send-base nil)
+  (setq-local agent-chat--cost-vendor "codex")
   (codex-repl--ensure-session-id)
   (codex-repl--ensure-store-session)
   ;; Register with Agency only for buffer-local lane overrides; never
@@ -4463,10 +4510,15 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (when (local-variable-p 'codex-repl-agency-agent-id (current-buffer))
     (or (codex-repl--re-register-current)
         (codex-repl--auto-register)))
-  (agent-chat-init-buffer
-   (list :title (replace-regexp-in-string
-                 "\\`\\*\\|\\*\\'" ""
-                 (or codex-repl-buffer-name "*codex-repl*"))
+  (let* ((base-title (replace-regexp-in-string
+                      "\\`\\*\\|\\*\\'" ""
+                      (or codex-repl-buffer-name "*codex-repl*")))
+         (title (if (and (stringp codex-repl--registry-model)
+                         (not (string-empty-p codex-repl--registry-model)))
+                    (format "%s · %s" base-title codex-repl--registry-model)
+                  base-title)))
+    (agent-chat-init-buffer
+   (list :title title
          :session-id (or codex-repl-session-id "pending")
          :modeline-fn #'codex-repl--build-modeline
          :face-alist `(("codex" . codex-repl-codex-face))
@@ -4482,7 +4534,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          :thinking-text "codex is thinking..."
          :thinking-prop 'codex-repl-thinking
          :evidence-url codex-repl-evidence-url
-         :evidence-timeout codex-repl-evidence-timeout))
+         :evidence-timeout codex-repl-evidence-timeout)))
   (agent-chat-invariants-setup)
   (add-hook 'kill-buffer-hook #'codex-repl--cleanup-buffer nil t)
   (codex-repl--ensure-header-line!))
@@ -4504,7 +4556,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
         (setq-local codex-repl-agency-agent-id agent-id))
       (when session-file
         (setq-local codex-repl-session-file session-file))
-      (when (and working-directory
+      (when (and (stringp working-directory)
                  (file-directory-p working-directory))
         (setq-local default-directory (file-name-as-directory working-directory)))
       (agent-chat-set-clock! target nil t)
@@ -4594,11 +4646,25 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (interactive (list (codex-repl--read-attach-agent-id)))
   (let* ((state (or (codex-repl--fetch-lane-process-state agent-id)
                     (codex-repl--recent-agent-state agent-id)))
-         (session-file (or (plist-get state :session-file)
+         ;; Guard against JSON-null leaking in as :null (the state plist comes
+         ;; from a parse that doesn't force :null-object nil): a non-string
+         ;; value must fall through to the default, not propagate (it would
+         ;; crash file-directory-p and serialize back as ":null").
+         (session-file (or (let ((sf (plist-get state :session-file)))
+                             (and (stringp sf) sf))
                            (codex-repl--default-session-file-for-agent agent-id)))
-         (working-directory (or (plist-get state :working-directory)
+         (working-directory (or (let ((wd (plist-get state :working-directory)))
+                                  (and (stringp wd) wd))
                                 default-directory))
-         (buffer (codex-repl--open-instance (codex-repl--lane-buffer-name agent-id)
+         (buffer-name (codex-repl--lane-buffer-name agent-id))
+         (_model-cache
+          (with-current-buffer (get-buffer-create buffer-name)
+            (unless (eq major-mode 'codex-repl-mode)
+              (codex-repl-mode))
+            (setq-local codex-repl--registry-model
+                        (and (fboundp 'claude-repl--registry-model-for-agent)
+                             (claude-repl--registry-model-for-agent agent-id)))))
+         (buffer (codex-repl--open-instance buffer-name
                                             (codex-repl--lane-invoke-buffer-name agent-id)
                                             codex-repl-api-url
                                             agent-id
@@ -4608,6 +4674,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (codex-repl--restore-agent agent-id session-file working-directory)
+        (codex-repl--refresh-displayed-model-title)
         (codex-repl--refresh-session-header (current-buffer))))
     (message "codex-repl: attached %s (%s)"
              agent-id

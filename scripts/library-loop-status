@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo_root=$(cd -- "$script_dir/.." && pwd)
+workspace=$(pwd -P)
+cd -- "$repo_root"
+exec env LIBRARY_LOOP_TOOL_WORKSPACE="$workspace" \
+  clojure -Srepro -M -m futon3c.apm.library-loop-tools status "$@"

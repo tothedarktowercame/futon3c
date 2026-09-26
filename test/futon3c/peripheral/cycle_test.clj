@@ -3,7 +3,8 @@
 
    Tests the cycle machine in isolation using a minimal test domain config,
    proving that the extraction from proof.clj preserved all behavior."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -94,7 +95,11 @@
 (deftest valid-domain-config-rejects-missing-keys
   (is (not (cycle/valid-domain-config? (dissoc test-config :domain-id))))
   (is (not (cycle/valid-domain-config? (dissoc test-config :phase-order))))
-  (is (not (cycle/valid-domain-config? (dissoc test-config :fruit-fn)))))
+  (is (not (cycle/valid-domain-config? (dissoc test-config :fruit-fn))))
+  (is (not (cycle/valid-domain-config?
+            (assoc test-config :derived-tools {:bad :not-a-function}))))
+  (is (cycle/valid-domain-config?
+       (assoc test-config :derived-tools {:derived (fn [_ _] :ok)}))))
 
 ;; =============================================================================
 ;; Lifecycle — start/stop
@@ -120,6 +125,18 @@
   (let [p (make-test-peripheral (make-test-mock))
         start (runner/start p {:session-id "sess-3" :test-field "custom"})]
     (is (= "custom" (get-in start [:state :test-field])))))
+
+(deftest cycle-step-refuses-absent-state-before-tool-execution
+  (let [backend (make-test-mock)
+        p (make-test-peripheral backend)
+        result (runner/step p nil {:tool :cycle-begin :args ["M" "B"]})]
+    (fix/assert-valid! shapes/SocialError result)
+    (is (= :absent-state (:error/code result)))
+    (is (nil? (:state result)) "no context-less cycle state is synthesized")
+    (is (empty? (tools/recorded-calls backend))
+        "the begin tool never reaches its backend")
+    (is (nil? (get-in result [:state :current-cycle-id])))
+    (is (empty? (or (get-in result [:state :steps]) [])))))
 
 ;; =============================================================================
 ;; Phase gating
@@ -157,6 +174,26 @@
         step (runner/step p (:state cycle-step) {:tool :tool-a :args []})]
     (is (:ok step))))
 
+(deftest step-records-retain-their-own-evidence-chain-ids
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "step-evidence-chain"})
+        first-step (runner/step p (:state start) {:tool :read :args ["a"]})
+        second-step (runner/step p (:state first-step)
+                                 {:tool :tool-a :args []})
+        first-id (get-in first-step [:evidence :evidence/id])
+        second-id (get-in second-step [:evidence :evidence/id])
+        records (get-in second-step [:state :steps])]
+    (is (= [first-id second-id] (mapv :evidence/id records))
+        "each record retains its own id, not the preceding evidence id")
+    (is (not= first-id second-id))
+    (is (= second-id (get-in second-step [:state :last-evidence-id]))
+        ":last-evidence-id remains the newest emitted evidence")
+    (is (= (get-in start [:evidence :evidence/id])
+           (get-in first-step [:evidence :evidence/in-reply-to])))
+    (is (= first-id
+           (get-in second-step [:evidence :evidence/in-reply-to]))
+        "step n+1 links to step n's retained evidence id")))
+
 ;; =============================================================================
 ;; Phase transitions
 ;; =============================================================================
@@ -168,6 +205,42 @@
         advance (runner/step p (:state cycle-step) {:tool :cycle-advance :args ["M-test" "C1" {:observed true}]})]
     (is (:ok advance))
     (is (= :beta (get-in advance [:state :current-phase])))))
+
+(deftest domain-without-output-stamp-preserves-the-advance-payload
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "no-output-stamp"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        payload {:observed :caller-value}
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance :args ["M" "C1" payload]})]
+    (is (:ok advanced))
+    (is (= payload (get-in advanced [:state :cycle/outputs])))))
+
+(deftest required-output-enforcement-defaults-off
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "default-off"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance :args ["M" "C1" {}]})]
+    (is (:ok advanced))))
+
+(deftest output-invariant-waits-for-all-required-operands
+  (let [called (atom false)
+        config (assoc test-config :output-invariants
+                      [{:id :needs-never-produced
+                        :requires #{:left :right}
+                        :check (fn [_] (reset! called true) {:failure :boom})}])
+        p (cycle/make-cycle-peripheral config test-spec (make-test-mock))
+        start (runner/start p {:session-id "invariant-not-ready"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance
+                               :args ["M" "C1" {:observed true}]})]
+    (is (:ok advanced))
+    (is (false? @called))))
 
 (deftest cycle-completion-clears-phase
   (let [backend (tools/make-mock-backend
@@ -259,3 +332,238 @@
           step (runner/step p (:state start) {:tool :mystery-tool :args []})]
       (fix/assert-valid! shapes/SocialError step)
       (is (= :unclassified-tool (:error/code step))))))
+
+;; =============================================================================
+;; Opt-in engine-owned state I/O
+;; =============================================================================
+
+(def state-io-config
+  (-> test-config
+      (assoc :state-io-tools {:save :state-save :load :state-load}
+             :always-available-tools #{:state-save :state-load})
+      (update :tool-ops assoc :state-save :action :state-load :action)))
+
+(def state-io-spec
+  (update test-spec :peripheral/tools into #{:state-save :state-load}))
+
+(deftest domain-without-state-io-keeps-backend-argument-contract
+  (let [backend (make-test-mock)
+        p (make-test-peripheral backend)
+        start (runner/start p {:session-id "no-state-io"})
+        step (runner/step p (:state start) {:tool :tool-a :args [:caller-arg]})]
+    (is (:ok step))
+    (is (= [:caller-arg]
+           (:args (last (tools/recorded-calls backend)))))))
+
+;; =============================================================================
+;; Engine-derived tools
+;; =============================================================================
+
+(def derived-spec
+  (update test-spec :peripheral/tools conj :derive-state))
+
+(defn- derived-config [derive]
+  (-> test-config
+      (update :setup-tools conj :derive-state)
+      (update :tool-ops assoc :derive-state :observe)
+      (assoc :derived-tools {:derive-state derive})))
+
+(deftest derived-tool-uses-engine-state-and-never-calls-backend
+  (let [backend (make-test-mock {:derive-state :backend-must-not-run})
+        config (derived-config
+                (fn [state args]
+                  {:from-state (:test-field state) :args args}))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived" :test-field :authoritative})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args [:caller]})]
+    (is (:ok result))
+    (is (= {:from-state :authoritative :args [:caller]} (:result result)))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest derived-tool-still-obeys-phase-gating
+  (let [called (atom false)
+        backend (make-test-mock)
+        config (derived-config (fn [_ _] (reset! called true)))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived-gate"})
+        state (assoc (:state start) :current-phase :alpha)
+        result (runner/step p state {:tool :derive-state :args []})]
+    (is (= :phase-tool-not-allowed (:error/code result)))
+    (is (false? @called))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest derived-tool-still-obeys-the-peripheral-spec
+  (let [called (atom false)
+        backend (make-test-mock)
+        config (derived-config (fn [_ _] (reset! called true)))
+        ;; test-spec deliberately does not list :derive-state.
+        p (cycle/make-cycle-peripheral config test-spec backend)
+        start (runner/start p {:session-id "derived-spec"})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args []})]
+    (is (= :tool-not-allowed (:error/code result)))
+    (is (false? @called))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest throwing-derived-tool-is-a-structured-failure
+  (let [backend (make-test-mock)
+        config (derived-config
+                (fn [_ _] (throw (ex-info "cannot derive" {}))))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived-throw"})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args []})]
+    (is (= :tool-execution-failed (:error/code result)))
+    (is (re-find #"cannot derive"
+                 (str (get-in result [:error/context :result :error]))))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest state-save-receives-authoritative-engine-state
+  (let [seen (atom nil)
+        backend (make-test-mock
+                 {:state-save
+                  (fn [_ args]
+                    (reset! seen args)
+                    {:ok true :result {:saved? true}})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "save-state" :test-field :engine})
+        fake {:session-id "save-state" :test-field :caller-fake}
+        saved (runner/step p (:state start)
+                           {:tool :state-save :args [fake :v1]})]
+    (is (:ok saved))
+    (is (= :engine (:test-field (first @seen))))
+    (is (not= fake (first @seen)))
+    (is (= [fake :v1] (vec (rest @seen))))))
+
+(deftest state-save-excludes-runtime-values-and-round-trips-as-edn
+  (let [seen (atom nil)
+        nested-runtime {:callback (fn [] :not-edn)}
+        config (assoc state-io-config :state-runtime-keys
+                      #{:runtime :cycle-config :evidence-store})
+        backend (make-test-mock
+                 {:state-save
+                  (fn [_ args]
+                    (reset! seen (first args))
+                    {:ok true :result {:saved? true}})})
+        p (cycle/make-cycle-peripheral config state-io-spec backend)
+        start (runner/start p {:session-id "save-edn"})
+        state (assoc (:state start) :runtime nested-runtime :persisted :yes)
+        saved (runner/step p state {:tool :state-save :args []})
+        encoded (pr-str @seen)]
+    (is (:ok saved))
+    (is (not (contains? @seen :runtime)))
+    (is (= @seen (edn/read-string encoded)))
+    (is (= :yes (:persisted @seen)))))
+
+(deftest state-load-reattaches-current-runtime-before-validation
+  (let [validated (atom nil)
+        current-runtime {:sink :current}
+        stale-runtime {:sink :loaded}
+        loaded (atom nil)
+        config (assoc state-io-config
+                      :state-runtime-keys
+                      #{:runtime :cycle-config :evidence-store}
+                      :state-validate-fn
+                      (fn [_ candidate]
+                        (reset! validated (:runtime candidate))
+                        nil))
+        backend (make-test-mock
+                 {:state-load (fn [_ _] {:ok true :result @loaded})})
+        p (cycle/make-cycle-peripheral config state-io-spec backend)
+        start (runner/start p {:session-id "runtime-load"})
+        current (assoc (:state start) :runtime current-runtime)
+        candidate (assoc (:state start) :runtime stale-runtime :loaded? true)
+        _ (reset! loaded candidate)
+        result (runner/step p current {:tool :state-load :args [1]})]
+    (is (:ok result))
+    (is (= current-runtime @validated)
+        "domain validation sees the state that will actually be installed")
+    (is (= current-runtime (get-in result [:state :runtime])))
+    (is (true? (get-in result [:state :loaded?])))))
+
+(deftest valid-state-load-replaces-state-and-records-branch-marker
+  (let [loaded (atom nil)
+        backend (make-test-mock
+                 {:state-load (fn [_ _] {:ok true :result @loaded})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "load-state" :test-field :current})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        candidate (-> (:state start)
+                      (assoc :current-phase :beta
+                             :test-field :loaded
+                             :loaded-only true
+                             :steps []))
+        _ (reset! loaded candidate)
+        result (runner/step p (:state begun)
+                            {:tool :state-load :args [3]})
+        marker (last (get-in result [:state :branch-markers]))]
+    (is (:ok result))
+    (is (= :loaded (get-in result [:state :test-field])))
+    (is (true? (get-in result [:state :loaded-only])))
+    (is (= :beta (get-in result [:state :current-phase])))
+    (is (string? (:branch/id marker)))
+    (is (= [3] (:branch/load-args marker)))
+    (is (= marker (get-in result [:state :steps 0 :branch-marker])))))
+
+(deftest invalid-state-load-leaves-authoritative-state-untouched
+  (let [backend (make-test-mock
+                 {:state-load {:session-id "different-session"
+                               :current-phase :alpha}})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "keep-state" :test-field :original})
+        before (:state start)
+        bytes-before (pr-str before)
+        result (runner/step p before {:tool :state-load :args [99]})]
+    (is (= :loaded-state-session-mismatch (:error/code result)))
+    (is (nil? (:state result)))
+    (is (= bytes-before (pr-str before)))
+    (is (= :original (:test-field before)))
+    (is (empty? (:steps before)))))
+
+(deftest always-available-tools-do-not-weaken-ordinary-phase-gating
+  (let [backend (make-test-mock
+                 {:state-save {:saved? true}
+                  :state-load {:session-id "always" :current-phase :alpha}})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "always"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        saved (runner/step p (:state begun) {:tool :state-save :args []})
+        forbidden (runner/step p (:state begun) {:tool :tool-b :args []})]
+    (is (:ok saved))
+    (is (= :phase-tool-not-allowed (:error/code forbidden)))))
+
+(deftest load-refuses-a-foreign-cycle
+  ;; The cycle id is set BY THE ENGINE at cycle-begin, so this test must let the
+  ;; engine set it rather than assoc it in. The first version of this test built
+  ;; :cycle/id on the state by hand -- a key the engine never writes -- so it
+  ;; passed against a guard that could not fire in reality.
+  (let [foreign {:session-id "xcycle" :current-cycle-id "CYCLE-B"
+                 :steps [] :cycle/outputs {}}
+        backend (make-test-mock
+                 {:cycle-begin (fn [_ _] {:ok true :result {:cycle/id "CYCLE-A"}})
+                  :state-load  (fn [_ _] {:ok true :result foreign})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "xcycle"})
+        begun (runner/step p (:state start) {:tool :cycle-begin :args ["M" "C"]})
+        _ (is (= "CYCLE-A" (:current-cycle-id (:state begun)))
+              "the engine, not the test, must establish the cycle id")
+        r (runner/step p (:state begun) {:tool :state-load :args []})]
+    (is (= :loaded-state-cycle-mismatch (:error/code r)))
+    (is (nil? (:state r)))))
+
+(deftest identity-keys-cannot-be-declared-runtime-keys
+  ;; Validation runs after reattachment, so declaring :session-id or
+  ;; :current-cycle-id as runtime would make the engine compare current state
+  ;; against itself. Verified before this guard: with :session-id declared, a
+  ;; load of a FOREIGN session succeeded and installed its steps and
+  ;; :cycle/outputs under our own session id.
+  (is (cycle/valid-domain-config?
+       (assoc state-io-config :state-runtime-keys #{:cycle-config})))
+  (is (not (cycle/valid-domain-config?
+            (assoc state-io-config :state-runtime-keys #{:session-id}))))
+  (is (not (cycle/valid-domain-config?
+            (assoc state-io-config :state-runtime-keys
+                   #{:cycle-config :current-cycle-id})))))

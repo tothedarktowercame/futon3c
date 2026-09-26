@@ -24,19 +24,27 @@
             [clojure.java.shell :as sh]
             [clojure.set]
             [babashka.http-client :as http]
+            [clojure.walk :as walk]
             [cheshire.core :as json]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
-            [futon3c.watcher.file-ingest :as file-ingest])
+            [futon3c.watcher.file-ingest :as file-ingest]
+            [futon3c.watcher.freshness :as freshness]
+            [futon3.inbox-zero.watcher :as inbox-zero])
   (:import [java.time Instant]
+           [java.nio.channels FileChannel OverlappingFileLockException]
+           [java.nio.file Files Paths StandardOpenOption]
+           [java.nio.file.attribute FileAttribute]
+           [java.util Date]
            [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
 
-(def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
+                   (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 
-(def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "md"})
+(def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "multiarg" "md"})
 (def NOISE-PATTERN
   #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
 
@@ -47,18 +55,76 @@
   #"/holes/(?:missions/)?M-[^/]+\.md$")
 
 (def ^:private mission-doc-stem-pattern
-  #"(?:^|/)holes/(?:missions/)?((?:M|E)-[^/]+)\.md$")
+  ;; Scope-lane stem extraction — missions (M-), excursions (E-) AND campaigns (C-),
+  ;; under holes/ optionally nested in missions//excursions//campaigns/.  Campaigns were
+  ;; absent, so their scope-surface drifted (never enqueued for reingest on doc-land).
+  #"(?:^|/)holes/(?:missions/|excursions/|campaigns/)?((?:M|E|C)-[^/]+)\.md$")
 
 (def ^:private excursion-doc-pattern
   #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
 
+(def ^:private campaign-doc-pattern
+  #"/holes/(?:campaigns/)?C-[^/]+\.md$")
+
 (declare !state)
+(declare mission-maintenance-status ensure-mission-maintenance-drainer!)
 
 ;; Scope lane: the watcher hot path only enqueues mission stems. The reingest
 ;; work runs off-cycle on a separate scheduled drainer thread. Detection shells
 ;; to futon6's Python detector; ingestion reuses the already-loaded futon3c
 ;; mission-scope ingest namespace in-process.
 (def ^:private scope-lane-env "FUTON3C_WATCHER_SCOPE_LANE")
+
+;; In-process override for the scope-lane gate (Joe, 2026-09-17: the lane
+;; should be BINDABLE, not env-only). nil = defer to the env default, true =
+;; on, false = off regardless of the env. Set only through arm-scope-lane! /
+;; disarm-scope-lane! / reset-scope-lane-override!, so a change is deliberate
+;; and starts (or stops) the maintenance drainer with it.
+(defonce ^:private !scope-lane-override (atom nil))
+
+(defn- env-scope-lane-enabled? []
+  (contains? #{"1" "true" "yes" "on"}
+             (some-> (System/getenv scope-lane-env) str/lower-case)))
+
+(defn scope-lane-enabled?
+  "Truthy gate for watcher-integrated mission-scope reingest. An explicit
+   in-process override (arm-scope-lane!/disarm-scope-lane!) wins; otherwise
+   the env default FUTON3C_WATCHER_SCOPE_LANE decides. The CODE default is
+   OFF, so a bare test or CLI JVM never runs the lane; the zone serving
+   profile turns it ON in scripts/dev-zone-env (Joe 2026-09-17: the watcher
+   keeps substrate-2 up to date, and that is configuration, not an operator
+   step to remember at each restart)."
+  []
+  (if-some [override @!scope-lane-override]
+    (boolean override)
+    (env-scope-lane-enabled?)))
+
+(defn arm-scope-lane!
+  "Arm the mission-scope lane IN-PROCESS (the env-var alternative is a JVM
+   restart). Idempotent; ensures the maintenance drainer is running."
+  []
+  (reset! !scope-lane-override true)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
+
+(defn disarm-scope-lane!
+  "Turn the scope lane OFF in-process and stop the maintenance drainer.
+   Idempotent. This sets the override to FALSE rather than clearing it,
+   because the env default is now ON (scripts/dev-zone-env, 2026-09-17):
+   clearing the override would defer to that default and disarming would do
+   nothing, leaving a restart as the only way to stop the lane during an
+   incident. Use `reset-scope-lane-override!` to go back to the env default."
+  []
+  (reset! !scope-lane-override false)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
+
+(defn reset-scope-lane-override!
+  "Drop the in-process override so the gate follows the env default again."
+  []
+  (reset! !scope-lane-override nil)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
 (def ^:private maintenance-drain-interval-ms 1000)
 (def ^:private maintenance-debounce-ms 2000)
 (def ^:private maintenance-recent-limit 20)
@@ -94,20 +160,58 @@
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
     endpoints))
 
+(def ^:private store-timeout-ms
+  "Timeouts sized to the MEASURED store, not to hope. E-apm-A3-ingest-efficiency
+   measures ~3 s/doc and a pattern carries ~15 documents, so the old 10 s POST /
+   15 s GET were below the cost of the work they were waiting for -- which is why
+   timeouts were the normal case rather than the exception."
+  60000)
+
 (defn post-hyperedge!
-  [hx-type endpoints labels & [props]]
+  "Write a hyperedge. `opts` may carry `{:encoding :edn}`.
+
+   JSON is the default because it matches the watcher's own writes, whose props
+   are string-valued anyway. It is the WRONG encoding for anything that must
+   ROUND-TRIP, because JSON has no keyword type: props read out of the store as
+   EDN and re-posted as JSON come back as strings. `:attachment-status
+   :reviewed` landed as \"reviewed\", and peripheral/memory_recall.clj:45 tests
+   `(not= :reviewed attachment-status)` -- so a repointed attachment would have
+   been dropped from every recall while still looking present in the store.
+   Repoints therefore post EDN; futon1b_server.clj parse-payload reads EDN
+   whenever the Content-Type is not JSON."
+  [hx-type endpoints labels & [props opts]]
   (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
-                  (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))]
+        edn? (= :edn (:encoding opts))
+        k (if edn? keyword identity)
+        payload (cond-> {(k "hx/type") hx-type (k "hx/endpoints") endpoints}
+                  (seq labels) (assoc (k "hx/labels") labels)
+                  props (assoc (k "hx/props") props))]
     (try
       (let [resp (http/post (str FUTON1A "/api/alpha/hyperedge")
-                            {:headers {"Content-Type" "application/json"
+                            {:headers {"Content-Type" (if edn?
+                                                        "application/edn"
+                                                        "application/json")
                                        "X-Penholder" PENHOLDER}
-                             :body (json/generate-string payload)
-                             :throw false})]
-        {:ok? (= 200 (:status resp))})
-      (catch Exception _ {:ok? false}))))
+                             :body (if edn?
+                                     (pr-str payload)
+                                     (json/generate-string payload))
+                             :timeout store-timeout-ms
+                             :throw false})
+            ok? (= 200 (:status resp))]
+        ;; dual-write leg (reindex-not-port): no-op unless
+        ;; file-ingest/!futon1b-url is set.
+        (when ok?
+          (file-ingest/post-futon1b! {:hx-type hx-type :endpoints endpoints
+                                      :labels labels :props props}))
+        (cond-> {:ok? ok?}
+          (not ok?) (assoc :status (:status resp)
+                           :body (some-> (:body resp) str (subs 0 (min 300 (count (str (:body resp)))))))))
+      ;; Carry the cause. Swallowing it meant a caller could only ever report
+      ;; "write failed", which is indistinguishable between a refused penholder,
+      ;; a timeout and a malformed body -- three failures with three different
+      ;; repairs.
+      (catch Exception e {:ok? false :error (.getMessage e)
+                          :exception (.getName (class e))}))))
 
 (defn http-get-edn [url]
   (let [resp (http/get url {:headers {"X-Penholder" PENHOLDER}
@@ -122,13 +226,6 @@
 
 (defn- now-ms []
   (System/currentTimeMillis))
-
-(defn scope-lane-enabled?
-  "Truthy env gate for watcher-integrated mission-scope reingest.
-   Defaults OFF so the lane can be loaded dark."
-  []
-  (contains? #{"1" "true" "yes" "on"}
-             (some-> (System/getenv scope-lane-env) str/lower-case)))
 
 (defn- mission-stem-from-path [path]
   (some->> (str path)
@@ -159,7 +256,7 @@
   (when (map? report)
     (select-keys report
                  [:mission :path :binders :binder-count :detected-json
-                  :broadcast? :detector-ms :ingest-ms])))
+                  :record-refresh :broadcast? :detector-ms :ingest-ms])))
 
 (defn- mission-scope-tree-path [stem]
   (str mission-scope-tree-dir "/" stem ".json"))
@@ -178,7 +275,9 @@
 (defn- scope-tree-binders [stem]
   (let [path (mission-scope-tree-path stem)
         data (json/parse-string (slurp path) true)
-        by-count (-> data :scope-count-by-binder-type keys)
+        ;; parse-string keywordizes, so these keys are keywords; binder
+        ;; names are strings everywhere downstream (cf. mission-scope-ingest).
+        by-count (->> data :scope-count-by-binder-type keys (map name))
         by-scope (->> (:scope-hyperedges data)
                       (keep :binder-type)
                       distinct)]
@@ -198,10 +297,38 @@
     "mission" stem})
   true)
 
+(defn- refresh-mission-record!
+  "Refresh the machine's mission-entity record (status, provenance, sha256)
+   for one landed mission doc, through futon2's single record writer
+   (futon2.aif.mission-registry/upsert-mission-record!). The futon3c watcher
+   keeps substrate-2 up to date (Joe 2026-09-17): a scope reingest that did
+   not also refresh the record would leave the machine reading a stale
+   status after every mission-doc land. futon2 lives on this JVM's classpath
+   (the WM runs in-process); if it cannot resolve, the failure is reported
+   in the lane's report — never swallowed.
+
+   Only MISSION docs have a record to refresh. The lane's stem pattern
+   deliberately also admits excursions and campaigns, and futon2's registry
+   admits only `holes/missions/M-*.md`, so every E-/C- land would otherwise
+   come back `:path-not-admitted` and be filed as an error forever. A doc
+   that was never in the mission registry is `:not-applicable`, not a
+   failure; keeping the two apart is what lets a real `:error` mean
+   something."
+  [stem path]
+  (if-not (some-> stem (str/starts-with? "M-"))
+    {:status :not-applicable :reason :not-a-mission-doc :stem stem}
+    (try
+      (let [upsert (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)]
+        (upsert {:path path}))
+      (catch Throwable t
+        {:status :error :message (.getMessage t)
+         :exception (.getName (class t))}))))
+
 (defn reingest-mission-scopes!
   "Run the same scope-lane mechanics as scripts/mission-scope-reingest.sh:
    re-detect with futon6 Python, then ingest each binder in-process through the
-   Drawbridge-safe mission-scope ingest entry point, then broadcast an update
+   Drawbridge-safe mission-scope ingest entry point, refresh the mission's
+   substrate-2 RECORD (status/provenance/sha256), then broadcast an update
    frame for Emacs-side refreshers."
   [{:keys [stem path]}]
   (let [detected (detect-mission-scopes! path)
@@ -212,6 +339,7 @@
                                 :out (ingest-scope-binder! stem binder)})
                              binders)
         ingest-ms (- (now-ms) ingest-start)
+        record (refresh-mission-record! stem path)
         broadcast? (broadcast-mission-scopes-updated! stem)]
     {:mission stem
      :path path
@@ -219,6 +347,7 @@
      :binders binders
      :binder-count (count binders)
      :binder-reports binder-reports
+     :record-refresh record
      :broadcast? broadcast?
      :detector-ms (:duration-ms detected)
      :ingest-ms ingest-ms}))
@@ -414,6 +543,306 @@
     (string? x) x
     :else (str x)))
 
+(def ^:private canonical-pattern-facets
+  ["conclusion" "context" "if" "however" "then" "because" "next-steps"])
+
+(declare file-ext)
+
+(defn flexiarg-pattern-id
+  "Derive the qualified pattern id from a library flexiarg path, including
+   families with nested directories. Returns nil for every other path."
+  [path]
+  (second (re-find #"(?:^|/)library/(.+)\.flexiarg$" (str path))))
+
+(defn pattern-source-file?
+  "True for either declaration-based pattern source extension. Identity still
+   comes from declarations, never from this predicate or the pathname."
+  [path]
+  (contains? #{"flexiarg" "multiarg"} (file-ext (str path))))
+
+(defn declaration-manifest
+  "Return every pattern id declared by PATH. Parsing failures propagate so a
+   cycle cannot replace a usable prior manifest with incomplete knowledge."
+  [path]
+  (when (pattern-source-file? path)
+    (->> (:vars (file-ingest/collect-file path))
+         (map :pattern/id)
+         (remove nil?)
+         distinct
+         sort
+         vec)))
+
+(defn fetch-pattern-relations
+  [entity-id]
+  (let [url (str FUTON1A "/api/alpha/relations?from="
+                 (java.net.URLEncoder/encode entity-id "UTF-8")
+                 "&limit=100")]
+    (vec (or (:relations (http-get-edn url)) []))))
+
+(declare retract-documents!)
+
+(defn fetch-attachment-hyperedges
+  "Fetch memory attachment hyperedges naming a pattern endpoint."
+  [pattern-id]
+  (let [url (str FUTON1A "/api/alpha/hyperedges?end="
+                 (java.net.URLEncoder/encode pattern-id "UTF-8")
+                 "&limit=50")]
+    (->> (or (:hyperedges (http-get-edn url)) [])
+         (filter #(= "memory/assert" (type-str (:hx/type %))))
+         vec)))
+
+(defn- replace-exact
+  [form old-id new-id]
+  (walk/postwalk #(if (= old-id %) new-id %) form))
+
+(defn- contains-exact?
+  [form target]
+  (let [found? (volatile! false)]
+    (walk/postwalk (fn [x]
+                     (when (= target x) (vreset! found? true))
+                     x)
+                   form)
+    @found?))
+
+(defn- verified-attachment-replacement?
+  [expected actual old-id]
+  (and (= (type-str (:hx/type expected)) (type-str (:hx/type actual)))
+       (= (:hx/endpoints expected) (:hx/endpoints actual))
+       (= (:hx/props expected) (:hx/props actual))
+       (not (contains-exact? actual old-id))))
+
+(defn- post-replacement!
+  "Post one replacement edge, retrying the store's transient rebuild refusal.
+
+   The substrate rebuilds its memory-projection index under a watermark taken
+   after quiescence, and refuses with 503 :memory-projection-source-moved-after-
+   quiescence when a concurrent write moves that watermark mid-build
+   (futon1b_graph.clj). A repoint of 40+ edges is exactly the traffic that
+   provokes it, and it is a race, not a bad write: the same call succeeds
+   moments later. Replacement writes are idempotent -- hx/id derives from the
+   endpoint set, so a re-post of one that already landed is a no-op -- so
+   retrying is safe. Only 503 is retried; a 403 or a malformed body would fail
+   identically every time and must surface at once."
+  [replacement]
+  (loop [attempt 1]
+    (let [posted (post-hyperedge! (type-str (:hx/type replacement))
+                                  (:hx/endpoints replacement)
+                                  (:hx/labels replacement)
+                                  (:hx/props replacement)
+                                  {:encoding :edn})]
+      (if (or (:ok? posted) (not= 503 (:status posted)) (>= attempt 5))
+        posted
+        (do (Thread/sleep (* 2000 attempt))
+            (recur (inc attempt)))))))
+
+(defn repoint-pattern-attachments!
+  "Create and verify replacement memory attachments before atomically
+   retracting the stale edge documents. Every exact occurrence of the old
+   pattern id is replaced, including nested review history."
+  [old-id new-id]
+  (if (= old-id new-id)
+    {:ok true :count 0 :old-pattern-id old-id :new-pattern-id new-id}
+    (let [stale (fetch-attachment-hyperedges old-id)
+          replacements (mapv #(replace-exact % old-id new-id) stale)]
+      (doseq [replacement replacements]
+        ;; EDN, not JSON: these props were READ from the store, so every value
+        ;; type in them has to survive the round trip or the verification below
+        ;; can never pass -- and if the verification were loosened instead, the
+        ;; edge would land with :reviewed silently downgraded to "reviewed".
+        (let [posted (post-replacement! replacement)]
+          (when-not (:ok? posted)
+            (throw (ex-info "replacement memory attachment write failed; stale edge retained"
+                            {:old-pattern-id old-id :new-pattern-id new-id
+                             :failed-edge-id (:hx/id replacement)
+                             :cause (dissoc posted :ok?)
+                             :old-edge-ids (mapv :hx/id stale)})))
+          (let [landed (fetch-attachment-hyperedges new-id)]
+            (when-not (some #(verified-attachment-replacement?
+                              replacement % old-id)
+                            landed)
+              (throw (ex-info "replacement memory attachment did not verify; stale edge retained"
+                              {:old-pattern-id old-id :new-pattern-id new-id
+                               :old-edge-ids (mapv :hx/id stale)}))))))
+      (when (seq stale)
+        (retract-documents! (mapv #(hash-map :table :hyperedges :id (:hx/id %))
+                                  stale)))
+      {:ok true :count (count stale)
+       :old-pattern-id old-id :new-pattern-id new-id})))
+
+(defn fetch-pattern-entity-ids
+  "Resolve canonical names to their stored IDs while retaining name-shaped IDs.
+   The latter are included because legacy pattern hyperedges could mint a
+   same-name entity alongside the UUID-backed canonical record.
+
+   THROWS on a transport failure rather than returning fewer names. Returning []
+   for \"I could not ask\" is indistinguishable from \"nothing is there\", and
+   retract-flexiarg! reads an empty result as `done` -- so a slow store used to
+   end the retraction loop early and report success with rows still standing.
+   Measured 2026-08-17: 16 of 31 retractions silently no-opped that way."
+  ([names]
+   (fetch-pattern-entity-ids names ["pattern/library" "pattern/clause"]))
+  ([names entity-types]
+   (let [names (vec names)
+         fetch-page (fn [entity-type after]
+                     (let [url (str FUTON1A "/api/alpha/entities?type="
+                                    (java.net.URLEncoder/encode entity-type "UTF-8")
+                                    "&limit=5000"
+                                    (when after
+                                      (str "&after="
+                                           (java.net.URLEncoder/encode after "UTF-8"))))]
+                       (try
+                         (let [resp (http/get url {:headers {"X-Penholder" PENHOLDER}
+                                                   :throw false
+                                                   :timeout store-timeout-ms})]
+                           (when-not (= 200 (:status resp))
+                             (throw (ex-info "cannot list pattern entities: store refused query"
+                                             {:outcome :unknown :entity-type entity-type
+                                              :status (:status resp) :body (:body resp)})))
+                           (edn/read-string (:body resp)))
+                         (catch Exception e
+                           (if (= :unknown (:outcome (ex-data e)))
+                             (throw e)
+                             (throw (ex-info "cannot list pattern entities: store unreachable"
+                                             {:outcome :unknown :entity-type entity-type
+                                              :cause (.getMessage e)})))))))
+         fetch-type (fn [entity-type]
+                     (loop [after nil pages 0 accumulated []]
+                       (when (>= pages 100)
+                         (throw (ex-info "pattern entity listing exceeded page limit"
+                                         {:outcome :unknown :entity-type entity-type
+                                          :pages pages})))
+                       (let [{:keys [entities next-cursor]} (fetch-page entity-type after)
+                             accumulated' (into accumulated entities)]
+                         (if next-cursor
+                           (recur next-cursor (inc pages) accumulated')
+                           accumulated'))))]
+     (->> entity-types
+         (mapcat (fn [entity-type]
+                   (let [entities (fetch-type entity-type)]
+                     (mapcat
+                      (fn [entity-name]
+                        (when-let [resolved
+                                   (->> entities
+                                        (filter #(or (= entity-name (:entity/id %))
+                                                     (= entity-name (:entity/name %))
+                                                     (= entity-name (:entity/external-id %))))
+                                        (sort-by (fn [entity]
+                                                   [(if (= entity-name (:entity/id entity)) 0 1)
+                                                    (if (= entity-name (:entity/name entity)) 0 1)
+                                                    (str (:entity/id entity))]))
+                                        first
+                                        :entity/id)]
+                          [entity-name resolved]))
+                      names))))
+         distinct
+         vec))))
+
+(defn retract-documents!
+  "Atomically retract derived documents. THREE outcomes, not two.
+
+   A timeout means the CLIENT stopped waiting; it says nothing about whether the
+   store did the work. Reporting it as failure is a lie in the dangerous
+   direction -- the caller retries a completed retraction, or reports a repair
+   that did not happen. Observed 2026-08-17: a retraction reported
+   \"request timed out\" and the row was gone (1345 -> 1344 rows).
+
+     :retracted  200 + :ok        -- done
+     :refused    a non-200 reply  -- definitely did not happen, safe to retry
+     :unknown    timeout/transport -- MAY have happened; VERIFY before retrying"
+  [documents]
+  (let [payload {:documents (vec documents)}
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/documents/retract")
+                          {:headers {"Content-Type" "application/edn"
+                                     "X-Penholder" PENHOLDER}
+                           :body (pr-str payload)
+                           :throw false
+                           :timeout store-timeout-ms})
+               (catch Exception e
+                 (throw (ex-info "pattern document retraction OUTCOME UNKNOWN -- the client timed out, the store may have applied it; re-query before retrying"
+                                 {:outcome :unknown
+                                  :document-count (count documents)
+                                  :document-ids (mapv :id documents)
+                                  :cause (.getMessage e)}))))
+        body (when (string? (:body resp))
+               (try (edn/read-string (:body resp))
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp)) (:ok body))
+      (assoc body :outcome :retracted)
+      (throw (ex-info "pattern document retraction refused by the store"
+                      {:outcome :refused
+                       :status (:status resp) :body body
+                       :document-count (count documents)})))))
+
+(defn retract-pattern-id!
+  "Retract one explicitly declared pattern id, its canonical clauses, and its owned
+   pattern/has-* relations in verified atomic batches. The canonical entity
+   IDs equal their names, so retract them directly and rely on the substrate's
+   indexed post-commit verification. Then drain UUID-backed legacy duplicates
+   with one type-scoped listing per pass. Legacy hyperedges minted duplicate
+   pattern entities, not clause entities, so only the pattern name needs this
+   discovery pass."
+  [pattern-id]
+  (let [entity-names (cons pattern-id
+                           (map #(str pattern-id "/" %) canonical-pattern-facets))
+        relations (->> (fetch-pattern-relations pattern-id)
+                       (filter #(str/starts-with?
+                                 (type-str (:relation/type %))
+                                 "pattern/has-"))
+                       (keep :relation/id)
+                       distinct)
+        canonical-documents (concat
+                             (map #(hash-map :table :entities :id %) entity-names)
+                             (map #(hash-map :table :relations :id %) relations))
+        canonical-result (retract-documents! canonical-documents)]
+    (loop [batch 1 total (:count canonical-result)]
+      (let [entity-ids (fetch-pattern-entity-ids [pattern-id]
+                                                 ["pattern/library"])]
+        (if (empty? entity-ids)
+          {:ok true :count total :batches batch :pattern-id pattern-id}
+          (do
+            (when (>= batch 4)
+              (throw (ex-info "pattern duplicates remain after retraction limit"
+                              {:pattern-id pattern-id
+                               :entity-ids entity-ids})))
+            (let [pattern-ids (->> entity-ids
+                                   (filter #(or (= pattern-id %)
+                                                (not (str/includes? % "/"))))
+                                   (cons pattern-id)
+                                   distinct)
+                  relations (->> pattern-ids
+                                 (mapcat fetch-pattern-relations)
+                                 (filter #(str/starts-with?
+                                           (type-str (:relation/type %))
+                                           "pattern/has-"))
+                                 (keep :relation/id)
+                                 distinct)
+                  documents (concat
+                             (map #(hash-map :table :entities :id %) entity-ids)
+                             (map #(hash-map :table :relations :id %) relations))
+                  result (retract-documents! documents)]
+              (recur (inc batch) (+ total (:count result))))))))))
+
+(defn retract-flexiarg!
+  "Backward-compatible single-pattern path entry point. New lifecycle code
+   consumes declaration manifests and calls retract-pattern-id! directly."
+  [path]
+  (let [pattern-id (or (flexiarg-pattern-id path)
+                       (throw (ex-info "not a library flexiarg path" {:path path})))]
+    (retract-pattern-id! pattern-id)))
+
+(defn retract-declaration-manifest!
+  "Retract exactly the explicitly declared pattern IDs in MANIFEST."
+  [manifest]
+  (reduce (fn [acc pattern-id]
+            (let [result (retract-pattern-id! pattern-id)]
+              (-> acc
+                  (update :patterns inc)
+                  (update :documents + (:count result 0))
+                  (update :results conj result))))
+          {:ok true :patterns 0 :documents 0 :results []}
+          manifest))
+
 (defn- prop-get [h k]
   (let [props (:hx/props h)
         ks (cond
@@ -431,7 +860,8 @@
    (let [query (cond-> (str FUTON1A "/api/alpha/hyperedges?type="
                             (java.net.URLEncoder/encode hx-type "UTF-8")
                             "&repo="
-                            (java.net.URLEncoder/encode label "UTF-8"))
+                            (java.net.URLEncoder/encode label "UTF-8")
+                            "&include-total=false")
                  source-file
                  (str "&source-file="
                       (java.net.URLEncoder/encode source-file "UTF-8")))
@@ -515,13 +945,15 @@
         ext (file-ext (str path))
         mission-doc? (boolean (re-find mission-doc-pattern norm))
         excursion-doc? (boolean (re-find excursion-doc-pattern norm))
+        campaign-doc? (boolean (re-find campaign-doc-pattern norm))
         sorry-registry? (file-ingest/sorry-registry-path? norm)]
     (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
          (not (re-find NOISE-PATTERN norm))
          (or sorry-registry?
              (not= ext "md")
              mission-doc?
-             excursion-doc?))))
+             excursion-doc?
+             campaign-doc?))))
 
 (defn- mark-subtask!
   [subtask]
@@ -539,12 +971,27 @@
   (let [norm (str/replace (str dir) "\\" "/")]
     (boolean (re-find NOISE-PATTERN (str norm "/")))))
 
+(defn- pruned-file-seq
+  "Depth-first file traversal that never enters ignored directory trees.
+
+  `watched?` still decides which files enter the snapshot; pruning here makes
+  the same exclusion structural at traversal time, so polling a repository
+  does not walk `.git`, virtualenv, `node_modules`, build-output, or cache
+  corpora merely to reject their descendants afterwards."
+  [root]
+  (tree-seq (fn [^java.io.File f]
+              (and (.isDirectory f)
+                   (not (noise-dir? (.getPath f)))))
+            (fn [^java.io.File dir]
+              (or (seq (.listFiles dir)) []))
+            (java.io.File. ^String root)))
+
 (defn file-fingerprint [^String path]
   (let [f (java.io.File. path)]
     {:mtime (.lastModified f) :size (.length f)}))
 
 (defn walk-root [root]
-  (->> (file-seq (java.io.File. ^String root))
+  (->> (pruned-file-seq root)
        (filter #(.isFile ^java.io.File %))
        (map #(.getPath ^java.io.File %))
        (filter watched?)
@@ -562,7 +1009,10 @@
 
 (defn enriched-snapshot [root]
   (->> (walk-root root)
-       (map (fn [[p meta]] [p (assoc meta :hash (sha-256 p))]))
+       (map (fn [[p meta]]
+              [p (cond-> (assoc meta :hash (sha-256 p))
+                   (pattern-source-file? p)
+                   (assoc :declaration-manifest (declaration-manifest p)))]))
        (into {})))
 
 (defn changed-fingerprint? [old-meta new-meta]
@@ -575,10 +1025,18 @@
     (reduce-kv
      (fn [acc path meta]
        (let [old-meta (get cache path)
-             hash (if (changed-fingerprint? old-meta meta)
+             changed? (changed-fingerprint? old-meta meta)
+             hash (if changed?
                     (sha-256 path)
-                    (or (:hash old-meta) (sha-256 path)))]
-         (assoc acc path (assoc meta :hash hash))))
+                    (or (:hash old-meta) (sha-256 path)))
+             manifest (when (pattern-source-file? path)
+                        (if changed?
+                          (declaration-manifest path)
+                          (or (:declaration-manifest old-meta)
+                              (declaration-manifest path))))]
+         (assoc acc path (cond-> (assoc meta :hash hash)
+                           (pattern-source-file? path)
+                           (assoc :declaration-manifest manifest)))))
      {}
      fingerprints)))
 
@@ -639,21 +1097,35 @@
 ;; ---------- heartbeat / event hyperedges ----------
 
 (defn heartbeat!
+  "Emit the per-root heartbeat hyperedge — ONLY for cycles that changed
+  something, under a STABLE per-root id.
+
+  2026-07-10 (E-futon1a-to-futon1b F10): the original emitted every cycle
+  (idle included) with cycle-n baked into the ENDPOINTS, so the server
+  derived a fresh hx/id each time — 5.09M watcher-event docs, 88.5% of all
+  hyperedges in the store. The README's intent is observability of the
+  pipeline's health, not an unbounded event log: liveness is the
+  process-watchdog's job (CYDER + status fields), so the substrate now
+  keeps the LATEST non-idle cycle state, one doc per root (stable
+  endpoints → stable server-derived id → replace, and the write path's
+  no-op guards skip unchanged re-posts)."
   [{:keys [root label run-id cycle-n files-seen files-changed
            n-deleted n-renamed n-added n-cross-root-moves]}]
-  (let [evidence-id (str root "/run-" run-id "/heartbeat-" cycle-n)]
-    (post-hyperedge!
-     "code/v05/watcher-event"
-     [evidence-id (str cycle-n)]
-     ["v05" "phase-4.5" label "heartbeat"]
-     {"repo" label "phase" 4.5 "run-id" run-id "cycle" cycle-n
-      "ts" (System/currentTimeMillis) "files-seen" files-seen
-      "files-changed" files-changed
-      "n-deleted" (or n-deleted 0)
-      "n-renamed" (or n-renamed 0)
-      "n-added" (or n-added 0)
-      "n-cross-root-moves" (or n-cross-root-moves 0)
-      "source" "heartbeat"})))
+  (let [activity (+ (or files-changed 0) (or n-deleted 0) (or n-renamed 0)
+                    (or n-added 0) (or n-cross-root-moves 0))]
+    (when (pos? activity)
+      (post-hyperedge!
+       "code/v05/watcher-event"
+       [(str root "/heartbeat") label]
+       ["v05" "phase-4.5" label "heartbeat"]
+       {"repo" label "phase" 4.5 "run-id" run-id "cycle" cycle-n
+        "ts" (System/currentTimeMillis) "files-seen" files-seen
+        "files-changed" files-changed
+        "n-deleted" (or n-deleted 0)
+        "n-renamed" (or n-renamed 0)
+        "n-added" (or n-added 0)
+        "n-cross-root-moves" (or n-cross-root-moves 0)
+        "source" "heartbeat"}))))
 
 (defn deletion-event!
   [{:keys [path root label run-id event-n hash]}]
@@ -694,48 +1166,95 @@
       "hash" hash "source" "cross-root-move"})
     (println (format "[cross-root-move] %s → %s" from to))))
 
+(defn- require-pattern-ingest!
+  [result context]
+  (when-not (and (= :pattern (:status result))
+                 (zero? (or (:failed result) 0)))
+    (throw (ex-info "pattern replacement ingest failed; prior declarations retained"
+                    (assoc context :ingest-result result))))
+  result)
+
+(defn reconcile-pattern-change!
+  "Ingest the complete replacement before retracting declarations dropped
+   from the prior manifest. Any ingest failure throws before cleanup."
+  [{:keys [path root label run-id event-n source prior-manifest current-manifest]}]
+  (let [result (ingest-event! {:path path :root root :label label
+                               :run-id run-id :event-n event-n :source source})]
+    (require-pattern-ingest! result {:path path})
+    (let [dropped (sort (clojure.set/difference (set prior-manifest)
+                                                 (set current-manifest)))
+          retracted (retract-declaration-manifest! dropped)]
+      {:ingest result :dropped dropped :retracted retracted})))
+
 (defn handle-deletion!
-  [{:keys [path root label run-id event-n hash]}]
-  (let [victims (source-file-vertices label path)
-        stale (mark-vertices-stale! victims "deletion"
-                                    {"edge/witness-stale-source-file" path
-                                     "edge/witness-stale-last-known-hash" hash})]
-    (deletion-event! {:path path :root root :label label
-                      :run-id run-id :event-n event-n :hash hash})
-    (println (format "[deletion-stale] %s vertices=%d failed=%d"
-                     path (:written stale) (:failed stale)))))
+  [{:keys [path root label run-id event-n hash prior-manifest]}]
+  (if (some? prior-manifest)
+    (let [retracted (retract-declaration-manifest! prior-manifest)]
+      (deletion-event! {:path path :root root :label label
+                        :run-id run-id :event-n event-n :hash hash})
+      (println (format "[deletion-pattern] %s patterns=%d documents=%d"
+                       path (:patterns retracted) (:documents retracted))))
+    (let [victims (source-file-vertices label path)
+          stale (mark-vertices-stale! victims "deletion"
+                                      {"edge/witness-stale-source-file" path
+                                       "edge/witness-stale-last-known-hash" hash})]
+      (deletion-event! {:path path :root root :label label
+                        :run-id run-id :event-n event-n :hash hash})
+      (println (format "[deletion-stale] %s vertices=%d failed=%d"
+                       path (:written stale) (:failed stale))))))
 
 (defn handle-rename!
-  [{:keys [from to root label run-id event-n hash]}]
-  (let [old-vertices (source-file-vertices label from)]
-    (ingest-event! {:path to :root root :label label
-                    :run-id run-id :event-n event-n
-                    :source "rename-ingest"})
-    (let [new-vertices (source-file-vertices label to)
-          survivor-eps (clojure.set/intersection
-                        (set (map primary-endpoint old-vertices))
-                        (set (map primary-endpoint new-vertices)))
-          stale-old (vec (remove #(survivor-eps (primary-endpoint %)) old-vertices))
-          stale (mark-vertices-stale! stale-old "rename"
-                                      {"edge/witness-stale-source-file" from
-                                       "edge/witness-stale-renamed-to" to
-                                       "edge/witness-stale-last-known-hash" hash})
-          pairs (deterministic-rename-pairs old-vertices new-vertices)
-          link-stats (reduce (fn [acc {:keys [from to]}]
-                               (let [ok? (:ok? (emit-renamed-link!
-                                                {:from from :to to :label label
-                                                 :from-path from :to-path to
-                                                 :hash hash}))]
-                                 (update acc (if ok? :written :failed) inc)))
-                             {:written 0 :failed 0}
-                             pairs)]
-      (rename-event! {:from from :to to :hash hash
-                      :root root :label label
-                      :run-id run-id :event-n event-n})
-      (println (format "[rename-cascade] %s → %s stale=%d stale-failed=%d links=%d link-failed=%d"
-                       from to
-                       (:written stale) (:failed stale)
-                       (:written link-stats) (:failed link-stats))))))
+  [{:keys [from to root label run-id event-n hash
+           prior-manifest current-manifest]}]
+  (if (some? prior-manifest)
+    (let [result (ingest-event! {:path to :root root :label label
+                                 :run-id run-id :event-n event-n
+                                 :source "rename-ingest"})]
+      (require-pattern-ingest! result {:from from :to to})
+      (let [old-only (sort (clojure.set/difference (set prior-manifest)
+                                                   (set current-manifest)))
+            new-only (sort (clojure.set/difference (set current-manifest)
+                                                   (set prior-manifest)))
+            attachments (if (and (= 1 (count old-only)) (= 1 (count new-only)))
+                          (repoint-pattern-attachments! (first old-only)
+                                                        (first new-only))
+                          {:ok true :count 0})
+            retracted (retract-declaration-manifest! old-only)]
+        (rename-event! {:from from :to to :hash hash
+                        :root root :label label
+                        :run-id run-id :event-n event-n})
+        (println (format "[rename-pattern] %s → %s attachments=%d patterns=%d documents=%d"
+                         from to (:count attachments) (:patterns retracted)
+                         (:documents retracted)))))
+    (let [old-vertices (source-file-vertices label from)]
+      (ingest-event! {:path to :root root :label label
+                      :run-id run-id :event-n event-n
+                      :source "rename-ingest"})
+      (let [new-vertices (source-file-vertices label to)
+            survivor-eps (clojure.set/intersection
+                          (set (map primary-endpoint old-vertices))
+                          (set (map primary-endpoint new-vertices)))
+            stale-old (vec (remove #(survivor-eps (primary-endpoint %)) old-vertices))
+            stale (mark-vertices-stale! stale-old "rename"
+                                        {"edge/witness-stale-source-file" from
+                                         "edge/witness-stale-renamed-to" to
+                                         "edge/witness-stale-last-known-hash" hash})
+            pairs (deterministic-rename-pairs old-vertices new-vertices)
+            link-stats (reduce (fn [acc {:keys [from to]}]
+                                 (let [ok? (:ok? (emit-renamed-link!
+                                                  {:from from :to to :label label
+                                                   :from-path from :to-path to
+                                                   :hash hash}))]
+                                   (update acc (if ok? :written :failed) inc)))
+                               {:written 0 :failed 0}
+                               pairs)]
+        (rename-event! {:from from :to to :hash hash
+                        :root root :label label
+                        :run-id run-id :event-n event-n})
+        (println (format "[rename-cascade] %s → %s stale=%d stale-failed=%d links=%d link-failed=%d"
+                         from to
+                         (:written stale) (:failed stale)
+                         (:written link-stats) (:failed link-stats)))))))
 
 (defn handle-cross-root-move!
   [{:keys [from to from-root to-root from-label to-label run-id event-n hash]}]
@@ -829,7 +1348,8 @@
      (fn [acc t]
        (let [resp (http-get-edn
                    (str FUTON1A "/api/alpha/hyperedges?type=" t
-                        "&repo=" repo-label))
+                        "&repo=" repo-label
+                        "&include-total=false"))
              edges (:hyperedges resp)]
          (reduce (fn [m e]
                    (let [src-file (some-> e :hx/props :source-file)
@@ -848,12 +1368,30 @@
   [{:keys [root label cycle-n]}]
   (mark-subtask! {:phase :commit-ingest :repo label :root root :cycle-n cycle-n})
   (try
-    (let [vars-by-file (query-repo-vars-by-file label)
-          file->vars (fn [path] (get vars-by-file path))
+    ;; D2.1 (2026-06-25): resolve a changed file's vars by PARSING the file
+    ;; locally (collect-file at repo-root), not by querying substrate-2. The old
+    ;; substrate-2 query (query-repo-vars-by-file) was doubly broken: it timed
+    ;; out on large types and returned {} (so new commits got no :edits), AND it
+    ;; keyed the map by absolute :source-file while `files-changed` yields
+    ;; repo-relative paths (so lookups never matched anyway). Local parse returns
+    ;; unprefixed var qnames, which ingest-edits-for-commit! then per-repo
+    ;; prefixes. For a just-committed file the working-tree content == the commit
+    ;; content; historical accuracy for old commits is the separate D3
+    ;; (valid-time versioning) concern. This subsumes D0.1's reason to exist —
+    ;; there is no longer a per-cycle substrate-2 fetch to defer.
+    ;; D3 slice 1 (2026-06-25): pass the FULL parsed structure (collect-file
+    ;; shape {:ns :vars}), not just var qnames — commit-ingest derives :edits
+    ;; var-resolution from it AND emits var vertices at the commit's valid-time
+    ;; for db-as-of time-travel. One parse per changed file.
+    (let [file->structure (fn [rel-path]
+                            (let [abs (str root "/" rel-path)]
+                              (when (.exists (io/file abs))
+                                (try (file-ingest/collect-file abs)
+                                     (catch Throwable _ nil)))))
           report (commit-ingest/ingest-new-commits!
                   {:repo-root root
                    :repo-label label
-                   :file->vars file->vars})]
+                   :file->structure file->structure})]
       (when (pos? (:n-ingested report))
         (println (format "[cycle %d] %s: ingested %d new commit(s); latest=%s%s"
                          cycle-n label
@@ -869,8 +1407,20 @@
 
 (declare stop-requested? status)
 
+(defn describe-cycle-error
+  "One line naming a cycle fault: message plus the ex-data keys that identify
+  the failing subject (root, command, exit). Stays a string so existing
+  consumers of :last-error keep working."
+  [^Throwable t]
+  (let [data (ex-data t)
+        named (select-keys data [:error/type :repo/root :args :exit])]
+    (if (seq named)
+      (str (.getMessage t) " " (pr-str named))
+      (.getMessage t))))
+
 (defn run-cycle!
-  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?]
+  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
+           inbox-zero-options]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -879,6 +1429,7 @@
         cross-root-tos (set (map :to cross-root-moves))]
     (doseq [{:keys [root label snapshot cache moves ingest-paths first-cycle?]} plans]
       (let [{:keys [renamed deleted added]} moves
+            cycle-ok? (atom true)
             ingest-paths (vec (remove cross-root-tos ingest-paths))
             deleted (vec (remove cross-root-froms deleted))
             cross-root-count (count (filter #(or (= root (:from-root %))
@@ -891,46 +1442,71 @@
             dispatch-paths (if (and first-cycle? (not cold-scan?))
                              []
                              ingest-paths)]
-        (when-not first-cycle?
-          (doseq [p dispatch-paths]
-            (enqueue-mission-maintenance! p)))
-        (when (seq dispatch-paths)
-          (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
-          (println (format "[cycle %d] %s: %d/%d files changed"
-                           n label (count dispatch-paths) (count snapshot)))
-          (doseq [p dispatch-paths]
-            (mark-subtask! {:phase :file-ingest :repo label :path p})
+        ;; D0.2 (2026-06-25): isolate per-root file-ingest + heartbeat in a try
+        ;; so a futon1a "request timed out" here can't abort the cycle BEFORE
+        ;; commit-ingest — which had silently starved commit-ingest (cursors
+        ;; froze; D7a caught it). commit-ingest now ALWAYS runs per root.
+        (try
+          (when-not first-cycle?
+            (doseq [p dispatch-paths]
+              (enqueue-mission-maintenance! p)))
+          (when (seq dispatch-paths)
+            (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
+            (println (format "[cycle %d] %s: %d/%d files changed"
+                             n label (count dispatch-paths) (count snapshot)))
+            (doseq [p dispatch-paths]
+              (mark-subtask! {:phase :file-ingest :repo label :path p})
+              (let [ev-n (swap! event-n inc)
+                    source (if (and first-cycle? cold-scan?)
+                             "cold-scan"
+                             "fs-watch")
+                    current-manifest (get-in snapshot [p :declaration-manifest])]
+                (if (some? current-manifest)
+                  (reconcile-pattern-change!
+                   {:path p :root root :label label :run-id run-id
+                    :event-n ev-n :source source
+                    :prior-manifest (or (get-in cache [p :declaration-manifest]) [])
+                    :current-manifest current-manifest})
+                  (ingest-event! {:path p :root root :label label
+                                  :run-id run-id :event-n ev-n
+                                  :source source})))))
+          (doseq [p deleted]
+            (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
-              (ingest-event! {:path p :root root :label label
-                              :run-id run-id :event-n ev-n
-                              :source (if (and first-cycle? cold-scan?)
-                                        "cold-scan"
-                                        "fs-watch")}))))
-        (doseq [p deleted]
-          (mark-subtask! {:phase :deletion :repo label :path p})
-          (let [ev-n (swap! event-n inc)]
-            (handle-deletion! {:path p :root root :label label
+              (handle-deletion! {:path p :root root :label label
+                                 :run-id run-id :event-n ev-n
+                                 :hash (get-in cache [p :hash])
+                                 :prior-manifest
+                                 (get-in cache [p :declaration-manifest])})))
+          (doseq [{:keys [from to hash]} renamed]
+            (mark-subtask! {:phase :rename :repo label :from from :to to})
+            (let [ev-n (swap! event-n inc)]
+              (handle-rename! {:from from :to to :hash hash
+                               :root root :label label
                                :run-id run-id :event-n ev-n
-                               :hash (get-in cache [p :hash])})))
-        (doseq [{:keys [from to hash]} renamed]
-          (mark-subtask! {:phase :rename :repo label :from from :to to})
-          (let [ev-n (swap! event-n inc)]
-            (handle-rename! {:from from :to to :hash hash
-                             :root root :label label
-                             :run-id run-id :event-n ev-n})))
-        (when-not (stop-requested?)
-          (heartbeat! {:root root :label label :run-id run-id
-                       :cycle-n n
-                       :files-seen (count snapshot)
-                       :files-changed (count ingest-paths)
-                       :n-deleted (count deleted)
-                       :n-renamed (count renamed)
-                       :n-added (count added)
-                       :n-cross-root-moves cross-root-count}))
+                               :prior-manifest
+                               (get-in cache [from :declaration-manifest])
+                               :current-manifest
+                               (get-in snapshot [to :declaration-manifest])})))
+          (when-not (stop-requested?)
+            (heartbeat! {:root root :label label :run-id run-id
+                         :cycle-n n
+                         :files-seen (count snapshot)
+                         :files-changed (count ingest-paths)
+                         :n-deleted (count deleted)
+                         :n-renamed (count renamed)
+                         :n-added (count added)
+                         :n-cross-root-moves cross-root-count}))
+          (catch Throwable t
+            (reset! cycle-ok? false)
+            (binding [*out* *err*]
+              (println (format "[cycle %d] %s: file-ingest/heartbeat error (commit-ingest still runs): %s"
+                               n label (.getMessage t))))))
         (when (and commit-ingest? (not (stop-requested?)))
           (ingest-new-commits-for-root!
            {:root root :label label :cycle-n n}))
-        (swap! per-root-cache assoc root snapshot)))
+        (when @cycle-ok?
+          (swap! per-root-cache assoc root snapshot))))
     (doseq [{:keys [from to from-root to-root from-label to-label hash]} cross-root-moves]
       (mark-subtask! {:phase :cross-root-move
                       :from-repo from-label
@@ -942,6 +1518,41 @@
                                   :from-root from-root :to-root to-root
                                   :from-label from-label :to-label to-label
                                   :run-id run-id :event-n ev-n :hash hash})))
+    ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
+    ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
+    ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
+    ;; freshness probe error never breaks the ingest loop.
+    (when (and (pos? n) (zero? (mod n 60)) (not (stop-requested?)))
+      (try
+        (let [o (freshness/check+notify! roots commit-ingest?)]
+          (swap! !state (fn [s] (if (map? s) (assoc s :freshness o) s))))
+        (catch Throwable t
+          (binding [*out* *err*]
+            (println "[multi.freshness] check threw:" (.getMessage t))))))
+    (when inbox-zero-options
+      (mark-subtask! {:phase :inbox-zero :cycle-n n})
+      (let [{:keys [state projection] :as result}
+            (inbox-zero/run-cycle!
+             (assoc inbox-zero-options :roots roots :now (Date.)))
+            deliveries (when-let [url (:followup-url inbox-zero-options)]
+                         (inbox-zero/send-eligible-followups!
+                          {:url url :store state :projection projection :now (Date.)}))
+            readiness {:enabled? true
+                       :ready? true
+                       :state-path (:state-path inbox-zero-options)
+                       :witness-path (:witness-path inbox-zero-options)
+                       :followup-url (:followup-url inbox-zero-options)
+                       :observations-written (:observations-written result)
+                       :dirty-set-count (count (:dirty-sets projection))
+                       :ambiguous-count (count (:ambiguous projection))
+                       :unattributed-count (count (:unattributed projection))
+                       :delivery-count (count deliveries)
+                       ;; Roots skipped this cycle, with reasons — a skipped
+                       ;; root is loud status, never silent absence.
+                       :skipped-root-count (count (:skipped-roots result))
+                       :skipped-roots (vec (:skipped-roots result))
+                       :last-cycle-at (str (Instant/now))}]
+        (swap! !state #(if (map? %) (assoc % :inbox-zero readiness) %))))
     (mark-subtask! {:phase :idle :cycle-n n})))
 
 ;; ---------- service ----------
@@ -962,6 +1573,29 @@
                   :last-subtask <map|nil>
                   :stopping? <boolean>}"}
   !state (atom nil))
+
+(defn- acquire-inbox-zero-writer!
+  [state-path]
+  (let [lock-path (Paths/get (str state-path ".writer.lock") (make-array String 0))
+        parent (.getParent lock-path)
+        attrs (make-array FileAttribute 0)]
+    (when parent (Files/createDirectories parent attrs))
+    (let [channel (FileChannel/open lock-path
+                                    (into-array StandardOpenOption
+                                                [StandardOpenOption/CREATE
+                                                 StandardOpenOption/WRITE]))
+          lock (try (.tryLock channel)
+                    (catch OverlappingFileLockException _ nil))]
+      (when-not lock
+        (.close channel)
+        (throw (ex-info "Inbox-zero state already has a writer"
+                        {:error/type :inbox-zero/writer-already-active
+                         :state-path state-path})))
+      {:channel channel :lock lock :path (str lock-path)})))
+
+(defn- release-inbox-zero-writer! [{:keys [lock channel]}]
+  (when lock (.release lock))
+  (when channel (.close channel)))
 
 (defn stop-requested?
   "Return non-nil when the watcher should stop before more per-root work."
@@ -998,12 +1632,15 @@
                  (if (map? s)
                    (assoc s
                           :last-cycle-finished-at (Instant/now)
-                          :last-error (.getMessage t)
+                          ;; Keep the ex-data keys that name the fault: a bare
+                          ;; message ("Git command failed") cost a by-hand
+                          ;; reproduction to find WHICH root (2026-08-24).
+                          :last-error (describe-cycle-error t)
                           :last-subtask {:phase :cycle-error})
                    s)))
         (cyder/touch! "multi-watcher")
         (binding [*out* *err*]
-          (println "[multi.run-cycle!] uncaught:" (.getMessage t)))))))
+          (println "[multi.run-cycle!] uncaught:" (describe-cycle-error t)))))))
 
 (defn start!
   "Start the watcher loop with the given options. Idempotent — if
@@ -1019,15 +1656,24 @@
      :commit-ingest? — run the per-cycle commit-vertex catch-up
                        (default true). Set false when live file-event
                        ingestion is wanted without the slower commit sidecar.
+     :inbox-zero-options — optional {:state-path :witness-path :followup-url}.
+                          Acquires an exclusive writer lease for state-path.
 
    Returns the same shape as `status`."
-  [{:keys [roots interval-ms cold-scan? commit-ingest?]
+  [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options]
     :or {interval-ms 5000 cold-scan? false commit-ingest? true}}]
   (when-let [s @!state]
     (when (:executor s)
       (throw (ex-info "watcher already running; call stop! first or use status"
                       {:running true}))))
-  (let [run-id (System/currentTimeMillis)
+  (when (and inbox-zero-options
+             (not (and (string? (:state-path inbox-zero-options))
+                       (not (str/blank? (:state-path inbox-zero-options))))))
+    (throw (ex-info "Inbox-zero state path is required when enabled"
+                    {:error/type :inbox-zero/state-path-required})))
+  (let [writer (when inbox-zero-options
+                 (acquire-inbox-zero-writer! (:state-path inbox-zero-options)))
+        run-id (System/currentTimeMillis)
         event-n (atom 0)
         cycle-n (atom 0)
         per-root-cache (atom (zipmap (map :path roots) (repeat {})))
@@ -1045,9 +1691,9 @@
                      :event-n event-n
                      :cycle-n cycle-n
                      :cold-scan? cold-scan?
-                     :commit-ingest? commit-ingest?}
+                     :commit-ingest? commit-ingest?
+                     :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
-    (.scheduleWithFixedDelay executor task 0 interval-ms TimeUnit/MILLISECONDS)
     (reset! !state {:executor executor
                     :run-id run-id
                     :event-n event-n
@@ -1057,12 +1703,23 @@
                     :interval-ms interval-ms
                     :cold-scan? cold-scan?
                     :commit-ingest? commit-ingest?
+                    :inbox-zero-options inbox-zero-options
+                    :inbox-zero-writer writer
+                    :inbox-zero (if inbox-zero-options
+                                  {:enabled? true :ready? false
+                                   :state-path (:state-path inbox-zero-options)
+                                   :writer-lock (:path writer)}
+                                  {:enabled? false :ready? false})
                     :last-cycle-started-at nil
                     :last-cycle-finished-at nil
                     :last-progress-at nil
                     :last-error nil
                     :last-subtask {:phase :boot}
                     :stopping? false})
+    ;; Publish the complete ownership/status state before the zero-delay task
+    ;; can observe it; otherwise the first cycle can be skipped or its ready
+    ;; projection overwritten by the boot reset.
+    (.scheduleWithFixedDelay executor task 0 interval-ms TimeUnit/MILLISECONDS)
     (println (format "[futon3c.watcher.multi] started run-id=%d roots=%d interval-ms=%d"
                      run-id (count roots) interval-ms))
     (doseq [{:keys [path label]} roots]
@@ -1078,6 +1735,7 @@
     (when-let [^ScheduledExecutorService ex (:executor s)]
       (.shutdownNow ex)
       (.awaitTermination ex 2 TimeUnit/SECONDS))
+    (release-inbox-zero-writer! (:inbox-zero-writer s))
     (stop-mission-maintenance-drainer!)
     (reset! !state nil)
     (println "[futon3c.watcher.multi] stopped"))
@@ -1088,7 +1746,7 @@
   [_]
   (when-let [s @!state]
     (-> s
-        (dissoc :executor :event-n :cycle-n :per-root-cache)
+        (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1109,5 +1767,8 @@
                  :per-root-cache (:per-root-cache s)
                  :run-id (:run-id s)
                  :event-n (:event-n s)
-                 :cycle-n (:cycle-n s)})
+                 :cycle-n (:cycle-n s)
+                 :cold-scan? (:cold-scan? s)
+                 :commit-ingest? (:commit-ingest? s)
+                 :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))

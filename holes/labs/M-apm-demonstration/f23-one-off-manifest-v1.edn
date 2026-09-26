@@ -1,0 +1,31 @@
+{:manifest/version 2
+ :manifest/scope :one-off
+ :manifest/id "0b272803df2088dc4af604ef59265839a475fbe5d82f3cdc09913448be096ef6"
+ :campaign/id "apm-f23-one-off-v1"
+ :block/id "f23-one-off-v1"
+ :apparatus
+ {:pin/id "42e7eff8401503edb85dc6430124ae0c9d74596859352f4effe745143a0dc91a"
+  :repository "/home/joe/code/futon3c-apm-control"
+  :branch "frame/18-control"
+  :revision "91e3ace1abe27c4dfcd77e135095cb9c1641fdd4"
+  :artifacts
+  {:cycle-contract {:path "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn" :blob "5c8538be1cf5376ab85b437be146954393eddcbf"}
+   :solver {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md" :blob "1a886998bfc1d77b97a468a2122e0052160cd668"}
+   :student {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md" :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.1.md" :blob "75fda67f122a4f6e0346ca507caf62df19abc0cd"}
+   :scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md" :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md" :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :promotion-proctor {:path "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v1.md" :blob "1a2098d34600e94de9681f2bc4d288b5339e2e54"}
+   :analyst {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md" :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
+ :units
+ [{:frame/id "f23" :ordinal 1 :arm :treatment :problem/id "a96A08"
+   :classification/value :non-topology
+   :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: evaluation and integrability of an improper sine integral."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "42e7eff8401503edb85dc6430124ae0c9d74596859352f4effe745143a0dc91a"
+   :problem {:repository "/home/joe/code/apm-lean"
+             :branch "exp/countdown-f23-a96A08-solver"
+             :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+             :path "problems/a96A08/lean/Main.lean"
+             :blob "bc3709e5f72f4861ac181425bae1c156a3226a27"}}]}

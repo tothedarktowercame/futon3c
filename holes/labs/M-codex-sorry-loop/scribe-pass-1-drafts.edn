@@ -1,0 +1,296 @@
+[{:name "derive-integrable-from-nonzero-bochner-integral"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "A scalar kernel theorem assumes `∫ x, g x ∂volume = 1` but does not separately assume `Integrable g volume`."
+   :proof-shape
+   ["Assume `¬ Integrable g volume`."
+    "Use `integral_undef` to obtain `∫ x, g x ∂volume = 0`."
+    "Contradict the given equality to 1, here with `linarith`."]
+   :lean-sketch
+   "have hg_integrable : Integrable g volume := by\n  by_contra h\n  have hg_zero : ∫ x, g x ∂volume = 0 := integral_undef h\n  linarith [hg_int, hg_zero]"
+   :boundary
+   "This uses the Bochner integral's zero value for a nonintegrable function. It derives integrability only when the assumed integral is provably nonzero."
+   :observed-use
+   "`convolution_L2_contraction_of_probability_kernel` in `YoungL2.lean`."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-lemma, :id "integral_undef"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]
+   :artifacts ["YoungL2.lean:convolution_L2_contraction_of_probability_kernel"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prove-eLpNorm-translation-through-the-underlying-lintegral"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Show that translating a real-domain function by a fixed amount preserves its `ℒ²` seminorm."
+   :statement
+   "eLpNorm (fun x => f (x - y)) 2 volume = eLpNorm f 2 volume"
+   :proof-shape
+   ["Rewrite both sides with `eLpNorm_eq_lintegral_rpow_enorm_toReal` at exponent 2."
+    "Use `congr 1` to remove the common outer `rpow` layer."
+    "Rewrite subtraction as addition by `-y`."
+    "Apply `lintegral_add_right_eq_self (μ := volume)` to the underlying integrand."]
+   :boundary
+   "The committed lemma is for translations on `ℝ` with Lebesgue volume. General locally compact groups require the corresponding invariant-measure hypotheses."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-lemma, :id "lintegral_add_right_eq_self"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]
+   :artifacts ["YoungL2.lean:eLpNorm_two_sub_right"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "reduce-probability-kernel-L2-contraction-to-young"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Derive an `L²` contraction for a nonnegative probability kernel once the `L¹ * L²` Young inequality is available."
+   :proof-shape
+   ["Derive `Integrable g volume` from the nonzero integral using `integral_undef`."
+    "Prove the explicit normalization `∫ x, |g x| ∂volume = 1` using pointwise nonnegativity."
+    "Instantiate `young_convolution_inequality_L2` with scalar codomain."
+    "Finish by simplifying scalar action to multiplication and the kernel norm factor to 1."]
+   :soundness-boundary
+   "At commit 8208ca7 this corollary compiles but is conditional on the still-sorried `young_convolution_inequality_L2`; the local sorry count reduction is not an axiom-clean proof."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-declaration,
+         :id "YoungL2.lean/convolution_L2_contraction_of_probability_kernel"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]
+   :artifacts
+   ["YoungL2.lean:young_convolution_inequality_L2"
+    "YoungL2.lean:convolution_L2_contraction_of_probability_kernel"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "specify-invariant-measure-when-lintegral-translation-stalls"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "Applying `lintegral_add_right_eq_self` in a translation-invariance proof leaves the invariant measure metavariable unresolved."}
+   :before
+   "`lintegral_add_right_eq_self (fun x => ‖f x‖ₑ ^ (2 : ℝ≥0∞).toReal) (-y)`"
+   :after
+   "`lintegral_add_right_eq_self (μ := volume) (fun x => ‖f x‖ₑ ^ (2 : ℝ≥0∞).toReal) (-y)`"
+   :rule
+   "When several invariant measures could elaborate, supply the intended measure explicitly rather than changing the theorem or adding casts."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-lemma, :id "lintegral_add_right_eq_self"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "descend-through-eLpNorm-rpow-before-lintegral-rewrite"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "After expanding an `eLpNorm`, the desired translation lemma concerns the inner `lintegral`, while the goal still has a common outer `rpow`."}
+   :before
+   "Attempt to apply `lintegral_add_right_eq_self` directly to the expanded `eLpNorm` equality."
+   :after
+   "Run `congr 1` first, then apply `lintegral_add_right_eq_self` to the exposed integral."
+   :rule
+   "Remove a syntactically identical outer constructor before rewriting the inner measure expression."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-tactic, :id "congr"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "state-the-absolute-integral-normalization-explicitly"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A nonnegative probability-kernel hypothesis gives `∫ g = 1`, while the Young bound's normalized goal contains `∫ |g|` or `∫ ‖g‖`."}
+   :before
+   "Ask broad simplification to rewrite the kernel factor directly from `hg_int`."
+   :after
+   "First prove `have hg_abs : ∫ x, |g x| ∂volume = 1 := by simpa [abs_of_nonneg (hg_nonneg _)] using hg_int`, then simplify the Young bound with `hg_abs`."
+   :rule
+   "Bridge the normalized expression explicitly when simplification has changed a real norm to absolute value."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :lean-concept, :id "real-norm-absolute-value"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "probe-the-high-risk-integral-assembly-before-polishing-young-leaves"
+  :lane :trajectory-lane
+  :level :process
+  :status :draft
+  :body
+  {:trigger
+   "A construction target has several tractable invariance/integrability leaves but may depend on a missing theorem that assembles a parameterized Bochner integral in `Lᵖ`."
+   :observed-trajectory
+   ["Verify recalled lemma names against the installed Mathlib revision."
+    "Probe the high-risk assembly before attempting to finish every leaf."
+    "After finding finite-sum Minkowski and Hölder but no Bochner-integral `eLpNorm` bridge, stop broad library reconnaissance."
+    "Checkpoint the compiling partial: one unconditional translation leaf and one corollary conditional on the remaining main theorem."]
+   :abandoned
+   "The runner abandoned completing the main Young assembly in this session after naming the exact missing integral-Minkowski frontier."
+   :cost-observation
+   "The harvested turn records 72 tool digests and is truncated at the 16KB body cap; it supports that reconnaissance was substantial, but not a reliable wall-clock decomposition by subtask."
+   :memory-use
+   [{:id "e-9751e537-f5b7-4c40-a857-0c0b699b93a2"
+     :runner-report
+     "Prompted early probing of the high-risk integral assembly and an early compiling checkpoint."}
+    {:id "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+     :runner-report
+     "Kept API reconnaissance bounded once the integral-Minkowski gap was confirmed."}
+    {:id "e-bb16ffa8-e6da-4956-81c3-011e312d5302"
+     :runner-report
+     "Correctly identified Fubini/integrability assembly as the frontier and led to the translation-invariance leaf."}]
+   :capture-kind :runner-narrated
+   :inference
+   "The reusable process rule is inferred from this single narrated trajectory; the specific memory-use effects are the runner's own report, not scribe reconstruction."}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :process-pattern, :id "bounded-high-risk-assembly-probe"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "integral-minkowski-eLpNorm-bochner"
+  :lane :frontier-lane
+  :level :frontier
+  :status :session-in-flight
+  :anchor :literature
+  :demand 2
+  :body
+  {:frontier/kind :missing-library-bridge
+  :statement
+  "eLpNorm (fun x => ∫ y, h y x ∂ν) 2 μ ≤ ∫⁻ y, eLpNorm (h y) 2 μ ∂ν"
+  :hypothesis-envelope
+  {:status :to-be-made-exact
+   :runner-listed
+   ["suitable joint measurability"
+    "Bochner integrability"
+    "σ-finiteness"
+    "completeness hypotheses"]}
+  :literature
+  {:author "Schep"
+   :url "https://people.math.sc.edu/schep/minkowski-corrected.pdf"
+   :proof-scaffold ["duality" "Fubini–Tonelli" "Hölder"]
+   :source :ground-control-packet}
+  :unblocks
+  [#:ref{:type :lean-declaration,
+         :id "YoungL2.lean/young_convolution_inequality_L2"}
+   #:ref{:type :apm-problem, :id "a96A04/heatConv_L2_le"}]
+  :instantiation
+  {:kernel "h y x = g y • f (x - y)"
+   :leaves
+   ["`eLpNorm_const_smul`"
+    "`eLpNorm_two_sub_right` from commit 8208ca7"]
+   :claimed-effect
+   "The runner states that these leaves turn the integral-Minkowski inequality into the required Young bound."}
+  :concurrent-session
+  {:stage :S6
+   :runner "codex-6"
+   :outcome :unknown-at-draft-time
+   :note
+   "This draft records frontier history even if the concurrent session closes it."}}
+  :proposed-edges
+  [{:edge/type :frontier/blocks
+    :from #:ref{:type :frontier-draft,
+                :id "integral-minkowski-eLpNorm-bochner"}
+    :to #:ref{:type :lean-declaration,
+              :id "YoungL2.lean/young_convolution_inequality_L2"}
+    :status :proposed}
+   {:edge/type :frontier/blocks
+    :from #:ref{:type :frontier-draft,
+                :id "integral-minkowski-eLpNorm-bochner"}
+    :to #:ref{:type :apm-problem, :id "a96A04/heatConv_L2_le"}
+    :status :proposed}
+   {:edge/type :memory/pattern-attachment
+    :from #:ref{:type :memory-draft,
+                :id "integral-minkowski-eLpNorm-bochner"}
+    :to #:ref{:type :pattern, :id "math/missing-dependency-protocol"}
+    :attachment-status :proposed}
+   {:edge/type :memory/pattern-attachment
+    :from #:ref{:type :memory-draft,
+                :id "probe-the-high-risk-integral-assembly-before-polishing-young-leaves"}
+   :to #:ref{:type :pattern, :id "math/missing-dependency-protocol"}
+    :attachment-status :proposed}
+   {:edge/type :memory/refines
+    :from #:ref{:type :memory-draft,
+                :id "integral-minkowski-eLpNorm-bochner"}
+    :to #:ref{:type :memory,
+              :id "e-dfea2de9-8979-4f8f-9343-caabb48487e6"}
+    :status :proposed
+    :scope
+    "Refines the general stop-search rule with the exact missing bridge, demand, and literature scaffold."}]
+  :supersession-note
+  "No supersession is proposed: e-dfea2de9's bounded-search rule remains valid; this frontier record narrows and advances its Young instance."
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :mathlib-gap, :id "integral-minkowski-eLpNorm-bochner"}
+   #:ref{:type :apm-problem, :id "a96A04"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t007"]
+   :commits ["8208ca737a939b427953e48675dc2ab01fde3dc9"]
+   :problems ["young-convolution-L1-L2" "a96A04"]
+   :ledger ["holes/labs/M-codex-sorry-loop/pilot-1-ledger.edn"]
+   :census-rows
+   ["sorry-0051" "sorry-0052" "sorry-0222" "sorry-0242"
+    "sorry-0263" "sorry-0266" "sorry-0301" "sorry-0313"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}]

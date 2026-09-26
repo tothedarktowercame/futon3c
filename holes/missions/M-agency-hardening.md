@@ -1,7 +1,13 @@
 # M-agency-hardening -- Conference-ready IRC-backed Agency
 
 Date: 2026-06-07
-Status: CLOSED 2026-06-12 (Joe's call). Core delivered + durable: auto-bellback +
+Status: CLOSED 2026-06-12 (Joe's call) — **but see
+`holes/excursions/E-unsolicited-pouch-turns.md` (2026-08-03): a turn source the
+D1–D5 invariants do not quantify over (the agent's own background-task
+completions) reproduces the operator-visible defect this mission closed on.
+Joe flagged it for revisiting; the closure record below is left intact, and
+whether to formally reopen is his call.**
+Core delivered + durable: auto-bellback +
 mesh-edge coverage + mesh-QA + MQ-7, all reviewed/integrated/live; the durable
 per-agent FIFO turn-queue (`FUTON3C_DURABLE_QUEUE`, drainer-v2) landed on master and
 activated; crossed-bell locus (session-id resolution) verified from source. Final
@@ -81,6 +87,13 @@ unproven numbers or workflow claims with evidence-backed ones.
   the bell's surface contract, so the conversation thread is visible to the agents.
   Server-side sibling: `E-per-turn-isolation.md` (overlapping-turn sink/session
   isolation — the same crossing one layer down).
+- **`holes/excursions/E-unsolicited-pouch-turns.md`** (2026-08-03) — the warm pouch emits
+  `result` events for turns **no `feed-turn!` solicited** (background-task completions
+  re-invoke the agent), so each one shifts the operator's REPL one reply behind.
+  `drain-pending!`'s premise — "the process is idle between turns" — measured false 2:1 on
+  claude-11. Proposes **D6 (single-reader / result accounting)** as the missing dual of D3,
+  and notes the D1 gate is unrunnable as instrumented (`msg-id` empty on all 3057
+  `[invoke-trace]` lines).
 - **`holes/missions/M-typed-bells.md`** (was `E-typed-bells.md`, promoted to a mission
   2026-06-11) — the child of E-crossed-bells: the bell router recovered the conversation
   *graph*; typing the bells recovers its *illocutionary semantics* (ask/answer/challenge/…)
@@ -418,3 +431,39 @@ fires (a deeper-signal hook if it fires every turn).
 warm pouches). Re-probe `MANGO-CHARLIE-3` / `MANGO-DELTA-9` → each returned its own token.
 The first post-fix turn drained the pending stale result and **resynced fable-1 without
 eviction** (kept its warm session). clj-kondo: 0 errors, 0 warnings.
+
+## Display-desync instance, 2026-08-03 — narrowed (claude-12)
+
+claude-10 reported an operator-surface line reading
+`⟲ zai-1 invoking (bell from http-caller): [run_shell … a96A05 …]` persisting
+6+ hours after that session ended, while a different job ran. Their evidence
+(ledger `done`, commit `2a97f8e`, no a96A05 process, roster showing one running
+job) is sound. The **inference to API staleness is not** — I checked
+`/api/alpha/agents` directly:
+
+    invoke-started-at    2026-08-03T13:57:58Z   ← current job, correct
+    invoke-prompt-preview "… From: claude-10 To: zai-1 … Edge: invoke-…936-…"
+                                                ← current job, correct
+    running-jobs 1, nonterminal-jobs 1          ← correct
+
+**The endpoint is serving the current job accurately.** So the stale
+`http-caller`/`a96A05`/`run_shell` line is not coming from these fields. If the
+operator surface renders from this endpoint, the staleness is in the **display
+layer** — a last-rendered line not cleared on job change. If it renders from a
+WS feed, that feed is the suspect. I cannot see the Emacs buffer, so I am not
+claiming which; the point is that the fix is **not** in `/api/alpha/agents`, and
+an evidence entry saying "API serves stale attribution" would send the next
+person to the wrong file.
+
+**A separate, confirmed API-side bug found while checking:**
+
+    last-active        2026-08-03T12:31:45Z
+    invoke-started-at  2026-08-03T13:57:58Z
+
+`last-active` is ~1.5h behind a *currently running* invocation — it does not
+tick while a job runs. That is real, it is server-side, and it is why
+`last-active` cannot be used as a liveness signal (I hit this earlier today
+diagnosing codex-3's overrun, where `last-active` predated the job's own start
+time). Smaller than the reported bug and in a different place.
+
+Two findings, two owners. Worth separating before either is scheduled.

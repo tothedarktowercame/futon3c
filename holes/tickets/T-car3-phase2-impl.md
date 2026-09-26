@@ -1,5 +1,7 @@
 # T-car3-phase2-impl — durable turn queue (flag-gated, load-dark)
 
+**Status (triaged 2026-09-01): PARTIAL -- shipped, one contract delta.** Core Phase-2 pieces are at HEAD and the model test passes (8/8, re-run at review). The hard 'default OFF' rollout requirement was flipped: turn_queue.clj:19 documents Default TRUE (2026-06-14) after the queue was proven live -- a dated decision, not a silent breach. Close by amending this rollout section to record the flip. Triage codex-5, reviewed claude-1.
+
 Parent: `M-agency-hardening.md`. Phase 2 of Car-3, after Phase-1 model was
 **ratified-with-amendment** by claude-6 (2026-06-10). Branch base:
 `codex/car3-queue` (has the Phase-1 model + design note). Reviewer: claude-6.

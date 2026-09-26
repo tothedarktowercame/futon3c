@@ -27,9 +27,11 @@
             [futon3c.watcher.projections.elisp :as elisp]
             [futon3c.watcher.projections.python :as python]
             [futon3c.watcher.projections.flexiarg :as flexiarg]
-            [futon3c.watcher.projections.essay :as essay]))
+            [futon3c.watcher.projections.essay :as essay]
+            [futon3c.watcher.scope-reingest :as scope-reingest]))
 
-(def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
+                   (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def FUTON3C   (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
 (def ^:private home (System/getProperty "user.home"))
@@ -39,6 +41,9 @@
 
 (def ^:private excursion-doc-pattern
   #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
+
+(def ^:private campaign-doc-pattern
+  #"/holes/(?:campaigns/)?C-[^/]+\.md$")
 
 (def ^:private sorry-registry-pattern
   ;; R-A.1 (M-war-machine-first-outing): sorrys.edn relocated data/ → resources/
@@ -66,13 +71,105 @@
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
     endpoints))
 
-(defn post-hyperedge!
-  [hx-type endpoints labels & [props]]
-  (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
+(def ^:dynamic *valid-time-ms*
+  "When bound to an epoch-millis value, every hyperedge write in dynamic scope
+   stamps its put/retract with that XTDB valid-time (M-populate-substrate-2 D3).
+   The historical replay (futon3c.watcher.replay) binds this to each commit's
+   timestamp so structure time-travels under db-as-of. nil (default) writes at
+   current time — preserving the live forward path's behaviour. Mirrors the
+   reviewed slice-1 pattern in futon3c.watcher.commit-ingest."
+  nil)
+
+(defonce !futon1b-url
+  ;; When non-nil (e.g. "http://localhost:7073"), every hyperedge write is
+  ;; ALSO posted (EDN) to the futon1b XTDB2 server — the dual-write leg of
+  ;; the reindex-not-port migration (E-futon1a-to-futon1b, 2026-07-10).
+  ;; futon1a stays primary: futon1b failures are logged, never fatal.
+  ;; Enable live via Drawbridge:
+  ;;   (reset! futon3c.watcher.file-ingest/!futon1b-url "http://localhost:7073")
+  (atom (System/getenv "FUTON1B_URL")))
+
+(defn- self-dual-write?
+  "True when the primary substrate URL already IS the futon1b server —
+  post-cutover the hook would double-post every hyperedge to the same
+  store (second copy penholder-less -> 403 noise; observed live
+  2026-07-11). Dual-write only makes sense when the targets differ."
+  [base]
+  (letfn [(norm [u] (some-> u str (clojure.string/replace #"/+$" "")
+                            (clojure.string/replace "localhost" "127.0.0.1")))]
+    (= (norm base) (norm FUTON1A))))
+
+(defn post-futon1b!
+  "Secondary EDN write to the futon1b server. No-op unless !futon1b-url is
+  set AND it differs from the primary (self-dual-write guard). Valid-time
+  replays stay primary-only (futon1b v1 has no valid-time support).
+  Never throws."
+  [{:keys [id hx-type endpoints labels props op]}]
+  (when-let [base @!futon1b-url]
+    (when-not (or *valid-time-ms* (self-dual-write? base))
+      (try
+        (let [payload (cond-> {:hx/type hx-type :hx/endpoints endpoints}
+                        id (assoc :hx/id id)
+                        (seq labels) (assoc :hx/labels labels)
+                        props (assoc :hx/props props)
+                        op (assoc :hx/op op))
+              resp (http/post (str base "/api/alpha/hyperedge")
+                              {:headers {"Content-Type" "application/edn"
+                                         "X-Penholder" PENHOLDER}
+                               :body (pr-str payload)
+                               :throw false})]
+          (when (not= 200 (:status resp))
+            (println "[futon1b dual-write] non-200:" (:status resp)
+                     (subs (str (:body resp)) 0 (min 200 (count (str (:body resp))))))))
+        (catch Exception e
+          (println "[futon1b dual-write] failed:" (.getMessage e)))))))
+
+(def ^:private !last-posted
+  "Client-side no-op guard (2026-07-10, E-futon1a-to-futon1b F9): the watcher
+   used to re-POST unchanged hyperedges every pass (sampled live: 63 versions,
+   2 distinct contents on one code/v05/contains doc). Map of hx-key → hash of
+   the last successfully-posted payload; an identical re-post is skipped
+   before any HTTP. Keyed by (or id [type endpoints]) and storing the LATEST
+   hash so A→B→A still posts A. Bypassed for retracts and *valid-time-ms*
+   replays (temporal intent). Bounded: reset when it exceeds 500k entries —
+   the server-side no-op guard in futon1a catches whatever this misses."
+  (atom {}))
+
+(def ^:private last-posted-cap 500000)
+
+(declare post-hx-http*)
+
+(defn- post-hx*
+  "Shared hyperedge write. ENDPOINTS are final (directed transform already
+   applied). Honours *valid-time-ms* and an optional `op` (\"retract\" →
+   end-valid-time delete). Returns {:ok?} (with :no-op? true when the
+   client-side cache skipped an unchanged re-post)."
+  [{:keys [id hx-type endpoints labels props op]}]
+  (let [payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
+                  id (assoc "hx/id" id)
                   (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))
-        resp (try
+                  props (assoc "hx/props" props)
+                  *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*)
+                  op (assoc "hx/op" op))
+        cacheable? (and (nil? op) (nil? *valid-time-ms*))
+        hx-key (or id [hx-type endpoints])
+        payload-hash (hash payload)]
+    (if (and cacheable? (= payload-hash (get @!last-posted hx-key)))
+      {:ok? true :no-op? true}
+      (let [result (post-hx-http* payload)]
+        (when (and cacheable? (:ok? result))
+          (swap! !last-posted
+                 (fn [m] (assoc (if (> (count m) last-posted-cap) {} m)
+                                hx-key payload-hash))))
+        (when (:ok? result)
+          (post-futon1b! {:id id :hx-type hx-type :endpoints endpoints
+                          :labels labels :props props :op op}))
+        result))))
+
+(defn- post-hx-http*
+  "The actual HTTP write (extracted from post-hx* for the no-op cache)."
+  [payload]
+  (let [resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
@@ -85,25 +182,27 @@
     {:ok? (and (= 200 (:status resp))
                (or (:hyperedge body) (:hx/id body)))}))
 
+(defn post-hyperedge!
+  [hx-type endpoints labels & [props]]
+  (post-hx* {:hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :props props}))
+
 (defn post-hyperedge-doc!
   [{:keys [id hx-type endpoints labels props]}]
-  (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
-                  id (assoc "hx/id" id)
-                  (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))
-        resp (try
-               (http/post (str FUTON1A "/api/alpha/hyperedge")
-                          {:headers {"Content-Type" "application/json"
-                                     "X-Penholder" PENHOLDER}
-                           :body (json/generate-string payload)
-                           :throw false})
-               (catch Exception e {:status -1 :body (.getMessage e)}))
-        body (when (string? (:body resp))
-               (try (json/parse-string (:body resp) true)
-                    (catch Exception _ (:body resp))))]
-    {:ok? (and (= 200 (:status resp))
-               (or (:hyperedge body) (:hx/id body)))}))
+  (post-hx* {:id id :hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :props props}))
+
+(defn retract-hyperedge!
+  "End-valid-time retract of a hyperedge (D3 slice 2 removal-accuracy). Uses
+   the SAME type+endpoints (hence the same hx/id) as the put that created it,
+   so XTDB ends exactly that entity's validity at *valid-time-ms*. Removal is
+   HELD behind the replay's :emit-removals? flag pending Joe's greenlight."
+  [hx-type endpoints labels]
+  (post-hx* {:hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :op "retract"}))
 
 ;; ---------- mission cross-ref edge emission (T-9d) ----------
 
@@ -116,7 +215,9 @@
    targets without having to know each cross-ref's source repo."
   []
   (try
-    (let [url (str FUTON1A "/api/alpha/hyperedges?type=code/v05/mission-doc&limit=500")
+    (let [url (str FUTON1A
+                   "/api/alpha/hyperedges?type=code/v05/mission-doc"
+                   "&limit=500&include-total=false")
           resp (http/get url {:headers {"Accept" "application/json"}
                               :throw false
                               :timeout 5000})]
@@ -211,7 +312,79 @@
                (try (json/parse-string (:body resp) true)
                     (catch Exception _ (:body resp))))]
     {:ok? (and (= 200 (:status resp))
-               (or (:entity body) (:id body)))}))
+               (or (:entity body) (:id body)))
+     :entity (:entity body)
+     :body body
+     :status (:status resp)}))
+
+(defn post-relation!
+  [{:keys [type src dst provenance]}]
+  (let [payload (cond-> {"type" type "src" src "dst" dst}
+                  provenance (assoc "provenance" provenance))
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/relation")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    {:ok? (and (= 200 (:status resp))
+               (or (:relation body) (:id body)))
+     :relation (:relation body)
+     :body body
+     :status (:status resp)}))
+
+(defn post-relations-batch!
+  "Write a non-empty relation batch through futon1b's verified atomic route.
+   Any transport, validation, endpoint, or read-back failure is fatal."
+  [relations]
+  (let [payload {"relations" (vec relations)}
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/relations/batch")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp))
+             (= (count relations) (:count body))
+             (= (count relations) (count (:relations body))))
+      {:ok? true :count (:count body) :relations (:relations body)
+       :rescue (:rescue body) :body body :status (:status resp)}
+      (throw (ex-info "relation batch write failed"
+                      {:status (:status resp) :body body
+                       :expected-count (count relations)})))))
+
+(defn post-entities-batch!
+  "Write a non-empty entity batch through futon1b's verified atomic route.
+   Returned entities preserve input order; any failure is fatal."
+  [entities]
+  (let [payload {"entities" (vec entities)}
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/entities/batch")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp))
+             (= (count entities) (:count body))
+             (= (count entities) (count (:entities body))))
+      {:ok? true :count (:count body) :entities (:entities body)
+       :rescue (:rescue body) :queued? (:queued? body)
+       :body body :status (:status resp)}
+      (throw (ex-info "entity batch write failed"
+                      {:status (:status resp) :body body
+                       :expected-count (count entities)})))))
 
 ;; ---------- file-extension helpers (replaces babashka.fs/extension) ----------
 
@@ -228,13 +401,21 @@
 (def src-exts #{"clj" "cljs" "cljc"})
 (def def-forms #{'defn 'defn- 'def 'defmulti 'defmethod 'defprotocol 'defrecord 'deftype})
 
-(defn read-forms [^java.io.File f]
-  (with-open [pbr (java.io.PushbackReader. (io/reader f))]
+(defn read-forms-from-reader [^java.io.Reader rdr]
+  (with-open [pbr (java.io.PushbackReader. rdr)]
     (binding [*default-data-reader-fn* (fn [_t v] v)]
       (loop [acc []]
         (let [form (try (read {:read-cond :allow :features #{:clj :cljs} :eof ::eof} pbr)
                         (catch Exception _ ::eof))]
           (if (= form ::eof) acc (recur (conj acc form))))))))
+
+(defn read-forms [^java.io.File f]
+  (read-forms-from-reader (io/reader f)))
+
+(defn read-forms-from-string
+  "Read clj forms from a content STRING (D3 slice 2 blob-accurate parse)."
+  [^String content]
+  (read-forms-from-reader (java.io.StringReader. content)))
 
 (defn ns-form [forms] (some #(when (and (seq? %) (= 'ns (first %))) %) forms))
 
@@ -263,9 +444,11 @@
       (str/ends-with? path "_test.cljs")
       (str/ends-with? path "_test.cljc")))
 
-(defn collect-clj-file [path]
-  (let [forms (read-forms (io/file path))
-        nf (ns-form forms)
+(defn collect-clj-forms
+  "Shared clj structure extraction from already-read FORMS. PATH is used only
+   for the test-file? heuristic. Returns {:ns :aliases :vars :tests} or nil."
+  [forms path]
+  (let [nf (ns-form forms)
         nsym (when nf (second nf))]
     (when nsym
       (let [aliases (parse-requires nf)
@@ -295,6 +478,14 @@
          :vars (if test? [] @vars)
          :tests (if test? @tests [])}))))
 
+(defn collect-clj-file [path]
+  (collect-clj-forms (read-forms (io/file path)) path))
+
+(defn collect-clj-from-string
+  "Blob-accurate clj collect from a content STRING (D3 slice 2)."
+  [content path]
+  (collect-clj-forms (read-forms-from-string content) path))
+
 ;; ---------- collect-file dispatch ----------
 
 (def ^:private excluded-dir-re
@@ -314,6 +505,20 @@
         ((:src-exts (meta #'flexiarg/src-exts) flexiarg/src-exts) ext) (flexiarg/collect-file path)
         :else nil))))
 
+(defn collect-from-string
+  "Blob-accurate parse from a content STRING (e.g. `git show <sha>:<path>`),
+   dispatched by PATH's extension. D3 slice 2 covers the clj family only —
+   that is the entire var/contains/calls/coverage structural graph. Non-clj
+   (elisp/python/flexiarg) returns nil: python's collector shells to a
+   file-based AST helper, so blob-accurate historical structure for those is
+   a named follow-on. Callers should COUNT/LOG these skips, not read nil as
+   'this file has no structure'."
+  [content path]
+  (when-not (re-find excluded-dir-re (str path))
+    (let [ext (file-ext path)]
+      (when (src-exts ext)
+        (collect-clj-from-string content path)))))
+
 (defn essay-home-path?
   [path]
   (essay/essay-home-md? path))
@@ -329,6 +534,12 @@
   [path]
   (boolean
    (re-find excursion-doc-pattern
+            (str/replace (str path) "\\" "/"))))
+
+(defn campaign-doc-path?
+  [path]
+  (boolean
+   (re-find campaign-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
 (defn sorry-registry-path? [path]
@@ -745,9 +956,17 @@
         ;; focus on it and cross-link to the existing hyperedges via
         ;; futon1a's hyperedges-by-end (UUID → name smart-resolve in
         ;; routes.clj). See README-conventions.md §3.
+        ;; E-futon1a-archivist: key :id = vertex-id (the :mission/doc
+        ;; :xt/id == :name invariant, claude-2-ratified), so this rich node
+        ;; lands ON the canonical id capability-ingest already writes instead
+        ;; of a server UUID — unifying the two formerly non-composing
+        ;; populations. post-entity! forwards :id; resolve-end-id (routes.clj)
+        ;; bridges only UUID-shaped ids, so a name-keyed node resolves
+        ;; directly (gate-confirmed with claude-1, the watcher's owner).
         _entity-ok? (when hx-ok?
                       (:ok? (post-entity!
-                             {:name vertex-id
+                             {:id vertex-id
+                              :name vertex-id
                               :type "mission/doc"
                               :source "mission-doc-watcher"
                               :external-id (str "M-" mission-id)
@@ -1034,48 +1253,184 @@
                   "pattern/qname" (:var/qname v)}
                  (slot->props slot))})
 
-(defn ingest-one-file!
-  "Parse `path`, POST its vertices and edges to futon1a. Returns stats.
-   B-2 v0: per-repo prefix applied to per-repo qname endpoints."
-  [{:keys [path label root-ctx]}]
-  (let [{:keys [ns vars tests aliases]} (or (collect-file path) {})
-        labels ["v05" "phase-4.5" label "per-file"]
-        base-props {"repo" label "phase" 4.5 "source-file" path}
+(defn emit-structure!
+  "Shared structural emitter (D3). Writes namespace/var(+pattern-slots)/test/
+   calls/coverage/contains for one file's parsed STRUCTURE (the collect-file
+   shape {:ns :vars :tests :aliases}) via the valid-time-aware write path
+   (honours *valid-time-ms*). Used by BOTH the live forward path
+   (ingest-one-file!, current time) and the historical replay (commit valid-time)
+   so there is exactly one structural-edge id convention — no drift.
+
+   Returns {:stats {:vertices :edges :failed :retracted} :manifest <set>} where
+   manifest is the set of structural-edge keys [hx-type raw-endpoints] emitted
+   (var/test/calls/coverage/contains — the things that can disappear; the shared
+   namespace vertex and flexiarg pattern-slots are not tracked). The replay
+   carries the manifest forward and, when :emit-removals? is true, retracts the
+   keys present in :prior-manifest but absent now (prior − new) at *valid-time-ms*
+   — removal-accurate time-travel. Removal is HELD off by default."
+  [{:keys [structure label base-props root-ctx labels prior-manifest emit-removals?]}]
+  (let [{:keys [ns vars tests aliases]} (or structure {})
+        labels (or labels ["v05" "phase-4.5" label "per-file"])
         pf (fn [q] (str label "/" q))
+        stats (atom {:vertices 0 :edges 0 :failed 0 :retracted 0})
+        manifest (atom #{})
         post! (fn [t eps & [extra-props]]
                 (post-hyperedge! t eps labels (merge base-props extra-props)))
-        stats (atom {:vertices 0 :edges 0 :failed 0})]
+        ;; emit + record the [type raw-endpoints] key so removal can diff exactly.
+        track! (fn [bucket t eps & [extra-props]]
+                 (swap! manifest conj [t (vec eps)])
+                 (let [r (post! t eps extra-props)]
+                   (swap! stats update (if (:ok? r) bucket :failed) inc)
+                   r))]
     (when ns
-      (post! "code/v05/namespace" [(pf ns)] {"namespace" ns})
-      (swap! stats update :vertices inc)
+      ;; namespace vertex — shared across the file's vars; not removal-tracked.
+      (let [r (post! "code/v05/namespace" [(pf ns)] {"namespace" ns})]
+        (swap! stats update (if (:ok? r) :vertices :failed) inc))
       (doseq [v vars]
-        (let [r (post! "code/v05/var" [(pf (:var/qname v))]
-                       (flexiarg-var-props v))]
-          (swap! stats update (if (:ok? r) :vertices :failed) inc)
-          (doseq [slot (:pattern/slots v)]
-            (let [slot-r (post-hyperedge-doc!
-                          (pattern-slot-edge-doc pf labels base-props v slot))]
-              (swap! stats update (if (:ok? slot-r) :edges :failed) inc)))))
+        (track! :vertices "code/v05/var" [(pf (:var/qname v))] (flexiarg-var-props v))
+        (doseq [slot (:pattern/slots v)]
+          (let [slot-r (post-hyperedge-doc!
+                        (pattern-slot-edge-doc pf labels base-props v slot))]
+            (swap! stats update (if (:ok? slot-r) :edges :failed) inc))))
       (doseq [t tests]
-        (let [r (post! "code/v05/test" [(pf (:test/qname t))]
-                       {"test/ns" (:test/ns t) "test/qname" (:test/qname t)})]
-          (swap! stats update (if (:ok? r) :vertices :failed) inc)))
+        (track! :vertices "code/v05/test" [(pf (:test/qname t))]
+                {"test/ns" (:test/ns t) "test/qname" (:test/qname t)}))
       (let [{:keys [by-ns]} root-ctx]
         (doseq [v vars
                 s (:var/syms v)
                 :let [qn (resolve-symbol s ns aliases by-ns)]
                 :when (and qn (not= qn (:var/qname v)))]
-          (let [r (post! "code/v05/calls" [(pf (:var/qname v)) (pf qn)])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))
+          (track! :edges "code/v05/calls" [(pf (:var/qname v)) (pf qn)]))
         (doseq [t tests
                 s (:test/syms t)
                 :let [qn (resolve-symbol s ns aliases by-ns)]
                 :when (and qn (not= qn (:test/qname t)))]
-          (let [r (post! "code/v05/coverage" [(pf (:test/qname t)) (pf qn)])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))
+          (track! :edges "code/v05/coverage" [(pf (:test/qname t)) (pf qn)]))
         (doseq [v vars]
-          (let [r (post! "code/v05/contains" [(pf ns) (pf (:var/qname v))])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))))
+          (track! :edges "code/v05/contains" [(pf ns) (pf (:var/qname v))]))))
+    ;; Removal-accurate retracts — HELD behind emit-removals? (Joe's call).
+    (let [new-manifest @manifest]
+      (when (and emit-removals? (seq prior-manifest))
+        (doseq [[t eps] (remove new-manifest prior-manifest)]
+          (let [r (retract-hyperedge! t eps labels)]
+            (swap! stats update (if (:ok? r) :retracted :failed) inc)))))
+    {:stats @stats :manifest @manifest}))
+
+(defn ingest-one-file!
+  "Parse `path`, POST its vertices and edges to futon1a. Returns stats.
+   B-2 v0: per-repo prefix applied to per-repo qname endpoints. Thin wrapper
+   over emit-structure! (current valid-time, no removals) — the shared emitter."
+  [{:keys [path label root-ctx]}]
+  (:stats (emit-structure! {:structure (collect-file path)
+                            :label label
+                            :base-props {"repo" label "phase" 4.5 "source-file" path}
+                            :root-ctx root-ctx
+                            :labels ["v05" "phase-4.5" label "per-file"]})))
+
+(def ^:private canonical-pattern-facets
+  [:conclusion :context :if :however :then :because :next-steps])
+
+(def ^:private pattern-facet-aliases
+  {:conclusion #{"conclusion" "claim" "summary" "instantiated-by"}})
+
+(defn- pattern-facet-text
+  [v facet]
+  (let [aliases (or (get pattern-facet-aliases facet) #{(name facet)})]
+    (some (fn [slot]
+            (when (contains? aliases (:slot/name-key slot))
+              (:slot/text slot)))
+          (:pattern/slots v))))
+
+(defn ingest-flexiarg!
+  "Write one flexiarg as canonical pattern/clause entities and relations.
+
+   Semantic targets must already exist: the atomic relation endpoint refuses
+   the whole batch if any endpoint is absent. Cross-list categories remain a
+   property of the pattern entity and are never emitted as relations."
+  [{:keys [path]}]
+  (let [vars (:vars (flexiarg/collect-file path))
+        stats (atom {:patterns 0 :clauses 0 :relations 0 :failed 0
+                     :facets []})]
+    (doseq [v vars]
+      (let [pid (:pattern/id v)
+            facets (->> canonical-pattern-facets
+                        (keep (fn [facet]
+                                (when-let [text (pattern-facet-text v facet)]
+                                  {:facet facet :text text})))
+                        vec)
+            cross-list (vec (:pattern/cross-list v))
+            semantic-targets {:semantic-why (vec (:pattern/why v))
+                              :semantic-see-also (vec (:pattern/see-also v))}
+            entity-specs (into [{:id pid
+                                 :name pid
+                                 :type "pattern/library"
+                                 :external-id pid
+                                 :props {"pattern/cross-list" cross-list}
+                                 :source (or (:pattern/title v) pid)}]
+                               (map (fn [{:keys [facet text]}]
+                                      (let [clause-name (str pid "/" (name facet))]
+                                        {:id clause-name
+                                         :name clause-name
+                                         :type "pattern/clause"
+                                         :external-id clause-name
+                                         :source text})))
+                               facets)
+            entity-r (post-entities-batch! entity-specs)
+            returned (:entities entity-r)
+            pattern-entity (first returned)
+            clause-entities (subvec (vec returned) 1)
+            clause-relation-specs
+            (mapv (fn [{:keys [facet]} clause-entity]
+                    {:type (str ":pattern/has-" (name facet))
+                     :src (:id pattern-entity)
+                     :dst (:id clause-entity)
+                     :provenance {:note (str ":pattern/has-" (name facet))
+                                  :source "multi-watcher-flexiarg"}})
+                  facets clause-entities)
+            ;; @why/@see-also are :split directives in the shared parser, but
+            ;; library files since 2026-09-05 annotate them with prose, so the
+            ;; token list mixes pattern ids with sentence fragments ("basis:",
+            ;; "(L14", ...). Only id-shaped tokens can be relation endpoints;
+            ;; the rest are recorded, not posted — one prose word must not
+            ;; refuse the batch.
+            id-shaped? (fn [t] (boolean (re-matches #"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)+" (str t))))
+            semantic-pairs (mapcat (fn [[semantic-kind targets]]
+                                     (map #(vector semantic-kind %) targets))
+                                   semantic-targets)
+            semantic-relation-specs
+            (mapv (fn [[semantic-kind target]]
+                    (let [relation-type (str ":pattern/has-" (name semantic-kind))]
+                      {:type relation-type
+                       :src (:id pattern-entity)
+                       :dst target
+                       :provenance {:note relation-type
+                                    :source "multi-watcher-flexiarg"}}))
+                  (filter (comp id-shaped? second) semantic-pairs))
+            skipped-semantic (mapv second (remove (comp id-shaped? second) semantic-pairs))]
+        (swap! stats update :patterns inc)
+        (swap! stats update :clauses + (count facets))
+        (swap! stats update :facets into (mapv (comp name :facet) facets))
+        (when (seq skipped-semantic)
+          (swap! stats update :semantic-targets-skipped (fnil into []) skipped-semantic))
+        ;; Endpoint resolution happens only after the entity batch has returned
+        ;; from its post-commit read-back verification. Clause relations and
+        ;; semantic relations post as SEPARATE batches: clause endpoints were
+        ;; created above and must land; a semantic target may point at a
+        ;; pattern that does not exist, and that failure is recorded per file
+        ;; rather than allowed to take the clause links down with it.
+        (when (seq clause-relation-specs)
+          (let [relation-r (post-relations-batch! clause-relation-specs)]
+            (swap! stats update :relations + (:count relation-r))))
+        (when (seq semantic-relation-specs)
+          (try
+            (let [relation-r (post-relations-batch! semantic-relation-specs)]
+              (swap! stats update :relations + (:count relation-r)))
+            (catch Exception e
+              (swap! stats update :semantic-relation-failures (fnil conj [])
+                     {:pattern pid
+                      :dsts (mapv :dst semantic-relation-specs)
+                      :error (or (get-in (ex-data e) [:body :error :message])
+                                 (ex-message e))}))))))
     @stats))
 
 (defn dispatch!
@@ -1089,9 +1444,10 @@
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
         excursion-doc? (excursion-doc-path? path)
+        campaign-doc? (campaign-doc-path? path)
         sorry-registry? (sorry-registry-path? path)
         essay-home? (essay-home-path? path)
-        handled? (or mission-doc? excursion-doc? sorry-registry? essay-home? (supported-ext? ext))]
+        handled? (or mission-doc? excursion-doc? campaign-doc? sorry-registry? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -1099,13 +1455,22 @@
       (let [t-start (System/currentTimeMillis)
             stats (ingest-mission-doc! {:path path :label label :root root})
             dur (- (System/currentTimeMillis) t-start)]
+        ;; keep the scope-surface current too (debounced + async — never blocks here)
+        (scope-reingest/schedule! path)
         (assoc stats :status :mission-doc :duration-ms dur :path path))
 
       excursion-doc?
       (let [t-start (System/currentTimeMillis)
             stats (ingest-excursion-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
+        (scope-reingest/schedule! path)
         (assoc stats :status :excursion-doc :duration-ms dur :path path))
+
+      ;; Campaigns: no doc-entity parser yet (Phase 2b), but the scope pipeline
+      ;; is doc-type-agnostic — keep their scope-surface current the same way.
+      campaign-doc?
+      (do (scope-reingest/schedule! path)
+          {:status :campaign-doc-scopes :path path})
 
       sorry-registry?
       (let [t-start (System/currentTimeMillis)
@@ -1118,6 +1483,19 @@
             stats (ingest-essay! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :essay :duration-ms dur :path path))
+
+      ;; .multiarg is one file holding many patterns (`@arg <id>` headers).
+      ;; `collect-file` already returns one var per pattern and `ingest-flexiarg!`
+      ;; already loops over them, so both extensions take the same path — only
+      ;; the routing was missing. `flexiarg/src-exts` has always watched both,
+      ;; so multiarg files were accepted and then fell through to the generic
+      ;; code-graph branch, never becoming pattern entities (98 patterns across
+      ;; 9 files).
+      (contains? #{"flexiarg" "multiarg"} ext)
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-flexiarg! {:path path})
+            dur (- (System/currentTimeMillis) t-start)]
+        (assoc stats :status :pattern :duration-ms dur :path path))
 
       :else
       (let [t-start (System/currentTimeMillis)

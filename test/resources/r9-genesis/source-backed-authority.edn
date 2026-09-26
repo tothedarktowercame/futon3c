@@ -1,0 +1,15 @@
+{:schema :wm/r9-genesis-test-authority-v1
+ :scope :temporary-positive-boundary-fixture
+ :external-root {:status :verified :authority-origin :test-fixture
+                 :authority-root-id "root-1" :delegate "codex-26"
+                 :candidate-controlled? false}
+ :traces {"author-trace" {:status :verified :job-id "author-job"}
+          "review-trace" {:status :verified :job-id "review-job"}}
+ :acceptance {:status :verified :authority-origin :test-fixture
+              :schema :delegated-canonical-branch-acceptance-v1
+              :authority :delegated-technical-lead :accepted-by "codex-26"
+              :branch "main" :reviewer-job-id "review-job"
+              :digest "acceptance-digest"}
+ :artifacts {:source-sha {:status :verified :sha256 "source-sha"}
+             :tests-sha {:status :verified :sha256 "tests-sha"}
+             :review-sha {:status :verified :sha256 "review-sha"}}}

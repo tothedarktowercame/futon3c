@@ -1,0 +1,28 @@
+{
+  "arrows" : [ {
+    "from" : "citrus",
+    "to" : "vitamin_c"
+  }, {
+    "from" : "vitamin_c",
+    "to" : "scurvy"
+  } ],
+  "id" : "scurvy-vitamin-c-mediator",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "scurvy-vitamin-c-mediator.json"
+  },
+  "variables" : [ {
+    "id" : "citrus",
+    "kind" : "observed",
+    "name" : "Citrus Fruits"
+  }, {
+    "id" : "vitamin_c",
+    "kind" : "observed",
+    "name" : "Vitamin C"
+  }, {
+    "id" : "scurvy",
+    "kind" : "observed",
+    "name" : "Scurvy"
+  } ]
+}

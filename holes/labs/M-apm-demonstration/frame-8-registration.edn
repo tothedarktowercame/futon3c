@@ -1,0 +1,117 @@
+;; FRAME-8 registration — FROZEN 2026-08-17 on the operator's word
+;; (problem pick delegated to lab manager: a03J04, weak-L1 -> L^p embedding,
+;; statement verified at pin incl. the (1/(1-p))*m(E)^(1-p)*M^p constant by
+;; hand; one executable sorry). First frame under the audited two-promote
+;; specification: promote-solver feeds the student's witnessed eligible set
+;; (P16), pull uses receipted (P17), door pin-check at open (P18), student
+;; runner 60min with reporting reserve (P19), canonical subject vocabulary
+;; (P20), reviewer==actor (P14), typed guidance, self-identifying panes.
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "77f884065f459b090c78ade2c970933912cf6154"
+
+ ;; Five FRESH seats, minted by POST /api/alpha/frames/mint-seats "f7".
+ :reg/solver-seat  "f8-solver"
+ :reg/student-seat "f8-student"
+ :reg/guide-seat   "f8-guide"
+ :reg/proctor-seat "f8-proctor"
+ :reg/scribe-seat  "f8-scribe"
+
+ ;; Typed guidance: plan-first structural. :answer responds to the solver's
+ ;; reported obstruction; :suggest is a process nudge. Content performatives
+ ;; are refused at the dispatch gate.
+ :reg/guidance-regime #{:answer :suggest}
+
+ ;; Solver config pinned and witnessed in receipts + trace (P8c). Verified
+ ;; live by the READY probe on f7-solver.
+ :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
+
+ ;; Operator ruling W.58: 60 minutes; the student lane measures PROGRESS
+ ;; (committed artifacts + receipted memory use), not reproduction.
+ :reg/student-runner-budget {:wall-clock-minutes 60}
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "a03J04"
+           :difficulty-stratum    "family=a;weak-L1-embedding;near-promoted-analysis-techniques"
+           :regime                "92ddb9116495a5818b543db91a55a4eb42b88b90"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "frame-7: first fully-staffed fresh-seat frame through the conductor surface; store-mode; full-cycle definition of done per W.19"}
+
+ :claim :descriptive
+ :arms  [{:name "fresh seats, conducted surface, one problem"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "a03J04"
+                       :difficulty-stratum    "family=a;weak-L1-embedding;near-promoted-analysis-techniques"
+                       :regime                "92ddb9116495a5818b543db91a55a4eb42b88b90"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    1.0
+ :budget-cap        5.0
+ :teardown-deadline 240
+
+ :stop-rules [:budget-exceeded
+              :attempt-cap-reached
+              :axiom-unclean-close
+              :no-progress
+              :teardown-deadline-passed
+              :no-improvement-escalate]
+
+ ;; W.13 semantics: an attempt is a DISPATCH, not a proof step.
+ :reg/attempt-caps {:s-frontier 10
+                    :s-student  3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; git hash-object blob ids. Solver v3 and guide v2 freeze WITH this
+ ;; registration; student/proctor/scribe cards unchanged from round 1.
+ :reg/role-cards
+ {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
+  :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+
+ ;; Round 1 was :witnessed-not-enforced. Frame-7 seats are enforced at
+ ;; :register (P5) and the conductor is transport-bound (W.31).
+ :reg/seat-exclusivity :enforced-at-register
+
+ :reg/predictions
+ [{:id :eligibility-delivers
+   :text "The f8 student dispatch's eligible set includes at least one memory promoted at :promote-solver, with provenance :cycle-promoted (P16 witnessed union)."}
+  {:id :pull-use-receipted
+   :text "At least one student pull-use receipt joins the f8 trace (P17) — the channel that worked invisibly in f7 is measured in f8."}
+  {:id :student-progress
+   :text "The student commits at least one artifact within its 60-minute budget and reports within the reserve (W.58 progress framing; f7 baseline: 5 commits, unreported)."}]
+ :reg/frame-1-disclaimer false}

@@ -1,0 +1,28 @@
+{
+  "arrows" : [ {
+    "from" : "citrus",
+    "to" : "acidity"
+  }, {
+    "from" : "acidity",
+    "to" : "scurvy"
+  } ],
+  "id" : "scurvy-wrong-acidity-mediator",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "scurvy-wrong-acidity-mediator.json"
+  },
+  "variables" : [ {
+    "id" : "citrus",
+    "kind" : "observed",
+    "name" : "Citrus Fruits"
+  }, {
+    "id" : "acidity",
+    "kind" : "observed",
+    "name" : "Acidity"
+  }, {
+    "id" : "scurvy",
+    "kind" : "observed",
+    "name" : "Scurvy"
+  } ]
+}

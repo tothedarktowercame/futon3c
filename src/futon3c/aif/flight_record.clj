@@ -29,6 +29,13 @@
 
 (defn- g1 [g] (when (number? g) {:g g :g-grain :one-step-action}))
 
+(defn- ground
+  "Typed ground cell payload. Kept deliberately small: the ground's kind says
+   how to verify it, and the remaining keys are the witness data already present
+   at close time. Pre-wrapped pilot cells still pass through unchanged."
+  [kind & kvs]
+  (assoc (apply hash-map kvs) :ground/kind kind))
+
 (defn- cell?
   "Already a spec cell — a term ({:judgment :ground}) or a typed sorry."
   [m]
@@ -56,10 +63,10 @@
   [w]
   (let [{:keys [kind ref reasoning]} (:determined-by w)]
     (cond
-      reasoning (str "the recorded reasoning (kind " kind "): " reasoning)
-      ref (str "ref (findable where it points): " ref)
-      (:queued w) (str "queued undetermined: " (get-in w [:queued :queue-ref]))
-      :else "supplied at close; see judgment")))
+      reasoning (ground :pilot-synthesis :kind kind :reasoning reasoning)
+      ref (ground :ref :kind kind :ref ref)
+      (:queued w) (ground :queued :queue-ref (get-in w [:queued :queue-ref]))
+      :else (ground :supplied-at-close :note "see judgment"))))
 
 (defn compose-flight-record
   "Pure: begin-state + close-time computation + pilot-supplied :flight map
@@ -103,35 +110,40 @@
                                         :note "decision neighbourhood not externalised this flight (the seat-read's articulation cost)"}})}
                     (seq cascades) (assoc :cascades (vec cascades)))
         :ground {:begin-artifact begin-ref
-                 :scan-as-of (:scan-as-of begin)}}
+                 :scan-as-of (:scan-as-of begin)
+                 :ground/kind :begin-scan}}
 
        :velocity
        {:judgment (cond-> {:action v}
                     plan-sketch (assoc :plan-sketch (vec plan-sketch)))
-        :ground :warrant}
+        :ground (ground :organ-ref :organ :warrant)}
 
        :warrant (or (cellify warrant (warrant-ground warrant))
                     (ghost :not-yet))
 
        :verification (or (cellify verification
-                                  "evidence lines inline in the judgment (the select-time grep/read work, recorded)")
+                                  (ground :inline-evidence
+                                          :method :select-time-grep-read
+                                          :note "evidence lines inline in the judgment"))
                          (ghost :not-yet))
 
        :attribution
        {:judgment (:v-attribution begin)
-        :ground (str "cycle metadata; cg-id " (:cg-id begin))}
+        :ground (ground :cycle-metadata :cg-id (:cg-id begin))}
 
        :prediction
        {:judgment {:scaled (g1 predicted)
                    :constant (g1 predicted-constant)
                    :policy (ghost :not-yet :rollout-engine)}
-        :ground "WM forward model; numbers from the field entry at begin (never invented)"}
+        :ground (ground :model-output
+                        :model :wm-forward-model
+                        :source :begin-field-entry)}
 
        :begin-state
        {:judgment {:begin-at (:begin-at begin)
                    :target-g (g1 predicted)
                    :scan-as-of (:scan-as-of begin)}
-        :ground begin-ref}
+        :ground (ground :artifact-ref :ref begin-ref)}
 
        :act
        (if executed?
@@ -140,7 +152,9 @@
                                        :verified-by agent}
                                 act-verification
                                 (assoc :verification act-verification))}
-          :ground "the evidence-ref close-live-cycle! requires (no payload, no discharge)"}
+          :ground (ground :evidence-ref
+                          :ref evidence-ref
+                          :rule :close-live-cycle-requires-evidence-ref)}
          (ghost :proposal-mode))
 
        :measurement
@@ -156,31 +170,38 @@
                                         :fallback))
                            :realised-source realised-source}
                     window (assoc :window :window))
-        :ground (if window :window "no settle window supplied — class :clean would not verify (F2), honestly")}
+        :ground (if window
+                  (ground :organ-ref :organ :window)
+                  (ground :missing-witness
+                          :missing :settle-window
+                          :consequence :class-clean-would-fail-f2))}
 
        :counterfactual
        (if (and (number? realised) (number? predicted-constant))
          {:judgment {:constant-error (Math/abs (double (- realised predicted-constant)))}
-          :ground "derived: |realised - predicted-constant|; re-derivable by any reader"}
+          :ground (ground :derived
+                          :formula "|realised - predicted-constant|"
+                          :inputs [:measurement :prediction])}
          (ghost :not-yet))
 
        :out-of-band
        {:judgment events
         :ground (if (seq events)
-                  "discipline-events.edn (merge, verbatim at the same instant) + supplied steers"
-                  "no out-of-band events in the flight's span")}
+                  (ground :event-log :source "discipline-events.edn" :events :present)
+                  (ground :absence :events :none-in-flight-span))}
 
        :self-record
        {:judgment {:gamma-ref frame-path
                    :turn-record-count 1
                    :pilots-log-turn logged-turn}
-        :ground "repl-trace write-frame! artifact"}}
+        :ground (ground :artifact-ref :ref frame-path :kind :repl-trace-frame)}}
 
        window
        (assoc :window
               (cellify window
                        (or window-ground
-                           "pilot settle protocol (close-time labour, kept)"))))}))
+                           (ground :settle-protocol
+                                   :source :pilot-close-time-labour)))))}))
 
 ;; ---------------------------------------------------------------------------
 ;; the R11 validity mask — canonical producer-side implementation
@@ -276,23 +297,25 @@
       {:judgment {:gauge {:ref (str gamma-ref " :trace 0 :dT-snapshot")
                           :count (count (:dT-snapshot tr))}
                   :neighbourhood thin}
-       :ground (str "backfilled from γ frame " gamma-ref)}
-      :velocity {:judgment {:action v} :ground :warrant}
+       :ground (ground :backfilled-frame :ref gamma-ref :field :dT-snapshot)}
+      :velocity {:judgment {:action v} :ground (ground :organ-ref :organ :warrant)}
       :warrant thin
       :verification thin
       :attribution {:judgment (:v-attribution tr)
-                    :ground "γ frame :v-attribution (backfilled tag)"}
+                    :ground (ground :backfilled-frame :field :v-attribution)}
       :prediction
       {:judgment {:scaled (g1 predicted)
                   :constant (g1 predicted-constant)
                   :policy (ghost :not-yet :rollout-engine)}
-       :ground "γ frame predicted fields (backfilled tags)"}
+       :ground (ground :backfilled-frame :fields [:predicted-discharge :predicted-constant])}
       :begin-state thin
       :act (if executed?
              {:judgment {:state :executed
                          :witness {:ref (:evidence-ref tr)
                                    :verified-by agent}}
-              :ground "γ frame :evidence-ref (backfilled; verification detail was prose)"}
+              :ground (ground :backfilled-frame
+                              :field :evidence-ref
+                              :limitation :verification-detail-was-prose)}
              (ghost :proposal-mode))
       :measurement
       {:judgment (cond-> {:predicted (g1 predicted)
@@ -306,15 +329,20 @@
                                    :else nil)
                           :realised-source source}
                    rread (assoc :realised-read rread))
-       :ground "γ frame tags (backfilled); clean-vs-null beyond the mechanical derivation lived in prose — absent honestly"}
+       :ground (ground :backfilled-frame
+                       :fields [:predicted-discharge :predicted-constant
+                                :realised-discharge :realised-source :realised-read]
+                       :limitation :clean-vs-null-lived-in-prose)}
       :counterfactual
       (if (and (number? realised) (number? predicted-constant))
         {:judgment {:constant-error (Math/abs (double (- realised predicted-constant)))}
-         :ground "derived: |realised - predicted-constant|; re-derivable"}
+         :ground (ground :derived
+                         :formula "|realised - predicted-constant|"
+                         :inputs [:measurement :prediction])}
         thin)
       :out-of-band thin
       :self-record {:judgment {:gamma-ref gamma-ref}
-                    :ground "the frame itself"}}}))
+                    :ground (ground :artifact-ref :ref gamma-ref)}}}))
 
 (defn write-flight-record!
   "Persist RECORD as <dir>/<run-id>.flight.edn (pretty, no length limits).

@@ -1,0 +1,88 @@
+{:paper/id "1005.2653"
+ :passage/id "1005.2653:fourier-transfer:105-113"
+ :source {:lines [105 113] :kind :expository-proof}
+ :nodes
+ [{:id :h
+   :kind :object
+   :text "canonical Kleisli functor h:A^op tensor A -> H, surjective on objects"
+   :source {:lines [105 107]}}
+  {:id :khat-restriction
+   :kind :claim
+   :text "the Fourier functor K-hat is restriction along h, i.e. [h,1]"
+   :source {:lines [105 108]}}
+  {:id :khat-preserves-homs
+   :kind :claim
+   :text "K-hat=[h,1] preserves both left and right internal homs of the convolution structure"
+   :source {:lines [108 108]}}
+  {:id :straightforward-calculation
+   :kind :meta
+   :text "the preservation of internal homs is a straightforward calculation"
+   :source {:lines [108 108]}}
+  {:id :khat-conservative
+   :kind :claim
+   :text "K-hat=[h,1] is conservative"
+   :source {:lines [109 109]}}
+  {:id :source-star-autonomous
+   :kind :claim
+   :text "[A^op tensor A,Vect_k] is star-autonomous monoidal biclosed"
+   :source {:lines [109 109]}}
+  {:id :target-star-autonomous
+   :kind :claim
+   :text "[H,Vect_k] is a star-autonomous monoidal biclosed category"
+   :source {:lines [109 109]}}
+  {:id :H-star-autonomous
+   :kind :claim
+   :text "the domain H is star-autonomous as a promonoidal category over Vect_k"
+   :source {:lines [110 110]}}
+  {:id :cyclic-relations
+   :kind :claim
+   :text "the promultiplication p on H satisfies the cyclic relations given in [2] and [3]"
+   :source {:lines [110 110]}}
+  {:id :quantum-groupoid
+   :kind :claim
+   :text "K-hat=[h,1] is a quantum groupoid in the sense of [3]"
+   :source {:lines [113 113]}}
+  {:id :bimodule-herds-aside
+   :kind :meta
+   :text "there is also a connection with Brzezinski and Vercruysse's Bimodule herds"
+   :source {:lines [113 113]}}]
+ :edges
+ [{:id :e-homs
+   :kind :infer
+   :relation :calculation
+   :premise :khat-restriction
+   :meta [:straightforward-calculation]
+   :conclusion :khat-preserves-homs
+   :source {:lines [105 108]}}
+  {:id :e-transfer-star-autonomy
+   :kind :infer
+   :relation :because
+   :given [:khat-restriction :khat-preserves-homs :khat-conservative]
+   :premise :source-star-autonomous
+   :warrant {:kind :missing-warrant
+             :text "conservative hom-preserving restriction reflects/transfers the biclosed star-autonomous structure"}
+   :conclusion :target-star-autonomous
+   :source {:lines [108 109]}}
+  {:id :e-domain-star-autonomous
+   :kind :infer
+   :relation :implies
+   :premise :source-star-autonomous
+   :warrant {:kind :missing-warrant
+             :text "star-autonomy of the convolution functor category implies cyclic relations for the promonoidal domain"}
+   :conclusion [:H-star-autonomous :cyclic-relations]
+   :source {:lines [110 110]}}
+  {:id :e-quantum-groupoid
+   :kind :infer
+   :relation :thus
+   :premise [:target-star-autonomous :khat-restriction :cyclic-relations]
+   :warrant {:kind :citation :target "[3]"}
+   :conclusion :quantum-groupoid
+   :meta [:bimodule-herds-aside]
+   :source {:lines [113 113]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-transfer-star-autonomy
+   :wanted :restriction-transfer-of-star-autonomous-biclosed-structure}
+  {:kind :missing-warrant
+   :edge :e-domain-star-autonomous
+   :wanted :cyclic-relations-from-star-autonomous-functor-category}]}

@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "smoking_gene",
+    "to" : "smoking"
+  }, {
+    "from" : "smoking_gene",
+    "to" : "lung_cancer"
+  }, {
+    "from" : "smoking",
+    "to" : "lung_cancer"
+  } ],
+  "id" : "smoking-gene-two-readings",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "smoking-gene-two-readings.json"
+  },
+  "variables" : [ {
+    "id" : "smoking_gene",
+    "kind" : "observed",
+    "name" : "Smoking Gene"
+  }, {
+    "id" : "smoking",
+    "kind" : "observed",
+    "name" : "Smoking"
+  }, {
+    "id" : "lung_cancer",
+    "kind" : "observed",
+    "name" : "Lung Cancer"
+  } ]
+}

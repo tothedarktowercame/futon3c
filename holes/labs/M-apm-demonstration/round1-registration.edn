@@ -1,0 +1,249 @@
+;; APM demonstration — round 1 registration.
+;;
+;; Written 2026-08-14 by claude-2, BEFORE round 1 runs. Values are Joe's
+;; baseline (M-apm-demonstration I.4); shapes are dictated by
+;; futon3c/src/futon3c/apm/preregistration.clj.
+;;
+;; The validator and cycle harness were relocated into futon3c on 2026-08-15.
+;; They had been drafted in an unrelated research repository, which this round
+;; neither uses nor depends on; nothing was carried across but the code itself.
+;;
+;; Validate via futon3c.apm.preregistration/report; the launch authorization
+;; writer is futon3c/scripts/write_apm_demonstration_launch_authorization.clj.
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ ;; --- binding to the Lean -------------------------------------------------
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ ;; Resource pins at cycle registration. Both solver and student attempts must
+ ;; record this environment revision. The store snapshot is recorded but is
+ ;; deliberately allowed to change: it is the measured transfer channel.
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ ;; AMENDED 2026-08-15, BEFORE launch. The previous harness pin,
+ ;; 70282341dd146419ea750e4fc32c74581b550e6f, named a commit in a repository this
+ ;; round does not use. It was never noticed because until today NOTHING READ THE
+ ;; FIELD: the value is 40 hex, so every shape check passed while the referent
+ ;; was unreachable. The harness for this round is futon3c and nothing else.
+ ;;
+ ;; The value is the commit that last changed the HARNESS PATHS (src, scripts,
+ ;; deps.edn), NOT futon3c's HEAD. HEAD moves on every note and on this amendment
+ ;; itself, and a commit cannot contain its own sha, so a HEAD-scoped pin could
+ ;; never be satisfied by the run that follows it. It is also why a stray edit to
+ ;; an unrelated file must not read as an unfrozen harness. Measured by
+ ;; problem/measure-harness-repository, the same construction the validator uses
+ ;; for :lean-revision.
+ :reg/harness-revision     "7f37893b115cd13f33b8bde023c69d4c0a32acac"
+ ;; ^ re-pinned 2026-08-15 pre-flight (claude-7): last src/scripts/deps.edn
+ ;; commit after the rehearsal-driven fixes (base-injection, packet-checkout,
+ ;; recall nil-safety x2, write-substrate wiring, disposition pass-through,
+ ;; evidence-store-required, memory_read). Path-scoped measurer semantics.
+
+ ;; PRE-LAUNCH RULINGS (Joe, 2026-08-15, recorded before round 1):
+ ;; (1) :cycle/store-revision convention ADOPTED for round 1: sha-256 of the
+ ;;     sorted snapshot memory-id vector (+ deposits at attempt time), first
+ ;;     40 hex. Grounded in the supersession discipline: memories change by
+ ;;     new id, never in-place, so the id-set tracks store state honestly.
+ ;; (2) Student pull reads: envelope-only reads REPAIRED (memory_read tool,
+ ;;     7f37893b) -- Joe's launch gate: a zai runner must QUOTE a memory
+ ;;     body verbatim through the new tool before round 1 opens. Validation
+ ;;     result recorded in the mission record (W.5).
+
+ ;; The solver seat is a PARAMETER OF THE MEASUREMENT, not a location like the
+ ;; Lean repo or the Agency endpoint: guidance is counted as in-window Agency
+ ;; rows addressed to this seat, so naming a different seat at validation time
+ ;; would silently change the number. Pinned here, before the round, for the same
+ ;; reason :lean-revision is. An invocation naming a different seat is a loud
+ ;; :solver-seat-mismatch rather than a silent retarget.
+ :reg/solver-seat "codex-4"
+
+ ;; --- what is being run ---------------------------------------------------
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ ;; F7 is absent deliberately: its round-one definition made "available"
+ ;; mean "retrieved", so the check could not fail and was not a measurement.
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ ;; t94J02 — chosen because it was genuinely worked, not because it is short:
+ ;; 22-line Main.lean carrying ONE code-level sorry, against a 9.3K proof-outline
+ ;; and a 5.6K informal-solution.
+ ;;
+ ;; AMENDED 2026-08-15, BEFORE launch, after verifying the pick from the FILES
+ ;; rather than from status.json (which is corpus-wide stale: 144 of 475 bundles
+ ;; disagree with their own Lean, every status.json frozen at the 2026-05-01
+ ;; import while the Lean moved since). Two corrections to the original prose:
+ ;;
+ ;;   (1) "Zero candidate frames" overstated. A frame directory DOES exist --
+ ;;       ApmCanaries/Frames/T94J02/Apm_v2_t94J02_1775011263361/ -- but its
+ ;;       Main.lean is an EMPTY SCAFFOLD: 12 lines of namespace boilerplate and
+ ;;       no content. So nothing leaked, which is what the claim was for; but it
+ ;;       is a scaffold-identical frame, i.e. a live pre-existing F1 instance in
+ ;;       the corpus, not the absence of a frame.
+ ;;   (2) t94J02's own status.json is one of the 144: it reports
+ ;;       sorry_count_main 0 and classification "complete" while Main.lean
+ ;;       carries a code-level sorry. The problem is genuinely OPEN. Selection
+ ;;       must not read this file.
+ ;;
+ ;; No prior scribe history, so no memory-system contamination on the first
+ ;; measurement -- that part stands.
+ :reg/selection-verified-from :files-not-metadata
+ :reg/prior-frame {:module "ApmCanaries.Frames.T94J02.Apm_v2_t94J02_1775011263361"
+                   :state  :empty-scaffold
+                   :note   "pre-existing F1 instance; excluded from the student environment per I.38"}
+ :problem {:problem-id            "t94J02"
+           :difficulty-stratum    "family=t;freeze-stmt-lines=22"
+           :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+           :locked-lemma-exposure []}
+
+ ;; Identity floor rather than reproducibility: "the same result twice" means a
+ ;; student-tier solver reaches it given the deposit. Pinned by MODEL VERSION
+ ;; and BENCHMARK RELEASE, never by the rate -- the rate moved 1/41 -> 4/48
+ ;; across two releases, so a floor defined as a percentage silently rises
+ ;; whenever the vendor ships.
+ :variation {:kind     :measured
+             :endpoint "identity floor: a GLM-5.2-class student solver reaches the result given the deposit (ArXivLean June 2026, 4/48)"}
+
+ :claim :descriptive
+ :arms  [{:name "one problem, one-shot measurement"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ ;; pilot-units must be [the problem map]; confirmation-units must be EMPTY for a
+ ;; pilot. Lean models confirmation as a SEPARATE registration naming its
+ ;; predecessor (seededConfirmation), not as a field on the pilot -- see the note
+ ;; at the foot of this file.
+ :pilot-units        [{:problem-id            "t94J02"
+                       :difficulty-stratum    "family=t;freeze-stmt-lines=22"
+                       :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ ;; --- Joe's baseline, 2026-08-14 -----------------------------------------
+ ;; Cost is in units of weekly usage. Provisional by design: round 1's job is
+ ;; to replace this estimate with a measurement.
+ :estimated-cost    0.01
+ :budget-cap        0.05          ; 5x -- a cap, not a target
+ :teardown-deadline 120           ; minutes after launch, hard stop
+
+ :stop-rules [:budget-exceeded
+              :attempt-cap-reached
+              :axiom-unclean-close
+              :no-progress
+              :teardown-deadline-passed
+              :no-improvement-escalate]
+
+ ;; Attempt caps are TIERED (Joe, 2026-08-14): "3 cold attempts per problem...
+ ;; if no improvement is seen across all three, then we escalate to Joe,
+ ;; otherwise we continue to the next problem." Codex keeps 10 because its
+ ;; attempts are one continuing closer-loop session; Zai gets 3 because each is
+ ;; a cold start and we have many problems to get through.
+ ;; Previously these lived only in a comment, so they could not be checked.
+ :reg/attempt-caps {:s-frontier 10          ; Codex, continuing session
+                    :s-student  3}          ; Zai, cold per attempt
+
+ ;; Escalation is NOT a fifth proof outcome -- that would break the decision
+ ;; rule's totality (four outcomes partitioning on residual/axiom/defect).
+ ;; It is orthogonal: a cycle may be :tier-b AND escalated.
+ ;;
+ ;; WHAT VARIES, AND WHAT "IMPROVEMENT" MEANS. Both modes vary something ACROSS
+ ;; ATTEMPTS, so improvement is genuine in both. Joe's framing: Zai is a Chipwit
+ ;; moving through a maze --
+ ;;   store-mode   -- we change THE MAZE. Same harness all three attempts; Claude
+ ;;                   writes memories between them. Question: does adding
+ ;;                   knowledge help?
+ ;;   harness-mode -- we change THE CHIPWIT PROGRAM. Same store all three
+ ;;                   attempts; the harness is retuned between them. Question:
+ ;;                   does working better against fixed knowledge help? This is
+ ;;                   how we guide Zai to solve a problem when all the facts are
+ ;;                   already known.
+ ;; A flat L(i) across three attempts is a real finding in EITHER mode.
+ ;;
+ ;; THE HARNESS IS NOT THE ROLE CARD. The harness is the retrieval and collection
+ ;; machinery -- how Zai queries, what it collects, how results are ordered and
+ ;; presented. The role card is FRAMING and is frozen for the round (a card change
+ ;; is its own regime boundary). Keeping them apart matters: E9/E10 showed framing
+ ;; alone moved store lookups from 0 to 21, so a harness round that quietly
+ ;; retuned framing would attribute a framing effect to retrieval.
+ :reg/escalation {:trigger  :no-improvement-across-student-attempts
+                  :applies-in [:store-mode :harness-mode]
+                  :measure  "L(i) across the student's cold attempts"
+                  :action   :escalate-to-operator
+                  :otherwise :continue-to-next-problem}
+
+ ;; Total by construction: the outcomes partition on
+ ;; (residual-sorries, axiom-clean?, defect?), so every trace maps to exactly
+ ;; one. Totality is checkable at the schema level rather than the type level.
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ ;; Launch gating is discharged by construction in DarkTower: Launch requires
+ ;; ReadyToRun, and failed obligations make ReadyToRun uninhabited. There is no
+ ;; runtime refusal event to probe without demoting that guarantee to a watchdog.
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; Frozen for the round. Hashes are `git hash-object` blob ids (40 hex), the
+ ;; format the validator requires and reproducible with one command.
+ ;; Tuning between rounds is permitted, but a role-card
+ ;; change is a REGIME BOUNDARY: P1's slope must not be read across one, or a
+ ;; decline caused by better framing reads as one caused by better substrate.
+ :reg/role-cards
+ {:codex-solver "ab12c46e4cbe0a992bc00c95d2b389673d60023b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "b475f85cb1114184329f7e7b0a5e423085201218"
+  :scribe       "d4a8863d3828244756483be5295c8926bdcff301"
+  ;; The proctor holds the MEASUREMENT while the guide holds the treatment. Its
+  ;; first job is witnessing seat exclusivity: the guidance count is all in-window
+  ;; rows to the solver seat and deliberately ignores the claimed sender, which
+  ;; makes it robust against the guide and fragile against strangers. Seats are
+  ;; shared and unreserved -- an unrelated pilot put 234 bells into the student
+  ;; seat in 105 minutes on 2026-08-12, against a 120-minute window.
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+
+ ;; A4: the solver and student seats are exclusive to this cycle for the window's
+ ;; duration. NOT enforced by anything -- witnessed by the proctor at open and
+ ;; close, and a violation is a finding rather than something to adjust away.
+ :reg/seat-exclusivity :witnessed-not-enforced
+
+ ;; --- predictions, recorded BEFORE the round -----------------------------
+ ;; A prediction written after the data is not a prediction.
+ :reg/predictions
+ [{:id        :P1
+   :statement "Guidance interventions per cycle decline as problems seen increases."
+   :source    "Joe, 2026-08-14"
+   :measured-by "guidance interventions (RoleEvent :ground-control count per cycle)"
+   :confound  "a role-card change, a store-mode/harness-mode switch, or a solver version change is a regime boundary; the slope must not be read across one"}
+  {:id        :P2
+   :statement "By frame-100, the loop supports high confidence in its own claims."
+   :source    "Joe, 2026-08-14"
+   :status    :horizon-declared-metric-open
+   :note      "claude-2's proposed operational reading, NOT the operator's: (i) P1's slope estimable within a stated regime, and (ii) at least one teachability pair shows L(i) falling with the deposit and not without. Operator to accept, replace, or refuse."}]
+
+ ;; Frame-1 carries no guarantee. Joe, 2026-08-14: "at frame-1 nothing is
+ ;; guaranteed at all." Recorded as a pre-commitment: frame-1's outcome is not
+ ;; evidence for or against the design.
+ :reg/frame-1-disclaimer true
+
+ ;; a98A01 is the intended confirmation unit. It is NOT recorded here: the Lean
+ ;; models confirmation as a separate registration naming its predecessor
+ ;; (`seededConfirmation`), and a pilot's confirmation-units are empty by
+ ;; projection. Preregistering it by stuffing it into the pilot would bend the
+ ;; formalism to save a file. The round-2 registration is written before round 1
+ ;; is scored, which preserves the intent honestly.
+ :reg/intended-confirmation-unit "a98A01"}

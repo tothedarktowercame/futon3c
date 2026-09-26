@@ -1,0 +1,200 @@
+;; Where M-futon-seams actually stands against futon4/holes/mission-lifecycle.md.
+;;
+;; Status per phase is read from that phase's EXIT CRITERION against the
+;; evidence, not from the mission's Status line. Where the two disagree the row
+;; says so, and the disagreement is the point: this afternoon's work produced
+;; artefacts belonging to MAP, DERIVE, ARGUE and INSTANTIATE while the mission
+;; file still says IDENTIFY and has no section for any of them.
+;;
+;; Joe assigned the mission to claude-1 on 2026-09-24 ("claude-1 owns it,
+;; we're collaborating on the AIF + PROOF-2 interpretation"), so the Status
+;; line and the phase sections have been advanced to what the evidence
+;; supports -- and the out-of-order work is stated in the mission rather than
+;; smoothed away. Phases 2-7 are now written in the mission itself, so every
+;; row below anchors to a real span and none is a placeholder.
+;;
+;; :status is :not-started, :in-progress, :blocked or :exit-met. :blocked
+;; carries :blocked-on and means the phase's own work is done and its exit
+;; waits on another phase -- the lifecycle's word for it, applied to a phase.
+;; NOTHING USES IT. ARGUE briefly did, on an invented dependency on DOCUMENT
+;; that I read into its exit criterion; Joe caught it. The phases run in
+;; order and a later phase does not gate an earlier one. Kept because the
+;; state is real, but a phase claiming it should be doubted first.
+;;
+;; :verdict-source says WHERE a phase's verdict is written. :prose means the
+;; section carries an exact **Met.** / **Not met.** / **Not started.** line and
+;; scripts/verdict_check.py holds it to agree with :status here. :data-only
+;; means the phase has no exit-criterion paragraph and no verdict line, so its
+;; closure is recorded here and nowhere else -- HEAD and IDENTIFY, which
+;; predate the phase write-ups and carry the operator's voice.
+;;
+;; This was a hardcoded name list inside verdict_check.py until 2026-09-24,
+;; which is this mission's own defect in its own tooling: a property of a
+;; phase, living in a script instead of being declared. A reader that sees
+;; only prose, or only data, misreads the mission; now either can discover
+;; which phases it cannot see.
+;;
+;; :mission-anchor is an exact span of the mission at the recorded sha, as the
+;; annotations are. A phase with none gets a PLACEHOLDER in the page -- a
+;; heading that says the mission has not written this phase yet, drawn so it
+;; cannot be mistaken for mission text.
+;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
+{:schema :m-futon-seams/lifecycle-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
+ :mission {:path "holes/missions/M-futon-seams.md"
+           :sha256 "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
+           :status-line "COMPLETE (2026-09-24) -- all eight phase exits met"}
+ :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
+
+ :phases
+ [{:id :HEAD :n 0 :title "HEAD — operator-shape intake"
+   :verdict-source :data-only
+   :exit "The operator recognises the HEAD as faithful to the mission's live shape, and the carried-forward tensions are named well enough that IDENTIFY can proceed without pretending the unknowns have already been settled."
+   :exit-line 45
+   :status :exit-met
+   :mission-anchor {:start 1209 :end 1250 :quote "## HEAD (Rob, 2026-09-24, verbatim sense)"}
+   :because "The HEAD is Rob's own wording from the Matrix interview, with his interface/seam distinction preserved rather than paraphrased. The carried-forward tension is named in its own section and not resolved. Rob is the operator for this HEAD and asked for the record; Joe has read it and commissioned work from it."
+   :evidence [{:kind :commit :ref "73c77352" :what "the mission recorded from the interview"}
+              {:kind :span :what "## HEAD, and the following tension section"}]
+   :artefacts []}
+
+  {:id :IDENTIFY :n 1 :title "IDENTIFY — the gap, scoped"
+   :verdict-source :data-only
+   :exit "A human has read the proposal and agrees the gap is real and the scope is right."
+   :exit-line 68
+   ;; The lifecycle's generic exit above asks only for human agreement. The
+   ;; mission set itself a harder, technical one for this phase and it is the
+   ;; one the work was actually done against, so it is recorded here rather
+   ;; than left to be re-read out of the prose. Noted from outside first
+   ;; (H-WITNESS-ii, futon2 417bfb4f): the record undersold its own evidence.
+   :mission-exit "For whichever instance is chosen: the interface is declared, at least one existing caller is converted to it, and there is a test of the form 'redirect the binding and confirm behaviour follows'."
+   :mission-exit-line 17934
+   :mission-exit-status :met
+   :status :exit-met
+   :mission-anchor {:start 17934 :end 17967 :quote "## IDENTIFY exit (when picked up)"}
+   :because "Met. Joe has read the proposal, agrees the gap is real -- he commissioned the record and then the work -- and has agreed the scope in act: click-001 picked instance 4, Joe directed its implementation at 8e5c431e and the PROOF-2a exemplar over it, and on 2026-09-24 assigned the mission to claude-1. The agreement on scope is by direction rather than by a written ruling, which is worth noting but is what the criterion asks for: a human read it and agrees."
+   :evidence [{:kind :artefact :ref "exemplar/click-001.edn" :what "the target choice, with the exclusions and the cost ordering"}
+              {:kind :commit :ref "8e5c431e" :what "Joe directed work on the chosen instance, which is agreement in act"}
+              {:kind :note :what "ownership assigned to claude-1, 2026-09-24"}
+              {:kind :artefact :ref "resources/roles.edn" :what "mission-exit clause 1: the interface, declared -- the role table the registry resolves against"}
+              {:kind :artefact :ref "src/futon3c/agents/tickle_orchestrate.clj" :what "mission-exit clause 2: an existing caller converted -- request-review! resolves :reviewer through futon3c.agency.roles instead of naming a provider"}
+              {:kind :artefact :ref "test/futon3c/agency/roles_test.clj:89" :what "mission-exit clause 3: redirect-a-role-to-another-provider rebinds :reviewer to a Codex seat and asserts which seat is asked -- the redirect test instance 1's method calls for"}]
+   :artefacts [{:note "exemplar-click" :why "the click that performs this phase's own exit act"}
+               {:note "exemplar-two-orderings" :why "the cost ordering that did not choose the target"}
+               {:note "exemplar-lowest-score" :why "the chosen target scores lowest of the four feasible"}]}
+
+  {:id :MAP :n 2 :title "MAP — what exists, what is missing"
+   :verdict-source :prose
+   :exit "Every MAP question has a concrete answer. The \"ready vs missing\" table is complete."
+   :exit-line 113
+   :status :exit-met
+   :mission-anchor {:start 20370 :end 20407 :quote "## MAP \u2014 what exists, what is missing"}
+   :because "Met 2026-09-24. The MAP section now defines this mission's Q1-Q5 and answers each by counting: what exists that the mission uses (1,411 patterns in 119 families, all citable; 21 distinct patterns from 17 families drawn so far; 16 programs of its own tooling, 2,987 lines), what data it holds, the ready-vs-missing table in two columns, how much coupling is left per instance, and what its own method cannot check. Five surprises are recorded, including two that changed a finding: the library was already citable and a validator was wrong to refuse it, and four of five missing meets were an artefact of strict descendants."
+   :evidence [{:kind :span :what "the eight instances, each with measured counts and paths"}
+              {:kind :artefact :ref "exemplar/click-001.edn" :what ":feasible and :exclusions — the ready-vs-missing split, in the click rather than the mission"}
+              {:kind :span :what "Q1-Q5 with counted answers, the two-column ready-vs-missing table, and five recorded surprises"}]
+   :artefacts [{:note "top-context" :why "the shared context above both roots, answered for the whole inventory"}]}
+
+  {:id :DERIVE :n 3 :title "DERIVE — the method, from a hit coupling to a checked enactment"
+   :verdict-source :prose
+   :exit "Someone could implement the mission from the DERIVE section alone, without needing to ask clarifying questions."
+   :exit-line 153
+   :status :exit-met
+   :mission-anchor {:start 24961 :end 24983 :quote "## DERIVE \u2014 the method"}
+   :because "Met 2026-09-24. Nine numbered steps, each naming its input, its output artefact with the instance-4 path, the tool or 'by hand', and its check. Four steps are judgements made by a person; the method's claim is that a judgement must be recorded in a form something else can disagree with, not that it be automated away, and every step now has a check. The two that had none are the two instance 4 got wrong: step 8 closed by clause C, step 3 by scripts/grain_check.py, which compares the grain the cascade chose against the grain the enacted resolver is keyed by and verifies that resolver exists with the recorded arglist in the file at the recorded sha. Both fail on the real first attempt rather than a constructed example."
+   :evidence [{:kind :artefact :ref "proto/instance-{4,4b,5,6,7}.edn" :what "cascades with receipts"}
+              {:kind :artefact :ref "wiring/instance-{4,4b,5,6,7}-wiring.edn" :what "token-flow constructions"}
+              {:kind :commit :ref "007467f2" :what "wiring rebuilt as token flow"}
+              {:kind :artefact :ref "scripts/grain_check.py" :what "the step-3 check: passes on the second enactment, fails on the first (role vs agent-id), and fails on evidence that answers to no code"}]
+   :artefacts [{:figure "instance-4" :why "the chosen target's cascade"}
+               {:figure "instance-4b" :why "its second candidate, a different route to the same wants"}
+               {:figure "wiring-4" :why "the construction for the chosen candidate, with the enactment beside it"}
+               {:figure "wiring-4b" :why "the construction the other route implies"}
+               {:note "i4-cascade"} {:note "i4-grain"} {:note "i4-binding"}
+               {:note "i4-sites-enumerated"} {:note "i4-one-producer"}
+               {:note "i4-convert"} {:note "i4-redirect"} {:note "i4b-cascade"}
+               {:note "i4-wiring"}]}
+
+  {:id :ARGUE :n 4 :title "ARGUE — which patterns, and why those"
+   :verdict-source :prose
+   :exit "The design feels inevitable given the constraints, not merely possible. And someone outside the project can understand what it does and why from the plain-language argument alone."
+   :exit-line 191
+   :status :exit-met
+   :mission-anchor {:start 35844 :end 35884 :quote "## ARGUE \u2014 which patterns, and why those"}
+   :because "Met 2026-09-24, after two corrections of my own. FIT was argued all along: 37 pattern entries each carrying :forces, :reading and a :scope limit, every containment edge a :via. The checklist items I had never read are done -- rationale citation @why war-room/wr-8-typed-files-are-sources-of-truth, theoretical coherence against IDENTIFY's cost ordering, trade-offs, generalisation, and the three-to-five-sentence plain-language argument the phase actually asks for. INEVITABILITY: I had been answering the wrong question. The 2-of-7 retrieval measurement is about whether the LIBRARY is searchable and stands unchanged; it says nothing about whether the design is right, and conflating the two produced the earlier verdict of defensible-not-inevitable. Asked against the mission's own stated constraint -- a judgement must be recorded in a form something else can contradict -- registry-first records the grain judgement and grain_check.py contradicted it on the first attempt, while observe-first records no grain judgement at all and so cannot be contradicted on the point. Observe-first fails the constraint. That is inevitability in the lifecycle's sense: inevitable GIVEN THE CONSTRAINTS. candidate-comparison.edn is kept, including observe-first being better at preventing the error it could not have checked, because that cost is real."
+   :evidence [{:kind :artefact :ref "proto/meets.clj" :what "the restricted semilattice condition, computed"}
+              {:kind :artefact :ref "proto/kernels.clj" :what "three kernels over every linear extension"}
+              {:kind :artefact :ref "proto/selection-margins.edn" :what "2 of 7 slots reachable from the problem statement, 7 of 7 from the pattern's own words -- the inevitability gap, measured"}
+              {:kind :artefact :ref "proto/candidate-comparison.edn" :what "the comparison the click did not make: three differing readings, tested against the two failures that actually happened; verdict :not-inevitable"}
+              {:kind :span :what "the plain-language argument, the rationale citation, theoretical coherence, trade-offs and generalisation -- ARGUE's own checklist"}
+              {:kind :span :what "the inevitability argument from the mission's own constraint: observe-first records no grain judgement, so nothing can contradict it, so it fails the constraint registry-first satisfies"}
+              {:kind :artefact :ref "proto/selection-margins.edn" :what "2 of 7 reachable from the problem statement -- retained, and reclassified: a finding about the library's searchability, not about this design"}]
+   :artefacts [{:figure "instance-5" :why "the widest list-kernel spread in the set: p(all wants) 0.168 to 0.797 across 48 linear extensions"}
+               {:figure "instance-6" :why "the conflicting frontier, and the one real missing meet"}
+               {:figure "instance-7" :why "the instance the mission calls still compounding; co-application reaches all wants at 0.853 where every linear extension reaches 0"}
+               {:figure "wiring-5"} {:figure "wiring-6"} {:figure "wiring-7"}
+               {:note "i5-cascade"} {:note "i5-adapter"} {:note "i5-spread"}
+               {:note "i5-wiring"} {:note "i6-cascade"} {:note "i6-conflict"}
+               {:note "i6-destination"} {:note "i6-second-copy"} {:note "i6-retire"}
+               {:note "i6-wiring"} {:note "i7-cascade"} {:note "i7-wiring"}]}
+
+  {:id :VERIFY :n 5 :title "VERIFY — checked against structural constraints"
+   :verdict-source :prose
+   :exit "The design has been checked against available structural constraints. Any risks that can't be verified statically have been spiked. DERIVE revisions (if any) are recorded."
+   :exit-line 231
+   :status :exit-met
+   :mission-anchor {:start 49920 :end 49970 :quote "## VERIFY \u2014 checked against structural constraints"}
+   :because "Met 2026-09-24. The section previously said 'met in substance' without saying which of the three clauses the hedge was on; it was the second. Clause 1: seven checks, each of which caught something real. Clause 3: four DERIVE revisions recorded. Clause 2, unverifiable risks spiked: all named risks spiked, each with how. CORRECTED 2026-09-24: this row first read that check-ledger.edn has no ground truth and that clause 1 (A) is :declared. Both are false. The ledger carries :truth and a :truth-source on all 22 rows, 19 sources distinct, and clause 1 reads :measured-from-check-ledger with per-kind rates from counts. I queried a field named :ground-truth after reading a field list that says :truth, and asserted the conclusion twice before claude-8's check contradicted it. That last question is now CLOSED from outside: futon2 f758d702/fc90808d classify every ledger row -- 7 constructed-bad-case, 9 later-review, 6 independent-recomputation, none self-truthed -- so all 33 runs are eligible and the per-kind rates stand. The striking one is validator fn .750: the best-powered kind at 18 runs, and it says a validator in this mission let three of four bad cases through. The fifth spike is the one worth reading: instance 6 CLAIMS a prompt-carried coupling is invisible to tooling, so it was tried, and nothing noticed -- 22 tests, 75 assertions, 1 pre-existing failure, identical with and without a deliberately broken path."
+   :evidence [{:kind :artefact :ref "scripts/cascade_check.py" :what "5/5 cascades pass"}
+              {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
+              {:kind :artefact :ref "exemplar/proof2a_check.clj" :what "W_t and W_0 both pass (W_0 by constructor replay since a3f65fcc); clause C checks the enactment against the chosen candidate since 401469fd; every falsifier caught"}
+              {:kind :commit :ref "4d748660" :what "a DERIVE revision: four of five missing meets were a definition artefact"}
+              {:kind :artefact :ref "exemplar/spike-prompt-coupling.edn" :what "the spike for clause 2: a broken path in prompt text changes no test outcome, and two such paths are ALREADY broken in the tree with nothing reporting it"}
+              {:kind :artefact :ref "scripts/grain_check.py" :what "the grain declaration against the enacted resolver's arglist at the recorded sha"}
+              {:kind :independent-check :ref "futon2 0cb6396d proof2/packets/H-WITNESS-check.md"
+               :what "kimi-4, read-only, under claude-8: 14 warrant-citing steps across both candidates, 10 distinct patterns, every flexiarg present with a sha matching its receipt pin, all 14 reading as rewrite readings with consumed and produced tokens named and none citing a HOWEVER as its reason. No met phase exit rests on an unwarranted step. This is the first check of this mission's warrants by an agent outside it."
+               :observation "Receipt dates are pinned at file level (a prose comment) rather than per receipt. Noted and NOT acted on: every receipt in all five cascades has one author and one date, and the sha pin already catches the case a date would -- a reading made against a pattern that has since changed. A per-receipt date backfilled from a single day would add a field without adding information. If a cascade ever carries receipts from two authors or two days, add it then."}
+              {:kind :artefact :ref "exemplar/click-001-clauses.edn" :what "PROOF-2a clauses 1-6 computed over this click (results in the file, not restated on the page)"}]
+   :artefacts [{:note "p2a-i4-kernel"} {:note "p2a-roots"} {:note "p2a-i5-unproduced"}
+               {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}]}
+
+  {:id :INSTANTIATE :n 6 :title "INSTANTIATE — a demonstration for every completion criterion"
+   :verdict-source :prose
+   :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
+   :exit-line 266
+   :status :exit-met
+   :mission-anchor {:start 55697 :end 55728 :quote "## INSTANTIATE \u2014 demonstrations"}
+   :because "Met for instance 4, which is the scope the IDENTIFY exit set. All three want tokens are observed met with a recorded check each -- two tests and a grep -- and the mission now carries the four commands that reproduce them. NOT met for the mission: seven instances remain unenacted. Two residual couplings are recorded as deviations rather than closed: the library-loop adapter's check on the codex binary name, and tickle_orchestrate's rotation roster, which lists seats to cycle rather than looking a role up."
+   :evidence [{:kind :commit :ref "eafd07b7" :what "resources/roles.edn, roles/seat-for, request-review! asks for :reviewer, redirect test"}
+              {:kind :commit :ref "d6927670" :what "tickle's implementer default and mentor resolve through seat-for"}
+              {:kind :commit :ref "139caa97" :what "enumerate_sites.py and sites.edn: 43 seat literals in 12 files, 1 routing site"}
+              {:kind :artefact :ref "exemplar/click-001-enactment.edn" :what "8 attempts, 7 succeed; the grain step fails once; two conformance deviations recorded"}
+              {:kind :artefact :ref "exemplar/click-001-outcome.edn" :what "THE FIRST ATTEMPT, kept: the provider grain at 8e5c431e, all three wants :partial"}]
+   :artefacts [{:note "outcome-grain" :why "the first attempt, which built the wrong grain"}
+               {:note "outcome-unbound" :why "nothing checked the enactment against the candidate"}
+               {:note "enactment-as-chosen" :why "the second run, enacted as the cascade specified"}
+               {:note "enactment-residual" :why "what is left: the binary-name site and the roster"}]}
+
+  {:id :DOCUMENT :n 7 :title "DOCUMENT — findable without knowing the mission exists"
+   :verdict-source :prose
+   :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
+   :exit-line 293
+   :status :exit-met
+   :mission-anchor {:start 58540 :end 58551 :quote "## DOCUMENT"}
+   :because "Met 2026-09-24. Rob asked for the turn-annotation seam packaged so he could reuse it, and the package IS the documentation: packages/turn-seam/ carries the turn-record schema, the dispatch contract, a standard-library conformance checker and one real record. The schema was derived from 159 real records and checked against all of them -- conformance.py --dir passes 159 of 159 -- rather than designed in advance. Acceptance test, and it is Rob's: no path belonging to this machine appears anywhere in the package. Findable by navigation: three entries in the futon3x docbook under an L1 Seams, ids computed by the documented sha1 rule which reproduces the existing L1 ids exactly, and the TOC syncs to the docbook store. Recorded rather than hidden: that book's toc.json is generated from an index.org that no longer exists, it has 46 entry files against 37 TOC rows, and two of its own top-level ids do not match its exporter's rule."
+   :evidence [{:kind :artefact :ref "packages/turn-seam/" :what "the package: schema derived from 159 records and passing on all of them, dispatch contract, conformance checker, one real record, no host paths"}
+              {:kind :artefact :ref "futon4/docs/docbook/futon3x/" :what "three entries under an L1 Seams, in the TOC that syncs to the docbook store"}
+              {:kind :discrepancy :what "a NINTH instance, found while satisfying this criterion and out of scope: the docbook's toc.json is generated from an index.org that no longer exists, 46 entry files against 37 TOC rows, two top-level ids not matching the exporter's rule. wr-8 unapplied in the documentation system."}
+              {:kind :proposal :what "Rob via Joe: discharge DOCUMENT by extracting the turn->record and record->dispatch seam from the annotation feature. Evidence it is a seam and not a tidy-up: the >>> convention exists in the Emacs path only, so the same turn recorded live and recorded through turn_batch.py mean different things."}]
+   :artefacts [{:note "document-proposal" :why "Rob's proposed exit criterion, and the drift that motivates it"}]}]
+
+ :overall
+ {:status-line-says :complete
+  :exits-met [:HEAD :IDENTIFY :MAP :DERIVE :ARGUE :VERIFY :INSTANTIATE :DOCUMENT]
+  :finding
+  "The mission's Status line is not wrong, but it is not the whole picture either. HEAD's exit is met. IDENTIFY's is not: its criterion asks a human to agree the gap and the scope, and the scope was chosen by a click that nobody has reviewed. Meanwhile MAP, DERIVE, ARGUE, VERIFY and INSTANTIATE all have real artefacts, and INSTANTIATE has live code -- work ran several phases ahead of the order the lifecycle sets out. The clearest cost of that is recorded in click-001-outcome: the enactment was built from the mission's defect description rather than from a DERIVE that had met its exit, and it built the provider grain where the cascade had chosen the role grain."
+  :advanced "2026-09-24: Joe assigned the mission to claude-1, so the Status line now reads HEAD complete; IDENTIFY complete; MAP/DERIVE/ARGUE/VERIFY in progress on instance 4 only; INSTANTIATE-1 taken out of order. Phases 2-7 are written into the mission, each stating which of its exit criteria is met and which is not. VERIFY is the only one of the five in-progress phases whose criterion is met in substance; MAP, DERIVE, ARGUE and INSTANTIATE each say plainly what is missing."}}

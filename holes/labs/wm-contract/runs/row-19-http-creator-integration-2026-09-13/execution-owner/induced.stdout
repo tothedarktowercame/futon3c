@@ -1,0 +1,11 @@
+
+Running tests in #{"/tmp"}
+
+Testing codex23-owner-induced-test
+
+FAIL in (deliberate-failure) (codex23_owner_induced_test.clj:5)
+expected: (= :owner :reused-caller)
+  actual: (not (= :owner :reused-caller))
+
+Ran 1 tests containing 1 assertions.
+1 failures, 0 errors.

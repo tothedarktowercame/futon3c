@@ -1,0 +1,4 @@
+evidence-id test-registry-e714c236b698c02c2cc90d813e37a77a52e1b902df58baf770d18738ed0c81e1
+warrant? true
+results {:assertions 19, :duration-ms 6531, :errors 0, :exit 0, :failures 0, :tests 4}
+bound test-registry/read-endpoints -> test-registry-e714c236b698c02c2cc90d813e37a77a52e1b902df58baf770d18738ed0c81e1

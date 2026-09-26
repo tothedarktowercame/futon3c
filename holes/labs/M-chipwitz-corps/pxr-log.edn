@@ -1,0 +1,151 @@
+{:pxr-log
+ {:version "0.1.0"
+  :source "ft-chipwitz-corps-012 Flight 3 — warrant-finder v0 + PXR channel v0"
+  :mission "futon3c-d/mission/chipwitz-corps"
+  :deposit-proposal/hash "0ad620d68d3a9b35"
+  :flight "FLIGHTS-2026-07-10 Flight 3"
+  :threshold-v0 0.15
+  :threshold-note
+  "UNCALIBRATED v0 — fold policy-hole h1. The mission names this as THE one knob: too loose re-creates autopen-creep (everything proceeds on warrant), too tight re-creates rubber-stamp asks (everything escalates). This log is the first empirical data toward calibration."
+  :matching-mechanism "deterministic TF-IDF cosine similarity over futon3/library/**/*.flexiarg text (python3 stdlib, no model downloads, cwd-robust)"
+
+  :records
+  [{:psr/id "psr-9349c740adbe"
+    :psr/at "2026-07-10T14:51:53Z"
+    :psr/choice-point
+    "Two patterns partially transpose: when is :satiety :partial vs :full with an exclusion policy-hole?"
+    :psr/pattern-chosen "war-machine/advanceability"
+    :psr/score 0.2679
+    :psr/threshold 0.15
+    :psr/threshold-note "UNCALIBRATED v0"
+    :psr/decision "proceed-with-PSR"
+    :psr/candidates-considered
+    [{:pattern-id "war-machine/advanceability" :score 0.2679}
+     {:pattern-id "proof-search/typed-hole-as-frontier" :score 0.131}
+     {:pattern-id "pattern-coherence/scope-boundaries" :score 0.1135}
+     {:pattern-id "futon-theory/derive-exits-on-a-minted-sorry" :score 0.112}
+     {:pattern-id "math-informal/technique-landscape-map" :score 0.1097}]
+    :psr/rationale
+    "Best match war-machine/advanceability at cosine 0.2679 (threshold 0.15, ABOVE). THRESHOLD IS UNCALIBRATED v0."
+    :pur/at "2026-07-10T14:55:00Z"
+    :pur/actions "convention codified: :partial = needed part unavailable/non-transposing; :full with exclusion hole = inapplicable by judgment"
+    :pur/outcome "convention adopted by claude-2 across all three fold runs; no operator escalation needed"
+    :pur/prediction-error
+    "FALSE-POSITIVE RISK: the finder returned proceed-with-PSR (score above threshold) but the match (war-machine/advanceability) is a WEAK semantic match — advanceability is about whether a mission can be advanced, not about satiety conventions. The decision to proceed was correct but the WARRANT was wrong; the threshold let a keyword-overlap match through as if it were a semantic warrant. This is exactly the autopen-creep risk h1 warns about: at threshold 0.15, TF-IDF cosine finds enough shared tokens ('partial', 'full', 'advance', 'pattern') to clear the bar without the patterns being about the same thing. Calibration implication: either raise the threshold, or add a semantic-matching layer (embeddings) that can distinguish keyword overlap from semantic relevance."}
+
+   {:psr/id "psr-bee6548868f2"
+    :psr/at "2026-07-10T14:51:54Z"
+    :psr/choice-point
+    "Three reviewed deposits in hand: fly them through adjudication first, or batch-fold the remaining 24 proposals?"
+    :psr/pattern-chosen "realtime/loop-success-signals"
+    :psr/score 0.0888
+    :psr/threshold 0.15
+    :psr/threshold-note "UNCALIBRATED v0"
+    :psr/decision "escalate-to-operator"
+    :psr/candidates-considered
+    [{:pattern-id "realtime/loop-success-signals" :score 0.0888}
+     {:pattern-id "realtime/loop-recovery-actions" :score 0.0875}
+     {:pattern-id "plos-npt-with-small-n/coding-reliability-stated" :score 0.087}
+     {:pattern-id "repository-transition/strawman" :score 0.0848}
+     {:pattern-id "writing-coherence/triad-inflation" :score 0.0681}]
+    :psr/rationale
+    "Best match realtime/loop-success-signals at cosine 0.0888 (threshold 0.15, BELOW). THRESHOLD IS UNCALIBRATED v0."
+    :pur/at "2026-07-10T14:55:00Z"
+    :pur/actions "operator followed the fly-first recommendation (claude-2's suggestion)"
+    :pur/outcome "three flights dispatched and executed; first-coverage set complete"
+    :pur/prediction-error
+    "CORRECT ESCALATION: this was a genuine operator decision — the fly-vs-batch-more fork involved competing legitimate values (exercise the whole loop end-to-end vs maximize coverage) and was not determined by any standing contract. The finder correctly escalated (no findable warrant above threshold). The top match (realtime/loop-success-signals at 0.09) is keyword noise, not a semantic warrant — the escalation is correct for the right reason. This is the productive case: asking without a warrant is legitimate and the operator's answer (fly-first) was a real steer, not a policy lookup."}
+
+   {:psr/id "psr-d1b8dbd4a8ab"
+    :psr/at "2026-07-10T14:51:54Z"
+    :psr/choice-point
+    "A deposit claims :pins it did not compute: fix in place as reviewer, or re-bell the author?"
+    :psr/pattern-chosen "social/idempotent-handoff"
+    :psr/score 0.192
+    :psr/threshold 0.15
+    :psr/threshold-note "UNCALIBRATED v0"
+    :psr/decision "proceed-with-PSR"
+    :psr/candidates-considered
+    [{:pattern-id "social/idempotent-handoff" :score 0.192}
+     {:pattern-id "orchestration/recorded-handoff" :score 0.1554}
+     {:pattern-id "data-mining/classify-over-one-clean-source" :score 0.1152}
+     {:pattern-id "process-coherence/author-the-missing-pattern" :score 0.105}
+     {:pattern-id "aif/grounded-actuation-not-reobservation" :score 0.1039}]
+    :psr/rationale
+    "Best match social/idempotent-handoff at cosine 0.1920 (threshold 0.15, ABOVE). THRESHOLD IS UNCALIBRATED v0."
+    :pur/at "2026-07-10T14:55:00Z"
+    :pur/actions "fixed in place per fix-don't-re-bell protocol; contract updated to prevent recurrence"
+    :pur/outcome "two pins removed (:prompt-sha, :delta-g-recompute); real :psi-sha256 computed; fix applied to all subsequent folds"
+    :pur/prediction-error
+    "CORRECT PROCEED WITH RELEVANT WARRANT: social/idempotent-handoff (score 0.19) is a genuine semantic match — the fix-don't-re-bell protocol IS an idempotent handoff pattern (the reviewer applies the fix directly rather than re-dispatching, ensuring the work state is idempotent under the fix). The finder found a relevant warrant and the decision to proceed was correct. The second candidate (orchestration/recorded-handoff at 0.16) is also relevant — the fix was recorded in-place. This is the case where TF-IDF over text works: the pattern text contains the right vocabulary ('handoff', 'fix', 'in place') because the pattern IS about this kind of move."}
+
+   ;; === B2-F1 determination_test.py classifications (UNCALIBRATED v0) ===
+   ;; Appended by zai-2, Flight B2-F1. These are typed determination records
+   ;; classifying each fork's candidate warrant as DETERMINED /
+   ;; CONSISTENT-NOT-DETERMINED / UNDETERMINED per b3's reverse-morphogenesis
+   ;; epistemology. Heuristic: keyword-mining over PUR prediction-error text
+   ;; + match-score fallback. UNCALIBRATED — n=3, no threshold tuning.
+
+   {:determination/id "det-9ec3b10b2aad"
+    :determination/at "2026-07-10T16:02:44Z"
+    :determination/source-psr "psr-9349c740adbe"
+    :determination/choice-point "Two patterns partially transpose: when is :satiety :partial vs :full with an exclusion policy-hole?"
+    :determination/candidate-warrant "war-machine/advanceability"
+    :determination/match-score 0.2679
+    :determination/classification "CONSISTENT-NOT-DETERMINED"
+    :determination/failure-mode "WRONG-ARROW"
+    :determination/heuristic "UNCALIBRATED v0 — keyword-mining over PUR text + match-score fallback; n=3 calibration set"
+    :determination/signals
+    {:determined-hits 2
+     :consistent-not-determined-hits 4
+     :undetermined-hits 0}
+    :determination/rationale
+    "CONSISTENT-NOT-DETERMINED: prediction-error text contains 4 consistency-without-determination signal(s) (keyword overlap / warrant was wrong / false-positive). The warrant is consistent with the choice but does not DETERMINE it — b3's wrong-← failure mode. [UNCALIBRATED v0 heuristic]"}
+
+   {:determination/id "det-1fbdafc93088"
+    :determination/at "2026-07-10T16:02:44Z"
+    :determination/source-psr "psr-bee6548868f2"
+    :determination/choice-point "Three reviewed deposits in hand: fly them through adjudication first, or batch-fold the remaining 24 proposals?"
+    :determination/candidate-warrant "realtime/loop-success-signals"
+    :determination/match-score 0.0888
+    :determination/classification "UNDETERMINED"
+    :determination/failure-mode "WRONG-XIANG"
+    :determination/heuristic "UNCALIBRATED v0 — keyword-mining over PUR text + match-score fallback; n=3 calibration set"
+    :determination/signals
+    {:determined-hits 0
+     :consistent-not-determined-hits 1
+     :undetermined-hits 6}
+    :determination/rationale
+    "UNDETERMINED: prediction-error text contains 6 undetermination signal(s) (correct escalation / no findable warrant / genuine operator decision). No warrant bears on the choice. [UNCALIBRATED v0 heuristic]"}
+
+   {:determination/id "det-c04b06015cda"
+    :determination/at "2026-07-10T16:02:44Z"
+    :determination/source-psr "psr-d1b8dbd4a8ab"
+    :determination/choice-point "A deposit claims :pins it did not compute: fix in place as reviewer, or re-bell the author?"
+    :determination/candidate-warrant "social/idempotent-handoff"
+    :determination/match-score 0.192
+    :determination/classification "DETERMINED"
+    :determination/failure-mode "none (warrant determines)"
+    :determination/heuristic "UNCALIBRATED v0 — keyword-mining over PUR text + match-score fallback; n=3 calibration set"
+    :determination/signals
+    {:determined-hits 6
+     :consistent-not-determined-hits 0
+     :undetermined-hits 0}
+    :determination/rationale
+    "DETERMINED: prediction-error text contains 6 determination signal(s) (genuine semantic match / relevant warrant). The warrant's substance bears on the choice — the BHK arrow is constructive. [UNCALIBRATED v0 heuristic]"}
+  ]
+
+  :calibration-notes
+  {:total-forks 3
+   :proceed-decisions 2
+   :escalate-decisions 1
+   :proceed-correct 2
+   :proceed-false-positive 0
+   :escalate-correct 1
+   :escalate-false-negative 0
+   :warrant-quality
+   {:good-match "psr-d1b8dbd4a8ab (social/idempotent-handoff for fix-don't-re-bell) — semantic relevance"
+    :weak-match "psr-9349c740adbe (war-machine/advanceability for satiety convention) — keyword overlap, not semantic; proceed was correct but warrant was irrelevant"
+    :correct-no-match "psr-bee6548868f2 (escalate on fly-vs-batch fork) — no findable warrant, correct escalation"}
+   :threshold-assessment
+   "At 0.15, the finder admits keyword-overlap matches as warrants (psr-9349c740adbe). This is the autopen-creep shape h1 warns about: the decision was correct but the WARRANT was wrong, meaning the threshold is too loose for TF-IDF cosine. Two calibration options: (1) raise threshold to ~0.20 (would reject the weak match in psr-9349c740adbe but keep the good match in psr-d1b8dbd4a8ab); (2) add embeddings-based semantic matching to distinguish keyword overlap from semantic relevance. Either way, n=3 is far too few to calibrate — the charter needs ~11+ independent forks (same order as G-SIM's calibration requirement) before the threshold knob can be set empirically."}}}

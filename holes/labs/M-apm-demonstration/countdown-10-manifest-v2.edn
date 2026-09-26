@@ -1,0 +1,77 @@
+{:manifest/version 2
+ :manifest/id "8e1bacf4ef7a6ba789e933670642b5c250dc855ebfe2af91c10255053703e016"
+ :campaign/id "apm-countdown-r4"
+ :block/id "countdown-10-r4"
+ :apparatus
+ {:pin/id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+  :repository "/home/joe/code/futon3c" :branch "master"
+  :revision "4c08c2e64d6725a54ca85f981a4109a4947dad11"
+  :artifacts
+  {:solver {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v4.md" :blob "ad63c4dc908a0061ee38d16fb51dacb31110a303"}
+   :student {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md" :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide.md" :blob "b475f85cb1114184329f7e7b0a5e423085201218"}
+   :scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md" :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md" :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :analyst {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md" :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
+ :units
+ [
+  {:frame/id "f18" :ordinal 1 :arm :treatment :problem/id "a97J07"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: boundary norms and maximum modulus."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a97J07/lean/Main.lean" :blob "69f1a6c35eab92f234beed1697fc59d1eac12445"}}
+  {:frame/id "f19" :ordinal 2 :arm :treatment :problem/id "a01J05"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: zeros of derivatives of an analytic function."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01J05/lean/Main.lean" :blob "fb39c679ebd27b73b607e7367f5800fccb369e00"}}
+  {:frame/id "f20" :ordinal 3 :arm :treatment :problem/id "a01J06"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: zero distribution of entire functions of exponential type."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01J06/lean/Main.lean" :blob "eb1ad6e7536eef7e0aa0e769624e644118232092"}}
+  {:frame/id "f21" :ordinal 4 :arm :treatment :problem/id "a94A02"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: differentiability and an integrable derivative majorant."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a94A02/lean/Main.lean" :blob "c240a05ebc152e22cf1c67e691fb4a27c697384f"}}
+  {:frame/id "f22" :ordinal 5 :arm :treatment :problem/id "a94A07"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: injective entire functions are affine."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a94A07/lean/Main.lean" :blob "66f1a293a5e65762cafd3a94a60a11e2b515ee6d"}}
+  {:frame/id "f23" :ordinal 6 :arm :treatment :problem/id "a96A06"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: Taylor coefficients from a simple pole decomposition."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a96A06/lean/Main.lean" :blob "42a86604e29377eeed5c1e250a26ebbd23b4fb79"}}
+  {:frame/id "f24" :ordinal 7 :arm :treatment :problem/id "a96A08"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: evaluation of an improper trigonometric integral."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a96A08/lean/Main.lean" :blob "bc3709e5f72f4861ac181425bae1c156a3226a27"}}
+  {:frame/id "f25" :ordinal 8 :arm :treatment :problem/id "a97J05"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: local Laurent principal parts and residues."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a97J05/lean/Main.lean" :blob "539525533e98d914015cc32851384d38cd7e0481"}}
+  {:frame/id "f26" :ordinal 9 :arm :treatment :problem/id "a97J08"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: argument principle on a rectifiable Jordan curve."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a97J08/lean/Main.lean" :blob "4abf20d5c175413bf0904c3bb6c2683c438b4629"}}
+  {:frame/id "f27" :ordinal 10 :arm :treatment :problem/id "a98A07"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: locally uniform convergence under a boundary majorant."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a98A07/lean/Main.lean" :blob "f0334d613108f480aa663a4473b959c56a7e1ed0"}}]}

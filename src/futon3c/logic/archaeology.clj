@@ -777,6 +777,13 @@
   "Default age (in days) past which a mission doc must carry a Status line."
   60)
 
+(def mission-doc-status-remediation
+  "Operator-facing fix instruction for mission-doc disposition warnings."
+  (str "Add a parseable `Status: <open|closed|parked|archived>` line in "
+       "the first five lines of each listed mission doc. Lifecycle words "
+       "such as IDENTIFY/MAP/VERIFY are acceptable as active/open statuses; "
+       "use closed/parked/archived when the work is no longer active."))
+
 (defn- extract-status-token
   [line]
   (when (string? line)
@@ -849,8 +856,9 @@
      - Per-doc classification: every mission doc either has a Status
        line in its first five lines mapping to one of
        `mission-doc-disposition-vocabulary`, or defaults to `:open`.
-     - Population bound: per repo, |open| <= UNDECIDED-BOUND AND every
-       mission doc newer than OLD-DAYS carries a non-empty Status line.
+     - Population bound: per repo, docs with no parseable Status line
+       stay <= UNDECIDED-BOUND AND every mission doc newer than OLD-DAYS
+       carries a non-empty Status line.
 
    Options:
      :undecided-bound — default `default-mission-doc-undecided-bound` (10)
@@ -868,9 +876,7 @@
               (for [repo repo-paths
                     :when (.exists (io/file repo))]
                 (let [mission-docs (list-mission-docs-with-time repo)
-                      undecided (filter #(= default-mission-doc-disposition
-                                            (:disposition %))
-                                        mission-docs)
+                      undecided (remove :status-present? mission-docs)
                       missing-status-recent (filter
                                              #(and (<= (:age-days %) old-days)
                                                    (not (:status-present? %)))
@@ -883,7 +889,8 @@
                    :missing-status-recent (vec
                                            (for [doc missing-status-recent]
                                              {:path (:path doc)
-                                              :age-days (:age-days doc)}))
+                                              :age-days (:age-days doc)
+                                              :fix mission-doc-status-remediation}))
                    :violation? bound-violated?
                    :by-disposition (->> mission-docs
                                         (group-by :disposition)
@@ -903,6 +910,7 @@
                      :violations violations
                      :undecided-bound undecided-bound
                      :old-days old-days
+                     :how-to-fix mission-doc-status-remediation
                      :invariant I-bounded-disposition}}))
        (catch Throwable t
          {:outcome :violation

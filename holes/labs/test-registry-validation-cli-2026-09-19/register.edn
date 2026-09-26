@@ -1,0 +1,9 @@
+{:repo-root "/home/joe/code/futon3c"
+ :agency-url "http://localhost:7070"
+ :subject-id "test-registry/validation-cli"
+ :command ["clojure" "-M:test" "-n" "futon3c.test-registry.validation-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/test-registry-validation-cli-2026-09-19/execution"
+ :code-paths ["src/futon3c/test_registry/validation.clj"
+              "src/futon3c/test_registry/validation_adapters.clj"]
+ :test-paths ["test/futon3c/test_registry/validation_test.clj"]}

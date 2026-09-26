@@ -25,7 +25,9 @@ from typing import Iterable
 
 
 CURRENT_TURN_RE = re.compile(
-    r"^--- CURRENT TURN ---\nSurface: ([^\n]+)\nCaller: ([^\n]+)\n---\n",
+    r"^--- CURRENT TURN ---\nSurface: ([^\n]+)\n"
+    r"(?:(?:From|To|Origin): [^\n]*\n)*"
+    r"Caller: ([^\n]+)\n---\n",
     re.S,
 )
 USER_MESSAGE_RE = re.compile(r"\nUser message:\n(.*)\Z", re.S)
@@ -42,6 +44,16 @@ class Turn:
     text: str
     agent_id: str | None
     surface: str
+
+
+@dataclass
+class ParseResult:
+    turns: list[Turn]
+    operator_turns: int
+    parsed_operator_turns: int
+    unparsed_operator_turns: int
+    excluded_tool_results: int
+    excluded_harness_records: int
 
 
 def load_lines(path: Path) -> list[dict]:
@@ -69,6 +81,28 @@ def extract_assistant_text(content) -> str:
     return ""
 
 
+def has_tool_result(row: dict) -> bool:
+    if row.get("toolUseResult"):
+        return True
+    content = row.get("message", {}).get("content")
+    return isinstance(content, list) and any(
+        isinstance(block, dict) and block.get("type") == "tool_result"
+        for block in content
+    )
+
+
+def is_harness_record(text: str) -> bool:
+    stripped = text.lstrip()
+    return stripped.startswith(
+        (
+            "This session is being continued from a previous conversation",
+            "<local-command-caveat>",
+            "<command-name>",
+            "<local-command-stdout>",
+        )
+    )
+
+
 def infer_agent_id(message: str) -> str | None:
     match = AGENT_LINE_RE.search(message)
     if match:
@@ -79,20 +113,32 @@ def infer_agent_id(message: str) -> str | None:
     return None
 
 
-def parse_repl_turns(rows: Iterable[dict]) -> list[Turn]:
+def parse_repl_turns(rows: Iterable[dict]) -> ParseResult:
     turns: list[Turn] = []
     current_context: dict | None = None
     turn_index = 0
+    operator_turns = 0
+    parsed_operator_turns = 0
+    unparsed_operator_turns = 0
+    excluded_tool_results = 0
+    excluded_harness_records = 0
 
     for row in rows:
         row_type = row.get("type")
         if row_type == "user":
             content = row.get("message", {}).get("content", "")
-            if not isinstance(content, str):
+            if has_tool_result(row):
+                excluded_tool_results += 1
+                continue
+            content = extract_assistant_text(content)
+            if is_harness_record(content):
+                excluded_harness_records += 1
                 current_context = None
                 continue
+            operator_turns += 1
             match = CURRENT_TURN_RE.search(content)
             if not match:
+                unparsed_operator_turns += 1
                 current_context = None
                 continue
             surface = match.group(1).strip()
@@ -113,6 +159,7 @@ def parse_repl_turns(rows: Iterable[dict]) -> list[Turn]:
                     )
                 )
                 turn_index += 1
+                parsed_operator_turns += 1
                 current_context = {
                     "surface": surface,
                     "caller": caller,
@@ -124,7 +171,7 @@ def parse_repl_turns(rows: Iterable[dict]) -> list[Turn]:
                     "surface": surface,
                     "caller": caller,
                     "agent_id": agent_id,
-                    "backfillable": False,
+                        "backfillable": False,
                 }
         elif row_type == "assistant":
             text = extract_assistant_text(row.get("message", {}).get("content"))
@@ -141,10 +188,17 @@ def parse_repl_turns(rows: Iterable[dict]) -> list[Turn]:
                     )
                 )
                 turn_index += 1
-    return turns
+    return ParseResult(
+        turns=turns,
+        operator_turns=operator_turns,
+        parsed_operator_turns=parsed_operator_turns,
+        unparsed_operator_turns=unparsed_operator_turns,
+        excluded_tool_results=excluded_tool_results,
+        excluded_harness_records=excluded_harness_records,
+    )
 
 
-def http_json(url: str, timeout: float = 10.0, *, headers: dict[str, str] | None = None) -> dict:
+def http_json(url: str, timeout: float = 180.0, *, headers: dict[str, str] | None = None) -> dict:
     request = urllib.request.Request(url, headers=headers or {})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
@@ -160,16 +214,45 @@ def fetch_session_entries(base_url: str, session_id: str) -> list[dict]:
     return payload.get("entries", [])
 
 
+def parse_evidence_body(body) -> dict | None:
+    if isinstance(body, dict):
+        return body
+    if isinstance(body, str):
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+    return None
+
+
+def evidence_body_shapes(entries: Iterable[dict]) -> collections.Counter:
+    shapes: collections.Counter = collections.Counter()
+    for entry in entries:
+        body = entry.get("evidence/body")
+        if isinstance(body, dict):
+            shapes["map"] += 1
+        elif isinstance(body, str):
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                shapes["unparsed-string"] += 1
+            else:
+                shapes["json-string-map" if isinstance(parsed, dict) else "json-string-other"] += 1
+        else:
+            shapes[type(body).__name__] += 1
+    return shapes
+
+
 def build_existing_chat_queues(entries: Iterable[dict]) -> dict[tuple[str, str], collections.deque]:
-    chat_entries = [
-        entry
-        for entry in entries
-        if entry.get("evidence/body", {}).get("event") == "chat-turn"
-    ]
-    chat_entries.sort(key=lambda entry: entry.get("evidence/at", ""))
+    chat_entries = []
+    for entry in entries:
+        body = parse_evidence_body(entry.get("evidence/body"))
+        if body and body.get("event") == "chat-turn":
+            chat_entries.append((entry, body))
+    chat_entries.sort(key=lambda pair: pair[0].get("evidence/at", ""))
     queues: dict[tuple[str, str], collections.deque] = collections.defaultdict(collections.deque)
-    for entry in chat_entries:
-        body = entry.get("evidence/body", {})
+    for entry, body in chat_entries:
         key = ((body.get("role") or "").strip(), (body.get("text") or "").strip())
         queues[key].append(entry)
     return queues
@@ -294,16 +377,31 @@ def main() -> int:
 
     session_id = args.session_id or args.jsonl_path.stem
     rows = load_lines(args.jsonl_path)
-    turns = parse_repl_turns(rows)
+    parsed = parse_repl_turns(rows)
+    if parsed.parsed_operator_turns == 0:
+        print(
+            "ERROR: parsed zero operator turns; refusing to report a clean empty backfill",
+            file=sys.stderr,
+        )
+        return 2
     entries = fetch_session_entries(args.base_url, session_id)
-    missing = build_missing_entries(session_id, turns, entries)
+    operator_chat_turns = [turn for turn in parsed.turns if turn.role == "user"]
+    missing = build_missing_entries(session_id, operator_chat_turns, entries)
+    shapes = evidence_body_shapes(entries)
 
     print(
         json.dumps(
             {
                 "session_id": session_id,
-                "jsonl_repl_turns": len(turns),
+                "operator_turns": parsed.operator_turns,
+                "parsed_operator_turns": parsed.parsed_operator_turns,
+                "unparsed_operator_turns": parsed.unparsed_operator_turns,
+                "excluded_tool_results": parsed.excluded_tool_results,
+                "excluded_harness_records": parsed.excluded_harness_records,
+                "jsonl_chat_turns_both_roles": len(parsed.turns),
+                "candidate_scope": "operator-user-turns-only",
                 "existing_session_entries": len(entries),
+                "evidence_body_shapes": dict(sorted(shapes.items())),
                 "missing_chat_turns": len(missing),
             },
             indent=2,

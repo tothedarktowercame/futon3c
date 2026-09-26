@@ -3,8 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [repl.http :as repl-http])
-  (:import [java.io BufferedReader InputStreamReader]
-           [java.net HttpURLConnection URL]))
+  (:import [java.net HttpURLConnection URL]))
 
 ;; =============================================================================
 ;; Test server lifecycle
@@ -39,7 +38,7 @@
 (defn- http-post
   "POST to the eval endpoint. Returns {:status int :body str}."
   ([path body] (http-post path body {}))
-  ([path body {:keys [token] :or {token *token*}}]
+  ([path body {:keys [token profile] :or {token *token*}}]
    (let [url (URL. (str "http://127.0.0.1:" *port* path))
          conn (doto ^HttpURLConnection (.openConnection url)
                 (.setRequestMethod "POST")
@@ -48,6 +47,8 @@
                 (.setReadTimeout 30000)
                 (.setRequestProperty "Content-Type" "text/plain")
                 (.setRequestProperty "x-admin-token" token))]
+     (when profile
+       (.setRequestProperty conn "x-drawbridge-profile" profile))
      (with-open [os (.getOutputStream conn)]
        (.write os (.getBytes (str body) "UTF-8")))
      (let [status (.getResponseCode conn)
@@ -116,6 +117,24 @@
     (let [{:keys [status body]} (http-post "/eval" "(+ 1 1)" {:token "wrong"})]
       (is (= 403 status))
       (is (= "forbidden" body)))))
+
+(deftest admin-eval-requires-explicit-profile-and-keeps-coherence-guard
+  (testing "the admin route cannot be selected accidentally"
+    (let [{:keys [status body]} (http-post "/admin/eval" "(+ 1 2)")]
+      (is (= 403 status))
+      (is (= "dev-admin profile header required" body))))
+  (testing "an attributed admin operation reaches the same serving image"
+    (let [{:keys [status body]} (http-post "/admin/eval" "(+ 20 22)"
+                                           {:profile "dev-admin"})]
+      (is (= 200 status))
+      (is (= 42 (:value (edn/read-string body))))))
+  (testing "dev-admin cannot remove/recreate namespaces"
+    (let [{:keys [status body]} (http-post
+                                 "/admin/eval"
+                                 "(clojure.tools.namespace.repl/refresh)"
+                                 {:profile "dev-admin"})]
+      (is (= 403 status))
+      (is (re-find #"REFUSED.*tools.namespace" body)))))
 
 (deftest eval-can-require-namespaces
   (testing "require and call"

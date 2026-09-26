@@ -1,0 +1,9 @@
+[Unit]
+Description=Protected Futon serving workloads
+
+[Slice]
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+TasksAccounting=yes
+ManagedOOMPreference=avoid

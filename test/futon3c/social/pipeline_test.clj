@@ -3,7 +3,8 @@
 
    Wires: S-presence → S-authenticate → S-dispatch → S-persist
    Full end-to-end pipeline from connection to persisted session."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.social.authenticate :as auth]
             [futon3c.social.dispatch :as dispatch]
@@ -15,7 +16,7 @@
 
 ;; Reset registry + sessions between tests
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)

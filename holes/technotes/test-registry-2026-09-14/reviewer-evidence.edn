@@ -1,0 +1,626 @@
+{:implementation "6930dfb2",
+ :reviewer-receipt
+ {:evidence/id
+  "test-registry-b74395e00c7c1679747eaa8c999c7d1a660a5cad293d8001a5b5cd545906be38",
+  :sha256
+  "b74395e00c7c1679747eaa8c999c7d1a660a5cad293d8001a5b5cd545906be38",
+  :payload
+  {:warrant? true,
+   :schema "test-registry/v1",
+   :first-run? false,
+   :record-check
+   {:chain-length 2,
+    :checked-at "2026-09-14T21:32:29.462573581Z",
+    :diff-paths [],
+    :entry-id
+    "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+    :warrant? true},
+   :run/id "db764c03-cef9-4dda-ae47-dedab11b044a",
+   :ran-at "2026-09-14T21:32:33.266561893Z",
+   :outcome :reviewed,
+   :sample-entry
+   "test-registry-848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+   :spot-test "futon3c.flight.pretty-print-test/renders-byte-stably",
+   :lane :routine,
+   :adequacy
+   "Second-pass judgment, unchanged from first inspection: renderer is pure (ns docstring claims no scoring/repair/mutation; confirmed by read of stable-value/emit paths). Tests cover canonical-organ ordering incl. missing-organ visibility, byte-stable determinism, nil-class thin-record edge. Adequate for routine unchanged-behavior scope (:changed-paths []). Noted non-blocking gaps: sorry-cells with unknown :kind untested; cross-JVM determinism rests on stable-value total ordering (in-process only); no empty-organs fixture. Spot-test: renders-byte-stably, determinism being the registry's own foundation.",
+   :policy {:count 1, :mode :spot-check},
+   :reviewed-entry
+   "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+   :author "zai-7",
+   :previous
+   {:evidence/id
+    "test-registry-848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+    :sha256
+    "848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51"},
+   :kind :review,
+   :cost
+   {:author-execution-ms 1008,
+    :comparison :measured-execution-times-not-an-adequacy-proof,
+    :record-check-ms 795,
+    :review-execution-ms 902,
+    :review-total-before-append-ms 4599,
+    :sample-total-ms 3803}}},
+ :chain
+ [{:evidence/id
+   "test-registry-6bce93de9c9369d5eac77eb72ac4faf9e8c1a9f4791de5a9253f7429028bd44d",
+   :sha256
+   "6bce93de9c9369d5eac77eb72ac4faf9e8c1a9f4791de5a9253f7429028bd44d",
+   :payload
+   {:schema "test-registry/v1",
+    :test-files
+    {"test/futon3c/flight/pretty_print_test.clj"
+     "22774098bcb58c1c7e0b880eea6c4dd812c33714fc1a921ab6037677ffcab71b"},
+    :run/id "db764c03-cef9-4dda-ae47-dedab11b044a",
+    :ran-at "2026-09-14T21:31:38.686755298Z",
+    :command
+    ["clojure" "-M:test-pure" "-n" "futon3c.flight.pretty-print-test"],
+    :code-sha
+    "c5515a767fee61139f4e776066110645f50ac60b642afb55395ec60e203c734e",
+    :repo/root "/home/joe/code/futon3c",
+    :scope
+    {:code-paths
+     ["src/futon3c/flight/pretty_print.clj"
+      "data/flight-pretty-print-mapping.edn"],
+     :test-environment
+     {"LANG" "C.UTF-8", "LC_ALL" "C.UTF-8", "TZ" "UTC"},
+     :test-paths ["test/futon3c/flight/pretty_print_test.clj"]},
+    :author "codex-27",
+    :test-sha
+    "e9182ddbe25c27c8b44233d2260eef503715f53877d98fac1d16be0368d8bca2",
+    :previous {:reason :genesis, :status :none},
+    :kind :intent,
+    :origin "futon3c-agency:7070",
+    :code-files
+    {"data/flight-pretty-print-mapping.edn"
+     "2ef121ae001e4a426a48e6c8ed8448b0c0fd0af356d168ac8cb3075bdb7cdf9f",
+     "src/futon3c/flight/pretty_print.clj"
+     "465d958fed7b7b3f79ecdf1e6cbf6cfef80f192ddf6a737654deaee4dfad642e"},
+    :env-fingerprint
+    {:dependencies
+     [{:path "/home/joe/code/futon3c/src",
+       :sha256
+       "8090b5cc2bec4f54190b815c995b66b8c554e531d5b19694a66aace24953cea4"}
+      {:path "/home/joe/code/futon3c/test",
+       :sha256
+       "0b188009bec71127cfdbb036c3c2da827cbd52a2f778e1309bc4037aab0a2c30"}
+      {:path "/home/joe/code/futon3c/resources",
+       :sha256
+       "e92f60b64047400d67623e8d7a1c3798bbfc261edf43579736d54a00d52f17fc"}
+      {:path
+       "/home/joe/.gitlibs/libs/io.github.cognitect-labs/test-runner/dfb30dd6605cb6c0efc275e1df1736f6e90d4d73/src",
+       :sha256
+       "e4233c9588d221d8471368f30ffd523acbfd77326677335e59fcc967bcf69688"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/clojure/1.12.0/clojure-1.12.0.jar",
+       :sha256
+       "c45333006441a059ea9fdb1341fc6c1f40b921a10dccd82665311e48a0384763"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar",
+       :sha256
+       "6b97d2691919b9ea944a898fec798a90ecb81a17732916edbc73a6f5afd1f616"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.jar",
+       :sha256
+       "127533ab1e1e7a700c8238ad7d58d4b42c418d6d8f34c304711503bc882e3a70"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar",
+       :sha256
+       "eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar",
+       :sha256
+       "94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/java.classpath/1.0.0/java.classpath-1.0.0.jar",
+       :sha256
+       "c14e0e10304a5e5cfd2cc742fbdefac1f5293eec6070c2ffe8903fb5c7fe7d6f"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.reader/1.3.6/tools.reader-1.3.6.jar",
+       :sha256
+       "11d1b31f2c65c3355b292bb9b44b8fcafda54b44da63e34ab97b79a8ab3bb8e0"}],
+     :environment
+     {"LC_ALL"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc",
+      "JAVA_OPTS" {:reason :unset, :status :none},
+      "CLJ_JVM_OPTS" {:reason :unset, :status :none},
+      "TZ"
+      "68105452227ca2d3f5561c7ecb735350489d1c873ab627a5f4f09dd7458e0179",
+      "JAVA_HOME" {:reason :unset, :status :none},
+      "JDK_JAVA_OPTIONS" {:reason :unset, :status :none},
+      "JAVA_TOOL_OPTIONS" {:reason :unset, :status :none},
+      "CLJ_CONFIG" {:reason :unset, :status :none},
+      "LANG"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc"},
+     :jvm
+     {:java-sha
+      "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+      :modules-sha
+      "57d3fd5c7ac115282326965aa74890dade40981c9fe43c4b123b8040841e957d",
+      :os
+      {"file.encoding" "UTF-8",
+       "os.arch" "amd64",
+       "os.name" "Linux",
+       "os.version" "6.8.0-31-generic",
+       "user.language" "en"},
+      :vendor "Ubuntu",
+      :version "21.0.11+10-1-24.04.2-Ubuntu"},
+     :sha256
+     "98b0525e18d5943b99f7e99290f86d6330896136d00f102ada9c7a4a0d29a035",
+     :toolchain
+     {:alias "-M:test-pure",
+      :clojure
+      "{:version \"1.12.5.1664\"\n :config-files [\"/usr/local/lib/clojure/deps.edn\" \"/home/joe/.clojure/deps.edn\" \"deps.edn\" ]\n :config-user \"/home/joe/.clojure/deps.edn\"\n :config-project \"deps.edn\"\n :install-dir \"/usr/local/lib/clojure\"\n :config-dir \"/home/joe/.clojure\"\n :cache-dir \".cpcache\"\n :force false\n :repro false\n :main-aliases \"\"\n :repl-aliases \"\"}",
+      :config-hashes
+      {"/home/joe/.clojure/deps.edn"
+       "83b067294f04c8012b026416d7a8135feab7be25a979f8393652338abbac461d",
+       "/usr/local/lib/clojure/deps.edn"
+       "9052b75b2610b3683c93795ba08134cf07631f210a20e0b7fc73d51d153d4f4f",
+       "deps.edn"
+       "f256b861a2ad7e041f6acb003b1daba6a531c8a9ca09a34907edb910afc05316"},
+      :launcher-sha
+      "08104c2f4862704c51a175fc9def693bac65915bed4856359affef2cb7d4ab1d"}},
+    :git-head "6930dfb20fb0d4315a47d97fca437c1693857cbb"}}
+  {:evidence/id
+   "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+   :sha256
+   "bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+   :payload
+   {:warrant? true,
+    :schema "test-registry/v1",
+    :postcheck {:status :matched},
+    :test-files
+    {"test/futon3c/flight/pretty_print_test.clj"
+     "22774098bcb58c1c7e0b880eea6c4dd812c33714fc1a921ab6037677ffcab71b"},
+    :run/id "db764c03-cef9-4dda-ae47-dedab11b044a",
+    :ran-at "2026-09-14T21:31:38.686755298Z",
+    :command
+    ["clojure" "-M:test-pure" "-n" "futon3c.flight.pretty-print-test"],
+    :code-sha
+    "c5515a767fee61139f4e776066110645f50ac60b642afb55395ec60e203c734e",
+    :repo/root "/home/joe/code/futon3c",
+    :scope
+    {:code-paths
+     ["src/futon3c/flight/pretty_print.clj"
+      "data/flight-pretty-print-mapping.edn"],
+     :test-environment
+     {"LANG" "C.UTF-8", "LC_ALL" "C.UTF-8", "TZ" "UTC"},
+     :test-paths ["test/futon3c/flight/pretty_print_test.clj"]},
+    :author "codex-27",
+    :log-artifact
+    {:path
+     "/home/joe/code/storage/test-registry/artifacts/db764c03-cef9-4dda-ae47-dedab11b044a.log",
+     :sha256
+     "0a75d4b81b434556073d51af178ba6c212a53ce774fb6249f1dd036555d99d94"},
+    :test-sha
+    "e9182ddbe25c27c8b44233d2260eef503715f53877d98fac1d16be0368d8bca2",
+    :previous
+    {:evidence/id
+     "test-registry-6bce93de9c9369d5eac77eb72ac4faf9e8c1a9f4791de5a9253f7429028bd44d",
+     :sha256
+     "6bce93de9c9369d5eac77eb72ac4faf9e8c1a9f4791de5a9253f7429028bd44d"},
+    :kind :run,
+    :origin "futon3c-agency:7070",
+    :execution/stable? true,
+    :cost {:execution-ms 1008, :total-before-result-append-ms 2849},
+    :code-files
+    {"data/flight-pretty-print-mapping.edn"
+     "2ef121ae001e4a426a48e6c8ed8448b0c0fd0af356d168ac8cb3075bdb7cdf9f",
+     "src/futon3c/flight/pretty_print.clj"
+     "465d958fed7b7b3f79ecdf1e6cbf6cfef80f192ddf6a737654deaee4dfad642e"},
+    :finished-at "2026-09-14T21:31:41.535681143Z",
+    :env-fingerprint
+    {:dependencies
+     [{:path "/home/joe/code/futon3c/src",
+       :sha256
+       "8090b5cc2bec4f54190b815c995b66b8c554e531d5b19694a66aace24953cea4"}
+      {:path "/home/joe/code/futon3c/test",
+       :sha256
+       "0b188009bec71127cfdbb036c3c2da827cbd52a2f778e1309bc4037aab0a2c30"}
+      {:path "/home/joe/code/futon3c/resources",
+       :sha256
+       "e92f60b64047400d67623e8d7a1c3798bbfc261edf43579736d54a00d52f17fc"}
+      {:path
+       "/home/joe/.gitlibs/libs/io.github.cognitect-labs/test-runner/dfb30dd6605cb6c0efc275e1df1736f6e90d4d73/src",
+       :sha256
+       "e4233c9588d221d8471368f30ffd523acbfd77326677335e59fcc967bcf69688"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/clojure/1.12.0/clojure-1.12.0.jar",
+       :sha256
+       "c45333006441a059ea9fdb1341fc6c1f40b921a10dccd82665311e48a0384763"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar",
+       :sha256
+       "6b97d2691919b9ea944a898fec798a90ecb81a17732916edbc73a6f5afd1f616"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.jar",
+       :sha256
+       "127533ab1e1e7a700c8238ad7d58d4b42c418d6d8f34c304711503bc882e3a70"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar",
+       :sha256
+       "eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar",
+       :sha256
+       "94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/java.classpath/1.0.0/java.classpath-1.0.0.jar",
+       :sha256
+       "c14e0e10304a5e5cfd2cc742fbdefac1f5293eec6070c2ffe8903fb5c7fe7d6f"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.reader/1.3.6/tools.reader-1.3.6.jar",
+       :sha256
+       "11d1b31f2c65c3355b292bb9b44b8fcafda54b44da63e34ab97b79a8ab3bb8e0"}],
+     :environment
+     {"LC_ALL"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc",
+      "JAVA_OPTS" {:reason :unset, :status :none},
+      "CLJ_JVM_OPTS" {:reason :unset, :status :none},
+      "TZ"
+      "68105452227ca2d3f5561c7ecb735350489d1c873ab627a5f4f09dd7458e0179",
+      "JAVA_HOME" {:reason :unset, :status :none},
+      "JDK_JAVA_OPTIONS" {:reason :unset, :status :none},
+      "JAVA_TOOL_OPTIONS" {:reason :unset, :status :none},
+      "CLJ_CONFIG" {:reason :unset, :status :none},
+      "LANG"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc"},
+     :jvm
+     {:java-sha
+      "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+      :modules-sha
+      "57d3fd5c7ac115282326965aa74890dade40981c9fe43c4b123b8040841e957d",
+      :os
+      {"file.encoding" "UTF-8",
+       "os.arch" "amd64",
+       "os.name" "Linux",
+       "os.version" "6.8.0-31-generic",
+       "user.language" "en"},
+      :vendor "Ubuntu",
+      :version "21.0.11+10-1-24.04.2-Ubuntu"},
+     :sha256
+     "98b0525e18d5943b99f7e99290f86d6330896136d00f102ada9c7a4a0d29a035",
+     :toolchain
+     {:alias "-M:test-pure",
+      :clojure
+      "{:version \"1.12.5.1664\"\n :config-files [\"/usr/local/lib/clojure/deps.edn\" \"/home/joe/.clojure/deps.edn\" \"deps.edn\" ]\n :config-user \"/home/joe/.clojure/deps.edn\"\n :config-project \"deps.edn\"\n :install-dir \"/usr/local/lib/clojure\"\n :config-dir \"/home/joe/.clojure\"\n :cache-dir \".cpcache\"\n :force false\n :repro false\n :main-aliases \"\"\n :repl-aliases \"\"}",
+      :config-hashes
+      {"/home/joe/.clojure/deps.edn"
+       "83b067294f04c8012b026416d7a8135feab7be25a979f8393652338abbac461d",
+       "/usr/local/lib/clojure/deps.edn"
+       "9052b75b2610b3683c93795ba08134cf07631f210a20e0b7fc73d51d153d4f4f",
+       "deps.edn"
+       "f256b861a2ad7e041f6acb003b1daba6a531c8a9ca09a34907edb910afc05316"},
+      :launcher-sha
+      "08104c2f4862704c51a175fc9def693bac65915bed4856359affef2cb7d4ab1d"}},
+    :git-head "6930dfb20fb0d4315a47d97fca437c1693857cbb",
+    :results
+    {:assertions 7,
+     :duration-ms 1008,
+     :errors 0,
+     :exit 0,
+     :failures 0,
+     :tests 3}}}
+  {:evidence/id
+   "test-registry-3b5e54a1bce983b28c7bae6a426bed2e55fe15f93efbca41fba58f1e26b52eb0",
+   :sha256
+   "3b5e54a1bce983b28c7bae6a426bed2e55fe15f93efbca41fba58f1e26b52eb0",
+   :payload
+   {:schema "test-registry/v1",
+    :test-files
+    {"test/futon3c/flight/pretty_print_test.clj"
+     "22774098bcb58c1c7e0b880eea6c4dd812c33714fc1a921ab6037677ffcab71b"},
+    :run/id "c1a70480-c66e-4522-9e49-a93ff7d38275",
+    :ran-at "2026-09-14T21:32:29.463029184Z",
+    :command
+    ["clojure"
+     "-M:test-pure"
+     "-n"
+     "futon3c.flight.pretty-print-test"
+     "-v"
+     "futon3c.flight.pretty-print-test/renders-byte-stably"],
+    :code-sha
+    "c5515a767fee61139f4e776066110645f50ac60b642afb55395ec60e203c734e",
+    :repo/root "/home/joe/code/futon3c",
+    :scope
+    {:code-paths
+     ["src/futon3c/flight/pretty_print.clj"
+      "data/flight-pretty-print-mapping.edn"],
+     :test-environment
+     {"LANG" "C.UTF-8", "LC_ALL" "C.UTF-8", "TZ" "UTC"},
+     :test-paths ["test/futon3c/flight/pretty_print_test.clj"]},
+    :author "zai-7",
+    :test-sha
+    "e9182ddbe25c27c8b44233d2260eef503715f53877d98fac1d16be0368d8bca2",
+    :previous
+    {:evidence/id
+     "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+     :sha256
+     "bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6"},
+    :kind :intent,
+    :origin "futon3c-agency:7070",
+    :code-files
+    {"data/flight-pretty-print-mapping.edn"
+     "2ef121ae001e4a426a48e6c8ed8448b0c0fd0af356d168ac8cb3075bdb7cdf9f",
+     "src/futon3c/flight/pretty_print.clj"
+     "465d958fed7b7b3f79ecdf1e6cbf6cfef80f192ddf6a737654deaee4dfad642e"},
+    :env-fingerprint
+    {:dependencies
+     [{:path "/home/joe/code/futon3c/src",
+       :sha256
+       "8090b5cc2bec4f54190b815c995b66b8c554e531d5b19694a66aace24953cea4"}
+      {:path "/home/joe/code/futon3c/test",
+       :sha256
+       "0b188009bec71127cfdbb036c3c2da827cbd52a2f778e1309bc4037aab0a2c30"}
+      {:path "/home/joe/code/futon3c/resources",
+       :sha256
+       "e92f60b64047400d67623e8d7a1c3798bbfc261edf43579736d54a00d52f17fc"}
+      {:path
+       "/home/joe/.gitlibs/libs/io.github.cognitect-labs/test-runner/dfb30dd6605cb6c0efc275e1df1736f6e90d4d73/src",
+       :sha256
+       "e4233c9588d221d8471368f30ffd523acbfd77326677335e59fcc967bcf69688"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/clojure/1.12.0/clojure-1.12.0.jar",
+       :sha256
+       "c45333006441a059ea9fdb1341fc6c1f40b921a10dccd82665311e48a0384763"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar",
+       :sha256
+       "6b97d2691919b9ea944a898fec798a90ecb81a17732916edbc73a6f5afd1f616"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.jar",
+       :sha256
+       "127533ab1e1e7a700c8238ad7d58d4b42c418d6d8f34c304711503bc882e3a70"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar",
+       :sha256
+       "eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar",
+       :sha256
+       "94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/java.classpath/1.0.0/java.classpath-1.0.0.jar",
+       :sha256
+       "c14e0e10304a5e5cfd2cc742fbdefac1f5293eec6070c2ffe8903fb5c7fe7d6f"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.reader/1.3.6/tools.reader-1.3.6.jar",
+       :sha256
+       "11d1b31f2c65c3355b292bb9b44b8fcafda54b44da63e34ab97b79a8ab3bb8e0"}],
+     :environment
+     {"LC_ALL"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc",
+      "JAVA_OPTS" {:reason :unset, :status :none},
+      "CLJ_JVM_OPTS" {:reason :unset, :status :none},
+      "TZ"
+      "68105452227ca2d3f5561c7ecb735350489d1c873ab627a5f4f09dd7458e0179",
+      "JAVA_HOME" {:reason :unset, :status :none},
+      "JDK_JAVA_OPTIONS" {:reason :unset, :status :none},
+      "JAVA_TOOL_OPTIONS" {:reason :unset, :status :none},
+      "CLJ_CONFIG" {:reason :unset, :status :none},
+      "LANG"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc"},
+     :jvm
+     {:java-sha
+      "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+      :modules-sha
+      "57d3fd5c7ac115282326965aa74890dade40981c9fe43c4b123b8040841e957d",
+      :os
+      {"file.encoding" "UTF-8",
+       "os.arch" "amd64",
+       "os.name" "Linux",
+       "os.version" "6.8.0-31-generic",
+       "user.language" "en"},
+      :vendor "Ubuntu",
+      :version "21.0.11+10-1-24.04.2-Ubuntu"},
+     :sha256
+     "98b0525e18d5943b99f7e99290f86d6330896136d00f102ada9c7a4a0d29a035",
+     :toolchain
+     {:alias "-M:test-pure",
+      :clojure
+      "{:version \"1.12.5.1664\"\n :config-files [\"/usr/local/lib/clojure/deps.edn\" \"/home/joe/.clojure/deps.edn\" \"deps.edn\" ]\n :config-user \"/home/joe/.clojure/deps.edn\"\n :config-project \"deps.edn\"\n :install-dir \"/usr/local/lib/clojure\"\n :config-dir \"/home/joe/.clojure\"\n :cache-dir \".cpcache\"\n :force false\n :repro false\n :main-aliases \"\"\n :repl-aliases \"\"}",
+      :config-hashes
+      {"/home/joe/.clojure/deps.edn"
+       "83b067294f04c8012b026416d7a8135feab7be25a979f8393652338abbac461d",
+       "/usr/local/lib/clojure/deps.edn"
+       "9052b75b2610b3683c93795ba08134cf07631f210a20e0b7fc73d51d153d4f4f",
+       "deps.edn"
+       "f256b861a2ad7e041f6acb003b1daba6a531c8a9ca09a34907edb910afc05316"},
+      :launcher-sha
+      "08104c2f4862704c51a175fc9def693bac65915bed4856359affef2cb7d4ab1d"}},
+    :git-head "6930dfb20fb0d4315a47d97fca437c1693857cbb"}}
+  {:evidence/id
+   "test-registry-848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+   :sha256
+   "848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+   :payload
+   {:warrant? true,
+    :schema "test-registry/v1",
+    :postcheck {:status :matched},
+    :test-files
+    {"test/futon3c/flight/pretty_print_test.clj"
+     "22774098bcb58c1c7e0b880eea6c4dd812c33714fc1a921ab6037677ffcab71b"},
+    :run/id "c1a70480-c66e-4522-9e49-a93ff7d38275",
+    :ran-at "2026-09-14T21:32:29.463029184Z",
+    :command
+    ["clojure"
+     "-M:test-pure"
+     "-n"
+     "futon3c.flight.pretty-print-test"
+     "-v"
+     "futon3c.flight.pretty-print-test/renders-byte-stably"],
+    :code-sha
+    "c5515a767fee61139f4e776066110645f50ac60b642afb55395ec60e203c734e",
+    :repo/root "/home/joe/code/futon3c",
+    :scope
+    {:code-paths
+     ["src/futon3c/flight/pretty_print.clj"
+      "data/flight-pretty-print-mapping.edn"],
+     :test-environment
+     {"LANG" "C.UTF-8", "LC_ALL" "C.UTF-8", "TZ" "UTC"},
+     :test-paths ["test/futon3c/flight/pretty_print_test.clj"]},
+    :author "zai-7",
+    :log-artifact
+    {:path
+     "/home/joe/code/storage/test-registry/artifacts/c1a70480-c66e-4522-9e49-a93ff7d38275.log",
+     :sha256
+     "94f44050b43056f31aa1c54ecd70010ba79c50ef7e0b54ccf813c97be3a09139"},
+    :test-sha
+    "e9182ddbe25c27c8b44233d2260eef503715f53877d98fac1d16be0368d8bca2",
+    :previous
+    {:evidence/id
+     "test-registry-3b5e54a1bce983b28c7bae6a426bed2e55fe15f93efbca41fba58f1e26b52eb0",
+     :sha256
+     "3b5e54a1bce983b28c7bae6a426bed2e55fe15f93efbca41fba58f1e26b52eb0"},
+    :kind :run,
+    :origin "futon3c-agency:7070",
+    :execution/stable? true,
+    :cost {:execution-ms 902, :total-before-result-append-ms 2693},
+    :code-files
+    {"data/flight-pretty-print-mapping.edn"
+     "2ef121ae001e4a426a48e6c8ed8448b0c0fd0af356d168ac8cb3075bdb7cdf9f",
+     "src/futon3c/flight/pretty_print.clj"
+     "465d958fed7b7b3f79ecdf1e6cbf6cfef80f192ddf6a737654deaee4dfad642e"},
+    :finished-at "2026-09-14T21:32:32.156441242Z",
+    :env-fingerprint
+    {:dependencies
+     [{:path "/home/joe/code/futon3c/src",
+       :sha256
+       "8090b5cc2bec4f54190b815c995b66b8c554e531d5b19694a66aace24953cea4"}
+      {:path "/home/joe/code/futon3c/test",
+       :sha256
+       "0b188009bec71127cfdbb036c3c2da827cbd52a2f778e1309bc4037aab0a2c30"}
+      {:path "/home/joe/code/futon3c/resources",
+       :sha256
+       "e92f60b64047400d67623e8d7a1c3798bbfc261edf43579736d54a00d52f17fc"}
+      {:path
+       "/home/joe/.gitlibs/libs/io.github.cognitect-labs/test-runner/dfb30dd6605cb6c0efc275e1df1736f6e90d4d73/src",
+       :sha256
+       "e4233c9588d221d8471368f30ffd523acbfd77326677335e59fcc967bcf69688"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/clojure/1.12.0/clojure-1.12.0.jar",
+       :sha256
+       "c45333006441a059ea9fdb1341fc6c1f40b921a10dccd82665311e48a0384763"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.cli/1.0.206/tools.cli-1.0.206.jar",
+       :sha256
+       "6b97d2691919b9ea944a898fec798a90ecb81a17732916edbc73a6f5afd1f616"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.namespace/1.3.0/tools.namespace-1.3.0.jar",
+       :sha256
+       "127533ab1e1e7a700c8238ad7d58d4b42c418d6d8f34c304711503bc882e3a70"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar",
+       :sha256
+       "eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar",
+       :sha256
+       "94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/java.classpath/1.0.0/java.classpath-1.0.0.jar",
+       :sha256
+       "c14e0e10304a5e5cfd2cc742fbdefac1f5293eec6070c2ffe8903fb5c7fe7d6f"}
+      {:path
+       "/home/joe/.m2/repository/org/clojure/tools.reader/1.3.6/tools.reader-1.3.6.jar",
+       :sha256
+       "11d1b31f2c65c3355b292bb9b44b8fcafda54b44da63e34ab97b79a8ab3bb8e0"}],
+     :environment
+     {"LC_ALL"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc",
+      "JAVA_OPTS" {:reason :unset, :status :none},
+      "CLJ_JVM_OPTS" {:reason :unset, :status :none},
+      "TZ"
+      "68105452227ca2d3f5561c7ecb735350489d1c873ab627a5f4f09dd7458e0179",
+      "JAVA_HOME" {:reason :unset, :status :none},
+      "JDK_JAVA_OPTIONS" {:reason :unset, :status :none},
+      "JAVA_TOOL_OPTIONS" {:reason :unset, :status :none},
+      "CLJ_CONFIG" {:reason :unset, :status :none},
+      "LANG"
+      "26275e702b089d1487b23b4cb2db11f3362f13f048b05ebc8427739a64d2accc"},
+     :jvm
+     {:java-sha
+      "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+      :modules-sha
+      "57d3fd5c7ac115282326965aa74890dade40981c9fe43c4b123b8040841e957d",
+      :os
+      {"file.encoding" "UTF-8",
+       "os.arch" "amd64",
+       "os.name" "Linux",
+       "os.version" "6.8.0-31-generic",
+       "user.language" "en"},
+      :vendor "Ubuntu",
+      :version "21.0.11+10-1-24.04.2-Ubuntu"},
+     :sha256
+     "98b0525e18d5943b99f7e99290f86d6330896136d00f102ada9c7a4a0d29a035",
+     :toolchain
+     {:alias "-M:test-pure",
+      :clojure
+      "{:version \"1.12.5.1664\"\n :config-files [\"/usr/local/lib/clojure/deps.edn\" \"/home/joe/.clojure/deps.edn\" \"deps.edn\" ]\n :config-user \"/home/joe/.clojure/deps.edn\"\n :config-project \"deps.edn\"\n :install-dir \"/usr/local/lib/clojure\"\n :config-dir \"/home/joe/.clojure\"\n :cache-dir \".cpcache\"\n :force false\n :repro false\n :main-aliases \"\"\n :repl-aliases \"\"}",
+      :config-hashes
+      {"/home/joe/.clojure/deps.edn"
+       "83b067294f04c8012b026416d7a8135feab7be25a979f8393652338abbac461d",
+       "/usr/local/lib/clojure/deps.edn"
+       "9052b75b2610b3683c93795ba08134cf07631f210a20e0b7fc73d51d153d4f4f",
+       "deps.edn"
+       "f256b861a2ad7e041f6acb003b1daba6a531c8a9ca09a34907edb910afc05316"},
+      :launcher-sha
+      "08104c2f4862704c51a175fc9def693bac65915bed4856359affef2cb7d4ab1d"}},
+    :git-head "6930dfb20fb0d4315a47d97fca437c1693857cbb",
+    :results
+    {:assertions 1,
+     :duration-ms 902,
+     :errors 0,
+     :exit 0,
+     :failures 0,
+     :tests 1}}}
+  {:evidence/id
+   "test-registry-b74395e00c7c1679747eaa8c999c7d1a660a5cad293d8001a5b5cd545906be38",
+   :sha256
+   "b74395e00c7c1679747eaa8c999c7d1a660a5cad293d8001a5b5cd545906be38",
+   :payload
+   {:warrant? true,
+    :schema "test-registry/v1",
+    :first-run? false,
+    :record-check
+    {:chain-length 2,
+     :checked-at "2026-09-14T21:32:29.462573581Z",
+     :diff-paths [],
+     :entry-id
+     "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+     :warrant? true},
+    :run/id "db764c03-cef9-4dda-ae47-dedab11b044a",
+    :ran-at "2026-09-14T21:32:33.266561893Z",
+    :outcome :reviewed,
+    :sample-entry
+    "test-registry-848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+    :spot-test "futon3c.flight.pretty-print-test/renders-byte-stably",
+    :lane :routine,
+    :adequacy
+    "Second-pass judgment, unchanged from first inspection: renderer is pure (ns docstring claims no scoring/repair/mutation; confirmed by read of stable-value/emit paths). Tests cover canonical-organ ordering incl. missing-organ visibility, byte-stable determinism, nil-class thin-record edge. Adequate for routine unchanged-behavior scope (:changed-paths []). Noted non-blocking gaps: sorry-cells with unknown :kind untested; cross-JVM determinism rests on stable-value total ordering (in-process only); no empty-organs fixture. Spot-test: renders-byte-stably, determinism being the registry's own foundation.",
+    :policy {:count 1, :mode :spot-check},
+    :reviewed-entry
+    "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+    :author "zai-7",
+    :previous
+    {:evidence/id
+     "test-registry-848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51",
+     :sha256
+     "848dda081c2b4609431365c4b61a67a9baf50cd92d6d506d88adb24873dfae51"},
+    :kind :review,
+    :cost
+    {:author-execution-ms 1008,
+     :comparison :measured-execution-times-not-an-adequacy-proof,
+     :record-check-ms 795,
+     :review-execution-ms 902,
+     :review-total-before-append-ms 4599,
+     :sample-total-ms 3803}}}],
+ :cli-check
+ {:warrant? true,
+  :chain-length 2,
+  :entry-id
+  "test-registry-bc9d2129240a8d14870684727e7fda0bc2141a72d22f607bfd905ec15b84c8f6",
+  :checked-at "2026-09-14T21:33:19.493014840Z",
+  :diff-paths []},
+ :cli-control :ambient-LC_ALL-unset,
+ :cost-conclusion :no-wall-time-saving-demonstrated}

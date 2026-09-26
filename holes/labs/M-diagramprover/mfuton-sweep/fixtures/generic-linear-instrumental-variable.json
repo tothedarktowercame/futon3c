@@ -1,0 +1,30 @@
+{
+  "example_id": "generic-linear-instrumental-variable",
+  "title": "Generic linear instrumental variable",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.9 adds path coefficients to the generic instrumental-variable graph. Z affects X by a, X affects Y by b, and hidden U affects X and Y by c and d.",
+  "variables": [
+    {"key": "u", "name": "U", "content": "The unobserved common cause of X and Y.", "observed": false},
+    {"key": "z", "name": "Z", "content": "The instrument."},
+    {"key": "x", "name": "X", "content": "The treatment."},
+    {"key": "y", "name": "Y", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "coefficient": "a", "because": "Figure 7.9 labels the instrument-to-treatment path a."},
+    {"source": "x", "target": "y", "coefficient": "b", "because": "Figure 7.9 labels the treatment effect b."},
+    {"source": "u", "target": "x", "coefficient": "c", "because": "Figure 7.9 labels hidden confounding into X by c."},
+    {"source": "u", "target": "y", "coefficient": "d", "because": "Figure 7.9 labels hidden confounding into Y by d."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:c4b1d169d7a1132b",
+    "ta-book-of-why-2018:a9e542e6c799d8c2",
+    "ta-book-of-why-2018:0cc30d0f645328c4",
+    "ta-book-of-why-2018:3221ad656f939741",
+    "ta-book-of-why-2018:f18df111d015b462",
+    "ta-book-of-why-2018:81f0828c35c9b906",
+    "ta-book-of-why-2018:be75421b4f027cd7",
+    "ta-book-of-why-2018:2cf0db3e1d181e04",
+    "ta-book-of-why-2018:e9a7f8b6d67d44d8"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0261"]
+}

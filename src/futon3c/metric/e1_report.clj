@@ -10,7 +10,8 @@
             [futon3c.metric.e1 :as e1]))
 
 (def default-futon1a-url
-  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def default-penholder
   (or (System/getenv "FUTON1A_PENHOLDER") "api"))
@@ -51,7 +52,8 @@
                   "/api/alpha/hyperedges?type="
                   (url-encode hx-type)
                   "&limit="
-                  limit)
+                  limit
+                  "&include-total=false")
          resp (http/get url {:headers {"Accept" "application/json"
                                        "X-Penholder" default-penholder}
                              :throw false

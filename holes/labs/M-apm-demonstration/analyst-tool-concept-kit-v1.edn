@@ -1,0 +1,71 @@
+{:kit/id :apm-analyst-tool-concept-kit-v1
+ :kit/purpose
+ "Give the batch Analyst evidenced concepts and instruments for diagnosing
+  memory transfer and the learning loop without treating a static graph
+  statistic as a success criterion."
+
+ :evidence-sources
+ [{:path "docs/retrieval-whitepaper-v2.md"
+   :use :failure-analysis-and-route-relative-hypotheses}
+  {:path "docs/retrieval-whitepaper-v3.md"
+   :use :demand-side-and-artifact-witness-standard}
+  {:path "docs/pattern-retrieval-architecture.md"
+   :use :attachment-projection-and-end-to-end-canary}
+  {:path "docs/memory-causal-graph-spec.md"
+   :use :causal-spine-and-counterfactual-isolation}
+  {:path "holes/excursions/E-memory-v3-programme.md"
+   :use :typed-experimental-claims}
+  {:path "holes/labs/M-memory-retrieval/memory-system-static-analysis-20260803.md"
+   :use :implemented-push-pull-surfaces-and-known-gaps}]
+
+ :concepts
+ #{:route-relative-reachability
+   :attachment-layer-bottleneck
+   :push-versus-pull-channel
+   :regulative-versus-substitutive-use
+   :trajectory-delta
+   :counterfactual-ablation
+   :paired-blind-or-twin-adjudication
+   :artifact-fingerprint-witness
+   :demand-vote-build-callback
+   :end-to-end-surfacing-canary}
+
+ :instrument-policy
+ {:forbidden-gates #{:global-lambda2-threshold}
+  :descriptive-only
+  {:lambda2 {:requires #{:declared-graph-universe :declared-operator
+                         :declared-step-size :component-accounting}
+             :reason "The v2 criterion inverted across graph richness and
+                      connectivity proved route-relative."}}}
+
+ :tools
+ [{:tool :frame-receipt-query
+   :availability :required-machine-surface
+   :purpose :assemble-ten-frame-evidence-window}
+  {:tool :artifact-witness-check
+   :availability :required-machine-surface
+   :purpose :verify-that-memory-use-reached-a-committed-artifact}
+  {:tool :end-to-end-pattern-canary
+   :availability :specified-not-yet-certified-for-analyst-seat
+   :purpose :prove-deposit-through-projection-through-recall}
+  {:tool :memory-search
+   :availability :implemented-on-some-agent-surfaces-seat-access-unverified
+   :purpose :pull-channel-query}
+  {:tool :pattern-memory
+   :availability :implemented-on-some-agent-surfaces-seat-access-unverified
+   :purpose :inspect-pattern-projection}
+  {:tool :evidence-graph
+   :availability :implemented-on-some-agent-surfaces-seat-access-unverified
+   :purpose :inspect-evidenced-relations}
+  {:tool :psr-search
+   :availability :implemented-on-some-agent-surfaces-seat-access-unverified
+   :purpose :search-problem-solution-records}]
+
+ :batch-review
+ {:initial-window-closed-frames 10
+  :always-produce #{:batch-diagnosis :instrument-health-report}
+  :produce-on-evidence #{:memory-store-architecture-proposal
+                         :learning-loop-structure-proposal
+                         :instrument-repair-proposal}
+  :rule "Absence of an architectural proposal is a valid batch outcome;
+         absence of a diagnosis or instrument-health report is not."}}

@@ -1,0 +1,26 @@
+/tmp/flight8/timeline.py:6: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  def iso(ts): return datetime.datetime.utcfromtimestamp(ts).strftime('%Y-%m-%dT%H:%M:%SZ')
+/tmp/flight8/timeline.py:48: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+  print('# Eighth flight of M-autoclock-in (flight-ada87008; the dry-run plan named flight-4a6838e4, the --run minted its own id) — timeline, UTC, generated '+iso(datetime.datetime.utcnow().timestamp())+' by /tmp/flight8/timeline.py from the store, the Agency job list, the click endpoint and the driver process')
+# Eighth flight of M-autoclock-in (flight-ada87008; the dry-run plan named flight-4a6838e4, the --run minted its own id) — timeline, UTC, generated 2026-09-26T04:01:01Z by /tmp/flight8/timeline.py from the store, the Agency job list, the click endpoint and the driver process
+# operator: Joe, 2026-09-25: "OK to M-auto-clock in but can you please monitor it directly"; "keep meticulous records with timestamps"; flown by claude-8
+2026-09-26T03:50:39Z driver  dry-run plan started (no --run); flight id in plan: flight-4a6838e4
+2026-09-26T03:50:56Z driver  flight-driver M-autoclock-in --run started from /home/joe/code/futon2-flight8 (futon2 083cc190, runtime c95c6453), seat claude-5, author claude-6, reviewer claude-13, dispatch seat claude-5, max-clicks 1
+2026-09-26T03:51:48Z click   click wm-click-149bfc1f-2ec5-4b1a-a627-be8f3e214852 running? False phase None
+2026-09-26T03:52:03Z click   phase opportunity start
+2026-09-26T03:52:28Z click   phase agent-readiness start
+2026-09-26T03:52:35Z click   phase agent-readiness end outcome ok 6196 ms
+2026-09-26T03:52:41Z click   phase code-state start
+2026-09-26T03:52:47Z click   phase code-state end outcome ok 6198 ms
+2026-09-26T03:52:53Z click   phase substrate-preflight start
+2026-09-26T03:53:08Z click   phase substrate-preflight end outcome ok 14078 ms
+2026-09-26T03:53:13Z click   phase preference-refresh start
+2026-09-26T03:54:39Z click   phase preference-refresh end outcome ok 85894 ms
+2026-09-26T03:54:46Z click   phase stop-line-memory start
+2026-09-26T03:54:58Z click   phase stop-line-memory end outcome ok 12182 ms
+2026-09-26T03:55:04Z click   phase selection start
+2026-09-26T03:55:51Z click   phase selection end outcome error 47266 ms error "substrate-2 mission registry unreachable"
+2026-09-26T03:56:09Z server  run record written tick-run-record-2026-09-26-flight-ada87008-click-1.edn
+2026-09-26T03:56:18Z store   written flights/flight-ada87008.edn
+2026-09-26T03:56:19Z driver  flight-driver process ended: EXIT 0

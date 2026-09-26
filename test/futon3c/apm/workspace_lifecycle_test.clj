@@ -1,0 +1,432 @@
+(ns futon3c.apm.workspace-lifecycle-test
+  (:require [clojure.java.shell :as shell]
+            [clojure.edn :as edn]
+            [clojure.set]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.workspace-lifecycle :as sut])
+  (:import [java.nio.file Files Path]
+           [java.nio.file.attribute FileAttribute]
+           [java.time Instant]))
+
+(defn- sh [& args] (apply shell/sh args))
+
+(defn- addressed? [value id-key]
+  (= (get value id-key) (machine/ledger-digest [(dissoc value id-key)])))
+
+(defn- fixture []
+  (let [root (Files/createTempDirectory "apm-lifecycle-" (make-array FileAttribute 0))
+        repo (.resolve root "repo")
+        workspaces (.resolve root "workspaces")
+        lake (.resolve repo ".lake")]
+    (Files/createDirectories repo (make-array FileAttribute 0))
+    (sh "git" "init" "-b" "main" (str repo))
+    (spit (str (.resolve repo ".gitignore")) "/.lake\n")
+    (Files/createDirectories (.resolve repo "problems/p1/lean")
+                             (make-array FileAttribute 0))
+    (spit (str (.resolve repo "problems/p1/lean/Main.lean")) "theorem p1 : True := by trivial\n")
+    (spit (str (.resolve repo "lake-manifest.json")) "{}\n")
+    (Files/createDirectories lake (make-array FileAttribute 0))
+    (sh "git" "-C" (str repo) "add" ".")
+    (sh "git" "-C" (str repo) "-c" "user.name=Test" "-c"
+        "user.email=test@example.invalid" "commit" "-m" "base")
+    (let [revision (:out (sh "git" "-C" (str repo) "rev-parse" "HEAD"))
+          revision (.trim revision)
+          blob (-> (sh "git" "-C" (str repo) "rev-parse"
+                       (str revision ":problems/p1/lean/Main.lean")) :out .trim)]
+      {:root root :repo repo :workspaces workspaces :lake lake
+       :unit {:frame/id "f19" :problem/id "p1"
+              :problem {:repository (str repo) :branch "main" :revision revision
+                        :path "problems/p1/lean/Main.lean" :blob blob}}})))
+
+(deftest provision-validate-retire-retains-branch-and-receipt
+  (let [{:keys [root repo workspaces lake unit]} (fixture)
+        provisioned (sut/provision! {:unit unit :role :solver
+                                     :workspace-root workspaces
+                                     :substrate-path lake
+                                     :now (Instant/parse "2026-08-21T00:00:00Z")})
+        lease (:lease provisioned)
+        validation (sut/validate lease {:probe-fn (fn [_] {:exit 0})})
+        receipt-dir (.resolve root "receipts")
+        audit (:audit (sut/certify-retirement-audit
+                       {:lease lease :validation validation
+                        :observations (zipmap sut/required-retirement-preconditions
+                                              (repeat true))
+                        :terminal-head (:head validation)
+                        :context :qualification-rehearsal
+                        :audited-at (Instant/parse "2026-08-21T00:00:30Z")}))
+        retired (sut/retire! {:lease lease :audit audit
+                              :receipt-directory receipt-dir
+                              :now (Instant/parse "2026-08-21T00:01:00Z")})]
+    (is (:ok provisioned))
+    (is (false? (Files/isSymbolicLink
+                 (.resolve (Path/of (:workspace/path lease)
+                                    (make-array String 0)) ".lake"))))
+    (is (not= (str lake) (:substrate/path lease)))
+    (is (:valid? validation) (pr-str (:findings validation)))
+    (is (:ok retired))
+    (is (:path-absent? retired))
+    (is (= (:head validation) (:branch-head retired)))
+    (is (= (:receipt retired) (sut/read-receipt (:receipt/path retired))))
+    (let [replayed (sut/retirement-status
+                    {:lease lease :terminal-head (:head validation)
+                     :receipt-directory receipt-dir})]
+      (is (:ok replayed) (pr-str replayed))
+      (is (= :already-retired (:status replayed)))
+      (is (= (:receipt/id (:receipt retired))
+             (get-in replayed [:receipt :receipt/id]))))
+    (is (zero? (:exit (sh "git" "-C" (str repo) "show-ref" "--verify"
+                           (str "refs/heads/" (:branch lease))))))
+    (testing "retained exact branch can be reprovisioned"
+      (let [again (sut/provision! {:unit unit :role :solver
+                                   :workspace-root workspaces
+                                   :substrate-path lake})]
+        (is (:ok again))
+        (is (= (:base-revision lease) (:base-revision (:lease again))))))))
+
+(deftest operations-fail-closed-on-scope-state-and-audit-mismatch
+  (let [{:keys [root workspaces lake unit]} (fixture)]
+    (testing "path collision"
+      (Files/createDirectories (.resolve workspaces "f19-p1-solver")
+                               (make-array FileAttribute 0))
+      (is (= :workspace-provision-path-exists
+             (:error/code (sut/provision! {:unit unit :role :solver
+                                           :workspace-root workspaces
+                                           :substrate-path lake})))))
+    (testing "missing retirement evidence"
+      (let [other-root (.resolve root "other")
+            provisioned (sut/provision! {:unit unit :role :student
+                                         :workspace-root other-root
+                                         :substrate-path lake})
+            lease (:lease provisioned)]
+        (is (= :workspace-retirement-audit-certificate-invalid
+               (:error/code (sut/retire! {:lease lease :audit {}
+                                          :receipt-directory (.resolve root "receipts")}))))))))
+
+(deftest exact-partial-provision-is-recovered-idempotently
+  (let [{:keys [workspaces lake unit]} (fixture)
+        now "2026-08-26T05:00:00Z"
+        first-result (sut/provision! {:unit unit :role :student
+                                      :workspace-root workspaces
+                                      :substrate-path lake :now now})
+        lease (:lease first-result)
+        packages (.resolve (Path/of (:workspace/path lease)
+                                    (make-array String 0))
+                           ".lake/packages")]
+    (is (:ok first-result))
+    ;; Model interruption between Git worktree creation and substrate linking.
+    (Files/delete packages)
+    (let [recovered (sut/provision! {:unit unit :role :student
+                                     :workspace-root workspaces
+                                     :substrate-path lake :now now})]
+      (is (:ok recovered))
+      (is (= :recovered-partial (:status recovered)))
+      (is (= (:workspace/id lease) (get-in recovered [:lease :workspace/id])))
+      (is (= (.resolve lake "packages") (Files/readSymbolicLink packages))))))
+
+(deftest retirement-binds-the-recorded-terminal-head-not-the-lease-base
+  (let [{:keys [root repo workspaces lake unit]} (fixture)
+        provisioned (sut/provision! {:unit unit :role :solver
+                                     :workspace-root workspaces
+                                     :substrate-path lake})
+        lease (:lease provisioned)
+        workspace (:workspace/path lease)]
+    (spit (str workspace "/problems/p1/lean/Main.lean")
+          "theorem p1 : True := by\n  exact True.intro\n")
+    (is (zero? (:exit (sh "git" "-C" workspace "add"
+                           "problems/p1/lean/Main.lean"))))
+    (is (zero? (:exit (sh "git" "-C" workspace
+                           "-c" "user.name=Test"
+                           "-c" "user.email=test@example.invalid"
+                           "commit" "-m" "solve p1"))))
+    (let [terminal-head (-> (sh "git" "-C" workspace "rev-parse" "HEAD")
+                            :out .trim)
+          base-validation (sut/validate lease {:probe-fn (fn [_] {:exit 0})})
+          terminal-validation (sut/validate lease
+                                            {:probe-fn (fn [_] {:exit 0})
+                                             :expected-head terminal-head})
+          audit (:audit (sut/certify-retirement-audit
+                         {:lease lease
+                          :validation terminal-validation
+                          :observations
+                          (zipmap sut/required-retirement-preconditions
+                                  (repeat true))
+                          :terminal-head terminal-head
+                          :context :terminal-head-regression
+                          :audited-at (Instant/parse "2026-08-23T00:00:00Z")}))
+          retired (sut/retire! {:lease lease :audit audit
+                                :receipt-directory (.resolve root "receipts")})]
+      (is (false? (:valid? base-validation)))
+      (is (some #{:workspace-head-mismatch} (:findings base-validation)))
+      (is (:valid? terminal-validation) (pr-str (:findings terminal-validation)))
+      (is (= terminal-head (:head terminal-validation)))
+      (is (:ok retired) (pr-str retired))
+      (is (= terminal-head (:branch-head retired)))
+      (is (zero? (:exit (sh "git" "-C" (str repo) "show-ref" "--verify"
+                           (str "refs/heads/" (:branch lease)))))))))
+
+(deftest committed-f19-rehearsal-evidence-is-self-contained-and-addressed
+  (let [evidence (edn/read-string
+                  (slurp "holes/labs/M-apm-demonstration/countdown-f19-workspace-evidence-v1.edn"))
+        report (edn/read-string
+                (slurp "holes/labs/M-apm-demonstration/countdown-f19-workspace-rehearsal-v1.edn"))]
+    (is (addressed? report :rehearsal/id))
+    (is (= [:solver :student] (mapv :role (:seats evidence))))
+    (doseq [{:keys [lease validation audit receipt]} (:seats evidence)]
+      (is (addressed? lease :workspace/id))
+      (is (:valid? validation))
+      (is (addressed? audit :audit/id))
+      (is (addressed? receipt :receipt/id))
+      (is (= (:audit/id audit) (:audit/id receipt)))
+      (is (= (:workspace/id lease) (:workspace/id receipt))))))
+
+(deftest invalid-retirement-audit-reports-the-hidden-validation-failure
+  (let [validation {:valid? false :findings [:workspace-probe-failed]
+                    :head "observed"}
+        result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation validation
+                 :observations
+                 (zipmap sut/required-retirement-preconditions (repeat true))
+                 :terminal-head "expected"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result)))
+    (is (= [:workspace-probe-failed] (:validation/findings result)))
+    (is (= "expected" (:terminal-head result)))
+    (is (= "observed" (:validation/head result)))))
+
+(deftest student-source-is-archived-then-worktree-reset-to-base
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake
+                                       :now (Instant/parse "2026-08-23T00:00:00Z")}))
+        workspace (:workspace/path lease)
+        problem (str workspace "/" (:problem/path lease))
+        archive (str workspaces "/archive")]
+    (spit problem "theorem p1 : True := by\n  exact trivial\n")
+    (spit (str workspace "/scratch.lean") "-- untracked\n")
+    (testing "archive names the file by blob and reports the dirty tree"
+      (let [archived (sut/archive-problem-source!
+                      {:workspace/path workspace :problem/path (:problem/path lease)
+                       :archive-directory archive})
+            source (:source archived)]
+        (is (:ok archived))
+        (is (= (slurp problem) (slurp (:path source))))
+        (is (re-matches #"[0-9a-f]{40}" (:blob source)))
+        (is (.endsWith ^String (:path source) (str (:blob source) "-Main.lean")))
+        (is (= (:base-revision lease) (:head source)))
+        (is (true? (:dirty? source)))))
+    (testing "reset discards tracked and untracked work, keeps the substrate link"
+      (let [reset (sut/reset-to-base! lease)]
+        (is (:ok reset))
+        (is (= (:base-revision lease) (:head reset)))
+        (is (= (:problem/blob lease) (:problem/blob reset)))
+        (is (= (:base-revision lease) (get-in reset [:discarded :head])))
+        (is (= 2 (count (get-in reset [:discarded :status]))))
+        (is (re-matches #"refs/apm/preserved-student-attempts/f19/p1/[0-9a-f]{40}"
+                        (get-in reset [:preserved :ref])))
+        (is (= "-- untracked\n"
+               (:out (sh "git" "-C" workspace "show"
+                         (str (get-in reset [:preserved :ref])
+                              "^3:scratch.lean"))))
+            "the preservation ref retains untracked attempt evidence")
+        (is (= "theorem p1 : True := by trivial\n" (slurp problem)))
+        (is (not (.exists (java.io.File. (str workspace "/scratch.lean")))))
+        (is (Files/isSymbolicLink (Path/of (str workspace "/.lake/packages")
+                                           (make-array String 0)))
+            "ignored substrate link survives git clean")
+        (is (true? (:worktree-clean? (sut/validate lease {:probe-fn (fn [_] {:exit 0})}))))))
+    (testing "reset fails closed on a malformed base"
+      (is (= :workspace-reset-shape-invalid
+             (:error/code (sut/reset-to-base! (assoc lease :base-revision "main"))))))))
+
+(deftest f30-shaped-dirty-student-candidate-is-committed-certified-and-idempotent
+  (let [{:keys [repo workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        workspace (:workspace/path lease)
+        problem (str workspace "/" (:problem/path lease))]
+    (spit problem "theorem p1 : True := by\n  exact True.intro\n")
+    (spit (str workspace "/student-notes.txt") "preserve the whole attempt\n")
+    (let [first-result (sut/preserve-student-candidate!
+                        {:lease lease :attempt-ordinal 3
+                         :probe-fn (fn [_] {:exit 0})})
+          candidate (:candidate first-result)
+          second-result (sut/preserve-student-candidate!
+                         {:lease lease :attempt-ordinal 3
+                          :probe-fn (fn [_] {:exit 0})})]
+      (is (:ok first-result) (pr-str first-result))
+      (is (true? (:created-commit? first-result)))
+      (is (addressed? candidate :candidate/id))
+      (is (= 0 (:candidate/lean-exit candidate)))
+      (is (= [] (:candidate/probe-findings candidate)))
+      (is (true? (:candidate/worktree-clean? candidate)))
+      (is (true? (:candidate/persisted-before-receipt? candidate)))
+      (is (= "preserve the whole attempt\n"
+             (:out (sh "git" "-C" (str repo) "show"
+                       (str (:candidate/ref candidate) ":student-notes.txt")))))
+      (is (:ok second-result) (pr-str second-result))
+      (is (false? (:created-commit? second-result)))
+      (is (= candidate (:candidate second-result))
+          "a crash before receipt persistence reuses the exact candidate"))))
+
+(deftest noncompiling-student-candidate-is-preserved-certified-and-idempotent
+  (let [{:keys [repo workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        source "theorem p1 : True := by\n  exact False.elim\n"
+        probe-fn (fn [_] {:exit 1 :out "Main.lean:2:2: error: type mismatch\n"
+                         :err "probe diagnostic"})]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease)) source)
+    (let [first-result (sut/preserve-student-candidate!
+                        {:lease lease :attempt-ordinal 2 :probe-fn probe-fn})
+          candidate (:candidate first-result)
+          second-result (sut/preserve-student-candidate!
+                         {:lease lease :attempt-ordinal 2 :probe-fn probe-fn})
+          preserved (sh "git" "-C" (str repo) "show"
+                        (str (:candidate/ref candidate) ":" (:problem/path lease)))]
+      (is (:ok first-result) (pr-str first-result))
+      (is (true? (:created-commit? first-result)))
+      (is (= 1 (:candidate/lean-exit candidate)))
+      (is (= [:workspace-probe-failed] (:candidate/probe-findings candidate)))
+      (is (addressed? candidate :candidate/id))
+      (is (not (addressed? (assoc candidate :candidate/lean-exit 0) :candidate/id)))
+      (is (not (addressed? (assoc candidate :candidate/probe-findings []) :candidate/id)))
+      (is (not (contains? candidate :probe/out)))
+      (is (not (contains? candidate :probe/err)))
+      (is (= 0 (:exit preserved)))
+      (is (= source (:out preserved)))
+      (is (:ok second-result) (pr-str second-result))
+      (is (false? (:created-commit? second-result)))
+      (is (= candidate (:candidate second-result))))))
+
+(deftest student-candidate-structural-failure-rejects-with-full-probe-evidence
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        body (assoc (dissoc lease :workspace/id) :branch "wrong-branch")
+        bad-lease (assoc body :workspace/id (machine/ledger-digest [body]))]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease))
+          "theorem p1 : True := by\n  exact False.elim\n")
+    (doseq [exit [0 1]]
+      (let [result (sut/preserve-student-candidate!
+                    {:lease bad-lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit exit :out "Main.lean:2:2: error"})})]
+        (is (false? (:ok result)))
+        (is (= :student-candidate-validation-failed (:error/code result)))
+        (is (= (cond-> [:workspace-branch-mismatch]
+                 (= 1 exit) (conj :workspace-probe-failed))
+               (get-in result [:validation :findings])))))))
+
+(deftest student-candidate-rejects-a-probe-that-never-ran
+  ;; A substrate that cannot bootstrap also exits nonzero, and demoting it
+  ;; would record "the Student did not manage the proof" for a failure the
+  ;; Student had no part in. workspace-build/probe! retains the typed
+  ;; bootstrap failure under :bootstrap; that case stays structural.
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        bootstrap-failed {:ok false
+                          :error/code :workspace-bootstrap-failed
+                          :finding {:exit 1 :err "lake: no such package"}}]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease))
+          "theorem p1 : True := by\n  exact False.elim\n")
+    (testing "a bootstrap failure is not a Student observation"
+      (let [result (sut/preserve-student-candidate!
+                    {:lease lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit 1 :out "" :err "lake"
+                                        :bootstrap bootstrap-failed})})]
+        (is (false? (:ok result)) (pr-str result))
+        (is (= :student-candidate-validation-failed (:error/code result)))
+        (is (= [:workspace-probe-failed]
+               (get-in result [:validation :findings])))))
+    (testing "the same exit code with no bootstrap failure is preserved"
+      (let [result (sut/preserve-student-candidate!
+                    {:lease lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit 1 :out "error: type mismatch"})})]
+        (is (:ok result) (pr-str result))
+        (is (= 1 (:candidate/lean-exit (:candidate result))))
+        (is (= [:workspace-probe-failed]
+               (:candidate/probe-findings (:candidate result))))))))
+
+;; f84, 2026-09-03: retirement failed on exactly one precondition that no
+;; operator could repair -- a role job the frame owned had not yet left a live
+;; state. It was classified :workspace-retirement-audit-invalid, the regulator
+;; failed, and the watchdog durably disabled the campaign. Forty minutes later
+;; every f84 job was `done`. These tests fix the classification boundary.
+
+(defn- observations-missing [& ks]
+  (reduce #(assoc %1 %2 false)
+          (zipmap sut/required-retirement-preconditions (repeat true))
+          ks))
+
+(defn- certify [observations]
+  (sut/certify-retirement-audit
+   {:lease {:workspace/id "w"}
+    :validation {:valid? true :findings [] :head "head"}
+    :observations observations
+    :terminal-head "head"
+    :context :test-auditor}))
+
+(deftest transient-shortfall-is-pending-not-invalid
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace))]
+    (is (= :workspace-retirement-audit-pending (:error/code result)))
+    (is (true? (:retirement/pending? result)))
+    (is (= #{:no-running-or-parked-job-references-workspace} (:pending result)))
+    (is (false? (:ok result))
+        "pending is still not a certification -- retirement may not proceed")))
+
+(deftest both-transient-preconditions-are-pending
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace
+                         :no-active-ledger-claim-references-workspace))]
+    (is (= :workspace-retirement-audit-pending (:error/code result)))
+    (is (= sut/transient-retirement-preconditions (:pending result)))))
+
+(deftest structural-shortfall-remains-invalid
+  (doseq [k sut/structural-retirement-preconditions]
+    (is (= :workspace-retirement-audit-invalid
+           (:error/code (certify (observations-missing k))))
+        (str k " must never be classified pending"))))
+
+(deftest mixed-shortfall-remains-invalid
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace
+                         :worktree-clean))]
+    (is (= :workspace-retirement-audit-invalid (:error/code result))
+        "a structural defect is not excused by an accompanying transient one")))
+
+(deftest pending-requires-otherwise-sound-validation
+  (let [result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation {:valid? false :findings [:workspace-probe-failed]
+                              :head "head"}
+                 :observations (observations-missing
+                                :no-running-or-parked-job-references-workspace)
+                 :terminal-head "head"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result))
+        "a failed probe is a defect even when the only shortfall is transient")))
+
+(deftest head-mismatch-is-never-pending
+  (let [result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation {:valid? true :findings [] :head "observed"}
+                 :observations (observations-missing
+                                :no-running-or-parked-job-references-workspace)
+                 :terminal-head "expected"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result)))))
+
+(deftest transient-and-structural-partition-the-required-set
+  (is (= sut/required-retirement-preconditions
+         (into sut/structural-retirement-preconditions
+               sut/transient-retirement-preconditions)))
+  (is (empty? (clojure.set/intersection sut/structural-retirement-preconditions
+                                        sut/transient-retirement-preconditions))))

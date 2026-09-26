@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "gene",
+    "to" : "hdl"
+  }, {
+    "from" : "lifestyle",
+    "to" : "hdl"
+  }, {
+    "from" : "lifestyle",
+    "to" : "attack"
+  }, {
+    "from" : "hdl",
+    "to" : "attack"
+  } ],
+  "id" : "mendelian-randomization-hdl",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "mendelian-randomization-hdl.json"
+  },
+  "variables" : [ {
+    "id" : "gene",
+    "kind" : "observed",
+    "name" : "HDL Gene"
+  }, {
+    "id" : "lifestyle",
+    "kind" : "observed",
+    "name" : "Lifestyle"
+  }, {
+    "id" : "hdl",
+    "kind" : "observed",
+    "name" : "HDL Levels"
+  }, {
+    "id" : "attack",
+    "kind" : "observed",
+    "name" : "Heart Attack"
+  } ]
+}

@@ -75,9 +75,12 @@
                   (nil? (:v s))
                   [(str (label s) ": TELEPORT — state moved/printed with no chosen v "
                         "(the de-skilling failure mode)")]
-                  (not (#{:operator :pilot-autonomous} (:v-attribution s)))
+                  ;; Car-3 seam-c: :operator-directed is a legitimate attribution —
+                  ;; begin-live-cycle! emits it when the operator directs a :target (the
+                  ;; operator's direction IS the consent; not a teleport).
+                  (not (#{:operator :operator-directed :pilot-autonomous} (:v-attribution s)))
                   [(str (label s) ": v present but :v-attribution "
-                        (pr-str (:v-attribution s)) " ∉ #{:operator :pilot-autonomous}")]
+                        (pr-str (:v-attribution s)) " ∉ #{:operator :operator-directed :pilot-autonomous}")]
                   (nil? (:cg-id s))
                   [(str (label s) ": v present but no :cg-id minted at EVAL")]
                   :else nil)

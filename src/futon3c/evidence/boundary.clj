@@ -44,7 +44,9 @@
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [futon3c.evidence.backend :as backend]
             [futon3c.evidence.invariant :as invariant]
+            [futon3c.evidence.subject :as subject]
             [futon3c.evidence.store :as store]
+            [futon3c.marks :as marks]
             [futon3c.social.shapes :as shapes]
             [clojure.string :as str]))
 
@@ -54,6 +56,30 @@
        "futon3c.evidence.boundary/append!, which is the only path that "
        "calls futon3c.evidence.store/append*. New direct callers of "
        "store/append* are I-single-boundary violations."))
+
+(defn- social-error-taxonomy
+  [error-code]
+  (case error-code
+    :duplicate-id {:kind :duplicate-id
+                   :label "duplicate id"
+                   :invariant I-single-boundary
+                   :quiet? true
+                   :idempotent? true}
+    :store-timeout {:kind :timeout
+                    :label "persistence timeout"
+                    :invariant invariant/I-evidence-per-turn}
+    :store-unreachable {:kind :unreachable
+                        :label "persistence transport unreachable"
+                        :invariant invariant/I-evidence-per-turn}
+    :store-serialization {:kind :serialization
+                          :label "persistence serialization rejected"
+                          :invariant invariant/I-evidence-per-turn}
+    :store-rejected {:kind :store-rejected
+                     :label "persistence rejected"
+                     :invariant invariant/I-evidence-per-turn}
+    {:kind :shape
+     :label "shape rejected"
+     :invariant invariant/I-evidence-per-turn}))
 
 ;; ---------------------------------------------------------------------------
 ;; Coercion — translate commonly-misshaped fields to their canonical types
@@ -89,7 +115,9 @@
   (cond
     (nil? subject) subject
     (and (map? subject) (contains? subject :ref/type))
-    (update subject :ref/type (partial coerce-keyword :evidence/subject))
+    (-> subject
+        (update :ref/type (partial coerce-keyword :evidence/subject))
+        subject/normalize-ref)
     :else subject))
 
 (defn- coerce-entry-fields
@@ -206,6 +234,38 @@
 
     :else nil))
 
+(defn- evidence-field
+  [entry namespaced-key unqualified-key]
+  (or (get entry namespaced-key)
+      (get entry unqualified-key)))
+
+(defn- event-kind
+  [entry]
+  (let [body (evidence-field entry :evidence/body :body)]
+    (when (map? body)
+      (or (get body :event)
+          (get body "event")))))
+
+(defn- diagnostic-suffix
+  "Render producer identity and wire diagnostics without logging evidence body."
+  [entry result]
+  (let [context (:error/context result)
+        fields [["trace-id" (:trace-id context)]
+                ["evidence-id" (or (:evidence/id entry)
+                                   (:evidence-id context))]
+                ["author" (evidence-field entry :evidence/author :author)]
+                ["session" (evidence-field entry
+                                           :evidence/session-id
+                                           :session-id)]
+                ["event" (event-kind entry)]
+                ["status" (:status context)]
+                ["invalid-edn" (:invalid-edn context)]]]
+    (str/join " "
+              (keep (fn [[label value]]
+                      (when (some? value)
+                        (str label "=" (pr-str value))))
+                    fields))))
+
 (defn append!
   "Append an evidence entry through the single boundary.
 
@@ -253,7 +313,7 @@
    `dev/futon3c/dev/invoke.clj` and `src/futon3c/transport/http.clj`)."
   [evidence-store entry-or-args]
   (try
-    (let [coerced (coerce-input entry-or-args)
+    (let [coerced (marks/maybe-decorate-turn (coerce-input entry-or-args))
           ;; Resolve the backend ONCE so append* and verify-persisted
           ;; agree on which backend they're addressing. Without this, a
           ;; nil evidence-store causes append* to silently fall back to
@@ -266,24 +326,30 @@
         ;; Detect via the SocialError shape; convert to boundary's receipt shape.
         (shapes/valid? shapes/SocialError result)
         (let [msg (:error/message result)
-              duplicate-id? (= :duplicate-id (:error/code result))]
-          (when-not duplicate-id?
+              taxonomy (social-error-taxonomy (:error/code result))
+              diagnostic (diagnostic-suffix coerced result)]
+          (when-not (:quiet? taxonomy)
             (binding [*out* *err*]
-              (println (str "[boundary] I-single-boundary VIOLATION: "
-                            "shape rejected — " msg))))
+              (println (str "[boundary] "
+                            (if (= I-single-boundary (:invariant taxonomy))
+                              "I-single-boundary"
+                              "I-evidence-per-turn")
+                            " VIOLATION: "
+                            (:label taxonomy) " — " msg
+                            (when (seq diagnostic)
+                              (str " " diagnostic))))))
           {:ok false
            :error/code (:error/code result)
            :error/message msg
            :error/at (:error/at result)
+           :trace-id (get-in result [:error/context :trace-id])
            :evidence/id (or (:evidence/id coerced)
                             (get-in result [:error/context :evidence-id]))
            :invariant/violation
-           {:invariant (if duplicate-id?
-                         I-single-boundary
-                         invariant/I-evidence-per-turn)
-            :kind (if duplicate-id? :duplicate-id :shape)
+           {:invariant (:invariant taxonomy)
+            :kind (:kind taxonomy)
             :reason msg
-            :idempotent? duplicate-id?
+            :idempotent? (boolean (:idempotent? taxonomy))
             :rejected-entry coerced}})
 
         ;; Backend returned a typed-result with :ok semantics.
@@ -340,7 +406,8 @@
             :else
             {:ok true
              :entry entry
-             :evidence/id eid}))))
+             :evidence/id eid
+             :trace-id (:trace-id result)}))))
     (catch clojure.lang.ExceptionInfo e
       (let [msg (.getMessage e)
             data (ex-data e)]

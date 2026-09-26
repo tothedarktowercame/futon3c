@@ -1,0 +1,509 @@
+(ns futon3c.apm.typed-role-submission
+  "Controller-owned, content-addressed terminal submissions for live APM roles.
+
+   Agents submit observations only.  Frame identity, role, phase, dispatch,
+   agent, and job identity are copied from an immutable authority registered
+   by the controller before activation."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.set :as set]
+            [clojure.string :as str]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.generated-contract :as generated-contract]
+            [futon3c.apm.promotion-pipeline :as pipeline])
+  (:import (java.nio.file Files StandardCopyOption)
+           (java.util UUID)))
+
+(def ^:dynamic *submission-root*
+  "data/apm-role-submissions")
+
+(defn wire-keyword
+  "Normalize a JSON string representation at the typed-submission boundary.
+  Keywords remain keywords; absent and non-string values remain invalid."
+  [value]
+  (cond
+    (keyword? value) value
+    (string? value) (keyword (if (.startsWith ^String value ":")
+                               (subs value 1)
+                               value))
+    :else nil))
+
+(defn normalize-predicate-keys
+  "Canonicalize declared trailing-? keys in a JSON-originated map. The sole
+  alias is the same key without the final question mark. Absence remains
+  absence; conflicting canonical and alias values are refused."
+  [value declared-keys]
+  (if-not (map? value)
+    {:ok true :value value}
+    (let [conflicts
+          (->> declared-keys
+               (keep (fn [declared]
+                       (let [spelling (name declared)
+                             alias (keyword (subs spelling 0 (dec (count spelling))))]
+                         (when (and (contains? value declared)
+                                    (contains? value alias)
+                                    (not= (get value declared) (get value alias)))
+                           {:declared-key declared :alias-key alias
+                            :declared-value (get value declared)
+                            :alias-value (get value alias)}))))
+               vec)]
+      (if (seq conflicts)
+        {:ok false :error/code :wire-predicate-key-conflict
+         :findings [:wire-predicate-key-conflict]
+         :conflicts conflicts}
+        {:ok true
+         :value
+         (reduce (fn [normalized declared]
+                   (let [spelling (name declared)
+                         alias (keyword (subs spelling 0 (dec (count spelling))))
+                         alias-present? (contains? normalized alias)
+                         alias-value (get normalized alias)
+                         declared-present? (contains? normalized declared)]
+                     (cond-> (dissoc normalized alias)
+                       (and (not declared-present?) alias-present?)
+                       (assoc declared alias-value))))
+                 value declared-keys)}))))
+
+(def completion-contract
+  {:path "holes/labs/M-apm-demonstration/role-cards/typed-completion-v1.md"
+   :blob "d3351807f1597baf97e8ba7ae5605274f0f9a92c"})
+
+(def authority-fields
+  #{:job-id :dispatch/id :agent-id :session-id :submission/authority-version :frame-id :problem-id :phase :role
+    :attempt-ordinal :submission/attempt :predecessor-job-id
+    :fresh-session-nonce :memory-snapshot
+    ;; The holdout travels with the job authority so every channel that
+    ;; serves memories can enforce it. Without this the shelf and the
+    ;; cascade withhold an id while the search channel still returns it.
+    :shelf/holdout :shelf/withheld-ids
+    ;; Preregistered Solver exposure is immutable dispatch authority. The
+    ;; later observation may say which authorized ids were used, never add ids.
+    :solver-shelf-canary
+    ;; V4 outer-loop reviews bind exact candidate bytes before activation.
+    :v4/revision-review})
+
+(def checkpoint-authority-fields
+  #{:solver/round :solver/strategy-checkpoint?})
+
+(def memory-search-capable-roles
+  #{:student :scribe :zai-scribe :promotion-proctor})
+
+(def common-required #{:command-own-exit :outcome :failure-account :evidence})
+
+(def evidence-shape-by-phase
+  {:preflight {:mutations nil :clean-before? nil :clean-after? nil
+               :statement-unchanged? nil :lean nil}
+   :solve {:branch nil :base-revision nil :final-head nil :committed? nil
+           :statement-unchanged? nil :lean nil :axioms nil :clean-before? nil
+           :clean-after? nil :mutations nil}
+   :verify {:branch nil :base-revision nil :final-head nil :committed? nil
+            :statement-unchanged? nil :lean nil :axioms nil :clean-before? nil
+            :clean-after? nil :mutations nil}
+   ;; The downstream promotion validators distinguish the Solver-mining and
+   ;; deposit forms; the common wrapper is deterministic for both.
+   :promote-solver {}
+   :pattern-revision-review {:revision-review {:proposal/id nil :candidate/sha256 nil
+                                               :verdict nil :reason nil :residual nil}}
+   :promotion-review {:candidate-set-digest nil :base-problem-blob nil
+                      :open-residuals nil :reviews nil}
+   :student-attempt-1 {:memory-use {:used-ids nil}}
+   :student-attempt-2 {:memory-use {:used-ids nil}}
+   :student-attempt-3 {:memory-use {:used-ids nil}}
+   :guide-intervention-1
+   {:channel-audit {:direct-student-contact? nil}}
+   :guide-intervention-2
+   {:channel-audit {:direct-student-contact? nil}}
+   :scribe-reduce {:lanes nil :dispositions nil :promotion-reviews nil}
+   :close-frame {:trace-id nil :result nil :memory-use-audit nil}
+   :analyst {:analysis nil}})
+
+(def evidence-required-by-phase
+  (update-vals evidence-shape-by-phase #(set (keys %))))
+
+(def evidence-optional-shape-by-phase
+  "Typed evidence which validators inspect when supplied, but which is not
+   required for every successful completion of the phase."
+  {:promote-solver
+   {:memory-candidates [{:memory-id nil
+                         :content-digest nil
+                         :pattern-ids nil}]}
+   :guide-intervention-1
+   {:candidates [pipeline/guide-candidate-agent-shape]}
+   :guide-intervention-2
+   {:candidates [pipeline/guide-candidate-agent-shape]}})
+
+(def validator-evidence-shape-by-phase
+  "Evidence shapes inspected by typed phase validators. A nil leaf means the
+  validator requires only that top-level structure; nested maps/vectors name
+  leaves whose presence is part of the validator contract."
+  {:student-attempt-1 {:memory-use {:used-ids nil}}
+   :student-attempt-2 {:memory-use {:used-ids nil}}
+   :student-attempt-3 {:memory-use {:used-ids nil}}
+   :guide-intervention-1
+   {:channel-audit {:direct-student-contact? nil}
+    :candidates [pipeline/guide-candidate-agent-shape]}
+   :guide-intervention-2
+   {:channel-audit {:direct-student-contact? nil}
+    :candidates [pipeline/guide-candidate-agent-shape]}
+   :scribe-reduce {:lanes nil :dispositions nil :promotion-reviews nil}
+   :promote-solver {:memory-candidates nil}
+   :close-frame {:trace-id nil :result nil}})
+
+(def validator-evidence-fields-by-phase
+  "Top-level compatibility view of `validator-evidence-shape-by-phase`."
+  (update-vals validator-evidence-shape-by-phase #(set (keys %))))
+
+(defn evidence-shape [auth]
+  (cond-> (get evidence-shape-by-phase (:phase auth))
+    (and (= :scribe-reduce (:phase auth))
+         (= :zai-scribe (:role auth)))
+    (assoc :memory-candidates nil)
+    (and (= :promote-solver (:phase auth))
+         (= :scribe (:role auth)))
+    (assoc :receipt nil)
+    (and (= :solve (:phase auth))
+         (true? (:solver/strategy-checkpoint? auth)))
+    (assoc :solver/strategy nil)
+    (and (= :solve (:phase auth))
+         (map? (:solver-shelf-canary auth)))
+    (assoc :solver/shelf-observation {:surfaced-ids nil :used-ids nil})))
+
+(defn evidence-optional-shape [auth]
+  (get evidence-optional-shape-by-phase (:phase auth) {}))
+
+(defn- missing-shape-paths
+  [required declared path]
+  (cond
+    (map? required)
+    (if-not (map? declared)
+      [path]
+      (mapcat (fn [[key required-value]]
+                (let [next-path (conj path key)]
+                  (if (contains? declared key)
+                    (missing-shape-paths required-value
+                                         (get declared key) next-path)
+                    [next-path])))
+              required))
+
+    (vector? required)
+    (if (and (vector? declared) (seq declared))
+      (missing-shape-paths (first required) (first declared) (conj path 0))
+      [path])
+
+    :else []))
+
+(defn validator-schema-findings
+  "Return validator-inspected structures or leaves absent from both required
+  and optional evidence declarations. Top-level findings remain keywords;
+  nested findings are paths such as `[:candidates 0 :body]`."
+  [auth]
+  (let [declared (merge (evidence-shape auth) (evidence-optional-shape auth))
+        required (get validator-evidence-shape-by-phase (:phase auth) {})]
+    (->> (missing-shape-paths required declared [])
+         (map #(if (= 1 (count %)) (first %) %))
+         (sort-by pr-str)
+         vec)))
+
+(defn evidence-required
+  "Return the evidence schema owned by immutable dispatch authority.
+
+   Strategy evidence is required only for an addressed Solver checkpoint;
+   ordinary solve turns retain the ordinary proof-report schema."
+  [auth]
+  (let [shape (evidence-shape auth)]
+    (when (some? shape) (set (keys shape)))))
+
+(defn new-token [] (str (UUID/randomUUID)))
+
+(defn prepare-request [request]
+  (let [seed (select-keys request
+                          [:dispatch/id :agent-id :frame-id :problem-id :phase
+                           :role :attempt :submission/attempt
+                           :session-id :memory-snapshot-id])]
+    (cond-> (assoc request :submission/token
+                   (machine/ledger-digest ["apm-role-submission" seed]))
+      ;; Saved V1 requests already have a token. Do not reinterpret their
+      ;; formerly unregistered session field as immutable authority on replay.
+      (not (contains? request :submission/token))
+      (assoc :submission/authority-version 2))))
+
+(defn canonical-job-id [request]
+  (str "apm-role-" (machine/ledger-digest
+                    ["apm-role-job" (:dispatch/id request)
+                     (:agent-id request) (:phase request)
+                     (:submission/attempt request)])))
+
+(defn with-job-authority [request]
+  (assoc request :submission/job-id (or (:submission/job-id request)
+                                        (canonical-job-id request))))
+
+(defn- record-path [job-id]
+  (io/file *submission-root* (str job-id ".edn")))
+
+(defn- read-record [job-id]
+  (let [file (record-path job-id)]
+    (when (.isFile file) (edn/read-string (slurp file)))))
+
+(defn registered-job-ids-for-frame
+  "Return job ids whose immutable typed-submission authority names FRAME-ID.
+   This is the durable membership authority for frame jobs; the transport
+   ledger records delivery but does not own campaign identity."
+  [frame-id]
+  (let [root (io/file *submission-root*)]
+    (if-not (.isDirectory root)
+      #{}
+      (into #{}
+            (comp
+             (filter #(.isFile ^java.io.File %))
+             (filter #(.endsWith (.getName ^java.io.File %) ".edn"))
+             (map #(edn/read-string (slurp ^java.io.File %)))
+             (keep (fn [{:keys [authority]}]
+                     (when (= frame-id (:frame-id authority))
+                       (:job-id authority)))))
+            (.listFiles root)))))
+
+(defn- atomic-write! [file value]
+  (io/make-parents file)
+  (let [temporary (io/file (.getParentFile file)
+                           (str "." (.getName file) "." (UUID/randomUUID) ".tmp"))]
+    (spit temporary (str (pr-str value) "\n"))
+    (Files/move (.toPath temporary) (.toPath file)
+                (into-array StandardCopyOption
+                            [StandardCopyOption/ATOMIC_MOVE
+                             StandardCopyOption/REPLACE_EXISTING])))
+  {:ok true})
+
+(defn authority
+  "Create the exact authority that will be registered after job announcement."
+  [request ticket]
+  (select-keys
+   (cond-> (merge request {:job-id (:job-id ticket)})
+     (not= 2 (:submission/authority-version request)) (dissoc :session-id))
+   (into (conj authority-fields :submission/token)
+         checkpoint-authority-fields)))
+
+(defn register!
+  "Persist immutable job authority. Identical replay is idempotent; conflicting
+   authority fails closed."
+  [request ticket]
+  (let [auth (authority request ticket)
+        job-id (:job-id auth)
+        existing (read-record job-id)]
+    (cond
+      (or (not (string? job-id)) (not (string? (:submission/token auth))))
+      {:ok false :error/code :role-submission-authority-invalid}
+
+      (and existing (not= auth (:authority existing)))
+      {:ok false :error/code :role-submission-authority-conflict}
+
+      existing {:ok true :status :already-registered :authority auth}
+
+      :else
+      (let [record {:record/type :apm-role-submission
+                    :authority auth :submission nil}]
+        (atomic-write! (record-path job-id) record)
+        {:ok true :status :registered :authority auth}))))
+
+(defn- revision-review-valid? [auth payload]
+  (let [review (get-in payload [:evidence :revision-review])
+        pin (:v4/revision-review auth)
+        sha? #(and (string? %) (re-matches #"[0-9a-f]{64}" %))
+        text? #(and (string? %) (not (str/blank? %)))]
+    (and (= 0 (:command-own-exit payload))
+         (contains? #{:complete :success} (wire-keyword (:outcome payload)))
+         (map? review)
+         (sha? (:proposal/id review))
+         (= (:proposal/id pin) (:proposal/id review))
+         (sha? (:candidate/sha256 review))
+         (= (get-in pin [:candidate :sha256]) (:candidate/sha256 review))
+         (contains? #{:accept :reject :cannot-judge} (wire-keyword (:verdict review)))
+         (text? (:reason review)) (text? (:residual review)))))
+
+(defn validate-payload [auth payload]
+  (if-not (map? payload)
+    {:ok false :error/code :role-submission-payload-invalid
+     :findings [:payload-not-map]}
+   (let [missing (set/difference common-required (set (keys payload)))
+        evidence-required (evidence-required auth)
+        evidence-missing (if evidence-required
+                           (set/difference evidence-required
+                                           (set (keys (:evidence payload))))
+                           #{})
+        search-check
+        (when (and (contains? memory-search-capable-roles (:role auth))
+                   (not= :student (:role auth)))
+          (let [receipts
+                ((requiring-resolve
+                  'futon3c.apm.role-memory-search/recorded-receipts-for-job)
+                 (:job-id auth))]
+            (if (and (contains? #{:scribe :promotion-proctor} (:role auth))
+                     (empty? receipts))
+              {:ok false :error/code :canonical-pattern-search-required}
+              {:ok true :receipts receipts})))
+        pattern-check (when (and (:ok search-check)
+                                 (contains? #{:scribe :zai-scribe
+                                              :promotion-proctor}
+                                            (:role auth)))
+                        ((requiring-resolve
+                          'futon3c.apm.role-memory-search/validate-pattern-accounting)
+                         (:receipts search-check) (:evidence payload)))
+        student-memory-use (get-in payload [:evidence :memory-use])
+        allowed-student-memory-use
+        (->> generated-contract/required-submission-schemas
+             :student-memory-use :role-authored-fields (map keyword) set)
+        findings (cond-> []
+                   (and (= :pattern-revision-review (:phase auth))
+                        (not (revision-review-valid? auth payload)))
+                   (conj :pattern-revision-review-invalid)
+                   (nil? evidence-required) (conj :phase-schema-unknown)
+                   (seq (set/intersection authority-fields (set (keys payload))))
+                   (conj :authority-field-supplied-by-agent)
+                   (seq missing) (conj :required-fields-missing)
+                   (not (map? (:evidence payload))) (conj :evidence-not-map)
+                   (seq evidence-missing) (conj :evidence-fields-missing)
+                   (and (contains? payload :command-own-exit)
+                        (not (int? (:command-own-exit payload))))
+                   (conj :command-own-exit-not-integer)
+                   (and (contains? payload :failure-account)
+                        (not (vector? (:failure-account payload))))
+                   (conj :failure-account-not-vector)
+                   (and search-check (not (:ok search-check)))
+                   (conj :memory-search-receipts-invalid)
+                   (and pattern-check (not (:ok pattern-check)))
+                   (conj :memory-search-pattern-accounting-invalid)
+                   (and (= :student (:role auth))
+                        (not (map? student-memory-use)))
+                   (conj :student-memory-use-not-map)
+                   (and (= :student (:role auth))
+                        (map? student-memory-use)
+                        (not (and (vector? (:used-ids student-memory-use))
+                                  (every? string? (:used-ids
+                                                   student-memory-use)))))
+                   (conj :student-memory-used-ids-invalid)
+                   (and (= :student (:role auth))
+                        (map? student-memory-use)
+                        (seq (set/difference (set (keys student-memory-use))
+                                             allowed-student-memory-use)))
+                   (conj :controller-derived-memory-field-supplied-by-agent))]
+    (if (seq findings)
+      {:ok false :error/code :role-submission-payload-invalid
+       :findings findings :missing missing :evidence/missing evidence-missing
+       :memory-search/check search-check :memory-search/pattern-check pattern-check}
+      {:ok true}))))
+
+(defn schema [job-id token]
+  (let [record (read-record job-id)
+        auth (:authority record)]
+    (cond
+      (nil? record) {:ok false :error/code :role-submission-authority-missing}
+      (not= token (:submission/token auth))
+      {:ok false :error/code :role-submission-token-mismatch}
+      :else {:ok true :phase (:phase auth)
+             :required (vec (sort common-required))
+             :evidence-shape (evidence-shape auth)
+             :evidence-optional-shape (evidence-optional-shape auth)
+             :evidence-required
+             (vec (sort (evidence-required auth)))})))
+
+(defn authenticate
+  "Return immutable controller authority for a valid job token.  Auxiliary
+   role services use this boundary rather than trusting role-supplied identity."
+  [job-id token]
+  (let [record (read-record job-id)
+        auth (:authority record)]
+    (cond
+      (nil? record) {:ok false :error/code :role-submission-authority-missing}
+      (not= token (:submission/token auth))
+      {:ok false :error/code :role-submission-token-mismatch}
+      :else {:ok true :authority auth})))
+
+(defn submit!
+  "Validate and persist an agent's observational payload. The canonical result
+   is content-addressed and receives authority exclusively from registration."
+  [job-id token payload]
+  (let [record (read-record job-id)
+        auth (:authority record)]
+    (cond
+      (nil? record) {:ok false :error/code :role-submission-authority-missing}
+      (not= token (:submission/token auth))
+      {:ok false :error/code :role-submission-token-mismatch}
+      :else
+      (let [checked (validate-payload auth payload)]
+        (if-not (:ok checked)
+          checked
+          (let [body {:authority (dissoc auth :submission/token)
+                      :payload payload}
+                submission (assoc body :submission/id
+                                  (machine/ledger-digest [body]))
+                existing (:submission record)]
+            (cond
+              (= existing submission)
+              {:ok true :status :already-submitted :submission submission}
+              existing
+              {:ok false :error/code :role-submission-conflict
+               :submission/id (:submission/id existing)}
+              :else
+              (do (atomic-write! (record-path job-id)
+                                 (assoc record :submission submission))
+                  {:ok true :status :submitted :submission submission}))))))))
+
+(defn submitted [job-id]
+  (some-> (read-record job-id) :submission))
+
+(defn authenticated-completion
+  "Return a persisted completion only when its controller-owned authority still
+  matches REQUEST and TICKET.  This is the reconciliation read used before an
+  apparently live transport wrapper is considered for orphan recovery."
+  [request ticket]
+  (let [job-id (:job-id ticket)
+        record (read-record job-id)
+        expected (some-> (authority request ticket) (dissoc :submission/token))
+        observed (some-> record :authority (dissoc :submission/token))
+        completion (:submission record)]
+    (cond
+      (nil? completion) nil
+      (not= expected observed)
+      {:ok false :error/code :role-submission-authority-conflict
+       :expected expected :observed observed}
+      (not= observed (:authority completion))
+      {:ok false :error/code :role-submission-completion-authority-invalid
+       :expected observed :observed (:authority completion)}
+      :else {:ok true :submission completion})))
+
+(defn command
+  "Exact client command placed into the activated role prompt."
+  [request ticket]
+  (let [agency-base (or (:agency-base request) "http://localhost:7070")
+        endpoint-option (str " --agency-base '" (str/replace agency-base "'" "'\"'\"'") "'")
+        base (str "/home/joe/code/futon3c/scripts/apm-submit-role.py"
+                  " --job-id " (:job-id ticket)
+                  " --token " (:submission/token request) endpoint-option)
+        payload (str "/tmp/apm-role-" (:job-id ticket) ".json")
+        search (when (contains? memory-search-capable-roles (:role request))
+                 (str "\n# Search the open reviewed mathematics memory corpus; "
+                      "the returned receipt is execution evidence:\n"
+                      "/home/joe/code/futon3c/scripts/apm-search-memory.py"
+                      " --job-id " (:job-id ticket)
+                      " --token " (:submission/token request)
+                      endpoint-option " --query 'YOUR QUERY'"))]
+    (str "# Read source job traces through Agency (not the evidence store):\n"
+         "python3 /home/joe/code/futon3c/scripts/apm-read-job.py"
+         endpoint-option " --job-id SOURCE_JOB_ID\n"
+         "# This checks response identity; inspect the events before claiming support.\n"
+         (or search "")
+         (when search "\n")
+         (cond
+           (= :student (:role request))
+           (str "# Optionally record grounded applicability for a memory you "
+                "actually considered; use apm-memory-caption.py observe with "
+                "the search receipt and keep absent distinct from unchecked.\n")
+           (contains? #{:scribe :zai-scribe} (:role request))
+           (str "# Draft versioned grounded captions separately with "
+                "apm-memory-caption.py propose; they require independent review.\n")
+           (= :promotion-proctor (:role request))
+           (str "# Review caption revisions independently with "
+                "apm-memory-caption.py review; do not approve your own draft.\n")
+           :else "")
+         base " --init --payload " payload
+         "\n# edit " payload ", then submit:\n"
+         base " --payload " payload)))

@@ -4,6 +4,111 @@
 (require 'cl-lib)
 (require 'agent-chat)
 
+(ert-deftest agent-chat-cost-segment-renders-warm-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-fable-5" :mult 2.0
+            :ctx 312000 :warm_s 240 :cold nil :per_turn_usd 0.62
+            :per_turn_cold_usd 6.24 :session_usd 41.2 :turns 130))
+    (should (equal (agent-chat-cost-segment)
+                   "fable x2 · ctx 312k · warm 4m · ~$0.62/turn · $41 / 130t"))))
+
+(ert-deftest agent-chat-cost-segment-renders-cold-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-opus-5" :mult 1.0
+            :ctx 700000 :warm_s 244800 :cold t :per_turn_usd 0.7
+            :per_turn_cold_usd 7.41))
+    (should (equal (agent-chat-cost-segment)
+                   "opus x1 · ctx 700k · cold 68h · next ~$7.41"))))
+
+(ert-deftest agent-chat-cost-segment-renders-codex-without-dollars ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "codex" :model "gpt-5" :ctx 258000 :warm_s 120 :cold nil))
+    (should (equal (agent-chat-cost-segment) "ctx 258k · warm 2m"))))
+
+(ert-deftest agent-chat-cost-flair-suffix-renders-last-turn ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :model "claude-fable-5" :mult 2.0 :ctx 105076
+                    :last_turn_usd 1.450742 :last_turn_calls 7 :session_usd 7.68))
+                 " · ~$1.45 (7 calls · ctx 105k · fable x2) · session $8"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :model "claude-opus-5" :mult 1.0 :ctx 411000
+                    :last_turn_usd 5.14 :last_turn_calls 22 :session_usd 293))
+                 " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  Compaction recommended (C-c C-z)"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "none"))
+                 " · ~$0.50 (1 call) · no pouch"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "warm"))
+                 " · ~$0.50 (1 call) · pouch"))
+  (should (equal (agent-chat-cost-flair-suffix '(:vendor "codex" :ctx 1000)) ""))
+  (should (equal (agent-chat-cost-flair-suffix nil) "")))
+
+(ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
+  (with-temp-buffer
+    (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--annotate-turn-flair!)
+    (should (string-match-p "^Cooked for 1m 03s · ~\\$0\\.50 (1 call)$"
+                            (buffer-substring (point-min) (point-max))))))
+
+(ert-deftest agent-chat-annotate-turn-flair-ignores-transcript-cooked-lines ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\nsome transcript\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (should (equal (buffer-string) "Cooked for 9s\nsome transcript\n> "))))
+
+(ert-deftest agent-chat-ensure-prompt-markers-ignores-blockquote ()
+  (with-temp-buffer
+    (insert "claude: quoting\n> `:name \"x\"`\n\nmore text\nCooked for 6m 15s\n")
+    (setq-local agent-chat--prompt-marker (copy-marker (point-max) t))
+    (setq-local agent-chat--separator-start nil)
+    (setq-local agent-chat--input-start nil)
+    (should (agent-chat--ensure-prompt-markers!))
+    (should (= (marker-position agent-chat--prompt-marker) (- (point-max) 2)))
+    (should (string-suffix-p "Cooked for 6m 15s\n> " (buffer-string)))
+    (should (= (marker-position agent-chat--input-start) (point-max)))))
+
+(ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                    :cold t :per_turn_cold_usd 1.56))
+                 " · ~$0.50 (1 call) · cold — resuming costs ~$1.56")))
+
+(ert-deftest agent-chat-schedule-cold-notice-marks-cold-now-or-later ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    ;; already past the TTL: annotate immediately
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 4000 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--schedule-cold-notice!)
+    (should (null agent-chat--cost-cold-timer))
+    (should (string-match-p "resuming costs ~\\$1\\.56" (buffer-string)))
+    ;; still warm: a timer is pending, nothing written yet
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 10 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--schedule-cold-notice!)
+    (should (timerp agent-chat--cost-cold-timer))
+    (should-not (string-match-p "resuming" (buffer-string)))
+    (cancel-timer agent-chat--cost-cold-timer)))
+
+(ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis nil)
+    (should (equal (agent-chat-cost-segment) ""))))
+
 (defun agent-chat-test--init-buffer ()
   (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count)
              (lambda (&rest _) nil)))
@@ -16,6 +121,13 @@
            :face-alist nil
            :thinking-text "agent is thinking..."
            :thinking-prop 'agent-chat-test-thinking))))
+
+(ert-deftest agent-chat-init-buffer-preserves-default-face-remapping ()
+  (with-temp-buffer
+    (setq-local face-remapping-alist '((default custom-existing-face)))
+    (agent-chat-test--init-buffer)
+    (should (equal face-remapping-alist
+                   '((default custom-existing-face))))))
 
 (ert-deftest agent-chat-ensure-prompt-markers-preserves-live-input ()
   (with-temp-buffer
@@ -53,6 +165,111 @@
                        "first line\n> quoted line in prompt input\nfinal line"))
         (should callback)))))
 
+(ert-deftest agent-chat-unsolicited-turn-queues-operator-input ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let ((live-proc nil)
+          calls
+          first-callback)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'process-live-p)
+                 (lambda (proc) (and proc (eq proc live-proc)))))
+        (agent-chat-send-unsolicited-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq first-callback cb)
+           (setq live-proc 'unsolicited-proc)
+           'unsolicited-proc)
+         "agent"
+         "background wake"
+         "continuation")
+        (should (eq agent-chat--pending-turn-origin 'unsolicited))
+        (insert "fresh operator question")
+        (agent-chat-send-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq live-proc 'operator-proc)
+           (funcall cb "operator reply")
+           'operator-proc)
+         "agent")
+        (should (= 1 (length calls)))
+        (should (= 1 (length agent-chat--queued-operator-turns)))
+        (setq live-proc nil)
+        (funcall first-callback "wake reply")
+        (should (= 2 (length calls)))
+        (should-not agent-chat--queued-operator-turns)
+        (let ((ordered (reverse calls)))
+          (should (equal "background wake" (plist-get (car ordered) :text)))
+          (should (eq 'unsolicited (plist-get (car ordered) :origin)))
+          (should (equal "fresh operator question" (plist-get (cadr ordered) :text)))
+          (should (eq 'operator (plist-get (cadr ordered) :origin))))
+        (let ((buf (buffer-string)))
+          (should (string-match-p "continuation:" buf))
+          (should (string-match-p "joe:" buf))
+          (should (string-match-p "wake reply" buf))
+          (should (string-match-p "operator reply" buf)))))))
+
+(ert-deftest agent-chat-unsolicited-queues-behind-operator-turn ()
+  "The mirror race: an unsolicited resume arriving while an OPERATOR turn is in
+flight must QUEUE (and drain after), never signal — the park delivery path has
+already recorded the park-id, so refusing here would destroy the resume."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let ((live-proc nil)
+          calls
+          operator-callback)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'process-live-p)
+                 (lambda (proc) (and proc (eq proc live-proc)))))
+        (insert "operator question")
+        (agent-chat-send-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq operator-callback cb)
+           (setq live-proc 'operator-proc)
+           'operator-proc)
+         "agent")
+        (should (eq agent-chat--pending-turn-origin 'operator))
+        ;; The resume lands mid-turn: must queue without signalling.
+        (agent-chat-send-unsolicited-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq live-proc 'unsolicited-proc)
+           (funcall cb "wake reply")
+           'unsolicited-proc)
+         "agent"
+         "background wake"
+         "continuation")
+        (should (= 1 (length calls)))
+        (should (= 1 (length agent-chat--queued-operator-turns)))
+        (setq live-proc nil)
+        (funcall operator-callback "operator reply")
+        (should (= 2 (length calls)))
+        (should-not agent-chat--queued-operator-turns)
+        (let ((ordered (reverse calls)))
+          (should (equal "operator question" (plist-get (car ordered) :text)))
+          (should (eq 'operator (plist-get (car ordered) :origin)))
+          (should (equal "background wake" (plist-get (cadr ordered) :text)))
+          (should (eq 'unsolicited (plist-get (cadr ordered) :origin))))
+        (let ((buf (buffer-string)))
+          (should (string-match-p "continuation:" buf))
+          (should (string-match-p "wake reply" buf))
+          (should (string-match-p "operator reply" buf)))))))
+
 (ert-deftest agent-chat-affect-live-runner-builds-command ()
   (let ((agent-chat-affect-live-enabled t)
         (agent-chat-affect-live-directory "/tmp")
@@ -74,6 +291,145 @@
                      '("clojure" "-M" "-m" "futon0.rhythm.affect" "--live"
                        "--evidence-url" "http://localhost:7070/api/alpha/evidence")))
       (should (null (plist-get captured :buffer))))))
+
+(ert-deftest agent-chat-evidence-outbox-replays-stable-id-after-timeout ()
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (responses '((:status 0 :error "timed out")
+                      (:status 201 :json (:evidence/id "ignored-server-id"))))
+         seen-timeouts
+         evidence-id)
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (_method _url timeout &rest _)
+                     (push timeout seen-timeouts)
+                     (prog1 (car responses) (setq responses (cdr responses)))))
+                  ((symbol-function 'agent-chat-evidence-start-outbox!) #'ignore))
+          (setq evidence-id
+                (agent-chat-evidence-post-entry-id
+                 "http://store.test/api/alpha/evidence" 1
+                 '((type . "coordination")
+                   (claim-type . "observation")
+                   (author . "joe")
+                   (body . ((event . "chat-turn")))
+                   (tags . ["user"]))))
+          (should (string-prefix-p "emacs-" evidence-id))
+          (should (eq 'retry agent-chat--last-evidence-delivery-outcome))
+          (let* ((files (agent-chat-evidence--queue-files))
+                 (record (agent-chat-evidence--read-record (car files)))
+                 (payload (alist-get 'payload record)))
+            (should (= 1 (length files)))
+            (should (equal evidence-id (alist-get 'id payload)))
+            (should-not (assq 'timeout record)))
+          (cl-letf (((symbol-function 'agent-chat-evidence--start-replay!)
+                     (lambda (path record)
+                       (when (eq 'acked
+                                 (agent-chat-evidence--attempt-record record))
+                         (delete-file path))
+                       (agent-chat-evidence--release-drain-lease))))
+            (agent-chat-evidence-drain-outbox!))
+          (should (equal (reverse seen-timeouts)
+                         (list 1 agent-chat-evidence-outbox-attempt-timeout)))
+          (should-not (agent-chat-evidence--queue-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-outbox-treats-duplicate-as-ack ()
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _) '(:status 409 :json (:error "duplicate")))))
+          (should (equal "stable-evidence-id"
+                         (agent-chat-evidence-post-entry-id
+                          "http://store.test/api/alpha/evidence" 1
+                          '((id . "stable-evidence-id")
+                            (type . "coordination")
+                            (claim-type . "observation")
+                            (author . "joe")))))
+          (should (eq 'acked agent-chat--last-evidence-delivery-outcome))
+          (should-not (agent-chat-evidence--queue-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-outbox-retains-terminal-rejection ()
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _) '(:status 400 :json (:error "bad shape")))))
+          (should-not
+           (agent-chat-evidence-post-entry-id
+            "http://store.test/api/alpha/evidence" 1
+            '((id . "rejected-evidence-id")
+              (type . "coordination")
+              (claim-type . "observation")
+              (author . "joe"))))
+          (should-not (agent-chat-evidence--queue-files))
+          (should (= 1 (length (agent-chat-evidence--failed-files)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-outbox-retries-reply-not-found ()
+  "A 409 reply-not-found is transient (parent in flight / server restarting)."
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t))
+        (agent-chat--evidence-outbox-timer nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _)
+                     '(:status 409
+                       :json (:ok :false :err "reply-not-found"
+                              :error (:error/code "reply-not-found"
+                                      :error/message "in-reply-to references missing entry")))))
+                  ((symbol-function 'agent-chat-evidence-start-outbox!) #'ignore))
+          (should (equal "child-evidence-id"
+                         (agent-chat-evidence-post-entry-id
+                          "http://store.test/api/alpha/evidence" 1
+                          '((id . "child-evidence-id")
+                            (in-reply-to . "parent-evidence-id")
+                            (type . "coordination")
+                            (claim-type . "observation")
+                            (author . "joe")))))
+          (should (eq 'retry agent-chat--last-evidence-delivery-outcome))
+          (should (= 1 (length (agent-chat-evidence--queue-files))))
+          (should-not (agent-chat-evidence--failed-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-reply-not-found-fails-after-bounded-attempts ()
+  (let ((response '(:status 409 :json (:err "reply-not-found")))
+        (agent-chat-evidence-outbox-reply-not-found-max-attempts 3))
+    (should (eq 'retry (agent-chat-evidence--classify-response response)))
+    (should (eq 'retry (agent-chat-evidence--classify-response
+                        response '((attempts . 2)))))
+    (should (eq 'failed (agent-chat-evidence--classify-response
+                         response '((attempts . 3)))))
+    ;; Other 409s and 4xxs stay terminal.
+    (should (eq 'failed (agent-chat-evidence--classify-response
+                         '(:status 409 :json (:err "conflict")))))
+    (should (eq 'acked (agent-chat-evidence--classify-response
+                        '(:status 409 :json (:err "duplicate-id")))))))
+
+(ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
+  (should (= 409 (agent-chat-evidence--curl-status
+                  "409\n\nProcess agent-chat-evidence-replay finished\n")))
+  (should (= 0 (agent-chat-evidence--curl-status "curl transport error"))))
+
+(ert-deftest agent-chat-evidence-retry-deadline-is-persisted-across-emacs-processes ()
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (agent-chat-evidence-outbox-retry-seconds 15)
+         (path (expand-file-name "record.json"
+                                 agent-chat-evidence-outbox-directory))
+         (record '((evidence-url . "http://store.test/api/alpha/evidence")
+                   (payload . ((evidence-id . "stable-id")))
+                   (attempts . 0)
+                   (next-at . 0))))
+    (unwind-protect
+        (cl-letf (((symbol-function 'float-time) (lambda (&rest _) 1000.0)))
+          (agent-chat-evidence--schedule-retry path record)
+          (let ((saved (agent-chat-evidence--read-record path)))
+            (should (= 1 (alist-get 'attempts saved)))
+            (should (= 1030.0 (alist-get 'next-at saved)))
+            (should-not (agent-chat-evidence--eligible-record))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
 
 (ert-deftest agent-chat-ensure-prompt-markers-repairs-drifting-input-start ()
   (with-temp-buffer
@@ -118,6 +474,50 @@
                  "maybe M-does-not-exist"))
     (should-not (agent-chat--auto-clock-target-from-text
                  "compare M-autoclock-in and M-vsatarcs-invariants-integration"))))
+
+;; Tickets are clock targets (Joe, 2026-09-24).
+(defmacro agent-chat-test--with-ticket-candidates (&rest body)
+  `(cl-letf (((symbol-function 'agent-chat--clock-target-candidates)
+              (lambda (kind)
+                (pcase kind
+                  ('mission '("M-autoclock-in"))
+                  ('ticket '("T-agency-desktop-save" "T-other"))))))
+     ,@body))
+
+(ert-deftest agent-chat-tickets-parse-label-and-inherit-the-path ()
+  (with-temp-buffer
+    (should (equal (agent-chat-parse-clock-target "M-autoclock-in > T-agency-desktop-save")
+                   '(:campaign-id nil :mission-id "M-autoclock-in" :excursion-id nil
+                     :ticket-id "T-agency-desktop-save")))
+    (agent-chat-set-clock! "M-autoclock-in" nil t)
+    (agent-chat-set-clock! "T-agency-desktop-save" t t)
+    (should (equal (agent-chat-mission-label) "M-autoclock-in › T-agency-desktop-save"))
+    (should (equal (agent-chat-dispatch-clock-id) "T-agency-desktop-save"))
+    (let ((fields (agent-chat--mission-body-fields)))
+      (should (equal (alist-get 'ticket-id fields) "T-agency-desktop-save"))
+      (should (equal (alist-get 'clocked-ticket fields) "T-agency-desktop-save")))
+    (agent-chat-set-clock! "M-autoclock-in" nil t)
+    (should-not agent-chat--ticket-id)
+    (should (equal (agent-chat-dispatch-clock-id) "M-autoclock-in"))))
+
+(ert-deftest agent-chat-auto-clock-resolves-tickets ()
+  (agent-chat-test--with-ticket-candidates
+   (should (equal (agent-chat--auto-clock-target-from-text
+                   "You requisitioned kimi-1 for T-agency-desktop-save.")
+                  '(:campaign-id nil :mission-id nil :excursion-id nil
+                    :ticket-id "T-agency-desktop-save"
+                    :tokens ("T-agency-desktop-save")
+                    :rule "explicit-resolved-target")))
+   (should-not (agent-chat--auto-clock-target-from-text "T-agency-desktop-save and T-other"))
+   (should-not (agent-chat--auto-clock-target-from-text "T-missing"))
+   (with-temp-buffer
+     (setq-local agent-chat-auto-clock-enabled t)
+     (cl-letf (((symbol-function 'agent-chat-insert-message) #'ignore))
+       (agent-chat-set-clock! "M-autoclock-in" nil t)
+       (agent-chat--maybe-auto-clock-from-turn "switch → T-agency-desktop-save")
+       (should (equal agent-chat--ticket-id "T-agency-desktop-save"))
+       ;; An arrow switch to a ticket keeps the parent path.
+       (should (equal agent-chat--mission-id "M-autoclock-in"))))))
 
 (ert-deftest agent-chat-auto-clock-promotes-before-evidence-fields-and-clears-witness ()
   (with-temp-buffer
@@ -218,3 +618,18 @@ promoted (and must not wipe a bare campaign down to the bare mention)."
           (should inserted))))))
 
 ;;; agent-chat-test.el ends here
+
+(ert-deftest agent-chat-surface-marker-splits-only-a-prefix ()
+  "A leading surface marker is metadata; the same glyph mid-sentence is text.
+voxterm prepends the speaking-head marker to a dictated turn so the operator
+can see which surface he is on. It must not reach the evidence text, and it
+must not eat a character he meant to write."
+  (should (equal (agent-chat-split-surface-marker "🗣 the turn text")
+                 '(dictated . "the turn text")))
+  (should (equal (agent-chat-split-surface-marker "the turn text")
+                 '(nil . "the turn text")))
+  (should (equal (agent-chat-split-surface-marker "talk about 🗣 emoji")
+                 '(nil . "talk about 🗣 emoji")))
+  ;; the marker's trailing space goes with it, not into the text
+  (should (equal (cdr (agent-chat-split-surface-marker "🗣    spaced out"))
+                 "spaced out")))

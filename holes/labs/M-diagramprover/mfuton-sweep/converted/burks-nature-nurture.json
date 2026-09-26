@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "parental",
+    "to" : "social"
+  }, {
+    "from" : "social",
+    "to" : "child"
+  }, {
+    "from" : "parental",
+    "to" : "child"
+  }, {
+    "from" : "x",
+    "to" : "social"
+  }, {
+    "from" : "x",
+    "to" : "child"
+  } ],
+  "id" : "burks-nature-nurture",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "burks-nature-nurture.json"
+  },
+  "variables" : [ {
+    "id" : "parental",
+    "kind" : "observed",
+    "name" : "Parental Intelligence"
+  }, {
+    "id" : "social",
+    "kind" : "observed",
+    "name" : "Social Status"
+  }, {
+    "id" : "child",
+    "kind" : "observed",
+    "name" : "Child's Intelligence"
+  }, {
+    "id" : "x",
+    "kind" : "latent-unobserved",
+    "name" : "X"
+  } ]
+}

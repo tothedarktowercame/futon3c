@@ -103,8 +103,12 @@
          spinoff-candidates (count (filter #(re-find #"no mission" %) gaps))
          ;; Evidence velocity: count recent evidence entries
          evidence-per-day (when evidence-store
-                            (let [recent (estore/query* evidence-store
-                                                        {:query/limit 100})
+                            (let [;; Last-day window. A bare :query/limit doesn't prune the
+                                  ;; ~64k store (~10s) and also capped this velocity count
+                                  ;; at 100; :since seeks the index and counts accurately.
+                                  day-ago (str (.minus (Instant/now) (Duration/ofDays 1)))
+                                  recent (estore/query* evidence-store
+                                                        {:query/since day-ago})
                                   now-ms (System/currentTimeMillis)
                                   day-ms (* 24 60 60 1000)
                                   recent-today (count

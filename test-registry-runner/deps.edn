@@ -1,0 +1,4 @@
+;; The Test Registry's in-JVM runner as a dependency-free local library, so
+;; futon3c.test-registry can put it on ANY repo's test classpath via -Sdeps
+;; :extra-deps {:local/root ...} without adding futon3c's own dependencies.
+{:paths ["src"] :deps {}}

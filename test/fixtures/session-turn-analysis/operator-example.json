@@ -1,0 +1,194 @@
+{
+  "request": {
+    "version": 1,
+    "source_text": "OK, it's starting to become more useful now.  But turns that don't have any tagging (like this one) should trigger additional analysis.  What I'd like ultimately is to start to fit my turns to the flexiarg library.  Right now that's done via an embedding.  But we could eventually do it via a complex cascading templating or rewriting system.  However that won't work if the turns have no structural markup.",
+    "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+    "sentences": [
+      {
+        "id": "s1",
+        "status": "unresolved",
+        "cues": [],
+        "start": 0,
+        "end": 44,
+        "text": "OK, it's starting to become more useful now."
+      },
+      {
+        "id": "s2",
+        "status": "unresolved",
+        "cues": [],
+        "start": 46,
+        "end": 135,
+        "text": "But turns that don't have any tagging (like this one) should trigger additional analysis."
+      },
+      {
+        "id": "s3",
+        "status": "unresolved",
+        "cues": [],
+        "start": 137,
+        "end": 214,
+        "text": "What I'd like ultimately is to start to fit my turns to the flexiarg library."
+      },
+      {
+        "id": "s4",
+        "status": "unresolved",
+        "cues": [],
+        "start": 216,
+        "end": 255,
+        "text": "Right now that's done via an embedding."
+      },
+      {
+        "id": "s5",
+        "status": "unresolved",
+        "cues": [],
+        "start": 257,
+        "end": 342,
+        "text": "But we could eventually do it via a complex cascading templating or rewriting system."
+      },
+      {
+        "id": "s6",
+        "status": "unresolved",
+        "cues": [],
+        "start": 344,
+        "end": 407,
+        "text": "However that won't work if the turns have no structural markup."
+      }
+    ],
+    "unmatched": [
+      "s1",
+      "s2",
+      "s3",
+      "s4",
+      "s5",
+      "s6"
+    ],
+    "created_at": "2026-09-22T16:32:22Z",
+    "agent_id": "codex-14",
+    "session_id": "01a0c489-1ec2-7553-9e83-52d0f2bea66e",
+    "turn_id": "codex-14-turn-12",
+    "analysis_status": "requested"
+  },
+  "analysis": {
+    "version": 1,
+    "status": "analyzed",
+    "method": "agent-interpretation",
+    "human_approved": false,
+    "labeller": "codex-14",
+    "created_at": "2026-09-22T16:32:49.030808+00:00",
+    "source_text": "OK, it's starting to become more useful now.  But turns that don't have any tagging (like this one) should trigger additional analysis.  What I'd like ultimately is to start to fit my turns to the flexiarg library.  Right now that's done via an embedding.  But we could eventually do it via a complex cascading templating or rewriting system.  However that won't work if the turns have no structural markup.",
+    "source_sha256": "0c8f96c5d0bee05ff8e85b6ce980d67be243840d41aa34effe31731df89f8352",
+    "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+    "sentences": [
+      {
+        "id": "s1",
+        "fragments": [
+          {
+            "start": 0,
+            "end": 44,
+            "text": "OK, it's starting to become more useful now.",
+            "intent": "approve",
+            "target": "usefulness of the current tagging implementation",
+            "rationale": "Positive assessment of the current implementation; approval is qualified as progress rather than completion.",
+            "relations": [
+              "context"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      },
+      {
+        "id": "s2",
+        "fragments": [
+          {
+            "start": 46,
+            "end": 135,
+            "text": "But turns that don't have any tagging (like this one) should trigger additional analysis.",
+            "intent": "constrain",
+            "target": "handling turns with no tags",
+            "rationale": "Specifies a trigger and required response: absent tags should cause further analysis.",
+            "relations": [
+              "condition",
+              "action"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      },
+      {
+        "id": "s3",
+        "fragments": [
+          {
+            "start": 137,
+            "end": 214,
+            "text": "What I'd like ultimately is to start to fit my turns to the flexiarg library.",
+            "intent": "prioritize",
+            "target": "fitting operator turns to the flexiarg library",
+            "rationale": "States the intended end use that should guide the intermediate tagging work.",
+            "relations": [
+              "goal"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      },
+      {
+        "id": "s4",
+        "fragments": [
+          {
+            "start": 216,
+            "end": 255,
+            "text": "Right now that's done via an embedding.",
+            "intent": "explain",
+            "target": "current method for fitting turns to patterns",
+            "rationale": "Describes embedding retrieval as the present implementation, without endorsing or rejecting it.",
+            "relations": [
+              "context"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      },
+      {
+        "id": "s5",
+        "fragments": [
+          {
+            "start": 257,
+            "end": 342,
+            "text": "But we could eventually do it via a complex cascading templating or rewriting system.",
+            "intent": "propose",
+            "target": "cascading templates or rewriting for pattern fitting",
+            "rationale": "Offers a possible future method; eventually makes this a proposal rather than an immediate implementation demand.",
+            "relations": [
+              "action",
+              "contrast"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      },
+      {
+        "id": "s6",
+        "fragments": [
+          {
+            "start": 344,
+            "end": 407,
+            "text": "However that won't work if the turns have no structural markup.",
+            "intent": "constrain",
+            "target": "structural markup as a prerequisite for rewriting",
+            "rationale": "Identifies a prerequisite: the proposed method cannot operate on unstructured turns.",
+            "relations": [
+              "condition",
+              "dependency"
+            ],
+            "pattern_refs": []
+          }
+        ],
+        "unresolved_reason": ""
+      }
+    ]
+  }
+}

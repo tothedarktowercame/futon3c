@@ -1,0 +1,97 @@
+{:fixture-version 1
+ :status :frozen-phase7-shadow
+ :freeze-id "phase7-strategic-policy-shadow-v1-20260723"
+ :frozen-at "2026-07-23T13:16:42Z"
+ :dirichlet-alpha 0.5
+ :minimum-review-window 4
+
+ :selection-events
+ [{:selection-id "es-a-1" :grain :strategic
+   :policy-id "pi-s-9dbc2ceb3317bc38050c41ce"}
+  {:selection-id "es-a-2" :grain :strategic
+   :policy-id "pi-s-9dbc2ceb3317bc38050c41ce"}
+  {:selection-id "es-a-3" :grain :strategic
+   :policy-id "pi-s-9dbc2ceb3317bc38050c41ce"}
+  {:selection-id "es-b-1" :grain :strategic
+   :policy-id "pi-s-333889ba71ae67544d53f17a"}
+  {:selection-id "es-b-2" :grain :strategic
+   :policy-id "pi-s-333889ba71ae67544d53f17a"}
+  {:selection-id "es-b-3" :grain :strategic
+   :policy-id "pi-s-333889ba71ae67544d53f17a"}
+  {:selection-id "es-b-4" :grain :strategic
+   :policy-id "pi-s-333889ba71ae67544d53f17a"}
+  {:selection-id "es-b-5" :grain :strategic
+   :policy-id "pi-s-333889ba71ae67544d53f17a"}
+  {:selection-id "es-ba-1" :grain :strategic
+   :policy-id "pi-s-9dbc2ceb3317bc38050c41ce"}
+  {:selection-id "et-1" :grain :tactical
+   :policy-id "pi-t-field-simp"}
+  {:selection-id "et-2" :grain :tactical
+   :policy-id "pi-t-ring"}]
+
+ :shadow-cases
+ [{:decision-id "phase7-shadow-1"
+   :baseline-mission-ids ["M-shared-memory-control-build-test"]
+   :reviewed-mission-ids ["M-shared-memory-control-build-test"]
+   :reviewer-witness-id "phase7-reviewer-1"
+   :temperature 0.5
+   :predicted-g-s
+   [{:mission-ids ["M-shared-memory-control-build-test"]
+     :value 0.2 :uncertainty {:lower 0.1 :upper 0.4}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1"]}}
+    {:mission-ids ["M-shared-memory-control-build-test"
+                   "M-aif-policy-conditioned-eig"]
+     :value 0.5 :uncertainty {:lower 0.3 :upper 0.9}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1" "phase6-test-a-1"]}}]}
+
+  {:decision-id "phase7-shadow-2"
+   :baseline-mission-ids ["M-shared-memory-control-build-test"]
+   :reviewed-mission-ids ["M-shared-memory-control-build-test"
+                          "M-aif-policy-conditioned-eig"]
+   :reviewer-witness-id "phase7-reviewer-2"
+   :temperature 0.5
+   :predicted-g-s
+   [{:mission-ids ["M-shared-memory-control-build-test"]
+     :value 0.7 :uncertainty {:lower 0.4 :upper 1.0}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1"]}}
+    {:mission-ids ["M-shared-memory-control-build-test"
+                   "M-aif-policy-conditioned-eig"]
+     :value 0.4 :uncertainty {:lower 0.2 :upper 0.8}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1" "phase6-test-a-1"]}}]}
+
+  {:decision-id "phase7-shadow-3"
+   :baseline-mission-ids ["M-shared-memory-control-build-test"]
+   :reviewed-mission-ids ["M-shared-memory-control-build-test"
+                          "M-aif-policy-conditioned-eig"]
+   :reviewer-witness-id "phase7-reviewer-3"
+   :temperature 0.2
+   :predicted-g-s
+   [{:mission-ids ["M-shared-memory-control-build-test"]
+     :value 0.6 :uncertainty {:lower 0.4 :upper 0.9}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-2"]}}
+    {:mission-ids ["M-shared-memory-control-build-test"
+                   "M-aif-policy-conditioned-eig"]
+     :value 0.0 :uncertainty {:lower 0.0 :upper 0.3}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-2" "phase6-test-a-2"]}}]}
+
+  {:decision-id "phase7-shadow-4"
+   :baseline-mission-ids ["M-aif-policy-conditioned-eig"]
+   :reviewed-mission-ids ["M-shared-memory-control-build-test"]
+   :reviewer-witness-id "phase7-reviewer-4"
+   :temperature 2.0
+   :predicted-g-s
+   [{:mission-ids ["M-shared-memory-control-build-test"]
+     :value 0.35 :uncertainty {:lower 0.2 :upper 0.6}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1"]}}
+    {:mission-ids ["M-shared-memory-control-build-test"
+                   "M-aif-policy-conditioned-eig"]
+     :value 0.4 :uncertainty {:lower 0.2 :upper 0.8}
+     :source {:model-id "phase6-shadow-g-v1"
+              :evidence-ids ["phase6-test-b-1" "phase6-test-a-1"]}}]}]}

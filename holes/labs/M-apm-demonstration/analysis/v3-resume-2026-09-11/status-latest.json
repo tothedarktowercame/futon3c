@@ -1,0 +1,28 @@
+{
+  "observed_at": "2026-09-11T02:41:24.900576+00:00",
+  "campaign": "jit-all-open-v3",
+  "frame": "f218",
+  "problem": "m03J03",
+  "phase": "guide-intervention-1",
+  "state": "ok",
+  "alert": null,
+  "lifecycle": {
+    "enabled": true,
+    "status": "running",
+    "tick_claim": true,
+    "stopped_at": null,
+    "last_result": "intent-persisted"
+  },
+  "watchdog": "watching",
+  "valid_wait": true,
+  "substrate": {
+    "total": 4,
+    "available": 2,
+    "holders": 2,
+    "permit_waiters": 0,
+    "requests_queued": 0,
+    "workers_active": 2,
+    "workers_total": 8,
+    "node_open": true
+  }
+}

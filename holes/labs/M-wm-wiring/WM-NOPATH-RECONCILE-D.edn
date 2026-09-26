@@ -1,0 +1,113 @@
+;; WM-NOPATH-RECONCILE-D (claude-11, 2026-09-26): the 17 edges WM-SUPERSET-D
+;; (futon3c 67db43d4) classed no-path, reconciled with the corrections since.
+;; Read-only. Revisions read: registry futon2 0a7ea5f2 (its :holes), code
+;; futon2 4dcb6aa2; WM-PROVER-POSITIONAL-D (futon3c 5f249090); H-A-CONSUMER-D;
+;; the node packets deae6e99 / e6e48e22.
+;;
+;; :final
+;;   :reclassified          not a code wire: the code already carries it, or
+;;                          it enters through another row, or it is by design;
+;;                          the fix is a registry correction and/or a map
+;;                          declaration, never a code change
+;;   :dead-path             on F_pi's chain: moot until F_pi is computed on the
+;;                          live path; the packet is the path (group 1)
+;;   :consumer-not-written  the consuming equation has no code (a component,
+;;                          not a wire); the packet is the component
+;;   :live-code-wire        a code change of one behaviour carries it on a path
+;;                          the machine runs today (none remain: see the note)
+{:revisions {:registry "futon2 0a7ea5f2" :code "futon2 4dcb6aa2" :superset "futon3c 67db43d4"
+             :positional "futon3c 5f249090" :h-a-consumer-d "futon2 proof2/packets/H-A-CONSUMER-D.md"}
+ :counts {:reclassified 7 :live-code-wire 0 :dead-path 5 :consumer-not-written 5 :total 17}
+
+ :edges
+ [;; ---- reclassified ----
+  {:edge [:R2 :R1] :terms [:o] :final :reclassified :group 3
+   :correction "RC7+RC8 (futon2 9c4cc59a): o reaches mu through R3's update, not at R1's site (reconcile-belief-carry takes (fresh, mu-post) only); kept out of :holes"
+   :now "carried by [R2 R3a] -> [R3a R7] -> [R7 R3] -> [R3 R1]: R2->R3a, R3a->R7, R7->R3 declared by deae6e99/e6e48e22; R3->R1 is E2 (positional)"
+   :registry-note {:row :belief-state :enters-through {:o :s-next}}}
+  {:edge [:R16 :R1] :terms [:u] :final :reclassified :group 3
+   :correction "RC7+RC8: u enters mu through the state update, not R1's site"
+   :now "u enters no belief update in the tick (apply-arena-belief-events' events come from the weighted errors only). The formal's B_{u_t} is :state-belief-update's, whose absence is already recorded as the hole [[:R2 :R3] [:R4 :R3]]; this edge adds no separate work"
+   :registry-note {:row :belief-state :enters-through {:u :s-next}}}
+  {:edge [:R4 :R1] :terms [:A :B] :final :reclassified :group 3
+   :correction "as [:R16 :R1]" :now "via :state-belief-update, recorded under the hole [[:R2 :R3] [:R4 :R3]]"
+   :registry-note {:row :belief-state :enters-through {:A :s-next :B :s-next}}}
+  {:edge [:R4 :R2] :terms [:A :B] :final :reclassified :group 3
+   :correction "RC7+RC8 recorded it as a :not-realised hole BY DESIGN: :observe's :formal is the generative process, which the machine does not simulate; the observation reads the world"
+   :now "stays a hole by design; 2d's ACCEPT must exempt it (it is not a missing wire)"}
+  {:edge [:R1 :R4] :terms [:mu] :final :reclassified :group 3
+   :correction "pointer (WM-SUPERSET-D): the live R4/R5 path reads the TOKEN belief as rank-actions' :cascade-belief (joint-q0, from token-belief-carry); R1's :code names only the entity belief (belief.clj)"
+   :now "an existing keyed wire once R1 names the token belief's site (or R1 is split into entity and token belief rows); no code change"
+   :registry-correction {:row :belief-state :add-code "the token belief carry and the :cascade-belief it hands rank-actions (war_machine cascade-decision-admitted)"}}
+  {:edge [:R6 :R16] :terms [:Q-pi :pi] :final :reclassified :group 3
+   :correction "the hole's path-dependence was close-loop! enacting the first passing act gate instead of the recorded selection; at futon2 4dcb6aa2 enact/close-loop! (enact.clj:323) has NO caller in src or scripts, and the runner enacts selected-entry (full_loop_runner.clj:1356); the flight enacts :enacted-steps from select-action-cascades"
+   :now "a live in-function wire in policy/select-action-cascades: selection-posterior's posterior -> bayes-choice; the hole should be closed with this evidence (registry), and the map declares it between the R6 and R16 sites"
+   :registry-correction {:hole [:R6 :R16] :close-with "close-loop! uncalled at 4dcb6aa2; the live runner and the flight enact the recorded selection"}}
+  {:edge [:R4 :R7] :terms [:A] :final :reclassified :group 2
+   :correction "pointer: :likelihood-precision's :code is nil; its site is likelihood_precision/tempered-rates, called on the live path in cascade_model_manifest horizon-g-sparse* (:830), which tempers the token rates (the carrier of A) by zeta"
+   :now "a live positional wire rates -> tempered-rates, inert at the declared zeta = 1 (rates pass unchanged) and when the rates are all zero; the measured-A early return H-A-CONSUMER-D named is fixed (see group 2)"
+   :registry-correction {:row :likelihood-precision :add-code "futon2 src/futon2/aif/likelihood_precision.clj tempered-rates; its live call cascade_model_manifest.clj:830 (horizon-g-sparse*)"}}
+
+  ;; ---- dead path: F_pi (group 1) ----
+  {:edge [:R8 :R6] :terms [:F-pi] :final :dead-path :group 1 :closes-with :F1}
+  {:edge [:R2 :R8] :terms [:o] :final :dead-path :group 1 :closes-with :F1}
+  {:edge [:R4 :R8] :terms [:A] :final :dead-path :group 1 :closes-with :F1
+   :note "WM-PROVER-POSITIONAL-D E5: token-likelihood is on the F_pi path (cascade-free-energy/candidate-free-energy arg 1)"}
+  {:edge [:R6 :R8] :terms [:pi] :final :dead-path :group 1 :closes-with :F1}
+  {:edge [:R8 :R3] :terms [:F-pi] :final :dead-path :group 1 :closes-with :F1
+   :note "also a consumer-not-written edge: :state-belief-update has :code nil, so F1 alone does not close it; it needs C-R3s too"}
+
+  ;; ---- consumer not written (group 3) ----
+  {:edge [:R2 :R3] :terms [:o] :final :consumer-not-written :group 3 :closes-with :C-R3s
+   :note ":state-belief-update :code nil (a Lean-only equation: ExactBeliefTrajectory.exactUpdate)"}
+  {:edge [:R4 :R3] :terms [:A :B] :final :consumer-not-written :group 3 :closes-with :C-R3s}
+  {:edge [:R4 :R3a] :terms [:A :B] :final :consumer-not-written :group 3 :closes-with :C-R3as
+   :note ":state-prediction-error :code nil (Lean: StatePredictionError.statePredictionError)"}
+  {:edge [:R1 :R17] :terms [:mu] :final :consumer-not-written :group 3 :closes-with :C-R17}
+  {:edge [:R2 :R17] :terms [:o] :final :consumer-not-written :group 3 :closes-with :C-R17
+   :note "the a4a accumulation is a different model (capability x mission from the substrate); Dirichlet accumulation over the tick's (o, mu) is not written"}]
+
+ :groups
+ {:1-f-pi
+  {:packet :F1
+   :what "F_pi computed on the live path, attached as each candidate's :f"
+   :stamp "policy-prefix-evidence/production-ranked (policy_prefix_evidence.clj:56-70) dissocs :f and stamps :f-prefix {:status :not-supplied :reason :no-admitted-policy-prefix :pending-dependency :d-conditioning-consumption-and-policy-prefix-admission}"
+   :suppliers
+   [{:site "futon2 src/futon2/aif/policy_prefix_evidence.clj evaluate-synthetic" :status :intended
+     :why "the ns docstring: 'Production remains not-supplied until D owns and admits the policy/execution/observation join'; the observed-prefix F per policy. Needs the D conditioning consumption and a policy-prefix admission, which do not exist"}
+    {:site "futon2 src/futon2/aif/cascade_free_energy.clj policy-free-energy (via efe/rank-cascade-actions :1193)" :status :present-but-switched-off
+     :why "computed only when (:f-prefix-production? opts) is false; war_machine sets it true at both call sites (:5908 base-opts, :6592 cascade-decision-admitted), so on the live path it is never computed; with the flag off it attaches :f {:status :computed ...} (efe.clj :1339-1360)"}
+    {:site "futon2 scripts/futon2/report/war_machine.clj f-pi-dark-readback -> policy_free_energy/f-pi-vector" :status :not-the-supplier
+     :why "no production caller (test callers only); a readback of an earlier F definition, not wired into selection"}]
+   :decision "which F the registry's :policy-free-energy means (the observed-prefix F, or the cascade F over q0 and the observed tokens) is a ruling; F1 cannot be one behaviour until it is made"
+   :stamp-readers
+   ["futon2 scripts/futon2/report/war_machine.clj:5908, :6592 (set :f-prefix-production? true)"
+    "futon2 src/futon2/aif/efe.clj:1193 (skips policy-free-energy), :1339-1344 (certificate :f {:status :not-supplied ...})"
+    "futon2 src/futon2/aif/policy.clj:236 selection-candidate (reads :f-prefix; f from it), :255, :297 (carried into the record)"
+    "futon2 src/futon2/aif/cascade_selection.clj:88, :100 (not-supplied admitted as finite), :112 (the -F term is 0.0 when not supplied), :182-183, :200, :226 (law receipt: F absent), :255, :284-285 (contribution attribution)"]
+   :would-change "the selection score (the -F term), the law receipt's F fields, the contribution attribution, the certificate's :f status, and the run record's F-absence stamp (f39bf0a1)"
+   :closes {:hole [[:R2 :R8] [:R4 :R8] [:R6 :R8] [:R8 :R6] [:R8 :R3]] :except [:R8 :R3] :except-why ":state-belief-update has no code (C-R3s)"}}
+  :2-measured-a
+  {:site "futon2 src/futon2/aif/observation_rates.clj token-likelihood-rates (defn :156)"
+   :early-return "H-A-CONSUMER-D (futon2 0358d4c5): the (= :checkable (:kind cls)) arm returned the zero kernel before reading the label-derived rates, so every production class (C3/C4/C5/C6/C8, all :checkable) scored zero whatever the ledger said"
+   :status :fixed
+   :fixed-by "futon2 7ba427ab (H-A-CONSUMER-I, 2026-09-25): a measured rate is read first (cond arm 1, :197-203); the zero kernel is taken only when the class is :checkable AND unmeasured (:206-208), marked :measurement :absent; 64f005d4 refuses a declared-not-measured rate"
+   :remaining "whether the live R5 call (war_machine :5898, labels from (:subjects observation-labels)) actually receives measured cells for the production classes is not checked here; ζ stays 1 (declared fixed), so tempered-rates is identity on the live path"
+   :edges [[:R4 :R7]]}
+  :3-rest
+  {:order [:RC-registry :C-R3s :C-R3as :C-R17]
+   :RC-registry "registry corrections, no code: :belief-state :enters-through {:o :u :A :B -> :s-next} and a second :code site for the token belief; close [:R6 :R16] with its evidence; :likelihood-precision :code = tempered-rates"
+   :C-R3s "the exact state update (ExactBeliefTrajectory.exactUpdate) in code, consuming o, A, B (and F_pi once F1 lands): closes [[:R2 :R3] [:R4 :R3]] and, with F1, [:R8 :R3]"
+   :C-R3as "the state prediction error in code, consuming A and B: closes [:R4 :R3a]; after C-R3s, which it shares A and B's carriers with"
+   :C-R17 "Dirichlet accumulation over the tick's (o, mu) pairs (Da Costa eq. 21) in code: closes [[:R2 :R17] [:R1 :R17]]"}}
+
+ ;; every :holes entry at 0a7ea5f2, and what closes it
+ :holes
+ [{:hole [:R6 :R16] :status :path-dependent :closed-by :RC-registry :how "evidence: close-loop! uncalled; live paths enact the recorded selection"}
+  {:hole [[:R2 :R17] [:R1 :R17]] :status :not-realised :closed-by :C-R17}
+  {:hole [[:R2 :R8] [:R4 :R8] [:R6 :R8] [:R8 :R6] [:R8 :R3]] :status :not-realised :closed-by :F1 :except {[:R8 :R3] [:F1 :C-R3s]}}
+  {:hole [[:R2 :R3] [:R4 :R3]] :status :not-realised :closed-by :C-R3s}
+  {:hole [:R4 :R3a] :status :not-realised :closed-by :C-R3as}
+  {:hole [:R4 :R7] :status :not-realised :closed-by :RC-registry :how "pointer to tempered-rates; the wire is live (identity at zeta = 1)"}
+  {:hole [:R4 :R2] :status :not-realised :closed-by nil :by-design true :accept "exempt: the observation reads the world by design"}
+  {:hole nil :status :no-consumer :closed-by nil :note "per-tick F stored and read by nothing; a diagnostic, not an edge; outside 2d"}]}

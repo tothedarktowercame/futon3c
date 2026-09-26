@@ -1,0 +1,162 @@
+[{:name "finish-an-outside-root-count-from-an-inside-count-and-no-boundary-roots"
+  :lane :solve-lane
+  :level :algebraic-tail
+  :status :draft
+  :body
+  {:hook
+   "After analysis supplies the number of roots inside a circle, finish the outside count algebraically: compute total root multiplicity, exclude boundary roots, and partition the root multiset with complementary filters."
+   :how-to-apply
+   ["Prove the polynomial's natural degree and monicity with `compute_degree!` and `monicity!` when coefficient computation is concrete."
+    "Use algebraic closedness to obtain `p.Splits` and convert natural degree to the cardinality of `p.roots`, counted with multiplicity."
+    "Prove no root lies on the boundary circle."
+    "Rewrite the outside filter `{z | 1 < ‖z‖}` as the complement of the inside predicate `{z | ‖z‖ < 1}` on the root multiset; boundary exclusion is the load-bearing step."
+    "Apply `Multiset.filter_add_not` to partition all roots into inside and outside multisets."
+    "Take multiset cardinalities and solve the remaining natural-number subtraction from the supplied inside count."]
+   :problem-class
+   "Separate the analytic zero-count step in a Rouché argument from the finite algebraic bookkeeping that converts an inside count into an outside count."
+   :witnesses
+   [{:declaration "ApmCanaries.A92J05.p_natDegree"
+     :result "p.natDegree = 10"}
+    {:declaration "ApmCanaries.A92J05.p_monic"
+     :result "p.Monic"}
+    {:declaration "ApmCanaries.A92J05.p_card_roots"
+     :result "p.roots.card = 10"}
+    {:declaration "ApmCanaries.A92J05.roots_inside_add_outside"
+     :result
+     "p.roots.filter (fun z => ‖z‖ < 1) + p.roots.filter (fun z => 1 < ‖z‖) = p.roots"}
+    {:declaration
+     "ApmCanaries.A92J05.roots_outside_card_eq_of_inside_card_eq"
+     :result "inside card = 3 → outside card = 7"}]
+   :key-api
+   ["IsAlgClosed.splits"
+    "Polynomial.Splits.natDegree_eq_card_roots"
+    "Multiset.filter_add_not"
+    "Multiset.filter_congr"
+    "Multiset.card_add"
+    "compute_degree!"
+    "monicity!"]
+   :formalization-arcs
+   ["`native_decide` is unsuitable for this noncomputable complex polynomial; use the polynomial degree and monicity tactics."
+    "Avoid a global rewrite with `Multiset.filter_add_not` when it rewrites nested filter occurrences; use an explicit `calc` and `Multiset.filter_congr`."
+    "When converting `¬ ‖z‖ < 1` to `1 < ‖z‖`, use the no-boundary-root theorem to rule out equality."]
+   :axiom-audit
+   {:declarations
+    ["p_natDegree"
+     "p_monic"
+     "p_card_roots"
+     "roots_inside_add_outside"
+     "roots_outside_card_eq_of_inside_card_eq"]
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "Isolate Rouché's theorem to one inside-root-count premise; discharge degree, total multiplicity, boundary exclusion, root partition, and outside arithmetic independently so the remaining analytic frontier is exact."
+   :boundary
+   "This memory does not prove the inside count. It assumes a separate analytic or algebraic argument establishes `(p.roots.filter (fun z => ‖z‖ < 1)).card = 3`."
+   :capture-kind :runner-axiom-clean-partial-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J05"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t036"]
+   :receipt-ids ["c08156bb-1537-472b-b5de-7a1823cc6906"]
+   :commits ["e24093a9632d785093ada9c25cc3a5c744ed80fe"]
+   :problems ["a92J05-rouche-root-count"]
+   :artifacts
+   ["problems/a92J05/lean/Main.lean:p_natDegree"
+    "problems/a92J05/lean/Main.lean:p_monic"
+    "problems/a92J05/lean/Main.lean:p_card_roots"
+    "problems/a92J05/lean/Main.lean:roots_inside_add_outside"
+    "problems/a92J05/lean/Main.lean:roots_outside_card_eq_of_inside_card_eq"]}
+  :confidence :blocked-row-with-five-ground-control-verified-axiom-clean-declarations
+  :review {:verdict :pending-owner-review}}
+
+ {:name "close-a92J05-by-transferring-the-unit-disk-zero-count"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :literature
+  :demand 1
+  :body
+  {:hook
+   "The degree-ten and inside/outside bookkeeping are complete; a92J05 now needs only the argument-principle transfer proving that `5z³` and `z¹⁰ + 5z³ + 2z + 1` have the same three zeros in the unit disk."
+   :how-to-apply
+   ["Reuse the proved strict boundary estimate `‖z¹⁰ + 2z + 1‖ < ‖5z³‖` on `‖z‖ = 1`."
+    "Instantiate the straight-line Rouché homotopy between `5z³` and the target polynomial."
+    "Supply the missing theorem that total divisor count in the closed disk is invariant under an analytic homotopy nonzero on the boundary."
+    "Identify the divisor count of `5z³` on the unit disk with three."
+    "Relate the target polynomial's divisor count to `(p.roots.filter (fun z => ‖z‖ < 1)).card`; boundary roots are already excluded."
+    "Feed the resulting inside count to the axiom-clean algebraic tail `roots_outside_card_eq_of_inside_card_eq`."]
+   :frontier/kind :application-of-missing-argument-principle-bridge
+   :residual-goal
+   "(p.roots.filter (fun z => ‖z‖ < 1)).card = 3"
+   :target-polynomial
+   "p(z) = z^10 + 5*z^3 + 2*z + 1"
+   :dominant-and-remainder
+   {:dominant "g(z) = 5*z^3"
+    :remainder "h(z) = z^10 + 2*z + 1"
+    :boundary-estimate "On ‖z‖ = 1, ‖h(z)‖ ≤ 4 < 5 = ‖g(z)‖."}
+   :proved-prefix
+   ["`rouche_condition` proves the strict boundary inequality."
+    "`p_no_roots_on_circle` excludes unit-circle roots."
+    "`p_card_roots` proves ten total roots with multiplicity."
+    "`roots_inside_add_outside` partitions all roots."
+    "`roots_outside_card_eq_of_inside_card_eq` reduces the answer seven to the residual inside count three."
+    "`ConstructionTargets.Rouche.rouche_homotopy_ne_zero_on_sphere` proves boundary nonvanishing along the straight-line homotopy."]
+   :missing-bridge
+   "`ConstructionTargets.Rouche.zeroCountInClosedBall_add_eq` still contains `sorry`. Mathlib's divisor/Jensen API represents multiplicities but does not currently supply the unweighted argument-principle homotopy-invariance theorem needed to transfer the total count."
+   :relation-to-existing-frontier
+   {:memory-id "e-codexpilot-zeroCountInClosedBall-homotopy-invariant"
+    :relation
+    "The existing memory states the general missing homotopy-invariance theorem. This record fixes its exact a92J05 instantiation, residual multiset goal, proved downstream tail, and final divisor-to-roots bridge."
+    :not-a-duplicate
+    "It does not restate the general theorem as a new Mathlib gap; it records the narrowed application leaf that remains after the current partial."}
+   :literature
+   {:source "leanprover-community Zulip archive"
+    :archive-path "116395-maths/Argument.20principle.json"
+    :use-status :historical-gap-anchor
+    :contribution
+    "The thread identifies argument-principle, residue, and winding-number infrastructure as the historical missing bridge."
+    :boundary
+    "The thread does not itself supply the Lean construction."}
+   :rejected-shortcut
+   "`ConstructionTargets/Rouche.lean` may not be imported as if complete while `zeroCountInClosedBall_add_eq` remains sorried; that would propagate `sorryAx` rather than close this frontier."
+   :unblocks
+   [#:ref{:type :lean-theorem, :id "roots_outside_unit_disk"}]
+   :capture-kind :runner-narrowed-frontier-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J05"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :mathlib-gap,
+         :id "zeroCountInClosedBall-homotopy-invariant"}]
+  :proposed-edges
+  [{:edge/type :depends-on
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-zeroCountInClosedBall-homotopy-invariant"}
+    :status :pending-owner-review}
+   {:edge/type :uses
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-straight-line-rouche-homotopy-stays-nonzero-on-boundary"}
+    :status :pending-owner-review}
+   {:edge/type :uses
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-represent-disk-zero-count-with-meromorphic-divisor"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t036"]
+   :receipt-ids ["c08156bb-1537-472b-b5de-7a1823cc6906"]
+   :commits ["e24093a9632d785093ada9c25cc3a5c744ed80fe"]
+   :problems ["a92J05-rouche-root-count"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path "116395-maths/Argument.20principle.json"}]
+   :artifacts
+   ["problems/a92J05/lean/Main.lean:roots_outside_unit_disk"
+    "ConstructionTargets/Rouche.lean:zeroCountInClosedBall_add_eq"
+    "ConstructionTargets/Rouche.lean:rouche_homotopy_ne_zero_on_sphere"]}
+  :confidence :frontier-sharp-ground-control-verified
+  :review {:verdict :pending-owner-review}}]

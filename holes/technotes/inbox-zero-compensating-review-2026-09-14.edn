@@ -1,0 +1,15 @@
+{:safety :compensating
+ :ledger-path "/home/joe/code/storage/inbox-zero/compensating-batch-2026-09-14.edn"
+ :dispatch {:id "invoke-1789414858946-20826-448a11bd"
+            :operator "joe" :relayed-by "zai-7"
+            :source "bell:invoke-1789414858946-20826-448a11bd"
+            :message "Implement compensating safety (option 1), then re-run the batch; commit and push admissible packages."
+            :action :package-commit-and-push}
+ :reviews {["/home/joe/code/futon0" ["README-emacs.md"]]
+           {:message "Document recurring Emacs terminal-resize crash and tested guard"
+            :rationale "Reviewed the 204-line documentation addition: coherent incident timeline, reproduction, failed mitigation, and guarded resize outcome. Preserve the existing authored evidence; this review does not claim to reproduce the Emacs crash independently. No author claim is minted."
+            :blobs {"README-emacs.md" "925aa2be3668d8b0ed63b613b496164ad27630a5"}
+            :gates [{:gate/name :whitespace :cmd ["git" "diff" "--check" "--" "README-emacs.md"]}]} }
+ :review/residuals {:futon3 "Bytecode requires generated-artifact disposition, not a blind commit. Spider/index content remains reviewable after the repository is quiet; the newly committed workshop pattern makes the old ready classification stale."
+                    :futon2 :in-flight
+                    :futon3c :in-flight}}

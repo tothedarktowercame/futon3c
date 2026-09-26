@@ -4,30 +4,91 @@
    Tests the Ring handler directly (no actual HTTP server for most tests)
    to keep tests fast and deterministic. Invoke-path tests exercise a real
    local HTTP server because /api/alpha/invoke uses async channel semantics."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
+            [futon3c.apm.conductor-binding :as conductor-binding]
+            [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.transport.peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.federation :as federation]
+            [futon3c.agency.turn-queue :as turn-queue]
+            [futon3c.agency.clock-store :as clock-store]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [java.nio.charset StandardCharsets]
+           [java.nio.file Files StandardOpenOption]
+           [java.nio.file.attribute FileAttribute]))
 
 ;; =============================================================================
 ;; Fixtures
 ;; =============================================================================
 
+(defn- delete-temp-tree!
+  [root]
+  (doseq [file (reverse (file-seq (.toFile root)))]
+    (io/delete-file file true)))
+
+(defn- with-isolated-invoke-jobs-ledger
+  [f]
+  (let [root (Files/createTempDirectory
+              "futon3c-http-test-invoke-jobs-"
+              (make-array FileAttribute 0))
+        ledger-path (str (.resolve root "invoke-jobs.edn"))]
+    (try
+      (with-redefs-fn
+        {#'futon3c.transport.http/invoke-jobs-store-path
+         (constantly ledger-path)}
+        f)
+      (finally
+        (http/reset-invoke-jobs!)
+        (delete-temp-tree! root)))))
+
+(use-fixtures :once with-isolated-invoke-jobs-ledger)
+
+(deftest invoke-stream-stamps-every-event-with-one-turn-id
+  (let [stamp #'http/stamp-turn-event
+        events [{:type "started"}
+                {:type "text" :text "partial"}
+                {:type "tool_use" :tools ["Read"]}
+                {:type "done" :ok true :result "complete"}]
+        stamped (mapv #(stamp "turn-identity-1" %) events)]
+    (is (= ["started" "text" "tool_use" "done"]
+           (mapv :type stamped)))
+    (is (every? #(= "turn-identity-1" (:turn-id %)) stamped)
+        "started, intermediate, and terminal events share one identity")))
+
+(deftest invoke-session-recovery-forwards-solver-process-options
+  (let [seen (atom nil)]
+    (with-redefs [reg/invoke-agent!
+                  (fn [_agent _prompt opts]
+                    (reset! seen opts)
+                    {:ok true :result "done"})]
+      (#'futon3c.transport.http/invoke-agent-with-session-recovery!
+       "codex-4" "solve" {:model "gpt-5.6-sol"
+                           :reasoning-effort "high"}
+       "job-config")
+      (is (= "gpt-5.6-sol" (:model @seen)))
+      (is (= "high" (:reasoning-effort @seen)))
+      (is (= "job-config" (:dispatch-id @seen))))))
+
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
+    (clock-store/reset-store!)
     (persist/reset-sessions!)
     (estore/reset-store!)
     (reset! portfolio/!state {:mu perceive/default-mu
@@ -75,10 +136,213 @@
             :uri uri
             :query-string query-string}))
 
+(deftest parked-resume-buffer-surface-inbox-is-authoritative-ws-is-poke
+  (testing "the inbox push always happens; an accepted WS frame is only a poke"
+    (let [sent (atom [])
+          pushed (atom [])]
+      (with-redefs [ws-invoke/send-frame! (fn [agent frame]
+                                            (swap! sent conj [agent frame])
+                                            true)
+                    http/parked-ready-push! (fn [& args]
+                                               (swap! pushed conj args))]
+        (is (= "park-ready-inbox+poke:pk-1"
+               ((var-get #'http/parked-resume!)
+                {:id "pk-1" :agent "claude-1" :session "sid"
+                 :surface "emacs-repl" :payload "wake" :arrived {}
+                 :awaiting #{} :mode :background})))
+        (is (= 1 (count @sent)))
+        (is (nil? (:prompt (second (first @sent))))
+            "the poke frame carries no authoritative payload")
+        (is (= [["claude-1" "sid" "pk-1"
+                 "wake\n\n--- resumed: parked dependencies complete (0) ---\n"
+                 :background]]
+               @pushed)))))
+  (testing "missing targeted WS sender still enqueues exactly one inbox item"
+    (let [sent (atom [])
+          pushed (atom [])]
+      (with-redefs [ws-invoke/send-frame! (fn [agent frame]
+                                            (swap! sent conj [agent frame])
+                                            false)
+                    http/parked-ready-push! (fn [& args]
+                                               (swap! pushed conj args))]
+        (is (= "park-ready-inbox:pk-2"
+               ((var-get #'http/parked-resume!)
+                {:id "pk-2" :agent "claude-1" :session "sid"
+                 :surface "emacs-repl" :payload "wake" :arrived {}
+                 :awaiting #{} :mode :background})))
+        (is (= 1 (count @sent)))
+        (is (= [["claude-1" "sid" "pk-2"
+                 "wake\n\n--- resumed: parked dependencies complete (0) ---\n"
+                 :background]]
+               @pushed))))))
+
+(deftest parked-ready-withholds-while-agent-busy
+  (testing "server-side busy gate withholds ready items without leasing"
+    (let [popped? (atom false)
+          response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 http/agent-in-flight-turn? (constantly true)
+                                 http/parked-ready-pop! (fn [& _]
+                                                          (reset! popped? true)
+                                                          {:park-id "bad"})]
+                     ((var-get #'http/handle-parked-ready)
+                      {:query-string "agent=claude-1&session=sid"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= [] (:ready body)))
+      (is (true? (:withheld body)))
+      (is (false? @popped?)))))
+
+(deftest park-coerces-decimal-string-timestamps-before-persisting
+  (let [park-args (atom nil)
+        response (with-redefs [http/parked-on-enabled? (constantly true)
+                               parked-on/park! (fn [args _opts]
+                                                 (reset! park-args args)
+                                                 {:id "park-test" :status :parked})]
+                   ((var-get #'http/handle-park)
+                    {:body (json/generate-string
+                            {:agent "codex-10"
+                             :awaiting []
+                             :timer-due-ms "1787266477778"
+                             :deadline-ms "1787266480000"})}
+                    nil))
+        body (json/parse-string (:body response) true)]
+    (is (= 200 (:status response)))
+    (is (true? (:ok body)))
+    (is (= 1787266477778 (:timer-due-ms @park-args)))
+    (is (= 1787266480000 (:deadline-ms @park-args)))
+    (is (integer? (:timer-due-ms @park-args)))
+    (is (integer? (:deadline-ms @park-args)))))
+
+(deftest park-rejects-unconvertible-timestamps
+  (doseq [[field value error] [[:timer-due-ms "tomorrow" "invalid-timer-due-ms"]
+                               [:deadline-ms 1.5 "invalid-deadline-ms"]]]
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)]
+                     ((var-get #'http/handle-park)
+                      {:body (json/generate-string
+                              (assoc {:agent "codex-10" :awaiting []}
+                                     field value))}
+                      nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 400 (:status response)))
+      (is (= error (:error body))))))
+
+(deftest parked-background-record-does-not-defer-within-turn-finalization
+  (testing "background parks are excluded from /parked more-pending"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot (fn []
+                                                      {:records
+                                                       {"bg" {:id "bg"
+                                                              :agent "claude-1"
+                                                              :session "sid"
+                                                              :awaiting #{"job-1"}
+                                                              :deadline-ms 123
+                                                              :mode :background
+                                                              :released? false}}})
+                                 parked-on/ready-inbox-pending? (constantly false)]
+                     ((var-get #'http/handle-parked)
+                      {:query-string "agent=claude-1&session=sid"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= [] (:parked body)))
+      (is (false? (:more-pending body))))))
+
+(deftest parked-all-mode-shows-background-without-deferring-finalization
+  (testing "mode=all is an operator view, not a change to more-pending semantics"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot (fn []
+                                                      {:records
+                                                       {"bg" {:id "bg"
+                                                              :agent "claude-1"
+                                                              :session "sid"
+                                                              :awaiting #{"job-1"}
+                                                              :deadline-ms 123
+                                                              :mode :background
+                                                              :released? false}}})
+                                 parked-on/ready-inbox-pending? (constantly false)]
+                     ((var-get #'http/handle-parked)
+                      {:query-string "agent=claude-1&session=sid&mode=all"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= [{:id "bg"
+               :agent "claude-1"
+               :session "sid"
+               :surface nil
+               :awaiting ["job-1"]
+               :deadline-ms 123
+               :mode "background"}]
+             (:parked body)))
+      (is (false? (:more-pending body))))))
+
+(deftest parked-bare-operator-view-shows-all-outstanding-parks
+  (testing "GET /parked without an agent is the documented global visibility view"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot
+                                 (fn []
+                                   {:records
+                                    {"within" {:id "within"
+                                               :agent "claude-2"
+                                               :session "s2"
+                                               :surface "emacs-repl"
+                                               :awaiting #{"job-2"}
+                                               :deadline-ms 456
+                                               :mode :within-turn
+                                               :released? false}
+                                     "background" {:id "background"
+                                                   :agent "codex-3"
+                                                   :session "s3"
+                                                   :surface "bell"
+                                                   :awaiting #{"job-3"}
+                                                   :deadline-ms 789
+                                                   :mode :background
+                                                   :released? false}}})]
+                     ((var-get #'http/handle-parked) {} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= #{["within" "claude-2" "s2" "emacs-repl" "within-turn"]
+               ["background" "codex-3" "s3" "bell" "background"]}
+             (set (map (juxt :id :agent :session :surface :mode)
+                       (:parked body)))))
+      (is (true? (:more-pending body))))))
+
+(deftest invoke-job-public-view-exposes-auto-bellback-decision
+  (let [decision {:suppressed? true
+                  :reason :parked-on
+                  :park-id "park-1"}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-1" :state "done" :auto-bellback decision
+               :result "private complete response"
+               :result-text "private bounded response"})]
+    (is (= decision (:auto-bellback view)))
+    (is (not (contains? view :result-text)))
+    (is (= "private complete response" (:result view)))))
+
+(deftest invoke-job-public-view-preserves-delivery-observation
+  (let [observation {:terminal-job-id "job-1"
+                     :delivery-status "delivery-failed"
+                     :inbox-file-created? false
+                     :registered-push-performed? false
+                     :polling-available? true}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-1" :trace/delivery-observation observation})]
+    (is (= observation (:trace/delivery-observation view)))))
+
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(deftest missions-can-skip-ancillary-turn-count-scan
+  (testing "inventory-only callers do not query live coordination evidence"
+    (with-redefs [mcb/build-inventory (fn [] [{:mission/id "M-test"}])
+                  mcb/mission-turn-count-telemetry
+                  (fn [& _] (throw (ex-info "must not run" {})))]
+      (let [response (get-req-with-query (make-handler)
+                                         "/api/alpha/missions"
+                                         "include-turn-counts=false")
+            body (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= [{:mission/id "M-test"}] (:missions body)))
+        (is (false? (:turn-counts-included? body)))
+        (is (nil? (:turn-counts body)))))))
 
 (defn- with-system-properties
   [settings f]
@@ -126,20 +390,101 @@
                                       (.orElse nil))}
      :body (.body resp)}))
 
+(deftest invoke-stream-pushes-live-agent-events-to-client
+  (testing "events reported through the registered Agency sink reach the open stream"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-stream-push" :id/type :continuity}
+      :type :codex
+      :invoke-fn
+      (fn [_prompt _session-id]
+        (reg/update-invoke-activity! "codex-stream-push" "using bash")
+        {:result "complete" :session-id "stream-session"})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)]
+      (with-redefs [http/repl-through-queue? (constantly true)
+                    turn-queue/drainer-v2-enabled? (constantly true)]
+        (with-live-server
+          handler
+          (fn [base-url]
+            (let [response (http-post-json
+                            base-url
+                            "/api/alpha/invoke-stream"
+                            (json/generate-string
+                             {:agent-id "codex-stream-push"
+                              :prompt "show progress"
+                              :caller "http-test"}))
+                  events (mapv #(json/parse-string % true)
+                               (str/split-lines (:body response)))]
+              (is (= 200 (:status response)))
+              (is (= ["started" "invoke.activity" "done"]
+                     (mapv :type events)))
+              (is (= "using bash" (:activity (second events))))
+              (is (apply = (map :turn-id events))
+                  "every pushed event retains the request's stream identity"))))))))
+
 (defn- wait-for-job-state
-  "Poll /api/alpha/invoke/jobs/:id until state is no longer queued/running or timeout."
+  "Poll /api/alpha/invoke/jobs/:id until state is terminal or timeout."
   [handler job-id timeout-ms]
   (let [deadline (+ (System/currentTimeMillis) timeout-ms)]
     (loop []
       (let [resp (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
             parsed (parse-body resp)
             state (get-in parsed [:job :state])]
-        (if (or (not (#{"queued" "running"} state))
+        (if (or (not (#{"queued" "activating" "running" "overrun" "delivering"}
+                       state))
                 (>= (System/currentTimeMillis) deadline))
           {:response resp :parsed parsed}
           (do
             (Thread/sleep 20)
             (recur)))))))
+
+(deftest whistle-timeout-returns-pollable-supervised-job
+  (testing "strict whistle timeout returns job-id/overrun while the same turn completes"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-whistle-overrun" :id/type :continuity}
+      :type :codex
+      :invoke-fn (fn [_prompt _session-id]
+                   (Thread/sleep 120)
+                   {:result "late whistle result" :session-id "s-whistle"})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)]
+      (with-redefs [http/job-ceiling-ms (constantly 500)
+                    turn-queue/drainer-v2-enabled? (constantly false)]
+        (with-live-server
+          handler
+          (fn [base-url]
+            (let [response (http-post-json
+                            base-url
+                            "/api/alpha/whistle"
+                            (json/generate-string
+                             {:agent-id "codex-whistle-overrun"
+                              :prompt "slow question"
+                              :timeout-ms 20}))
+                  body (parse-body response)
+                  job-id (:job-id body)]
+              (is (= 504 (:status response)))
+              (is (true? (:overrun body)))
+              (is (string? job-id))
+              (is (= (str "/api/alpha/invoke/jobs/" job-id)
+                     (:status-url body)))
+              (let [deadline (+ (System/currentTimeMillis) 1000)
+                    terminal
+                    (loop []
+                      (let [job-response (get-req
+                                          handler
+                                          (str "/api/alpha/invoke/jobs/" job-id))
+                            parsed (parse-body job-response)
+                            state (get-in parsed [:job :state])]
+                        (if (or (= "done" state)
+                                (>= (System/currentTimeMillis) deadline))
+                          parsed
+                          (do (Thread/sleep 10) (recur)))))]
+                (is (= "done" (get-in terminal [:job :state])))
+                (is (= "late whistle result"
+                       (get-in terminal [:job :result-summary])))
+                (is (= :idle
+                       (:agent/status
+                        (reg/get-agent "codex-whistle-overrun"))))))))))))
 
 (defn- with-temp-dir
   [f]
@@ -382,6 +727,78 @@
             (is (false? (:ok invoke-parsed)))
             (is (= "invoke-error" (:error invoke-parsed)))))))))
 
+(deftest agent-get-resolves-local-area-code-alias
+  (testing "GET /api/alpha/agents/:id resolves this site's qualified alias"
+    (let [handler (make-handler)
+          old-site (System/getProperty "FUTON3C_SITE")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "ams")
+        (register-mock-agent! "zai-1" :zai)
+        (let [response (get-req handler "/api/alpha/agents/ams-zai-1")
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "ams-zai-1" (:agent-id parsed)))
+          (is (= "zai" (get-in parsed [:agent :type]))))
+        (let [response (post handler "/api/alpha/invoke"
+                             (json/generate-string
+                              {"agent-id" "ams-zai-1" "prompt" "hello"}))
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "ok" (:result parsed))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
+(deftest qualified-local-job-counts-project-onto-canonical-agent
+  (testing "a job addressed through this site's area code keeps the one local roster row live"
+    (let [old-site (System/getProperty "FUTON3C_SITE")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "ams")
+        (register-mock-agent! "zai-1" :zai)
+        (let [job-id ((var-get #'http/create-invoke-job!)
+                      {:agent-id "ams-zai-1"
+                       :prompt "prove it"
+                       :caller "apm-driver"
+                       :surface "bell"})]
+          ((var-get #'http/mark-invoke-job-running!) job-id)
+          (let [counts (http/active-invoke-job-counts)]
+            (is (= {:queued-jobs 0
+                    :running-jobs 1
+                    :nonterminal-jobs 1}
+                   (get counts "zai-1")))
+            (is (nil? (get counts "ams-zai-1"))))
+          (let [info (get-in (reg/registry-status) [:agents "zai-1"])]
+            (is (= :invoking (:status info)))
+            (is (= 1 (:running-jobs info)))
+            (is (= 1 (:nonterminal-jobs info)))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
+(deftest proxy-runtime-refresh-is-published
+  (testing "an HTTP federation update is projected to HUDs and downstream uplinks"
+    (let [published (atom 0)
+          handler (make-handler)]
+      (with-redefs [federation/register-proxy-agent!
+                    (fn [_origin _agent _info]
+                      {:ok true :agent-id "ams-zai-1" :action :updated})
+                    reg/publish-agents-status!
+                    (fn [] (swap! published inc) {:ok true :count 1})]
+        (let [response (post handler "/api/alpha/agents"
+                             (json/generate-string
+                              {"agent-id" "zai-1"
+                               "type" "zai"
+                               "origin-url" "http://ams.invalid:7070"
+                               "proxy" true
+                               "home-site" "ams"
+                               "status" "invoking"}))]
+          (is (= 200 (:status response)))
+          (is (= 1 @published)))))))
+
 (deftest agent-auto-register-seeds-session-id
   (testing "POST /api/alpha/agents/auto seeds session continuity at registration time"
     (let [handler (make-handler)
@@ -511,6 +928,42 @@
             (when (.exists session-file)
               (.delete session-file))))))))
 
+(deftest zai-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto creates a fresh zai lane with its own session file"
+    (let [handler (make-handler {:evidence-store (atom {:entries {} :order []})})
+          session-file (io/file "/tmp/futon-zai-session-id-zai-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-zai-register"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "zai"
+                                      "session-id" sid
+                                      "cwd" cwd
+                                      "memory-domain" "mathematics"})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "zai-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "zai-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= "mathematics" (:memory-domain parsed)))
+          (is (= :zai (:agent/type agent)))
+          (is (= :mathematics
+                 (get-in agent [:agent/metadata :memory-domain])))
+          (is (fn? (:agent/invoke-fn agent)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
 (deftest agent-restore-registers-codex-exact-identity
   (testing "POST /api/alpha/agents/restore recreates an exact codex identity"
     (let [handler (make-handler)
@@ -546,6 +999,28 @@
             (spit session-file backup)
             (when (.exists session-file)
               (.delete session-file))))))))
+
+(deftest agent-restore-registers-non-invokable-war-machine-apparatus
+  (testing "persistent :wm records restore without manufacturing an invoke path"
+    (let [handler (make-handler)
+          body (json/generate-string
+                {"agent-id" "war-machine"
+                 "type" "wm"
+                 "cwd" "/home/joe/code/futon2"
+                 "metadata" {"apparatus?" true}})
+          response (post handler "/api/alpha/agents/restore" body)
+          parsed (parse-body response)
+          agent (reg/get-agent "war-machine")
+          refusal (reg/invoke-agent! "war-machine" "should refuse" nil)]
+      (is (= 201 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= :wm (:agent/type agent)))
+      (is (nil? (:agent/invoke-fn agent)))
+      (is (= true (get-in agent [:agent/metadata :apparatus?])))
+      (is (= "/home/joe/code/futon2"
+             (get-in agent [:agent/metadata :cwd])))
+      (is (false? (:ok refusal)))
+      (is (= :invoke-error (get-in refusal [:error :error/code]))))))
 
 (deftest agent-restore-clears-stale-remote-metadata
   (testing "POST /api/alpha/agents/restore makes a local lane stop displaying as remote"
@@ -699,9 +1174,240 @@
           (when (.exists session-file)
             (.delete session-file)))))))
 
+(deftest agent-compact-maps-pouch-control-statuses
+  (let [handler (make-handler)
+        result {:ok true :compact-result "success"}]
+    (with-redefs [agent-pouch/snapshot (constantly {"claude-compact" {:alive? true}})
+                  agent-pouch/compact-pouch! (fn [agent-id opts]
+                                               (is (= "claude-compact" agent-id))
+                                               (is (= {:wait? true} opts))
+                                               result)
+                  turn-queue/accept-async!
+                  (fn [entry]
+                    (let [waiter (promise)]
+                      (deliver waiter ((:process-fn entry) entry))
+                      {:status :queued :entry entry :waiter waiter}))]
+      (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
+        (is (= 200 (:status response)))
+        (is (= (assoc result :path "warm") (parse-body response)))))))
+
+(deftest agent-compact-cold-path-refuses-only-unknown-agent
+  (let [handler (make-handler)]
+    (with-redefs [agent-pouch/snapshot (constantly {})
+                  reg/get-agent (constantly nil)]
+      (let [response (post handler "/api/alpha/agents/missing/compact" "{}")]
+        (is (= 404 (:status response)))
+        (is (= {:ok false :error "no local agent"} (parse-body response)))))
+    (with-redefs [agent-pouch/snapshot (constantly {})
+                  reg/get-agent (constantly {:agent/invoke-fn identity
+                                             :running-jobs 1 :queued-jobs 0})
+                  turn-queue/accept-async!
+                  (fn [entry] {:status :queued :entry entry :waiter (promise)})]
+      (let [response (post handler "/api/alpha/agents/claude-busy/compact" "{}")]
+        (is (= 202 (:status response)))
+        (is (true? (:queued (parse-body response))))
+        (is (string? (:turn-id (parse-body response))))))))
+
+(deftest agent-compact-cold-path-queues-literal-control-and-returns-outcome
+  (let [handler (make-handler)
+        invoked (atom nil)
+        queued (atom nil)
+        invoke-fn (fn [prompt session-id]
+                    (reset! invoked [prompt session-id
+                                     turn-queue/*drained-by-outer*
+                                     turn-queue/*turn-id*])
+                    {:compact-result "failed"
+                     :compact-error "Not enough messages to compact."
+                     :session-id session-id
+                     :usage {:input_tokens 10}
+                     :total-cost-usd 0.0})]
+    (with-redefs [agent-pouch/snapshot (constantly {})
+                  agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly {:agent/invoke-fn invoke-fn
+                                             :agent/session-id "sid-cold"
+                                             :running-jobs 0 :queued-jobs 0})
+                  turn-queue/accept-async!
+                  (fn [entry]
+                    (reset! queued entry)
+                    (let [waiter (promise)]
+                      (deliver waiter ((:process-fn entry) entry))
+                      {:status :queued :entry entry :waiter waiter}))]
+      (let [response (post handler "/api/alpha/agents/claude-cold/compact" "{}")
+            parsed (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= ["/compact" "sid-cold" true (:id @queued)] @invoked))
+        (is (= "/compact" (:prompt @queued)))
+        (is (= {:ok false
+                :compact-result "failed"
+                :compact-error "Not enough messages to compact."
+                :session-id "sid-cold"
+                :usage {:input_tokens 10}
+                :total-cost-usd 0.0
+                :path "cold"}
+               parsed))))))
+
+(defn- with-isolated-turn-queue [f]
+  (let [root (Files/createTempDirectory
+              "compact-turn-queue-" (make-array FileAttribute 0))
+        store-path (str (.resolve root "queue-state.edn"))]
+    (try
+      (with-redefs-fn {#'turn-queue/queue-store-path (constantly store-path)}
+        (fn []
+          (turn-queue/clear!)
+          (try (f) (finally (turn-queue/clear!)))))
+      (finally (delete-temp-tree! root)))))
+
+(deftest agent-compact-queues-behind-draining-repl-and-dedupes
+  (with-isolated-turn-queue
+    (fn []
+      (let [handler (make-handler)
+            release-first (promise)
+            compacted (promise)
+            first-turn (turn-queue/accept-async!
+                        {:id "repl-claude-compact-live-shape"
+                         :msg-id "repl-claude-compact-live-shape"
+                         :to "claude-compact-live-shape" :from "joe"
+                         :surface "emacs-repl" :prompt "long turn"
+                         :process-fn (fn [_] @release-first)})]
+        (loop [deadline (+ (System/currentTimeMillis) 2000)]
+          (when (and (not (contains? (:draining (turn-queue/snapshot))
+                                     "claude-compact-live-shape"))
+                     (< (System/currentTimeMillis) deadline))
+            (Thread/sleep 10)
+            (recur deadline)))
+        (turn-queue/accept-async!
+         {:id "repl-queued-behind-live-turn" :msg-id "repl-queued-behind-live-turn"
+          :to "claude-compact-live-shape" :from "joe" :surface "emacs-repl"
+          :prompt "queued repl" :process-fn (fn [_] {:result "repl done"})})
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [prompt session-id]
+                                        (deliver compacted [prompt session-id])
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "retained-session"})]
+          (let [first-response (parse-body
+                                (post handler
+                                      "/api/alpha/agents/claude-compact-live-shape/compact" "{}"))
+                depth-before-second (count (get-in (turn-queue/snapshot)
+                                                   [:queues "claude-compact-live-shape"]))
+                second-response (parse-body
+                                 (post handler
+                                       "/api/alpha/agents/claude-compact-live-shape/compact" "{}"))]
+            (is (true? (:queued first-response)))
+            (is (= 2 (:ahead first-response)))
+            (is (true? (:deduped second-response)))
+            (is (= (:turn-id first-response) (:turn-id second-response)))
+            (is (= depth-before-second
+                   (count (get-in (turn-queue/snapshot)
+                                  [:queues "claude-compact-live-shape"]))))
+            (deliver release-first {:result "first done"})
+            (is (= ["/compact" "retained-session"] (deref compacted 2000 nil)))
+            ;; The entry turns terminal only after the compact's finally (heartbeat
+            ;; stop, idle reset), so wait for it rather than race it.
+            (is (= :processed
+                   (loop [deadline (+ (System/currentTimeMillis) 2000)]
+                     (let [status (get-in (turn-queue/snapshot)
+                                          [:entries (:turn-id first-response) :status])]
+                       (if (or (= :processed status)
+                               (> (System/currentTimeMillis) deadline))
+                         status
+                         (do (Thread/sleep 10) (recur deadline)))))))
+            @(:waiter first-turn)))))))
+
+(deftest agent-compact-dedupes-running-compact-and-returns-clean-outcome
+  ;; pop-next! takes an entry off :queues as it starts, so a POST while a
+  ;; compact is executing must still find it (claude-16 review, 2026-09-12).
+  (with-isolated-turn-queue
+    (fn []
+      (let [handler (make-handler)
+            aid "claude-compact-running"
+            url (str "/api/alpha/agents/" aid "/compact")
+            started (promise)
+            release (promise)]
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [_prompt session-id]
+                                        (deliver started true)
+                                        @release
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "sid-running"})]
+          (let [first-post (future (post handler url "{}"))]
+            (is (true? (deref started 2000 false)))
+            (let [second-response (parse-body (post handler url "{}"))
+                  running-id (:turn-id second-response)]
+              (is (true? (:deduped second-response)))
+              (is (= "compact-control"
+                     (get-in (turn-queue/snapshot) [:entries running-id :from])))
+              (is (empty? (get-in (turn-queue/snapshot) [:queues aid])))
+              (deliver release true)
+              (let [response (deref first-post 2000 nil)
+                    body (parse-body response)]
+                (is (= 200 (:status response)))
+                (is (= "success" (:compact-result body)))
+                (is (= "cold" (:path body)))
+                ;; mark-terminal! decorates the waiter value with the queue entry.
+                (is (not-any? #(.contains (str %) "turn-queue") (keys body)))))))))))
+
+(deftest agent-compact-shows-as-activity-while-it-runs
+  ;; voxterm's chip reads roster status + invoke-activity-at on a 120 s window;
+  ;; a compaction must read as activity throughout and end idle (Joe, 2026-09-12).
+  (let [handler (make-handler)
+        calls (atom [])
+        seen-at-invoke (promise)]
+    (with-redefs-fn {#'http/compact-heartbeat-ms 20}
+      (fn []
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/update-invoke-activity! (fn [aid activity]
+                                                    (swap! calls conj [:activity aid activity]))
+                      reg/mark-agent-idle! (fn [aid] (swap! calls conj [:idle aid]) true)
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [_prompt session-id]
+                                        (deliver seen-at-invoke @calls)
+                                        (Thread/sleep 150)
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "sid-chip"
+                                      :running-jobs 0 :queued-jobs 0})
+                      turn-queue/accept-async!
+                      (fn [entry]
+                        (let [waiter (promise)]
+                          (deliver waiter ((:process-fn entry) entry))
+                          {:status :queued :entry entry :waiter waiter}))]
+          (let [response (post handler "/api/alpha/agents/claude-chip/compact" "{}")
+                log @calls]
+            (is (= 200 (:status response)))
+            (is (= [[:activity "claude-chip" "compacting context"]] @seen-at-invoke)
+                "stamped before the compaction starts")
+            (is (<= 2 (count (filter #(= :activity (first %)) log)))
+                "the heartbeat restamps during a long compaction")
+            (is (= [:idle "claude-chip"] (last log)) "ends idle, with no stamp after")
+            (is (= 1 (count (filter #(= :idle (first %)) log))))))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
+
+(deftest invoke-job-forwards-explicit-clock-without-unvalidated-preclock
+  (testing "the shared decision boundary owns target validation and clock writes"
+    (let [seen (atom nil)
+          job-id (#'http/create-invoke-job! {:agent-id "zai-preclock"
+                                            :prompt "check context" :caller "test"
+                                            :surface "emacs-repl"})]
+      (with-redefs [http/invoke-agent-with-session-recovery!
+                    (fn [_agent _prompt opts _dispatch-id]
+                      (reset! seen opts)
+                      {:ok true :result "ok" :session-id "real-session"})]
+        (is (:ok (#'http/run-invoke-job! {:job-id job-id :agent-id "zai-preclock"
+                                         :prompt "check context" :caller "test"
+                                         :surface "emacs-repl" :mission-id "E-preclock"})))
+        (is (= "E-preclock" (:mission-id @seen)))
+        (is (= (clock-store/empty-clock)
+               (clock-store/current-clock "zai-preclock" "real-session")))))))
 
 (deftest claude-invoke-recovers-from-missing-conversation-session
   (testing "Claude missing-conversation resume failure clears continuity and retries once"
@@ -814,6 +1520,55 @@
         (is (str/includes? prompt "\"command\":\"eval-sexp\""))
         (is (str/includes? prompt "\"command\":\"run-script\""))))))
 
+(deftest wrap-agent-facing-surface-includes-live-problem-conductor-contract
+  (let [agent-id "claude-contract"
+        session-id "contract-session"
+        original "Drive the next cycle action."
+        handle {:ok true
+                :cycle-id "cycle-contract-1"
+                :config {:problem-id "t94J02"}
+                :state {:current-phase :guided-solve}
+                :log [{:tool :problem-save}]}
+        previous (#'futon3c.transport.http/wrap-surface-header
+                  "" "emacs-repl" "joe" agent-id nil)]
+    (reg/register-agent!
+     {:agent-id {:id/value agent-id :id/type :continuity}
+      :type :claude
+      :invoke-fn (fn [_ _] {:result "ok" :session-id session-id})
+      :session-id session-id})
+    (try
+      (testing "an unbound session receives byte-identical pre-contract text"
+        (is (= (str previous original)
+               (#'futon3c.transport.http/wrap-agent-facing-surface
+                original "emacs-repl" "joe" agent-id))))
+      (is (:ok (conductor-binding/install! agent-id session-id handle)))
+      (testing "a bound prompt reports live problem, phase, cycle, and version"
+        (let [prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                      original "emacs-repl" "joe" agent-id)]
+          (is (str/includes? prompt "Problem: t94J02"))
+          (is (str/includes? prompt "Cycle: cycle-contract-1"))
+          (is (str/includes? prompt "Current phase: guided-solve"))
+          (is (str/includes? prompt "Version: 1"))
+          (is (str/includes? prompt "/api/alpha/conductor/action"))
+          (is (str/includes? prompt "reads are unrestricted"))))
+      (let [advanced (with-redefs-fn
+                       {#'futon3c.apm.conductor-surface/operations
+                        {:test (fn [h]
+                                 (-> h
+                                     (assoc-in [:state :current-phase] :intervene)
+                                     (update :log conj {:tool :problem-save})))}}
+                       #(conductor-surface/execute-action!
+                         agent-id session-id
+                         {:action-id "advance-contract" :cycle-id "cycle-contract-1"
+                          :version 1 :operation :test :args []}))
+            prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                    original "emacs-repl" "joe" agent-id)]
+        (is (:ok advanced))
+        (is (str/includes? prompt "Current phase: intervene"))
+        (is (str/includes? prompt "Version: 2")))
+      (finally
+        (conductor-binding/reset-bindings!)))))
+
 (deftest maybe-route-surface-writes-strips-and-relays-minibuffer-directives
   (testing "MINIBUFFER directives are removed from visible output and relayed to Emacs"
     (let [sent (atom [])]
@@ -923,6 +1678,34 @@
           (is (= 200 (:status job-response)))
           (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
 
+(deftest invoke-job-artifact-ref-does-not-take-pr-prefix-from-prose
+  (testing "ordinary prose before a commit SHA cannot masquerade as a PR ref"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-sha-after-prose"
+                                      "prompt" "hello from artifact parser"})]
+      (register-mock-agent! "codex-http-sha-after-prose" :codex)
+      (with-redefs [reg/invoke-agent!
+                    (fn [_ _ _]
+                      {:ok true
+                       :result (str "Implemented fail-closed provenance checks. "
+                                    "FULL_LOOP_AUTHOR: DONE "
+                                    "dd3a23c81dfd275cbe406e4315a46087a8263f13")
+                       :session-id "sess-http-sha-after-prose"
+                       :invoke-meta
+                       {:invoke-trace-id "invoke-http-sha-after-prose-1"
+                        :execution {:executed? true
+                                    :tool-events 1
+                                    :command-events 1}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "dd3a23c81dfd275cbe406e4315a46087a8263f13"
+                 (get-in job-parsed [:job :artifact-ref]))))))))
+
 (deftest invoke-job-artifact-ref-mfuton-mode-preserves-generic-matching
   (testing "mfuton mode still leaves gitlab issue URLs outside the generic canonical artifact-ref slot"
     (let [handler (make-handler)
@@ -1018,11 +1801,16 @@
               job-parsed (parse-body job-response)]
           (is (= 200 (:status invoke-response)))
           (is (= 200 (:status job-response)))
-          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
-          (is (= "http" (get-in job-parsed [:job :delivery :surface]))))))))
+          (is (= "delivery-failed" (get-in job-parsed [:job :delivery :status])))
+          (is (= "http" (get-in job-parsed [:job :delivery :surface])))
+          (is (= "http-response-consumption-unconfirmed"
+                 (get-in job-parsed [:job :delivery :note])))
+          (is (false? (get-in job-parsed
+                              [:job :trace/delivery-observation
+                               :registered-push-performed?]))))))))
 
-(deftest invoke-emacs-surface-auto-records-delivery-when-trace-present
-  (testing "direct Emacs invoke marks delivery delivered and keeps the Emacs surface label"
+(deftest invoke-emacs-surface-does-not-claim-unobserved-delivery
+  (testing "direct Emacs response construction is not a performed delivery"
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-emacs-delivery"
                                       "prompt" "hello from emacs delivery"
@@ -1044,9 +1832,14 @@
               job-parsed (parse-body job-response)]
           (is (= 200 (:status invoke-response)))
           (is (= 200 (:status job-response)))
-          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
+          (is (= "delivery-failed" (get-in job-parsed [:job :delivery :status])))
           (is (= "emacs-repl" (get-in job-parsed [:job :delivery :surface])))
-          (is (= "caller joe" (get-in job-parsed [:job :delivery :destination]))))))))
+          (is (= "caller joe" (get-in job-parsed [:job :delivery :destination])))
+          (is (= "http-response-consumption-unconfirmed"
+                 (get-in job-parsed [:job :delivery :note])))
+          (is (= "delivery-failed"
+                 (get-in job-parsed [:job :trace/delivery-observation
+                                     :delivery-status]))))))))
 
 (deftest invoke-job-delivery-records-on-job
   (testing "POST /api/alpha/invoke-delivery updates invoke-job delivery state via trace-id"
@@ -1151,12 +1944,115 @@
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
 
+(deftest bell-caller-reaches-the-seat
+  ;; Requisition-gated seats (kimi) exempt auto-bellbacks and send reminders
+  ;; to the caller, so the caller must arrive in the seat's invoke context
+  ;; through the real bell path, not only in unit tests that supply it.
+  (let [seen (atom [])]
+    (reg/register-agent!
+     {:agent-id {:id/value "kimi-caller-probe" :id/type :continuity}
+      :type :kimi
+      :invoke-fn (fn [_prompt _session-id ctx]
+                   (swap! seen conj (:caller ctx))
+                   {:result "ok" :session-id nil})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)
+          job-id (:job-id (parse-body
+                           (post handler "/api/alpha/bell"
+                                 (json/generate-string
+                                  {"agent-id" "kimi-caller-probe"
+                                   "caller" "claude-test"
+                                   "prompt" "caller probe"}))))]
+      (wait-for-job-state handler job-id 2000)
+      (is (= ["claude-test"] @seen)))))
+
+(deftest bell-rejects-unregistered-recipients-before-creating-jobs
+  (let [handler (make-handler)
+        bell (fn [agent-id]
+               (post handler "/api/alpha/bell"
+                     (json/generate-string {"agent-id" agent-id
+                                            "prompt" "registration probe"})))
+        job-count (fn []
+                    (count (get-in @(var-get #'http/!invoke-jobs-ledger)
+                                   [:jobs])))]
+    (testing "an unknown name is rejected without a ledger entry"
+      (let [before (job-count)
+            response (bell "unregistered-bell-recipient")
+            parsed (parse-body response)]
+        (is (= 404 (:status response)))
+        (is (= {:ok false
+                :error "agent-not-found"
+                :message "Agent not registered: unregistered-bell-recipient"}
+               parsed))
+        (is (= before (job-count)))))
+
+    (testing "a normally registered id is still accepted"
+      (register-mock-agent! "bell-bare-target" :codex)
+      (is (= 202 (:status (bell "bell-bare-target")))))
+
+    (testing "this site's area-code alias is accepted"
+      (register-mock-agent! "bell-area-target" :codex)
+      (binding [reg/*resolve-site-prefix* (constantly (constantly "testsite"))]
+        (is (= 202 (:status (bell "testsite-bell-area-target"))))))
+
+    (testing "a persona with a registered target is accepted"
+      (register-mock-agent! "bell-persona-target" :codex)
+      (with-redefs [reg/agent-personas
+                    (constantly {"countdown-control" "bell-persona-target"})]
+        (is (= 202 (:status (bell "countdown-control"))))))
+
+    (testing "a persona with an unregistered target is rejected without a job"
+      (with-redefs [reg/agent-personas
+                    (constantly {"wm-full-loop" "absent-persona-target"})]
+        (let [before (job-count)
+              response (bell "wm-full-loop")
+              parsed (parse-body response)]
+          (is (= 404 (:status response)))
+          (is (false? (:ok parsed)))
+          (is (= "agent-not-found" (:error parsed)))
+          (is (= before (job-count))))))))
+
+(deftest bell-explicit-work-mode-overrides-keyword-fallback
+  (testing "an explicit client mode is stored even when the prompt has no work keywords"
+    (register-mock-agent! "codex-bell-mode-work" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-mode-work"
+                                      "prompt" "Please investigate this unusual coordination behavior."
+                                      "mode" "work"})
+          response (post handler "/api/alpha/bell" body)
+          parsed (parse-body response)
+          final (-> (wait-for-job-state handler (:job-id parsed) 10000) :parsed)]
+      (is (= 202 (:status response)))
+      (is (= "work" (:mode parsed))
+          "the response must not silently classify the supplied mode as brief")
+      (is (= "work" (get-in final [:job :mode]))
+          "the durable job record honors the client-supplied mode")
+      (is (= "no-execution-evidence" (get-in final [:job :terminal-code]))
+          "explicit work mode also drives work-mode execution enforcement"))))
+
+(deftest bell-explicit-brief-mode-overrides-work-keywords
+  (testing "explicit mode has precedence over prompt-text inference"
+    (register-mock-agent! "codex-bell-mode-brief" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-mode-brief"
+                                      "prompt" "State of play on this task assignment"
+                                      "mode" "brief"})
+          response (post handler "/api/alpha/bell" body)
+          parsed (parse-body response)
+          final (-> (wait-for-job-state handler (:job-id parsed) 10000) :parsed)]
+      (is (= 202 (:status response)))
+      (is (= "brief" (:mode parsed)))
+      (is (= "brief" (get-in final [:job :mode])))
+      (is (= "done" (get-in final [:job :state]))
+          "explicit brief mode disables keyword-inferred work enforcement"))))
+
 (deftest invoke-announce-creates-canonical-queued-job
   (testing "POST /api/alpha/invoke/announce records a queued job before external acceptance"
     (register-mock-agent! "codex-announce-1" :codex)
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-announce-1"
                                       "prompt" "hello from announce"
+                                      "mode" "work"
                                       "caller" "irc:joe"
                                       "surface" "irc (#math)"})
           response (post handler "/api/alpha/invoke/announce" body)
@@ -1172,6 +2068,7 @@
       (is (string? job-id))
       (is (= 200 (:status job-response)))
       (is (= "queued" (get-in job-parsed [:job :state])))
+      (is (= "work" (get-in job-parsed [:job :mode])))
       (is (= "pending" (get-in job-parsed [:job :delivery :status]))))))
 
 (deftest invoke-announce-job-is-reused-by-direct-invoke
@@ -1202,6 +2099,306 @@
       (is (= job-id (:job-id job)))
       (is (= "done" (:state job)))
       (is (= 1 (count (filter #(= "accepted" (:type %)) (:events job))))))))
+
+(deftest invoke-announce-drainer-records-stream-events-and-restores-sink
+  (testing "an announced job records drainer stream events without clobbering an existing sink"
+    (register-mock-agent! "codex-announce-stream" :codex)
+    (let [handler (make-handler)
+          prior-events (atom [])
+          prior-sink #(swap! prior-events conj %)
+          announce-body (json/generate-string
+                         {"agent-id" "codex-announce-stream"
+                          "prompt" "stream this turn"
+                          "caller" "frame-solver"
+                          "surface" "frame"})
+          announce-response (post handler "/api/alpha/invoke/announce" announce-body)
+          job-id (:job-id (parse-body announce-response))
+          invoke-body (json/generate-string
+                       {"agent-id" "codex-announce-stream"
+                        "prompt" "stream this turn"
+                        "caller" "frame-solver"
+                        "surface" "frame"
+                        "job-id" job-id})]
+      (reg/set-invoke-event-sink! "codex-announce-stream" prior-sink)
+      (with-redefs [reg/invoke-agent!
+                    (fn [agent-id _prompt _opts]
+                      (let [sink (reg/get-invoke-event-sink agent-id)]
+                        (sink {:type "text" :text "live chunk"})
+                        (sink {:type "tool_use" :tools ["Read"]}))
+                      {:ok true :result "done" :session-id "sess-announce-stream"})]
+        (let [invoke-response (post handler "/api/alpha/invoke" invoke-body)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job (get-in (parse-body job-response) [:job])
+              event-types (mapv :type (:events job))]
+          (is (= 202 (:status announce-response)))
+          (is (= 200 (:status invoke-response)))
+          (is (some #{"prompt"} event-types))
+          (is (some #{"text"} event-types))
+          (is (some #{"tool_use"} event-types))
+          (is (= ["text" "tool_use"] (mapv :type @prior-events))
+              "the previously installed sink receives both events")
+          (is (identical? prior-sink
+                          (reg/get-invoke-event-sink "codex-announce-stream"))
+              "the exact previous sink is restored after the turn"))))))
+
+(deftest invoke-activation-accepts-immediately-and-is-idempotent
+  (testing "a pre-announced canonical job executes once behind a durable 202 boundary"
+    (let [started (promise) release (promise) invocations (atom 0)]
+      (reg/register-agent!
+       {:agent-id {:id/value "codex-activate-1" :id/type :continuity}
+        :type :codex :capabilities [:explore :edit]
+        :invoke-fn (fn [_prompt _session-id]
+                     (swap! invocations inc)
+                     (deliver started true)
+                     @release
+                     {:result "ok" :session-id nil
+                      :invoke-meta {:execution {:executed? true
+                                                :tool-events 1
+                                                :command-events 1}}})})
+      (let [handler (make-handler)
+            authority {"agent-id" "codex-activate-1" "prompt" "durable work"
+                       "caller" "countdown-control" "surface" "emacs-repl"
+                       "mode" "brief"}
+            announced (parse-body
+                       (post handler "/api/alpha/invoke/announce"
+                             (json/generate-string authority)))
+            job-id (:job-id announced)
+            activation (assoc authority "job-id" job-id)
+            first-response (post handler "/api/alpha/invoke/activate"
+                                 (json/generate-string activation))
+            first-body (parse-body first-response)]
+        (is (= 202 (:status first-response)))
+        (is (true? (:accepted first-body)))
+        (is (true? (deref started 1000 false)))
+        (let [second-response (post handler "/api/alpha/invoke/activate"
+                                    (json/generate-string activation))
+              second-body (parse-body second-response)]
+          (is (= 202 (:status second-response)))
+          (is (true? (:reused? second-body)))
+          (is (= job-id (:job-id second-body))))
+        (is (= 1 @invocations))
+        (deliver release true)
+        (is (= "done" (get-in (:parsed (wait-for-job-state handler job-id 2000))
+                               [:job :state])))
+        (is (= 1 @invocations))))))
+
+(deftest invoke-activation-rejects-authority-mismatch-without-execution
+  (let [invocations (atom 0)]
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-activate-2" :id/type :continuity}
+      :type :codex :capabilities [:explore]
+      :invoke-fn (fn [_ _] (swap! invocations inc) {:result "unexpected"})})
+    (let [handler (make-handler)
+          authority {"agent-id" "codex-activate-2" "prompt" "exact prompt"
+                     "caller" "countdown-control" "surface" "emacs-repl"}
+          announced (parse-body
+                     (post handler "/api/alpha/invoke/announce"
+                           (json/generate-string authority)))
+          response (post handler "/api/alpha/invoke/activate"
+                         (json/generate-string
+                          (assoc authority "prompt" "different prompt"
+                                 "job-id" (:job-id announced))))]
+      (is (= 409 (:status response)))
+      (is (= "activation-request-mismatch" (:error (parse-body response))))
+      (is (zero? @invocations)))))
+
+(deftest invoke-job-tool-use-retains-bounded-tool-output
+  (let [ledger-var (var-get #'http/!invoke-jobs-ledger)
+        before @ledger-var
+        job-id "tool-output-retention-test"]
+    (try
+      (reset! ledger-var
+              {:version 1 :job-order [job-id]
+               :jobs {job-id {:job-id job-id :event-seq 0 :events []}}})
+      (#'http/record-job-stream-event!
+       job-id {:type "tool_use" :tools ["run_shell"]
+               :tool_details [{:name "run_shell"
+                               :input {:command "lake env lean Main.lean"}}]})
+      (#'http/record-job-stream-event!
+       job-id {:type "tool_result"
+               :results [{:content "Main.lean:17: error: type mismatch"}]})
+      (let [event (-> @ledger-var :jobs (get job-id) :events first)]
+        (is (= "tool_use" (:type event)))
+        (is (= ["run_shell lake env lean Main.lean"] (:previews event)))
+        (is (= ["Main.lean:17: error: type mismatch"] (:output event))))
+      (finally
+        (reset! ledger-var before)))))
+
+(deftest legacy-unbound-invoke-request-requires-explicit-audited-binding
+  (testing "an old queued job can be bound once without weakening activation"
+    (let [authority {:job-id "legacy-unbound-1"
+                     :agent-id "codex-activate-legacy"
+                     :prompt "exact legacy prompt"
+                     :caller "countdown-control"
+                     :surface "emacs-repl"
+                     :mode "brief"}]
+      (#'http/update-invoke-jobs-ledger!
+       (fn [ledger]
+         (-> ledger
+             (update :job-order conj (:job-id authority))
+             (assoc-in [:jobs (:job-id authority)]
+                       {:job-id (:job-id authority)
+                        :agent-id (:agent-id authority)
+                        :caller (:caller authority)
+                        :surface (:surface authority)
+                        :mode "brief"
+                        :state "queued"
+                        :event-seq 1
+                        :events [{:seq 1 :type "accepted"}]}))))
+      (is (= :retained-identity-mismatch
+             (:error (http/bind-unbound-invoke-request!
+                      (assoc authority :surface "http")))))
+      (let [bound (http/bind-unbound-invoke-request! authority)
+            job (get-in @(var-get #'http/!invoke-jobs-ledger)
+                        [:jobs (:job-id authority)])]
+        (is (:ok bound))
+        (is (= (:request-digest bound) (:request-digest job)))
+        (is (= "request-bound" (-> job :events last :type)))
+        (is (= :request-already-bound
+               (:error (http/bind-unbound-invoke-request! authority))))))))
+
+(deftest invoke-request-commission-survives-hot-job-expiry-and-rejoins-digest
+  (testing "the exact preimage and R9 join projection outlive the seven-day hot job"
+    (let [create! (fn [id]
+                    (let [job-id (#'http/create-invoke-job!
+                                  {:requested-job-id id
+                                   :agent-id "claude-reviewer"
+                                   :prompt (str "Review " id " and its receipts.")
+                                   :caller "completion-lead"
+                                   :surface "bell"
+                                   :mode "work"
+                                   :model "review-model"})]
+                      job-id))
+          target-id (create! "r9-production-shaped-review")
+          second-id (create! "r9-second-old-job")
+          sentinel-id (create! "r9-newest-sentinel")
+          ledger-atom (var-get #'http/!invoke-jobs-ledger)
+          finish! (fn [ledger id finished-at]
+                    (update-in ledger [:jobs id]
+                               #(-> %
+                                    (assoc :state "done" :finished-at finished-at
+                                           :trace-id (str "trace-" id)
+                                           :artifact-ref (str "artifact-" id)
+                                           :execution {:executed? true :tool-events 2})
+                                    (assoc :events [{:seq 1 :type "accepted" :at finished-at}
+                                                    {:seq 2 :type "prompt" :at finished-at
+                                                     :text (str "Review " id " and its receipts.")}
+                                                    {:seq 3 :type "tool_use" :at finished-at
+                                                     :tools ["read" "exec"]}
+                                                    {:seq 4 :type "done" :at finished-at}]))))
+          original (-> @ledger-atom
+                       (finish! target-id "2020-01-01T00:00:00Z")
+                       (finish! second-id "2020-01-02T00:00:00Z")
+                       (finish! sentinel-id "2020-01-03T00:00:00Z"))
+          clock (constantly (java.time.Instant/parse "2020-01-20T00:00:00Z"))]
+      (reset! ledger-atom original)
+      (testing "post-publication directory-force failure preserves hot jobs"
+        (let [outcome (try
+                        (binding [http/*invoke-ledger-now* clock
+                                  http/*force-commission-archive-directories!*
+                                  (fn [_] (throw (ex-info "planted force failure" {})))]
+                          (#'http/update-invoke-jobs-ledger! identity))
+                        :unexpected-success
+                        (catch clojure.lang.ExceptionInfo _ :refused))]
+          (is (= :refused outcome))
+          (is (Files/exists (#'http/commission-archive-path target-id)
+                            (make-array java.nio.file.LinkOption 0))
+              "the immutable file was published before the failed barrier")
+          (is (contains? (:jobs @ledger-atom) target-id))))
+
+      (testing "corrupt stored digest refuses retry and preserves hot evidence"
+        (let [path (#'http/commission-archive-path target-id)
+              valid (#'http/request-commission-archive-record
+                     (get-in original [:jobs target-id]) (clock))]
+          (Files/writeString
+           path (pr-str (assoc valid :archive-digest "corrupt"))
+           StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING]))
+          (is (= :request-commission-archive-tampered
+                 (:refusal (try
+                             (binding [http/*invoke-ledger-now* clock]
+                               (#'http/update-invoke-jobs-ledger! identity))
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+          (is (contains? (:jobs @ledger-atom) target-id))
+          ;; Restore the exact prepublished bytes to exercise a valid retry.
+          (Files/writeString
+           path (pr-str valid) StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING]))))
+
+      (let [barriers (atom 0)
+            compacted (binding [http/*invoke-ledger-now* clock
+                                http/*force-commission-archive-directories!*
+                                (fn [path]
+                                  (swap! barriers inc)
+                                  (#'http/force-commission-archive-directories! path))]
+                        (#'http/compact-invoke-jobs-ledger original))]
+        (is (pos? @barriers)
+            "existing-file retry repeats the directory durability barrier")
+      (#'http/persist-invoke-jobs-ledger! compacted)
+      (http/reset-invoke-jobs!)
+      (let [ledger (#'http/ensure-invoke-jobs-ledger!)
+            readback (http/invoke-job-request-commission target-id)]
+        (is (nil? (get-in ledger [:jobs target-id])))
+        (is (some? (get-in ledger [:jobs sentinel-id]))
+            "a different newest job is the tombstone sentinel")
+        (is (= :commission-archive (:source readback)))
+        (is (= "Review r9-production-shaped-review and its receipts."
+               (get-in readback [:commission :prompt])))
+        (is (= "trace-r9-production-shaped-review"
+               (get-in readback [:job-join :trace-id])))
+        (is (= "artifact-r9-production-shaped-review"
+               (get-in readback [:job-join :artifact-ref])))
+        (is (not (contains? ledger :request-commission-archive)))
+            "ordinary hot-ledger state contains no archive bodies")
+        (is (not (str/includes? (slurp (#'http/invoke-jobs-store-path))
+                                "Review r9-production-shaped-review"))
+            "ordinary hot-ledger persistence does not rewrite archived prompts"))
+
+      (testing "an archived requested job id cannot begin a second generation"
+        (is (= :archived-invoke-job-id-reuse
+               (:refusal (try
+                           (#'http/create-invoke-job!
+                            {:requested-job-id target-id
+                             :agent-id "other-agent" :prompt "new generation"})
+                           (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+      (testing "a hot/archive disagreement never returns a mixed generation"
+        (let [archived (#'http/read-commission-archive target-id)
+              hot (merge (:job-join archived)
+                         {:job-id target-id
+                          :request-digest (:request-digest archived)
+                          :request-commission (:commission archived)
+                          :trace-id "different-trace"
+                          :artifact-ref "different-artifact"})]
+          (swap! ledger-atom assoc-in [:jobs target-id] hot))
+        (is (= :request-commission-hot-archive-disagreement
+               (:refusal (try
+                           (http/invoke-job-request-commission target-id)
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (swap! ledger-atom update :jobs dissoc target-id))
+
+      (testing "missing archive refuses without reconstructing trimmed events"
+        (Files/delete (#'http/commission-archive-path second-id))
+        (is (= :invoke-job-missing
+               (:refusal (try
+                           (http/invoke-job-request-commission second-id)
+                           (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+      (testing "tampered archive refuses its own content digest"
+        (let [path (#'http/commission-archive-path target-id)
+              record (#'http/read-commission-archive target-id)]
+          (Files/writeString
+           path
+           (pr-str (assoc record :commission
+                          {:agent-id "claude-reviewer" :prompt "tampered"
+                           :caller "completion-lead" :surface "bell"
+                           :model "review-model"}))
+           StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING])))
+        (is (= :request-commission-archive-tampered
+               (:refusal (try
+                           (http/invoke-job-request-commission target-id)
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
@@ -1520,6 +2717,82 @@
       (is (= "codex" (:evidence/author (first entries))))
       (is (= "reflection" (:evidence/type (first entries)))))))
 
+(deftest evidence-author-filter-is-pushed-to-backend
+  (testing "GET /api/alpha/evidence pushes author into the backend query"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query handler "/api/alpha/evidence" "author=codex")]
+          (is (= 200 (:status response)))
+          (is (= "codex" (:query/author @seen-query))))))))
+
+(deftest evidence-limit-is-pushed-to-backend-without-app-filters
+  (testing "GET /api/alpha/evidence?limit=N pushes the limit when no app-only filters are present"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query handler "/api/alpha/evidence" "limit=5")]
+          (is (= 200 (:status response)))
+          (is (= 5 (:query/limit @seen-query))))))))
+
+(deftest evidence-session-and-pattern-filters-are-pushed-to-backend
+  (testing "session-id/pattern-id requests stay bounded instead of degrading to backend params={}"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query
+                        handler
+                        "/api/alpha/evidence"
+                        "session-id=sess-1&pattern-id=agent%2Fpause&limit=7")]
+          (is (= 200 (:status response)))
+          (is (= "sess-1" (:query/session-id @seen-query)))
+          (is (= :agent/pause (:query/pattern-id @seen-query)))
+          (is (= 7 (:query/limit @seen-query))))))))
+
+(deftest evidence-query-defaults-to-bounded-backend-page
+  (testing "GET /api/alpha/evidence without query params pushes a default page limit"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req handler "/api/alpha/evidence")]
+          (is (= 200 (:status response)))
+          (is (= 100 (:query/limit @seen-query))))))))
+
+
+(deftest evidence-query-stamps-the-default-it-applied
+  (testing "AR-43: a broad page stamps its defaulted window; an explicit since is stamped not-defaulted"
+    (let [handler (make-handler)]
+      (with-redefs [estore/query* (fn [_store _query] [])]
+        (let [broad (parse-body (get-req handler "/api/alpha/evidence"))]
+          (is (true? (get-in broad [:window :defaulted?])))
+          (is (some? (get-in broad [:window :since])))
+          (is (true? (:count-post-window? broad)))
+          (is (= 0 (:count broad))))
+        (let [explicit (parse-body
+                        (get-req-with-query handler "/api/alpha/evidence"
+                                            "since=1970-01-01T00:00:00Z"))]
+          (is (false? (get-in explicit [:window :defaulted?])))
+          (is (= "1970-01-01T00:00:00Z" (get-in explicit [:window :since]))))))))
+
+(deftest evidence-count-author-filter-is-pushed-to-backend
+  (testing "GET /api/alpha/evidence/count pushes author into the backend count query"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/count* (fn [_store query]
+                                    (reset! seen-query query)
+                                    0)]
+        (let [response (get-req-with-query handler "/api/alpha/evidence/count" "author=codex")]
+          (is (= 200 (:status response)))
+          (is (= "codex" (:query/author @seen-query))))))))
+
 (deftest evidence-get-by-id-and-chain
   (testing "GET /api/alpha/evidence/:id and /chain return expected payload"
     (let [root (-> (estore/append! {:subject {:ref/type :session :ref/id "sess-chain"}
@@ -1571,6 +2844,44 @@
       (is (true? (:ok parsed)))
       (is (string? entry-id))
       (is (some? (estore/get-entry entry-id))))))
+
+(deftest evidence-create-normalizes-memory-witness-enum
+  (testing "JSON outcome evidence remains usable by the typed PUR guard"
+    (let [handler (make-handler)
+          body
+          (json/generate-string
+           {"subject" {"ref/type" "task" "ref/id" "phase3/http-witness"}
+            "type" "pattern-outcome"
+            "claim-type" "observation"
+            "author" "independent-checker"
+            "body"
+            {"memory-outcome/witness-status" "independently-witnessed"
+             "exit" 0}})
+          response (post handler "/api/alpha/evidence" body)
+          parsed (parse-body response)
+          stored (estore/get-entry (:evidence/id parsed))]
+      (is (= 201 (:status response)))
+      (is (= :independently-witnessed
+             (get-in stored
+                     [:evidence/body
+                      :memory-outcome/witness-status]))))))
+
+(deftest evidence-create-transport-failures-are-retryable
+  (testing "outbox clients receive 503, not a terminal shape-like 400"
+    (is (= 400 (#'http/append-error-status :store-serialization)))
+    (is (= 503 (#'http/append-error-status :store-timeout)))
+    (is (= 503 (#'http/append-error-status :store-unreachable)))
+    (is (= 503 (#'http/append-error-status :store-rejected)))))
+
+(deftest evidence-create-coalesces-the-same-stable-id
+  (let [in-flight (var-get #'http/!evidence-appends-in-flight)]
+    (reset! in-flight #{})
+    (try
+      (is (#'http/claim-evidence-append! "stable-id"))
+      (is (not (#'http/claim-evidence-append! "stable-id")))
+      (is (#'http/claim-evidence-append! "other-id"))
+      (finally
+        (reset! in-flight #{})))))
 
 (deftest evidence-count-returns-total
   (testing "GET /api/alpha/evidence/count returns total evidence count"
@@ -1791,6 +3102,44 @@
 ;; start-server! test — real port binding (L7: verify-after-start)
 ;; =============================================================================
 
+(deftest installed-handler-can-be-rebuilt-without-restarting-server
+  (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
+                    (.getLocalPort ss))
+        route-enabled? (atom false)
+        constructions (atom 0)
+        request! (fn []
+                   (let [client (java.net.http.HttpClient/newHttpClient)
+                         request (-> (java.net.http.HttpRequest/newBuilder
+                                      (java.net.URI/create
+                                       (str "http://localhost:" free-port "/new-route")))
+                                     (.GET)
+                                     (.build))]
+                     (.send client request
+                            (java.net.http.HttpResponse$BodyHandlers/ofString))))]
+    (letfn [(build-handler []
+              (swap! constructions inc)
+              (let [route-enabled-at-construction? @route-enabled?]
+                (with-meta
+                  (fn [request]
+                    (if (and route-enabled-at-construction?
+                             (= "/new-route" (:uri request)))
+                      {:status 200 :headers {} :body "new route"}
+                      {:status 404 :headers {} :body "not found"}))
+                  {:futon3c.transport.http/rebuild-fn build-handler})))]
+      (let [server-info (http/start-server! (build-handler) free-port)]
+        (try
+          (is (= 404 (.statusCode (request!))))
+          (is (= 1 @constructions))
+          (reset! route-enabled? true)
+          (http/rebuild-handler!)
+          (is (= 200 (.statusCode (request!))))
+          (is (= "new route" (.body (request!))))
+          ;; One initial construction plus one explicit rebuild. Requests only
+          ;; dereference the installed handler atom.
+          (is (= 2 @constructions))
+          (finally
+            ((:server server-info))))))))
+
 (deftest start-server-binds-and-verifies-port
   (testing "start-server! binds port and verifies it is listening (L7)"
     (let [;; Find a free port
@@ -1981,7 +3330,13 @@
                                        (when (= 14 days)
                                          {:as-of as-of
                                           :payload {"window" {"days" 14}
-                                                    "judgement" {"mode" "steady"}}}))
+                                                    "judgement"
+                                                    {"mode" "steady"
+                                                     "decision"
+                                                     {"status" "abstained"
+                                                      "refusals"
+                                                      [{"target" "M-live"
+                                                        "kind" "want-not-declared"}]}}}}))
                                      futon3c.wm.scheduler/status
                                      (fn []
                                        {:running? true
@@ -2004,11 +3359,45 @@
       (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
       (is (= 14 (get-in parsed [:window :days])))
       (is (= "steady" (get-in parsed [:judgement :mode])))
+      ;; parse-body keywordizes top-level keys only; nested values stay
+      ;; JSON-typed (strings), as in the pre-H3 assertions
+      (is (= "abstained-readiness"
+             (get-in parsed [:live-recommendation :status])))
+      (is (nil?
+           (get-in parsed
+                   [:live-recommendation :recommendation])))
+      (is (= {:want-not-declared 1}
+             (into {} (map (fn [[k v]] [k (count v)]))
+                   (get-in parsed
+                           [:live-recommendation :refusals-by-kind]))))
+      (is (= "not-yet-wired" (get-in parsed [:r14-gamma :status])))
+      (is (= "cascade-beta" (get-in parsed [:r14-gamma :controller-kind])))
       (is (= true (get-in parsed [:vsatarcs-status :available?])))
       (is (= "violation" (get-in parsed [:vsatarcs-status :build :status])))
       (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))
       (is (integer? (:scan-age-seconds parsed)))
       (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
+
+(deftest r14-gamma-route-is-deleted-and-answers-not-yet-wired
+  (testing "H3: the selection-gain γ route is deleted; the slot answers a typed
+            :not-yet-wired for the H5 learned cascade β, never the old gain"
+    (let [summary (with-redefs [requiring-resolve
+                                (fn [sym]
+                                  (case sym
+                                    futon3c.aif.calibration/load-evidence
+                                    (fn [] [])
+                                    futon3c.aif.calibration/calibration-report
+                                    (fn [_] {:paired-count 0
+                                             :independent-paired-count 0
+                                             :verdict :insufficient-data})
+                                    nil))]
+                    (#'http/r14-gamma-summary))]
+      (is (= :not-yet-wired (:status summary)))
+      (is (= :cascade-beta (:controller-kind summary)))
+      (is (nil? (:gamma summary)))
+      (is (nil? (:policy-outcome-samples summary)))
+      (is (= :insufficient-data
+             (get-in summary [:calibration-signal :verdict]))))))
 
 (deftest war-machine-returns-503-while-background-warmup-starts
   (testing "GET /api/alpha/war-machine returns 503 and requests a background warmup when no snapshot exists yet"
@@ -2047,3 +3436,47 @@
           response (post handler "/api/alpha/portfolio/heartbeat" "{bad")]
       (is (= 400 (:status response)))
       (is (false? (:ok (parse-body response)))))))
+
+;; ---------------------------------------------------------------------------
+;; AR-42: GET /api/alpha/test-registry/latest — which record covers a namespace.
+
+(deftest test-registry-latest-names-the-record-and-types-its-absence
+  (let [backend (atom {:entries {} :order []})
+        append! (requiring-resolve 'futon3c.test-registry/append-record!)
+        ;; an UNWARRANTED, failing run: the lookup must still find it, because a
+        ;; warrant-filtering lookup would let it hide behind an older green run
+        run (append! backend
+                     {:kind :run :author "author" :run/id "r-latest-1"
+                      :ran-at "2026-09-25T01:00:00Z" :finished-at "2026-09-25T01:00:01Z"
+                      :command ["clojure" "-M:test" "-n" "demo-latest-test"]
+                      :code-files {"src/demo.clj" "blob"} :test-files {"test/demo_test.clj" "t"}
+                      :results {:tests 1 :assertions 1 :failures 1 :errors 0 :exit 1}
+                      :postcheck {:status :matched} :warrant? false}
+                     nil)
+        config {:evidence-store backend}
+        ask (fn [query-string]
+              (http/handle-test-registry-latest
+               {:request-method :get :uri "/api/alpha/test-registry/latest"
+                :query-string query-string}
+               config))
+        body (fn [response] (json/parse-string (:body response) true))]
+    (testing "a record that covers the namespace is named, not judged"
+      (let [response (ask "namespace=demo-latest-test")]
+        (is (= 200 (:status response)))
+        (is (true? (get-in (body response) [:latest :found])))
+        (is (= (:evidence/id run) (get-in (body response) [:latest :entry-id])))
+        ;; the record itself is NOT in the body: the consumer reads it through
+        ;; the evidence API and verifies the digest itself
+        (is (nil? (get-in (body response) [:latest :payload])))))
+    (testing "absence is a successful read with a typed reason"
+      (let [response (ask "namespace=futon3c.no-such-test")]
+        (is (= 200 (:status response)))
+        (is (false? (get-in (body response) [:latest :found])))
+        (is (= "no-run-for-namespace" (get-in (body response) [:latest :reason])))))
+    (testing "a scan that filled its window did not establish absence"
+      (let [response (ask "namespace=futon3c.no-such-test&limit=1")]
+        (is (= "scan-window-exhausted" (get-in (body response) [:latest :reason])))))
+    (testing "a request with no namespace is malformed, not absent"
+      (let [response (ask "")]
+        (is (= 400 (:status response)))
+        (is (= "namespace-required" (:reason (body response))))))))

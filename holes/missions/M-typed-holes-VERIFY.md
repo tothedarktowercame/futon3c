@@ -1,5 +1,7 @@
 # M-typed-holes — VERIFY (2026-06-14)
 
+Status: complete
+
 *Phase 5 per `futon4/holes/mission-lifecycle.md`: check the design against
 evidence — does it hold, what breaks it? ARGUE's handoff: "does one `fill` + the
 proving loop actually cover all six projections, with no orphan hole-source and
@@ -78,9 +80,23 @@ The wiring certificate checks the **deployed** projections against I1–I6 + the
 grounded% tripwire. It is **partially fillable now**, with a named gap:
 
 - **Checkable today (already running):**
-  - *answer = fill at runtime* — `scripts/scope_query_dogfood.py` (c694d55) runs a
-    structural ScopeQuery over the 0809.2517 golden graph: answers ARE the fills
-    of the scope's holes. The runtime shadow of `answers_eq_fills`.
+  - *answer = fill at runtime, AT SCALE* — `scripts/scope_query_dogfood.py`
+    (c694d55) runs a structural ScopeQuery where answers ARE the fills of the
+    scope's holes. **Gate (a) substrate-2a import LANDED** (2026-06-15, futon6
+    `12fa355`, authored by codex-1, reviewed PASS by claude-1 — determinism
+    re-run + source-fidelity recount): the mined CT first cut (9736 papers) is
+    imported to the `hx/` schema (80-paper sample store, grounded% baseline
+    67.2, `data/substrate-2a/QA-METRICS.md`), so the runtime now answers over
+    real mined CT, not just the 8-paper golden. The runtime shadow of
+    `answers_eq_fills`, deployed.
+  - *proving loop witnessed in ArSE (I5) LANDED* — **gate (b)** (2026-06-15,
+    futon3c `a573b54`, authored by codex-1, reviewed PASS by claude-1).
+    `scripts/proving_loop.py` poses 5 grounding scopes over substrate-2a and
+    records each answer as a witnessed `(ask → answer)` ArSE pair via the direct
+    `/arse/ask`+`/arse/answer` endpoints (FUTON3C_TYPED_BELLS on; ArSE 69→74;
+    `unanswered`=0). Independently verified: thread `ask-1781552434-69`'s witness
+    equals `answers()` for that scope. **Proof = witnessed fill, demonstrated
+    live** — the C-adopt-on-flag-ON step.
   - *reply/bell projection live* — M-typed-bells is COMPLETE; `type=query` →
     `type=answer --ref` is the deployed query/answer fill (I5's witness loop).
   - *ground/symbol precision gates live* — the grounding harvesters (appositive,

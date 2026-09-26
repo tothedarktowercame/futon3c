@@ -1,0 +1,48 @@
+{
+  "arrows" : [ {
+    "from" : "x",
+    "to" : "w"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  }, {
+    "from" : "w",
+    "to" : "z"
+  }, {
+    "from" : "z",
+    "to" : "y"
+  }, {
+    "from" : "u",
+    "to" : "w"
+  }, {
+    "from" : "u",
+    "to" : "y"
+  } ],
+  "id" : "wermuth-cox-sequential-treatment",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "wermuth-cox-sequential-treatment.json"
+  },
+  "variables" : [ {
+    "id" : "u",
+    "kind" : "latent-unobserved",
+    "name" : "U"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "X"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "W"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Z"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Y"
+  } ]
+}

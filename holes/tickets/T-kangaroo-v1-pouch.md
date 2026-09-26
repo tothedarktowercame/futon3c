@@ -1,5 +1,7 @@
 # T-kangaroo-v1-pouch — warm claude pouch (cr version, flag-gated)
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** Warm reuse, locking, eviction, joey cap, snapshots, cold fallback all live (agent_pouch.clj; enabled in dev-laptop-env, source default off). One deliberate later change: an operator-interrupted warm turn does NOT fall back cold (dev.clj:4039+). Close.
+
 Parent: `holes/missions/M-kangaroo.md` (read its DERIVE log E1/E2 + ARGUE +
 INSTANTIATE). Dispatched by claude-6, 2026-06-10. Reviewer: claude-6. Branch off
 **master**.

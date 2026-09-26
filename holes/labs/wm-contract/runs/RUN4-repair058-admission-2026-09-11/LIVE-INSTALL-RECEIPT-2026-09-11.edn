@@ -1,0 +1,71 @@
+{:schema :wm/run4-live-install-receipt-v1
+ :installed-at "2026-09-11T13:04:26Z"
+ :operator-authority "Joe direct live-loading and trial authorization"
+ :reviewed-packet-commit "a91c1da7"
+ :independent-acceptance-commit "95dcf657"
+ :futon2-head "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+ :template-sha256 "0f31e4abd3340c6df431105f4c937651e2e708cd21b104692d7ca1c7d9de0065"
+ :series-ref "holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11/series-pin.edn"
+ :series-sha256 "343ed84b83bf5df898939886967d1e91edd0826e0070b692773794bacd985b77"
+ :task-pin-sha256 "cff1f65d853afca6ad5005de424690f1e163425ee52d975f64701059c26ddaf7"
+ :casting {:author "codex-10" :reviewer "codex-12"
+           :repair-reviewer "codex-12"}
+ :historical-authority
+ {:repair-id "repair-attempt-058-untyped-failure"
+  :verification-id "repair-058-revalidation-20260911-v1"
+  :verification-sha256 "1367dc2c1e4fdf25c287003c3fbee35f409856fa3b8a940002d301c9132a12f3"
+  :applicable-at-install true
+  :execution-identity nil
+  :successor-link :unmaterialized}
+ :retained-historical-verifications
+ {:repair-057 "6ca6f397b1f7531c91a0f4b9ab6cbc3d2712eb4b347c3c897b91a62c72958829"
+  :repair-058 "1367dc2c1e4fdf25c287003c3fbee35f409856fa3b8a940002d301c9132a12f3"}
+ :stores
+ {:controller-and-admission "/home/joe/run4/repair058-admission/controller"
+  :bindings "/home/joe/run4/repair058-admission/bindings"
+  :projections "/home/joe/run4/repair058-admission/projections"
+  :run-records "/home/joe/run4/repair058-admission/run-records"
+  :recordings "/home/joe/run4/repair058-admission/recordings"
+  :visibility "/home/joe/run4/repair058-admission/visibility"
+  :mode "0700"}
+ :execution-cohort
+ {:preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11/authority/holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11/cohort.edn"
+  :preregistration-sha256 "3b490316ae2006dac365088674d804670bb2f9adb539db1ec6b95e0a9adff1b3"
+  :data-root "/home/joe/run4/repair058-admission/cohort"
+  :cohort-id :run4-repair058-admission-20260911-v1
+  :activation-sha256 "f7f69c31b947130852376ff19b74971c2dbd5b86c9aba824dac987b655ac83e0"
+  :target 1 :remaining-at-install 1 :attempt-count 0 :closed-count 0}
+ :loaded-source-sha256
+ {"futon2/aif/repair_obligation.clj" "4c432d6c449945c2107caf05a5cc00f54d4bf9aaf7d24cc426d7b108795c96fd"
+  "futon2/aif/full_loop_cohort.clj" "9f1c7d94e0ab9d089c00d5d5c14fad7ba68fe42684b276aa9e495ec1d2eaf8f3"
+  "futon2/aif/full_loop_runner.clj" "1431e8f684cdaa30e1f13654c3d016c072f293e6e1440b20f9dd9b490217e0b3"
+  "futon3c/wm/run4_effective_environment.clj" "57e716a0b89c0a2639c1bc5ac3db3b0c4daf5d2e4979d0b6b8f019cfcf156c6c"
+  "futon3c/wm/run4_pinned_run_config.clj" "316280ba6867a9d2638227cdbed14f821d1be77274ea052aaa77ad88117d9108"
+  "futon3c/wm/run4_execution_cohort.clj" "9a970270f3abc5519dbcb133ac860a23e00d9d697c4f668346e575e79a78ff51"
+  "futon3c/wm/run4_terminal_evidence.clj" "32feb321edbc3bc25f9b63b92ab514acd180d1f2edee35fc06dbd54fac011202"
+  "futon3c/wm/run4_terminal_projection.clj" "6843de6f5729508841b32f4f72f600c1c9f63d9ee5dcd2340b0dae767467bd12"
+  "futon3c/wm/run4_realized_recording.clj" "cef74e180c859c899b5fd7b9f43abf12d098b54d91c67b9b3cad486140cdfa36"
+  "futon3c/wm/run4_historical_action.clj" "9048f039fcbdfe55bb6f5010b302b218aed3e5518eee9a4f2c93d149438e2c97"
+  "futon3c/wm/run4_historical_successor.clj" "9ec1f9de93fe96266235f0a6b0c08177fa73ecb366514b4c6a4ab8b8532feedd"
+  "futon3c/wm/run4_historical_projection.clj" "27130f4daee3807e044f1e85f833eae7893c0949928f7f2dd0a89f9906f48796"
+  "futon3c/wm/run4_run_visibility.clj" "a947792e49da4db1cb6ae03f8ea0815e7dbab35afa0d51fd03a197d04712e85b"
+  "futon3c/wm/run4_series_controller.clj" "fb6c2f5adb3df294ea5f850f9b59a77207ec2b372e94b4db19272bf51ef5187f"
+  "futon3c/wm/runner_service.clj" "67e66b4ad4028a985057e77eb5701e8ea1e10798ea06cb9f8c4f50f4811885e7"
+  "futon3c/wm/run4_trusted_entry.clj" "d8f41db873e3beff1af7cda8f3304ce1d9e7e2d08d45a280018ca76742d01a93"
+  "futon3c/wm/run4_series_service.clj" "a0a1f3e3307692434ef5dfdb1c595ca9105ec9a340c19ca1fca611725e3f4117"
+  "futon3c/wm/run4_deployment_config.clj" "4958fbcf28bc11fce6c41ffca8c68dd50be73110c2c7cb3ea56fd7f8215c5c48"
+  "futon3c/wm/run4_boot.clj" "db6a07c27aafe11dcaed80a99ef81c722cdb10ae9472decb62bf037d72f6c00f"
+  "futon3c/transport/http.clj" "d1169697e0484f97ad46609cb15c8497a17d497af670e3b8fcb5fb127570eb0e"}
+ :live-validation
+ {:runner-idle true
+  :effective-required-consumers 3
+  :recording-environment "1"
+  :materialized true
+  :trusted-preparation true
+  :execution-cohort-exact true
+  :handler {:status :handler-reconfigured :run4-configured? true}}
+ :request
+ {:method :post
+  :route "/api/alpha/wm/run4/series/step"
+  :body {:run4-series-ref "holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11/series-pin.edn"}}
+ :series-step {:submitted? false}}

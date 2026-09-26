@@ -1,0 +1,133 @@
+[{:name "replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate"
+  :lane :solve-lane
+  :level :route-substitution
+  :status :draft
+  :body
+  {:hook
+   "`tendsto_integral_filter_of_dominated_convergence` cannot run over `cocompact ℂ` without an unavailable `IsCountablyGenerated` instance; for compact support, bound the whole integral error by `C / ‖z‖` and squeeze instead."
+   :how-to-apply
+   ["Before applying filter-indexed dominated convergence, inspect its typeclass requirements at the actual source filter."
+    "For the Cauchy-transform error, use compactness to choose `B > 0` with `‖t‖ ≤ B` on the support."
+    "Restrict eventually to `2B < ‖z‖` along `cocompact ℂ`."
+    "Use the reverse triangle inequality to obtain `‖t-z‖ ≥ ‖z‖/2`, hence `‖t/(t-z)‖ ≤ 2B/‖z‖` uniformly for every `t` in the support."
+    "Apply `norm_setIntegral_le_of_norm_le_const_ae` to lift the pointwise estimate to `‖∫_K t/(t-z)‖ ≤ (2B/‖z‖)·volume(K)`."
+    "Prove the scalar upper bound tends to zero using `tendsto_norm_cocompact_atTop` and inversion."
+    "Conclude convergence of the integral error with `squeeze_zero_norm'`, then reassemble `z·cauchyTransform K z` from the constant term and error."]
+   :problem-class
+   "Prove a compactly supported parameter integral tends to its limit as a complex parameter escapes to infinity along the cocompact filter."
+   :discarded-route
+   {:theorem "tendsto_integral_filter_of_dominated_convergence"
+    :missing-instance "(cocompact ℂ).IsCountablyGenerated"
+    :failure-kind :typeclass-precondition
+    :scope
+    "The theorem is not directly applicable to this cocompact-indexed net at the current Mathlib revision. This does not assert that dominated convergence is mathematically invalid or unavailable for sequences and other countably generated filters."}
+   :uniform-estimate
+   {:error "error z = ∫ t in K, (t : ℂ) * ((t : ℂ) - z)⁻¹"
+    :eventual-bound
+    "‖error z‖ ≤ (2 * B / ‖z‖) * (volume K).toReal"
+    :limit
+    "Tendsto error (cocompact ℂ) (𝓝 0)"}
+   :key-api
+   ["norm_setIntegral_le_of_norm_le_const_ae"
+    "isCompact_closedBall.compl_mem_cocompact"
+    "tendsto_norm_cocompact_atTop"
+    "squeeze_zero_norm'"
+    "Filter.Tendsto.congr'"
+    "Filter.EventuallyEq"]
+   :formalization-arcs
+   ["Supply `μ := volume.restrict K` explicitly when set-integral rewrites do not infer the intended measure."
+    "Use an explicit `Filter.EventuallyEq` and `Filter.Tendsto.congr'` for cocompact eventual equalities instead of relying on field notation."
+    "Expose real-to-complex scalar coercions before algebraic normalization."]
+   :relation-to-existing
+   {:memory-id
+    "e-codexpilot-differentiate-a-cauchy-transform-locally-under-the-integral"
+    :relation
+    "The prior memory handles local differentiation away from compact support by dominated differentiation on a neighbourhood filter. This record handles the global cocompact asymptotic stage, where filter-indexed dominated convergence has a missing countable-generation instance and a uniform estimate is preferable."}
+   :witness
+   {:declaration "ApmCanaries.A00J05.cauchyTransform_mul_z_tendsto"
+    :result
+    "Tendsto (fun z : ℂ => z * cauchyTransform K z) (cocompact ℂ) (𝓝 (-(volume K).toReal))"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When filter-indexed dominated convergence fails on a missing source-filter instance and the support is compact, seek an eventual uniform integrand bound whose integral decays as an explicit scalar; this can turn a typeclass frontier into a direct squeeze proof."
+   :boundary
+   "The substitution relies on compact support, finite measure, and a uniform denominator estimate. It is not a replacement for dominated convergence when no uniform decay bound is available."
+   :capture-kind :runner-discarded-route-and-axiom-clean-substitution}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J05"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t039"]
+   :receipt-ids ["c18f4fdb-edc2-47e8-86cb-4a76c9242ed1"]
+   :commits ["2f24f492ae53cadf0345f07fbfcd0b54da6dfdf6"]
+   :problems ["a00J05-cauchy-transform"]
+   :artifacts
+   ["problems/a00J05/lean/Main.lean:cauchyTransform_mul_z_tendsto"]}
+  :confidence :single-instance-missing-instance-and-ground-control-verified-substitution
+  :review {:verdict :pending-owner-review}}
+
+ {:name "rule-out-an-entire-extension-from-cocompact-asymptotics"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:hook
+   "If an entire `g` agrees off a compact set with a transform satisfying `z·g(z) → L ≠ 0`, divide by `z` to get `g(z) → 0`; Liouville then forces `g = 0`, contradicting uniqueness of the first limit."
+   :how-to-apply
+   ["Turn equality outside a compact set into `g =ᶠ[cocompact ℂ] f` using the compact set's complement as a cocompact neighbourhood."
+    "Transport the known limit of `z * f z` to `z * g z` with an explicit eventual equality and `Filter.Tendsto.congr'`."
+    "Prove `z⁻¹ → 0` along `cocompact ℂ` from `tendsto_norm_cocompact_atTop`."
+    "Away from the singleton `{0}`, rewrite `g z = z⁻¹ * (z * g z)` and conclude `g z → 0`."
+    "Apply `Differentiable.apply_eq_of_tendsto_cocompact` to the entire function and obtain `g = 0` everywhere."
+    "The zero function makes `z * g z → 0`; use uniqueness of limits against the transported nonzero limit."
+    "Discharge nonzeroness from the positive-measure hypothesis on the original compact set."]
+   :problem-class
+   "Show a Cauchy transform of a positive-measure compact real set cannot agree with an entire function outside its singular support."
+   :proof-shape
+   {:eventual-agreement
+    "EqOn outside a compact image becomes EventuallyEq along `cocompact ℂ`."
+    :decay
+    "`z*g(z) → -volume(K)` and `z⁻¹ → 0` imply `g(z) → 0`."
+    :rigidity
+    "Liouville turns cocompact decay of an entire function into global zero."
+    :contradiction
+    "The same function `z*g(z)` cannot tend both to zero and to the nonzero value `-volume(K)`."}
+   :key-api
+   ["IsCompact.compl_mem_cocompact"
+    "Filter.EventuallyEq.mul"
+    "Filter.Tendsto.congr'"
+    "tendsto_norm_cocompact_atTop"
+    "Differentiable.apply_eq_of_tendsto_cocompact"
+    "tendsto_nhds_unique"]
+   :relation-to-existing
+   {:memory-id
+    "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville"
+    :shared-core
+    "Both arguments create cocompact decay of an entire function and use Liouville to force global constancy."
+    :new-content
+    "Here the function is already entire and eventual agreement transfers a first-order asymptotic. The contradiction comes from two incompatible limits of `z*g(z)`, not from zero-filling punctures or finding a nonzero reciprocal value."}
+   :witness
+   {:declaration
+    "ApmCanaries.A00J05.cauchyTransform_not_extendable_to_entire"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To refute an entire extension, combine eventual agreement at infinity with a nonzero first-order asymptotic: divide by the escaping coordinate, apply Liouville to the induced decay, and finish by uniqueness of limits."
+   :boundary
+   "The contradiction needs the first-order limit to be nonzero; in this row that follows from positive measure of `K`."
+   :capture-kind :runner-liouville-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J05"}
+   #:ref{:type :pattern, :id "math/entire-and-singularity-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t039"]
+   :receipt-ids ["c18f4fdb-edc2-47e8-86cb-4a76c9242ed1"]
+   :commits ["2f24f492ae53cadf0345f07fbfcd0b54da6dfdf6"]
+   :problems ["a00J05-cauchy-transform"]
+   :artifacts
+   ["problems/a00J05/lean/Main.lean:cauchyTransform_not_extendable_to_entire"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]

@@ -1,0 +1,14 @@
+{
+  "frozen_at": "2026-09-10T17:04:18.081969+00:00",
+  "futon3c_source_sha": "703b987655ce0bc81232438579e44c567573d68c",
+  "prototype_sha": "b9e09bb5",
+  "files": {
+    "materials/patterns.json": "17cbc1572c2bbc83f9f85a51330857472216697dfec3f45a94ad53ebb8fb6bfb",
+    "materials/reviewed-links.json": "f29d13324b0f228698fac04c0487a35a448faf516308f4c1a89203ecd223d71a",
+    "materials/search-audit.json": "aa19fb34703e9b7d4a22ff22c14bc308649e09429ebaaa87faee5ead3c0b40d7",
+    "materials/source-lesson.md": "3795d7e5cb85cf6c86905b833324fc4bf54698aa7b1d9d2d9f912b300d6f215b",
+    "materials/ta-cascade-and-reference.md": "7d61c8c59849fcfa208d9ad22119d978eb6431f0fa6049befac5315147e7ac27",
+    "materials/tasks.json": "08a8b985167a278c342317521f3f0eaa3fa8404c69b6959266bc9972db27780a",
+    "MANIFEST.md": "5362a44df318b697b1b55b504bec9a3f0d081441d6a366312f93f208c1085b44"
+  }
+}

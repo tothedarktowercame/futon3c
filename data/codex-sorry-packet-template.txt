@@ -1,0 +1,137 @@
+CODEX SORRY LOOP — ONE AXIOM-CLEAN FORMALIZATION TASK
+
+Queue row: @@ID@@
+Kind: @@KIND@@
+Target file: /home/joe/code/apm-lean/@@FILE@@
+Target line(s): @@LINE@@
+Target statement(s):
+@@STATEMENT@@
+Downstream unblocks: @@UNBLOCKS@@
+Available proved support: @@AVAILABLE@@
+Suggested route (if any): @@ROUTE@@
+
+Binding rules:
+
+1. Read /home/joe/code/AGENTS.md first. Do not weaken, replace, or silently
+   alter the target statements. Root-level or lib/ construction lemmas are
+   allowed. If the target is under problems/<id>/, modify only its stated
+   target file within that problem directory.
+2. YOU ARE IN THE CLOSER ROLE, AND LITERATURE SEARCH IS PART OF THE JOB, NOT A
+   FORMALITY. Read this rule before starting.
+
+   Do NOT assume a file with one remaining sorry is nearly done. Measured
+   2026-07-30 across the 19 single-sorry problems in this corpus: 16 were
+   AUTHORED with exactly one sorry, so the count reflects how the problem was
+   scaffolded, not how much of it is finished. Where we have evidence, the
+   remaining sorry is the HARD one — the residue left after the tractable parts
+   went. Several are blocked on construction lemmas that are themselves still
+   only partially proved. Budget accordingly.
+
+   EXPECT THE RESULT TO BE ABSENT FROM MATHLIB. That is the typical finding on
+   these rows and the first cold pass has usually established it already, so do
+   not spend your budget re-litigating whether some Mathlib lemma states the
+   whole theorem. It generally does not.
+
+   These problems come from qualifying exams sat with NO library access, so the
+   mathematics was standard material taught that year and expected to be
+   memorised. But standard-in-mathematics is NOT the same as present-in-Mathlib.
+   The gap you are filling is a FORMALIZATION gap, not a mathematical one: the
+   construction is known and written down somewhere, and your job is to find it
+   and carry it as your PLAN.
+
+   Worked precedent (S6, 2026-07-28): integral Minkowski is absent from Mathlib
+   — only the sum form is there — but has a classical short proof by duality +
+   Fubini + Hölder, with Schep's paper as the cleanest scaffold. The packet
+   carried that literature proof as its plan.
+
+   SEARCH AT DESIGN TIME, BEFORE WRITING TACTICS — and search in this ORDER.
+   These surfaces are not a checklist to tick; they are a `cond`, and which arm
+   you need depends on whether you already have a mathematical route.
+
+   (a) DO YOU KNOW THE ROUTE? If you can already state the argument in prose —
+       "layer-cake, split at t0, bound each tail" — then what you are missing is
+       PIECES, not a plan. Use https://loogle.lean-lang.org (pattern/type
+       search) and https://leansearch.net (natural language). Mathlib will very
+       likely not state your theorem, but it will have most of the components
+       you assemble it from. This arm is the cheapest and it is often enough:
+       on a01A02 (2026-07-30) it carried the entire proof by itself.
+
+   (b) HAS IT BEEN FORMALIZED BEFORE, or is there a known Mathlib obstacle?
+       `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive`. Cheap,
+       and it warns you about traps as well as supplying techniques.
+
+   (c) FALL-THROUGH — arXiv, FOR WHEN YOU DO NOT HAVE A ROUTE. Take this arm
+       when you cannot state the argument in prose, or when (a) and (b) came
+       back empty. It is the most expensive search and also the most likely to
+       hold the answer: the construction exists in the literature even when it
+       exists nowhere in Mathlib. Do NOT skip it on cost grounds when you are
+       genuinely without a plan — that is exactly the case it exists for.
+       Precedent: integral Minkowski is absent from Mathlib and its construction
+       came from Schep's paper, which then became the packet's plan.
+       Local manifest, 570k papers with abstracts:
+       `sqlite3 /home/joe/code/storage/arxiv-manifest/arxiv_manifest.sqlite
+       "select arxiv_id, title from papers where primary_category like 'math%'
+       and (title like '%<topic>%' or abstract like '%<topic>%') limit 20;"`
+       Search the standard NAME of the technique, not the problem statement.
+
+   Spend real time here when the target resists; a wrong route costs far more
+   than a thorough search. Record what you found — paper, thread, or
+   declaration — or explicitly record that a surface came back empty, AND state
+   WHICH ARM ACTUALLY CARRIED THE PROOF. That last datum is tracked per problem
+   area: "(a) was enough" and "(c) was necessary" are both valuable reports, and
+   a vague "searched everything" is not.
+
+   Treat any in-file comment claiming something is "not in Mathlib" as a
+   REVISION-SCOPED claim that may have been true when written and false now.
+   Re-check it yourself before relying on it.
+
+   IF THIS ROW CARRIES A SUGGESTED ROUTE, treat it as a HYPOTHESIS TO EVALUATE,
+   not as instructions. It may come from a previous session that ran out of time,
+   or from the file's own docstring, and it may simply be WRONG: a01A06's
+   informal solution confidently proposed a route resting on an invalid step, and
+   following it would have wasted the whole run. Read it, judge it, and say in
+   your report whether you followed it, corrected it, or discarded it and why.
+   If the row carries no route, that is the normal case — find one.
+3. Work toward a genuine Lean 4 + Mathlib proof. Run
+   `cd /home/joe/code/apm-lean && lake env lean @@FILE@@` repeatedly and once
+   at the end. Exit 0 is required before committing.
+4. ON COMPILE ERRORS: before broad Mathlib searching, run
+   `bb /home/joe/code/futon3c/scripts/error_recall.bb --row @@ID@@ "<error text>"`.
+   If a surfaced rule applies, use it and cite its memory id. The row id is the
+   local log key because the Agency job id does not exist when this packet is
+   assembled; ground control joins row to job from the queue. For additional
+   declaration search, consult https://loogle.lean-lang.org (pattern/type
+   search) and https://leansearch.net (natural-language search) before
+   unbounded source grepping.
+5. A completed declaration is accepted only when axiom-clean. Add a temporary
+   scratch check if necessary and report the VERBATIM `#print axioms` output.
+   Any `sorryAx` means relocated, not discharged.
+6. At about 20 minutes, preserve and commit an honest compiling partial rather
+   than losing a precise frontier to the job horizon. Never disguise a
+   remaining obligation with an axiom, weakened theorem, or irrelevant proof.
+   But a partial is a concession to the ~30-minute job cap, NOT a way to bank
+   visible progress. If you can close the target, close it — deferring work a
+   closer could have finished is a failure, not a hand-off. When you genuinely
+   must stop, leave the next session a PLAN rather than a puzzle: state the
+   remaining obligation precisely enough that it can be carried forward as a
+   suggested route, which is exactly where the “Suggested route” field above
+   gets populated from.
+7. Commit only the scoped apm-lean files with a task-specific message.
+
+Final summary contract:
+
+- Route taken, and the literature anchor (including an explicit “none found”).
+  Name the STANDARD RESULT the route rests on, not just the Mathlib
+  declaration — that name is what makes the route reusable on the next
+  problem, and it is what a memory can be written against.
+- WHICH SEARCH ARM CARRIED IT: (a) components, (b) Zulip, (c) arXiv, or none —
+  plus which arms you tried and came back empty. This is tracked per problem
+  area to learn where each surface pays; a surface that was not needed is a
+  different datum from a surface that failed, so distinguish them.
+- Exact files and statements changed; initial and final sorry counts.
+- Final `lake env lean` command and result.
+- Verbatim `#print axioms` output for every declaration claimed complete.
+- “Memory usage” section naming every used or ignored dispatch-time and
+  error-time surfaced memory ID and why.
+- Concise error → fix work log.
+- Commit SHA, or the exact remaining obstruction if blocked.

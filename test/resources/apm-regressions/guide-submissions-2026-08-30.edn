@@ -1,0 +1,55 @@
+{:fixture/type :apm-guide-submission-regression-corpus
+ :fixture/version 1
+ :captured-at "2026-08-30"
+ :source-policy
+ {:note "Payload maps are copied verbatim from the current terminal collection in each durable phase state. Paths and SHA-256 values record provenance only; tests do not read live campaign state."}
+ :submissions
+ [{:id :f60-guide-repair
+   :authority {:frame-id "f60" :problem-id "b00J02"}
+   :request {:dispatch/type :guide-intervention :agent-id "f60-guide"
+             :frame-id "f60" :problem-id "b00J02" :mode :store-mode}
+   :payload
+   {:command-own-exit 0
+    :evidence
+    {:channel-audit {:direct-student-contact? false}
+     :candidates
+     [{:content-digest "e5c83e9552296b1c9b688ff4fb8f81bff7b94a021fb618104318a3082a33d88a"
+       :memory-id "e-bd9763de-dc40-44fc-a849-0f3f8c307c8a"
+       :name "count-unit-matrices-over-zmod-via-subtype-filter"
+       :pattern-ids ["math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence"]
+       :source-attempts ["77f83e7e22871b1723b29ec961bce57df8a67b7b40098ed023137a7b9a8c24b8"]}
+      {:content-digest "f06309ee67a34f60e965de69efc76073eb9ad20d0cbaf5ee01b629b510ee1784"
+       :memory-id "e-154119aa-1800-4a67-b375-d7e1de64e33d"
+       :name "units-subtype-bridge-api-traps"
+       :pattern-ids ["math-formalization/notation-semantics-traps"]
+       :source-attempts ["77f83e7e22871b1723b29ec961bce57df8a67b7b40098ed023137a7b9a8c24b8"]}]}
+    :failure-account
+    ["Prior submission was rejected because the job result text was prose, not an EDN report, so the mode echo and candidate gate never parsed; this repair returns the report as a single fenced EDN map."
+     "Student attempt 1 closed b00J02 (0 sorries, lean exit 0, used-ids empty), so the residual signal comes from its recorded obstacles, not an open failure."
+     "Substrate writes for both deposits succeeded as entries, but the hyperedge transport timed out; typed edges may need later repair."]
+    :outcome "closed: guide-intervention-1 repair in store-mode. Student attempt 1 closed b00J02 with zero sorries and no memory use; mined its failure account for two domain-level deposits, recorded both to the substrate, and propose both as candidates with non-empty pattern-ids for promotion review."}
+   :expected-findings
+   [:guide-mode-authority-mismatch
+    :guide-candidates-invalid
+    :guide-candidates-outside-store-mode]
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f60/live/guide-intervention-1.edn"
+            :sha256 "3575b18eace38a6d011ed001ce758aac5009bab1d8dda345b8f69faa00238d66"}}
+  {:id :f61-guide-repair
+   :authority {:frame-id "f61" :problem-id "b01A02"}
+   :request {:dispatch/type :guide-intervention :agent-id "f61-guide"
+             :frame-id "f61" :problem-id "b01A02" :mode :store-mode}
+   :payload
+   {:mode "store-mode"
+    :command-own-exit 0
+    :evidence
+    {:channel-audit {:direct-student-contact? false}
+     :candidates
+     [{:content-digest "e320194c10223faa75cc79be66c8aae1f861f734f456eca9475879449a271dc0"
+       :memory-id "e-a17ceaa9-875a-4f6a-b5a3-830006da28ba"
+       :pattern-ids ["math-informal/construct-an-explicit-witness"]
+       :source-attempts ["b03c31fb8fccb4911facc12de95fb7fa2ec42d742169959c1e449f4d7ff5a6aa"]}]}
+    :failure-account []
+    :outcome "Repair of guide-intervention-1, mode store-mode. Prior submission omitted the authorized :mode echo and left content-digest null in the candidate; both corrected. One store-mode deposit mined from student-attempt-1 failure account b03c31fb: the abandoned commGroupOfCyclicCenterQuotient route (deterministic whnf timeout at 800000 heartbeats) versus the working explicit-generator route. Memory persisted to substrate as e-a17ceaa9-875a-4f6a-b5a3-830006da28ba (subject problem b01A02), attached to existing pattern math-informal/construct-an-explicit-witness; content-digest is sha256 of the persisted body. Pattern tier is domain-level finite-group cyclicity guidance with no problem id or line numbers; leaf names exact Mathlib API (Commute.orderOf_mul_eq_mul_orderOf_of_coprime, Subgroup.orderOf_coe, Subgroup.eq_top_of_card_eq with explicit G and H arguments, Nat.dvd_gcd and Nat.dvd_one for the nonlinear-divisibility omega failure). The already-coined pattern math-formalization/trivialize-conjugation-by-coprime-centralizer-index covers the N/C conjugation step, so no duplicate deposit. No harness tuning, no direct student contact."}
+   :expected-findings [:guide-candidates-invalid]
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f61/live/guide-intervention-1.edn"
+            :sha256 "6b84a7fc3c3b316eb89d4edf5b708abe938a7a6b9784c840e931cb1f5f917094"}}]}

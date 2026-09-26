@@ -1,0 +1,3 @@
+acceptance/fabricated no-warrant test-registry-fabricated-validation-cli-repair
+test-registry/validation-cli current test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7
+SUMMARY {:current 1, :no-warrant 1}

@@ -1,0 +1,960 @@
+;; Cohort-1 fresh-arm coverage summary (non-draft cohort metadata).
+;; Complex-analysis arm a93J05 had zero surfaced memories (`recall-empty`,
+;; receipt e-c6719268-6cb9-4f98-861a-5db82a3d3ddf). Series arm a93J02
+;; surfaced three strategy-level memories but no lemma-location memories
+;; (receipt e-33c1ea3a-3c12-4074-983a-61ccc25918d2); its useful discoveries
+;; were instead the default-HasSum semantic boundary, the Leibniz/Abel
+;; template, and interval-integral translation APIs.
+[{:name "bridge-strict-and-closed-convergence-in-measure-thresholds"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "A problem states convergence in measure with strict bad sets `{x | ε < |fₙ x - g x|}` and strict measure bounds, while the library API uses closed bad sets `{x | ε ≤ dist (fₙ x) (g x)}` whose measures tend to zero."
+   :proof-shape
+   ["Keep a problem-faithful definition rather than silently replacing `>` by `≤`."
+    "For the problem-to-library direction, unfold `tendstoInMeasure_iff_dist` and `ENNReal.tendsto_atTop_zero`. Given library distance threshold `ε` and target measure bound `b`, handle `b = ⊤` separately; otherwise choose `δ = min ε b.toReal / 2`."
+    "Use `{x | ε ≤ dist (fₙ x) (g x)} ⊆ {x | δ < |fₙ x - g x|}`, measure monotonicity, and `ENNReal.ofReal δ ≤ b`."
+    "Shift the problem witness from `N₀ < n` to the library tail convention `N₀ + 1 ≤ n`."
+    "For the library-to-problem direction, query the library limit at threshold `ε / 2`, include `{x | ε < |fₙ x - g x|}` in `{x | ε / 2 ≤ |fₙ x - g x|}`, and finish with `ofReal (ε / 2) < ofReal ε`."]
+   :preconditions
+   ["real-valued functions, so `Real.dist_eq` relates distance and absolute difference"
+    "the library convergence predicate exposes closed-threshold bad sets"
+    "measure values are in `ENNReal`, including a possible `⊤` target during the limit proof"]
+   :boundary
+   "The halving/slack argument transfers the convergence predicate; it does not itself construct the almost-everywhere convergent subsequence."
+   :key-api
+   ["tendstoInMeasure_iff_dist"
+    "ENNReal.tendsto_atTop_zero"
+    "ENNReal.toReal_pos"
+    "ENNReal.ofReal_le_iff_le_toReal"
+    "measure_mono"]}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :proof-pattern, :id "threshold-slack-bridge"}]
+  :evidence
+  {:turn-round-ids
+   ["e-48eeec58-b6a9-499e-9c32-ffac099ba25f"
+    "e-1e2d9c42-4c5a-42b6-97ae-cd9f8893b3c9"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "The runner identified the boundary mismatch before writing, refined the slack construction through compilation, and the zero-sorry commit contains both directions of the bridge."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "tendsto-in-measure-ae-subsequence-api"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Extract a strictly monotone subsequence converging almost everywhere from a sequence converging in measure."
+   :lemma "`MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae`"
+   :location
+   "`Mathlib.MeasureTheory.Function.ConvergenceInMeasure`, in the `MeasureTheory` namespace"
+   :statement-shape
+   "From `TendstoInMeasure μ f atTop g`, obtain `∃ ns : ℕ → ℕ, StrictMono ns ∧ ∀ᵐ x ∂μ, Tendsto (fun i => f (ns i) x) atTop (𝓝 (g x))`."
+   :use
+   "First bridge the problem's convergence-in-measure definition to Mathlib's `TendstoInMeasure`; then invoke `.exists_seq_tendsto_ae` directly."
+   :implementation-note
+   "Mathlib's theorem already packages the fast `2⁻ᵏ` subsequence and first Borel-Cantelli argument, so callers should not rebuild that machinery unless their hypotheses cannot be converted to `TendstoInMeasure`."
+   :boundary
+   "The lemma consumes Mathlib's predicate, not an arbitrary problem-local strict-threshold definition; that conversion remains a separate obligation."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :mathlib-lemma,
+         :id "MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae"}]
+  :evidence
+  {:turn-round-ids
+   ["e-1fb28d44-d532-47dc-be51-d0cd2698fdb0"
+    "e-17dc5a24-fc9a-4885-beab-d2115c949ad7"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 7-8 show direct discovery and inspection of the exact theorem; the committed main theorem is a one-line application after the bridge and validates with zero sorries."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "verify-stale-blocked-labels-against-current-library"
+  :level :process
+  :status :draft
+  :body
+  {:trigger
+   "A prior candidate or assessment labels a formalization blocked because an API or packaged theorem is allegedly absent."
+   :rule
+   ["Treat the blocked label as dated evidence, not as a current environment fact."
+    "Locate the library file for the core concept and search its current theorem inventory directly."
+    "Search semantic variants and result shapes (`subsequence`, `StrictMono`, `tendsto_ae`) rather than only the guessed theorem name from the stale assessment."
+    "Retain the blocker only after the checked dependency revision lacks both the direct theorem and a short conversion into it."]
+   :negative-examples
+   [{:problem "a92J02"
+     :stale-claim
+     "The harvested candidates said the proof was blocked by missing convergence-in-measure API/theory and specifically claimed there was no packaged a.e.-subsequence theorem."}
+    {:problem "a93A01"
+     :stale-claim
+     "A prior candidate assessment classified the problem as blocked by missing API/theory for the difference-quotient implication."}]
+   :observed-corrections
+   [{:problem "a92J02"
+     :correction
+     "A direct search of the installed `ConvergenceInMeasure.lean` found `TendstoInMeasure.exists_seq_tendsto_ae` within two rounds; the completed proof reduced the main theorem to that API leaf."}
+    {:problem "a93A01"
+     :correction
+     "The runner proceeded from the current problem and library rather than inheriting the blocker, found `totallyBounded_Ioo`, `isUniformEmbedding_subtype_val`, and `TotallyBounded.image`, and completed the allegedly blocked implication with zero sorries."}]
+   :cost-signals
+   ["For a92J02 the stale label briefly shaped round 6's belief, but verification in rounds 7-8 prevented a needless manual Borel-Cantelli implementation."
+    "For a93A01 the runner spent substantial effort finding the exact bounded-image composition, but the final current-library search falsified the blocker rather than confirming it."]
+   :scope
+   "Repository assessments whose dependency versions or search methods may differ from the current formalization environment."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :apm-problem, :id "a93A01"}
+   #:ref{:type :process-pattern, :id "revalidate-stale-blockers"}]
+  :evidence
+  {:turn-round-ids
+   ["e-1c03e343-f628-441d-bd93-50a25f041995"
+    "e-1fb28d44-d532-47dc-be51-d0cd2698fdb0"
+    "e-17dc5a24-fc9a-4885-beab-d2115c949ad7"
+    "e-0e685809-98e4-4527-a175-090e936cae01"
+    "e-fa0d8dcd-0f21-4371-af2c-c3c781e5bb62"
+    "e-28372a56-69a5-4b8d-8ccd-7f198c7958a4"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits
+   ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"
+    "035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a92J02" "a93A01"]}
+  :confidence :n-instances
+  :instance-count 2
+  :rationale
+  "Two distinct sessions now show the same arc: a harvested blocker asserted a missing API, the runner checked the installed Mathlib directly, and a zero-sorry artifact falsified the blocker in the current environment."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "record-subsumed-pattern-use-as-challenge"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :pattern-use-challenge
+   :pattern-id "math-informal/pass-to-a-subsequence"
+   :attachment-state :no-reviewed-memory-attachments
+   :use-texture
+   {:surfaced "The runner's own `psr_search` surfaced the pattern while it was planning the convergence-in-measure proof."
+    :selected "After one malformed selection receipt, the runner successfully recorded a PSR selection with a problem-specific rationale."
+    :contribution "The pattern correctly named the high-level move, but supplied no additional proof step beyond the already-discovered Mathlib theorem."
+    :runner-judgment "Conceptually relevant and subsumed by `TendstoInMeasure.exists_seq_tendsto_ae`."}
+   :challenge
+   {:claim
+    "For this problem class, the unattached pattern is too abstract to improve the proof once the native API leaf is known."
+    :not-a-retraction
+    "The pattern's mathematical content is sound; the observation challenges its marginal operational value and attachment state, not the pass-to-a-subsequence technique itself."
+    :review-question
+    "Should this pattern acquire an attachment that routes directly to `TendstoInMeasure.exists_seq_tendsto_ae`, or remain a conceptual label whose advice is considered subsumed when that lemma is available?"}
+   :process-rule
+   "Record consulted-but-subsumed patterns as use evidence with a scoped challenge; do not inflate them into successful proof dependencies, and do not discard the consultation as if recall never occurred."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :proof-pattern, :id "math-informal/pass-to-a-subsequence"}]
+  :evidence
+  {:turn-round-ids
+   ["e-48eeec58-b6a9-499e-9c32-ffac099ba25f"
+    "e-b93401a8-c321-4c8d-ab37-d61271c62fbe"
+    "e-d6582ea7-a490-4ea8-a03d-ca1a15e55428"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "The evidence distinguishes search, failed receipt, successful selection, and final usefulness judgment, making this a traceable memory-use observation rather than an inference from the final proof alone."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "bound-uniformly-continuous-image-before-controlling-quotients"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "A uniformly continuous function on a totally bounded domain (including a bounded interval in Euclidean space) must satisfy a conclusion triggered by a large difference quotient, but the desired threshold must be independent of the chosen points."
+   :failure-of-direct-threshold
+   "Choosing only `N = ε / δ` from uniform continuity is insufficient in the direction from uniform continuity to the quotient condition: the numerator `|f x - f y|` is not bounded by ε before closeness of x and y is known."
+   :proof-shape
+   ["First prove that the uniformly continuous image of the domain is bounded."
+    "Extract `B` with `|f x| ≤ B` on the domain and replace it by a positive bound such as `B' = max B 1`."
+    "Uniform continuity at ε supplies δ > 0."
+    "Choose `N = 2 * B' / δ`; boundedness gives `|f x - f y| ≤ 2 * B'`."
+    "If the difference quotient exceeds N, the numerator bound forces `|x - y| < δ`; uniform continuity then gives `|f x - f y| < ε`."]
+   :why-boundedness-first
+   "The quotient hypothesis relates numerator and denominator but does not independently cap the numerator. Bounding the image closes that gap and makes the threshold uniform over all x and y."
+   :reverse-direction
+   "For the converse quotient-condition-to-uniform-continuity direction, the direct choice `δ = ε / N` is valid and no image bound is needed."
+   :scope
+   "Quotient-trigger conditions over totally bounded domains, with a uniformly continuous real-valued map or another codomain where bounded image controls pairwise distance."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A01"}
+   #:ref{:type :proof-pattern, :id "boundedness-before-quotient-threshold"}]
+  :evidence
+  {:turn-round-ids
+   ["e-bfb25214-35f0-4c1b-87f3-2e53f515a8cb"
+    "e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-0e5ec559-1f0e-48af-a2bc-59521410e5f7"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "The turn stream records the failed attempt to avoid boundedness, the pivot to the bounded-image architecture, and the final summary; the zero-sorry commit implements the stated threshold."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "uniformly-continuous-image-boundedness-api-chain"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Show that a real-valued function uniformly continuous on the open interval `(0,1)` has bounded image, despite the domain not being compact."
+   :api-chain
+   [{:lemma "`totallyBounded_Ioo 0 1`"
+     :role "establish total boundedness of the interval as a set"}
+    {:lemma "`isUniformEmbedding_subtype_val`"
+     :role "relate total boundedness of the set to total boundedness of the interval subtype"}
+    {:lemma "`totallyBounded_image_iff h_emb.isUniformInducing`"
+     :role "transfer total boundedness through the subtype inclusion and identify the subtype universe"}
+    {:lemma "`TotallyBounded.image`"
+     :role "map the totally bounded subtype universe through the uniformly continuous restriction of f"}
+    {:lemma "`TotallyBounded.isBounded`"
+     :role "turn total boundedness of the image into metric boundedness"}
+    {:lemma "`Metric.isBounded_iff_subset_closedBall 0`"
+     :role "extract a numerical radius B usable by arithmetic proofs"}]
+   :bridge
+   "Use `Metric.uniformContinuousOn_iff` to convert the problem-local ε-δ predicate into `UniformContinuousOn`, then use the restriction `I01.restrict f` as the uniformly continuous map on the subtype."
+   :result-shape
+   "Obtain `∃ B, ∀ x ∈ Set.Ioo 0 1, |f x| ≤ B` after rewriting the restricted image back to `f '' Set.Ioo 0 1`."
+   :boundary
+   "`TotallyBounded.image` expects a uniformly continuous function on a type; the subtype restriction and uniform-embedding transfer are essential rather than cosmetic coercion fixes."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A01"}
+   #:ref{:type :mathlib-lemma, :id "TotallyBounded.image"}
+   #:ref{:type :mathlib-lemma, :id "isUniformEmbedding_subtype_val"}
+   #:ref{:type :mathlib-lemma, :id "totallyBounded_Ioo"}]
+  :evidence
+  {:turn-round-ids
+   ["e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-28372a56-69a5-4b8d-8ccd-7f198c7958a4"
+    "e-0e5ec559-1f0e-48af-a2bc-59521410e5f7"
+    "e-6a0e1ad2-0f94-453e-92b7-c65c1ec9f918"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 78-80 identify the subtype and uniform-embedding composition, round 93 validates the assembled proof, and the final zero-sorry artifact confirms the exact API chain."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "correct-a93a01-direct-uniform-continuity-quotient-argument"
+  :level :challenge
+  :status :draft
+  :body
+  {:challenge-kind :corpus-correction
+   :target
+   {:artifact "problems/a93A01/informal-solution.md"
+    :direction "(a) implies (b)"
+    :challenged-claim
+    "After uniform continuity supplies δ for ε, taking `N = ε / δ` directly proves that a quotient larger than N forces `|f(x)-f(y)| < ε`."}
+   :verdict :mathematically-invalid
+   :error
+   "The quotient inequality alone does not bound its numerator. A large value of `|f(x)-f(y)| / |x-y|` can coexist with `|x-y| ≥ δ` when `|f(x)-f(y)|` is large, so the proposed direct contradiction does not follow. The artifact's later sequence variant has the same gap: `|xₙ-yₙ| < |f(xₙ)-f(yₙ)| / n` does not imply `|xₙ-yₙ| → 0` unless the numerators are uniformly bounded."
+   :correction
+   {:architecture :boundedness-first
+    :steps
+    ["Use uniform continuity on the totally bounded interval `(0,1)` to prove the image is bounded."
+     "Choose a positive B' with `|f x| ≤ B'`, hence `|f x - f y| ≤ 2B'`."
+     "For the δ supplied by uniform continuity at ε, take `N = 2B' / δ`."
+     "A quotient larger than N now forces `|x-y| < δ`, and uniform continuity supplies the desired numerator bound."]}
+   :scope
+   "This challenge is limited to the harvested proof of `(a) implies (b)`. The reverse implication's use of `δ = ε / N`, after condition (b) supplies N, is valid."
+   :witness
+   {:formalization-commit "035e4d97175ecc2b9dbbeebf72d734326c67b9e3"
+    :validation "Lean exit 0 with zero errors and zero sorries"
+    :corrected-theorem "unifCont_implies_diffQuot"}}
+  :subjects
+  [#:ref{:type :apm-artifact,
+         :id "problems/a93A01/informal-solution.md"}]
+  :evidence
+  {:turn-round-ids
+   ["e-c0fbe153-6c1e-45b1-aba9-9c6cd652edc5"
+    "e-bfb25214-35f0-4c1b-87f3-2e53f515a8cb"
+    "e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "The runner read the harvested artifact, independently encountered and diagnosed the missing numerator bound, replaced the argument with a boundedness-first proof, and explicitly recorded the correction in its final summary; the committed Lean proof is a machine-checked witness."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "kadec-klee-via-norm-sub-square-and-sqrt"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "Prove strong convergence in a real Hilbert space from weak convergence together with convergence of norms."
+   :proof-shape
+   ["Specialize weak convergence at the proposed limit x to obtain `⟪h n, x⟫_ℝ → ⟪x, x⟫_ℝ = ‖x‖²`."
+    "Use norm convergence and `Tendsto.pow` to obtain `‖h n‖² → ‖x‖²`."
+    "Rewrite `‖h n - x‖²` with the Hilbert-space norm-subtraction identity."
+    "Limit arithmetic makes the rewritten expression converge to `‖x‖² - 2‖x‖² + ‖x‖² = 0`."
+    "Compose with continuity of the real square root and rewrite `sqrt (‖h n - x‖²) = ‖h n - x‖` using nonnegativity of the norm."]
+   :why-this-shape
+   "Weak convergence controls the mixed inner-product term, while norm convergence controls the remaining quadratic term. The squared norm is therefore the common expression on which both hypotheses act directly."
+   :key-api
+   ["norm_sub_sq_real"
+    "real_inner_self_eq_norm_sq"
+    "Tendsto.pow"
+    "Real.continuous_sqrt"
+    "Real.sqrt_sq"]
+   :boundary
+   "This proves the real-Hilbert-space Kadec-Klee implication. It does not by itself establish the separate weak lower-semicontinuity liminf statement."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :proof-pattern, :id "kadec-klee-norm-square"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-9ace4878-0de4-46b4-b675-f3e7b5b5f8e1"
+    "e-167d52aa-1c14-4b8c-a1b7-57ea25331c7b"
+    "e-14a11c0a-aa86-4b46-aa8e-1da080d7688b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The runner identified the quadratic architecture in round 4, resolved the square-root transport through rounds 52-64, and committed part (a) with zero sorries."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "norm-sub-square-to-norm-limit-api-chain"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Turn weak and norm convergence into convergence of distances in a real inner-product space, including the final conversion from squared distance to distance."
+   :api-chain
+   [{:lemma "`norm_sub_sq_real`"
+     :role
+     "Rewrite `‖a-b‖²` exactly as `‖a‖² - 2 * ⟪a,b⟫_ℝ + ‖b‖²`, avoiding a manual inner-product expansion."}
+    {:lemma "`real_inner_self_eq_norm_sq`"
+     :role
+     "Normalize the weak-limit target `⟪x,x⟫_ℝ` to `‖x‖²`."}
+    {:lemma "`Real.continuous_sqrt`"
+     :role
+     "Compose `‖h n-x‖² → 0` with square-root continuity."}
+    {:lemma "`Real.sqrt_sq`"
+     :role
+     "Rewrite `sqrt (‖h n-x‖²)` to `‖h n-x‖`, using `norm_nonneg`."}]
+   :use
+   "Transport the limit across `norm_sub_sq_real` with `Tendsto.congr`; after limit arithmetic reaches zero, apply `Real.continuous_sqrt.tendsto 0`, compose, rewrite `Real.sqrt_zero`, and use `Real.sqrt_sq (norm_nonneg _)` pointwise."
+   :boundary
+   "`Real.continuous_sqrt` is the real-valued final bridge. Complex inner-product proofs still use a real norm but need the appropriate real-part identity for the mixed term."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :mathlib-lemma, :id "norm_sub_sq_real"}
+   #:ref{:type :mathlib-lemma, :id "Real.continuous_sqrt"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-9ace4878-0de4-46b4-b675-f3e7b5b5f8e1"
+    "e-167d52aa-1c14-4b8c-a1b7-57ea25331c7b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The exact identity was discovered in round 4; the runner then verified the square-root API and the committed theorem uses both leaves in a compiling, sorry-free proof."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "liminf-le-of-le-zero-lower-bound-side-condition"
+  :level :lemma-location
+  :status :direction-scoped-resolution
+  :body
+  {:problem-class
+   "Discharge `IsBoundedUnder (· ≥ ·)` for `liminf_le_of_le` when the sequence is nonnegative."
+   :gap-kind :resolved-side-condition
+   :history
+   "The previous promoted version merged this construction with the opposite `le_liminf_of_le`/`IsCoboundedUnder` direction. S4 mechanically disproved that scope: the zero witness resolves only the bounded-under premise used by `liminf_le_of_le`."
+   :resolution
+   {:source-problem "a96A03"
+    :exact-construction
+    "have h_bdd : Filter.IsBoundedUnder (· ≥ ·) atTop (fun n => eLpNorm (f n) 2 volume) := ⟨0, Eventually.of_forall (fun _ => by simp)⟩"
+    :explanation
+    "For the `(· ≥ ·)` relation, `IsBoundedUnder` asks for one eventual lower bound. A nonnegative norm-valued sequence therefore uses the constant lower bound zero; no upper bound on the sequence is needed."
+    :use
+    "Pass `h_bdd` to `liminf_le_of_le`, or construct the analogous zero-bound witness for another nonnegative sequence before invoking the relevant liminf API."
+    :boundary
+    "This shortcut applies only when the requested premise is `IsBoundedUnder (· ≥ ·)`: one eventual lower bound. It does not prove `IsCoboundedUnder (· ≥ ·)`, which uniformly bounds all eventual lower bounds and is required by `le_liminf_of_le`."}
+   :scope-challenge
+   {:source-problem "a93A03"
+    :runner-quote
+    "The prior session memory about resolving liminf blocks on a96A03 (using `IsBoundedUnder` via `⟨0, nonneg⟩`) was NOT applicable because this proof needs the OPPOSITE direction (`le_liminf_of_le` with `IsCoboundedUnder`, not `liminf_le_of_le` with `IsBoundedUnder`)."
+    :outcome
+    "The correction admits that the n=2 merged memory overclaimed; the opposite direction is now a separate open gap memory."}
+   :classification
+   "A direction-scoped API leaf with one compiling positive instance and one mechanically witnessed non-applicability boundary."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a96A03"}
+   #:ref{:type :mathlib-lemma, :id "liminf_le_of_le"}
+   #:ref{:type :formalization-pattern,
+         :id "zero-eventual-lower-bound"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0619e21d-72a8-4f40-be9a-7dec4c4bb7e1"
+    "e-d6d7a90c-2321-4f8b-9d80-ef2f74ee9c1a"
+    "e-3d6d4147-f1fe-4298-8acc-c6ddaa17602e"]
+   :commits
+   ["d93e7e0dbe7b24f14d12006cd93ae560ccbe7a33"
+    "26be1cb64f54724e803452daa60ac6b7398a045b"]
+   :problems ["a93A03" "a96A03"]}
+  :confidence :single-instance
+  :boundary-witness-count 1
+  :rationale
+  "a96A03 compiles with the exact zero-bound witness; S4 supplies direct negative evidence that the witness cannot be generalized to the opposite coboundedness premise."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}
+
+ {:name "le-liminf-is-cobounded-under-unbounded-above-gap"
+  :level :lemma-location
+  :status :gap-open
+  :body
+  {:problem-class
+   "Prove `c ≤ liminf u atTop` from an eventual-lower-bound argument when the real-valued sequence may be unbounded above."
+   :gap-kind :opposite-direction-coboundedness
+   :attempted-api
+   {:lemma "`le_liminf_of_le`"
+    :required-premise
+    "`Filter.IsCoboundedUnder (· ≥ ·) atTop u`"
+    :meaning
+    "There must be one `b` that bounds every eventual lower bound `a`: `∃ b, ∀ a, (∀ᶠ n, a ≤ u n) → a ≤ b`."
+    :failure
+    "For a sequence unbounded above, the eventual lower bounds can themselves be unbounded above, so this premise does not follow from nonnegativity or from one known eventual lower bound."}
+   :failed-alternative
+   {:route "`liminf_eq` followed by `le_csSup`"
+    :failure
+    "`le_csSup` requires `BddAbove` for the set of eventual lower bounds. Deriving that bound from the desired liminf inequality is circular."
+    :root-cause
+    "On the conditionally complete lattice ℝ, `csSup` has the junk value zero on an unbounded set; an inequality involving that value cannot recover the missing `BddAbove` premise."}
+   :negative-rule
+   "Do not reuse the `IsBoundedUnder (· ≥ ·)` zero-lower-bound witness here: `IsCoboundedUnder` is the opposite quantifier/direction and asks for a uniform upper bound on all eventual lower bounds."
+   :candidate-route
+   {:status :untested-suggestion
+    :source "ground-control cohort-2 ops log"
+    :architecture
+    "First prove weak convergence implies uniform norm boundedness, via the uniform boundedness principle; then derive `IsCoboundedUnder` non-circularly from that actual upper bound; finally apply `le_liminf_of_le`."
+    :caution
+    "No corpus commit or runner trace has yet located or validated the necessary Mathlib uniform-boundedness-to-norm-bound chain."}}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :mathlib-lemma, :id "le_liminf_of_le"}
+   #:ref{:type :mathlib-definition,
+         :id "Filter.IsCoboundedUnder"}
+   #:ref{:type :formalization-bottleneck,
+         :id "liminf-coboundedness-unbounded-above"}]
+  :evidence
+  {:turn-round-ids ["e-3d6d4147-f1fe-4298-8acc-c6ddaa17602e"]
+   :commits ["26be1cb64f54724e803452daa60ac6b7398a045b"]
+   :problems ["a93A03"]
+   :register-markers
+   ["⊸meter [S4]"
+    "⊸prop [scope-challenge]"
+    "⊸meter [ground-control-math-note]"]}
+  :confidence :single-instance
+  :rationale
+  "The runner reached the exact premise in compiling one-sorry code, tested both available real-liminf routes, and documented the direction mismatch and csSup circularity. The proposed boundedness-first discharge remains explicitly untested."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}
+
+ {:name "use-informal-proof-architecture-with-leaf-level-verification"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :partial-trust-corpus-use
+   :trigger
+   "A harvested informal solution contains a mathematically useful proof architecture plus speculative or sorry-filled Lean code."
+   :rule
+   ["Retain the high-level mathematical decomposition when it correctly identifies which hypotheses control which terms."
+    "Independently verify every proposed Mathlib leaf before adopting the formal skeleton."
+    "Replace manual or sorry-heavy expansions with a native identity when the library packages the entire algebraic step."
+    "Report the artifact as a template dependency, not as either a fully trusted proof or a rejected source."]
+   :observed-use
+   {:artifact "problems/a93A03/informal-solution.md"
+    :retained
+    "The architecture `weak convergence at x + convergence of norms + expansion of ‖hₙ-x‖²`."
+    :replaced
+    "The suggested sorry-heavy norm expansion and low-level inner-product manipulation."
+    :replacement
+    "`norm_sub_sq_real`, followed by ordinary limit arithmetic and `Real.continuous_sqrt`."
+    :outcome
+    "Part (a) compiles with zero sorries; the separate part (b) liminf packaging remains partial."}
+   :scope
+   "Harvested mathematical solutions that mix sound prose-level structure with unverified theorem names or incomplete Lean sketches."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :apm-artifact,
+         :id "problems/a93A03/informal-solution.md"}
+   #:ref{:type :process-pattern, :id "partial-trust-corpus-use"}]
+  :evidence
+  {:turn-round-ids
+   ["e-74b13e0c-b6bf-465b-923a-1fb44674666f"
+    "e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-14a11c0a-aa86-4b46-aa8e-1da080d7688b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The session begins by reading the informal solution, independently locates the exact identity, completes the retained architecture, and explicitly characterizes the source as a useful template whose formal expansion was replaced."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "conditionally-convergent-series-use-ordered-partial-sums"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Formalize the value of a conditionally convergent real series such as the alternating harmonic series."
+   :gotcha
+   "Mathlib's default `HasSum f a` uses the `unconditional` summation filter: convergence of sums over arbitrary sufficiently large finite subsets, invariant under permutation. It is not the usual ordered-series convergence along initial segments of ℕ."
+   :explicit-library-warning
+   "`Mathlib.Topology.Algebra.InfiniteSum.Defs` explicitly names `fun n : ℕ => (-1 : ℝ)^n / (n + 1)` as a function that does not have a sum under the default definition, although it is summable for the conditional filter."
+   :wrong-formulation
+   "`HasSum (fun n : ℕ => (-1 : ℝ)^n / (n + 1)) (Real.log 2)` with the default filter is false, not merely difficult to prove."
+   :correct-formulation
+   "`Tendsto (fun n => ∑ i ∈ Finset.range n, (-1 : ℝ)^i / (i + 1)) atTop (𝓝 (Real.log 2))` records convergence in the natural order. An explicit conditional summation filter is another possible formulation when its API is desired."
+   :process-consequence
+   "Before using `HasSum`, `Summable`, or `tsum` for a non-absolutely-convergent series, inspect the summation filter. If the mathematics depends on term order, state the theorem with ordered partial sums or an explicit conditional filter."
+   :location
+   "`Mathlib.Topology.Algebra.InfiniteSum.Defs`, the documentation immediately above `HasProd`/`HasSum` (including the alternating harmonic non-example)."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-definition, :id "HasSum"}
+   #:ref{:type :mathlib-file,
+         :id "Mathlib.Topology.Algebra.InfiniteSum.Defs"}]
+  :evidence
+  {:turn-round-ids
+   ["e-6802a1b3-0eb8-407c-b98d-680c4d2b73db"
+    "e-ad75ac9e-d209-47a5-9e6f-ca2bfc1c5105"
+    "e-ca4b627d-8147-4b65-9350-24fc1bac746e"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "384ccab1c2f88b70cfa077e9a034a5b2263e57b1"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "The runner found the exact Mathlib documentation, changed the theorem statement from the false default-`HasSum` form to ordered partial-sum `Tendsto`, and retained that correction in the compiling partial artifact."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "leibniz-formula-template-for-abel-boundary-limits"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Identify the ordered sum of an alternating series by extending an interior power-series identity to the boundary of its convergence disk."
+   :template "`Real.tendsto_sum_pi_div_four`"
+   :location
+   "`Mathlib.Analysis.Real.Pi.Leibniz`; the theorem proves the Leibniz π/4 series using Abel's limit theorem."
+   :template-shape
+   ["Use an alternating-series theorem to obtain convergence of ordered partial sums to some l."
+    "Apply `tendsto_tsum_powerSeries_nhdsWithin_lt` to show the interior power series tends to l as the scalar tends to 1 from below."
+    "Identify the interior `tsum` with a closed-form analytic function."
+    "Prove that closed form tends to the desired boundary value."
+    "Use uniqueness of limits to identify l."]
+   :a93j02-instantiation
+   "Take coefficients `(-1)^n/(n+1)`. Inside `0 < x < 1`, transform `hasSum_pow_div_log_of_abs_lt_one` at `-x` into `Σ (-1)^n x^n/(n+1) = log(1+x)/x`; then let x tend to 1 from below."
+   :key-api
+   ["Antitone.tendsto_alternating_series_of_tendsto_zero"
+    "tendsto_tsum_powerSeries_nhdsWithin_lt"
+    "hasSum_pow_div_log_of_abs_lt_one"
+    "tendsto_nhds_unique"]
+   :boundary
+   "The template supplies the proof architecture, not the coefficient algebra. In a93J02 the remaining sorry is exactly the reindexing/sign/division conversion from the log power series to the required coefficient form."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-lemma, :id "Real.tendsto_sum_pi_div_four"}
+   #:ref{:type :mathlib-lemma,
+         :id "tendsto_tsum_powerSeries_nhdsWithin_lt"}]
+  :evidence
+  {:turn-round-ids
+   ["e-8eb04dbf-2648-4d71-95cd-14840160715b"
+    "e-d32c4644-568d-4888-81ae-507a9b3cdcf8"
+    "e-f0e2e84a-712c-425b-9bbe-7bb5d45d0d4b"
+    "e-ca4b627d-8147-4b65-9350-24fc1bac746e"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "384ccab1c2f88b70cfa077e9a034a5b2263e57b1"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 41-43 show direct discovery and adaptation of the Leibniz proof; the final artifact implements alternating convergence and the Abel setup while honestly isolating the coefficient conversion as its one remaining sorry."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "translate-interval-integrals-with-integral-comp-add-right"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Evaluate an interval integral whose integrand is a translated standard function, such as `∫₀¹ 1/(1+x) dx`."
+   :lemma "`intervalIntegral.integral_comp_add_right`"
+   :use
+   "Instantiate `f := fun y : ℝ => y⁻¹`, interval endpoints 0 and 1, and translation 1. This rewrites the integral of `(x+1)⁻¹` over `[0,1]` as the integral of `x⁻¹` over `[1,2]`."
+   :completion
+   "Apply `integral_inv_of_pos` on `[1,2]`, then normalize `log (2/1)` to `log 2`."
+   :normalization-gotcha
+   "The source integrand may be written `1 / (1+x)` while the translation lemma produces `(x+1)⁻¹`; explicitly rewrite with `one_div` and commutativity before applying the lemma."
+   :result
+   "The a93J02 lemma `integral_inv_one_plus_x` compiles with zero sorries."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-lemma,
+         :id "intervalIntegral.integral_comp_add_right"}
+   #:ref{:type :mathlib-lemma, :id "integral_inv_of_pos"}]
+  :evidence
+  {:turn-round-ids
+   ["e-88825788-562b-41f8-9c6e-bf3e66fdd2e0"
+    "e-6a1cdbfb-9624-496e-84d7-cab0b71865fd"
+    "e-f9a4ea77-fb59-4466-8c55-5aed3884851f"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "The trace records the normalization failures and successful substitution, and the committed helper lemma is a complete application of this API chain."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "record-reasoned-non-use-of-surfaced-memories"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :live-dispatch-memory-use-outcome
+   :rule
+   "A surfaced memory is an offered hypothesis, not an obligation to cite or force into the proof. Inspect it, mark it unused when its preconditions or proof object do not match, and retain a short reason so honest non-use becomes recall-quality evidence."
+   :live-event
+   {:job-id "invoke-1785096421259-158-9638e22e"
+    :problem "a93J02"
+    :receipt-status :pending-outcome
+    :surfaced-count 3
+    :surfaced-levels [:strategy :strategy :strategy]
+    :surfaced
+    [{:memory-id "e-1ac936fb-04e8-460e-a710-37fac474401c"
+      :name "symmetric-interval-law-to-dyadic-differentiation"
+      :outcome :not-directly-applicable
+      :reason
+      "Its midpoint splitting and differentiation-basis architecture does not address an ordered scalar series or Abel boundary limit."}
+     {:memory-id "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a"
+      :name "lacunary-series-three-layer-architecture"
+      :outcome :not-directly-applicable
+      :reason
+      "It separates M-test regularity, derivative interchange, and natural-boundary arguments for lacunary power series; a93J02 instead needs conditional ordered summation and evaluation at a boundary point."}
+     {:memory-id "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"
+      :name "convergence-in-measure-through-bounded-transform"
+      :outcome :not-directly-applicable
+      :reason
+      "Its bad-set measure decomposition is unrelated to scalar partial sums and logarithmic power-series identities."}]
+    :outcome-source
+    "The dispatch receipt records the three offers as pending/unused; the runner's final summary explicitly names all three and reports each as not directly applicable."}
+   :level-mismatch
+   "All offered memories were strategy-level. The useful discoveries were lemma-location facts: the default-`HasSum` semantic trap, the `Real.tendsto_sum_pi_div_four` Abel template, and `integral_comp_add_right`."
+   :missed-pattern
+   {:pattern-id "math/series-evaluation-api"
+    :description-terms
+    ["tsum" "series evaluation" "zeta" "Basel" "index shift" "hasSum"
+     "summable" "geometric series" "uniform convergence" "M-test"
+     "power series continuity"]
+    :diagnosis
+    "The generated receipt query contained generic terms such as `convergence`, `dominated`, and `sum_`, but omitted `series`, `alternating`, `harmonic`, `log`, `HasSum`, and `tsum`; the proof-outline contributed only `apm-a93j02` and `select`, leaving too little lexical overlap for the series-evaluation pattern despite the actual terrain."}
+   :process-consequence
+   "Treat reasoned non-use as a successful receipt outcome, and use the miss diagnosis to improve recall terms or attachments rather than counting three unused offers as runner failure."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :memory-use-receipt,
+         :id "e-33c1ea3a-3c12-4074-983a-61ccc25918d2"}
+   #:ref{:type :recall-pattern, :id "math/series-evaluation-api"}]
+  :evidence
+  {:turn-round-ids ["e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :dispatch-receipt-ids
+   ["e-33c1ea3a-3c12-4074-983a-61ccc25918d2"]
+   :surfaced-memory-ids
+   ["e-1ac936fb-04e8-460e-a710-37fac474401c"
+    "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a"
+    "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"]
+   :pattern-description-ids
+   ["e-pattern-description-v1-series-evaluation-api"]
+   :commits ["e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "This is the first live dispatch-surfacing event in the pilot: the store receipt identifies exactly what was offered and why, while the runner's final report supplies the discriminating non-use outcome."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "reduce-lattice-periodic-entire-functions-to-compact-domain"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "Show that an entire complex-valued function invariant under a rank-two lattice is constant."
+   :proof-shape
+   ["Extend each base-period equation from one translate to every integer multiple, including negative integers."
+    "Choose a compact fundamental parallelogram for the lattice."
+    "Decompose every z into a representative w in that parallelogram plus an integer lattice translate. For periods 1 and I, use `Int.fract z.re`, `Int.fract z.im`, `Int.floor z.re`, and `Int.floor z.im`."
+    "Use periodicity to prove `f z = f w`, hence `Set.range f` is contained in the image of the compact fundamental domain."
+    "Continuity of the coordinate map and f makes that image compact and therefore bounded."
+    "Apply Liouville's bounded-entire-function theorem to conclude that f is constant."]
+   :rectangular-lattice-decomposition
+   "`z = (fract (re z) + fract (im z) * I) + floor (re z) + floor (im z) * I`, with both fractional coordinates in `[0,1]`."
+   :formal-assembly
+   {:integer-periods
+    "`Int.induction_on` extends `f (z+ω)=f z` to `f (z+n*ω)=f z`; `push_cast` and `ring` normalize successor and predecessor arithmetic."
+    :compactness
+    "`isCompact_Icc.prod isCompact_Icc`, followed by two `IsCompact.image` steps for the coordinate map and f."
+    :range-bound
+    "`IsBounded.subset` transports boundedness from the compact image to `Set.range f`."
+    :final-leaf
+    "`Differentiable.exists_const_forall_eq_of_bounded`."}
+   :scope
+   "The committed instance uses the rectangular lattice generated by 1 and I. A general pair of real-linearly independent periods needs the corresponding coordinate decomposition, but the compact-domain and Liouville architecture is unchanged."
+   :failure-boundary
+   "Compactness alone bounds f only on the chosen domain; the range-containment proof through lattice reduction is the essential bridge."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J05"}
+   #:ref{:type :proof-pattern,
+         :id "lattice-periodicity-to-compact-fundamental-domain"}]
+  :evidence
+  {:turn-round-ids
+   ["e-b398750c-9184-47ab-aad3-4062bfb6b7d1"
+    "e-a16714bd-b152-45ff-a547-71a856469cf0"
+    "e-c5846d8c-04b6-484d-8aa1-9052c717d9c1"
+    "e-e5e61d86-394e-458c-ab7e-3d588f98bb83"
+    "e-eee98fc5-0915-45d2-b45d-37b3ecfb2b20"]
+   :commits
+   ["03453c31c1ddefd67925c0366a84fdd198a5442f"
+    "f3d9a2ecbd3a4f38077977fab341d4fecefbc81c"
+    "32f09c85f42210396d76559117fb3ef6cd29b522"]
+   :problems ["a93J05"]}
+  :confidence :single-instance
+  :rationale
+  "The runner selected the Liouville architecture immediately, implemented each compactness and periodicity bridge, and the final zero-sorry commit executes the full lattice reduction."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "liouville-bounded-entire-constant-api"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Conclude that a globally complex-differentiable function is constant after separately proving boundedness of its range."
+   :lemma "`Differentiable.exists_const_forall_eq_of_bounded`"
+   :location "`Mathlib.Analysis.Complex.Liouville`"
+   :statement-shape
+   "Given `hf : Differentiable ℂ f` and `IsBounded (Set.range f)`, `hf.exists_const_forall_eq_of_bounded` yields `∃ c, ∀ z, f z = c`."
+   :use
+   "Apply the lemma at the start of the final theorem so the remaining goal is exactly boundedness of `range f`; then prove that goal by compact fundamental-domain reduction."
+   :boundary
+   "The lemma does not infer boundedness from periodicity. Periodicity, lattice decomposition, compactness, and range containment remain caller obligations."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J05"}
+   #:ref{:type :mathlib-lemma,
+         :id "Differentiable.exists_const_forall_eq_of_bounded"}]
+  :evidence
+  {:turn-round-ids
+   ["e-a16714bd-b152-45ff-a547-71a856469cf0"
+    "e-eee98fc5-0915-45d2-b45d-37b3ecfb2b20"]
+   :commits
+   ["03453c31c1ddefd67925c0366a84fdd198a5442f"
+    "32f09c85f42210396d76559117fb3ef6cd29b522"]
+   :problems ["a93J05"]}
+  :confidence :single-instance
+  :rationale
+  "Round 5 finds the exact theorem, and the committed main proof begins with a direct application before discharging its bounded-range premise."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "normalize-integer-complex-casts-before-projections"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Prove a complex equality by real and imaginary parts when the expression contains integers cast directly into ℂ, especially floor terms."
+   :symptom
+   "After `Complex.ext` and expansion with `Complex.add_re`, `Complex.mul_re`, `Complex.add_im`, and `Complex.mul_im`, goals retain terms such as `(↑⌊x⌋ : ℂ).re` and `(↑⌊x⌋ : ℂ).im`; `Complex.ofReal_re` and `Complex.ofReal_im` do not match those direct integer casts."
+   :lemma "`Complex.ofReal_intCast`"
+   :before
+   "`simp only [Complex.ofReal_re, Complex.ofReal_im, ...]` leaves integer-cast projections opaque, so `linarith`, `ring`, `omega`, and `push_cast` cannot see the real floor identities."
+   :after
+   "Include `← Complex.ofReal_intCast` before `Complex.ofReal_re` and `Complex.ofReal_im` in the simplification set. The integer-to-complex cast is first normalized to an integer-to-real cast followed by `Complex.ofReal`; the projection lemmas then reduce it to a real integer cast."
+   :rewrite-rule
+   "Normalize the source cast into the constructor expected by a projection lemma before trying to simplify the projection."
+   :successful-shape
+   ["Apply `Complex.ext`."
+    "Expand addition, multiplication, and I projections."
+    "Rewrite with `← Complex.ofReal_intCast`."
+    "Simplify `Complex.ofReal_re`/`Complex.ofReal_im`."
+    "Finish with the real identities `Int.fract_add_floor` and `linarith`."]
+   :scope
+   "Direct `ℤ → ℂ` casts under `.re` or `.im`. The broader tactic applies whenever a simplification lemma is stated for an intermediate constructor rather than the original coercion path."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J05"}
+   #:ref{:type :mathlib-lemma, :id "Complex.ofReal_intCast"}
+   #:ref{:type :formalization-pattern,
+         :id "normalize-cast-before-projection"}]
+  :evidence
+  {:turn-round-ids
+   ["e-86706e90-5414-4f4c-8514-33bfcb97f577"
+    "e-c61806f7-8e1f-4c42-a7cc-9d16ffed140e"
+    "e-ea067e3f-1422-4c07-b9c1-cd44c9446f76"
+    "e-db1938b2-b8f7-4121-9030-e9e1b803ae92"
+    "e-eee98fc5-0915-45d2-b45d-37b3ecfb2b20"]
+   :commits
+   ["f3d9a2ecbd3a4f38077977fab341d4fecefbc81c"
+    "32f09c85f42210396d76559117fb3ef6cd29b522"]
+   :problems ["a93J05"]}
+  :confidence :single-instance
+  :rationale
+  "The trace documents repeated failures with projection simplification and identifies `Complex.ofReal_intCast` as the decisive normalization; the final commit removes the last sorry with exactly this rewrite order."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "formalize-statement-first-after-confirmed-api-absence"
+  :level :process
+  :status :draft
+  :body
+  {:trigger
+   "A needed theorem is absent after repository search, #check probes, and prior failed attempts have confirmed that the gap is real rather than a lemma-location miss."
+   :rule
+   ["Commit the exact reusable theorem statements with all imports, namespaces, types, and side conditions compiling."
+    "Document the intended proof decomposition and the specific API leaves already located."
+    "Leave explicit, bounded sorries only at the unresolved proof obligations; do not disguise them as a completed library result."
+    "Use the construction artifact as the contract for a follow-on proof session."]
+   :positive-instance
+   "`YoungL2.lean` establishes compiling statements for both Young L² inequalities and records the weighted Hölder, Fubini, and translation-invariance route while retaining exactly two theorem-body sorries."
+   :boundary
+   "Use only after absence is confirmed. If the theorem already exists, statement-first construction creates duplication instead of resolving a dependency."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "lib-young"}
+   #:ref{:type :apm-problem, :id "a96A04"}
+   #:ref{:type :process-pattern,
+         :id "statement-first-confirmed-absence"}]
+  :evidence
+  {:turn-round-ids ["e-2f56155d-6a39-46bd-9bda-6dcdc6c4f3dd"]
+   :commits ["525253b68eb882de1eb2db2b2a2eb91e8c5ceedc"]
+   :problems ["lib-young" "a96A04"]}
+  :confidence :single-instance
+  :rationale
+  "The S1 artifact compiles with the intended public statements and exactly two disclosed sorries, turning a confirmed missing dependency into a reviewable construction contract."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}
+
+ {:name "young-l2-holder-fubini-translation-api-map"
+  :level :lemma-location
+  :status :dependency-map-blocked
+  :body
+  {:problem-class
+   "Prove the L² Young convolution bounds `‖f ⋆ g‖₂ ≤ ‖f‖₁ ‖g‖₂` and its symmetric L²/L¹ variant on ℝ."
+   :proof-map
+   [{:stage :pointwise-holder
+     :leaf "`MeasureTheory.integral_mul_le_Lp_mul_Lq_of_nonneg`"
+     :role
+     "Apply weighted Cauchy–Schwarz/Hölder to the convolution integrand after splitting one factor into square-root weights."}
+    {:stage :integrate-and-swap
+     :leaf "Tonelli/Fubini for nonnegative integrands"
+     :role
+     "Integrate the squared pointwise estimate and exchange the x/y integrals."}
+    {:stage :translate
+     :leaf "Lebesgue integral invariance under translation"
+     :role
+     "Reduce `∫ ‖g (x-y)‖² dx` to `∫ ‖g x‖² dx`."}
+    {:stage :finish
+     :leaf "square-root and eLpNorm identities"
+     :role
+     "Convert the squared integral estimate back to the L² norm inequality."}]
+   :symmetric-case
+   "Obtain the L²/L¹ orientation by the same calculation with f and g exchanged, or by convolution commutativity once its hypotheses are available."
+   :continuation-result
+   {:session "S1b"
+    :outcome "Honest zero progress: the file still compiles with two sorries and no new commit."
+    :main-theorem-blocker
+    "The proof still needs a coherent Fubini/Tonelli assembly around the weighted Cauchy–Schwarz estimate and translation invariance."
+    :corollary-blocker
+    "Deriving the probability-kernel corollary additionally needs `Integrable g` from nonnegativity plus `∫ g = 1`; the attempt did not close `HasFiniteIntegral`/`AEStronglyMeasurable` for arbitrary g, nor the scalar-action and ENNReal normalization details."
+    :lesson
+    "The statement-first map remains valid, but its named leaves are not yet an executable proof chain; future work should isolate the integrability and measure-preserving translation sublemmas before returning to the top theorem."}
+   :boundary
+   "This is a blocked dependency map, not a completed proof. S1b validated the statements and blockers but did not reduce either theorem-body sorry."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "lib-young"}
+   #:ref{:type :apm-problem, :id "a96A04"}
+   #:ref{:type :mathlib-lemma,
+         :id "MeasureTheory.integral_mul_le_Lp_mul_Lq_of_nonneg"}]
+  :evidence
+  {:turn-round-ids
+   ["e-2f56155d-6a39-46bd-9bda-6dcdc6c4f3dd"
+    "e-5c8b38e1-d6b1-444b-bc76-4a4919d8e0d0"]
+   :commits ["525253b68eb882de1eb2db2b2a2eb91e8c5ceedc"]
+   :problems ["lib-young" "a96A04"]}
+  :confidence :single-instance
+  :rationale
+  "The compiling construction fixes the target signatures; the S1b continuation independently confirms that the unresolved work is the Fubini/integrability assembly rather than statement design or a hidden existing theorem."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}
+
+ {:name "fatou-lp-ae-limit-api-chain"
+  :level :lemma-location
+  :status :proved-component
+  :body
+  {:problem-class
+   "Derive the L² Fatou lower-semicontinuity inequality from almost-everywhere convergence of measurable functions."
+   :api-chain
+   [{:leaf "`aestronglyMeasurable_of_tendsto_ae`"
+     :role
+     "Transfer a.e.-strong measurability to the pointwise a.e. limit."}
+    {:leaf "`MeasureTheory.Lp.eLpNorm'_lim_le_liminf_eLpNorm'`"
+     :role
+     "Apply Fatou directly at the primed extended Lp norm level."}
+    {:leaf "`eLpNorm_eq_eLpNorm'`"
+     :role
+     "Rewrite the public eLpNorm goals to the primed form expected by the Fatou lemma."}]
+   :critical-side-condition
+   {:shape
+    "`Filter.IsBoundedUnder (· ≥ ·) atTop (fun n => eLpNorm (f n) 2 volume)`"
+    :construction
+    "Use zero as an eventual lower bound: `⟨0, Eventually.of_forall (fun _ => by simp)⟩`."}
+   :result
+   "The a96A03 part-(1) theorem compiles using this chain."
+   :boundary
+   "This chain proves the Fatou/liminf component only. The same commit retains one separate sorry in the density-plus-dominated-convergence argument for part (2)."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a96A03"}
+   #:ref{:type :mathlib-lemma,
+         :id "MeasureTheory.Lp.eLpNorm'_lim_le_liminf_eLpNorm'"}
+   #:ref{:type :mathlib-lemma,
+         :id "aestronglyMeasurable_of_tendsto_ae"}
+   #:ref{:type :mathlib-lemma, :id "eLpNorm_eq_eLpNorm'"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0619e21d-72a8-4f40-be9a-7dec4c4bb7e1"
+    "e-d6d7a90c-2321-4f8b-9d80-ef2f74ee9c1a"]
+   :commits ["d93e7e0dbe7b24f14d12006cd93ae560ccbe7a33"]
+   :problems ["a96A03"]}
+  :confidence :single-instance
+  :rationale
+  "The final commit witnesses the Fatou component in compiling code, and the trace identifies both the three API leaves and the zero lower-bound construction needed by the liminf side condition."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}]

@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+Syntax error compiling at (futon3c/transport/invoke_ingress_integration_test.clj:192:9).
+Unable to resolve symbol: finally in this context
+
+Full report at:
+/tmp/clojure-9172917452932320717.edn

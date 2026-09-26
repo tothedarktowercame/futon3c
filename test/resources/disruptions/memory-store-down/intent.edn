@@ -1,0 +1,1 @@
+{:job-id "job-memory-store-down" :dispatch/id "dispatch-memory-store-down" :dispatch/action :invoke :expected/postcondition {:job/state :terminal}}

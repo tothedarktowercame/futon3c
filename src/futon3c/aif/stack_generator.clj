@@ -20,6 +20,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.evidence.store :as estore]))
 
@@ -78,7 +79,18 @@
    :effect-witness
    {:kind :ranked-actions-top-shifts-on-action
     :observable "ranked-actions[0] :action :target changes between two consecutive WM scheduler ticks bracketing a pilot action."
-    :demonstrated-by "Pre-action top: address-sorry sorry/wm-aif-substrate-addressability (G=-4.99).  Post-action top: address-sorry sorry/r3a-likelihood-loop-health (G=-4.39).  Recorded in pilot-inhabitations.edn under inhab/claude-1/cycle/cg-5b03db29-address-meta-sorry."}
+    :demonstrated-by "Pre-action top: address-sorry sorry/wm-aif-substrate-addressability (G=-4.99).  Post-action top: address-sorry sorry/r3a-likelihood-loop-health (G=-4.39).  Recorded in pilot-inhabitations.edn under inhab/claude-1/cycle/cg-5b03db29-address-meta-sorry."
+    ;; The 2026-05-25 demonstration stands as recorded; it is kept, not
+    ;; rewritten.  But no future tick can meet this criterion as written: the
+    ;; flat decision is deleted (Joe, 2026-09-17, SPEC-flat-removal), so there
+    ;; is no ranked-actions[0] to shift.  The same effect in the grain the
+    ;; machine now decides in:
+    :superseded-by
+    {:kind :enacted-cascade-shifts-on-action
+     :observable "the tick's enacted :cascade-candidate -- its target and its first acting pattern -- differs between two consecutive WM scheduler ticks bracketing a pilot action, with both decisions carrying :selection-law :applied :cascade-selection-posterior."
+     :why "a cascade is a policy and G is computed over policies (Joe, 2026-09-17); the action is a marginal of the cascade posterior, so the flat top-of-ranking has no referent."
+     :demonstrated-by :not-yet
+     :blocked-on "the tick decides for one declared target today; a second target must be declared before an enacted choice can shift."}}
    :successor-witness
    {:kind :recurring-shifts-without-pilot-intervention
     :v3-spec "v3 would close once the pilot's actions on R3a-tier sorries (likelihood models) themselves drive a recomputation that surfaces non-sorry actions — e.g. :open-mission, :fire-pattern, :learn-action-class — as concrete candidates with G-totals comparable to or exceeding the sorry tier.  Until then v3 remains a documented-but-not-preregistered follow-on."
@@ -393,15 +405,17 @@
     stack))
 
 ;; =============================================================================
-;; Live next-move projection from judgement.ranked-actions
+;; Live next-move projection from judgement.decision (H3: cascade-only)
 ;; =============================================================================
 ;;
 ;; E-wm-live-recommendation: the cached :reading :next-move in THE-STACK.aif.edn
-;; is a static prior (mtime ~33d at time of authorship).  The War Machine's
-;; scheduler produces a fresh :judgement :ranked-actions every ~300s.  Project
-;; the top of the live ranked-actions into a next-move-shape that the cljs
+;; is a static prior.  The War Machine's scheduler produces a fresh :judgement
+;; :decision every ~300s.  Project the cascade decision (its target, enacted
+;; first step, posterior mass, β) into a next-move-shape that the cljs
 ;; next-move-tile can render alongside the cached prose, so the pilot's loop
-;; reads live data rather than a poster on the wall.
+;; reads live data rather than a poster on the wall.  A typed abstention is a
+;; readiness state, rendered as its refusals grouped by kind — never a fallback
+;; selection.  There is no :ranked-actions read (H3 removed the flat grain).
 
 (def ^:private live-rec-default-days 14)
 (def ^:private live-rec-alt-count 4)
@@ -434,26 +448,39 @@
         tp          tp
         :else       (pr-str action)))))
 
-(defn- ranked-entry-action [entry]
-  (or (:action entry) (get entry "action")))
+(defn- step-key
+  "Identity of an enacted/alternative first step for display comparison."
+  [step]
+  (if (map? step) [(action-type-str step) (action-target-str step)] step))
 
-(defn- ranked-entry-g-total [entry]
-  (or (:G-total entry) (get entry "G-total")))
+(defn =step
+  "True when two first steps are the same for presentation purposes."
+  [left right]
+  (= (step-key left) (step-key right)))
 
-(defn- ranked-entry-rank [entry]
-  (or (:rank entry) (get entry "rank")))
-
-(defn- alternatives-from-ranked [ranked-actions]
-  (->> (rest (take (inc live-rec-alt-count) ranked-actions))
+(defn- alternatives-from-posterior
+  "Posterior alternatives to the enacted step: the other first-acting-pattern
+   marginals, best-first, as short legible strings. Presentation only."
+  [posterior enacted-step]
+  (->> (remove #(=step (:step %) enacted-step) posterior)
+       (take live-rec-alt-count)
        (map-indexed
         (fn [i entry]
-          (let [a (ranked-entry-action entry)]
-            [(keyword (str "rank-" (+ 2 i)))
-             (str (action-type-str a)
-                  " " (action-target-str a)
-                  " (G=" (some-> (ranked-entry-g-total entry)
-                                 (#(format "%.3f" (double %)))) ")")])))
+          [(keyword (str "alternative-" (inc i)))
+           (str (action->specifically (:step entry))
+                " (p=" (format "%.3f" (double (:posterior-mass entry))) ")")]))
        (into {})))
+
+(defn- posterior-entry->tile-entry
+  "Slim form the cljs tile renders, for one posterior first-step marginal."
+  [entry]
+  (let [s (:step entry)]
+    {:rank           (:rank entry)
+     :posterior-mass (:posterior-mass entry)
+     :G-display      (when (number? (:posterior-mass entry))
+                       (format "%.3f" (double (:posterior-mass entry))))
+     :specifically   (action->specifically s)
+     :action         s}))
 
 (defn- snapshot-judgement [snapshot]
   ;; The cached payload is stored in JSON-key-stringified form
@@ -473,59 +500,20 @@
                    (java.time.Instant/now)))
       (catch Throwable _ nil))))
 
-(def ^:private live-rec-tied-epsilon
-  "G-total distance under which two ranked-actions are considered tied
-   for display purposes (suppress false specificity in the live tile).
-   The WM's EFE math frequently yields exact ties (5 sibling sorries
-   with identical channel-gap contributions); 1e-3 covers exact + near-
-   exact cases."
-  1.0e-3)
-
-(defn- tied-prefix
-  "Return the prefix of RANKED-ACTIONS whose G-total is within EPS of
-   top-1's G-total.  Caller decides what to do with the count (display
-   as tied-bucket when > 1; single-action when = 1)."
-  [ranked-actions eps]
-  (when-let [top (first ranked-actions)]
-    (let [top-g (ranked-entry-g-total top)]
-      (->> ranked-actions
-           (take-while (fn [r]
-                         (let [g (ranked-entry-g-total r)]
-                           (and (number? g) (number? top-g)
-                                (< (Math/abs (- g top-g)) eps)))))
-           vec))))
-
-(defn- ranked-entry->tile-entry
-  "Project a ranked-action into the slim form the cljs tile renders for
-   the tied-bucket display. §3.4 trace affordance: include per-term G
-   decomposition + :anamnesis-concentration when present (attached by
-   futon2.report.war-machine/apply-anamnesis-tiebreak when the tied group
-   was discriminated by ΔT)."
-  [entry]
-  (let [a (ranked-entry-action entry)
-        g (ranked-entry-g-total entry)]
-    {:rank         (ranked-entry-rank entry)
-     :G-total      g
-     :G-display    (when (number? g) (format "%.3f" (double g)))
-     :G-risk       (or (:G-risk entry) (get entry "G-risk"))
-     :G-ambiguity  (or (:G-ambiguity entry) (get entry "G-ambiguity"))
-     :G-info       (or (:G-info entry) (get entry "G-info"))
-     :G-survival   (or (:G-survival entry) (get entry "G-survival"))
-     :anamnesis-concentration (or (:anamnesis-concentration entry)
-                                  (get entry "anamnesis-concentration"))
-     :specifically (action->specifically a)
-     :action       a
-     :rationale    (or (:rationale a) (get a "rationale"))}))
-
 (defn derive-next-move-live
-  "Project the top of judgement.ranked-actions into the next-move-tile shape.
+  "Project the authoritative judgement.decision into the next-move-tile
+   shape. H3 (2026-09-17): the flat :ranked-actions grain is removed; the
+   projection is built from the cascade decision — its target, the enacted
+   first step (:action), the posterior mass (:posterior-mass) and β with its
+   status — plus the posterior alternatives. A typed abstention renders as a
+   readiness state (refusals grouped by kind in :refusals-by-kind); it is
+   not an error and never a fallback selection.
 
-   Returns a map with :action, :rank, :G-total, :specifically, :rationale,
-   :alternatives-considered, :priorities, :mode, :source, :as-of,
-   :scheduler-period-seconds, :age-seconds, :stale?, :note,
-   :tied-actions (vec of slim ranked-entry projections — count is 1 when
-   top-1 has no near-equal siblings, > 1 when WM has tied options),
-   :tied-count — or nil if no live snapshot is available.
+   Returns a map with :action, :target, :posterior-mass, :beta,
+   :specifically, :alternatives-considered, :priorities, :mode, :source,
+   :as-of, :scheduler-period-seconds, :age-seconds, :stale?, :note,
+   :tied-actions (slim posterior marginal projections), :tied-count — or
+   nil if no live snapshot is available.
 
    Stale? is true when the snapshot is older than 2× the scheduler period
    (default period 300s → stale at >600s).  The cljs tile uses :stale? to
@@ -533,12 +521,7 @@
   ([] (derive-next-move-live (wm-snapshot-for live-rec-default-days)))
   ([snapshot]
    (when-let [judgement (snapshot-judgement snapshot)]
-     (let [ranked (or (:ranked-actions judgement)
-                      (get judgement "ranked-actions")
-                      (get judgement "ranked_actions"))
-           top    (first ranked)
-           top-action (ranked-entry-action top)
-           priorities (or (:priorities judgement)
+     (let [priorities (or (:priorities judgement)
                           (get judgement "priorities"))
            mode (or (:mode judgement) (get judgement "mode"))
            as-of (snapshot-as-of snapshot)
@@ -547,34 +530,53 @@
            ;; to keep stack-generator's surface minimal.
            period-s 300
            stale? (when (number? age-s) (> age-s (* 2 period-s)))
-           tied (tied-prefix ranked live-rec-tied-epsilon)
-           tied-actions (mapv ranked-entry->tile-entry tied)
-           tied-count (count tied-actions)]
-       (when top-action
-         {:action top-action
-          :rank (or (ranked-entry-rank top) 1)
-          :G-total (ranked-entry-g-total top)
-          :specifically (action->specifically top-action)
-          :rationale (or (:rationale top-action)
-                         (get top-action "rationale")
-                         "Top of judgement.ranked-actions for this WM tick")
-          :alternatives-considered (alternatives-from-ranked ranked)
-          :priorities (vec (take 5 (or priorities [])))
-          :mode mode
-          :source :wm-judgement-ranked-actions
-          :as-of as-of
-          :scheduler-period-seconds period-s
-          :age-seconds age-s
-          :stale? (boolean stale?)
-          ;; E-wm-live-recommendation v1.1: tied-bucket display.
-          ;; When the WM's EFE has multiple actions at near-equal G-total,
-          ;; surface the whole bucket so the cljs tile doesn't falsely
-          ;; promote rank-1 as if it were a real preference.
-          :tied-actions tied-actions
-          :tied-count tied-count
-          :tied-epsilon live-rec-tied-epsilon
-          :note (str "Recomputed every WM scheduler tick (default "
-                     period-s "s). See E-wm-live-recommendation.md.")})))))
+           selection-trace (live-recommendation/project judgement)
+           status (:status selection-trace)
+           base {:priorities (vec (take 5 (or priorities [])))
+                 :mode mode
+                 :source :judgement.decision
+                 :as-of as-of
+                 :scheduler-period-seconds period-s
+                 :age-seconds age-s
+                 :stale? (boolean stale?)
+                 :note (str "Recomputed every WM scheduler tick (default "
+                            period-s "s). See E-wm-live-recommendation.md.")}
+           branch (if (= :recommendation-issued status)
+                    (let [recommendation (:recommendation selection-trace)
+                          step (:enacted-step recommendation)
+                          posterior (:posterior selection-trace)
+                          chosen-entry (first (filter #(=step (:step %) step)
+                                                      posterior))]
+                      {:action step
+                       :target (:target recommendation)
+                       :rank (or (:rank chosen-entry) 1)
+                       :posterior-mass (or (:posterior-mass chosen-entry)
+                                           (:posterior-mass recommendation))
+                       :beta (:beta recommendation)
+                       :specifically (action->specifically step)
+                       :rationale (or (when (map? step) (:rationale step))
+                                      "Authoritative judgement.decision (cascade) for this WM tick")
+                       :alternatives-considered
+                       (alternatives-from-posterior posterior step)
+                       ;; A presentation projection must not re-rank the
+                       ;; posterior; the tile keeps only the enacted step's
+                       ;; own marginal.
+                       :tied-actions (if chosen-entry
+                                       [(posterior-entry->tile-entry chosen-entry)]
+                                       [])
+                       :tied-count (if chosen-entry 1 0)})
+                    ;; abstention / unavailable: a readiness state, not an error
+                    {:action nil
+                     :rank nil
+                     :tied-actions []
+                     :tied-count 0
+                     :refusals (:refusals selection-trace)
+                     :refusals-by-kind (:refusals-by-kind selection-trace)})]
+       (merge base
+              branch
+              (select-keys selection-trace
+                           [:status :algorithm :recommendation :posterior
+                            :selection-boundary :actuation]))))))
 
 (defn- cached-prose-mtime []
   (try

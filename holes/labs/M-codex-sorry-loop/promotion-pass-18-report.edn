@@ -1,0 +1,1 @@
+{:at "2026-07-28", :mode :commit, :patterns {}, :results [{:name "combine-Schwarz-rigidity-with-power-series-uniqueness", :status :skipped-existing} {:name "bound-the-interface-adapter-heuristic-with-genuine-construction-cases", :status :skipped-existing} {:name "prefer-installed-source-search-when-the-library-namespace-is-guessable", :status :skipped-existing}]}

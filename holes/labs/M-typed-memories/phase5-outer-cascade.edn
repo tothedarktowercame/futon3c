@@ -1,0 +1,46 @@
+{:cascade
+ {:shown ["p4ng/R9-independent-witness"
+          "p4ng/R6-candidate-pattern-action-space"
+          "p4ng/R5-policy-evaluation"
+          "p4ng/R10-liveness"]
+  :semilattice
+  {:descent
+   [["p4ng/R9-independent-witness"
+     "p4ng/R6-candidate-pattern-action-space"]
+    ["p4ng/R6-candidate-pattern-action-space"
+     "p4ng/R5-policy-evaluation"]
+    ["p4ng/R6-candidate-pattern-action-space"
+     "p4ng/R10-liveness"]]
+   :co_app []}
+  :policy-holes
+  [{:hole/type :unrepresented-control
+    :hole-signature "recover-from-misleading-retrieval-seed"
+    :witness-ids ["wm-review/seed-a"]
+    :memory-ids ["e-wm-memory-challenge"]
+    :why "No control pattern represents recovery from a misleading seed"}
+   {:hole/type :unrepresented-control
+    :hole-signature "recover-from-misleading-retrieval-seed"
+    :witness-ids ["wm-review/seed-b"]
+    :memory-ids ["e-wm-eig-challenge"]
+    :why "A second witnessed episode repeats the same control hole"}]}
+ :dependencies
+ [{:mission-id "M-aif-policy-conditioned-eig"
+   :depends-on "M-shared-memory-control-build-test"
+   :status :witnessed
+   :provenance [{:kind :reviewed-phase5-fixture}]}
+  {:mission-id "M-wm-aif-policy-grain-compliance"
+   :depends-on "M-wm-tripwires"
+   :status :witnessed
+   :provenance [{:kind :reviewed-phase5-fixture}]}]
+ :transition-warrants
+ [{:from "p4ng/R9-independent-witness"
+   :to "p4ng/R6-candidate-pattern-action-space"
+   :status :witnessed
+   :provenance [{:kind :reviewed-phase5-fixture}]}
+  {:from "p4ng/R6-candidate-pattern-action-space"
+   :to "p4ng/R5-policy-evaluation"
+   :status :witnessed
+   :provenance [{:kind :reviewed-phase5-fixture}]}]
+ :checkpoint
+ {:held-out-target-ids ["M-shared-memory-control-build-test"]
+  :hit-k 1}}

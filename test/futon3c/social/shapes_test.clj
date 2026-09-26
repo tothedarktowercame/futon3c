@@ -5,7 +5,8 @@
    must have at least one valid example and at least one invalid example.
    This ensures the Malli schemas are well-formed and catch real errors."
   (:require [clojure.test :refer [deftest is testing]]
-            [futon3c.social.shapes :as shapes]))
+            [futon3c.social.shapes :as shapes]
+            [malli.core :as malli]))
 
 ;; =============================================================================
 ;; Test data factories
@@ -425,7 +426,11 @@
   (testing "valid artifact ref"
     (is (shapes/valid? shapes/ArtifactRef
                        {:ref/type :mission
-                        :ref/id "M-agency-refactor"}))))
+                        :ref/id "M-agency-refactor"})))
+  (testing "decision refs provide exact outcome join identity"
+    (is (shapes/valid? shapes/ArtifactRef
+                       {:ref/type :decision
+                        :ref/id "wm-decision-20260731"}))))
 
 (deftest artifact-ref-invalid
   (testing "invalid artifact ref — bad type"
@@ -545,12 +550,13 @@
                      :ClaimType :ArtifactRefType :ArtifactRef
                      :EvidenceType :EvidenceEntry :EvidenceQuery
                      :SocialError :TypedAgentId
-                     :WsPeripheralStart :WsToolAction :WsPeripheralStop}]
+                     :WsPeripheralStart :WsPeripheralEvent
+                     :WsToolAction :WsPeripheralStop}]
       (is (= expected (set (keys shapes/shapes)))))))
 
 (deftest all-shapes-are-valid-malli-schemas
   (testing "every shape in the registry is a valid Malli schema"
     (doseq [[shape-name schema] shapes/shapes]
       (testing (str "shape: " shape-name)
-        (is (some? (malli.core/schema schema))
+        (is (some? (malli/schema schema))
             (str shape-name " is not a valid Malli schema"))))))

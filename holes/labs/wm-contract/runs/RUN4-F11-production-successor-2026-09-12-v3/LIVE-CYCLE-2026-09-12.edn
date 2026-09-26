@@ -1,0 +1,60 @@
+{:schema :wm/f11-continuous-cycle-v1
+ :recorded-at "2026-09-12T18:12:00Z"
+ :series-id "run4-f11-production-successor-20260912-v3"
+ :trial-id "M-f11-find-production-successor"
+ :controller-attempt-id "f11-production-successor-20260912-attempt-003"
+ :click-id "wm-click-c9d0581b-2ea4-40c9-b1ed-8031e3a4b5d9"
+ :run-id "d6785ee0-2d38-4bd2-a20f-ecf511569532"
+ :cohort {:id :run4-f11-production-successor-20260912-v3
+          :local-attempt "attempt-001" :target 1 :closed-count 1}
+ :fold {:job-id "run4-fold-91348cfc-520c-4fb2-950e-349c7704cf81"
+        :seat "codex-21" :wiring-present? true
+        :authority-present? true :execution-present? true}
+ :selection-enaction
+ {:verdict :match
+  :selected {:type :repair-machine-failure :target "repair-attempt-001"}
+  :enacted {:type :repair-machine-failure :target "repair-attempt-001"}
+  :requested-not-enacted
+  {:type :advance-mission :target "M-f11-find-production-successor"}
+  :evidence {:source :runner-selection
+             :reason "stop-the-line: independent-review-failure from attempt-001"}}
+ :jobs {:author "invoke-1789235425446-20455-180e9812"
+        :review-round-1 "invoke-1789235726964-20457-3cae8c04"
+        :revision-author "invoke-1789236017657-20458-af126f34"
+        :review-round-2 "invoke-1789236324087-20459-b1eacea7"}
+ :repair-attempt-001
+ {:implementation-commits
+  ["b630882eaf08651f834a452aee0311467d49210a"
+   "f60779574b6f818c5b49c8e509692af7769e58b8"]
+  :review-round-1 :reject
+  :review-round-2 :approve
+  :grounded false
+  :remaining-requirement :distinct-production-shaped-successor}
+ :result {:cohort-outcome :incomplete
+          :task-success false
+          :grounded false
+          :reason :machine-repair-lacks-grounded-review-evidence
+          :service-projection
+          {:status :absent
+           :binding-status :unavailable
+           :run-record-status :absent
+           :run-record-absence :runner-did-not-observe-topology-route}}
+ :repair-successor {:repair-id "repair-attempt-024-feature-card-missing-or-invalid"
+                    :replacement-commit "a0bd18be8ba400a9930ae7b773652076df4981ad"
+                    :requested-task-enacted? false
+                    :discharged? false
+                    :verification-record-present? false}
+ :i6 {:previous-finding :required-negative-controls-failed
+      :current-finding :machine-repair-lacks-grounded-review-evidence
+      :same-consecutive-finding? false}
+ :i8 {:item 3 :operator-interventions 0 :terminal-disposition :incomplete}
+ :artifacts
+ {:selection-sha256 "c2df44eba55601e84342c3972c96574d1ff6bc694deaf9a03af49dfbf6cf699d"
+  :construction-sha256 "a7af3782bd0e7fb7f188e6ced96b5bc43be3c490738b8321355390e0b4fbfe5a"
+  :dispatch-sha256 "e2c5634b18e62f95d93cb5f95829db4c90a2fb8b3d851a85a95cb347cd2163b3"
+  :build-sha256 "78129718d366f64094227ef69ba3c8ddadce3491b251e795d0e52974a6e5abe2"
+  :adjudication-sha256 "a8e5a87dc0ed087485f35e1b0958c9135a7f818087e6bc99a95fff1dff366c60"
+  :closed-sha256 "6100141ed696df07769c704dfb8d6f70eef0d0a72bb04f75adfaac270b140a26"
+  :run-record nil}
+ :claims {:runtime-validation-only true
+          :lean-attestation :suspended-vocabulary}}

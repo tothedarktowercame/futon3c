@@ -25,12 +25,15 @@
                :agent/session-id "sess-remote"
                :agent/status :idle
                :agent/metadata {:proxy? true :remote? true
+                                :home-site :lon
                                 :origin-url "http://192.168.1.100:7070"}}})
 
 (def ^:private clean-routing
   {"claude-1" {:invoke-route :local :invoke-ready? true}
    "codex-1"  {:invoke-route :ws :invoke-ready? true}
-   "claude-r" {:invoke-route :none :invoke-ready? false}})
+   "claude-r" {:invoke-route :none
+               :invoke-ready? false
+               :invoke-diagnostic "proxy not connected yet"}})
 
 (def ^:private peripheral-specs
   "Minimal peripheral topology for testing."
@@ -60,14 +63,35 @@
   (testing "No violations in a well-formed registry + routing + topology"
     (let [db (logic/build-db {:registry clean-registry
                               :routing clean-routing
+                              :local-point :laptop
+                              :live-writers [{:agent-id "claude-1"
+                                              :session-id "sess-claude-1"
+                                              :inhabitant-id "pid-1"}
+                                             {:agent-id "codex-1"
+                                              :session-id "sess-codex-1"
+                                              :inhabitant-id "pid-2"}]
                               :peripherals peripheral-specs})
           v (logic/query-violations db)]
       (is (empty? (:untyped-agents v))
           "All agents have typed IDs")
       (is (empty? (:duplicate-sessions v))
           "No shared session-ids")
+      (is (empty? (:duplicate-live-writers v))
+          "No two live inhabitants write the same session")
+      (is (empty? (:remote-local-phantoms v))
+          "Remote proxy does not count as a local phantom")
       (is (empty? (:route-inconsistencies v))
           "Routes match invoke-fn presence")
+      (is (empty? (:dead-connected-channels v))
+          "No dishonest connection-state facts")
+      (is (empty? (:stale-remote-health v))
+          "No stale remote-health facts")
+      (is (empty? (:invoke-readiness-gaps v))
+          "Route :none has a diagnostic")
+      (is (empty? (:exhausted-sessions v))
+          "No context-exhausted sessions")
+      (is (empty? (:unaccepting-servers v))
+          "No unaccepting server probes")
       (is (empty? (:dead-end-peripherals v))
           "All peripherals have exits")
       (is (empty? (:entry-exit-asymmetry v))
@@ -104,6 +128,62 @@
         (is (= "sess-claude-1" sid))
         (is (= #{"claude-1" "codex-1"} #{a1 a2}))))))
 
+(deftest query-violations-catches-duplicate-live-session-writers
+  (testing "AG-1: one session-id cannot have two live writer inhabitants"
+    (let [db (logic/build-db {:registry clean-registry
+                              :live-writers [{:agent-id "claude-1"
+                                              :session-id "sess-claude-1"
+                                              :inhabitant-id "interactive-cli"}
+                                             {:agent-id "claude-1"
+                                              :session-id "sess-claude-1"
+                                              :inhabitant-id "headless-resume"}]})
+          v (logic/query-violations db)]
+      (is (= [["headless-resume" "interactive-cli" "sess-claude-1"]]
+             (:duplicate-live-writers v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-catches-remote-homed-local-phantom
+  (testing "AG-2: remote-homed agent cannot be run locally as a non-proxy phantom"
+    (let [registry (assoc clean-registry
+                     "lon-claude-1" {:agent/id {:id/value "lon-claude-1" :id/type :continuity}
+                                     :agent/type :claude
+                                     :agent/invoke-fn (fn [_prompt _session-id] {:result "wrong local run"})
+                                     :agent/capabilities [:coordination/execute]
+                                     :agent/session-id "lon-session"
+                                     :agent/status :idle
+                                     :agent/metadata {:home-site :lon}})
+          routing (assoc clean-routing
+                    "lon-claude-1" {:invoke-route :local :invoke-ready? true})
+          db (logic/build-db {:registry registry
+                              :routing routing
+                              :local-point :laptop})
+          v (logic/query-violations db)]
+      (is (= [{:agent-id "lon-claude-1"
+               :home-point :lon
+               :local-point :laptop}]
+             (:remote-local-phantoms v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-allows-remote-homed-proxy
+  (testing "AG-2: remote-homed proxy is the intended local representation"
+    (let [registry (assoc clean-registry
+                     "lon-claude-1" {:agent/id {:id/value "lon-claude-1" :id/type :continuity}
+                                     :agent/type :claude
+                                     :agent/invoke-fn (fn [_prompt _session-id] {:result "forwarded"})
+                                     :agent/capabilities [:coordination/execute]
+                                     :agent/session-id "lon-session"
+                                     :agent/status :idle
+                                     :agent/metadata {:proxy? true
+                                                      :home-site :lon
+                                                      :origin-url "http://172.236.28.208:7070"}})
+          routing (assoc clean-routing
+                    "lon-claude-1" {:invoke-route :local :invoke-ready? true})
+          db (logic/build-db {:registry registry
+                              :routing routing
+                              :local-point :laptop})
+          v (logic/query-violations db)]
+      (is (empty? (:remote-local-phantoms v))))))
+
 ;; =============================================================================
 ;; Invoke routing violations
 ;; =============================================================================
@@ -125,6 +205,89 @@
           db (logic/build-db {:registry registry})
           v (logic/query-violations db)]
       (is (some #{"claude-1"} (:agents-invoking v))))))
+
+(deftest query-violations-catches-dead-connected-channel
+  (testing "AG-3: :connected must mean the underlying channel is live"
+    (let [db (logic/build-db {:connections [{:connection-id "codex-ws"
+                                             :declared-state :connected
+                                             :channel-state :dead}]})
+          v (logic/query-violations db)]
+      (is (= [{:connection-id "codex-ws"
+               :declared-state :connected
+               :channel-state :dead}]
+             (:dead-connected-channels v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-catches-stale-remote-health
+  (testing "AG-4: remote health must be current, not registration-frozen"
+    (let [db (logic/build-db {:remote-health [{:agent-id "codex-1"
+                                               :registered-ready? true
+                                               :current-ready? false}]})
+          v (logic/query-violations db)]
+      (is (= ["codex-1"] (:stale-remote-health v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-catches-undiagnosed-invoke-unreadiness
+  (testing "AG-5: route :none must carry a diagnostic"
+    (let [db (logic/build-db {:registry clean-registry
+                              :routing {"codex-1" {:invoke-route :none
+                                                    :invoke-ready? false}}})
+          v (logic/query-violations db)]
+      (is (= ["codex-1"] (:invoke-readiness-gaps v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-allows-diagnosed-invoke-unreadiness
+  (testing "AG-5: route :none is allowed when a diagnostic explains it"
+    (let [db (logic/build-db {:registry clean-registry
+                              :routing {"codex-1" {:invoke-route :none
+                                                    :invoke-ready? false
+                                                    :invoke-diagnostic "ws bridge not connected"}}})
+          v (logic/query-violations db)]
+      (is (empty? (:invoke-readiness-gaps v))))))
+
+(deftest query-violations-catches-context-exhausted-session
+  (testing "AG-6: context-exhausted sessions need fresh continuity"
+    (let [db (logic/build-db {:session-capacity [{:agent-id "codex-1"
+                                                  :session-id "019ecbd7"
+                                                  :capacity-state :context-exhausted}]})
+          v (logic/query-violations db)]
+      (is (= [{:agent-id "codex-1"
+               :session-id "019ecbd7"
+               :capacity-state :context-exhausted}]
+             (:exhausted-sessions v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-catches-listening-but-unaccepting-server
+  (testing "AG-7: listening implies accepting within bounded backlog/latency"
+    (let [db (logic/build-db {:server-accept [{:server-id :london-7070
+                                               :listening? true
+                                               :accepting? false
+                                               :backlog 51
+                                               :backlog-limit 50
+                                               :accept-latency-ms 60000
+                                               :latency-bound-ms 1000}]})
+          v (logic/query-violations db)]
+      (is (= [{:server-id :london-7070
+               :listening? true
+               :accepting? false
+               :backlog 51
+               :backlog-limit 50
+               :accept-latency-ms 60000
+               :latency-bound-ms 1000}]
+             (:unaccepting-servers v)))
+      (is (logic/violations? v)))))
+
+(deftest query-violations-allows-listening-and-accepting-server
+  (testing "AG-7: healthy accept-loop facts do not violate"
+    (let [db (logic/build-db {:server-accept [{:server-id :local-7070
+                                               :listening? true
+                                               :accepting? true
+                                               :backlog 0
+                                               :backlog-limit 50
+                                               :accept-latency-ms 10
+                                               :latency-bound-ms 1000}]})
+          v (logic/query-violations db)]
+      (is (empty? (:unaccepting-servers v))))))
 
 ;; =============================================================================
 ;; Hop topology violations

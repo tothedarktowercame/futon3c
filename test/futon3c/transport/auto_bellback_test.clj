@@ -1,9 +1,13 @@
 (ns futon3c.transport.auto-bellback-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.inbox :as agency-inbox]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.transport.http :as http]))
 
 (def ^:dynamic *ledger-file* nil)
@@ -49,7 +53,7 @@
   {:body (json/generate-string m)})
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (let [tmp (java.io.File/createTempFile "auto-bellback" ".edn")]
       (.delete tmp)
@@ -57,11 +61,13 @@
         (with-redefs-fn {#'http/invoke-jobs-store-path (fn [] *ledger-file*)}
           (fn []
             (reg/reset-registry!)
+            (parked-on/clear!)
             (http/reset-invoke-jobs!)
             (try
               (f)
               (finally
                 (reg/reset-registry!)
+                (parked-on/clear!)
                 (http/reset-invoke-jobs!)
                 (io/delete-file tmp true)))))))))
 
@@ -77,8 +83,12 @@
     (is (= 1 (count @enqueued)))
     (is (= "claude-6" (:caller (first @enqueued))))
     (is (= "auto-bellback-job-1" (:bell-job-id (first @enqueued))))
-    (is (str/includes? (:prompt (first @enqueued)) "codex-1 finished job `job-1`"))
-    (is (str/includes? (:prompt (first @enqueued)) "state: `done`"))
+    ;; Format-agnostic: bell-router default flipped ON 2026-06-27, so the prompt is
+    ;; "RE: your bell — job `job-1` to codex-1 finished (state `done`)" rather than the
+    ;; legacy "codex-1 finished job `job-1` (state: `done`)". Both name the job + state.
+    (is (str/includes? (:prompt (first @enqueued)) "job `job-1`"))
+    (is (str/includes? (:prompt (first @enqueued)) "codex-1"))
+    (is (str/includes? (:prompt (first @enqueued)) "`done`"))
     (is (= {:sent? true
             :bell-job-id "auto-bellback-job-1"}
            (select-keys (:auto-bellback (job "job-1")) [:sent? :bell-job-id])))))
@@ -104,6 +114,128 @@
       #(finalize! "job-2b"))
     (is (empty? @enqueued))
     (is (nil? (:auto-bellback (job "job-2b"))))))
+
+(deftest pull-only-caller-completion-is-atomically-delivered-to-inbox
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "completion-inbox"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        caller "pull-only-caller"
+        job-id "pull-only-completion"]
+    (try
+      (reg/register-agent!
+       {:agent-id caller
+        :type :mock
+        :delivery-mode :inbox
+        :invoke-fn (fn [& _] (throw (ex-info "pull-only caller invoked" {})))
+        :capabilities [:invoke]})
+      ;; An ineligible worker type reproduces the observed gap: push
+      ;; auto-bellback would not have been selected for this completion.
+      (create-job! {:job-id job-id :agent-id "unregistered-worker" :caller caller})
+      (with-redefs [agency-inbox/inbox-root (constantly root)]
+        (finalize! job-id)
+        (#'http/record-bell-completion-delivery! job-id caller {:ok true})
+        (let [original (job job-id)
+              bell-job-id (get-in original [:auto-bellback :bell-job-id])
+              bell-job (job bell-job-id)
+              inbox-file (io/file (:inbox-path bell-job))
+              payload (json/parse-string (slurp inbox-file) true)]
+          (is (= "delivered" (get-in original [:delivery :status])))
+          (is (= "inbox" (get-in original [:delivery :surface])))
+          (is (= {:terminal-job-id job-id
+                  :delivery-status "delivered"
+                  :inbox-file-created? true
+                  :registered-push-performed? false
+                  :polling-available? true}
+                 (:trace/delivery-observation original)))
+          (is (.isFile inbox-file))
+          (is (not (.exists (io/file (.getParentFile inbox-file)
+                                     (str bell-job-id ".json.tmp"))))
+              "atomic rename leaves no temporary delivery file")
+          (is (= (str "/api/alpha/invoke/jobs/" bell-job-id "/ack")
+                 (:ack-url payload)))
+          (is (= job-id (:in-reply-to payload)))))
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (io/delete-file file true))))))
+
+(deftest push-caller-completion-delivery-receipt-is-unchanged
+  (register-agent! "codex-push" :codex)
+  (register-agent! "claude-push" :claude)
+  (create-job! {:job-id "push-completion"
+                :agent-id "codex-push"
+                :caller "claude-push"})
+  (with-redefs-fn {#'http/*enqueue-auto-bellback!* (constantly nil)}
+    #(finalize! "push-completion"))
+  (#'http/record-bell-completion-delivery!
+   "push-completion" "claude-push" {:ok true})
+  (is (= {:status "delivered"
+          :surface "bell"
+          :note "bell-job-ready"}
+         (select-keys (:delivery (job "push-completion"))
+                      [:status :surface :note])))
+  (is (true? (get-in (job "push-completion")
+                     [:trace/delivery-observation
+                      :registered-push-performed?]))))
+
+(deftest pollable-result-is-not-recorded-as-delivered
+  (create-job! {:job-id "pollable-completion"
+                :agent-id "unregistered-worker"
+                :caller "missing-caller"})
+  (finalize! "pollable-completion")
+  (let [delivery (:delivery (job "pollable-completion"))]
+    (is (= "delivery-failed" (:status delivery)))
+    (is (not= "delivered" (:status delivery)))
+    (is (= "poll" (:surface delivery)))
+    (is (false? (get-in (job "pollable-completion")
+                        [:trace/delivery-observation
+                         :registered-push-performed?])))
+    (is (= "caller-not-a-registered-seat" (:note delivery)))
+    (is (= "/api/alpha/invoke/jobs/pollable-completion"
+           (:destination delivery)))))
+
+(deftest terminal-non-seat-job-never-rests-at-pending
+  (create-job! {:job-id "terminal-non-seat"
+                :agent-id "unregistered-worker"
+                :caller "jvm-harness"})
+  (finalize! "terminal-non-seat")
+  (let [terminal (job "terminal-non-seat")]
+    (is (= "done" (:state terminal)))
+    (is (= "delivery-failed" (get-in terminal [:delivery :status])))
+    (is (= "poll" (get-in terminal [:delivery :surface])))
+    (is (= "delivery-failed"
+           (get-in terminal [:trace/delivery-observation :delivery-status])))))
+
+(deftest concurrent-reader-cannot-observe-terminal-before-delivery-disposition
+  (let [job-id "concurrent-terminal-non-seat"
+        entered (promise)
+        release (promise)
+        record! (var-get #'http/record-invoke-job-delivery-by-job-id!)]
+    (create-job! {:job-id job-id
+                  :agent-id "unregistered-worker"
+                  :caller "jvm-harness"})
+    (with-redefs [http/record-invoke-job-delivery-by-job-id!
+                  (fn [& args]
+                    (deliver entered true)
+                    @release
+                    (apply record! args))]
+      (let [finalizer (future-call (bound-fn [] (finalize! job-id)))]
+        @entered
+        (let [durable-half-state (job job-id)
+              public-half-state
+              (#'http/invoke-job-public-view durable-half-state)]
+          (is (= "done" (:state durable-half-state)))
+          (is (= "pending" (get-in durable-half-state [:delivery :status])))
+          (is (= "delivering" (:state public-half-state)))
+          (is (not (#'http/terminal-invoke-state?
+                    (:state public-half-state)))))
+        (deliver release true)
+        @finalizer
+        (let [public-final
+              (#'http/invoke-job-public-view (job job-id))]
+          (is (= "done" (:state public-final)))
+          (is (= "delivery-failed"
+                 (get-in public-final [:delivery :status])))
+          (is (map? (:trace/delivery-observation public-final))))))))
 
 (deftest invalid-callers-do-not-bell-back
   (register-agent! "codex-1" :codex)
@@ -131,23 +263,79 @@
     (is (empty? @enqueued))))
 
 (deftest auto-bellback-job-records-delivery
-  (register-agent! "claude-6" :claude)
-  (let [direct-executor (proxy [java.util.concurrent.AbstractExecutorService] []
-                          (shutdown [] nil)
-                          (shutdownNow [] [])
-                          (isShutdown [] false)
-                          (isTerminated [] false)
-                          (awaitTermination [_ _] true)
-                          (execute [r] (.run r)))]
-    (with-redefs [http/invoke-executor direct-executor]
-      (let [job-id (#'http/enqueue-auto-bellback!
-                    {:caller "claude-6"
-                     :bell-job-id "auto-bellback-delivery-1"
-                     :prompt "bell back from test"})
-            delivery (:delivery (job job-id))]
-        (is (= "delivered" (:status delivery)))
-        (is (= "auto-bellback" (:surface delivery)))
-        (is (= "auto-bellback-ready" (:note delivery)))))))
+  ;; Covers the LEGACY (flag-off) lane's synchronous delivery recording; the
+  ;; drainer-v2 lane's delivery runs on the drainer thread (finalize-fn) and is
+  ;; covered by auto-bellback-routes-through-per-agent-drainer-when-v2-on.
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [direct-executor (proxy [java.util.concurrent.AbstractExecutorService] []
+                            (shutdown [] nil)
+                            (shutdownNow [] [])
+                            (isShutdown [] false)
+                            (isTerminated [] false)
+                            (awaitTermination [_ _] true)
+                            (execute [r] (.run r)))]
+      (with-redefs [http/invoke-executor direct-executor]
+        (let [job-id (#'http/enqueue-auto-bellback!
+                      {:caller "claude-6"
+                       :bell-job-id "auto-bellback-delivery-1"
+                       :prompt "bell back from test"})
+              delivery (:delivery (job job-id))]
+          (is (= "delivered" (:status delivery)))
+          (is (= "auto-bellback" (:surface delivery)))
+          (is (= "auto-bellback-ready" (:note delivery))))))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
+
+(deftest auto-bellback-routes-through-per-agent-drainer-when-v2-on
+  ;; I-1 — "single identity is sequential execution" (incident 2026-06-26).
+  ;; With drainer-v2 ON (production default), an auto-bellback must enqueue on the
+  ;; RECIPIENT's per-agent drainer (single-flight, serialized with its other turns)
+  ;; instead of racing on the shared invoke-executor pool. Two concurrent dispatches
+  ;; for one agent were the defect that bifurcated claude-11.
+  (System/setProperty "FUTON3C_DRAINER_V2" "true")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [accepted (atom [])
+          executor-used (atom false)]
+      (with-redefs-fn {#'turn-queue/accept-async!
+                       (fn [entry] (swap! accepted conj entry) {:status :accepted})
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/invoke-executor
+                       (proxy [java.util.concurrent.AbstractExecutorService] []
+                         (shutdown [] nil) (shutdownNow [] []) (isShutdown [] false)
+                         (isTerminated [] false) (awaitTermination [_ _] true)
+                         (execute [r] (reset! executor-used true) (.run r)))}
+        (fn []
+          (#'http/enqueue-auto-bellback!
+           {:caller "claude-6" :bell-job-id "ab-route-1" :prompt "bell back"})))
+      (is (= 1 (count @accepted)) "routed through the per-agent drainer (accept-async!)")
+      (is (= "claude-6" (:to (first @accepted))) "enqueued to the recipient agent's drainer")
+      (is (= "auto-bellback" (:from (first @accepted))))
+      (is (false? @executor-used) "did NOT use the shared invoke-executor lane"))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
+
+(deftest auto-bellback-uses-legacy-lane-when-v2-off
+  ;; Flag-off fallback stays byte-for-byte: the shared invoke-executor lane.
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [accepted (atom [])
+          executor-used (atom false)]
+      (with-redefs-fn {#'turn-queue/accept-async!
+                       (fn [entry] (swap! accepted conj entry) {:status :accepted})
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/invoke-executor
+                       (proxy [java.util.concurrent.AbstractExecutorService] []
+                         (shutdown [] nil) (shutdownNow [] []) (isShutdown [] false)
+                         (isTerminated [] false) (awaitTermination [_ _] true)
+                         (execute [r] (reset! executor-used true) (.run r)))}
+        (fn []
+          (#'http/enqueue-auto-bellback!
+           {:caller "claude-6" :bell-job-id "ab-legacy-1" :prompt "bell back"})))
+      (is (true? @executor-used) "flag-off path uses the shared invoke-executor lane")
+      (is (empty? @accepted) "flag-off path does NOT route through accept-async!"))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
 
 (deftest feature-flag-off-disables-auto-bellback
   (register-agent! "codex-1" :codex)
@@ -160,6 +348,62 @@
     (is (empty? @enqueued))
     (is (nil? (:auto-bellback (job "job-4"))))))
 
+(deftest parked-caller-resume-suppresses-server-auto-bellback
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-park-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [full-result (str "FULL-RESULT-BEGIN\n"
+                         (apply str (repeat 80 "long parked reply line\n"))
+                         "FULL-RESULT-END")
+        park (parked-on/park! {:agent "claude-6"
+                               :session "session-1"
+                               :surface "emacs-codex-repl"
+                               :awaiting ["job-park-1"]
+                               :payload "resume checklist"}
+                              {:ledger-lookup (constantly nil)
+                               :now-ms 1000})
+        enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-park-1" "done" {:ok true :result full-result}))
+    (is (empty? @enqueued) "server auto-bellback is skipped")
+    (let [resume (http/parked-ready-pop! "claude-6" "session-1")]
+      (is (= (:id park) (:park-id resume)) "park resume was pushed instead")
+      (is (str/includes? (:prompt resume) "resume checklist"))
+      (is (str/includes? (:prompt resume) full-result)
+          "the substituted park channel carries the complete result, not its summary"))
+    (is (= {:suppressed? true
+            :reason :parked-on
+            :park-id (:id park)}
+           (select-keys (:auto-bellback (job "job-park-1"))
+                        [:suppressed? :reason :park-id])))))
+
+(deftest no-park-still-auto-bellbacks
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-no-park-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-no-park-1"))
+    (is (= 1 (count @enqueued)) "no awaiting park preserves the bellback path")
+    (is (= "claude-6" (:caller (first @enqueued))))))
+
+(deftest parked-notify-failure-does-not-suppress-auto-bellback
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-park-fail-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'parked-on/note-completion! (fn [& _] (throw (ex-info "boom" {})))
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-park-fail-1"))
+    (is (= 1 (count @enqueued))
+        "suppression depends on a successful released-records result; release failure leaves bellback live")))
+
 (deftest pure-decision-predicate-covers-gates
   (let [base {:job-id "job-5" :agent-id "codex-1" :caller "claude-6" :state "done"}]
     (is (true? (http/should-auto-bellback? base :codex true true)))
@@ -170,7 +414,21 @@
         "unregistered/ineligible recipient type never bells")
     (is (false? (http/should-auto-bellback? (assoc base :caller nil) :codex true true)))
     (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:sent? true}) :codex true true)))
-    (is (false? (http/should-auto-bellback? base :codex true false)))))
+    (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:suppressed? true})
+                                            :codex true true)))
+    (is (false? (http/should-auto-bellback? base :codex true true
+                                            [{:id "park-1" :agent "claude-6"}]))
+        "a released park for the caller suppresses the duplicate server wake")
+    (is (true? (http/should-auto-bellback? base :codex true true
+                                           [{:id "park-2" :agent "other-agent"}]))
+        "a released park for another agent does not suppress this caller")
+    (is (false? (http/should-auto-bellback? base :codex true false)))
+    (is (false? (http/should-auto-bellback? (assoc base :state "cancelled") :codex true true))
+        "cancelled while queued: nothing ran, the canceller already knows")
+    (is (true? (http/should-auto-bellback? (assoc base :state "cancelled"
+                                                  :started-at "2026-09-25T10:00:00Z")
+                                           :codex true true))
+        "cancelled mid-run still reports back")))
 
 ;; --- Bell router (E-crossed-bells): explicit, self-describing bellback replies ---
 
@@ -180,9 +438,14 @@
     (isTerminated [] false) (awaitTermination [_ _] true)
     (execute [r] (.run r))))
 
-(deftest bell-router-default-off
+(deftest bell-router-default-on
+  ;; Default flipped ON 2026-06-27 (Joe). Explicit off still disables.
   (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (is (false? (#'http/bell-router-enabled?))))
+  (try
+    (is (true? (#'http/bell-router-enabled?)) "unset ⇒ ON by default")
+    (System/setProperty "FUTON3C_BELL_ROUTER" "false")
+    (is (false? (#'http/bell-router-enabled?)) "explicit off still disables")
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-on-makes-bellback-an-explicit-reply
   (System/setProperty "FUTON3C_BELL_ROUTER" "true")
@@ -214,13 +477,18 @@
     (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-off-omits-bellback-of
-  (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (register-agent! "claude-6" :claude)
-  (with-redefs [http/invoke-executor (direct-executor)]
-    (let [job-id (#'http/enqueue-auto-bellback!
-                  {:caller "claude-6" :bell-job-id "auto-bellback-br3"
-                   :prompt "x" :reply-to "job-br3"})]
-      (is (nil? (:bellback-of (job job-id))) "off path records no correlation"))))
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")   ;; explicit off (default is now on)
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")    ;; legacy lane so invoke-executor redef applies
+  (try
+    (register-agent! "claude-6" :claude)
+    (with-redefs [http/invoke-executor (direct-executor)]
+      (let [job-id (#'http/enqueue-auto-bellback!
+                    {:caller "claude-6" :bell-job-id "auto-bellback-br3"
+                     :prompt "x" :reply-to "job-br3"})]
+        (is (nil? (:bellback-of (job job-id))) "off path records no correlation")))
+    (finally
+      (System/clearProperty "FUTON3C_BELL_ROUTER")
+      (System/clearProperty "FUTON3C_DRAINER_V2"))))
 
 (deftest bell-router-surface-header-shows-thread
   (System/setProperty "FUTON3C_BELL_ROUTER" "true")
@@ -234,11 +502,58 @@
     (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-off-omits-thread-line
-  (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (is (not (str/includes?
-            (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
-            "Thread:"))
-      "off path adds no thread header (byte-for-byte)"))
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")   ;; explicit off (default is now on)
+  (try
+    (is (not (str/includes?
+              (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
+              "Thread:"))
+        "off path adds no thread header (byte-for-byte)")
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+;; --- Reply-delivery dedup (incident 2026-06-26): don't manually re-bell when the
+;;     response auto-routes back to the caller (the double-delivery that bifurcated
+;;     claude-11). ---
+
+(deftest reply-auto-routes-contract-forbids-manual-rebell
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "claude-10" :claude)   ;; recipient — eligible type
+    (register-agent! "claude-11" :claude)   ;; caller — registered
+    (let [hdr (#'http/wrap-surface-header "do the thing" "bell" "claude-11" "claude-10"
+                                          {:bell-id "J42"})]
+      (is (str/includes? hdr "Reply delivery:") "explicit auto-route contract is shown")
+      (is (str/includes? hdr "delivered back to claude-11 automatically"))
+      (is (str/includes? hdr "do NOT also bell"))
+      (is (str/includes? hdr "Just respond to answer in-thread")
+          "NEW-request thread line says respond, not manually bell")
+      (is (not (str/includes? hdr "with in-reply-to=`J42`"))
+          "the manual reply-bell instruction is suppressed when the reply auto-routes"))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest reply-delivery-contract-shows-even-with-bell-router-off
+  ;; The dup happened with bell-router OFF, so the auto-route contract must NOT be
+  ;; gated behind it. (Default is now ON, so set it explicitly off here.)
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")
+  (try
+    (register-agent! "claude-10" :claude)
+    (register-agent! "claude-11" :claude)
+    (let [hdr (#'http/wrap-surface-header "x" "bell" "claude-11" "claude-10" {:bell-id "J50"})]
+      (is (str/includes? hdr "Reply delivery:"))
+      (is (str/includes? hdr "do NOT also bell")))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest no-auto-route-keeps-manual-reply-instruction
+  ;; When the response will NOT auto-route (caller unregistered), keep the manual
+  ;; reply-bell instruction so the answer still reaches the caller.
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "claude-10" :claude)
+    (let [hdr (#'http/wrap-surface-header "x" "bell" "ghost-caller" "claude-10"
+                                          {:bell-id "J43"})]
+      (is (not (str/includes? hdr "Reply delivery:")) "no auto-route ⇒ no auto-route contract")
+      (is (str/includes? hdr "bell/whistle ghost-caller with in-reply-to=`J43`")
+          "manual reply-bell instruction retained when there is no auto-route"))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 ;; --- Typed bells (M-typed-bells): type/ref on the wire + ArSE bridge ---
 
@@ -382,3 +697,22 @@
       (is (str/includes? header "Type: query"))
       (is (str/includes? header "help resolve ArSE `ask-typed-1`")))
     (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest cancelling-a-queued-job-draws-no-bellback
+  ;; Joe, 2026-09-25: 27 queued kimi-1 jobs cancelled by claude-12 became 27
+  ;; claude-12 turns saying "nothing to do". Through the real cancel handler.
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-cancel-queued" :agent-id "codex-1" :caller "claude-6"})
+  (create-job! {:job-id "job-cancel-running" :agent-id "codex-1" :caller "claude-6"})
+  (set-job-field! "job-cancel-running" :state "running")
+  (set-job-field! "job-cancel-running" :started-at "2026-09-25T10:00:00Z")
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                     #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(do (#'http/handle-cancel-invoke-job "job-cancel-queued" (json-request {}))
+           (is (= "cancelled" (:state (job "job-cancel-queued"))))
+           (is (empty? @enqueued) "queued job cancelled: no bellback")
+           (#'http/handle-cancel-invoke-job "job-cancel-running" (json-request {}))
+           (is (= ["auto-bellback-job-cancel-running"] (map :bell-job-id @enqueued))
+               "running job cancelled: the caller hears about it")))))

@@ -1,0 +1,19 @@
+cluster	slice	distinct-problems	transcripts	disposition	notes
+probe-the-claimed-property-not-the-acceptance-proxy	1	7	17	AUTHORED	Authored as a technique
+separate-evidence-history-from-verdict-state	1	4	4	REJECTED	Awaiting a clean-context leg
+type-empty-idle-failed-and-retryable-outcomes-explicitly	1	6	7	REINFORCES	agency/loud-failure
+measure-the-discriminating-population-before-prescribing	1	8	14	REINFORCES	system-coherence/facet-before-aggregating; system-coherence/argue-empirically-not-persuasively
+resolve-current-state-before-interpreting-historical-state	1	6	9	REINFORCES	process-coherence/status-refresh-before-work; stack-coherence/staleness-scan
+calibrate-a-gate-on-known-good-and-known-bad-artifacts	1	6	7	REINFORCES	data-mining/gates-as-code; data-mining/golden-is-curated-not-raw
+distinguish-mathematically-different-constructors-or-map-directions-before-encoding	2	1	2	REJECTED	Below 3-problem threshold
+partition-reported-library-gaps-into-absent-near-neighbour-search-and-packaging-gaps	2	1	3	REJECTED	Below threshold
+reframe-or-honestly-narrow-a-false-vacuous-formalization	2	1	1	REJECTED	Below threshold
+expose-hidden-equality-measure-or-closure-hypotheses-by-constructing-edge-witnesses	2	1	2	REJECTED	Below threshold
+validate-a-defect-probe-against-fresh-and-exception-bearing-examples	2	1	1	REINFORCES	Slice-1 probe-the-claimed-property-not-the-acceptance-proxy; does not independently clear the math threshold
+match-a-goal-to-a-named-theorem-by-hypothesis-conclusion-shape	3	7	13	REINFORCES	math-informal/reduce-to-known-result; math-informal/find-the-right-abstraction
+replace-enumeration-with-structural-counting	3	3	4	AUTHORED	Authored as a technique
+probe-the-transitive-axiom-trust-closure	3	5	9	REINFORCES	Slice-1 probe-the-claimed-property-not-the-acceptance-proxy
+re-express-a-goal-into-the-librarys-native-api-form	3	4	6	REINFORCES	math-informal/structural-equivalence; math-strategy/convention-bridge
+construct-an-edge-witness-or-pathological-model-to-test-semantics	3	4	4	REINFORCES	math-informal/construct-an-explicit-witness; check-the-extreme-cases; failure-mode-characterization
+check-hidden-instance-equality-direction-and-ambient-hypotheses	3	4	4	REINFORCES	math-strategy/hypothesis-category-check; case-1 transport-across-an-instance-diamond
+specialised-packaging-search	case-1	1	invoke-1786535522215-3816 mark 3	AWAITING	Awaiting a second independent leg

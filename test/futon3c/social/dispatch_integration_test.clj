@@ -4,7 +4,8 @@
    End-to-end scenarios that wire the full social pipeline (S-presence →
    S-authenticate → S-mode → S-dispatch) with peripheral dispatch, evidence
    threading, session persistence, and ← verification."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.threads :as threads]
@@ -21,7 +22,7 @@
   (:import [java.time Instant]))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)

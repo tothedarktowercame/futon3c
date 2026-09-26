@@ -1,0 +1,42 @@
+{
+  "arrows" : [ {
+    "from" : "a",
+    "to" : "x"
+  }, {
+    "from" : "a",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "y"
+  } ],
+  "id" : "deconfounding-game-4",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "deconfounding-game-4.json"
+  },
+  "variables" : [ {
+    "id" : "a",
+    "kind" : "latent-unobserved",
+    "name" : "Societal-Norm Attitudes (A)"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Smoking (X)"
+  }, {
+    "id" : "b",
+    "kind" : "observed",
+    "name" : "Seat-Belt Usage (B)"
+  }, {
+    "id" : "c",
+    "kind" : "latent-unobserved",
+    "name" : "Safety and Health Attitudes (C)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Lung Disease (Y)"
+  } ]
+}

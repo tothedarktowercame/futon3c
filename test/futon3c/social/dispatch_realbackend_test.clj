@@ -6,7 +6,8 @@
    Unlike dispatch_integration_test.clj (which uses MockBackend), these tests
    confirm that tool execution produces real results and that evidence entries
    land in the evidence store with correct reply chains."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.java.io :as io]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.store :as estore]
@@ -25,7 +26,7 @@
            [java.util UUID]))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)

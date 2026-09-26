@@ -1,0 +1,374 @@
+(ns futon3c.apm.promotion-candidate-store
+  "Controller-owned persistence for promotion candidates.
+
+  A Scribe describes candidate content.  This boundary derives its evidence
+  identity and digest, writes the evidence and proposed memory/assert edge,
+  and reads both back before a review request can be constructed."
+  (:require [clojure.string :as str]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.evidence.futon1b-backend :as f1b]
+            [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.substrate.client :as substrate])
+  (:import [java.time Instant]))
+
+(defn- nonblank? [value]
+  (and (string? value) (not (str/blank? value))))
+
+(defn- timeout-throwable [error]
+  (some #(when (instance? java.net.http.HttpTimeoutException %) %)
+        (take-while some? (iterate #(.getCause ^Throwable %) error))))
+
+(defn- fetch-review-entry [fetch-entry memory-id]
+  (try
+    {:ok true :entry (fetch-entry memory-id)}
+    (catch Throwable error
+      (let [data (ex-data error)
+            typed-read-failure?
+            (and (= :transport (:error/component data))
+                 (= :read (:transport/operation data)))
+            timeout (timeout-throwable error)]
+        (cond
+          typed-read-failure?
+          {:ok false
+           :error/code (:error/code data)
+           :error/component :transport
+           :transport/acquired-outcome (:transport/acquired-outcome data)
+           :transport/evidence :not-obtained
+           :memory-id memory-id
+           :exception/class (.getName (class error))
+           :exception/message (.getMessage error)}
+
+          timeout
+          {:ok false
+           :error/code :promotion-review-candidate-evidence-timeout
+           :error/component :transport
+           :transport/acquired-outcome :timeout
+           :transport/evidence :not-obtained
+           :memory-id memory-id
+           :exception/class (.getName (class timeout))
+           :exception/message (.getMessage timeout)}
+
+          :else
+          (throw error))))))
+
+(defn- evidence-body [candidate]
+  (select-keys candidate [:name :hook :kind :body :why :how-to-apply
+                          :admission/schema]))
+
+(defn controller-source-attempts
+  "Return the source receipts/jobs named by the controller-owned request."
+  [request]
+  (vec
+   (distinct
+    (concat
+     (:source-attempt-ids request)
+     (when-let [attempt-id (:input-attempt-id request)] [attempt-id])
+     (mapcat (fn [{:keys [job-id repair-job-ids]}]
+               (cond-> [] job-id (conj job-id) true (into repair-job-ids)))
+             (:student-attempts request))))))
+
+(defn controller-source-refs
+  "Keep controller-provided jobs, receipts and unresolved legacy IDs distinct."
+  [request]
+  (let [jobs (distinct (concat (:source-job-ids request)
+                               (when-let [id (:job-id request)] [id])
+                               (mapcat (fn [{:keys [job-id repair-job-ids]}]
+                                         (cond-> (vec repair-job-ids) job-id (conj job-id)))
+                                       (:student-attempts request))))
+        receipts (distinct (concat (:source-receipt-ids request)
+                                   (when-let [id (:input-attempt-id request)] [id])))
+        known (set (concat jobs receipts))]
+    (vec (concat (map #(hash-map :source/type :agency-job :source/id %) jobs)
+                 (map #(hash-map :source/type :phase-receipt :source/id %) receipts)
+                 (map #(hash-map :source/type :unresolved :source/id %)
+                      (remove known (:source-attempt-ids request)))))))
+
+(defn canonical-candidate
+  "Derive controller-owned identity and digest for one described candidate."
+  [deposit-request depositor ordinal candidate]
+  (let [reported-kind (:kind candidate)
+        reported-source-attempts (:source-attempts candidate)
+        kind (if (pipeline/proof-text?
+                  candidate (:solver-certified-source deposit-request))
+               :proof-text
+               :memory)
+        candidate (assoc candidate
+                         :reported-kind reported-kind
+                         :reported-source-attempts reported-source-attempts
+                         :kind kind
+                         :admission/schema
+                         pipeline/durable-memory-admission-schema
+                         :source-attempts
+                         (controller-source-attempts deposit-request)
+                         :source-refs (controller-source-refs deposit-request))
+        body (evidence-body candidate)
+        digest (machine/ledger-digest [body])
+        identity-digest
+        (machine/ledger-digest
+         [{:dispatch/id (:dispatch/id deposit-request)
+           :ordinal ordinal
+           :depositor depositor
+           :content-digest digest}])]
+    (assoc candidate
+           :reported-memory-id (:memory-id candidate)
+           :reported-content-digest (:content-digest candidate)
+           :memory-id (str "e-apm-promotion-" (subs identity-digest 0 32))
+           :content-digest digest)))
+
+(defn- candidate-errors [candidate]
+  (cond-> []
+    (not (nonblank? (:name candidate))) (conj :candidate-name-missing)
+    (not (nonblank? (:hook candidate))) (conj :candidate-hook-missing)
+    (not (nonblank? (:body candidate))) (conj :candidate-body-missing)
+    (not (and (vector? (:pattern-ids candidate))
+              (seq (:pattern-ids candidate))
+              (every? nonblank? (:pattern-ids candidate))))
+    (conj :candidate-patterns-missing)))
+
+(defn- memory-entry [deposit-request depositor candidate]
+  {:evidence/id (:memory-id candidate)
+   :evidence/subject {:ref/type :problem
+                      :ref/id (:problem-id deposit-request)}
+   :evidence/type :memory
+   :evidence/claim-type :assert
+   :evidence/author depositor
+   :evidence/session-id (or (:job-id deposit-request)
+                            (:dispatch/id deposit-request))
+   :evidence/at (str (Instant/now))
+   :evidence/body (evidence-body candidate)
+   :evidence/tags [:memory :memory/assert :apm/promotion-candidate]})
+
+(defn- memory-edge [deposit-request candidate]
+  (let [memory-id (:memory-id candidate)
+        problem-id (:problem-id deposit-request)
+        patterns (:pattern-ids candidate)]
+    {:hx/id (str "hx-mem-" (subs memory-id 2))
+     :hx/type :memory/assert
+     :hx/endpoints (vec (distinct (concat [memory-id problem-id] patterns)))
+     :hx/props {:roles {:entry memory-id
+                        :subjects (vec (cons problem-id patterns))
+                        :distills []
+                        :session (or (:job-id deposit-request)
+                                     (:dispatch/id deposit-request))
+                        :patterns patterns}
+                :kind (:kind candidate)
+                :admission/schema (:admission/schema candidate)
+                :name (:name candidate)
+                :hook (:hook candidate)
+                :volatile? false
+                :state :current
+                :domain :mathematics
+                :attachment-status :proposed}}))
+
+(defn- exact-entry? [expected observed]
+  ;; :evidence/at is assigned on first append and retained on replay.
+  (= (dissoc expected :evidence/at) (dissoc observed :evidence/at)))
+
+(defn- exact-edge-visible? [expected fetch-hyperedges]
+  (some #(and (= (:hx/id expected) (:hx/id %))
+              (= (:hx/props expected) (:hx/props %)))
+        (fetch-hyperedges (get-in expected [:hx/props :roles :entry]))))
+
+(def ^:private hyperedge-refusal-reasons
+  #{:invalid-hyperedge :invalid-hyperedge-end
+    :invalid-memory-assert-hyperedge
+    :memory-assert-evidence-endpoint-missing})
+
+(defn- pair-write-error-code [result]
+  (let [error (:error result)
+        reason (get-in error [:error/context :body :error :reason])]
+    (if (or (= :transport (:error/component error))
+            (contains? hyperedge-refusal-reasons reason))
+      :promotion-candidate-edge-write-failed
+      :promotion-candidate-evidence-write-failed)))
+
+(defn- materialization-witness [candidate observed]
+  (let [digest (machine/ledger-digest [(:evidence/body observed)])]
+    {:artifact-id (:memory-id candidate)
+     :content-digest (:content-digest candidate)
+     :persisted-content-digest digest
+     :read-back-content-digest digest
+     ;; boundary/append! returns the readable evidence id as its durable
+     ;; delivery receipt.  On idempotent replay the same readable id is the
+     ;; persistence authority.
+     :persistence-receipt-id (:evidence/id observed)}))
+
+(defn persist!
+  "Persist and verify all candidates in DEPOSIT before independent review.
+
+  The returned candidate vector contains only controller-derived ids and
+  digests.  Partial, ambiguous, or mismatching writes fail closed."
+  ([deposit deposit-request]
+   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+     (persist! deposit deposit-request
+               {:fetch-entry #(estore/get-entry* backend %)
+                :post-memory-assert
+                #(memory-write/post-memory-assert!
+                  {:evidence-store backend} %1 %2)
+                :post-edge #(memory-write/post-hyperedge!
+                             {:evidence-store backend} %)
+                :fetch-hyperedges substrate/hyperedges-by-end})))
+  ([{:keys [depositor candidates] :as deposit} deposit-request
+    {:keys [fetch-entry post-memory-assert post-edge fetch-hyperedges]}]
+   (let [reported-depositor depositor
+         depositor (:agent-id deposit-request)
+         deposit (assoc deposit
+                        :reported-depositor reported-depositor
+                        :depositor depositor)
+         source-attempts (controller-source-attempts deposit-request)
+         shape-findings
+         (mapv (fn [ordinal candidate]
+                 {:ordinal ordinal :findings (candidate-errors candidate)})
+               (range 1 (inc (count candidates))) candidates)
+         invalid (filterv (comp seq :findings) shape-findings)]
+     (if (or (not (nonblank? depositor)) (not (seq candidates))
+             (empty? source-attempts) (seq invalid))
+       {:ok false :error/code :promotion-candidate-content-invalid
+        :findings (cond-> invalid
+                    (not (nonblank? depositor))
+                    (conj {:finding :controller-depositor-missing})
+                    (not (seq candidates))
+                    (conj {:finding :candidates-missing})
+                    (empty? source-attempts)
+                    (conj {:finding :controller-source-attempts-missing}))}
+       (loop [remaining (map-indexed vector candidates)
+              persisted []]
+         (if-let [[index candidate] (first remaining)]
+           (let [canonical (canonical-candidate deposit-request depositor
+                                                (inc index) candidate)
+                 entry (memory-entry deposit-request depositor canonical)
+                 edge (memory-edge deposit-request canonical)
+                 existing (fetch-entry (:memory-id canonical))]
+             (cond
+               (and existing (not (exact-entry? entry existing)))
+               {:ok false :error/code :promotion-candidate-id-conflict
+                :memory-id (:memory-id canonical)}
+
+               :else
+               (let [edge-visible? (exact-edge-visible? edge fetch-hyperedges)
+                     ;; Two different writes, because they repair two
+                     ;; different states. With no evidence yet the pair has
+                     ;; to land together or not at all. With the evidence
+                     ;; already committed and no edge -- what a pre-atomic
+                     ;; write could leave behind -- the paired route refuses
+                     ;; that id with 409, so only an edge-only write
+                     ;; completes it, and the durable entry means writing
+                     ;; the edge alone leaves nothing partial.
+                     write-kind (cond (nil? existing) :pair
+                                      (not edge-visible?) :edge)
+                     write-result (case write-kind
+                                    :pair (post-memory-assert entry edge)
+                                    :edge (post-edge edge)
+                                    nil)
+                     refused? (and write-result
+                                   (not (:ok write-result))
+                                   (not (:duplicate? write-result)))
+                     observed (fetch-entry (:memory-id canonical))]
+                 (cond
+                   refused?
+                   {:ok false
+                    :error/code (if (= :edge write-kind)
+                                  :promotion-candidate-edge-write-failed
+                                  (pair-write-error-code write-result))
+                    :memory-id (:memory-id canonical) :finding write-result}
+
+                   (not (exact-entry? entry observed))
+                   {:ok false :error/code :promotion-candidate-evidence-not-visible
+                    :memory-id (:memory-id canonical)}
+
+                   (not (exact-edge-visible? edge fetch-hyperedges))
+                   {:ok false :error/code :promotion-candidate-edge-not-visible
+                    :memory-id (:memory-id canonical)}
+
+                   :else
+                   (recur (next remaining)
+                          (conj persisted
+                                (assoc canonical :materialization
+                                       (materialization-witness canonical
+                                                                observed))))))))
+           {:ok true
+            :deposit (assoc deposit :candidates persisted)
+            :candidates persisted}))))))
+
+(defn visible?
+  "Verify the persisted candidate entry, digest, and current attachment edge."
+  ([candidate]
+   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+     (visible? candidate #(estore/get-entry* backend %)
+               substrate/hyperedges-by-end)))
+  ([candidate fetch-entry fetch-hyperedges]
+   (let [entry (fetch-entry (:memory-id candidate))
+         edge (->> (fetch-hyperedges (:memory-id candidate))
+                   (filter #(= :memory/assert (:hx/type %)))
+                   (filter #(= :current (get-in % [:hx/props :state])))
+                   first)
+         status (get-in edge [:hx/props :attachment-status])
+         edge-patterns (set (get-in edge [:hx/props :roles :patterns]))
+         review (get-in edge [:hx/props :review])
+         review-entry (when (and (= :reviewed status)
+                                 (string? (:evidence-id review)))
+                        (fetch-entry (:evidence-id review)))
+         attachment-visible?
+         (case status
+           :proposed (= (set (:pattern-ids candidate)) edge-patterns)
+           :reviewed
+           (and review-entry
+                (= (:memory-id candidate)
+                   (get-in review-entry [:evidence/body :review/memory-id]))
+                (= (:verdict review)
+                   (get-in review-entry [:evidence/body :review/verdict]))
+                (= edge-patterns (set (:pattern-ids review))))
+           false)]
+     (and entry edge
+          (= (:content-digest candidate)
+             (machine/ledger-digest [(:evidence/body entry)]))
+          (= (:memory-id candidate) (get-in edge [:hx/props :roles :entry]))
+          attachment-visible?))))
+
+(defn review-inputs
+  "Freshly read the full persisted evidence used to construct a review
+  dispatch. A missing entry and an entry whose content body is absent are
+  distinct apparatus failures; neither can be sent to a reviewer."
+  ([candidates]
+   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+     (review-inputs candidates #(estore/get-entry* backend %)
+                    (substrate/configured-url))))
+  ([candidates fetch-entry substrate-url]
+   (loop [remaining candidates
+          inputs []]
+     (if-let [candidate (first remaining)]
+       (let [memory-id (:memory-id candidate)
+             fetched (fetch-review-entry fetch-entry memory-id)
+             entry (:entry fetched)
+             body (:evidence/body entry)]
+         (cond
+           (not (:ok fetched))
+           fetched
+
+           (nil? entry)
+           {:ok false
+            :error/code :promotion-review-candidate-evidence-unfetchable
+            :memory-id memory-id}
+
+           (not (nonblank? (:body body)))
+           {:ok false
+            :error/code :promotion-review-candidate-body-missing
+            :memory-id memory-id}
+
+           (not= (:content-digest candidate)
+                 (machine/ledger-digest [body]))
+           {:ok false
+            :error/code :promotion-review-candidate-content-mismatch
+            :memory-id memory-id}
+
+           :else
+           (recur (next remaining)
+                  (conj inputs
+                        {:memory-id memory-id
+                         :content-digest (:content-digest candidate)
+                         :read-ref (str (str/replace (str substrate-url) #"/$" "")
+                                        "/api/alpha/evidence/" memory-id)
+                         :entry entry}))))
+       {:ok true :candidate-evidence inputs}))))

@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-initialization-close-queue-20260911-v1"
+ :state-root "/home/joe/run4/initialization-close-admission/queue"
+ :visibility-file "/home/joe/run4/initialization-close-admission/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "initialization-close-historical-admission"
+         :series-id "run4-initialization-close-admission-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-initialization-close-admission-2026-09-11/series-pin.edn"
+         :manifest-sha256 "c55d80c621dc43c66505bdf830f99823a44ed00e3023091d7c69056d6243c3e5"
+         :cohort-id :run4-initialization-close-admission-20260911-v1
+         :cohort-sha256 "2251c474f58666dad17c994ef21fabad8623fb8207c7d8c04c0641c2fdcd123c"}
+ :activation :not-performed}

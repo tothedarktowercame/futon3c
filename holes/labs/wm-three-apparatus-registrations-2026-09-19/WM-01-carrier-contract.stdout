@@ -1,0 +1,4 @@
+evidence-id test-registry-73bb30ae5375d4f4c6865c01d91af85e985251f20feaf573587e45591ad2e02e
+warrant? true
+results {:assertions 31, :duration-ms 1407, :errors 0, :exit 0, :failures 0, :tests 3}
+bound WM-01-carrier-contract -> test-registry-73bb30ae5375d4f4c6865c01d91af85e985251f20feaf573587e45591ad2e02e

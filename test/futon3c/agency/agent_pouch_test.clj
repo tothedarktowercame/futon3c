@@ -1,5 +1,6 @@
 (ns futon3c.agency.agent-pouch-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
+            [cheshire.core :as json]
             [futon3c.agency.agent-pouch :as pouch]))
 
 (use-fixtures
@@ -17,16 +18,40 @@
           (str "#!/usr/bin/env python3\n"
                "import json, sys\n"
                "sid = 'fake-session-1'\n"
+               ;; Like the real CLI, results carry the process's running total.
+               "total = [0.0]\n"
                "for line in sys.stdin:\n"
                "    data = json.loads(line)\n"
-               "    text = data.get('message', {}).get('content', [{}])[0].get('text', '')\n"
+               "    content = data.get('message', {}).get('content', '')\n"
+               "    text = content if isinstance(content, str) else content[0].get('text', '')\n"
                "    if text == 'CRASH':\n"
                "        sys.exit(7)\n"
                "    if text == 'SLOW':\n"
                "        import time; time.sleep(1)\n"
+               "    if text == 'BURST':\n"
+               ;; One solicited turn, then — before reading the next stdin line —
+               ;; an agent-initiated turn that is still being emitted when the
+               ;; caller's drain runs (the sleep keeps it out of the drain).
+               "        print(json.dumps({'type':'system','session_id':sid}), flush=True)\n"
+               "        print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:BURST'}]}}), flush=True)\n"
+               "        print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"
+               "        import time; time.sleep(0.4)\n"
+               "        print(json.dumps({'type':'system','subtype':'task_notification'}), flush=True)\n"
+               "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
+               "        print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'unsolicited report'}]}}), flush=True)\n"
+               "        print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"
+               "        continue\n"
+               "    if text == '/compact':\n"
+               "        print(json.dumps({'type':'system','subtype':'status','status':'compacting'}), flush=True)\n"
+               "        print(json.dumps({'type':'system','subtype':'status','status':None,'compact_result':'success','compact_error':None}), flush=True)\n"
+               "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
+               "        total[0] += 0.25\n"
+               "        print(json.dumps({'type':'result','subtype':'success','session_id':sid,'usage':{'input_tokens':12},'total_cost_usd':total[0]}), flush=True)\n"
+               "        continue\n"
                "    print(json.dumps({'type':'system','session_id':sid}), flush=True)\n"
                "    print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}}), flush=True)\n"
-               "    print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"))
+               "    total[0] += 0.5\n"
+               "    print(json.dumps({'type':'result','session_id':sid,'is_error':False,'total_cost_usd':total[0]}), flush=True)\n"))
     (.setExecutable f true)
     (.deleteOnExit f)
     (.getAbsolutePath f)))
@@ -90,3 +115,80 @@
       (is (false? (get-in (pouch/snapshot) ["claude-busy" :in-flight?])))
       (Thread/sleep 5)
       (is (= ["claude-busy"] (pouch/evict-idle! 1)) "evictable again once the turn ends"))))
+
+(deftest compact-pouch-sends-raw-control-and-collects-status
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-compact" "warm" {:claude-bin bin :timeout-ms 2000})
+    (is (= {:ok true
+            :compact-result "success"
+            :compact-error nil
+            :orphaned-turns 0
+            :session-id "fake-session-1"
+            :usage {:input_tokens 12}
+            ;; warm turn left the running total at 0.5; compact took it to 0.75
+            :total-cost-usd 0.25
+            :pouch-total-cost-usd 0.75}
+           (pouch/compact-pouch! "claude-compact" {:timeout-ms 2000})))))
+
+(deftest compact-pouch-reads-past-an-in-flight-unsolicited-turn
+  ;; claude-1, 2026-09-01 18:24: a task-notification turn was mid-flight when
+  ;; /compact was written; its `result` was taken for the compaction's.
+  (let [bin (fake-claude-bin)]
+    (is (= "reply:BURST"
+           (:result (pouch/feed-turn! "claude-burst" "BURST"
+                                      {:claude-bin bin :timeout-ms 2000}))))
+    (let [r (pouch/compact-pouch! "claude-burst" {:timeout-ms 3000})]
+      (is (true? (:ok r)))
+      (is (= "success" (:compact-result r)))
+      (is (= 1 (:orphaned-turns r)) "the unsolicited turn's result is consumed, not reported")
+      (is (nil? (:error r)))
+      (is (nil? (:total-cost-usd r))
+          "no earlier running total (BURST results carry none): no price, not the total"))
+    ;; alignment survives: the next fed turn reads its own reply
+    (is (= "reply:after"
+           (:result (pouch/feed-turn! "claude-burst" "after"
+                                      {:claude-bin bin :timeout-ms 2000}))))))
+
+(deftest compact-control-is-literal-without-changing-normal-user-lines
+  (let [control (json/parse-string (#'pouch/control-line) true)
+        normal (json/parse-string (#'pouch/user-line "/compact") true)]
+    (is (= "/compact" (get-in control [:message :content])))
+    (is (= [{:type "text" :text "/compact"}]
+           (get-in normal [:message :content])))))
+
+(deftest compact-pouch-refuses-cold-or-busy-agent
+  (is (= {:ok false :error "no warm pouch"}
+         (pouch/compact-pouch! "claude-cold" {})))
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-busy-compact" "warm"
+                      {:claude-bin bin :timeout-ms 2000})
+    (let [slow (future
+                 (pouch/feed-turn! "claude-busy-compact" "SLOW"
+                                   {:claude-bin bin :timeout-ms 5000}))
+          deadline (+ (System/currentTimeMillis) 2000)]
+      (while (and (not (get-in (pouch/snapshot)
+                               ["claude-busy-compact" :in-flight?]))
+                  (< (System/currentTimeMillis) deadline))
+        (Thread/sleep 10))
+      (is (= {:ok false :error "turn in flight"}
+             (pouch/compact-pouch! "claude-busy-compact" {})))
+      @slow)))
+
+(deftest compact-pouch-wait-option-serializes-behind-held-lock
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-wait-compact" "warm"
+                      {:claude-bin bin :timeout-ms 2000})
+    (let [slow (future
+                 (pouch/feed-turn! "claude-wait-compact" "SLOW"
+                                   {:claude-bin bin :timeout-ms 5000}))
+          deadline (+ (System/currentTimeMillis) 2000)]
+      (while (and (not (get-in (pouch/snapshot)
+                               ["claude-wait-compact" :in-flight?]))
+                  (< (System/currentTimeMillis) deadline))
+        (Thread/sleep 10))
+      (let [compact (future
+                      (pouch/compact-pouch! "claude-wait-compact"
+                                           {:wait? true :timeout-ms 3000}))]
+        (is (= ::waiting (deref compact 100 ::waiting)))
+        (is (= "reply:SLOW" (:result @slow)))
+        (is (= "success" (:compact-result @compact)))))))

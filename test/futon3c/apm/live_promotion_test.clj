@@ -1,0 +1,1639 @@
+(ns futon3c.apm.live-promotion-test
+  (:require [clojure.edn :as edn]
+            [clojure.string :as string]
+            [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-job-driver :as job-driver]
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-promotion :as sut]
+            [futon3c.apm.promotion-candidate-store :as candidate-store]
+            [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.apm.transport-conformance :as transport]
+            [futon3c.apm.typed-role-submission :as submission]))
+
+(defn materialization [id digest]
+  {:artifact-id id :content-digest digest
+   :persisted-content-digest digest :read-back-content-digest digest
+   :persistence-receipt-id id})
+
+(deftest dispatch-failure-retains-the-failing-boundary
+  (with-redefs [job-port/announce!
+                (constantly {:ok false :error/code :announcement-refused})
+                submission/register!
+                (fn [& _] (throw (ex-info "must not register" {})))
+                job-port/activate!
+                (fn [& _] (throw (ex-info "must not activate" {})))]
+    (let [stage (#'sut/agency-stage
+                 "http://agency" {:agent-id "scribe" :submission/job-id "job"}
+                 "prompt")
+          result (stage)]
+      (is (= :promotion-stage-dispatch-failed (:error/code result)))
+      (is (= :announcement-refused
+             (get-in result [:dispatch :announced :error/code])))
+      (is (nil? (get-in result [:dispatch :registered])))
+      (is (nil? (get-in result [:dispatch :activated]))))))
+
+(deftest typed-evidence-receipt-is-expanded-before-promotion-validation
+  (let [report (#'sut/submitted-report
+                {:authority {:frame-id "f27" :role :scribe}
+                 :payload {:command-own-exit 0 :outcome "deposited"
+                           :failure-account []
+                           :evidence
+                           {:receipt
+                            "{:depositor \"f27-scribe\" :candidates [{:memory-id \"m\"}] :lanes []}"}}})]
+    (is (= "f27-scribe" (:depositor report)))
+    (is (= [{:memory-id "m"}] (:candidates report)))
+    (is (= [] (:lanes report)))
+    (is (= "f27" (:frame-id report)))
+    (is (= 0 (:command-own-exit report)))))
+
+(deftest scribe-promotion-requires-authoritative-typed-receipt
+  (let [auth {:phase :promote-solver :role :scribe}
+        missing (submission/validate-payload
+                 auth {:command-own-exit 0 :outcome "deposited"
+                       :failure-account []
+                       :evidence {:memory-search-receipt-ids []}})]
+    (is (= #{:receipt} (:evidence/missing missing)))
+    (is (contains? (submission/evidence-required auth) :receipt))))
+
+(deftest f29-string-enum-deposit-is-normalized-at-typed-boundary
+  (let [fixture (edn/read-string
+                 (slurp "test/fixtures/apm/f29-promotion-deposit-string-enums.edn"))
+        raw (pipeline/validate-deposit fixture)
+        report (#'sut/submitted-report
+                {:authority {:frame-id "f29" :role :scribe}
+                 :payload {:evidence fixture}})
+        validated (pipeline/validate-deposit report)]
+    (is (= [:lane-report-invalid] (:findings raw))
+        "the pure promotion gate remains keyword-typed")
+    (is (:ok validated))
+    (is (= #{:solve :arc :trajectory :challenge}
+           (set (map :lane (:lanes report)))))
+    (is (= #{:ran :ran-empty :not-run}
+           (set (map :status (:lanes report)))))))
+
+(deftest promotion-wire-keyword-also-accepts-json-without-edn-colon
+  (is (= :solve (#'sut/wire-keyword "solve")))
+  (is (= :solve (#'sut/wire-keyword ":solve"))))
+
+(deftest relative-frozen-card-path-is-resolved-against-control-root
+  (is (= "/control/holes/cards/scribe-v3.md"
+         (sut/resolved-role-card-path
+          "/control" {:role-card-path "holes/cards/scribe-v3.md"})))
+  (is (= "/frozen/scribe-v3.md"
+         (sut/resolved-role-card-path
+          "/control" {:role-card-path "/frozen/scribe-v3.md"}))))
+
+(deftest deposit-review-publish-is-durable-and-ordered
+  (let [saved (atom nil) calls (atom [])
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1 2 3]}
+        lanes [{:lane :solve :status :ran}
+               {:lane :arc :status :ran-empty :reason "no errors"}
+               {:lane :trajectory :status :ran}
+               {:lane :challenge :status :not-run :reason "no prior claim"}]
+        base {:persist-fn #(do (reset! saved %) {:ok true})
+              :publish-fn (fn [publication]
+                            (is (= "scribe" (get-in publication
+                                                     [:deposit :depositor])))
+                            (is (= "proctor" (:reviewer publication)))
+                            (is (= "proctor" (:job-id publication)))
+                            (swap! calls conj :publish)
+                            {:ok true :receipt {:receipt/id "promotion"}})}
+        r1 (sut/drive! (merge base {:state nil
+                                    :deposit-fn #(do (swap! calls conj :deposit)
+                                                     {:ok true :job "scribe"})}))
+        r2 (sut/drive! (merge base {:state (:state r1)
+                                    :deposit-fn (fn [_] {:ok true :report
+                                                        {:depositor "scribe"
+                                                         :candidates [candidate]
+                                                         :lanes lanes}})
+                                    :review-fn (fn [_] (swap! calls conj :review)
+                                                 {:ok true :job "proctor"})}))
+        review {:memory-id "m" :reviewer "proctor" :verdict :approve
+                :review-evidence-id "e" :attachment-status :reviewed
+                :pattern-ids ["p"] :reason "actionable fact"
+                :residual "Main.lean:12"}
+        r3 (sut/drive! (merge base {:state (:state r2)
+                                    :review-fn (fn [& _] {:ok true
+                                                         :reviewer "proctor"
+                                                         :reviews [review]})}))]
+    (is (= :awaiting-terminal (:status r1)))
+    (is (= "scribe" (:job-id r1)))
+    (is (= :independent-review (get-in r2 [:state :stage])))
+    (is (= "proctor" (:job-id r2)))
+    (is (= :certified (:status r3)))
+    (is (= [:deposit :review :publish] @calls))))
+
+(deftest malformed-deposit-is-durably-redispatched-without-review
+  (let [saved (atom nil)
+        review-called? (atom false)
+        repair-attempt (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "malformed" :attempt 1}
+                 :deposit-fn (fn
+                               ([value]
+                               (if (string? value)
+                                  (do (is (= "malformed" value))
+                                      {:ok false
+                                       :error/code :promotion-stage-terminal-invalid})
+                                  (do (reset! repair-attempt
+                                              (:submission/attempt value))
+                                      {:ok true :job "scribe-retry"})))
+                               ([] {:ok true :job "scribe-retry"}))
+                 :review-fn (fn [& _] (reset! review-called? true))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "scribe-retry" (:job-id result)))
+    (is (= {:job-id "scribe-retry"} (:ticket @saved)))
+    (is (= 2 (:attempt @saved)))
+    (is (= 1 @repair-attempt))
+    (is (= [{:attempt 1 :job "malformed"
+             :failure {:error/code :promotion-stage-terminal-invalid}}]
+           (:failed-attempts @saved)))
+    (is (false? @review-called?))))
+
+(deftest deposit-retry-archives-before-successor-and-appends
+  (let [successors (atom 0)
+        persist-log (atom [])
+        deposit-fn (fn [_]
+                     {:ok true :job (str "successor-" (swap! successors inc))})
+        persist-fn (fn [state] (swap! persist-log conj state) {:ok true})
+        failure {:ok false :error/code :bad-deposit :findings [:bad]}
+        first (#'sut/retry-deposit!
+               {:state/type :promotion :stage :deposit :job "original"
+                :ticket {:job-id "original"} :attempt 1}
+               failure deposit-fn persist-fn)
+        second (#'sut/retry-deposit! (:state first) failure deposit-fn persist-fn)]
+    (is (= ["original" "successor-1"]
+           (mapv #(get-in % [:job :job-id])
+                 (get-in second [:state :superseded-terminals]))))
+    (is (= [:bad] (get-in first [:state :superseded-terminals 0 :findings])))
+    (is (= 2 @successors)))
+  (let [successors (atom 0)
+        result (#'sut/retry-deposit!
+                {:state/type :promotion :stage :deposit :job "original"
+                 :ticket {:job-id "original"} :attempt 1}
+                {:ok false :error/code :bad-deposit :findings [:bad]}
+                (fn [_] (swap! successors inc) {:ok true :job "forbidden"})
+                (constantly {:ok false :error :disk-full}))]
+    (is (= :promotion-deposit-archive-persistence-failed
+           (:error/code result)))
+    (is (zero? @successors))))
+
+(deftest promotion-repair-successor-requires-authoritative-collection
+  (let [collection (job-driver/terminal-collection-record
+                    {:dispatch/id "dispatch" :role :promotion-proctor}
+                    {:job-id "terminal-job"}
+                    {:state "done" :terminal-code 0}
+                    {:submission/id "submission"} 1)
+        valid {:evidence collection}
+        mismatched {:evidence (assoc collection :collection/id "fabricated")}
+        stale-collection (job-driver/terminal-collection-record
+                          {:dispatch/id "dispatch" :role :promotion-proctor}
+                          {:job-id "old-job"}
+                          {:state "done" :terminal-code 0}
+                          {:submission/id "submission"} 1)
+        stale {:evidence stale-collection}
+        observe #(#'sut/successor-observation
+                   "terminal-job" % [:reviewer-missing])]
+    (is (= (:collection/id collection)
+           (:collection-evidence-id (observe valid))))
+    (is (= "" (:collection-evidence-id (observe nil))))
+    (is (= "" (:collection-evidence-id (observe mismatched))))
+    (is (= "" (:collection-evidence-id (observe stale))))
+    (is (= :terminal-collection-authority-missing
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" nil))))
+    (is (= :terminal-collection-authority-digest-mismatch
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" mismatched))))
+    (is (= :terminal-collection-authority-stale
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" stale))))))
+
+(deftest invisible-candidate-redispatches-scribe-before-observing-review
+  (let [saved (atom nil)
+        reviewed? (atom false)
+        state {:state/type :promotion :stage :independent-review
+               :deposit {:depositor "scribe" :job-id "scribe-original"}
+               :deposit-job "scribe-original"
+               :candidates [{:memory-id "missing"}]
+               :job "review-that-must-not-be-observed"
+               :attempt 1}
+        result
+        (sut/drive!
+         {:state state
+          :candidate-visible-fn (constantly false)
+          :deposit-fn (fn [failure]
+                        (is (= :promotion-candidates-not-persisted
+                               (:error/code failure)))
+                        {:ok true :job "scribe-repair"})
+          :review-fn (fn [& _] (reset! reviewed? true))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "scribe-repair" (:job-id result)))
+    (is (= :deposit (:stage @saved)))
+    (is (= "review-that-must-not-be-observed"
+           (:abandoned-review-job @saved)))
+    (is (= :promotion-candidates-not-persisted
+           (get-in @saved [:failed-attempts 0 :failure :error/code])))
+    (is (false? @reviewed?))))
+
+(deftest repair-attempt-produces-a-distinct-stable-job-identity
+  (let [request {:dispatch/id "dispatch" :agent-id "scribe"
+                 :phase :promote-solver}]
+    (is (= (submission/canonical-job-id request)
+           (submission/canonical-job-id request)))
+    (is (not= (submission/canonical-job-id request)
+              (submission/canonical-job-id
+               (assoc request :submission/attempt 1))))
+    (is (= (submission/canonical-job-id
+            (assoc request :submission/attempt 1))
+           (submission/canonical-job-id
+            (assoc request :submission/attempt 1))))))
+
+(deftest repaired-deposit-launches-review-as-append-only-successor
+  (let [saved (atom nil)
+        launched (atom nil)
+        predecessor "review-terminal"
+        state {:state/type :promotion :stage :deposit
+               :job "scribe-repair"
+               :deposit-job "scribe-original"
+               :deposit-request {:role :scribe}
+               :abandoned-review-job predecessor
+               :superseded-terminals
+               [{:job {:job-id predecessor :state :failed}
+                 :ticket {:job-id predecessor}
+                 :findings [:candidate-invisible]}]
+               :attempt 2}
+        candidate {:name "general pattern" :hook "when formalizing"
+                   :body "Use the reviewed library pattern."
+                   :kind :pattern/strategy :pattern-ids ["pattern"]
+                   :source-attempts [1]}
+        result
+        (sut/drive!
+         {:state state
+          :deposit-request {:role :scribe}
+          :reviewer-request {:role :promotion-proctor}
+          :deposit-fn (fn [job-id]
+                        (is (= "scribe-repair" job-id))
+                        {:ok true :job job-id
+                         :report {:depositor "scribe" :candidates [candidate]
+                                  :lanes [{:lane :solve :status :ran}
+                                          {:lane :arc :status :ran-empty
+                                           :reason "no arc"}
+                                          {:lane :trajectory :status :ran-empty
+                                           :reason "no trajectory"}
+                                          {:lane :challenge :status :ran-empty
+                                           :reason "no challenge"}]}})
+          :persist-candidates-fn
+          (fn [deposit]
+            (let [persisted (assoc candidate :memory-id "memory-successor"
+                                             :content-digest "digest-successor")]
+              {:ok true
+               :deposit (assoc deposit :candidates [persisted])
+               :candidates [persisted]}))
+          :prepare-patterns-fn (fn [_] {:ok true})
+          :review-fn (fn
+                       ([_] (throw (ex-info "ordinary replay forbidden" {})))
+                       ([_ _] (throw (ex-info "observation forbidden" {})))
+                       ([candidates prior attempt]
+                        (reset! launched {:candidates candidates
+                                          :predecessor prior
+                                          :attempt attempt})
+                        {:ok true :job "review-successor"}))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "review-successor" (:job-id result)))
+    (is (= predecessor (:predecessor @launched)))
+    (is (= 1 (:attempt @launched)))
+    (is (= predecessor (:predecessor-job-id @saved)))
+    (is (= predecessor
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))
+    (is (= 1 (:review-successor-attempt @saved)))
+    (is (= :independent-review (:stage @saved)))))
+
+(deftest f28-string-enum-reviews-cannot-silently-publish-empty
+  (let [fixture (edn/read-string
+                 (slurp "test/fixtures/apm/f28-solver-promotion-string-enums.edn"))
+        candidates (:candidates fixture)
+        raw-reviews (:reviews fixture)
+        raw (pipeline/validate-review* candidates (:depositor fixture)
+                                       (:reviewer fixture) raw-reviews)
+        reviews (mapv (partial #'sut/normalize-review-entry
+                               (:reviewer fixture))
+                      raw-reviews)
+        validated (pipeline/validate-review* candidates (:depositor fixture)
+                                             (:reviewer fixture) reviews)]
+    (is (= [:review-verdict-invalid]
+           (:findings raw))
+        "the F28 wire representation must fail closed before filtering")
+    (is (:ok validated))
+    (is (= 4 (count (:candidates validated))))
+    (is (= :promotion-publication-accounting-invalid
+           (:error/code
+            (pipeline/validate-publication-accounting reviews [])))
+        "four approvals may not certify an empty snapshot")
+    (is (:ok (pipeline/validate-publication-accounting
+              reviews (:candidates validated))))))
+
+(deftest cannot-judge-is-a-valid-nonpublishing-review
+  (let [candidate {:memory-id "candidate" :content-digest "digest"
+                   :pattern-ids ["pattern"]}
+        review {:memory-id "candidate" :reviewer "proctor"
+                :verdict :cannot-judge
+                :reason "persisted candidate evidence is unavailable"
+                :residual "retain the unresolved candidate for a later review"}
+        validated (pipeline/validate-review* [candidate] "zai-scribe"
+                                             "proctor" [review])]
+    (is (:ok validated))
+    (is (empty? (:candidates validated)))
+    (is (:ok (pipeline/validate-publication-accounting [review] [])))))
+
+(deftest coined-pattern-failure-dispatches-corrective-deposit
+  (let [saved (atom nil)
+        successor-failure (atom nil)
+        deposit {:depositor "scribe"
+                 :new-pattern-rationales {"new-pattern" "No witness."}
+                 :candidates [{:memory-id "memory" :content-digest "digest"
+                               :pattern-ids ["other-pattern"]
+                               :source-attempts [1]}]
+                 :lanes [{:lane :solve :status :ran}
+                         {:lane :arc :status :ran-empty :reason "none"}
+                         {:lane :trajectory :status :ran-empty :reason "none"}
+                         {:lane :challenge :status :ran-empty :reason "none"}]}
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :deposit :job "deposit-job"
+                  :ticket {:job-id "deposit-job"} :attempt 1}
+          :deposit-fn (fn [arg]
+                        (if (= arg "deposit-job")
+                          {:ok true :report deposit}
+                          (do (reset! successor-failure arg)
+                              {:ok true :job "corrective-deposit"})))
+          :prepare-patterns-fn
+          (constantly {:ok false :findings [:pattern-without-witness]
+                       :pattern-ids ["new-pattern"]})
+          :review-fn (fn [& _] (throw (ex-info "review forbidden" {})))
+          :persist-fn #(do (reset! saved %) {:ok true})
+          :deposit-request {}})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrective-deposit" (:job-id result)))
+    (is (= [:pattern-without-witness] (:findings @successor-failure)))
+    (is (= ["new-pattern"] (:pattern-ids @successor-failure)))
+    (is (= "deposit-job"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))))
+
+(deftest coined-pattern-is-published-before-independent-review
+  (let [visible? (atom false)
+        reviewed? (atom false)
+        deposit {:depositor "scribe"
+                 :new-pattern-rationales {"new-pattern" "No existing fit."}
+                 :candidates [{:memory-id "memory" :content-digest "digest"
+                               :pattern-ids ["new-pattern"]
+                               :source-attempts [1]}]
+                 :lanes [{:lane :solve :status :ran}
+                         {:lane :arc :status :ran-empty :reason "none"}
+                         {:lane :trajectory :status :ran-empty :reason "none"}
+                         {:lane :challenge :status :ran-empty :reason "none"}]}
+        saved (atom nil)
+        published (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :deposit :job "deposit-job"}
+          :deposit-fn (fn [_] {:ok true :report deposit})
+          :prepare-patterns-fn (fn [observed]
+                                 (is (= deposit observed))
+                                 (reset! visible? true)
+                                 {:ok true})
+          :review-fn (fn [_]
+                       (is @visible?)
+                       (reset! reviewed? true)
+                       {:ok true :job "review-job"})
+          :persist-fn #(reset! saved %)
+          :deposit-request {}})]
+    (is @reviewed?)
+    (is (= :awaiting-terminal (:status result)))
+    (is (= :independent-review (:stage @saved)))
+    (let [completed
+          (sut/drive!
+           {:state @saved
+            :review-fn
+            (fn [_ _]
+              {:ok true :reviewer "proctor"
+               :reviews [{:memory-id "memory" :reviewer "proctor"
+                           :verdict :approve :reason "coherent and witnessed"
+                           :residual "none"
+                           :review-evidence-id "review-evidence"
+                           :attachment-status :reviewed
+                           :pattern-ids ["new-pattern"]}]})
+            :publish-fn (fn [value]
+                          (reset! published value)
+                          {:ok true :receipt {:receipt/id "published"}})
+            :persist-fn #(reset! saved %)})]
+      (is (= :certified (:status completed)))
+      (is (= :approve (get-in @published [:reviews 0 :verdict]))))))
+
+(deftest invalid-deposit-shape-is-bounded
+  (let [result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "third-invalid" :attempt 3}
+                 :deposit-fn (fn [_] {:ok true :report {:depositor "scribe"}})
+                 :persist-fn (fn [_] (throw (ex-info "must not persist" {})))})]
+    (is (false? (:ok result)))
+    (is (= :promotion-deposit-retries-exhausted (:error/code result)))
+    (is (= 3 (:attempts result)))
+    (is (= [:candidates-missing :lane-report-invalid] (:findings result)))))
+
+(deftest final-semantic-attempt-gets-one-linter-feedback-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "invalid-edn" :attempt 3}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok false
+                                   :error/code :promotion-stage-terminal-invalid
+                                   :report/error {:error/code :report-edn-lint-failed
+                                                  :error/message "1:9 missing value for key"}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "format-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "format-repair" (:job-id result)))
+    (is (= :report-edn-lint-failed
+           (get-in @feedback [:report/error :error/code])))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:format-repairs @saved)))))
+
+(deftest final-attempt-gets-one-typed-lane-shape-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "parseable-wrong-shape" :attempt 3
+                         :format-repairs 1}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report
+                                   {:depositor "scribe"
+                                    :candidates [{:memory-id "m" :content-digest "d"
+                                                  :pattern-ids ["p"]}]
+                                    :lanes [{:lane :solve :ran true}]}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "schema-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "schema-repair" (:job-id result)))
+    (is (= [:lane-report-invalid] (:findings @feedback)))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:schema-repairs @saved)))))
+
+(deftest final-attempt-without-authoritative-receipt-gets-one-schema-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "typed-receipt-missing" :attempt 3}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report {}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "typed-receipt-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "typed-receipt-repair" (:job-id result)))
+    (is (= [:depositor-missing :candidates-missing :lane-report-invalid]
+           (:findings @feedback)))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:schema-repairs @saved)))))
+
+(deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
+  (let [normalize #'sut/normalize-review-report
+        reviews [{:memory-id "m" :reviewer "proctor" :verdict :reject
+                  :pattern-ids []}]
+        accepted (normalize {:candidate-set-digest "digest"
+                             :base-problem-blob "blob"
+                             :open-residuals []
+                             :promotion-reviews reviews}
+                            "digest" "blob" "proctor")]
+    (is (:ok accepted))
+    (is (= "proctor" (:reviewer accepted)))
+    (is (= :proposed (get-in accepted [:reviews 0 :attachment-status])))
+    (is (= "proctor" (get-in accepted [:reviews 0 :reported-reviewer])))
+    (is (= :promotion-review-candidate-digest-mismatch
+           (:error/code
+            (normalize {:candidate-set-digest "other"
+                        :base-problem-blob "blob" :open-residuals []
+                        :promotion-reviews reviews}
+                       "digest" "blob" "proctor"))))
+    (let [reported-other
+          (normalize {:candidate-set-digest "digest"
+                      :base-problem-blob "blob" :open-residuals []
+                      :promotion-reviews
+                      [{:memory-id "n" :reviewer "other"
+                        :verdict :reject :pattern-ids []}]}
+                     "digest" "blob" "proctor")]
+      (is (:ok reported-other))
+      (is (= "proctor" (get-in reported-other [:reviews 0 :reviewer])))
+      (is (= "other"
+             (get-in reported-other [:reviews 0 :reported-reviewer]))))))
+
+(deftest promotion-review-prompt-states-controller-residual-shape
+  (let [instruction (#'sut/review-output-instruction)]
+    (is (string/includes? instruction ":candidate-set-digest"))
+    (is (string/includes? instruction ":base-problem-blob"))
+    (is (string/includes? instruction
+                          ":open-residuals as a vector of {:line INT :summary STRING} maps"))
+    (is (string/includes? instruction "use [] when there are none"))
+    (is (string/includes? instruction "strings are not valid residual entries"))))
+
+(deftest reviewer-authority-carries-full-persisted-evidence
+  (let [candidate {:memory-id "m" :content-digest "digest"}
+        entry {:evidence/id "m"
+               :evidence/body {:hook "hook" :body "full persisted body"}}
+        request (#'sut/reviewer-authority
+                 {:frame-id "f"} [candidate]
+                 [{:memory-id "m" :read-ref "http://store/evidence/m"
+                   :entry entry}])]
+    (is (= entry (get-in request [:candidate-evidence 0 :entry])))
+    (is (= "full persisted body"
+           (get-in request [:candidate-evidence 0 :entry :evidence/body :body])))
+    (is (= "http://store/evidence/m"
+           (get-in request [:candidate-evidence 0 :read-ref])))))
+
+(deftest mechanical-rejection-is-recorded-without-llm-self-review
+  (let [saved (atom nil) published (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "unbound-candidates" :attempt 3
+                         :format-repairs 1}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report
+                                   {:depositor "scribe"
+                                    :candidates [{:memory-id "m" :content-digest "d"
+                                                  :pattern-ids []
+                                                  :source-attempts [1]}]
+                                    :lanes [{:lane :solve :status :ran}
+                                            {:lane :arc :status :ran}
+                                            {:lane :trajectory :status :ran}
+                                            {:lane :challenge :status :ran}]}}
+                                  (throw (ex-info "no repair expected" {:value value}))))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :review-fn (fn [& _]
+                              (throw (ex-info "no LLM review expected" {})))
+                 :publish-fn #(do (reset! published %) {:ok true :receipt :done})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= "unbound-candidates" (:job-id @published)))
+    (is (= [] (:candidates @published)))
+    (is (= [:no-parent-pattern]
+           (get-in @published [:reviews 0 :finding-codes])))
+    (is (= :promotion-certified (:state/type @saved)))))
+
+(deftest review-pending-state-dispatches-the-reviewer-without-a-deposit-job
+  ;; A Guide's store-mode candidates enter here: gated already, no Scribe job.
+  (let [saved (atom nil) reviewed (atom nil)
+        candidates [{:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                     :source-attempts [1]}]
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :review-pending
+                         :deposit {:depositor "f27-guide"}
+                         :candidates candidates}
+                 :deposit-fn (fn [& _] (throw (ex-info "no deposit job" {})))
+                 :review-fn (fn
+                              ([cands] (reset! reviewed cands)
+                               {:ok true :job "review-1"})
+                              ([_ _] (throw (ex-info "not observed yet" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "review-1" (:job-id result)))
+    (is (= candidates @reviewed))
+    (is (= :independent-review (:stage @saved)))
+    (is (= "f27-guide" (get-in @saved [:deposit :depositor])))))
+
+(deftest guide-mechanical-rejection-is-published-in-its-review-receipt
+  (let [published (atom nil)
+        mechanical [{:memory-id "guide-proof"
+                     :reviewer "promotion-mechanical-guard"
+                     :verdict :reject
+                     :reason "mechanical rejection: proof-text-not-memory"
+                     :residual "revise"
+                     :finding-codes [:proof-text-not-memory]}]
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :review-pending
+                         :deposit {:depositor "f30-guide"}
+                         :candidates [] :mechanical-reviews mechanical}
+                 :review-fn (fn [& _]
+                              (throw (ex-info "mechanical rejection needs no LLM" {})))
+                 :publish-fn (fn [value]
+                               (reset! published value)
+                               {:ok true :receipt {:receipt/id "guide-rejected"}})
+                 :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= mechanical (:reviews @published)))
+    (is (= "promotion-mechanical-guard" (:reviewer @published)))
+    (is (empty? (:candidates @published)))))
+
+(deftest independent-review-validates-against-the-gated-candidates
+  (let [candidates [{:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                     :source-attempts [1]}]
+        review {:memory-id "m" :reviewer "f27-promotion-proctor" :verdict :approve
+                :review-evidence-id "ev" :attachment-status :reviewed
+                :pattern-ids ["p"] :reason "residual: L1. fact: x"
+                :residual "Main.lean:1"}
+        published (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :independent-review
+                         :deposit {:depositor "f27-guide"}
+                         :candidates candidates :job "review-1"}
+                 :review-fn (fn [_ _] {:ok true :reviewer "f27-promotion-proctor"
+                                       :reviews [review]})
+                 :publish-fn (fn [value] (reset! published value)
+                               {:ok true :receipt {:receipt/id "gp"}})
+                 :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= "review-1" (:job-id @published)))
+    (is (= "f27-guide" (get-in @published [:candidates 0 :depositor])))
+    (is (= "f27-promotion-proctor" (:reviewer @published)))))
+
+(def f227-review-job
+  "apm-role-5a1aa8b0dfa0f1cd1f4634d20cb262ad87f7c182d9ea6bcc506cdd844d064817")
+
+(def f227-conflict
+  {:error/code "role-submission-conflict"
+   :ok false
+   :submission/id
+   "57f8b6fe1dd931d1d2603374347c9fcca4a471ddf0937ff193b6d754e75acee0"})
+
+(def f227-replay-provenance
+  {:review-state/path
+   "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f227/live/guide-intervention-2-review.edn"
+   :review-state/sha256
+   "270f3e712a673b237b26eaf8e3e049cc30e735c3b740eb1df2dc00880a42aa57"
+   :queue-state/sha256
+   "bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550"
+   :agency/job-id f227-review-job
+   :agency/event-seq 18})
+
+(defn- drive-f227-nested-review [submission-on-repair?]
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts ["e9f16fd64b887b4ed4c4711adff954716ff491616f8b8a17ad4051c5118d4530"]}
+        reviewer "f227-promotion-proctor"
+        base-blob "aa207f8ec052dd891b5597c158efc3d015fc2366"
+        digest (machine/ledger-digest [[candidate]])
+        review {:memory-id "m" :reviewer reviewer :verdict "approve"
+                :review-evidence-id "e" :attachment-status "reviewed"
+                :pattern-ids ["p"] :reason "pinned reason"
+                :residual "Main.lean:1"}
+        typed {:authority {:job-id "nested-repair-job" :agent-id reviewer}
+               :payload {:evidence {:candidate-set-digest digest
+                                    :base-problem-blob base-blob
+                                    :open-residuals [] :reviews [review]}}}
+        saved (atom {:state/type :promotion :stage :independent-review
+                     :deposit {:depositor "f227-guide"}
+                     :candidates [candidate] :job f227-review-job
+                     :ticket {:job-id f227-review-job}
+                     :request {:agent-id reviewer :base-problem-blob base-blob}})
+        announced (atom [])
+        persisted (atom [])
+        provider-calls (atom 0)
+        request {:agent-id reviewer :base-problem-blob base-blob
+                 :dispatch/id "9e4a8794e623c0edd86071df573b14b41fbaee902f94635eaa4a4d130e1770bb"
+                 :terminal-budget {:collection-attempts 1 :repair-attempts 1}}
+        step (fn []
+               (let [result
+                     (sut/drive!
+                      {:state @saved :reviewer-request request
+                       :agency-base "http://agency"
+                       :review-fn
+                       (fn [_ _]
+                         {:ok false :error/code :promotion-stage-terminal-invalid
+                          :job {:job-id f227-review-job :state :done
+                                :submission-attempt/error f227-conflict}
+                          :report/error {:error/code :typed-submission-missing}})
+                       :persist-candidates-fn
+                       (fn [deposit] {:ok true :deposit deposit
+                                      :candidates (:candidates deposit)})
+                       :candidate-visible-fn (constantly true)
+                       :persist-reviews-fn
+                       (fn [{:keys [reviews]}] {:ok true :reviews reviews})
+                       :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+                       :persist-fn (fn [state]
+                                     (swap! persisted conj state)
+                                     (reset! saved state)
+                                     {:ok true})})]
+                 result))]
+    (with-redefs [candidate-store/review-inputs
+                  (fn [_] {:ok true :candidate-evidence []})
+                  submission/prepare-request identity
+                  submission/with-job-authority
+                  (fn [req]
+                    (assoc req :submission/token "token"
+                           :submission/job-id
+                           (if (:repair/of-job-id req)
+                             "nested-repair-job" f227-review-job)))
+                  submission/register! (fn [& _] {:ok true})
+                  runtime/http-json (fn [& _] {:ok true :http/status 200})
+                  submission/authenticated-completion
+                  (fn [_ ticket]
+                    (swap! provider-calls inc)
+                    (when (and submission-on-repair?
+                               (= "nested-repair-job" (:job-id ticket)))
+                      typed))
+                  job-port/observe
+                  (fn [_ job-id]
+                    {:ok true :job-id job-id :agent-id reviewer :state :done
+                     :session-id "01a092fb-9ef6-7903-ada7-ebc94980fa6c"
+                     :submission-attempt/error f227-conflict})
+                  job-port/announce!
+                  (fn [_ {:keys [job-id]}]
+                    (swap! announced conj job-id)
+                    {:ok true :job-id job-id :state :announced})
+                  job-port/activate! (fn [& _] {:ok true})
+                  job-port/cancel! (fn [& _] {:ok true})]
+      (let [results (vec (repeatedly (if submission-on-repair? 4 6) step))]
+        {:results results :state @saved :states @persisted :announced @announced
+         :provider-calls @provider-calls}))))
+
+(deftest f227-missing-review-submission-is-reconciled-under-reviewer-authority
+  (let [{:keys [results states announced]}
+        (drive-f227-nested-review true)
+        state (last (filter #(= :submit-step
+                                (get-in % [:review/nested-driver-state
+                                           :active-request :repair/kind]))
+                            states))]
+    (is (= 18 (:agency/event-seq f227-replay-provenance)))
+    (is (= ["nested-repair-job"] announced))
+    (is (= f227-review-job
+           (get-in state [:review/nested-driver-state
+                          :superseded-terminals 0 :job :job-id])))
+    (is (= f227-conflict
+           (get-in state [:review/nested-driver-state
+                          :superseded-terminals 0 :job
+                          :submission-attempt/error])))
+    (is (= :submit-step
+           (get-in state [:review/nested-driver-state
+                          :active-request :repair/kind])))
+    (is (= f227-review-job
+           (get-in state [:review/nested-driver-state
+                          :active-request :repair/of-job-id])))
+    (is (= "f227-promotion-proctor"
+           (get-in state [:review/nested-driver-state
+                          :active-request :agent-id])))
+    (is (= :certified (:status (last results))))
+    (is (not-any? #(= :typed-submission-missing %)
+                  (:findings (last results))))))
+
+(deftest f227-empty-nested-repair-exhausts-with-recheck-outside-guide-findings
+  (let [{:keys [results state]} (drive-f227-nested-review false)
+        exhausted (last results)
+        nested (:nested/fault exhausted)]
+    (is (false? (:ok exhausted)))
+    (is (= :promotion-review-reconciliation-failed (:error/code exhausted)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code nested)))
+    (is (= :empty
+           (get-in nested [:terminal-exhaustion/recheck
+                           :recheck/observation])))
+    (is (map? (get-in state [:review/nested-driver-state])))
+    (is (not-any? #(= :typed-submission-missing %) (:findings exhausted)))))
+
+(deftest independent-review-persists-returned-verdict-before-publication
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reassign
+                :review-evidence-id "review" :attachment-status :reviewed
+                :pattern-ids ["canonical"] :reason "returned reason"
+                :residual "returned residual"}
+        calls (atom [])
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe"} :candidates [candidate]
+                  :job "review-job"}
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn
+          (fn [value]
+            (swap! calls conj [:persist-review value])
+            {:ok true
+             :reviews [(assoc review
+                              :review-evidence-id "controller-review"
+                              :depositor "scribe"
+                              :reviewer "proctor")]})
+          :publish-fn
+          (fn [value]
+            (swap! calls conj [:publish value])
+            {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= [:persist-review :publish] (mapv first @calls)))
+    (is (= :reassign
+           (get-in (second @calls) [1 :reviews 0 :verdict])))
+    (is (= "controller-review"
+           (get-in (second @calls)
+                   [1 :candidates 0 :review-evidence-id])))))
+
+(deftest generated-completed-pass-policy-holds-before-publication
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :cannot-judge
+                :reason "apparatus unavailable" :residual "repair apparatus"
+                :pattern-ids ["p"]}
+        saved (atom nil)
+        published? (atom false)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true}
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn
+          (fn [_]
+            {:ok true
+             :reviews [(assoc review
+                              :review-evidence-id "review"
+                              :attachment-status :proposed
+                              :review-materialization
+                              (materialization "review" "rd"))]})
+          :publish-fn (fn [_] (reset! published? true))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :awaiting-apparatus-repair (:stage @saved)))
+    (is (false? @published?))))
+
+(deftest projection-failure-holds-with-persisted-judgement-and-never-publishes
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        returned {:memory-id "m" :reviewer "proctor" :verdict :approve
+                  :review-evidence-id "reported-review"
+                  :attachment-status :reviewed :pattern-ids ["p"]
+                  :reason "appears coherent" :residual "projection failed"}
+        persisted (assoc returned
+                         :review-evidence-id "review"
+                         :attachment-status :proposed
+                         :projection/valid? false
+                         :projection/finding {:failure :edge-write-failed}
+                         :review-materialization
+                         (materialization "review" "rd"))
+        publication (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true
+                             :projection-repair-max-attempts 2
+                             :transport-retry-delay-ms 600000
+                             :transport-retry-max-attempts 3}
+          :now-ms-fn (constantly 1000)
+          :contract-digest "contract-v1"
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [returned]})
+          :persist-reviews-fn
+          (fn [_] {:ok false
+                   :error/code :promotion-review-projection-failed
+                   :review-job "review-job"
+                   :reviews [persisted]
+                   :persisted [{:review-evidence-id "review"}]
+                   :findings [{:memory-id "m"
+                               :failure :promotion-review-projection-failed
+                               :projection
+                               {:ok false
+                                :error {:error/component :transport
+                                        :error/code :hyperedge-unreachable}}}]})
+          :publish-fn (fn [value]
+                        (reset! publication value)
+                        {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (:ok result))
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (nil? @publication))
+    (is (= [persisted]
+           (get-in result [:state :persisted-review-result :reviews])))
+    (is (= [returned]
+           (get-in result
+                   [:state :persisted-review-result :returned-reviews])))
+    (is (= :review-projection (get-in result [:state :repair/kind])))
+    (is (= 2 (get-in result [:state :repair/max-attempts])))
+    (is (= :awaiting-transport-retry (get-in result [:state :stage])))
+    (is (= 601000 (get-in result [:state :transport-retry/not-before-ms])))
+    (is (= [{:attempt 0 :failed-at-ms 1000
+             :error/component :transport
+             :error/code :hyperedge-unreachable}]
+           (get-in result [:state :transport-retry/history])))))
+
+(deftest transport-retry-waits-without-io-then-reuses-terminal-review
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        retry-state {:state/type :promotion :stage :awaiting-transport-retry
+                     :last-valid-state last-valid
+                     :transport-retry/attempt 0
+                     :transport-retry/max-attempts 3
+                     :transport-retry/not-before-ms 601000
+                     :transport-retry/history
+                     [{:attempt 0 :failed-at-ms 1000}]}
+        calls (atom [])
+        emitted (atom [])
+        inputs {:state retry-state
+                :promotion-policy {:completed-pass-required true}
+                :review-fn (fn [job _]
+                             (swap! calls conj job)
+                             {:ok true :reviewer "proctor" :reviews [review]})
+                :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+                :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+                :certificate-emitter-fn
+                (fn [certificate emitted-at-ms]
+                  (swap! emitted conj [certificate emitted-at-ms])
+                  {:ok true})
+                :persist-fn (fn [_] {:ok true})}
+        waiting (sut/drive! (assoc inputs :now-ms-fn (constantly 600999)))
+        calls-while-waiting @calls
+        completed (sut/drive! (assoc inputs :now-ms-fn (constantly 601000)))]
+    (is (= :transport-retry-scheduled (:status waiting)))
+    (is (empty? calls-while-waiting))
+    (is (= :certified (:status completed)))
+    (is (= ["terminal-review"] @calls))
+    (is (= 1 (get-in completed [:state :transport-retry/history 1 :attempt])))
+    (is (= 601000
+           (get-in completed [:state :transport-retry/history 1
+                              :succeeded-at-ms])))
+    (is (= 1 (count @emitted)))
+    (is (:ok (transport/validate-certificate (ffirst @emitted))))))
+
+(deftest visibility-observation-failure-schedules-transport-retry
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        persisted (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true
+                             :transport-retry-delay-ms 600000
+                             :transport-retry-max-attempts 3}
+          :now-ms-fn (constantly 1000)
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn
+          (fn [_]
+            {:ok false :error/code :memory-snapshot-visibility-not-obtained
+             :error/component :transport
+             :transport/operation :post-publication-verification
+             :transport/acquired-outcome :timeout
+             :transport/classified-outcome :timeout
+             :transport/evidence :not-obtained})
+          :persist-fn #(reset! persisted %)})]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :awaiting-transport-retry (:stage @persisted)))
+    (is (= :memory-snapshot-visibility-not-obtained
+           (get-in @persisted [:transport-retry/history 0 :error/code])))
+    (is (= :timeout
+           (get-in @persisted
+                   [:transport-retry/history 0 :transport/acquired-outcome])))
+    (is (= :not-obtained
+           (get-in @persisted
+                   [:transport-retry/history 0 :transport/evidence])))))
+
+(deftest f65-terminal-transport-attempt-parks-once-with-conformant-certificate
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        history [{:attempt 0 :failed-at-ms 1000 :error/component :transport
+                  :error/code :memory-snapshot-visibility-not-obtained}
+                 {:attempt 1 :failed-at-ms 2000 :error/component :transport
+                  :error/code :memory-snapshot-visibility-not-obtained}]
+        persisted (atom [])
+        emitted (atom [])
+        io-calls (atom 0)
+        inputs {:state {:state/type :promotion :stage :independent-review
+                        :deposit {:depositor "scribe" :candidates [candidate]}
+                        :candidates [candidate] :job "f65-promotion-proctor"
+                        :transport-retry/attempt 2
+                        :transport-retry/history history}
+                :promotion-policy {:completed-pass-required true
+                                   :transport-retry-delay-ms 600000
+                                   :transport-retry-max-attempts 3}
+                :now-ms-fn (constantly 3000)
+                :review-fn (fn [_ _]
+                             (swap! io-calls inc)
+                             {:ok true :reviewer "proctor" :reviews [review]})
+                :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+                :publish-fn
+                (fn [_]
+                  (swap! io-calls inc)
+                  {:ok false :error/code :memory-snapshot-visibility-not-obtained
+                   :error/component :transport
+                   :transport/operation :post-publication-verification
+                   :transport/acquired-outcome :unavailable
+                   :transport/classified-outcome :unavailable
+                   :transport/evidence :not-obtained})
+                :certificate-emitter-fn
+                (fn [certificate _]
+                  (swap! emitted conj certificate)
+                  {:ok true :certificate certificate})
+                :persist-fn (fn [state]
+                              (swap! persisted conj state)
+                              {:ok true})}
+        terminal (sut/drive! inputs)
+        calls-after-terminal @io-calls
+        persisted-after-terminal (count @persisted)
+        repeated (sut/drive!
+                  (assoc inputs :state (:state terminal)
+                         :review-fn #(throw (ex-info "redispatched" {}))
+                         :publish-fn #(throw (ex-info "republished" {}))))
+        certificate (first @emitted)]
+    (is (= :awaiting-apparatus-repair (:status terminal)))
+    (is (= :promotion-substrate-retry-exhausted
+           (get-in terminal [:state :error/code])))
+    (is (= [:park :retry-exhausted] (:decision certificate)))
+    (is (= [0 1] (mapv :attempt (:history certificate))))
+    (is (= [0 1 2]
+           (mapv :attempt (get-in terminal [:state :transport-retry/history]))))
+    (is (:ok (transport/validate-certificate certificate)))
+    (is (= 1 (count @emitted)))
+    (is (= calls-after-terminal @io-calls))
+    (is (= persisted-after-terminal (count @persisted)))
+    (is (false? (:ok repeated)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code repeated)))
+    (is (= :promotion-publication (:repair/kind repeated)))
+    (is (= 1 (:repair/attempts repeated)))
+    (is (= (:state terminal) (:state repeated)))))
+
+(deftest transport-publication-retry-boundary-matches-zero-based-decision-rule
+  (doseq [[attempt expected-status expected-stage]
+          [[0 :transport-retry-scheduled :awaiting-transport-retry]
+           [1 :transport-retry-scheduled :awaiting-transport-retry]
+           [2 :awaiting-apparatus-repair :awaiting-apparatus-repair]]]
+    (let [saved (atom nil)
+          result (#'sut/hold-incomplete-pass!
+                  {:state/type :promotion :stage :independent-review
+                   :transport-retry/attempt attempt
+                   :transport-retry/history
+                   (mapv (fn [n] {:attempt n :failed-at-ms n})
+                         (range attempt))}
+                  {:ok false :error/code :promotion-publication-failed
+                   :findings [{:error/component :transport
+                               :error/code :memory-snapshot-visibility-not-obtained
+                               :transport/acquired-outcome :unavailable
+                               :transport/evidence :not-obtained}]}
+                  {:transport-retry-max-attempts 3
+                   :transport-retry-delay-ms 10}
+                  "contract" #(do (reset! saved %) {:ok true})
+                  (constantly 100))]
+      (is (= expected-status (:status result)))
+      (is (= expected-stage (:stage @saved)))
+      (is (= (range (inc attempt))
+             (map :attempt (:transport-retry/history @saved)))))))
+
+(deftest nonconformant-certificate-blocks-certified-state
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        persisted (atom [])
+        emitted (atom nil)
+        run (fn []
+              (sut/drive!
+               {:state {:state/type :promotion :stage :independent-review
+                       :deposit {:depositor "scribe" :candidates [candidate]}
+                       :candidates [candidate] :job "review-job"}
+               :promotion-policy {:completed-pass-required true}
+               :now-ms-fn (constantly 1000)
+               :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                     :reviews [review]})
+               :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+               :publish-fn (fn [_] {:ok true
+                                    :receipt {:receipt/id "published"}})
+               :certificate-emitter-fn
+               (fn [certificate _]
+                 (reset! emitted certificate)
+                 {:ok true :certificate-valid? false})
+                :persist-fn (fn [state] (swap! persisted conj state))}))
+        result (with-redefs-fn
+                 {(ns-resolve 'futon3c.apm.live-promotion
+                              'transport-implementation-identity)
+                  (fn [] {:spec-id "spec" :source-id "source"
+                          :loaded-runtime-id "stale"})}
+                 run)]
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :transport-certificate-nonconformant
+           (get-in result [:state :error/code])))
+    (is (some #(= :transport-conformance-runtime-identity-mismatch
+                  (:error/code %))
+              (:findings result)))
+    (is (= :awaiting-apparatus-repair (:stage (last @persisted))))
+    (is (not-any? #(= :promotion-certified (:state/type %)) @persisted))
+    (is (= "stale" (get-in @emitted [:identity :loaded-runtime-id])))))
+
+(deftest same-contract-projection-repair-reuses-terminal-review-job
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        calls (atom [])
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :contract-digest "contract-v1" :last-valid-state last-valid
+                  :repair/kind :review-projection :repair/attempts 0
+                  :repair/max-attempts 1}
+          :promotion-policy {:completed-pass-required true}
+          :contract-digest "contract-v1"
+          :review-fn (fn [job _]
+                       (swap! calls conj job)
+                       {:ok true :reviewer "proctor" :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= ["terminal-review"] @calls))))
+
+(deftest runtime-identity-repair-replays-only-the-last-valid-state
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        run #(sut/drive!
+              {:state {:state/type :promotion
+                       :stage :awaiting-apparatus-repair
+                       :error/code :transport-certificate-nonconformant
+                       :findings
+                       [{:error/code
+                         :transport-conformance-runtime-identity-mismatch}]
+                       :last-valid-state last-valid}
+               :promotion-policy {:completed-pass-required true}
+               :review-fn (fn [job _]
+                            (is (= "terminal-review" job))
+                            {:ok true :reviewer "proctor" :reviews [review]})
+               :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+               :publish-fn (fn [_] {:ok true
+                                    :receipt {:receipt/id "done"}})
+               :certificate-emitter-fn
+               (fn [_ _] {:ok true :certificate-valid? true})
+               :persist-fn (fn [_] {:ok true})})
+        result (with-redefs-fn
+                 {(ns-resolve 'futon3c.apm.live-promotion
+                              'transport-implementation-identity)
+                  (fn [] {:spec-id "spec" :source-id "current"
+                          :loaded-runtime-id "current"})}
+                 run)]
+    (is (= :certified (:status result)))
+    (is (= "done" (get-in result [:certificate :receipt/id])))))
+
+(deftest exhausted-projection-repair-does-not-advance-promotion
+  (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :contract-digest "contract-v1"
+               :last-valid-state {:stage :independent-review}
+               :repair/kind :review-projection :repair/attempts 1
+               :repair/max-attempts 1 :findings [{:failure :edge-write}]}
+        result (sut/drive! {:state state :contract-digest "contract-v1"})]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= state (:state result)))))
+
+(deftest loaded-transport-implementation-identifies-current-source
+  (let [{:keys [source-id loaded-runtime-id]}
+        (sut/transport-implementation-identity)]
+    (is (string? source-id))
+    (is (= source-id loaded-runtime-id))))
+
+(deftest exhausted-promotion-pass-review-set-mismatch-terminates
+  (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :contract-digest "contract-v1"
+               :last-valid-state {:stage :independent-review}
+               :repair/kind :promotion-pass :repair/attempts 1
+               :repair/max-attempts 1 :findings [:review-set-mismatch]}
+        result (sut/drive! {:state state :contract-digest "contract-v1"})]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= :promotion-pass (:repair/kind result)))
+    (is (= [:review-set-mismatch] (:findings result)))
+    (is (= state (:state result)))))
+
+(deftest apparatus-hold-revalidates-persisted-review-after-contract-change
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "completed-review"}
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :contract-digest "contract-v1" :last-valid-state last-valid}
+          :promotion-policy {:completed-pass-required true}
+          :contract-digest "contract-v2"
+          :review-fn (fn [job _]
+                       (is (= "completed-review" job))
+                       {:ok true :reviewer "proctor" :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))))
+
+(deftest unresolved-review-contract-change-dispatches-append-only-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe"}
+                    :candidates [{:memory-id "m"}]
+                    :job "prior-terminal-review"}
+        saved (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :repair/kind :unresolved-review
+                  :contract-digest "contract-v1"
+                  :last-valid-state last-valid}
+          :contract-digest "contract-v2"
+          :review-fn
+          (fn [candidates predecessor attempt]
+            (is (= [{:memory-id "m"}] candidates))
+            (is (= "prior-terminal-review" predecessor))
+            (is (= 1 attempt))
+            {:ok true :job "successor-review"})
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "successor-review" (:job-id result)))
+    (is (= "prior-terminal-review" (:predecessor-job-id @saved)))
+    (is (= 1 (:review-successor-attempt @saved)))
+    (is (= "prior-terminal-review"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))
+    (let [second (sut/drive!
+                  {:state {:state/type :promotion
+                           :stage :awaiting-apparatus-repair
+                           :repair/kind :unresolved-review
+                           :contract-digest "contract-v2"
+                           :last-valid-state (:state result)}
+                   :contract-digest "contract-v3"
+                   :review-fn (fn [_ _ _]
+                                {:ok true :job "successor-review-2"})
+                   :persist-fn #(do (reset! saved %) {:ok true})})]
+      (is (= :awaiting-terminal (:status second)))
+      (is (= ["prior-terminal-review" "successor-review"]
+             (mapv #(get-in % [:job :job-id])
+                   (get-in second [:state :superseded-terminals])))))))
+
+(deftest incomplete-promotion-pass-dispatches-bounded-review-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p"]}]
+                    :job "review-with-missing-patterns"
+                    :ticket {:job-id "review-with-missing-patterns"}}
+        saved (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :repair/kind :promotion-pass :repair/attempts 0
+                  :repair/max-attempts 1 :contract-digest "contract"
+                  :findings [:review-patterns-invalid]
+                  :last-valid-state last-valid}
+          :contract-digest "contract"
+          :review-fn
+          (fn [candidates predecessor attempt]
+            (is (= (:candidates last-valid) candidates))
+            (is (= "review-with-missing-patterns" predecessor))
+            (is (= 1 attempt))
+            {:ok true :job "corrected-review"})
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrected-review" (:job-id result)))
+    (is (= 1 (:projection-repair-attempt @saved)))
+    (is (= "review-with-missing-patterns"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))))
+
+(deftest pattern-contract-migration-allows-one-explicit-corrective-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p"]}]
+                    :job "first-correction" :review-successor-attempt 1}
+        saved (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion
+                         :stage :awaiting-apparatus-repair
+                         :repair/kind :promotion-pass
+                         :repair/attempts 1 :repair/max-attempts 1
+                         :findings [:review-patterns-invalid]
+                         :last-valid-state last-valid}
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "first-correction" predecessor))
+                              (is (= 2 attempt))
+                              {:ok true :job "contract-correction"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "contract-correction" (:job-id result)))
+    (is (true? (:pattern-contract-repair-attempted? @saved)))
+    (is (true? (:approve-pattern-semantics-repair-attempted? @saved)))
+    (let [held {:state/type :promotion :stage :awaiting-apparatus-repair
+                :repair/kind :promotion-pass
+                :repair/attempts 2 :repair/max-attempts 1
+                :findings [:review-patterns-invalid]
+                :last-valid-state @saved}]
+      (is (= :promotion-apparatus-repair-exhausted
+             (:error/code (sut/drive! {:state held})))))))
+
+(deftest explicit-approve-pattern-semantics-allows-one-legacy-migration-successor
+  (let [saved (atom nil)
+        prior {:state/type :promotion :stage :independent-review
+               :candidates [{:memory-id "m" :pattern-ids ["p" "q"]}]
+               :job "ambiguous-prompt-correction"
+               :review-successor-attempt 2
+               :pattern-contract-repair-attempted? true}
+        result (sut/drive!
+                {:state {:state/type :promotion
+                         :stage :awaiting-apparatus-repair
+                         :repair/kind :promotion-pass
+                         :repair/attempts 2 :repair/max-attempts 1
+                         :findings [:review-patterns-invalid]
+                         :last-valid-state prior}
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "ambiguous-prompt-correction" predecessor))
+                              (is (= 3 attempt))
+                              {:ok true :job "explicit-semantics-correction"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "explicit-semantics-correction" (:job-id result)))
+    (is (true? (:approve-pattern-semantics-repair-attempted? @saved)))))
+
+(deftest legacy-approved-pattern-projection-hold-dispatches-correction
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p" "q"]}]
+                    :job "bad-review" :ticket {:job-id "bad-review"}}
+        saved (atom nil)
+        state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :repair/kind :review-projection
+               :repair/attempts 1 :repair/max-attempts 1
+               :last-valid-state last-valid
+               :persisted-review-result
+               {:reviews [{:memory-id "m" :verdict :approve
+                            :pattern-ids ["q"]}]}
+               :findings
+               [{:memory-id "m"
+                 :failure :promotion-review-projection-failed
+                 :finding {:edge-patterns ["p" "q"]
+                           :review-patterns ["q"]}}]}
+        result (sut/drive!
+                {:state state
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "bad-review" predecessor))
+                              (is (= 1 attempt))
+                              {:ok true :job "corrected-review"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrected-review" (:job-id result)))
+    (is (true? (:pattern-contract-repair-attempted? @saved)))))
+
+(deftest unresolved-review-archive-failure-blocks-successor
+  (let [called (atom 0)
+        last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m"}] :job "prior-review"
+                    :ticket {:job-id "prior-review"}}
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                         :repair/kind :unresolved-review
+                         :contract-digest "old" :last-valid-state last-valid}
+                 :contract-digest "new"
+                 :review-fn (fn [& _]
+                              (swap! called inc)
+                              {:ok true :job "forbidden"})
+                 :persist-fn (constantly {:ok false :error :disk-full})})]
+    (is (= :promotion-review-archive-persistence-failed (:error/code result)))
+    (is (zero? @called))))
+
+;; f50, 2026-08-28T11:55:00Z. A promotion candidate edge write to futon1b hit
+;; http-kit's 30s idle timeout. The deposit stage returned that failure raw, so
+;; it reached the regulator as a plain tick failure and stopped the campaign --
+;; the bounded transport retry added that morning only covered the review path.
+;; The same shape had already halted f50 once at 08:47:44 the same day.
+(def ^:private f50-edge-write-timeout
+  {:ok false
+   :error/code :promotion-candidate-edge-write-failed
+   :memory-id "e-apm-promotion-5ee5f9ebc3dacc34ade531388d5f6dce"
+   :finding {:ok false
+             :error {:error/component :transport
+                     :error/code :hyperedge-unreachable
+                     :error/message "Hyperedge write transport failed"
+                     :error/at "2026-08-28T11:55:00.828014398Z"
+                     :error/context
+                     {:detail
+                      "org.httpkit.client.TimeoutException: idle timeout: 30000ms"}}}})
+
+(deftest deposit-transport-timeout-schedules-a-retry-instead-of-failing
+  (let [persisted (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"
+                         :attempt 2}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn (constantly f50-edge-write-timeout)
+                 :persist-fn #(reset! persisted %)
+                 :promotion-policy {}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (:ok result))
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :awaiting-transport-retry (:stage @persisted)))
+    ;; the deposit state is preserved so the retry re-attempts the write
+    ;; against the same scribe job rather than re-running the scribe
+    (is (= "job-1" (get-in @persisted [:last-valid-state :job])))
+    (is (= :deposit (get-in @persisted [:last-valid-state :stage])))))
+
+(deftest deposit-transport-retry-is-bounded-not-endless
+  (let [persisted (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"
+                         :transport-retry/attempt 99}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn (constantly f50-edge-write-timeout)
+                 :persist-fn #(reset! persisted %)
+                 :promotion-policy {:transport-retry-max-attempts 3}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :awaiting-apparatus-repair (:stage @persisted)))
+    (is (= :promotion-substrate-retry-exhausted
+           (:error/code @persisted)))
+    (is (= 1 (get-in @persisted
+                     [:transport-retry/escalation :attempts])))
+    (is (= [{:attempt 99 :failed-at-ms 1000
+             :error/component :transport
+             :error/code :hyperedge-unreachable}]
+           (get-in @persisted
+                   [:transport-retry/escalation :history])))))
+
+(deftest non-transport-deposit-failure-is-not-reclassified
+  (let [result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn
+                 (constantly {:ok false
+                              :error/code :promotion-candidate-id-conflict
+                              :memory-id "e-x"})
+                 :persist-fn identity
+                 :promotion-policy {}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (false? (:ok result)))
+    (is (= :promotion-candidate-id-conflict (:error/code result)))))
+
+(deftest thrown-read-timeout-preserves-job-and-exhausts-transport-budget
+  (let [saved (atom nil)
+        calls (atom [])
+        now (atom 1000)
+        base {:state/type :promotion :stage :deposit :job "accepted-deposit"}
+        inputs {:state base
+                :deposit-fn (fn [job] (swap! calls conj job)
+                              {:ok true :report {:candidates []}})
+                :persist-candidates-fn
+                (fn [_] (throw (ex-info "timed out"
+                                        {:error/component :transport
+                                         :error/code :futon1b-read-timeout
+                                         :transport/operation :read
+                                         :transport/acquired-outcome :timeout})))
+                :persist-fn #(do (reset! saved (edn/read-string (pr-str %))) {:ok true})
+                :promotion-policy {:transport-retry-max-attempts 2
+                                   :transport-retry-delay-ms 10}
+                :contract-digest "digest" :now-ms-fn #(deref now)}]
+    (is (= :transport-retry-scheduled (:status (sut/drive! inputs))))
+    (is (= base (:last-valid-state @saved)))
+    (is (= ["accepted-deposit"] @calls))
+    ;; A process restart can reload exactly the held EDN state. Before wake,
+    ;; no role collection or store operation runs again.
+    (is (= :transport-retry-scheduled
+           (:status (sut/drive! (assoc inputs :state @saved)))))
+    (is (= 1 (count @calls)))
+    (reset! now 1010)
+    (is (= :awaiting-apparatus-repair
+           (:status (sut/drive! (assoc inputs :state @saved)))))
+    (is (= :promotion-substrate-retry-exhausted (:error/code @saved)))
+    (is (= 1 (:transport-retry/attempt @saved)))
+    (is (= :deposit (get-in @saved [:last-valid-state :stage])))
+    (is (= ["accepted-deposit" "accepted-deposit"] @calls))))
+
+(deftest thrown-integrity-failure-never-becomes-transport-retry
+  (let [saved (atom nil)]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"identity conflict"
+          (sut/drive! {:state {:stage :deposit :job "accepted"}
+                       :deposit-fn (fn [_] (throw (ex-info "identity conflict"
+                                                  {:error/code :identity-conflict})))
+                       :persist-fn #(reset! saved %)})))
+    (is (nil? @saved))))
+
+(deftest transport-exception-preserves-the-newest-durable-checkpoint
+  (let [saved (atom nil)
+        checkpoint {:state/type :promotion :stage :independent-review
+                    :job "already-dispatched-review"}]
+    (with-redefs-fn
+      {#'sut/drive-step!
+       (fn [{:keys [persist-fn]}]
+         (persist-fn checkpoint)
+         (throw (ex-info "later observation unavailable"
+                         {:error/component :transport :error/code :futon1b-read-timeout})))}
+      #(let [result (sut/drive! {:state {:stage :deposit :job "old-deposit"}
+                                :persist-fn (fn [s] (reset! saved (edn/read-string (pr-str s)))
+                                              {:ok true})
+                                :now-ms-fn (constantly 0)})]
+         (is (= :transport-retry-scheduled (:status result)))
+         (is (= checkpoint (:last-valid-state @saved)))))))
+
+(deftest a-retry-is-not-scheduled-until-its-hold-is-durable
+  (let [state {:state/type :promotion :stage :deposit :job "accepted"}
+        result (sut/drive!
+                {:state state
+                 :deposit-fn (fn [_] (throw (ex-info "store down"
+                                                    {:error/component :transport
+                                                     :error/code :futon1b-unreachable})))
+                 :persist-fn (constantly {:ok false :error/code :disk-full})
+                 :now-ms-fn (constantly 0)})]
+    (is (false? (:ok result)))
+    (is (= :promotion-hold-persistence-failed (:error/code result)))
+    (is (= state (:state result)))))
+
+(deftest source-trace-lookup-uses-agency-not-the-evidence-store
+  (let [instruction (#'sut/review-read-instruction
+                     "http://agency.example:7070/"
+                     [{:source-refs [{:source/type :agency-job :source/id "job-a"}
+                                     {:source/type :agency-job :source/id "job/a"}]}
+                      {:source-refs [{:source/type :agency-job :source/id "job-a"}]}])]
+    (is (string/includes? instruction
+                          "http://agency.example:7070/api/alpha/invoke/jobs/job-a"))
+    (is (string/includes? instruction "/api/alpha/invoke/jobs/job%2Fa"))
+    (is (= 1 (count (re-seq #":source/id \"job-a\"" instruction))))
+    (is (not (string/includes? instruction ":7073")))
+    (is (string/includes? instruction "does not establish that a trace exists")))
+  (is (string/includes? (#'sut/review-read-instruction "http://agency" [])
+                        "preserve cannot-judge")))
+
+(deftest legacy-identifiers-are-not-guessed-to-be-jobs
+  (let [prompt (#'sut/review-read-instruction
+                "http://agency" [{:source-attempts ["legacy-hash"]}]
+                [{:source/type :agency-job :source/id "reobserved-job"}])]
+    (is (.contains prompt "legacy-hash"))
+    (is (not (.contains prompt "/invoke/jobs/legacy-hash")))
+    (is (.contains prompt "/invoke/jobs/reobserved-job"))))

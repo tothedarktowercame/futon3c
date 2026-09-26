@@ -1,5 +1,7 @@
 # M-substrate-metric R2 Curvature Full Pass - E1 Propose Surface
 
+Status: complete
+
 **Date:** 2026-06-01  
 **Scope:** full current structural-bridge pass over the live E1 `feeds-mu?` graph, with mission-adjacent report/sample artifacts excluded from O1 nodes.
 

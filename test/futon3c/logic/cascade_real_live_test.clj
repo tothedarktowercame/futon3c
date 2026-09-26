@@ -1,0 +1,450 @@
+(ns futon3c.logic.cascade-real-live-test
+  "Live-gate tests for C-cascade-real RUN/DELIVER. The HTTP fetch is exercised live
+   over Drawbridge; here we pin the pure extractor and prove the cross-dimension
+   composition gate bites on REAL-shaped node-ids (so a bad future car is caught)."
+  (:require [cheshire.core :as json]
+            [clojure.edn]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.java.io :as io]
+            [futon3c.agency.registry :as registry]
+            [futon3c.logic.cascade-real :as cr]
+            [futon3c.logic.cascade-real-live :as live]
+            [futon3c.substrate.client :as substrate]))
+
+#_{:clj-kondo/ignore [:unresolved-var]}
+(def ^:private claims-typeo-rel cr/claims-typeo)
+
+(def ^:private sample-clock-edges
+  ;; as the substrate-2 query returns them — endpoints are now CANONICAL node-ids
+  [{:hx/type :clock/clocked-on
+    :hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
+    :hx/props {:agent-id "claude-4" :mission-id "M-autoclock-in"}}
+   {:hx/type :clock/clocked-on
+    :hx/endpoints ["agent:claude-4" "campaign:C-cascade-real"]
+    :hx/props {"agent-id" "claude-4" "campaign-id" "C-cascade-real"}}])
+
+(deftest o3-extractor-keys-on-canonical-endpoints
+  (testing "clock edges → claims-typeo on the CANONICAL node-ids the lineage writes"
+    (let [claims (live/o3-claims-from sample-clock-edges)]
+      (is (some #{[claims-typeo-rel :O3 "futon3c-d/mission/autoclock-in" :mission]} claims)
+          "the canonical mission node is claimed (shares its id with O1/D4)")
+      (is (some #{[claims-typeo-rel :O3 "campaign:C-cascade-real" :campaign]} claims))
+      (is (some #{[claims-typeo-rel :O3 "agent:claude-4" :agent]} claims))
+      (is (every? #(= claims-typeo-rel (first %)) claims) "only claims-typeo facts"))))
+
+(deftest o1-extractor-maps-mined-moves
+  (testing "mined-move edges → claims-typeo :O1 on the canonical HAVE mission node (:mission)"
+    (let [edges  [{:hx/type "code/v05/mined-move"
+                   :hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}]
+          claims (live/o1-mined-move-claims-from edges)]
+      (is (= [[claims-typeo-rel :O1 "futon3c-d/mission/autoclock-in" :mission]] claims)
+          "claims the have (mission) node :mission; the -head want node is skipped"))))
+
+(deftest o4-extractor-maps-clusters
+  (testing "cascade/cluster-member edges → O4 claims the mission node :mission + cluster :cluster"
+    (let [edges  [{:hx/type :cascade/cluster-member
+                   :hx/endpoints ["cascade/cluster/operator-loops" "futon3c-d/mission/autoclock-in"]}]
+          claims (live/o4-cluster-claims-from edges)]
+      (is (some #{[claims-typeo-rel :O4 "cascade/cluster/operator-loops" :cluster]} claims))
+      (is (some #{[claims-typeo-rel :O4 "futon3c-d/mission/autoclock-in" :mission]} claims)
+          "claims the canonical mission node :mission (the shared spine with O1/O3)"))))
+
+(deftest o4-o3-o1-compose-on-the-shared-mission-node
+  (testing "O4 cluster, O1 arrow, O3 lineage all claim the SAME mission node :mission → clean compose"
+    (let [o3 (live/o3-claims-from sample-clock-edges)
+          o1 (live/o1-mined-move-claims-from
+              [{:hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}])
+          o4 (live/o4-cluster-claims-from
+              [{:hx/endpoints ["cascade/cluster/x" "futon3c-d/mission/autoclock-in"]}])
+          v  (cr/verify (cr/db-from-data (concat o3 o1 o4)))]
+      (is (= [] (:composition-violations v))
+          "three dimensions agree the mission node is :mission — full-spine compose, no conflict"))))
+
+(deftest o1-o3-compose-on-the-shared-mission-node
+  (testing "D4 arrows × O3 lineage both claim the SAME canonical mission node :mission → non-vacuous, clean"
+    (let [o3 (live/o3-claims-from sample-clock-edges)
+          o1 (live/o1-mined-move-claims-from
+              [{:hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}])
+          v  (cr/verify (cr/db-from-data (concat o3 o1)))]
+      (is (= [] (:composition-violations v))
+          "O1 and O3 agree the mission node is :mission — the gate's first real, non-vacuous compose"))))
+
+(deftest gate-bites-cross-dimension-conflict
+  (testing "a 2nd dimension's LIVE claim that types a shared real node differently is CAUGHT"
+    ;; O3 says mission:M-x is :mission; a hypothetical O4 car lands claiming it :pattern
+    (let [o3  [claims-typeo-rel :O3 "mission:M-x" :mission]
+          bad [claims-typeo-rel :O4 "mission:M-x" :pattern]
+          v   (cr/verify (cr/db-from-data [o3 bad]))]
+      (is (some #{"mission:M-x"} (:composition-violations v))
+          "the shared-node type conflict is detected over real-shaped node-ids")
+      (is (false? (:consistent? v))))))
+
+(deftest gate-clean-when-consistent
+  (testing "two dimensions agreeing on a shared node's type compose cleanly"
+    (let [o3 [claims-typeo-rel :O3 "mission:M-x" :mission]
+          o4 [claims-typeo-rel :O4 "mission:M-x" :mission]
+          v  (cr/verify (cr/db-from-data [o3 o4]))]
+      (is (= [] (:composition-violations v))))))
+
+(deftest empty-edges-no-claims
+  (testing "a dimension with no live rows contributes nothing (honest non-landing)"
+    (is (= [] (vec (live/o3-claims-from []))))
+    (is (= [] (vec (live/o2-meme-claims-from []))))))
+
+(deftest fetch-edges-uses-canonical-substrate-client
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [type opts]
+                  (is (= "clock/clocked-on" type))
+                  (is (= 5000 (:timeout-ms opts)))
+                  sample-clock-edges)]
+    (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
+
+(deftest o2-extractor-maps-memes
+  (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
+    (let [edges  [{:hx/type :mine/meme :hx/endpoints ["meme:ask-abc123"] :hx/props {}}
+                  {:hx/type :mine/meme :hx/endpoints ["meme:ask-def456" "concept:x"] :hx/props {}}]
+          claims (live/o2-meme-claims-from edges)]
+      (is (some #{[claims-typeo-rel :O2 "meme:ask-abc123" :meme]} claims))
+      (is (some #{[claims-typeo-rel :O2 "meme:ask-def456" :meme]} claims))
+      (is (= 2 (count claims)) "concept: endpoint not claimed in the first car"))))
+
+(deftest o2-o3-compose-disjoint
+  (testing "O2 memes + O3 missions are disjoint node-ids → compose cleanly"
+    (let [v (cr/verify (cr/db-from-data [[claims-typeo-rel :O3 "mission:M-x" :mission]
+                                         [claims-typeo-rel :O2 "meme:ask-1" :meme]]))]
+      (is (= [] (:composition-violations v))))))
+
+(deftest concept-index-collision-would-bite
+  (testing "WHY claude-1 defers concept-index: a mission node claimed as :meme by O2 is caught"
+    (let [v (cr/verify (cr/db-from-data [[claims-typeo-rel :O3 "mission:M-x" :mission]
+                                         [claims-typeo-rel :O2 "mission:M-x" :meme]]))]
+      (is (some #{"mission:M-x"} (:composition-violations v)))
+      (is (false? (:consistent? v))))))
+
+(deftest cascade-summary-uses-fast-claim-consistency
+  (testing "the UI summary computes dimensions and composition without running the full logic gate"
+    (let [edges {"clock/clocked-on" sample-clock-edges
+                 "mine/meme" [{:hx/endpoints ["meme:ask-abc123"]}]
+                 "code/v05/mined-move" [{:hx/endpoints ["futon3c-d/mission/autoclock-in"
+                                                        "futon3c-d/mission/autoclock-in-head"]}]
+                 "cascade/cluster-member" [{:hx/endpoints ["cascade/cluster/x"
+                                                           "futon3c-d/mission/autoclock-in"]}]
+                 "cascade/hole-target" [{:hx/endpoints ["cascade/hole/x"
+                                                        "futon3c-d/mission/autoclock-in"]
+                                         :hx/props {:hole-kind "gap"}}]}]
+      (with-redefs [live/fetch-edges (fn [hx-type] (get edges hx-type []))
+                    live/verify-live (fn [] (throw (ex-info "should-not-run" {})))]
+        (let [summary (live/cascade-real-summary)]
+          (is (true? (:consistent? summary)))
+          (is (= {:O3 4 :O2 1 :O1 1 :O4 2 :O5 2} (:dimensions summary)))
+          (is (= 1 (get-in summary [:composition :O1xO4])))
+          (is (= {"gap" 1} (:holes summary))))))))
+
+;; --- §7 DISSOLUTION Checklist B: the per-section BODY structure -------------
+
+(deftest lineage-section-agent-to-target
+  (testing "clock edges → agent→target rows, most-recent-first, mission OR campaign target"
+    (let [rows (live/lineage-section
+                [{:hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
+                  :hx/props {:agent-id "claude-4" :session-id "s1" :clocked-at-ms 100}}
+                 {:hx/endpoints ["agent:claude-1" "campaign:C-cascade-real"]
+                  :hx/props {:agent-id "claude-1" :session-id "s2" :clocked-at-ms 200}}])]
+      (is (= {:agent "agent:claude-1" :target "campaign:C-cascade-real" :session "s2" :at 200
+              :dispatched-by {:absent :caller-not-recorded}}
+             (first rows)) "most-recent (at=200) first; target is the non-agent endpoint")
+      (is (= "futon3c-d/mission/autoclock-in" (:target (second rows)))))))
+
+(deftest cluster-section-cluster-to-mission
+  (testing "cluster-member edges → cluster→mission rows"
+    (is (= [{:cluster "cascade/cluster/00-war-machine"
+             :mission "futon3c-d/mission/war-machine-first-outing"}]
+           (live/cluster-section
+            [{:hx/endpoints ["cascade/cluster/00-war-machine"
+                             "futon3c-d/mission/war-machine-first-outing"]}])))))
+
+(deftest hole-section-carries-kind
+  (testing "hole-target edges → hole→target rows with the hole kind (the honest hole)"
+    (is (= [{:hole "cascade/hole/capability-layer-not-canonical"
+             :target "futon0-d/mission/capability-star-map"
+             :kind "capability-not-canonical"}]
+           (live/hole-section
+            [{:hx/endpoints ["cascade/hole/capability-layer-not-canonical"
+                             "futon0-d/mission/capability-star-map"]
+              :hx/props {:hole-kind "capability-not-canonical" :composes true}}])))))
+
+(deftest arrow-section-keeps-move-honesty
+  (testing "mined-move edges → have→want rows carrying move-class + ΔG (self-loop visible)"
+    (let [rows (live/arrow-section
+                [{:hx/endpoints ["futon0-d/mission/capability-star-map"
+                                 "futon0-d/mission/capability-star-map-document"]
+                  :hx/props {:move-class ":close-hole" :delta-g -7.91E-4}}
+                 {:hx/endpoints ["futon3c-d/mission/x-head" "y"] :hx/props {}}])]
+      (is (= 1 (count rows)) "the -head want-side stem is skipped, like the O1 extractor")
+      (is (= ":close-hole" (:move-class (first rows))))
+      (is (= "futon0-d/mission/capability-star-map" (:have (first rows)))))))
+
+(deftest held-section-reads-namespaced-props
+  (testing "held/on-mission edges → held→mission rows with namespaced :held/reason + registry"
+    (is (= [{:held "held/item/prose/h1003283572"
+             :mission "futon7-d/mission/self-documenting-stack"
+             :registry "prose" :reason "scope unification"}]
+           (live/held-section
+            [{:hx/endpoints ["held/item/prose/h1003283572"
+                             "futon7-d/mission/self-documenting-stack"]
+              :hx/props {:held/disposition "held" :held/source-registry "prose"
+                         :held/reason "scope unification"}}])))))
+
+(deftest mission-pattern-section-crosslinks
+  ;; Rewritten 2026-08-23 to match `cadd12d1`, which repointed this section from
+  ;; `cascade/mission-pattern` -- a type nothing ever wrote, so the layer rendered
+  ;; 0 -- to the `mission-scope/pattern` binder edges that actually carry the 971
+  ;; rows. The old assertions were written against the empty type and were never
+  ;; updated, so the suite has been red ever since and everyone has been stepping
+  ;; around it. The live binder props are :pattern/ref, :pattern/ident,
+  ;; :pattern/state, :scope/id, :anchor/*. There is NO :cos and NO :relation on
+  ;; them -- verified against the live store -- so a test asserting a cosine score
+  ;; was asserting a field the data does not have.
+  ;;
+  ;; Note `:pattern/ref` must be a full `.../library/<ns>/<name>.flexiarg` path:
+  ;; `library-pattern-id` derives the cascade's `<ns>/<name>` id-space from it and
+  ;; returns nil for a bare slug, which drops the row. That is deliberate (the
+  ;; pattern id-space is the library's), and it is why a fixture with a bare ref
+  ;; silently yields [] rather than failing loudly.
+  (testing "mission-scope/pattern binder edges → mission→pattern rows"
+    (is (= [{:mission "futon3-d/mission/agency-rebuild"
+             :pattern "agency/single-routing-authority"
+             :ident "single-routing-authority"
+             :state :linked
+             :relation "applied"}]
+           (live/mission-pattern-section
+            [{:hx/endpoints [{:entity-id "futon3-d/mission/agency-rebuild" :role :entity}
+                             {:entity-id "agency/single-routing-authority"}]
+              :hx/props {:pattern/ref "futon3/library/agency/single-routing-authority.flexiarg"
+                         :pattern/ident "single-routing-authority"
+                         :pattern/state :linked}}]))))
+  (testing "every binder edge is an applied citation — the relation is not read from props"
+    (is (= ["applied"]
+           (mapv :relation
+                 (live/mission-pattern-section
+                  [{:hx/endpoints [{:entity-id "futon2-d/mission/x" :role :entity}
+                                   {:entity-id "realtime/y"}]
+                    :hx/props {:pattern/ref "futon3/library/realtime/y.flexiarg" :relation "candidate"}}])))))
+  (testing ":detached state rides along rather than being filtered out (honest hole)"
+    (is (= [:detached]
+           (mapv :state
+                 (live/mission-pattern-section
+                  [{:hx/endpoints [{:entity-id "futon2-d/mission/x" :role :entity}
+                                   {:entity-id "realtime/y"}]
+                    :hx/props {:pattern/ref "futon3/library/realtime/y.flexiarg"
+                               :pattern/state :detached}}]))))))
+
+(deftest sections-empty-on-no-rows
+  (testing "every section degrades to [] with no live rows (honest non-landing)"
+    (is (= [] (live/lineage-section []) (live/cluster-section [])
+           (live/hole-section []) (live/arrow-section []) (live/held-section [])
+           (live/mission-pattern-section [])))))
+
+(deftest graph-fetches-are-bounded-at-two
+  (let [active (atom 0)
+        max-active (atom 0)]
+    (with-redefs [live/fetch-edges
+                  (fn [_]
+                    (let [n (swap! active inc)]
+                      (swap! max-active max n)
+                      (Thread/sleep 20)
+                      (swap! active dec)
+                      []))]
+      (let [results (live/fetch-graph-sections)]
+        (is (= 7 (count results)))
+        (is (= 2 @max-active))
+        (is (every? #(= :ok (:status %)) (vals results)))))))
+
+(deftest graph-fetch-failure-is-an-explicit-honest-hole
+  (let [counts {"clock/clocked-on" 67
+                "cascade/cluster-member" 117
+                "cascade/hole-target" 0
+                "code/v05/mined-move" 177
+                "held/on-mission" 124
+                "mission-scope/pattern" 971}]
+    (with-redefs [live/fetch-edges
+                  (fn [hx-type]
+                    (if (= "mine/meme" hx-type)
+                      (throw (ex-info "induced one-section timeout" {:timeout-ms 1}))
+                      (vec (repeat (get counts hx-type) {:hx/endpoints []}))))
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (let [graph (live/cascade-real-graph)
+            status (:section-status graph)]
+        (is (= :failed (get-in status ["mine/meme" :status])))
+        (is (= "mine/meme" (get-in status ["mine/meme" :hyperedge-type])))
+        (is (= "induced one-section timeout"
+               (get-in status ["mine/meme" :error :message])))
+        (is (= {:status :ok
+                :hyperedge-type "cascade/hole-target"
+                :row-count 0}
+               (get status "cascade/hole-target"))
+            "healthy empty and failed are distinct response shapes")
+        (is (= counts
+               (into {} (map (fn [[hx-type _]]
+                               [hx-type (get-in status [hx-type :row-count])]))
+                     counts))
+            "all six independent sections survive with their full row counts")))))
+
+(deftest tickets-section-sorts-unclocked-docs
+  (testing "tickets are recent mission/excursion docs minus durable and live clocks"
+    (let [root (.toFile (java.nio.file.Files/createTempDirectory "cascade-tickets" (make-array java.nio.file.attribute.FileAttribute 0)))
+          mk (fn [repo rel mtime]
+               (let [f (io/file root repo "holes" rel)]
+                 (.mkdirs (.getParentFile f))
+                 (spit f "# ticket\n")
+                 (.setLastModified f mtime)
+                 f))
+          newer (mk "futon3c" "excursions/E-newer.md" 3000)
+          older (mk "futon6" "missions/M-older.md" 2000)
+          durable (mk "futon6" "missions/M-clocked.md" 4000)
+          live-clock (mk "futon3c" "excursions/E-live.md" 5000)]
+      (with-redefs-fn {#'live/code-root (.getCanonicalPath root)
+                       #'live/doc-files (fn [] [newer older durable live-clock])
+                       #'live/fetch-edges (fn [hx-type]
+                                             (if (= "clock/clocked-on" hx-type)
+                                               [{:hx/endpoints ["agent:claude-1" "futon6-d/mission/clocked"]}]
+                                               []))
+                       #'live/live-clocked-stems (fn [] #{"live"})}
+        (fn []
+          (let [tickets ((var-get #'live/tickets-section))
+                stems (mapv :stem (:items tickets))]
+            (is (= 2 (:count-total tickets)))
+            (is (= ["E-newer" "M-older"] stems))
+            (is (= ["futon3c" "futon6"] (mapv :repo (:items tickets))))))))))
+
+;; --- the outer cascade's field: excursion and ticket nodes (CASCADE-LIVE-I) ---
+
+(def ^:private three-kind-clock-edges
+  [{:hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
+    :hx/props {:agent-id "claude-4" :session-id "s1" :clocked-at-ms 100}}
+   {:hx/endpoints ["agent:kimi-7" "futon2-d/excursion/kimi-task-28"]
+    :hx/props {:agent-id "kimi-7" :session-id "s2" :clocked-at-ms 200}}
+   {:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]
+    :hx/props {:agent-id "codex-3" :session-id "s3" :clocked-at-ms 300}}])
+
+(deftest node-kind-matches-the-three-work-objects-only
+  (is (= :mission (live/node-kind "futon3c-d/mission/autoclock-in")))
+  (is (= :excursion (live/node-kind "futon2-d/excursion/kimi-task-28")))
+  (is (= :ticket (live/node-kind "futon3c-d/ticket/fail-invoke-error")))
+  (testing "the bad case: a kind that merely starts with a work-object word"
+    (is (nil? (live/node-kind "futon3c-d/missionary/x")))
+    (is (empty? (live/o3-claims-from
+                 [{:hx/endpoints ["futon3c-d/missionary/x" "futon3c-d/ticketing/y"]}])))))
+
+(deftest excursion-and-ticket-nodes-join-the-spine
+  (let [claims (live/o3-claims-from three-kind-clock-edges)]
+    (is (some #{[claims-typeo-rel :O3 "futon3c-d/mission/autoclock-in" :mission]} claims))
+    (is (some #{[claims-typeo-rel :O3 "futon2-d/excursion/kimi-task-28" :excursion]} claims))
+    (is (some #{[claims-typeo-rel :O3 "futon3c-d/ticket/fail-invoke-error" :ticket]} claims)))
+  (with-redefs [live/fetch-edges (fn [hx-type] (if (= "clock/clocked-on" hx-type) three-kind-clock-edges []))]
+    (let [spine (:spine (live/cascade-real-summary))]
+      (is (= {:canonical-mission-nodes 1 :canonical-excursion-nodes 1 :canonical-ticket-nodes 1
+              :O1-missions 0 :O4-missions 0}
+             spine))))
+  (testing "a store with no ticket ends reports a measured zero"
+    (with-redefs [live/fetch-edges (fn [hx-type] (if (= "clock/clocked-on" hx-type) (take 2 three-kind-clock-edges) []))]
+      (is (= 0 (get-in (live/cascade-real-summary) [:spine :canonical-ticket-nodes])))))
+  (testing "the excursion's lineage row is present"
+    (is (= #{"futon3c-d/mission/autoclock-in" "futon2-d/excursion/kimi-task-28" "futon3c-d/ticket/fail-invoke-error"}
+           (set (map :target (live/lineage-section three-kind-clock-edges)))))))
+
+(deftest tickets-section-lists-ticket-docs
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory "cascade-t-docs" (make-array java.nio.file.attribute.FileAttribute 0)))
+        f (io/file root "futon3c" "holes" "tickets" "T-fail-invoke-error.md")]
+    (.mkdirs (.getParentFile f))
+    (spit f "# T-fail-invoke-error\n")
+    (with-redefs-fn {#'live/code-root (.getCanonicalPath root)
+                     #'live/live-clocked-stems (constantly #{})}
+      (fn []
+        (is (= [{:stem "T-fail-invoke-error" :kind "ticket" :repo "futon3c"}]
+               (mapv #(select-keys % [:stem :kind :repo])
+                     (:items ((var-get #'live/tickets-section) [])))))
+        (testing "a clock edge on the ticket node takes it off the list"
+          (is (= [] (:items ((var-get #'live/tickets-section)
+                             [{:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]}])))))))))
+
+;; --- control: the mission part is unchanged on today's store (pinned) ---------
+;; Edges read from futon1b around GET /api/alpha/cascade-real (as-of 1790358119151)
+;; and /cascade-real/graph (as-of 1790358124816), 2026-09-25; the edge reads
+;; before and after both GETs were byte-identical.
+
+(def ^:private fixture-dir "test/fixtures/cascade-real-live/")
+
+(defn- pinned-edges [hx-type]
+  (:hyperedges (clojure.edn/read-string
+                (slurp (str fixture-dir (str/replace hx-type "/" "_") ".edn")))))
+
+(defn- as-json [x] (json/parse-string (json/generate-string x)))
+
+(deftest control-mission-part-unchanged-on-pinned-store
+  (with-redefs [live/fetch-edges pinned-edges]
+    (let [pinned (json/parse-string (slurp (str fixture-dir "summary.json")))
+          now (as-json (update-in (live/cascade-real-summary) [:standards :s4-evidence] dissoc :as-of))
+          mission-part (fn [m] (-> m
+                                   (select-keys ["consistent?" "composition" "holes" "owners"])
+                                   (assoc "spine" (select-keys (get m "spine") ["canonical-mission-nodes" "O1-missions" "O4-missions"])
+                                          "dimensions" (dissoc (get m "dimensions") "O3")
+                                          "standards" (update (get m "standards") "s4-evidence" dissoc "as-of"))))]
+      (is (= (mission-part pinned) (mission-part now)))
+      (testing "O3 grows by one claim per excursion-ended clock edge (12 edges on 5 nodes)"
+        (let [ends (count (for [e (pinned-edges "clock/clocked-on")
+                                ep (:hx/endpoints e)
+                                :when (= :excursion (live/node-kind ep))]
+                            ep))]
+          (is (= 12 ends))
+          (is (= (+ (get-in pinned ["dimensions" "O3"]) ends)
+                 (get-in now ["dimensions" "O3"])))))
+      (is (= 229 (get-in now ["spine" "canonical-mission-nodes"])))
+      (is (= 5 (get-in now ["spine" "canonical-excursion-nodes"])))
+      (is (= 0 (get-in now ["spine" "canonical-ticket-nodes"]))))
+    (let [pinned (json/parse-string (slurp (str fixture-dir "graph-sections.json")))
+          strip (fn [rows] (mapv #(dissoc % "dispatched-by") rows))]
+      (is (= (strip (get pinned "lineage"))
+             (strip (as-json (live/lineage-section (pinned-edges "clock/clocked-on"))))))
+      (is (= (get pinned "clusters") (as-json (live/cluster-section (pinned-edges "cascade/cluster-member")))))
+      (is (= (get pinned "holes") (as-json (live/hole-section (pinned-edges "cascade/hole-target")))))
+      (is (= (get pinned "arrows") (as-json (live/arrow-section (pinned-edges "code/v05/mined-move")))))
+      (is (= (get pinned "held") (as-json (live/held-section (pinned-edges "held/on-mission"))))))))
+
+;; --- :dispatched-by, as the witness says (CASCADE-LIVE-I 2) ------------------
+
+(defn- clock-edge [agent witness]
+  {:hx/endpoints [(str "agent:" agent) "futon3c-d/mission/the-perfect-crime"]
+   :hx/props {:agent-id agent :clocked-at-ms 1 :witness witness}})
+
+(deftest dispatched-by-reads-the-witness
+  (testing "a named caller (inherited clock)"
+    (is (= "claude-8" (:dispatched-by (first (live/lineage-section
+                                               [(clock-edge "codex-3" {:rule "clock-decision" :source "inherited"
+                                                                       :evidence {:caller-id "claude-8"}})]))))))
+  (testing "no caller recorded: a dispatch receipt, and a clock decision from a named target"
+    (doseq [w [{:rule "dispatch-mission-id" :source "invoke-receipt"}
+               {:rule "clock-decision" :source 1 :evidence {:targets ["M-the-perfect-crime"]}}
+               nil]]
+      (is (= {:absent :caller-not-recorded}
+             (:dispatched-by (first (live/lineage-section [(clock-edge "kimi-15" w)])))))))
+  (testing "the agent's own act"
+    (doseq [w [{:rule "agent-edit-activity" :source "agent-tool-edit"}
+               {:rule "selection-decision"}]]
+      (is (= :self (:dispatched-by (first (live/lineage-section [(clock-edge "claude-19" w)])))))))
+  (testing "string-keyed props, as some writers leave them"
+    (is (= "claude-5" (live/dispatched-by {"witness" {"evidence" {"caller-id" "claude-5"}}})))))
+
+(deftest dispatched-by-keeps-an-off-roster-caller
+  (testing "the field is what the witness says; nothing checks the roster"
+    (with-redefs [registry/registry-status
+                  (fn [] (throw (ex-info "roster must not be read" {})))]
+      (is (= "wm-full-loop"
+             (live/dispatched-by {:witness {:rule "clock-decision" :source "inherited"
+                                            :evidence {:caller-id "wm-full-loop"}}}))))))
+
+(deftest dispatched-by-on-the-pinned-store
+  (is (= {:caller 29 :self 2 :absent 57}
+         (frequencies (for [r (live/lineage-section (pinned-edges "clock/clocked-on"))
+                            :let [d (:dispatched-by r)]]
+                        (cond (string? d) :caller (= :self d) :self :else :absent))))))

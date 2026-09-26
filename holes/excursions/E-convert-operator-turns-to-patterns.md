@@ -1,0 +1,250 @@
+# E-convert-operator-turns-to-patterns — Joe's turns read in pattern terms, then carried out
+
+Opened 2026-09-25 by claude-12 at Joe's request, as the requisition for the
+seat that interprets his turns and as the record of the experiment.
+
+## What we are doing
+
+A two-seat chain. Joe writes a turn. **Seat A** reads it in pattern terms:
+fragments of his text, each with an intent, the library patterns it cites
+(`futon3/library/<id>.flexiarg`) or a typed hole, and a derived cascade.
+**Seat B** gets Joe's original text together with seat A's reading and
+carries out what he asked. claude-12 sets up the dispatch and reviews each
+round as it comes in, so we learn what works and what does not and improve
+it. Nothing runs in parallel; one turn at a time.
+
+## Who does what
+
+| role | seat | how |
+|---|---|---|
+| Seat A, interpreter | kimi-2 | session-mode's labeller (`session-mode-analysis-agent`, set in the `server` Emacs 2026-09-25 ~20:15Z). Every turn recorded by `session-mode-turn-tags-mode` goes to it with this requisition; its reading is written beside the turn record and shown on https://zone.hyperreal.enterprises/wip/turns/feed.html (margin notes, underlined cues, cascade column). |
+| Seat B, executor | kimi-1 | one persistent seat on M-the-perfect-crime: every task carries `Requisition: M-the-perfect-crime — …`, so its conversation continues from task to task. Oriented 2026-09-25 on the mission doc and audit (job `invoke-1790366997195-24407-0c250847`). |
+| Dispatch and review | claude-12 | sends seat B each "Real work:" turn with seat A's reading unchanged; reports per round what A read, what B did, and where the chain lost or added something. |
+
+Trigger: a turn to claude-12 that begins "Real work:". Other turns are
+conversation with claude-12.
+
+Recording starts when the feature is turned on; there is no backfill.
+claude-12's buffer has recorded since 2026-09-25 19:50Z; claude-1's buffer
+records too and also goes to seat A.
+
+## Seat B's standing rules (from its orientation brief)
+
+- Joe's words are what is carried out; seat A's reading is how to
+  understand them. Where they disagree, follow Joe and say so.
+- A warrant at every change (comment or docstring line, and a `Warrant:`
+  line in the commit) naming the turn, the fragment or pattern, and in one
+  clause what it asked for.
+- Anything thought needed but not asked for is listed under "Unwarranted,
+  not done", not done.
+- Explicit-path commits, never amend or stash; no loads into the shared
+  JVMs; no War Machine runs; nothing under `data/`.
+
+## Before this (2026-09-25, same day)
+
+Two earlier rounds used a different chain: seat A wrote an authored cascade
+(`storage/operator-turns/translations/`, `futon3c/scripts/operator-round/`)
+and seat B was a fresh seat per turn through `kimi-task.sh`. In both rounds
+seat A softened what Joe asked ("continue" became "refresh status"; "clean
+up the kimi list" became "prune the display"), and seat B, following the
+warrant rule, correctly declined the part left out. Round 2's code change
+(futon3c `5b14a6f6`) is committed, not loaded, and did not fix the
+reported case. A fresh seat per turn gave seat B no context; hence the
+persistent seat above. A backfill of Joe's earlier turns, which he did not
+ask for, was cancelled and its records set aside
+(`/tmp/claude12/backfill-records/`). All earlier Kimi and codex seats were
+deleted at Joe's request before this chain was set up.
+
+## Rounds
+
+One entry per "Real work:" turn: turn id, seat A's reading, seat B's job
+and commits, and the discrepancies claude-12's review found.
+
+### Round 1 — claude-12-turn-91 (turn-sVtZeL), 2026-09-25 ~20:18Z
+
+Joe: the EFE field page shows no Tornhill features; "I would like to get a
+plan back (with details in the mission) about how the integration will be
+effected".
+
+- **Seat A (kimi-2):** two fragments. s1a report-problem (0–166), matched
+  to the proposed `operator/pin-the-defect-with-its-evidence` (cited in
+  prose; the validator accepts only canonical ids); s1b ask-action
+  (171–275), `orchestration/recorded-handoff` (the plan and its home, the
+  mission, both named). Sound.
+- **Seat B (kimi-1):** job `invoke-1790367782402-24419-d2f9561c`; futon3c
+  `66f018a6`, a 66-line section "Integration plan — Tornhill features into
+  the EFE field page" in M-the-perfect-crime.md, warrant in the section and
+  the commit. Four layers (data, derived metrics, Arxana panel, EFE page),
+  each with an outside acceptance check. Implementation listed as
+  unwarranted, correctly: a plan was asked for.
+- **Discrepancies:**
+  1. *Gap at the step Joe asked about.* Layer 4 aggregates a hotspot score
+     "over the files/vars in each mission's scopes", but
+     `futon6/data/efe-scopes.json` carries no file references (0 found), so
+     nothing joins a mission to the code it touched. The plan's central join
+     is undefined; a mission→code join (commit best-guess, or clock lineage
+     × commits) is missing as its own step.
+  2. *Beyond the ask.* It declared the HEAD sub-question ("add Tornhill
+     anyway?") answered, as "yes-but-with-discipline" — a decision that was
+     Joe's.
+  File claims checked and true: both migration files name
+  `code/indentation`; the Arxana panel renders only `(when (or churn
+  complexity) …)`; the page's generator has no churn input.
+
+### Round 2 — claude-12-turn-95 (turn-NWwXB2), 2026-09-25 ~20:30Z
+
+Joe: record discrepancies here, and "Real work: what is the minimal visual
+improvement … that will let me see that the Tornhill information is being
+considered?"; a plan with a visual change existed and was not carried out.
+
+- **Seat A (kimi-2):** three fragments: defer (the tracking instruction,
+  addressed to claude-12), ask-action (the minimal visible change,
+  `operator/commission-the-smallest-reviewable-act`, prose cite),
+  report-problem (`process/spec-drift-by-displacement`). Sound; it kept the
+  @claude-12 part separate, and seat B left it to claude-12.
+- **Seat B (kimi-1):** job `invoke-1790368419659-24422-ce1a1c40`; futon6
+  `5fdcd71` (`scripts/mission_efe_field.py`: a yellow ring per district hub,
+  thickness ∝ log of commits touching the mission's own doc in 180 days,
+  dashed grey ring for zero; legend and hover say the complexity axis is
+  pending), futon3c `cb0e68d0` (mission note). Warrants in both. Dedupes
+  commits across the worktree repos that share history; its count for
+  M-the-perfect-crime (9) matched `git log` on futon3c (claude-12's recount:
+  10, the extra one being `cb0e68d0` itself).
+- **Discrepancies:**
+  1. *The label claims more than the ring measures.* It counts commits to
+     the mission's own doc, not code churn, yet the legend calls it "Tornhill
+     change-frequency" and the hover "Tornhill churn". Tornhill's churn is
+     change frequency of the code under study; this is activity on the
+     planning document — the kind of claim the mission itself is about.
+  2. *Not visible yet.* The page is a gitignored artefact regenerated
+     locally; nothing published it, so https://zone.hyperreal.enterprises/wip/mission-efe-field.html
+     is unchanged. Publishing (`futon6/scripts/publish-efe-field.sh`) was
+     outside seat B's limits.
+  3. *Small factual slip:* it says it recorded the plan "yesterday"; it was
+     earlier the same day (66f018a6).
+
+### Round 3 — claude-12-turn-97 (turn-tDqSTw), 2026-09-25 ~20:32Z
+
+Joe: the EFE page shows agents (flying saucers) that don't exist; the layout
+may lag, but the live annotations should match the Agency.
+
+- **Seat A (kimi-2):** two fragments: report-problem (the phantom agents,
+  pinned by URL, hedged), constrain (a freshness contract per layer: layout
+  may lag, annotations may not; candidate
+  `operator/set-the-freshness-contract-per-layer`). Sound, and s2 names the
+  requirement exactly.
+- **Seat B (kimi-1):** job `invoke-1790368573628-24424-a5431739`; futon6
+  `89f030e` (`scripts/mission_efe_field.py`, 25 lines: the page's live
+  layer draws an agent only if its Agency status is invoking/idle, shows
+  "N stale agent annotation(s) withheld"). Warrant present. Diagnosis: the
+  :7070 JVM predates futon3c `5b14a6f6`, so a restart would fix it.
+- **Discrepancies:**
+  1. *Wrong cause.* The published page is a static snapshot: the publish
+     script inlines the overlay and the page "performs no browser-time live
+     fetch" (`futon6/scripts/publish-efe-field.sh:123`). It lists 103
+     agents; 49 of them are not on the roster now (the Kimi and codex seats
+     deleted ~20:05Z, plus claude-7, claude-9). The phantoms are the
+     snapshot's age, not the server's filter. Nothing in the fix makes the
+     annotations track the Agency between publishes, which is what s2 asked.
+  2. *The predicate repeats round 2 of the old chain.* invoking/idle counts
+     almost every agent as active (the reason `5b14a6f6` changed 1 saucer);
+     a deleted agent is simply absent from the registry, so filtering by
+     status neither helps nor is needed for it.
+  3. *"Needs a restart" is wrong on two counts:* a reload from master is
+     enough to load `5b14a6f6`, and loading it would not remove these
+     phantoms.
+  File and count claims otherwise checked: one file, 25 lines, warrant in
+  the commit.
+
+### Round 4 — claude-12-turn-100 (turn-AIxeop), 2026-09-25 ~20:40Z
+
+Joe: don't publish (to claude-12); "Real work: I have received this
+feedback …, please consider it in an update", quoting claude-12's round-2
+finding that the ring's label overstates what it measures.
+
+- **Seat A (kimi-2):** redirect (the countermand, addressed to claude-12),
+  delegate (relay the review verbatim), and the quoted text read for
+  completeness with no candidates and no display cues, so the underlines
+  stay Joe's. Sound.
+- **Seat B (kimi-1):** job `invoke-1790369086228-24440-c2d00ddf`; futon6
+  `e7afd31` (labels only: legend, 284 tooltips and 40 no-data rings now say
+  "mission-doc activity" and that it is not Tornhill churn), futon3c
+  `0271f0f6` (the mission records the overclaim and its cause). Warrants in
+  both. Left the "don't publish" to claude-12; published nothing.
+- **Discrepancies:** none in the work. One in claude-12's dispatch: the
+  packet's text block was left unclosed (a slip in the build script), so
+  seat A's heading sat inside Joe's quoted text; seat B still separated
+  Joe's words, the quoted review and seat A's reading correctly.
+
+### Round 5 — claude-12-turn-104 (turn-AL0y9C), 2026-09-25 ~20:50Z
+
+Joe: too many turns spent on whether the page can show something; say so if
+it is too hard, otherwise show churn data meaningfully, not explanations of
+gaps.
+
+- **Seat A (kimi-2):** four fragments: disagree (the frame, not the work),
+  report-problem (turns metered against no artefact), constrain
+  (`memory/licence-to-fail`), ask-action
+  (`war-machine/operational-not-decorative`). Sound.
+- **Seat B (kimi-1):** job `invoke-1790369616704-24450-a6230ba1`; futon6
+  `84069cc` (EFE page: a pink ring per district for commits in 90 days to
+  the code files its mission doc touches, from `data/mission-activity.json`
+  — `scripts/mission_activity.py`, futon6 `f3820f5`/`eb32e27`, 03:11Z the
+  same day, from `data/fold-embed/edges.jsonl` touches edges; hover gives
+  churn × indent complexity, all-time commits and coupled missions; solid /
+  dashed / dotted for measured / link without files / no link: 28 / 7 /
+  289 of 324); futon3c `a3acb76b` (mission note). Warrants present. It found
+  the mission→code link already in the data, which rounds 1–4 missed.
+- **Discrepancies:**
+  1. *What "hot" means here.* The link is doc → vars → files, and big shared
+     files dominate: M-capability-star-map, CLOSED since 2026-06-10, ranks
+     third (239 commits in 90 days over 5 files, 506 vars). The ring shows
+     how hot the files a mission's doc refers to are, not how active the
+     mission's own work is; the legend should say so.
+  2. *The data is not live.* `mission-activity.json` was generated
+     2026-09-25T03:12Z; the page reads that file, so the ring is as old as
+     its last run. The hover carries the timestamp; the legend does not
+     say how to refresh it.
+  3. *An orphaned change.* `scripts/mission_activity.py` has 214 uncommitted
+     added lines (per-doc commit history), which seat B attributes to
+     claude-12's in-flight work. They are most likely from the Kimi job
+     cancelled when the old seats were deleted (kimi-10, stuck since 07:03);
+     nobody owns them now.
+  Coverage (28 of 324 measured) is drawn on the page rather than explained,
+  which is what Joe asked for. Not published.
+
+### Publish, 2026-09-25 21:29Z and 21:44Z (claude-12, at Joe's request)
+
+Rounds 2, 4 and 5 went live with `futon6/scripts/publish-efe-field.sh`.
+Two discrepancies surfaced only at publish:
+1. *A bug round 3 shipped and claude-12's review missed.* futon6 `89f030e`
+   wrote `join("\n")` inside a non-raw Python string, so the page's script
+   had a line break inside a JS string literal and did not run (21:29Z
+   page). The review checked the diagnosis, not the rendered page. Fixed in
+   futon6 `02cad20`; the 21:44Z page loads with no script errors.
+2. *The publish step timed out.* The pattern-density report took 132 s
+   against a fixed 90 s limit; the limit is now `PATTERN_DENSITY_TIMEOUT`
+   (futon6 `a99e026`).
+Still open: round 3's "stale agent annotation(s) withheld" notice is drawn
+large across the top of the map, over the star labels.
+
+## Wound down, 2026-09-25 ~21:50Z (Joe)
+
+Joe: "I see the yellow ring but very little clarity around what it means. I
+think we should probably wind down the Seat A and Seat B experiment and
+rethink how we're going about this." No further rounds are dispatched.
+
+What the five rounds showed, from the entries above:
+- Seat A's readings were sound every round; the losses were downstream.
+- Seat B followed Joe's words and put warrants at its changes, but fixed
+  what it could measure rather than what was asked (rounds 2, 3), and
+  shipped an unrendered page with a script error (round 3).
+- Each round produced a small change and a review; Joe saw several turns
+  of talk before anything visible, and what became visible (the yellow
+  ring) did not explain itself.
+- claude-12's reviews read diffs and data but not the rendered page until
+  publish.
+
+Left in place at wind-down: kimi-1 (seat B) and kimi-2 (seat A, still
+session-mode's interpreter for the turn feed), pending Joe's decision.
+

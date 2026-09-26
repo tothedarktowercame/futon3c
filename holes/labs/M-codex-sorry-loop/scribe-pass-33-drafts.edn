@@ -1,0 +1,337 @@
+[{:name "prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali"
+  :lane :solve-lane
+  :level :proof-architecture
+  :status :draft
+  :body
+  {:hook
+   "Move the norm convergence into `uₙ=|fₙ|^p`, use Scheffé to obtain `L¹` convergence and uniform integrability there, transfer the tail control back to `fₙ`, then apply finite-measure Vitali directly to `fₙ`."
+   :how-to-apply
+   ["Set `u n x = |f n x|^p` and `v x = |g x|^p` on the restricted finite measure space."
+    "Convert convergence of `eLpNorm (f n) p` to convergence of `∫ u n` using the exact norm-power/integral identity."
+    "Apply the nonnegative Scheffé lemma to get `∫ |u n-v| → 0`."
+    "Turn that `L¹` convergence into uniform integrability of `u`."
+    "Use the indicator identity for `eLpNorm` of `|f|^p` to transfer the small-set estimate from `u` to `f` at exponent `p`."
+    "Apply `tendsto_Lp_finite_of_tendsto_ae` directly to `fₙ`; a separate uniform-integrability proof for `|fₙ-g|^p` is unnecessary."]
+   :key-api
+   ["tendsto_integral_of_dominated_convergence"
+    "unifIntegrable_of_tendsto_Lp"
+    "eLpNorm_indicator_rpow_eq"
+    "tendsto_Lp_finite_of_tendsto_ae"]
+   :route-revision
+   {:stable-architecture "Scheffé on norm powers, transfer uniform integrability, then Vitali."
+    :discarded-step "Prove uniform integrability of `|fₙ-g|^p` via `rpow_sub_le`."
+    :replacement "Apply the finite-measure Vitali theorem directly to `fₙ` after transferring uniform integrability."}
+   :witness
+   {:declaration "radon_riesz"
+    :commit "040777917b9f583264023ee31e95dcbff0cb75f7"
+    :all-file-declarations 7
+    :sorryAx false
+    :statement-integrity :intact}
+   :rule
+   "For Radon–Riesz in general `Lᵖ`, use norm powers only to establish the scalar Scheffé and tail-control facts; return to the original functions before applying Vitali."
+   :boundary
+   "This route uses the finite-measure Vitali theorem and `1 < p < ∞`; it does not establish the corresponding result on an arbitrary infinite-measure space."
+   :capture-kind :runner-improved-carried-route-and-owner-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a02J02"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t051"
+    "e-codexroll-019fa2c1-t052"
+    "e-codexroll-019fa2c1-t053"]
+   :receipt-ids ["c2f0f1b2-c261-4fa5-8ecb-bcb35aa9529f"]
+   :commits ["040777917b9f583264023ee31e95dcbff0cb75f7"]
+   :problems ["a02J02-radon-riesz"]
+   :artifacts ["problems/a02J02/lean/Main.lean:radon_riesz"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019fa2c1-t051"
+     "e-codexroll-019fa2c1-t052"
+     "e-codexroll-019fa2c1-t053"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "evaluate-a-rational-circle-integral-by-separating-interior-and-exterior-poles"
+  :lane :solve-lane
+  :level :proof-architecture
+  :status :draft
+  :body
+  {:hook
+   "Factor the denominator, split it into simple poles, evaluate the pole inside the circle by Cauchy's formula, and kill the exterior pole by Cauchy–Goursat before returning to the real angular integral."
+   :how-to-apply
+   ["Factor the quadratic denominator and prove which root lies inside and which lies outside the unit circle."
+    "Establish a partial-fraction identity away from both roots."
+    "Use the circle Cauchy integral formula for the interior simple pole."
+    "Show the exterior-pole integrand is differentiable on the closed disk and apply the zero contour-integral theorem."
+    "Combine the two contour values algebraically."
+    "Unfold `circleIntegral`, prove the pointwise identity under `z=exp(iθ)`, and transfer equality through `intervalIntegral.integral_congr`."]
+   :key-api
+   ["circleIntegral.integral_sub_inv_of_mem_ball"
+    "circleIntegral_eq_zero_of_differentiable_on_off_countable"
+    "circleIntegral.integral_const_mul"
+    "circleIntegral.integral_sub"
+    "circleIntegral"
+    "intervalIntegral.integral_congr"]
+   :witness
+   {:declarations ["contour_integral_eval" "integral_inv_two_plus_cos"]
+    :commit "146de41665ed60d3e0a5a43709e194e50c9c9e0d"
+    :all-file-declarations 7
+    :sorryAx false
+    :statement-integrity :intact}
+   :rule
+   "For a rational unit-circle integral with separated simple poles, classify poles geometrically before performing algebra; the inside/outside split determines whether Cauchy's formula or Cauchy–Goursat supplies each term."
+   :boundary
+   "The method assumes no pole lies on the contour and that the denominator factors into poles whose disk membership can be proved."
+   :capture-kind :runner-contour-construction-and-owner-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J06"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t054"]
+   :receipt-ids ["adee5cd0-e7dc-4b63-8111-f137cf598c67"]
+   :commits ["146de41665ed60d3e0a5a43709e194e50c9c9e0d"]
+   :problems ["a92J06-contour-integral"]
+   :artifacts
+   ["problems/a92J06/lean/Main.lean:contour_integral_eval"
+    "problems/a92J06/lean/Main.lean:integral_inv_two_plus_cos"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019fa2c1-t054"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prove-Holder-convolution-vanishes-at-infinity-by-compact-support-density"
+  :lane :solve-lane
+  :level :proof-architecture
+  :status :draft
+  :body
+  {:hook
+   "Approximate both `Lᵖ` factors by compactly supported continuous functions, bound the two replacement errors uniformly by Hölder and translation isometry, and let the compactly supported core vanish eventually."
+   :how-to-apply
+   ["Choose compactly supported continuous `φ` and `ψ` close to `f` in `Lᵖ` and to `g` in the conjugate `Lᑫ` norm."
+    "Write the convolution pairing as a bounded bilinear pairing between a translate of one factor and the other."
+    "Use measure-preserving translation to make each approximation error independent of the translation point."
+    "Use Hölder/operator-norm bounds to place both replacement errors below the chosen epsilon fractions."
+    "Identify the approximating convolution `φ*ψ`; `HasCompactSupport.convolution` makes it compactly supported."
+    "Convert compact support to eventual equality with zero on the cocompact filter and combine the three estimates."]
+   :key-api
+   ["MemLp.exists_hasCompactSupport_eLpNorm_sub_le"
+    "Lp.norm_compMeasurePreserving"
+    "ContinuousLinearMap.le_opNorm2"
+    "HasCompactSupport.convolution"
+    "hasCompactSupport_iff_eventuallyEq"
+    "Filter.coclosedCompact_eq_cocompact"]
+   :witness
+   {:declaration "convolution_tendsto_zero"
+    :commit "b5e5ddb"
+    :all-file-declarations 3
+    :sorryAx false
+    :statement-integrity :intact}
+   :rule
+   "To prove an `Lᵖ*Lᑫ` convolution vanishes at infinity, approximate both factors so the core has literal compact support while translation-invariant Hölder bounds control the approximation error uniformly."
+   :boundary
+   "The proof uses conjugate exponents and the translation-invariant Lebesgue measure on `ℝ`; additional work is needed for non-unimodular groups or non-invariant measures."
+   :capture-kind :runner-executed-carried-route-and-owner-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a03J03"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t054"
+    "e-codexroll-019f9b12-t055"
+    "e-codexroll-019f9b12-t057"
+    "e-codexroll-019f9b12-t058"]
+   :receipt-ids ["1693fc6c-4e50-4c1f-a898-292667f5cb73"]
+   :commits ["b5e5ddb"]
+   :problems ["a03J03-convolution-vanishing"]
+   :artifacts ["problems/a03J03/lean/Main.lean:convolution_tendsto_zero"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t054"
+     "e-codexroll-019f9b12-t055"
+     "e-codexroll-019f9b12-t057"
+     "e-codexroll-019f9b12-t058"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-a-second-order-Schwarz-bound-by-integrating-the-derivative-radially"
+  :lane :solve-lane
+  :level :proof-architecture
+  :status :draft
+  :body
+  {:hook
+   "Apply Schwarz to `f'` to obtain `‖f'(w)‖≤‖w‖`, then integrate the derivative of `t↦f(tz)` along the radial segment; the exact integral of `t` supplies the factor `1/2`."
+   :how-to-apply
+   ["Use holomorphicity of `f` and the bound on `f'` to apply the classical Schwarz lemma to `f'`, using `f'(0)=0`."
+    "Fix `z` in the unit disk and define the real path `g(t)=f((t:ℂ)z)` for `t∈[0,1]`."
+    "Compute `g'(t)=z*f'((t:ℂ)z)` by the chain rule."
+    "Combine `‖f'(tz)‖≤‖tz‖` with norm multiplicativity to obtain `‖g'(t)‖≤t‖z‖²`."
+    "Apply the interval-integral derivative bound between zero and one."
+    "Evaluate `∫₀¹ t = 1/2` and use `f(0)=0`."]
+   :key-api
+   ["norm_le_norm_of_mapsTo_ball"
+    "DifferentiableOn.deriv"
+    "norm_sub_le_integral_of_norm_deriv_le_of_le"
+    "integral_id"]
+   :witness
+   {:declarations ["deriv_norm_le_norm" "schwarz_second_order_bound"]
+    :commit "b5c01ab"
+    :all-file-declarations 2
+    :sorryAx false
+    :statement-integrity :intact}
+   :rule
+   "When a holomorphic function and its first derivative vanish at the origin, apply first-order Schwarz rigidity to the derivative and recover the sharper function bound by radial integration."
+   :boundary
+   "This yields the stated second-order estimate under a unit bound on `f'`; it is not a general coefficient estimate for arbitrary higher vanishing order."
+   :capture-kind :runner-Schwarz-plus-radial-integration-construction}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93J06"}
+   #:ref{:type :pattern, :id "math/derivative-bounds-api"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t059"]
+   :receipt-ids ["380a7899-c60d-4550-8128-a2bf14a6bb49"]
+   :commits ["b5c01ab"]
+   :problems ["a93J06-schwarz-second-order"]
+   :artifacts
+   ["problems/a93J06/lean/Main.lean:deriv_norm_le_norm"
+    "problems/a93J06/lean/Main.lean:schwarz_second_order_bound"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t059"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "order-a-disjoint-interval-family-into-a-variation-partition"
+  :lane :frontier-lane
+  :level :missing-mathlib-lemma
+  :status :draft
+  :body
+  {:hook
+   "Mathlib can turn a monotone partition into disjoint intervals; the missing converse must sort an arbitrary finite pairwise-disjoint `uIoc` family so its endpoint increments are bounded by `eVariationOn`."
+   :frontier-status :gap-open
+   :exact-schematic
+   "`sum_edist_le_eVariationOn_of_mem_disjWithin`: for a finite pairwise-disjoint family of unoriented intervals `uIoc (a i) (b i)` contained in `[0,1]`, bound `∑ i, edist (f (a i)) (f (b i))` by `eVariationOn f (Icc 0 1)`."
+   :proved-prefix
+   [{:declaration "eVariationOn_intervalIntegral_le_integral_norm"
+     :result "The variation of an indefinite integral is bounded by the `L¹` norm of its integrand."
+     :axiom-clean true}
+    {:declaration "ac_implies_lipschitz_V_approx"
+     :result "Truncated derivatives yield Lipschitz primitives converging in variation to an absolutely continuous function."
+     :axiom-clean true}]
+   :candidate-route
+   ["Normalize each unoriented interval to ordered endpoints."
+    "Sort the finite family by left endpoint."
+    "Use pairwise disjointness to prove consecutive right endpoints do not exceed the next left endpoint."
+    "Insert any required gaps and endpoints to form a monotone partition of `[0,1]`."
+    "Extract the selected endpoint increments from the partition sum."
+    "Apply the defining `eVariationOn` supremum bound."]
+   :available-api
+   ["eVariationOn.sum_le"
+    "intervalIntegral.sum_integral_adjacent_intervals"
+    "absolutelyContinuousOnInterval_iff"
+    "LipschitzOnWith.absolutelyContinuousOnInterval"]
+   :absence-claim
+   "At the checked Mathlib revision, the available API constructs disjoint subintervals from a monotone partition but does not provide the converse ordering/embedding lemma."
+   :downstream
+   ["lipschitz_V_limit_implies_ac" "ac_iff_lipschitz_V_approx"]
+   :rule
+   "Do not rebuild the completed derivative-truncation half; the residual target is finite interval-ordering combinatorics connecting disjoint-interval AC tests to `eVariationOn`."
+   :boundary
+   "The schematic statement and candidate route are not yet axiom-clean. The receipt records a genuine Mathlib frontier, not a false target."
+   :capture-kind :blocked-row-exact-residual-with-axiom-clean-prefix}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93A04"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t056" "e-codexroll-019fa2c1-t057"]
+   :receipt-ids ["2a8fa1b7-846d-4a71-b001-8f4fa244c5fa"]
+   :commits ["13a37c420e4cd812d5a8e3ee31e1e133a549a246"]
+   :problems ["a93A04-ac-variation"]
+   :artifacts
+   ["problems/a93A04/lean/Main.lean:eVariationOn_intervalIntegral_le_integral_norm"
+    "problems/a93A04/lean/Main.lean:ac_implies_lipschitz_V_approx"
+    "problems/a93A04/lean/Main.lean:lipschitz_V_limit_implies_ac"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019fa2c1-t056" "e-codexroll-019fa2c1-t057"]}}
+  :confidence :exact-frontier-and-proved-prefix-owner-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "preflight-domain-guards-and-inferred-bound-types-in-analysis-statements"
+  :lane :trajectory-lane
+  :level :statement-audit
+  :status :draft
+  :body
+  {:hook
+   "Before proving an analytic bound, test the formal statement's degenerate witnesses: undefined integrals and derivatives may totalize to zero, while an inferred extended-real bound may be `⊤`."
+   :how-to-apply
+   ["For every integral hypothesis, check that the relevant integrability or absolute-continuity premise is present rather than merely described in prose."
+    "For every derivative hypothesis, check differentiability or `ContDiff` is assumed on the points where `deriv` is constrained."
+    "For each existential bound `∃ M, x ≤ M`, ask Lean for the inferred type of `M` and test whether `M=⊤` closes it by `le_top`."
+    "Compare the docstring's regularity and finiteness words against the formal binders; treat a mismatch as evidence about the statement, not as permission to silently repair it."
+    "Try the mechanism-specific degenerate witness before starting the intended proof, and record whether the resulting refutation is machine-checked or only argued."]
+   :mechanism-table
+   [{:mechanism :totalized-bochner-integral
+     :degenerate-value 0
+     :missing-guard "Integrable, IntervalIntegrable, absolute continuity, or an explicit improper-limit hypothesis"
+     :observed-problems ["a02J03" "a02J07"]}
+    {:mechanism :totalized-derivative
+     :degenerate-value 0
+     :missing-guard "Differentiable, DifferentiableOn, or `ContDiff`"
+     :observed-problems ["a92J07"]}
+    {:mechanism :extended-codomain-top
+     :degenerate-value "⊤"
+     :missing-guard "A finite bound type such as `ℝ≥0`, or `M < ⊤`"
+     :observed-problems ["a93A02"]}]
+   :taxonomy
+   {:umbrella "Missing semantic-domain guard admits a degenerate witness."
+    :separation
+    "Integral and derivative failures are totalizations of partial mathematical operations; `ℝ≥0∞` top is instead a legitimate extended-codomain value. Keep mechanism-specific rules and repairs even though one preflight detects all three."}
+   :rule
+   "Audit operation domains and inferred binder types before attempting the advertised analysis: a theorem's prose can state the intended finite or regular regime while its formal hypotheses still admit a zero or top witness."
+   :boundary
+   "All four new defect diagnoses are argued rather than machine-checked. This record supplies a preflight and taxonomy, not formal counterexamples or authorization to alter the statements."
+   :capture-kind :four-run-cross-mechanism-statement-audit}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a02J03"}
+   #:ref{:type :apm-problem, :id "a02J07"}
+   #:ref{:type :apm-problem, :id "a92J07"}
+   #:ref{:type :apm-problem, :id "a93A02"}
+   #:ref{:type :pattern, :id "math/corpus-trust-protocol"}
+   #:ref{:type :pattern, :id "math-formalization/notation-semantics-traps"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t052"
+    "e-codexroll-019f9b12-t053"
+    "e-codexroll-019f9b12-t056"
+    "e-codexroll-019fa2c1-t055"]
+   :receipt-ids
+   ["8bb3a574-ed5c-4317-9fc1-f8f7e69dbecc"
+    "3a24af2e-921c-4ef0-8fd3-38d62bf504cd"
+    "aab1e62e-e494-4437-85e6-ba24598cbdc6"
+    "a037de1b-ad0d-4971-8641-57564ff71156"]
+   :commits
+   ["591bbedb67cbbe6fb36920599e0096fdeda0643e"
+    "ca36debda16f5cf2158cfe3bff6b92a826300f8d"]
+   :diagnosis-status
+   {:a02J03 :argued-not-machine-checked
+    :a02J07 :argued-not-machine-checked
+    :a92J07 :argued-not-machine-checked
+    :a93A02 :argued-not-machine-checked}
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t052"
+     "e-codexroll-019f9b12-t053"
+     "e-codexroll-019f9b12-t056"
+     "e-codexroll-019fa2c1-t055"]}}
+  :confidence :four-owner-verified-argued-diagnoses-cross-mechanism
+  :review {:verdict :pending-owner-review}}]

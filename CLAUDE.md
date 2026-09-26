@@ -93,9 +93,26 @@ these invariants, stop and rethink.
 
 ### I-0: One JVM Is Plenty
 
+> **TEMPORARY OVERRIDE (2026-08-10, joe): the substrate is a SEPARATE JVM.**
+> The embedded futon1b (`FUTON1B_EMBED=1`, the 2026-07-14 unification below)
+> is retired for now: we formally decided to run futon1b as its own server
+> JVM, separate from the futon3c/fdev JVM. All substrate clients reach it via
+> `FUTON_SUBSTRATE_URL` (on Zone: `c7-futon1b.service`, port 7073, store
+> `migration-store-21`). Concrete failure that surfaced the confusion: on
+> 2026-08-10 the futon3c JVM embedded futon1b against a fresh, empty
+> `ams-store` on 7074 while the real 137k-row corpus sat in the separate
+> server on 7073 — every dispatch recall (e.g. a94A09) came back empty.
+> Consequence for the test below: at rest, `pgrep java` returning TWO PIDs
+> (futon3c + futon1b-server) is expected, not a regression. Everything else
+> in I-0 (no extra JVMs for WebArxana, War Machine, etc.) still holds.
+> Remove this note when the substrate topology decision is finalized.
+
 **There is exactly one serving JVM on this machine: the futon3c JVM.** It
-hosts the futon3c API (port 7070), the futon1a / substrate-2 hyperedge
-store (7071), the WebArxana app (3100), the War Machine API endpoints
+hosts the futon3c API (port 7070), the futon1b XTDB 2 substrate/evidence
+store (7074, embedded in-process via `FUTON1B_EMBED` — the I-0 unification,
+2026-07-14; the retired futon1a XTDB 1 store on 7071 is gone; **suspended by
+the override note above — the substrate now runs as its own JVM**), the
+WebArxana app (3100), the War Machine API endpoints
 (`/api/alpha/war-machine`, `/api/alpha/aif-stack/live`, etc., all on 7070),
 and the Drawbridge nREPL-over-HTTP (6768). Everything serves out of this
 one process.
@@ -179,6 +196,99 @@ M-peripheral-gauntlet §"Foundational Constraint." When porting from futon3,
 the existing code documents what worked and what failed — read it as design
 documentation, not as code to copy blindly.
 
+### I-6: Check A Warrant Before You Run A Suite
+
+**The full suite is not a verification step. It is a last resort.** Since the
+test registry landed (2026-09-17), a recorded run is evidence you can *check*
+without re-executing anything, and checking is what you should reach for.
+
+```bash
+# Does it STILL hold? Sub-second, on the running JVM — never launch a JVM to read.
+# (Joe's ruling 2026-09-19: cold `clojure … check` runs are banned; ~30 s each.)
+curl -s -X POST localhost:7070/api/alpha/test-registry/check \
+  -H 'Content-Type: application/json' \
+  -d '{"entry-id":"test-registry-…","repo-root":"/home/joe/code/futon3c","changed-paths":[]}'
+# Response nests the authority: {:check {...} :meaning "validity-now, …"}.
+# On :stale-sha, read :changed-files — it names WHICH file moved. Uncommitted
+# drift = a lane is mid-edit (wait); committed drift = superseded (re-mint).
+# The evidence lookup below serves the MINT verdict, which is a different answer:
+curl -s localhost:7070/api/alpha/evidence/<entry-id>          # who/what/counts at mint
+curl -s localhost:7070/api/alpha/test-registry/report          # all bindings, ≤30 s cache
+
+# Must actually run? Run the narrowest thing that answers the question.
+clojure -M:test -n futon3c.some.specific-test
+clojure -M:test -n futon3c.some.specific-test -v futon3c.some.specific-test/one-case
+
+# Need durable evidence others can rely on? Register once, check thereafter.
+clojure -M -m futon3c.test-registry.validation register <spec.edn>  # mints AND binds a subject
+clojure -M -m futon3c.test-registry run <config.edn>   # bare run; needs :artifact-dir
+```
+
+A check re-hashes the recorded load closure and resolves the run log from the
+write-only ledger (a 0.011 ms lookup); it refuses with a typed reason —
+`:stale-sha`, `:environment-mismatch`, `:results-log-mismatch` — the moment the
+code, tests, environment or closure move. **A refusal is the signal to run. An
+absence of refusal means running would tell you nothing you do not have.**
+`lane` decides spot-check versus full rerun; do not decide that by feel.
+
+Three reasons this is an invariant and not a preference:
+
+1. **The box is shared and the agents are quota-limited.** A full suite is
+   minutes of CPU that some other seat needed.
+2. **One wedged test hangs it for everyone.** 2026-09-17: a WM-08 rehearsal
+   test was killed at 400 s, then at 150 s after its fix; while it sat on
+   main, `clojure -M:test -m cognitect.test-runner` on futon2 did not
+   terminate for anybody.
+3. **Re-running is not stronger evidence than a warrant, it is weaker.** A
+   warrant records the closure, the environment fingerprint and the log under
+   its own hash. A green run in your terminal records nothing and convinces
+   no one tomorrow.
+
+The exception is the obvious one: you changed the code. Then the warrant
+refuses by design, and running is exactly the point.
+
+**`:artifact-dir` is scratch; the ledger is the guarantee (2026-09-17).**
+`register-run!` stores every run log in the write-only, content-addressed
+ledger (`futon3c.test-registry.ledger`) and `check-record!` resolves it there
+by sha256, so a moved or edited artifact no longer makes a warrant
+unverifiable. Keep `:artifact-dir` at `/home/joe/code/storage/test-registry/`
+anyway: it narrows the crash window between the run writing its log and the
+ledger append, and a `/tmp` artifact-dir makes that window a reboot.
+Historical counterexample: three 2026-09-17 warrants (two machine-contracts
+build warrants) pinned logs under `/tmp/claude-7-review/` before the ledger;
+they survived only because the logs were backfilled into it the same night.
+
+**Pre-`reader-version`-1 Clojure records are instrument-unpinned (2026-09-17).**
+Until that date futon3c's own runner sat in every Clojure warrant's load
+closure — 38 of 39 — so a comment-only edit to it refused them all with
+`:environment-mismatch` and told their holders to rerun; it killed the
+production tick's C2 that night, over a docstring. Of those 38, 14 were stale
+for that reason alone and healed when the exclusion landed; the other 24 were
+already stale on real specimen changes — "pins the instrument" and "is stale
+because of it" are different populations, and both authors of this paragraph
+conflated them at first.
+
+The runner is the instrument, not the specimen, and is now excluded from the
+recorded closure and from the check-time diff on both sides, which heals those
+records retroactively; `:runner-sha` records its bytes for audit without
+enforcing them. The
+consequence to know: a record written before `reader-version` 1 attests
+nothing about the runner's behaviour, then or now. That is not a weakening —
+its runner-bytes pinning was a measurement leak rather than an attestation —
+but do not read a pre-v1 Clojure record as evidence about the instrument.
+Each re-registration closes one; `scripts/registry_ledger_audit.clj` can
+enumerate which remain.
+
+**Enumerating warrants is one cheap tagged query, not a store scan:**
+
+```bash
+curl -s 'http://localhost:7070/api/alpha/evidence?tag=test-registry&limit=1000'
+```
+
+Each entry carries `:log-artifact {:path … :sha256 …}`; ~100 entries in
+seconds. Use it to answer "which warrants exist / which logs do they pin /
+are any missing from disk" without touching the 272k-entry evidence store.
+
 ## Agent Prompting: Surface Contracts
 
 When agents operate across multiple surfaces (IRC, Emacs buffer, WS), they
@@ -225,6 +335,37 @@ Is the S3 ArSE bridge active in this JVM?
 EOF
 ```
 
+## Durable background work (REPL-inhabiting agents)
+
+**If you are a warm-pouch / REPL-inhabiting agent (claude-N), do NOT rely on
+`Bash` `run_in_background`, `&`, `nohup`, or `setsid` for work that must outlive
+the current turn.** Your turn runs on an ephemeral `claude --print` pouch
+(M-kangaroo) that is LRU-evicted (`FUTON3C_KANGAROO_MAX_WARM`, RAM-bound) or
+idle-reaped between turns. Tearing the pouch down SIGTERM/SIGKILLs your claude
+process, whose shutdown reaps its background shells — **even setsid-detached
+ones** ("the watcher got reaped on teardown again", 2026-06-27). The legacy
+interactive CLI gets away with backgrounding because its claude process is
+long-lived; yours is not.
+
+**Instead, launch durable work as a child of the one long-lived parent that is
+never torn down between turns: the futon3c JVM (I-0).** Use
+`futon3c.agency.bg-process` (over Drawbridge) or the `scripts/bg.py` wrapper:
+
+```bash
+scripts/bg.py launch "<shell command>" --agent claude-N --label my-job   # -> {:id "bg-…"}
+scripts/bg.py status bg-…        # :running | :exited (+ :exit) | :killed
+scripts/bg.py tail   bg-… 40     # captured stdout+stderr (survives turns)
+scripts/bg.py kill   bg-…
+```
+
+The process is re-parented to the JVM (verified: PPID == the serving JVM), so it
+survives pouch eviction at **zero extra RAM** (it's the same process you'd have
+spawned). Output is captured to `/tmp/futon3c-bg/<id>.log` and is tailable across
+turns. This is for **helper work only** (backlog runners, reingest, builds,
+watchers) — never to spawn agent/claude clones (I-1/I-2/I-3). For recurring
+in-JVM services proper, prefer a `ScheduledExecutorService` daemon like
+`watcher/multi` or `watcher/scope_reingest`.
+
 ## Development Protocol
 
 Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
@@ -233,6 +374,24 @@ Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
 - **PSR/PUR discipline**: Record pattern selections and outcomes
 - **Evidence-first**: Specific counts and file names, not vague claims
 - **Argument form**: IF/HOWEVER/THEN/BECAUSE for design decisions
+
+### Evaluating a form on the test classpath
+
+`clojure -M:test -e '<form>'` does **not** evaluate the form. The `:test`
+alias sets `:main-opts ["-m" "cognitect.test-runner" "-e" ":slow"]`, and
+alias main-opts win: everything after `-M:test` is passed to the test runner
+as arguments. `-e '<form>'` is read as an exclude-tag, and with no `-n` the
+runner silently runs the **entire suite** — minutes of CPU, no output, and it
+looks exactly like a hung command (2026-09-09: two agents lost ~13 minutes
+between them this way).
+
+```bash
+# Run one namespace's tests (the alias's intended use)
+clojure -M:test -n futon3c.agency.invoke-activity-test
+
+# Evaluate an ad-hoc form against the same classpath
+java -cp "$(clojure -Spath -M:test)" clojure.main -e '<form>'
+```
 
 ## Key Integration Points
 
@@ -290,3 +449,24 @@ Code is being ported from futon3 via scoped missions. The source material is in:
 3. Check the peripheral spec: `~/code/futon3/docs/peripheral-spec.md`
 4. Check futon3b's AGENTS.md for the development protocol
 5. Search session history: `~/.claude/projects/`
+
+## Voice surface — open each turn with a Gist
+
+When a session may be spoken (the voxterm surface — see `README-voxterm.md`),
+open every turn with a one-line gist on its own line, prefixed `Gist:`:
+
+```
+Gist: The retry hangs because the enqueue blocks with no timeout.
+
+<the rest of the turn as normal>
+```
+
+One sentence, plain prose, no markup, no paths or code. It is read aloud on its
+own, before the rest of the turn is visible, to someone who may not be looking
+at the screen — so it must stand alone rather than refer back to anything.
+
+The gist is not a summary appended to the turn; it is the turn's opening line,
+saying what you found or what you are about to do. The body is unchanged.
+
+This is a format convention, not a brevity instruction: it adds a line, it does
+not constrain what follows.

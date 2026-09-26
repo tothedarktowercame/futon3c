@@ -1,0 +1,29 @@
+{:schema :wm/historical-verification-preparation-result-v1
+ :input {:path "verifier-input.reviewed.disabled.edn"
+         :sha256 "65d6539462e32a6f58b9d43e702e4447bcfad2948725e156ca830953d2c121ca"}
+ :review-source
+ {:path "independent-review-job.json"
+  :sha256 "05d605686d8064bee50bd6b852b9a2f776b714228978e6c2fff5d39e4733e5a1"
+  :job-id "invoke-1789129194625-20128-2e475262"
+  :reviewer "codex-12"
+  :verdict :approve
+  :execution {:executed true :tool-events 6 :command-events 6}}
+ :verification
+ {:path "offline-verification/repair-058-revalidation-20260911-v1.verification.edn"
+  :sha256 "1367dc2c1e4fdf25c287003c3fbee35f409856fa3b8a940002d301c9132a12f3"
+  :schema :wm/historical-repair-verification-v1
+  :repair-id "repair-attempt-058-untyped-failure"
+  :verification-id "repair-058-revalidation-20260911-v1"
+  :state :awaiting-validation
+  :repair-resolved? false
+  :actors {:author "codex-10" :reviewer "codex-12"}
+  :check-ids [:timeout-fault-probe :full-runner-regression
+              :repair-store-regression]}
+ :source-head "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+ :historical-action {:status :proposed-disabled
+                     :path "historical-action.proposed.disabled.edn"}
+ :verification-output-review :required
+ :repair-store-admission :not-performed
+ :execution-identity nil
+ :historical-successor-link :unmaterialized
+ :live-state-changed? false}

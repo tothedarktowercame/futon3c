@@ -1,0 +1,909 @@
+(ns futon3c.apm.problem-queue-supervisor
+  "Just-in-time frame minting over a pinned problem queue.
+
+  At most one frame is provisioned. A successor may be minted only from a
+  durably terminal predecessor; queued problems carry no seats or workspaces."
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.fault-taxonomy :as fault-taxonomy]
+            [futon3c.apm.phase-status :as phase-status]))
+
+(defn valid-guide-receipt?
+  "Does REPAIR-RECEIPT discharge the statement-repair obligation?
+
+   The single authority on this question. The observer in
+   queued-frame-adapter used to answer a WEAKER version of it -- obligation id
+   only -- so a receipt it called complete could still be rejected here, and
+   that rejection is an :ok false which faults the coordinator on every tick
+   rather than routing to the queue's own :discard-and-advance policy. On
+   2026-09-08 that wedged the campaign on f199: the guide returned a receipt
+   carrying :terminal-receipt/id and no :receipt/id, exactly as its prompt
+   asked, because the prompt required only that the receipt repeat
+   :obligation/id."
+  [obligation-id repair-receipt]
+  (boolean
+   (and (map? repair-receipt)
+        (= :guide (:repair/role repair-receipt))
+        (= obligation-id (:obligation/id repair-receipt))
+        (string? (:receipt/id repair-receipt))
+        (re-matches #"[0-9a-f]{64}" (:receipt/id repair-receipt)))))
+
+(def terminal-results #{:closed :partial :void})
+(def systematic-frame-failure-limit 3)
+
+(declare prepare-next)
+
+(defn valid-frame-park?
+  [park]
+  (and
+   (every? #(and (string? %) (not-empty %))
+           ((juxt :frame/id :problem/id :residual) park))
+   (= :claude-supervisor (:decision/owner park))
+   (or (and (= :awaiting-decision (:decision/status park))
+            (true? (:decision/bell-required park)))
+       (and (= :decided (:decision/status park))
+            (false? (:decision/bell-required park))
+            (if (= :fault-frame-park (:state/type park))
+              (= (:frame/id park)
+                 (get-in park [:decision/record :frame/id]))
+              (= (:last-valid-receipt/id park)
+                 (get-in park [:decision/record
+                               :last-valid-receipt/id])))))
+   (case (:state/type park)
+     :fault-frame-park
+     (and (= :frame-park (:fault/disposition park))
+          (keyword? (:error/code park))
+          (map? (:fault/result park)))
+
+     :solver-human-intervention-frame-park
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (every? #(and (string? %) (not-empty %))
+                  ((juxt :solver/final-head :solver/state-path) park))
+          (= :claude-required (:student/decision park))
+          (pos-int? (:solver/rounds-completed park)))
+
+     :scribe-reduce-apparatus-frame-park
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (= :scribe-reduce (:phase park))
+          (= :promotion-deposit-retries-exhausted (:error/code park))
+          (string? (:promotion/state-path park))
+          (pos-int? (:deposit/attempts park))
+          (seq (:deposit/findings park)))
+
+     :promotion-apparatus-frame-park
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (= :promotion (:phase park))
+          (= :promotion-apparatus-repair-exhausted (:error/code park))
+          (string? (:promotion/state-path park))
+          (keyword? (:repair/kind park))
+          (pos-int? (:repair/attempts park))
+          (seq (:promotion/findings park)))
+
+     :role-terminal-repair-frame-park
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (keyword? (:phase park))
+          (= :live-job-terminal-repair-exhausted (:error/code park))
+          (string? (:role/state-path park))
+          (keyword? (:repair/kind park))
+          (pos-int? (:repair/attempts park))
+          (seq (:role/findings park)))
+
+     false)))
+
+(defn fault-frame-park [frame result]
+  (let [fault (fault-taxonomy/classify result)]
+    (when (= :frame-park (:fault/disposition fault))
+      {:state/type :fault-frame-park
+       :frame/id (:frame/id frame)
+       :problem/id (:problem/id frame)
+       :error/code (:fault/code fault)
+       :fault/disposition :frame-park
+       :fault/result result
+       :residual (pr-str result)
+       :decision/owner :claude-supervisor
+       :decision/status :awaiting-decision
+       :decision/bell-required true})))
+
+(defn queue-plan [problems]
+  (let [body {:queue/type :apm-problem-queue :queue/version 1
+              :problems (mapv #(select-keys % [:problem/id :repository
+                                                :base-branch :revision :path
+                                                :blob :classification])
+                              problems)}]
+    (assoc body :queue/id (machine/ledger-digest [body]))))
+
+(defn valid-pinned-problem?
+  "The same eligibility shape is required of launch and replacement pins."
+  [problem]
+  (and (map? problem)
+       (every? string? ((juxt :problem/id :repository :revision :path :blob) problem))
+       (= :non-excluded (:classification problem))))
+
+(defn validate-plan [plan]
+  (let [problems (:problems plan)
+        ids (mapv :problem/id problems)
+        findings (cond-> []
+                   (not= :apm-problem-queue (:queue/type plan))
+                   (conj :queue-type-invalid)
+                   (not= 1 (:queue/version plan)) (conj :queue-version-invalid)
+                   (not= (:queue/id plan)
+                         (machine/ledger-digest [(dissoc plan :queue/id)]))
+                   (conj :queue-content-address-invalid)
+                   (empty? problems) (conj :queue-empty)
+                   (not= (count ids) (count (distinct ids)))
+                   (conj :queue-problem-duplicate)
+                   (some (complement valid-pinned-problem?) problems)
+                   (conj :queue-problem-ineligible))]
+    (if (seq findings)
+      {:ok false :error/code :problem-queue-invalid :findings findings}
+      {:ok true :plan plan})))
+
+(defn initial-state [plan]
+  (let [body {:state/type :apm-problem-queue :state/version 1
+              :queue/id (:queue/id plan) :next-index 0 :frame-ordinal 0
+              :active nil :completed []}]
+    (assoc body :state/id (machine/ledger-digest [body]))))
+
+(defn- valid-consecutive-frame-failures? [failure]
+  (or (nil? failure)
+      (and (= :role-terminal-unrecoverable
+              (get-in failure [:signature :classification]))
+           (vector? (get-in failure [:signature :failed-invariants]))
+           (seq (get-in failure [:signature :failed-invariants]))
+           (every? keyword?
+                   (get-in failure [:signature :failed-invariants]))
+           (pos-int? (:count failure))
+           (every? #(and (string? %) (not-empty %))
+                   ((juxt :last-frame-id :last-problem-id) failure)))))
+
+(defn valid-state? [state]
+  (and (= :apm-problem-queue (:state/type state))
+       (= 1 (:state/version state))
+       (or (nil? (:frame-ordinal state))
+           (nat-int? (:frame-ordinal state)))
+       (valid-consecutive-frame-failures?
+        (:consecutive-frame-failures state))
+       (or (not= :voided-slot-awaiting-revision (:status state))
+           (let [handoff (:statement-repair/handoff state)]
+             (and (= :statement-repair (:obligation/type handoff))
+                  (= :guide (:repair/role handoff))
+                  (= 1 (:repair/attempt handoff))
+                  (= 1 (:repair/max-attempts handoff))
+                  (true? (:dispatch/intent-persisted handoff))
+                  (every? #(and (string? %) (not-empty %))
+                          ((juxt :obligation/id :frame/id :problem/id
+                                 :source/revision :source/path :source/blob)
+                           handoff)))))
+       (= (:state/id state)
+          (machine/ledger-digest [(dissoc state :state/id)]))))
+
+(defn- addressed [state]
+  (assoc (dissoc state :state/id) :state/id
+         (machine/ledger-digest [(dissoc state :state/id)])))
+
+(defn decommission
+  "Trusted operator retirement of an entire quiescent queue, not a proof result.
+  Archive the exact prior queue first. Unfinished frames remain in that archive;
+  this transition creates no completion receipt and cannot mint a successor."
+  [state {:keys [archive quiescence actor] :as receipt}]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (= :decommissioned (:status state))
+    {:ok false :error/code :problem-queue-already-decommissioned}
+    (or (:store-read/hold state)
+        (some #(= :awaiting-decision (:decision/status %)) (:parked state)))
+    {:ok false :error/code :problem-queue-unresolved-obligations}
+    (not (and (= (:state/id state) (:queue/state-id archive))
+              (string? (:path archive)) (seq (:path archive))
+              (string? (:sha256 archive))
+              (re-matches #"[0-9a-f]{64}" (:sha256 archive))
+              (string? actor) (seq actor)
+              (= #{:coordinator/enabled? :tick-claim :active-job-ids :registered-frame-agent-ids}
+                 (set (keys quiescence)))
+              (false? (:coordinator/enabled? quiescence))
+              (nil? (:tick-claim quiescence))
+              (= [] (:active-job-ids quiescence))
+              (= [] (:registered-frame-agent-ids quiescence))))
+    {:ok false :error/code :problem-queue-decommission-evidence-invalid}
+    :else
+    {:ok true :state (addressed (assoc state :status :decommissioned
+                                      :active nil :resumption-queue []
+                                      :decommission/receipt receipt))}))
+
+(defn resume-parked-frames
+  "Trusted operator re-entry at a quiescent queue boundary. Schedules preserved
+  phase drivers without certifying phases or resetting retry budgets. Previously
+  active work resumes before the queue mints another frame."
+  [state recoveries]
+  (let [ids (mapv #(get-in % [:active :frame :frame/id]) recoveries)
+        nonblank? #(and (string? %) (not-empty %))
+        parks (mapv (fn [{:keys [active decision]}]
+                      (some #(when (and (= (get-in active [:frame :frame/id]) (:frame/id %))
+                                        (= (get-in active [:frame :problem/id]) (:problem/id %))
+                                        (= (:last-valid-receipt/id decision)
+                                           (:last-valid-receipt/id %))) %)
+                            (:parked state))) recoveries)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (or (empty? recoveries) (not= (count ids) (count (set ids)))
+          (some #{(get-in state [:active :frame :frame/id])} ids)
+          (seq (:resumption-queue state)) (some? (:status state)))
+      {:ok false :error/code :problem-queue-recovery-not-exclusive}
+      (not-every? true?
+       (map (fn [{:keys [active decision]} park]
+              (boolean
+               (and park (valid-frame-park? park)
+                    (= :resume-frame (:disposition decision))
+                    (= (get-in active [:frame :frame/id]) (:frame/id decision))
+                    (= (:queue/id state) (get-in active [:frame :queue/id]))
+                    (every? nonblank? [(:preparation/id active) (:operator decision)
+                                      (:recovery/evidence-ref decision)
+                                      (:last-valid-receipt/id decision)]))))
+            recoveries parks))
+      {:ok false :error/code :problem-queue-recovery-authority-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (assoc :active (:active (first recoveries))
+                          :resumption-queue
+                          (cond-> (mapv :active (rest recoveries))
+                            (:active state) (conj (:active state))))
+                   (update :parked #(vec (remove (set parks) %)))
+                   (update :park-recoveries (fnil into [])
+                           (mapv (fn [recovery park] (assoc recovery :park park))
+                                 recoveries parks))))})))
+
+(defn- frame-failure-signature [terminal-receipt]
+  (when (= :role-terminal-unrecoverable
+           (:void/classification terminal-receipt))
+    {:classification :role-terminal-unrecoverable
+     :failed-invariants (vec (sort (:void/failed-invariants
+                                    terminal-receipt)))}))
+
+(defn- record-frame-outcome [state frame terminal-receipt]
+  (if-let [signature (frame-failure-signature terminal-receipt)]
+    (let [prior (:consecutive-frame-failures state)
+          count (if (= signature (:signature prior))
+                  (inc (:count prior))
+                  1)]
+      (assoc state :consecutive-frame-failures
+             {:signature signature :count count
+              :last-frame-id (:frame/id frame)
+              :last-problem-id (:problem/id frame)}))
+    (dissoc state :consecutive-frame-failures)))
+
+(defn- statement-repair-handoff [frame terminal-receipt]
+  (let [problem (:problem frame)
+        body {:obligation/type :statement-repair
+              :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+              :repair/role :guide :repair/attempt 1 :repair/max-attempts 1
+              :source/repository (:repository problem)
+              :source/revision (:revision problem) :source/path (:path problem)
+              :source/blob (:blob problem)
+              :diagnostic (merge
+                           {:problem/outcome :refuted
+                            :terminal-receipt/id (:receipt/id terminal-receipt)}
+                           (select-keys terminal-receipt
+                                        [:problem/registered-target
+                                         :void/failed-invariants :error/code]))
+              :instruction :repair-registered-statement-once
+              :required-output [:replacement-pinned-problem :guide-receipt]
+              :exhaustion/action :discard-and-advance
+              :dispatch/intent-persisted true
+              :dispatch/status :pending}]
+    (assoc body :obligation/id (machine/ledger-digest [body]))))
+
+(defn- dispatch-repair [state dispatch-fn persist-state-fn now-fn]
+  (let [handoff (:statement-repair/handoff state)]
+    (if-not (fn? dispatch-fn)
+      {:ok false :error/code :problem-queue-guide-dispatch-provider-missing
+       :state state}
+      (let [result (dispatch-fn handoff)]
+        (if-not (and (:ok result)
+                     (string? (:dispatch/id result))
+                     (not-empty (:dispatch/id result)))
+          (merge {:ok false :error/code :problem-queue-guide-dispatch-failed
+                  :state state} (select-keys result [:dispatch/error]))
+          (let [dispatched (addressed
+                            (assoc state :statement-repair/handoff
+                                   (assoc handoff :dispatch/status :dispatched
+                                          :dispatch/id (:dispatch/id result)
+                                          :dispatch/dispatched-at-ms
+                                          (now-fn))))]
+            (if (:ok (persist-state-fn dispatched))
+              {:ok true :status :guide-statement-repair-dispatched
+               :state dispatched :handoff (:statement-repair/handoff dispatched)}
+              {:ok false :error/code
+               :problem-queue-state-persistence-failed})))))))
+
+(defn revise-voided-slot
+  "Replace the pins of the slot restored by a void, preserving its logical id.
+
+  Returns a new content-addressed plan and matching state. No other queue slot
+  or cursor position may change."
+  [plan state replacement repair-receipt]
+  (let [slot (:next-index state)
+        current (get (:problems plan) slot)
+        problem-id (:problem/id current)
+        attempts (get-in state [:statement-repair-attempts problem-id] 0)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (not= :voided-slot-awaiting-revision (:status state))
+      {:ok false :error/code :problem-queue-slot-revision-not-authorized}
+      (not= (:queue/id plan) (:queue/id state))
+      {:ok false :error/code :problem-queue-state-plan-mismatch}
+      (nil? current)
+      {:ok false :error/code :problem-queue-voided-slot-missing}
+      (not= (:problem/id current) (:problem/id replacement))
+      {:ok false :error/code :problem-queue-slot-problem-id-changed}
+      (not (valid-guide-receipt?
+            (get-in state [:statement-repair/handoff :obligation/id])
+            repair-receipt))
+      {:ok false :error/code :problem-queue-guide-repair-receipt-invalid}
+      (not (zero? attempts))
+      {:ok false :error/code :problem-queue-statement-repair-exhausted}
+      :else
+      (let [problems (assoc (:problems plan) slot replacement)
+            revised (queue-plan problems)
+            checked (validate-plan revised)]
+        (if-not (:ok checked)
+          checked
+          {:ok true :plan revised
+           :state (addressed
+                   (-> state
+                       (assoc :queue/id (:queue/id revised))
+                       ;; A refuted void restores :next-index to the voided
+                       ;; slot but leaves :frame-ordinal one past the frame it
+                       ;; spent, so a value that is present is already the
+                       ;; retry's number. Incrementing it again skipped a frame
+                       ;; number on every repair, and a hole in the frame series
+                       ;; reads later as a frame that went missing. The fallback
+                       ;; is for campaigns persisted before this field existed:
+                       ;; there the voided slot's own index is all we have, and
+                       ;; the retry is the number after it.
+                       (update :frame-ordinal
+                               #(or % (inc (:next-index state))))
+                       (assoc-in [:statement-repair-attempts problem-id] 1)
+                       (assoc-in [:statement-repair-receipts problem-id]
+                                 (:receipt/id repair-receipt))
+                       (dissoc :status :statement-repair/handoff)))})))))
+
+(defn- collect-repair [plan state providers]
+  (let [{:keys [observe-statement-repair-fn persist-plan-fn persist-state-fn]}
+        providers
+        handoff (:statement-repair/handoff state)]
+    (if-not (fn? observe-statement-repair-fn)
+      {:ok false :error/code :problem-queue-guide-observation-provider-missing}
+      (let [observed (observe-statement-repair-fn handoff)]
+        (cond
+          (not (:ok observed)) observed
+          (= :pending (:status observed))
+          {:ok true :status :guide-statement-repair-dispatched
+           :state state :handoff handoff}
+          (= :failed (:status observed))
+          (let [problem-id (:problem/id handoff)
+                advanced (addressed
+                          (-> state
+                              (assoc-in [:statement-repair-attempts problem-id] 1)
+                              (update :next-index inc)
+                              (update :frame-ordinal
+                                      (fnil inc (:next-index state)))
+                              (dissoc :status :statement-repair/handoff)))]
+            (if-not (:ok (persist-state-fn advanced))
+              {:ok false :error/code :problem-queue-state-persistence-failed}
+              (prepare-next plan advanced providers)))
+          (= :complete (:status observed))
+          (let [revised (revise-voided-slot
+                         plan state (:replacement-pinned-problem observed)
+                         (:guide-receipt observed))]
+            (if-not (:ok revised)
+              revised
+              ;; Not wired and failed-to-write are different questions, and
+              ;; this branch answered both with :plan-persistence-failed. The
+              ;; file already keeps them apart for the other two repair
+              ;; providers, for the reason prepare-next records about
+              ;; qualification: a regulator that stalls saying the write failed
+              ;; sends the reader to the disk, when the provider was never
+              ;; supplied.
+              (if-not (fn? persist-plan-fn)
+                {:ok false
+                 :error/code :problem-queue-plan-persistence-provider-missing}
+                (if-not (:ok (persist-plan-fn (:plan revised)))
+                  {:ok false :error/code :problem-queue-plan-persistence-failed}
+                  (if-not (:ok (persist-state-fn (:state revised)))
+                    {:ok false :error/code :problem-queue-state-persistence-failed}
+                    (prepare-next (:plan revised) (:state revised) providers))))))
+          :else
+          {:ok false :error/code :problem-queue-guide-observation-invalid})))))
+
+(defn reconcile-park-decisions
+  "Attach authoritative decision records to their receipt-matched parks.
+
+  Evidence-bearing parks match by the last valid receipt because a frame may
+  park more than once. Fault parks have no synthesized receipt and match their
+  unique retired frame id instead. Unmatched parks and records are inert. The
+  decision's disposition is recorded but never executed here."
+  [state decision-records]
+  (if-not (valid-state? state)
+    {:ok false :error/code :problem-queue-state-invalid}
+    (let [by-receipt (into {}
+                           (keep (fn [record]
+                                   (when-let [receipt
+                                              (:last-valid-receipt/id record)]
+                                     [receipt record])))
+                           decision-records)
+          by-frame (into {}
+                         (keep (fn [record]
+                                 (when-let [frame-id (:frame/id record)]
+                                   [frame-id record])))
+                         decision-records)
+          matched (volatile! [])
+          parks (mapv
+                 (fn [park]
+                   (if-let [record (if (= :fault-frame-park
+                                          (:state/type park))
+                                    (get by-frame (:frame/id park))
+                                    (get by-receipt
+                                         (:last-valid-receipt/id park)))]
+                     (do
+                       (vswap! matched conj record)
+                       (assoc park
+                              :decision/status :decided
+                              :decision/bell-required false
+                              :decision/record record))
+                     park))
+                 (:parked state))
+          changed? (not= parks (:parked state))]
+      {:ok true
+       :changed? changed?
+       :matched-receipt-ids (into [] (keep :last-valid-receipt/id) @matched)
+       :matched-frame-ids (into [] (keep :frame/id) @matched)
+       :unmatched-records (->> decision-records
+                               (remove (set @matched))
+                               vec)
+       :state (if changed?
+                (addressed (assoc state :parked parks))
+                state)})))
+
+(defn pause-after-active
+  "Durably request that the active frame finish and retire without minting a
+  successor. The active frame and queue cursor are otherwise unchanged."
+  [state]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (nil? (:active state))
+    {:ok false :error/code :problem-queue-no-active-frame}
+    :else
+    {:ok true :state (addressed (assoc state :status :pause-after-active))}))
+
+(defn resume-paused
+  "Return an intentionally paused queue to its ordinary runnable state.
+
+  The cursor, completed frames, and absence of an active frame are preserved;
+  the next tick remains solely responsible for minting the successor."
+  [state]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (:store-read/hold state)
+    {:ok false :error/code :store-read-repair-required}
+    (not= :paused (:status state))
+    {:ok false :error/code :problem-queue-not-paused}
+    (some? (:active state))
+    {:ok false :error/code :problem-queue-paused-active-frame-invalid}
+    :else
+    {:ok true :state (addressed (dissoc state :status))}))
+
+(defn release-store-read-hold
+  "Trusted operator boundary after inspecting repair and validation artifacts.
+  Records the operator's evidence; does not authenticate a claimed review or
+  infer repair from a successful bell. Normal resume-paused cannot bypass it."
+  [state receipt]
+  (let [hold (:store-read/hold state)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (not (and hold (= :paused (:status state)) (nil? (:active state))))
+      {:ok false :error/code :store-read-hold-required}
+      (not (and (= (:hold/id hold) (:hold/id receipt))
+                (= :verified (:repair/status receipt))
+                (string? (:repair/commit receipt))
+                (re-matches #"[0-9a-f]{40}" (:repair/commit receipt))
+                (seq (:validation/evidence receipt))
+                (every? #(and (string? %) (seq %)) (:validation/evidence receipt))))
+      {:ok false :error/code :store-read-repair-receipt-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (dissoc :store-read/hold)
+                   (assoc :status (:resume/status hold))
+                   (update :store-read/repairs (fnil conj [])
+                           {:hold hold :repair receipt})))})))
+
+(defn- dispatch-store-repair [state providers]
+  (let [hold (:store-read/hold state)]
+    (if (:dispatch/id hold)
+      {:ok true :status :batch-paused :state state :pause/reason :store-read-warnings}
+      (let [dispatch (:dispatch-store-repair-fn providers)
+            result (if dispatch (dispatch hold)
+                       {:ok false :error/code :store-repair-provider-missing})]
+        (if-not (:ok result)
+          (assoc result :state state :pause/reason :store-read-warnings)
+          (let [updated (addressed
+                         (update state :store-read/hold merge
+                                 (select-keys result [:dispatch/id :repair/agent-id])))
+                persisted ((:persist-state-fn providers) updated)]
+            (if (:ok persisted)
+              {:ok true :status :batch-paused :state updated
+               :pause/reason :store-read-warnings}
+              {:ok false :error/code :problem-queue-state-persistence-failed})))))))
+
+(defn- hold-for-store-warnings [state frame receipt warnings]
+  (if-not (seq warnings)
+    state
+    (let [body {:frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                :queue/id (:queue/id state)
+                :terminal-receipt/id (:receipt/id receipt)
+                :resume/status (:status state)
+                :warnings (vec warnings)}
+          hold (assoc body :hold/id (machine/ledger-digest [body]))]
+      (addressed (assoc state :status :paused :store-read/hold hold)))))
+
+(defn complete-active-without-successor
+  "Record a retryable terminal frame without preparing the queue's next item.
+
+  NEXT-INDEX is deliberately unchanged. Callers must disable this queue before
+  starting the distinct same-problem retry queue."
+  [state terminal-receipt]
+  (let [active (:active state)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (nil? active)
+      {:ok false :error/code :problem-queue-no-active-frame}
+      (not (and (= :partial (:frame/result terminal-receipt))
+                (= :unsolved (:problem/outcome terminal-receipt))
+                (true? (:retry/same-problem? terminal-receipt))))
+      {:ok false :error/code :problem-queue-retry-terminal-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (update :completed conj
+                           {:frame/id (get-in active [:frame :frame/id])
+                            :problem/id (get-in active [:frame :problem/id])
+                            :frame/result :partial
+                            :retry/same-problem? true
+                            :terminal-receipt/id (:receipt/id terminal-receipt)})
+                   (assoc :active nil :status :retry-superseded)))})))
+
+(defn- prepare-next
+  [plan state {:keys [mint-frame-fn qualify-frame-fn prepare-frame-fn
+                      persist-state-fn]}]
+  (if (seq (:resumption-queue state))
+    (let [resumed (addressed
+                   (assoc state :active (first (:resumption-queue state))
+                                :resumption-queue (vec (rest (:resumption-queue state)))))
+          persisted (persist-state-fn resumed)]
+      (if (:ok persisted)
+        {:ok true :status :frame-prepared :state resumed
+         :frame (get-in resumed [:active :frame])}
+        {:ok false :error/code :problem-queue-state-persistence-failed}))
+  (if (= (:next-index state) (count (:problems plan)))
+    (let [complete (addressed (assoc state :status :complete))
+          persisted (persist-state-fn complete)]
+      (if (:ok persisted)
+        {:ok true :status :batch-complete :state complete}
+        {:ok false :error/code :problem-queue-state-persistence-failed}))
+    (let [problem (nth (:problems plan) (:next-index state))
+          minted (mint-frame-fn {:problem problem
+                                 :ordinal (or (:frame-ordinal state)
+                                              (:next-index state))
+                                 :queue/id (:queue/id plan)})
+          ;; Retain the qualifier's own result. Discarding it left
+          ;; :problem-queue-frame-qualification-failed as the only record, so a
+          ;; stalled regulator said THAT qualification failed and nothing about
+          ;; WHY -- unreadable artifact, bad digest, invalid mint all look
+          ;; identical. Cost an evening of guessing on 2026-08-26.
+          qualification (when (:ok minted) (qualify-frame-fn (:frame minted)))]
+      (cond
+        (not (:ok minted)) minted
+        (= :queued-frame-eligibility-invalid (:error/code qualification))
+        (let [frame (:frame minted)
+              park {:state/type :eligibility-frame-park
+                    :frame/id (:frame/id frame)
+                    :problem/id (:problem/id frame)
+                    :decision/status :parked
+                    :park/reason :problem-ineligible
+                    :qualification qualification}
+              advanced (addressed
+                        (-> state
+                            (update :parked (fnil conj []) park)
+                            (update :next-index inc)
+                            (update :frame-ordinal
+                                    (fnil inc (:next-index state)))))
+              persisted (persist-state-fn advanced)]
+          (if-not (:ok persisted)
+            {:ok false :error/code :problem-queue-state-persistence-failed}
+            (prepare-next plan advanced
+                          {:mint-frame-fn mint-frame-fn
+                           :qualify-frame-fn qualify-frame-fn
+                           :prepare-frame-fn prepare-frame-fn
+                           :persist-state-fn persist-state-fn})))
+        (not (:ok qualification))
+        {:ok false :error/code :problem-queue-frame-qualification-failed
+         :frame (:frame minted) :qualification qualification}
+        :else
+        (let [prepared (prepare-frame-fn (:frame minted))]
+          (if-not (:ok prepared)
+            prepared
+            (let [active {:frame (:frame minted)
+                          :preparation/id (:preparation/id prepared)}
+                  advanced (addressed (-> state
+                                         (assoc :active active)
+                                         (update :next-index inc)
+                                         (update :frame-ordinal
+                                                 (fnil inc
+                                                       (:next-index state)))))
+                  persisted (persist-state-fn advanced)]
+              (if (:ok persisted)
+                {:ok true :status :frame-prepared :state advanced
+                 :frame (:frame minted)}
+                {:ok false :error/code
+                 :problem-queue-state-persistence-failed})))))))))
+
+(defn- park-failure-signature
+  "Streak signature for a park that replaced what was previously a void.
+
+  Role-terminal parks carry the same classification and invariants their
+  void certificate would have carried (Joe's 2026-09-06 park-not-void
+  ruling), so the systematic-failure brake keeps working across the
+  disposition change: three identical parks stop the queue exactly as
+  three identical voids did. Other park types return nil and leave the
+  streak untouched — they are unrelated apparatus faults, not evidence
+  the role-terminal streak ended."
+  [park]
+  (when (and (= :role-terminal-repair-frame-park (:state/type park))
+             (seq (:role/findings park)))
+    {:classification :role-terminal-unrecoverable
+     :failed-invariants (vec (sort (:role/findings park)))}))
+
+(defn- record-park-streak [state frame park]
+  (if-let [signature (park-failure-signature park)]
+    (let [prior (:consecutive-frame-failures state)
+          count (if (= signature (:signature prior))
+                  (inc (:count prior))
+                  1)]
+      (assoc state :consecutive-frame-failures
+             {:signature signature :count count
+              :last-frame-id (:frame/id frame)
+              :last-problem-id (:problem/id frame)}))
+    state))
+
+(defn- park-active-and-advance
+  [plan state park {:keys [persist-state-fn] :as providers}]
+  (let [active (:active state)]
+    (if-not (and (valid-frame-park? park)
+                 (= (:frame/id park) (get-in active [:frame :frame/id]))
+                 (= (:problem/id park) (get-in active [:frame :problem/id])))
+      {:ok false :error/code :problem-queue-frame-park-invalid
+       :finding park}
+      (let [pause? (= :pause-after-active (:status state))
+            streaked (record-park-streak state (:frame active) park)
+            systematic?
+            (>= (get-in streaked [:consecutive-frame-failures :count] 0)
+                systematic-frame-failure-limit)
+            cleared (addressed
+                     (-> streaked
+                         (update :parked (fnil conj []) park)
+                         (assoc :active nil)
+                         (cond-> pause? (assoc :status :paused)
+                                 systematic?
+                                 (assoc :status
+                                        :failed-systematic-frame-failure))))
+            persisted (persist-state-fn cleared)]
+        (if-not (:ok persisted)
+          {:ok false :error/code :problem-queue-state-persistence-failed}
+          (cond
+            systematic?
+            {:ok false
+             :error/code :problem-queue-systematic-frame-failure
+             :failure (:consecutive-frame-failures cleared)
+             :state cleared}
+            pause? {:ok true :status :batch-paused :state cleared}
+            :else (prepare-next plan cleared providers)))))))
+
+(defn- reconcile-decisions!
+  [state {:keys [park-decision-records-provider persist-state-fn]}]
+  (if-not (fn? park-decision-records-provider)
+    {:ok true :state state}
+    (try
+      (let [records (park-decision-records-provider)
+            reconciled (reconcile-park-decisions state records)]
+        (cond
+          (not (:ok reconciled)) reconciled
+          (not (:changed? reconciled)) reconciled
+          (:ok (persist-state-fn (:state reconciled))) reconciled
+          :else {:ok false
+                 :error/code :problem-queue-state-persistence-failed}))
+      (catch Throwable t
+        {:ok false :error/code :problem-queue-park-decision-read-failed
+         :finding {:exception/class (.getName (class t))
+                   :exception/message (.getMessage t)}}))))
+
+(defn tick!
+  "Perform one queue transition.
+
+  A nil active frame prepares the first/next problem. An active frame receives
+  one supervised tick. Only a terminal result can retire it and authorize
+  just-in-time creation of its successor."
+  [{:keys [plan state-provider persist-state-fn mint-frame-fn
+           qualify-frame-fn prepare-frame-fn frame-tick-fn retire-frame-fn
+           dispatch-statement-repair-fn now-fn]
+    :as providers}]
+  (let [plan-check (validate-plan plan)
+        initial (or (state-provider) (initial-state plan))
+        decision-sync (when (and (:ok plan-check)
+                                 (valid-state? initial)
+                                 (not= :decommissioned (:status initial))
+                                 (= (:queue/id plan) (:queue/id initial)))
+                        (reconcile-decisions! initial providers))
+        state (or (:state decision-sync) initial)]
+    (cond
+      (not (:ok plan-check)) plan-check
+      (not (every? fn? [state-provider persist-state-fn mint-frame-fn
+                        qualify-frame-fn prepare-frame-fn frame-tick-fn
+                        retire-frame-fn]))
+      {:ok false :error/code :problem-queue-provider-missing}
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (not= (:queue/id plan) (:queue/id state))
+      {:ok false :error/code :problem-queue-state-plan-mismatch}
+      (and decision-sync (not (:ok decision-sync))) decision-sync
+      (= :decommissioned (:status state))
+      {:ok true :status :batch-paused :pause/reason :decommissioned :state state}
+      (= :complete (:status state))
+      {:ok true :status :batch-complete :state state}
+      (:store-read/hold state)
+      (dispatch-store-repair state providers)
+      (= :paused (:status state))
+      {:ok true :status :batch-paused :state state}
+      (= :failed-systematic-frame-failure (:status state))
+      {:ok false :error/code :problem-queue-systematic-frame-failure
+       :failure (:consecutive-frame-failures state) :state state}
+      (= :voided-slot-awaiting-revision (:status state))
+      (if (= :dispatched
+             (get-in state [:statement-repair/handoff :dispatch/status]))
+        (collect-repair plan state providers)
+        (dispatch-repair state dispatch-statement-repair-fn persist-state-fn
+                         (or now-fn #(System/currentTimeMillis))))
+      (nil? (:active state))
+      (prepare-next plan state providers)
+      :else
+      (let [active (:active state)
+            result (frame-tick-fn (:frame active))]
+        (cond
+          (not (:ok result))
+          (if-let [park (fault-frame-park (:frame active) result)]
+            (park-active-and-advance plan state park providers)
+            result)
+          (= :unknown (phase-status/classify :problem-queue-frame
+                                             (:status result)))
+          {:ok false
+           :error/code :problem-queue-frame-status-vocabulary-incomplete
+           :finding {:status (:status result)
+                     :known-statuses
+                     (vec (sort (phase-status/known-statuses
+                                 :problem-queue-frame)))}}
+          (= :frame-parked (:status result))
+          (let [park (:frame/park result)]
+            (park-active-and-advance plan state park providers))
+          (not= :frame-complete (:status result))
+          (assoc result :queue/id (:queue/id plan)
+                 :active/frame-id (get-in active [:frame :frame/id]))
+          (not (contains? terminal-results (:frame/result result)))
+          {:ok false :error/code :problem-queue-terminal-result-invalid}
+          :else
+          (let [retired (retire-frame-fn
+                         {:frame (:frame active) :terminal-receipt
+                          (:terminal-receipt result)})]
+            (cond
+              (= :workspace-retirement-audit-retry-waiting
+                 (:error/code retired)) retired
+              (not (:ok retired))
+              (if-let [park (fault-frame-park (:frame active) retired)]
+                (park-active-and-advance plan state park providers)
+                retired)
+              :else
+              (let [void? (= :void (:frame/result result))
+                    refuted? (and void?
+                                  (= :refuted
+                                     (get-in result
+                                             [:terminal-receipt
+                                              :problem/outcome])))
+                    problem-id (get-in active [:frame :problem/id])
+                    repair-exhausted?
+                    (and refuted?
+                         (pos? (get-in state
+                                       [:statement-repair-attempts problem-id]
+                                       0)))
+                    pause? (= :pause-after-active (:status state))
+                    outcome-state (record-frame-outcome
+                                   state (:frame active)
+                                   (:terminal-receipt result))
+                    systematic?
+                    (>= (get-in outcome-state
+                                [:consecutive-frame-failures :count] 0)
+                        systematic-frame-failure-limit)
+                    cleared (addressed
+                             (cond-> (assoc outcome-state :active nil)
+                               (not void?)
+                               (update :completed conj
+                                       {:frame/id (get-in active [:frame :frame/id])
+                                        :problem/id (get-in active
+                                                            [:frame :problem/id])
+                                        :frame/result (:frame/result result)
+                                        :terminal-receipt/id
+                                        (get-in result
+                                                [:terminal-receipt :receipt/id])})
+                               void?
+                               (update :dispositions (fnil conj [])
+                                       {:frame/id
+                                        (get-in active [:frame :frame/id])
+                                        :problem/id
+                                        (get-in active [:frame :problem/id])
+                                        :frame/result :void
+                                        :void/classification
+                                        (get-in result
+                                                [:terminal-receipt
+                                                 :void/classification])
+                                        :void/failed-invariants
+                                        (get-in result
+                                                [:terminal-receipt
+                                                 :void/failed-invariants])
+                                        :terminal-receipt/id
+                                        (get-in result
+                                                [:terminal-receipt :receipt/id])})
+                               (and refuted? (not repair-exhausted?))
+                               (update :next-index dec)
+                               (and refuted? (not repair-exhausted?))
+                               (assoc :status :voided-slot-awaiting-revision
+                                      :statement-repair/handoff
+                                      (statement-repair-handoff
+                                       (:frame active)
+                                       (:terminal-receipt result)))
+                               pause? (assoc :status :paused)
+                               systematic?
+                               (assoc :status
+                                      :failed-systematic-frame-failure)))
+                    warnings (when-let [read-warnings (:store-read-warnings-fn providers)]
+                               (read-warnings (:frame active)))
+                    cleared (hold-for-store-warnings
+                             cleared (:frame active) (:terminal-receipt result) warnings)
+                    persisted (persist-state-fn cleared)]
+                (if-not (:ok persisted)
+                  {:ok false :error/code
+                   :problem-queue-state-persistence-failed}
+                  (if (:store-read/hold cleared)
+                    (dispatch-store-repair cleared providers)
+                    (if systematic?
+                    {:ok false
+                     :error/code :problem-queue-systematic-frame-failure
+                     :failure (:consecutive-frame-failures cleared)
+                     :state cleared}
+                    (if (and refuted? (not repair-exhausted?))
+                    (dispatch-repair cleared dispatch-statement-repair-fn
+                                     persist-state-fn
+                                     (or now-fn #(System/currentTimeMillis)))
+                    (if pause?
+                    {:ok true :status :batch-paused :state cleared}
+                    (prepare-next plan cleared providers))))))))))))))

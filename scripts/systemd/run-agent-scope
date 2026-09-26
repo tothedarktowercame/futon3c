@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/systemd/scope-lib.sh
+source "${script_dir}/scope-lib.sh"
+
+futon_run_scoped "$@"

@@ -1,0 +1,244 @@
+[{:name "build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:hook
+   "Choose `g(x)=x⁻¹ᐟ²`: it is integrable, its square is the borderline nonintegrable `x⁻¹`, and its entropy can be dominated by the slightly stronger but integrable power `4x⁻³ᐟ⁴`."
+   :how-to-apply
+   ["Define `g x` by `x^(-1/2)` for `x > 0` and zero otherwise, keeping measurability and endpoint behavior explicit."
+    "Use `integrableOn_Ioo_rpow_iff` to prove `g ∈ L¹(0,1)` and to refute integrability of `g² = x⁻¹`."
+    "Define the entropy density `ent x = g x * log (g x)`."
+    "Apply `Real.abs_log_mul_self_rpow_lt` with exponent `1/4` and factor the powers to obtain `|ent x| ≤ 4x⁻³ᐟ⁴` on `(0,1)`."
+    "Use the integrability of `x⁻³ᐟ⁴` to prove the entropy integral is finite."
+    "Derive the pointwise Young–Fenchel inequality `g*f ≤ exp f + g*log g` from `Real.add_one_le_exp (f - log g)`."
+    "Set `A = ∫ ent + 2`; combine the admissibility bound `∫ exp f ≤ 1` with integral monotonicity, avoiding an unnecessary exact evaluation of the entropy integral."]
+   :problem-class
+   "Refute an implication from entropy/Orlicz dual control to square integrability on a finite interval."
+   :witness-shape
+   {:function "g(x) = x^(-1/2) for x > 0, and 0 otherwise"
+    :L1 "the exponent -1/2 is greater than -1"
+    :not-L2 "g(x)^2 = x^(-1), the borderline divergent power"
+    :entropy-dominator "4*x^(-3/4), whose exponent is greater than -1"
+    :constant "A = ∫_[0,1] g*log(g) + 2"}
+   :key-api
+   ["intervalIntegral.integrableOn_Ioo_rpow_iff"
+    "Real.abs_log_mul_self_rpow_lt"
+    "Real.add_one_le_exp"
+    "Integrable.mono"
+    "integral_mono_ae"
+    "integral_add"]
+   :route-correction
+   {:classification :third-confirming-instance
+    :existing-memory-id
+    "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+    :supplied-route
+    "Use `x^(-3/4)` as the counterexample and separately discharge its logarithmic entropy integrability."
+    :implemented-route
+    "Use `x^(-1/2)` as the counterexample and reserve `x^(-3/4)` for an integrable domination bound."
+    :boundary
+    "This confirms evidence-based route correction; it does not make `x^(-3/4)` mathematically invalid as a possible witness."}
+   :witness
+   {:declaration "ApmCanaries.A01A06.orlicz_bound_not_implies_L2"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For entropy-controlled counterexamples, choose a singularity whose failed target norm becomes a standard borderline power, and use a nearby integrable power only to dominate the logarithmic entropy term."
+   :boundary
+   "This establishes failure of the `L²` conclusion for the file's `OrliczBound`; it does not characterize the sharp distribution tail implied by entropy control."
+   :capture-kind
+   :runner-counterexample-route-and-ground-control-full-file-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A06"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t041" "e-codexroll-019fa2c1-t042"]
+   :receipt-ids ["927e38e5-4296-468a-8631-909543486ceb"]
+   :commits ["9ea0efdcf844292928590cf5cf20b94a16f96e75"]
+   :problems ["a01A06-orlicz-not-L2"]
+   :artifacts
+   ["problems/a01A06/lean/Main.lean:orlicz_bound_not_implies_L2"]}
+  :confidence :single-proof-ground-control-full-file-axiom-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-a-circle-submean-bound-from-the-circle-average-identity"
+  :lane :solve-lane
+  :level :api-composition
+  :status :draft
+  :body
+  {:hook
+   "Package closed-ball holomorphicity as `DiffContOnCl`, rewrite the centre value as its circle average, and move the norm through the interval integral to obtain the circle sub-mean inequality."
+   :how-to-apply
+   ["From `DifferentiableOn ℂ g (closedBall z₀ r)` and `0 < r`, build `DiffContOnCl ℂ g (ball z₀ r)` using restriction to the open ball and continuity on its closure."
+    "Use `DiffContOnCl.circleAverage` to rewrite `g z₀` as `Real.circleAverage g z₀ r`."
+    "Unfold `Real.circleAverage_def` and normalize the positive `2π` scalar."
+    "Apply `intervalIntegral.norm_integral_le_integral_norm` to compare the norm of the complex circle integral with the circle average of `‖g‖`."]
+   :problem-class
+   "Extract the circle-level sub-mean inequality needed before converting a holomorphic estimate to a disk-area estimate."
+   :result
+   "`‖g z₀‖ ≤ Real.circleAverage (fun w ↦ ‖g w‖) z₀ r`"
+   :key-api
+   ["DiffContOnCl.circleAverage"
+    "Real.circleAverage_def"
+    "intervalIntegral.norm_integral_le_integral_norm"
+    "closure_ball"
+    "ball_subset_closedBall"]
+   :relation-to-existing
+   [{:memory-id
+     "e-codexpilot-package-closed-ball-holomorphicity-as-DiffContOnCl-for-Cauchy-estimates"
+     :shared-interface
+     "Both adapt differentiability on a closed ball to `DiffContOnCl` on the corresponding open ball."
+     :new-content
+     "The prior memory applies a Cauchy derivative estimate; this record applies the circle-average identity and norm-of-integral inequality."}
+    {:memory-id
+     "e-codexpilot-derive-circle-curve-length-from-the-average-of-the-derivative"
+     :shared-interface "`DiffContOnCl.circleAverage`"
+     :new-content
+     "The prior memory lower-bounds curve length through the average of `f'`; this record upper-bounds a centre value through the average of `‖g‖`."}]
+   :witness
+   {:declaration "ApmCanaries.A01A07.norm_le_circleAverage_norm"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When Mathlib supplies a circle-average identity but the goal is an inequality of norms, rewrite by the identity first and then apply the norm-of-integral bound under the normalized circle parameterization."
+   :boundary
+   "This is only the circle-level inequality. The disk-area inequality still requires polar coordinates, radial integration, translation invariance, and Fubini."
+   :capture-kind :runner-axiom-clean-helper-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A07"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t043" "e-codexroll-019f9b12-t044"]
+   :receipt-ids ["57ca09c6-cfd2-441e-a99b-c96f6c2fffaa"]
+   :commits
+   ["fc069ee1ad78ebe7ecf311dce122c24675014fd5"
+    "da77ea7421f9f266630a9a193922a09e7b77e2e4"]
+   :problems ["a01A07-L1-disk-convergence"]
+   :artifacts ["problems/a01A07/lean/Main.lean:norm_le_circleAverage_norm"]}
+  :confidence :blocked-row-one-ground-control-verified-axiom-clean-helper
+  :review {:verdict :pending-owner-review}}
+
+ {:name "lift-the-circle-submean-bound-to-a-disk-area-bound"
+  :lane :frontier-lane
+  :level :missing-construction
+  :status :draft
+  :body
+  {:hook
+   "The circle inequality is clean; the missing bridge is a polar-coordinate formula integrating circle averages with radial weight `2s` over a translated closed disk."
+   :frontier-status :gap-open
+   :exact-target
+   "`‖g z₀‖ ≤ (1 / (π*r²)) * ∫ w in closedBall z₀ r, ‖g w‖` for `0 < r` and `DifferentiableOn ℂ g (closedBall z₀ r)`."
+   :proved-prefix
+   {:declaration "norm_le_circleAverage_norm"
+    :result
+    "`‖g z₀‖ ≤ Real.circleAverage (fun w ↦ ‖g w‖) z₀ s` for every positive admissible radius."
+    :axiom-clean true}
+   :missing-bridge
+   "`∫ w in closedBall z r, ‖g w‖ = 2*π * ∫ s in Ioc 0 r, s * Real.circleAverage (fun w ↦ ‖g w‖) z s`"
+   :candidate-route
+   ["Translate the disk and integrand from centre `z` to the origin using invariance of complex volume."
+    "Use `Complex.integral_comp_polarCoord_symm` to express the planar integral in polar coordinates."
+    "Restrict the radial coordinate to `Ioc 0 r` and the angular coordinate to one full turn."
+    "Establish the Fubini and integrability hypotheses for `‖g‖` on the compact disk."
+    "Identify the angular integral with `2π * Real.circleAverage (fun w ↦ ‖g w‖) z s`."
+    "Integrate the proved circle sub-mean inequality against `2s` and normalize `∫₀ʳ 2s = r²`."]
+   :available-api
+   ["Complex.integral_comp_polarCoord_symm"
+    "DiffContOnCl.circleAverage"
+    "Real.circleAverage_def"
+    "intervalIntegral.norm_integral_le_integral_norm"]
+   :absence-claim
+   "The bounded component search found no packaged disk-area mean-value or sub-mean theorem at the checked Mathlib revision."
+   :downstream
+   ["norm_le_area_integral_div_area"
+    "tendstoUniformlyOn_of_L1_on_disks"
+    "differentiableOn_of_L1_limit"
+    "tendstoUniformlyOn_deriv_of_L1"
+    "L1_disk_convergence_analytic_upgrade"]
+   :rule
+   "Do not rebuild the analytic circle identity: isolate the remaining measure-theoretic bridge from circle averages to translated disk area."
+   :boundary
+   "The displayed polar formula is a construction target from the verified runner summary, not an axiom-clean theorem in this row."
+   :capture-kind :blocked-row-exact-residual-and-axiom-clean-prefix}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A07"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t043" "e-codexroll-019f9b12-t044"]
+   :receipt-ids ["57ca09c6-cfd2-441e-a99b-c96f6c2fffaa"]
+   :commits
+   ["fc069ee1ad78ebe7ecf311dce122c24675014fd5"
+    "da77ea7421f9f266630a9a193922a09e7b77e2e4"]
+   :problems ["a01A07-L1-disk-convergence"]
+   :artifacts
+   ["problems/a01A07/lean/Main.lean:norm_le_circleAverage_norm"
+    "problems/a01A07/lean/Main.lean:norm_le_area_integral_div_area"]}
+  :confidence :exact-residual-receipt-confirmed-route-untested
+  :review {:verdict :pending-owner-review}}
+
+ {:name "upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+  :lane :frontier-lane
+  :level :missing-construction
+  :status :draft
+  :body
+  {:hook
+   "Avoid a global finite cover: around each point choose `closedBall x R ⊆ Ω`, prove uniform Cauchy convergence on `closedBall x (R/2)` from the disk-area bound, then package the local limits as compact-uniform convergence."
+   :frontier-status :gap-open
+   :exact-target
+   "`L1ConvergesOnDisks f F Ω` and holomorphic `f n` imply `TendstoUniformlyOn f F atTop K` for every compact `K ⊆ Ω`."
+   :dependency
+   {:kind :serial
+    :requires "norm_le_area_integral_div_area"
+    :status :still-sorryAx}
+   :candidate-route
+   ["For each `x ∈ Ω`, use openness to choose `R > 0` with `closedBall x R ⊆ Ω`."
+    "For `y ∈ closedBall x (R/2)`, place `closedBall y (R/2)` inside `closedBall x R`."
+    "Apply the disk-area inequality to `g = f n - f m` on the smaller disk."
+    "Bound the resulting `L¹` norm by the two diskwise errors `‖f n - F‖` and `‖f m - F‖`; the hypothesis makes these tend to zero."
+    "Use completeness of the codomain to construct the locally uniform limit, then identify it pointwise with `F` from diskwise `L¹` convergence and continuity."
+    "Convert local uniform convergence to compact-uniform convergence with `tendstoLocallyUniformlyOn_iff_forall_isCompact`."
+    "Once established, use `TendstoLocallyUniformlyOn.differentiableOn` and `.deriv` for the downstream analytic and derivative conclusions."]
+   :route-correction
+   {:classification :runner-simplification
+    :discarded-step "Choose a finite cover of a compact subset before deriving the local estimate."
+    :replacement
+    "Prove the half-radius estimate locally first and use Mathlib's local-uniform/compact-uniform equivalence for the global packaging."}
+   :available-api
+   ["tendstoLocallyUniformlyOn_iff_forall_isCompact"
+    "TendstoLocallyUniformlyOn.differentiableOn"
+    "TendstoLocallyUniformlyOn.deriv"]
+   :transitive-status
+   {:direct-sorry-free
+    ["differentiableOn_of_L1_limit"
+     "tendstoUniformlyOn_deriv_of_L1"]
+    :still-depends-on-sorryAx true
+    :source "tendstoUniformlyOn_of_L1_on_disks"}
+   :boundary
+   "This is a verified reduction and route simplification, not a completed construction. The two direct-sorry-free downstream declarations remain unusable because `#print axioms` includes `sorryAx` transitively."
+   :capture-kind :blocked-row-serial-frontier-and-runner-route-simplification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A07"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t043" "e-codexroll-019f9b12-t044"]
+   :receipt-ids ["57ca09c6-cfd2-441e-a99b-c96f6c2fffaa"]
+   :commits
+   ["fc069ee1ad78ebe7ecf311dce122c24675014fd5"
+    "da77ea7421f9f266630a9a193922a09e7b77e2e4"]
+   :problems ["a01A07-L1-disk-convergence"]
+   :artifacts
+   ["problems/a01A07/lean/Main.lean:tendstoUniformlyOn_of_L1_on_disks"
+    "problems/a01A07/lean/Main.lean:differentiableOn_of_L1_limit"
+    "problems/a01A07/lean/Main.lean:tendstoUniformlyOn_deriv_of_L1"]}
+  :confidence :exact-reduction-receipt-confirmed-construction-untested
+  :review {:verdict :pending-owner-review}}]

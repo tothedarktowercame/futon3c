@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :subject-id "WM-01-carrier-contract"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.wm01-conversion-agreement-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/wm-three-apparatus-registrations-2026-09-19/WM-01-carrier-contract"
+ :code-paths ["test/futon2/aif/wm01_conversion_agreement_test.clj"]
+ :test-paths ["test/futon2/aif/wm01_conversion_agreement_test.clj"]}

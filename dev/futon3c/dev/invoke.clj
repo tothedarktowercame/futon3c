@@ -9,7 +9,7 @@
    the single routing authority that binds I-single-boundary +
    I-evidence-per-turn (M-invariant-queue-unstuck, INSTANTIATE-2)."
   (:require [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
@@ -30,14 +30,29 @@
   (config/env-bool "FUTON3C_DIRECT_XTDB" (:direct-xtdb? role-cfg false)))
 
 (defn make-evidence-store
-  "Build the evidence store based on direct-xtdb? flag.
-   When true, uses shared XTDB node (evidence persists to futon1a).
-   When false, uses in-memory atom (evidence lost on restart)."
-  [f1-sys direct-xtdb?]
-  (if direct-xtdb?
+  "Build the evidence store.
+   FUTON3C_EVIDENCE_BACKEND=futon1b (+ FUTON1B_URL) selects the futon1b
+   HTTP/EDN backend (E-futon1b-operational-switchover B2). The in-process
+   XTDB 1 direct path was retired in the I-0 unification (2026-07-14) — the
+   substrate is now futon1b/XTDB 2 (embedded in this JVM or over HTTP).
+   direct-xtdb? with no futon1b backend -> in-memory atom (lost on restart,
+   boot check fails loudly). f1-sys is retained for signature compatibility."
+  [_f1-sys direct-xtdb?]
+  (cond
+    (= "futon1b" (System/getenv "FUTON3C_EVIDENCE_BACKEND"))
+    (let [b (f1b/make-futon1b-backend)]
+      (println (str "[dev] evidence backend: futon1b (" (:base-url b) ")"))
+      b)
+
+    direct-xtdb?
     (do
-      (println "[dev] direct XTDB path: ENABLED")
-      (xb/make-xtdb-backend (:node f1-sys)))
+      (println (str "[dev] direct XTDB requested but futon1a is disabled "
+                    "(no node) — falling back to in-memory store; the "
+                    "I-evidence-per-turn boot check will fail loudly. "
+                    "Set FUTON3C_EVIDENCE_BACKEND=futon1b for a durable store."))
+      (atom {:entries {} :order []}))
+
+    :else
     (do
       (println "[dev] direct XTDB path: disabled (using in-memory evidence store)")
       (atom {:entries {} :order []}))))

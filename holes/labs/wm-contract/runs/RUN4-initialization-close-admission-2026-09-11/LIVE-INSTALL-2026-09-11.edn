@@ -1,0 +1,1 @@
+{:ok true, :value {:installed {:ok true, :status :handler-reconfigured, :run4-configured? true}, :cohort {:cohort-id :run4-initialization-close-admission-20260911-v1, :target 1, :remaining 1}, :queue-id "run4-initialization-close-queue-20260911-v1", :queue-started? false}}

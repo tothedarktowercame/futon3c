@@ -1,0 +1,29 @@
+{
+  "example_id": "simpsons-paradox-drug-gender",
+  "title": "Simpson's paradox: drug and gender",
+  "topology_basis": "printed_diagram",
+  "content": "Gender affects both treatment choice and heart-attack risk, confounding the observational association between the drug and heart attack. Adjusting for Gender identifies the drug's causal effect.",
+  "variables": [
+    {"key": "g", "name": "Gender", "content": "The confounder affecting treatment choice and baseline risk."},
+    {"key": "d", "name": "Drug", "content": "Drug D, the treatment whose effect is sought."},
+    {"key": "h", "name": "Heart Attack", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "g", "target": "d", "because": "Gender affects whether a patient chooses Drug D."},
+    {"source": "g", "target": "h", "because": "Gender affects baseline heart-attack risk."},
+    {"source": "d", "target": "h", "because": "The graph includes the drug's causal effect on heart attack."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:a604f3446604db9e",
+    "ta-book-of-why-2018:267730fc02251193",
+    "ta-book-of-why-2018:ed1086b8eefda9b7",
+    "ta-book-of-why-2018:452b8c577630ee28",
+    "ta-book-of-why-2018:fb7c18b3523ccc42",
+    "ta-book-of-why-2018:be4816bf082cb357",
+    "ta-book-of-why-2018:81a25f2d237f0f76"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0218",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0219"
+  ]
+}

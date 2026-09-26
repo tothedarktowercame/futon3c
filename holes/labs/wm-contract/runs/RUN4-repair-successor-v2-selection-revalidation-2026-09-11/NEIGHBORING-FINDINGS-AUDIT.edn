@@ -1,0 +1,32 @@
+{:schema :wm/run4-neighboring-findings-audit-v1
+ :observed-at "2026-09-11T15:38:00Z"
+ :mutation :none
+ :next-open-nonenvironmental
+ {:repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure"
+  :finding-sha256 "b888bcdd80d014c072f60faaa28d912908e4dc7674edce2f50d1ca6b45fc6068"
+  :failure-kind :untyped-failure
+  :failure-stage :selection
+  :error "Historical candidate targets another stop-line"
+  :cause :fixed-historical-action-did-not-match-first-open-stop-line
+  :covered-by-candidates ["1cf69c80fb29c39119a3b944e1ce94b5ca8fbc0f"
+                          "652ba19f4e0ba1150c9b691fbc2a9103de4d1dff"
+                          "5e96f370066958a3b789ef598a3fcf78aaad8891"
+                          "12b9c82d31d84eac776e91b072fb089fc46a6477"]}
+ :later-initialization-finding
+ {:repair-id "repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed"
+  :finding-sha256 "89a55521db658dc04499e4c43f7fde5af49fca632aad8c6311639ccdc16df68e"
+  :opened-at "2026-09-11T14:46:00.757771979Z"
+  :error-class "java.nio.file.FileAlreadyExistsException"
+  :conflicting-path "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-run4-u88-20260911-v1--attempt-001-agent-readiness-failed.edn"
+  :covered-by-reviewed-initialization-collision-repair :not-established
+  :reason "The retained bytes identify a repeated cohort-qualified external attempt identity, not the earlier unqualified attempt-001 path; association with an existing reviewed repair requires separate evidence."}
+ :neighboring-environmental-hold
+ {:repair-id "repair-run4-u88-20260911-v1--attempt-001-agent-readiness-failed"
+  :finding-sha256 "c77caf3e428328722edb64e261dcb97b2f1e61bb9630818465916030dabbb458"
+  :opened-at "2026-09-11T14:45:12.064747506Z"
+  :repair-class :environmental-hold
+  :failure-kind :agent-readiness-failed
+  :error "Agent readiness observation failed"
+  :covered-by-code-repair false
+  :reason "The finding records an environmental precondition and requires cleared readiness plus a grounded production-shaped successor; it is not discharged by historical admission."}
+ :status {:all-findings-unchanged true :none-cleared true :none-reclassified true}}

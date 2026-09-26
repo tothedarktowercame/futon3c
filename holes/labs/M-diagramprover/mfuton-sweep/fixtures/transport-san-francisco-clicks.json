@@ -1,0 +1,22 @@
+{
+  "example_id": "transport-san-francisco-clicks",
+  "title": "Transportability from San Francisco: different click-through rate",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(d) retains the target causal graph and adds selector S -> Click-through Rate W because San Francisco has a higher click-through rate.",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Exposure to the online advertisement."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "Whether the consumer purchases the product."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, a confounder of advertisement and purchase."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "The mediator whose population mechanism differs."},
+    {"key": "s", "name": "Population Difference (S)", "content": "The difference-producing selector for San Francisco click-through rate.", "selection": true}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "Age causes Advertisement exposure."},
+    {"source": "z", "target": "y", "because": "Age causes Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Advertisement causes Click-through Rate."},
+    {"source": "w", "target": "y", "because": "Click-through Rate causes Purchase Decision."},
+    {"source": "s", "target": "w", "because": "Figure 10.2(d) points selector S to Click-through Rate W."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:6220fad9ef1610b5", "ta-book-of-why-2018:e4d1cd2f403ad43d", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac", "ta-book-of-why-2018:324e56801575e33e"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367"]
+}

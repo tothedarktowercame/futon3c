@@ -1,0 +1,3283 @@
+{
+  "sqlite_version": "3.45.1",
+  "scope": "offline analyst-selected development; no graph admission or Student execution",
+  "retained_snapshot_counts": [
+    359,
+    364,
+    360,
+    361
+  ],
+  "retained_distinct_memories": 364,
+  "retained_distinct_pattern_ids": 102,
+  "retained_pattern_ids_in_canonical_library": 37,
+  "retained_pattern_ids_missing_from_canonical_library": [
+    "math-formalization-CA/cast-discipline-dyadic-endpoint-order",
+    "math-formalization-CA/dense-class-cancellation-for-oscillatory-weak-convergence",
+    "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums",
+    "math-formalization-FA/lp-space-api",
+    "math-formalization/abbrev-vs-def-instance-synthesis-in-application-position",
+    "math-formalization/asymptotic-coefficients-via-filter-lhopital-remainder-comparison",
+    "math-formalization/bridge-deriv-and-fderiv-by-curve-composition",
+    "math-formalization/check-namespace-and-existence-before-bare-name",
+    "math-formalization/classify-cyclic-actions-through-the-generator-image",
+    "math-formalization/commuting-semisimple-family-common-diagonalization",
+    "math-formalization/compare-ideal-to-linear-kernel-via-restrict-scalars",
+    "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+    "math-formalization/condition-rewrites-need-their-negation-proof-first",
+    "math-formalization/contradict-compactness-with-an-invariant-finite-span-flag",
+    "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+    "math-formalization/cyclic-source-hom-by-generator-image",
+    "math-formalization/defeq-endpoints-no-rewrite",
+    "math-formalization/degree-bounds-via-withbot-sup-not-natdegree-fold",
+    "math-formalization/endpoint-comparison-from-a-derivative-sign-on-an-interval",
+    "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+    "math-formalization/evaluate-a-polynomial-on-a-structured-algebra-element-by-structural-induction",
+    "math-formalization/exclude-relative-automorphisms-by-forbidden-cyclotomic-subextension",
+    "math-formalization/extract-a-linear-norm-bound-from-differentiability-at-a-zero",
+    "math-formalization/extract-exact-membership-inequalities",
+    "math-formalization/finite-basis-index-instance",
+    "math-formalization/globalize-a-local-linear-bound-on-a-compact-domain",
+    "math-formalization/globalize-uniform-local-ode-solutions-by-mesh-gluing",
+    "math-formalization/hand-build-multivariate-chain-rules-by-sections",
+    "math-formalization/identify-a-semisimple-summand-by-restricted-uniqueness",
+    "math-formalization/integer-discreteness-before-cast",
+    "math-formalization/let-preserves-definitional-transparency",
+    "math-formalization/lift-sylow-normality-through-a-normal-subgroup",
+    "math-formalization/local-fact-instances-via-leti",
+    "math-formalization/make-a-cover-occur-by-extending-and-comparing-composition-series",
+    "math-formalization/maximal-ideal-classification-by-residue-polynomial-ring",
+    "math-formalization/morphism-map-lemmas-over-simp-unfold",
+    "math-formalization/normal-subgroup-lattice-from-conjugacy-class-union",
+    "math-formalization/normalize-additive-jordan-data-to-a-multiplicative-decomposition",
+    "math-formalization/parity-dot-notation-falls-back-to-rcases-omega",
+    "math-formalization/pass-interior-estimates-to-a-closed-endpoint-by-one-sided-limits",
+    "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+    "math-formalization/prove-a-fixed-field-abelian-through-the-commutator-quotient",
+    "math-formalization/prove-converse-green-representation-before-claiming-bvp-uniqueness",
+    "math-formalization/prove-line-reflection-by-rectangle-morera",
+    "math-formalization/query-memory-with-api-names-not-obstacle-prose",
+    "math-formalization/recover-invariant-factors-from-power-kernel-cardinalities",
+    "math-formalization/recover-one-sided-ode-data-at-a-closed-endpoint",
+    "math-formalization/reduce-a-simple-subquotient-of-a-finite-power-coordinatewise",
+    "math-formalization/reduce-finite-group-commutativity-to-normal-sylow-factors",
+    "math-formalization/restrict-an-automorphism-by-proving-it-fixes-an-adjoin",
+    "math-formalization/solvability-by-kernel-range-chain",
+    "math-formalization/split-a-maximal-cyclic-factor-by-character-extension",
+    "math-formalization/split-half-line-green-kernels-into-moving-primitives",
+    "math-formalization/squarefree-product-from-pairwise-relative-primality",
+    "math-formalization/staging-serves-continuity-not-membership",
+    "math-formalization/supply-explicit-named-arguments-under-higher-order-unification",
+    "math-formalization/sylow-of-card-from-subgroup-order",
+    "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+    "math-formalization/transport-splitting-field-structure-through-uniqueness",
+    "math-formalization/trivialize-conjugation-by-coprime-centralizer-index",
+    "math-formalization/turn-abelian-subextension-maximality-into-commutator-containment",
+    "math-formalization/upgrade-linearity-by-commuting-with-algebra-generators",
+    "math-formalization/use-c0-on-a-closed-domain-for-decaying-fixed-points",
+    "math-informal/partition-global-optimization-by-an-attained-scalar-statistic",
+    "math-strategy/route-map-before-reconstruction"
+  ],
+  "retained_memories_with_differing_selected_rows": [],
+  "retained_attachment_status_counts": {
+    "reviewed": 400
+  },
+  "retained_attachments": [
+    {
+      "memory_id": "e-01c38dee-a698-41e3-af98-d6700d3dd55c",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-07a2f8d1-8769-4682-9f7f-06183f2dc458",
+      "pattern_id": "math-formalization-CA/pointwise-logderiv-bridge-interval-to-contour",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-082d154e-a52a-4697-92a7-61880d47f07c",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-0a6c4c9c-49c9-4beb-8221-7322afdd325b",
+      "pattern_id": "math-formalization-CV/entire-and-singularity-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-0d0d3806-f07b-406e-85bd-0d9702fbad8d",
+      "pattern_id": "math-formalization-CA/complex-arg-of-cpow-root",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-0d5fcb3e-7d75-4fa6-9b70-1f35688e0348",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-10323bb7-c624-4bb6-89de-bb5d67503b01",
+      "pattern_id": "math-formalization-CA/divisor-sum-to-root-count-without-monic",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-14100165-5b69-4898-ae80-f3cd44ddaed5",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-1866fc8e-aa5a-426c-aa30-d8d57c224238",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-1866fc8e-aa5a-426c-aa30-d8d57c224238",
+      "pattern_id": "math-formalization/coercion-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-1aa18a67-adf3-4262-8070-e44dc1744e3f",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-23a2940f-5fa6-444e-948c-74e6e201eb31",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-2794cdf2-fb43-4a37-ae26-978fe6677e4d",
+      "pattern_id": "math-formalization/statement-ladder-before-proof-text",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-4984bc4c-38ba-4112-ace1-e382b8c91fd9",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-63b7c7c1-1906-412c-ae18-b4644762fbea",
+      "pattern_id": "math-formalization/bank-cheap-obligations-before-the-hard-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-6556333d-b0d0-4e5a-802b-15b7d452553a",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-6aea0c17-eb1f-4c2c-978c-ee6f7b725688",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-6b355807-f9b3-4f2d-83e3-d63452f6de7c",
+      "pattern_id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-73ac922d-5d8d-42cd-a4df-25429440f39b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd",
+      "pattern_id": "math-informal/local-to-global",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-93b083ba-2a5c-4492-8120-9d48ab25a2de",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-93b083ba-2a5c-4492-8120-9d48ab25a2de",
+      "pattern_id": "math-formalization/coercion-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-98785d73-580b-4b5f-913b-9e9d6da97641",
+      "pattern_id": "math-formalization-CA/surj-via-oriented-root-preimage",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-a581383e-9229-4488-81ad-54bbed6d73a4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-aa4210cf-5ba3-49ed-8e40-96ace9aa6d8a",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-aa4210cf-5ba3-49ed-8e40-96ace9aa6d8a",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-00b29071a7d92441ac7d4533b65888a1",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-011584654eeb6ccb950676df79185e47",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-011584654eeb6ccb950676df79185e47",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-011cd8483b4a4725a4459fa573b61057",
+      "pattern_id": "math-formalization/staging-serves-continuity-not-membership",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-017b86a0e65cfa991d8e67a1157c29c2",
+      "pattern_id": "math-formalization/identify-a-semisimple-summand-by-restricted-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-01d9049953518a609da3e8872f490abd",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-01fe7b626234f1410632c10d1ebfc352",
+      "pattern_id": "math-formalization/classify-cyclic-actions-through-the-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-02cb3922e8e361ba2c9d0b12facd39b3",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-03afe376462d5c75fdfba725f6f1bb44",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-044f325b8b1cda520f6d053257b3d835",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-053c2caf90540b8d2ac8b13c84bd41f6",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-05d7486e3de78fb1e18004f19228492a",
+      "pattern_id": "math-formalization/trivialize-conjugation-by-coprime-centralizer-index",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-088a6beb590d213cf2a82037a2ac91c0",
+      "pattern_id": "math-formalization/bridge-deriv-and-fderiv-by-curve-composition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-08f682bdf257f01234c610ecf3ff4cbb",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-092bfe8160be4f156a00b124c519409e",
+      "pattern_id": "math-formalization/prove-line-reflection-by-rectangle-morera",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0af2ca3ab1d3461da7f90822a1c7c028",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0b922574d527cc4ce06f759c7798cd71",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0bee2494ebb3cb4c8fa8a75ff5e0c250",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0d90ce7aa86ff1c27803a9489b32ac05",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0e8c0208937d8d8b6e9f735dc76aa00c",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0fa02968679ad9cd46bf77726a8782de",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a",
+      "pattern_id": "math-strategy/missing-dependency-protocol",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-11c2745f7420eebc2ffcdbb15e680611",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-11eee63f24e3c081d84dc0e94dcaf9bd",
+      "pattern_id": "math-formalization-CA/dense-class-cancellation-for-oscillatory-weak-convergence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1227dda286cc1b7e1eda4a05d62f2c68",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1250c1b783c2e137c6092ffea43d474b",
+      "pattern_id": "math-formalization/compare-ideal-to-linear-kernel-via-restrict-scalars",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1446af28859b1b0a505873f512e2de94",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-15956f5bd082efcdfd049df1b5453fe8",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1825a5c9d9e2c6d2ef29e1e317163a7f",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-184859b9270fa205aed385b7a34a4425",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1869518d8ecad3c050b0a3c0d3c724f6",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-18e3d503d3b7b55468eed99853ed752f",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-18fb2019cd17055e1890198e245d4410",
+      "pattern_id": "math-formalization/reduce-a-simple-subquotient-of-a-finite-power-coordinatewise",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1b99c5dbb06322a0927306e77ac7940e",
+      "pattern_id": "math-formalization/globalize-uniform-local-ode-solutions-by-mesh-gluing",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-1de3ecbdd0f23414017b2a5ccbace790",
+      "pattern_id": "math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-207991cd31f44f3999b4cbd7c0b14c61",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-21e68477d8939f3b226e67d092b2ac33",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-21e68477d8939f3b226e67d092b2ac33",
+      "pattern_id": "math-strategy/proof-architecture",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-228c680d4290f40e16b7f05aad3392ed",
+      "pattern_id": "math-formalization/bound-sylow-order-from-faithful-prime-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-236560be6487b4b292f8f0ab6433c646",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2395e8e36d4b1d3f2fb986581369f476",
+      "pattern_id": "math-formalization/split-a-maximal-cyclic-factor-by-character-extension",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-23d4522bfd6e246f0b5d59e7014bd2ca",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-26895da62bb43e940cc903184f50cdb0",
+      "pattern_id": "math-formalization/classify-cyclic-actions-through-the-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-26f3266c5972f3bff9c0c798fa3f1eb4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-27660320ca9e15f6cf57619b9c522e03",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-27c9fba17df273a4fd03390524e691a5",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-29265f893b8e342cae43ea299c8f8215",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2a072486b0427b513283ae5395eff066",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2a2d5753d4013b31ff0bb8909d8f350e",
+      "pattern_id": "math-formalization/endpoint-comparison-from-a-derivative-sign-on-an-interval",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2a4e2e171e4fec989ec62907b08b1c53",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2a59b00adb208bb9eb07ba5343348d7e",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2b3f5ef98224d38408d3c26f1799a595",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2bbbc69a6f02d661cc136e8c7b520210",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2dadcff353d6fe5b9a82f21b3168fb82",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-2ec1aabe8b92b70699de56ee161504f2",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-349fb2f03f45feef5c0b22bdc88051c8",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-35c6ce45bddef24b83f26af18219953e",
+      "pattern_id": "math-formalization/degree-bounds-via-withbot-sup-not-natdegree-fold",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-36071cf940ee8b07999683ee96323169",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-368190be0931466c4b1868558e16e1d3",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-368190be0931466c4b1868558e16e1d3",
+      "pattern_id": "math-strategy/isolate-computational-kernel-before-transport",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-36a64942a579cd5b98662fed3908b846",
+      "pattern_id": "math-formalization/turn-abelian-subextension-maximality-into-commutator-containment",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-39475f66b79c4f117de6160dbb1ff96a",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-39ad04c68afb49aebb0d8b9af008d4df",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3a06a7a6d17cf7f9d2729d8299bcd8ef",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3af138feb70f01657c9c0cba92011270",
+      "pattern_id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3b51be2d09d4fcb55acb37e0e7c1a0bd",
+      "pattern_id": "math-formalization/cyclic-source-hom-by-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3cd1a2080b57e8df4ba88f9099560274",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3cd1a2080b57e8df4ba88f9099560274",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3cec69e2f0c366d7af8fcee5747c1822",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3e84697ca723af2853c35f06af5456b8",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3eb6f7e412960b2ddc2fe35318e6e24d",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3f30ae342c8115309a567a99510d3996",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3f336581fbce65fb34344d8f867a3b5e",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3f336581fbce65fb34344d8f867a3b5e",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3f7d9496cf20b2950b9ce2b62e678792",
+      "pattern_id": "math-formalization/coercion-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-3f7d9496cf20b2950b9ce2b62e678792",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-40b4351ceb18feb592d0512c852391f4",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-40b4351ceb18feb592d0512c852391f4",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-42893b28f6f128bf37e5c8e655cb9198",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4289ea801758c6087461efc308b88ca1",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-43727a6f62e9e388899ce3c626ee02fe",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-442f1ab7683c3685e2232135f161830e",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-451725cd11330a2e98ef27bc9261c6c1",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-451725cd11330a2e98ef27bc9261c6c1",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4601b53fb1dab7e4656b11410364e7cf",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4601b53fb1dab7e4656b11410364e7cf",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-46281298bfa2653ddc3f7774755f00d0",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-46aef25114ea3e89d3489bdafc530f52",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4721cbfda3c7ddb0189d485bbd16c98c",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-47e55897e612d9b12e47c26917f8d862",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-484a9e25467479d274e0487c1fa182d2",
+      "pattern_id": "math-formalization/trivialize-conjugation-by-coprime-centralizer-index",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-498a52fc52d1ccc6821e037629ab6240",
+      "pattern_id": "math-formalization/normal-subgroup-lattice-from-conjugacy-class-union",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4a0752ca3f0544957d39a61e1e4d688a",
+      "pattern_id": "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4a2b5c7bfbda9edfc1ab2a09c2a50c30",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4a6e217e7485f9e5abb899c90ec278da",
+      "pattern_id": "math-formalization-CV/derivative-bounds-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4bb42acdc77ee2888c2356ae685987b7",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4ca1e8109517bf7b072a90dd8080cf9b",
+      "pattern_id": "math-formalization/use-c0-on-a-closed-domain-for-decaying-fixed-points",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4d3cf5296f0c7795d5d72c8f858b4409",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4da4c6f5c49e824ef8d031fd5e0c3bea",
+      "pattern_id": "math-formalization/trivialize-conjugation-by-coprime-centralizer-index",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4e16d96c2aec66613bdf3de2b07dec55",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4ecf9ab0cab55c2c05d505d5f5ebef2d",
+      "pattern_id": "math-formalization/exclude-relative-automorphisms-by-forbidden-cyclotomic-subextension",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4eeae81b98414c467576b28963d8253f",
+      "pattern_id": "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-4fb8a8cfb5e705264b7a3e368654e765",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-505262c343ee2ba1601e267e1c4a4420",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-521f7c9e745a3a268be125e5eb9ed22b",
+      "pattern_id": "math-formalization/identify-a-semisimple-summand-by-restricted-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5267baf10456352824d7e3b5f7c740f6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5290c21c271207158b13384d28ea651a",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-541db0d84393128fe5eead558396a9c6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-547c0b81c1411e83899b6b2f159067e2",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-54982951b1a5eba611abe0b13aa96d98",
+      "pattern_id": "math-strategy/route-map-before-reconstruction",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-54f38e0db3cfda8d91a4562cf3507d29",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-560ffab07e2d22a8c6b8d43e8e0315dc",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-56fbffd7c23e55996ec7ae6fea69ce46",
+      "pattern_id": "math-formalization/recover-invariant-factors-from-power-kernel-cardinalities",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-576ee4043b66d098066451f82ed667e5",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-59686d04e9bee07922316433a191fb97",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-59f8cb4f833f2e7134d62425b9c4a9d1",
+      "pattern_id": "math-formalization/bound-sylow-order-from-faithful-prime-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5a33ac6fb6ab7313dde700951134fa83",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5a480c55cf4dc14cea10215341373c74",
+      "pattern_id": "math-formalization/squarefree-product-from-pairwise-relative-primality",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5ae953eb5e1d65eb3416c2271f5d6948",
+      "pattern_id": "math-formalization/evaluate-a-polynomial-on-a-structured-algebra-element-by-structural-induction",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5c164dd2070d29360a23d0a22bb2bf54",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5c3d94667ab64d50f0764877e62d45fc",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5c7349ba3da60b733ec48bea66682ad0",
+      "pattern_id": "math-formalization/split-a-maximal-cyclic-factor-by-character-extension",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5cefa5cfecdb1a44ffc39e8bc8317398",
+      "pattern_id": "math-formalization/solvability-by-kernel-range-chain",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5d273747449a42a0be9d8d2c17544e07",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5d273747449a42a0be9d8d2c17544e07",
+      "pattern_id": "math-formalization/commuting-semisimple-family-common-diagonalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5d755fb1354a530ee33b199ee9061357",
+      "pattern_id": "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5de8194d4638455ac03b4d0365fccbeb",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5e409b13ff2b412647e0ea216db92942",
+      "pattern_id": "math-informal/separate-into-independent-pieces",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5ee5f9ebc3dacc34ade531388d5f6dce",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5fd5140d1a84f674c7cf8989dbfbe7ff",
+      "pattern_id": "math-formalization-FA/lp-space-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5fdb99169bd788313841375c797c302c",
+      "pattern_id": "math-formalization/pass-interior-estimates-to-a-closed-endpoint-by-one-sided-limits",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-5fe509b2be0876395802f3ea08e5b471",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-607bb25c9e4bbfc5c9bbc58998f150fe",
+      "pattern_id": "math-formalization-CA/dense-class-cancellation-for-oscillatory-weak-convergence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-609d4a4a807dbd832ab62ef4882f2cb3",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-620601a038a2a5ca7b775f9c23912eba",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-62d4bd2f8ad1da80e73f402ba72039be",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-636cb72a17d87db883e8eacbb2624dda",
+      "pattern_id": "math-formalization/defeq-endpoints-no-rewrite",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-64526903be9f7bb0eb0d2a884b5348f0",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-656ea9ee0adc5f03f1ef83c974d27f38",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-65a19043268e612aa51b1efd00247f35",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-66d6f1a3e5539fc6d9553330c17246dc",
+      "pattern_id": "math-formalization/local-fact-instances-via-leti",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-680705d9ec7d96c9f9a9ae8232dadd4d",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-68967ac55513899b73397e46ed352938",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-68d44693dbf6b4da69a00a8d7b534a33",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6a75602265481dfb46b9dead6655915a",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6ae95c8bb4d020c030282490c18bf75c",
+      "pattern_id": "math-formalization/coercion-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6b404541e14225c7dc186612ed7b8431",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6ba7d508babdf1572310286e6b37803d",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6bac396cb8029f17cbfb784933f7c46d",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6c15bb0804ff40ea6799e4c348e45829",
+      "pattern_id": "math-formalization-CV/entire-and-singularity-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6c2deafad1cced833ba34525be00967c",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6c6774f8377c730662cf24765ed054d4",
+      "pattern_id": "math-formalization-CA/cast-discipline-dyadic-endpoint-order",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6c6774f8377c730662cf24765ed054d4",
+      "pattern_id": "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6d832ceee03324edf07bc33617ee65f0",
+      "pattern_id": "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6df5e6de26b4cdd7d23702ba613bd40d",
+      "pattern_id": "math-formalization/normalize-additive-jordan-data-to-a-multiplicative-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6f05f91af44678c651a28b3c4a141747",
+      "pattern_id": "math-formalization/bound-sylow-order-from-faithful-prime-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-6f56b015009e450e11953f3d43c91875",
+      "pattern_id": "math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-70025211ffdcc14b15cd0e160909f573",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7029c0f8f55a46dbf53ba247e4d4f303",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-70e2389df7f4f2312a2dfb05b8971b7b",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-73812d9dc61e0535c77eb276a6b0ae4a",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7501be83c80e8396626bbf50c26d60b4",
+      "pattern_id": "math-formalization/query-memory-with-api-names-not-obstacle-prose",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-75054f15756624771c6ed0fff31d6d74",
+      "pattern_id": "math-formalization/statement-ladder-before-proof-text",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-756bc65f9b19d1d8ef72d0ec54126997",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-757db7204d6fc225752d928749500de5",
+      "pattern_id": "math-formalization/compare-ideal-to-linear-kernel-via-restrict-scalars",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-78284e610bdf303610fe65a5c9ec2ac4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-78a21858bf055d66989fb0a1f7610f00",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-79238141ce8f3b05427371307f008758",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7978d5f262ca3ba93be491524ed55881",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7a733d30103cc38e6bd8a21313cd2955",
+      "pattern_id": "math-formalization/local-fact-instances-via-leti",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7b796b03abe575614fae099bfbb52c35",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7b9142cba8d37ee25f7e6fa455aace7d",
+      "pattern_id": "math-formalization/finite-basis-index-instance",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7b9142cba8d37ee25f7e6fa455aace7d",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7bd4752ebb3e205af1c35bb5c801ddb1",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7d4770dedbb89a6e4d733feb8cc00df2",
+      "pattern_id": "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7da02798e0894f1cc0e473a787abdc79",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7e99a3e9bbe569b285c12a344b97f316",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7eb19e40948a22b2331ec8f1373a36cf",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-7eb19e40948a22b2331ec8f1373a36cf",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-80b4735d37f1d15ad9d220ced8e76e29",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-80e49c1d3e4d7ab0f51003b79e30e588",
+      "pattern_id": "math-formalization/contradict-compactness-with-an-invariant-finite-span-flag",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-822c19bbf3500982ae1ec9297649e26d",
+      "pattern_id": "math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-842bb4125b90ec6fcc3b05b66c996019",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-85b754b3e50902ace7510de622f03a80",
+      "pattern_id": "math-formalization/globalize-a-local-linear-bound-on-a-compact-domain",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-85dbc00591b826f9e864e698a4175a92",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-86c1e0c52ff0922809f5e9b63fa0e84c",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-86c1e0c52ff0922809f5e9b63fa0e84c",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-87399a6fb8b4e66780f845e9f404b771",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-87693595a51aee77dc0fdef39db02b58",
+      "pattern_id": "math-formalization/split-half-line-green-kernels-into-moving-primitives",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-88a35ca007789060cb3cc16140b928f6",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-88c95fc6db5846b0a2c56f7c0ab3ce5b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-89291cd1513cdcd2db56e79b72f8ad16",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-89e9901e6770ed924a5d051f70f72879",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-89fbb110defc9cc27b05c90473327dcb",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8a3a11a7041044b8ca8776fb86cf8211",
+      "pattern_id": "math-formalization/sylow-of-card-from-subgroup-order",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8bf83438d2cb80951d15a72066d8658c",
+      "pattern_id": "math-formalization/make-a-cover-occur-by-extending-and-comparing-composition-series",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8c8a7be369174ecdf4073f0a167980c7",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8c8a7be369174ecdf4073f0a167980c7",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8d4608c586489b72402f43a77fb40f7b",
+      "pattern_id": "math-formalization/integer-discreteness-before-cast",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8e2f8f284b6c1f731fb824b90171ddd6",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8e58331bc3c8cf6cacadb5960f1d5db3",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8e58331bc3c8cf6cacadb5960f1d5db3",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8f1cf1b11e479187ec6c0eff6d863c9c",
+      "pattern_id": "math-formalization/parity-dot-notation-falls-back-to-rcases-omega",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8f4563cf103afd642fe1cc35916b90cf",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-8fa403a7f3ded54da0d45d9185114758",
+      "pattern_id": "math-formalization/let-preserves-definitional-transparency",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-905a276d5ed486eea3461a728247f0be",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9113e965613995bb0b7cffde3199c09a",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-911d811c4a45b07afa4c66e6f76cbf51",
+      "pattern_id": "math-formalization/lift-sylow-normality-through-a-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-91b463e45d2660f8fcbc7f44c9246403",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-927a701d7432d4f066cd5b53efa58984",
+      "pattern_id": "math-formalization/recover-one-sided-ode-data-at-a-closed-endpoint",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-92d7784478c14d395af80f88f98341b8",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-93b28c6be836048b289ec2eeb3c2885a",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9413c8c2aa2da4d252a293b7aa78475f",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-959e7ea797e5c7997db7f8741358c70d",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-96603c8953e8a6159e23d2dec94608ac",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-96a98b34a7b6343bd34fcf3e3c407e12",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-97397aa0f958a84bf7fb8c2bbdccebe2",
+      "pattern_id": "math-formalization/classify-cyclic-actions-through-the-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-982c6401b05d05ffe36a5184a98a1e21",
+      "pattern_id": "math-formalization/normalize-additive-jordan-data-to-a-multiplicative-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-98624ca2ae58e961126159d95f6628be",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-99fb67e884e13e7a475c1a450b9c92da",
+      "pattern_id": "math-formalization/extract-exact-membership-inequalities",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9b85562097715e5738c2a7dcb013770e",
+      "pattern_id": "math-formalization/globalize-uniform-local-ode-solutions-by-mesh-gluing",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9bc0f7329e928590f555fe258d580043",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9be232ac3734a484153059f06500a040",
+      "pattern_id": "math-formalization/contradict-compactness-with-an-invariant-finite-span-flag",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9bf44c206b3c71571798f2ac8fc4db0b",
+      "pattern_id": "math-formalization/make-a-cover-occur-by-extending-and-comparing-composition-series",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9d03c55d6f53f4dcf9c09ca7fe8d2db1",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9d9618b637029feafa790e0373b7e7fe",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9db7471c92835490d5af822046ca1290",
+      "pattern_id": "math-formalization/classify-square-zero-actions-by-adapted-complements",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9df5ef10836710290979ef6e715970ed",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-9f739ec83eff8b0842586a862d4c4ac4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a0c0320a9930285ef341917c7288c48c",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a1507c8cbce93ceaff909ffa055c725e",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a2c13a611d0b62d8d7755fd1ccb27cef",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a2d325b678926d21bc17f57688212fe1",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a2dccaaf756f0c6e0b9571234260704f",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a30655b78535a5dd7b76ab46c48b865d",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a5ed78d13c16922c619929addedbb69a",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a616ad168995fbc4e9aeb49c46086da2",
+      "pattern_id": "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a63c2ddcafadebd7423c461f49c3ed7d",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-a8c54c064a3eb4860038e16ad90c55e4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-accb3f215469f2a87337aa68e9041d56",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-adb48c739f713d4f5a2c9539a06c7862",
+      "pattern_id": "math-formalization/reduce-finite-group-commutativity-to-normal-sylow-factors",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-adce0d81ddd1d90df4d88305db81ff89",
+      "pattern_id": "math-formalization/check-namespace-and-existence-before-bare-name",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-aea74718f5170f599cb3df7122353d25",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-afc34e9831a65ebb9b2327a3189589e6",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-afc34e9831a65ebb9b2327a3189589e6",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-aff587f323483b6ac9d8563b68a2d765",
+      "pattern_id": "math-formalization/maximal-ideal-classification-by-residue-polynomial-ring",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b172d01411b1c010be1fe3d321662623",
+      "pattern_id": "math-formalization/compute-intermediate-fields-via-finite-group-subgroups",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b23dc28f98152cc436835f10167d1af3",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b23dc28f98152cc436835f10167d1af3",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b254bad61a52e24b8af51bf8b7797bf8",
+      "pattern_id": "math-formalization/contradict-compactness-with-an-invariant-finite-span-flag",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b294bb8050e34063a8cf382bd624b54e",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b33aa85adab4e572b8fa3f2817aeadc6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b43ecb1d7f73d3020be0b800a7427a9f",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b46cfe34f3e95c06a3a94a37d7db54a0",
+      "pattern_id": "math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b5c6ea1c0de9d7a40ffb9dfaf0169b95",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b5c6ea1c0de9d7a40ffb9dfaf0169b95",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b5fa9be578af6d7075a24fdca25de450",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b62cb49ba4a738a39de6a8007fca068a",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-b9db7729a0887d31a2355f529ba1ced0",
+      "pattern_id": "math-formalization/normal-subgroup-lattice-from-conjugacy-class-union",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ba18c48e6b3ea1813b93097bdb521380",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ba7d715789470b62e5a68cc51279e62c",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-bceabdb1173c26730938741b14555020",
+      "pattern_id": "math-formalization/defeq-endpoints-no-rewrite",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-bd37a8a86217ef1f0b5cd4de63102223",
+      "pattern_id": "math-formalization/classify-cyclic-actions-through-the-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-bd537f653162e219970003581cc8b9ee",
+      "pattern_id": "math-formalization/trivialize-conjugation-by-coprime-centralizer-index",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-bea39f55407c3c2ddea71ecbafe2954b",
+      "pattern_id": "math-formalization/hand-build-multivariate-chain-rules-by-sections",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c190ea66730dda78e6fac0e499491b2a",
+      "pattern_id": "math-informal/separate-into-independent-pieces",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c209c05f42c5f459b3a0109a8c65f38e",
+      "pattern_id": "math-formalization/bound-sylow-order-from-faithful-prime-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c24492ee0155aef8123c2e6705f28e74",
+      "pattern_id": "math-formalization/compact-thickening-upgrades-pointwise-analyticity",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c2523f525a0484bfb92a68b29bc02754",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c272def15369661ba7d3da51f4dca827",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c278b8320f0e94cab24e820ce3474d4a",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c475088fc5bebfe50980300560d3e8ff",
+      "pattern_id": "math-formalization/morphism-map-lemmas-over-simp-unfold",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c5059003df137092da1e694879c0c8ad",
+      "pattern_id": "math-informal/separate-into-independent-pieces",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c55b3c2b9a28e7fe90b0681a40e97223",
+      "pattern_id": "math-formalization/prove-converse-green-representation-before-claiming-bvp-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c65344bf261f3ce69f5e0f580eb6fa5e",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c6829af28e94c6c4d99bb45b8da12b25",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c6ea2fd625f42496abd08be83f8cda20",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c8dfc01331a79a8e9183b778f33c9bc6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c903193507ed73290a50abf016100cc7",
+      "pattern_id": "math-formalization-CV/entire-and-singularity-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c935ded1d7e643b759a794ef75d84650",
+      "pattern_id": "math-formalization/weld-range-lemmas-at-representation-seams",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c935ded1d7e643b759a794ef75d84650",
+      "pattern_id": "math-informal/construct-an-explicit-witness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c98dfc7450c2fe95d626c916e88a2a65",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c99db7afb5e674475257a437aba2d17e",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c99db7afb5e674475257a437aba2d17e",
+      "pattern_id": "math-formalization-CV/entire-and-singularity-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-c9d3118a167bb9c88cb028e47a799bda",
+      "pattern_id": "math-formalization-CV/entire-and-singularity-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cb50592fd25e191ddda8482a964a2f5c",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cbc499bd140d24f536d52483fbc54cbb",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cc6c46d208a74a1a1a3b9bac247cc9e2",
+      "pattern_id": "math-formalization/prime-index-kernel-from-finite-abelian-decomposition",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cc6d29ccbfd04d85b8c3f8e9cddbe987",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cd33dbdf904ff3d78dfa3c3c4b990ef6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-cd51a7cf27ef4655fb55f2b1a7c1879b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ceba5f1fac41973ae23cd3ca3866ce0d",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d08d0311adbe7d9159697d3019491c43",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d1014b9b15b890619865b55bfd809a13",
+      "pattern_id": "math-formalization/recover-invariant-factors-from-power-kernel-cardinalities",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d134187504dd20b4864a6bb725d591d1",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d14388496fee3108d64f467b2381ab60",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d1e214464ac72649b2c6b6cecc23fa9d",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d23abb7e2427d8450e9d872bd71f0d84",
+      "pattern_id": "math-formalization/prove-a-fixed-field-abelian-through-the-commutator-quotient",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d63949c31b2432dc40c45edb6cec31cb",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-d8347acc64d49461df14f5f2d4edef56",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-daf15b1482f39239f5c960a893725c73",
+      "pattern_id": "math-formalization/supply-explicit-named-arguments-under-higher-order-unification",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-dbf77a180cf1f6800d0ab680f4f23199",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-dca2ec83741133179a6eab86098e240b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-dd439641b7ae94b9718b04b911810116",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-de30b5ae3706422a549cc710ce4e7841",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-def31cb9167208c3135fef4355f3601c",
+      "pattern_id": "math-formalization-CA/dense-class-cancellation-for-oscillatory-weak-convergence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-def31cb9167208c3135fef4355f3601c",
+      "pattern_id": "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-df7cc8128c574b105d58ecf2476dcc6a",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e13c7dd92286c0ddd9ac992c65015c1e",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+      "pattern_id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e23bc1c8cf4468773b97951be0d21abb",
+      "pattern_id": "math-formalization/turn-abelian-subextension-maximality-into-commutator-containment",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e27250d407f8d921067e8503d1b3f2d8",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e27f23278ddcb5d780ed7a667180e26c",
+      "pattern_id": "math-formalization/classify-cyclic-actions-through-the-generator-image",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e2f7661011932d0484f34debdda077b4",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e35a5c260f620941b9be9c2e7c74a093",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e395cd0c4b31f2044686c9720dd7e448",
+      "pattern_id": "math-formalization/notation-semantics-traps",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e421265776ff1fe7143421bf86500a63",
+      "pattern_id": "math-formalization-CA/series-evaluation-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e585d230e5ee0f270deb3ec01f2e770d",
+      "pattern_id": "math-formalization/tactic-algebra-interference",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e58945601e9fe52cf2695cd57b765fd0",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e63541eca83e27c9d573e2e069086fae",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e6654cc26d5c5816f46cb0510e9de6e0",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e6b79103b99dd7a9046236934385f05c",
+      "pattern_id": "math-formalization/restrict-an-automorphism-by-proving-it-fixes-an-adjoin",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e6c67eb55a84000bf7795d8f1261f40b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e7d7bfafdda2e9d3ee76469c2340343b",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e7dcd2b3379e1e34f544adb5ee601ac8",
+      "pattern_id": "math-formalization/bound-sylow-order-from-faithful-prime-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e82f5f690291d84708457a067d64f14f",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-e86cbdf99609170f05ed5e4efad566d0",
+      "pattern_id": "math-formalization-FA/weak-convergence-hilbert",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ea0f91fe943a2dc1c047aaebf9fc564b",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ea812fce4d6b39a089e211dc55cedb6f",
+      "pattern_id": "math-formalization/equicardinal-fibers-from-equivariant-transitive-action",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ea812fce4d6b39a089e211dc55cedb6f",
+      "pattern_id": "math-formalization/sylow-trace-restriction-to-normal-subgroup",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-eae66fd16dc597c86d8a8eeb87b316e8",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-eaf274a1dc2164b2f4be2cdc65b6dd12",
+      "pattern_id": "math-formalization/condition-rewrites-need-their-negation-proof-first",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-eb67a967a218b67fb4479fb8b85fbbb7",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ec5994eccaddba5636e945549ad8e16f",
+      "pattern_id": "math-formalization/count-finite-structured-objects-by-explicit-coordinate-equivalence",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-eceb68bc2a08f32a2b6567cb22529ec5",
+      "pattern_id": "math-informal/construct-an-explicit-witness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ed99e29cc486a2d5b8dfbae14eb267aa",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-eefaf8c152040ace4337f0ee1940237b",
+      "pattern_id": "math-formalization/abbrev-vs-def-instance-synthesis-in-application-position",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f0a4bf984c7f7da61ecd05540a6d9fdc",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f240c45c48e864d2f9bf23317503bf6b",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f25d2d175cd3f2f4610203d1e8d41fc4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f445decf8a1d0b522446e08552180688",
+      "pattern_id": "math-formalization/transport-splitting-field-structure-through-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f495f943f78ccaeafb1e1d1c8eb2b7d1",
+      "pattern_id": "math-formalization/extract-a-linear-norm-bound-from-differentiability-at-a-zero",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f5191209ef638b6622c3c6244dbdd61b",
+      "pattern_id": "math-informal/partition-global-optimization-by-an-attained-scalar-statistic",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f5462223e1ab03d70792f7c0dc66c072",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f5cbb284f2ca57bdff09e085c4de8f4d",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f6ff4fd718db9c8c54bfe02eadd33067",
+      "pattern_id": "math-formalization/asymptotic-coefficients-via-filter-lhopital-remainder-comparison",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-f98a79ccd8ff2975f863b9d570b834ae",
+      "pattern_id": "math-formalization/assemble-a-basis-from-an-independent-supremum",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-fa3c8572f3576b1ddb34eb1d43948b4c",
+      "pattern_id": "math-formalization/upgrade-linearity-by-commuting-with-algebra-generators",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-fa9eb5c10b6b4a2f99430f5df2055ea6",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-faa280c92bd833ed990672c3b7007a78",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-fc3a9cdcda63dfe1dd6f43c5c9d1d2b8",
+      "pattern_id": "math-formalization/classify-square-zero-actions-by-adapted-complements",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ff27fb99c5c5fbfcdbe2daebdcb9a32d",
+      "pattern_id": "math-strategy/corpus-trust-protocol",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-apm-promotion-ffaf6970cfb03ba7acffb28e0f145f9e",
+      "pattern_id": "math-informal/argue-by-contradiction",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-b1c4fa0e-3d3e-4ec3-8e2a-588cf1fa518d",
+      "pattern_id": "math-formalization-CA/schwarz-disk-automorphism-formula",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+      "pattern_id": "math-formalization/memlp-power-law-scalar-thresholds",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-bc26b67e-cda0-4996-a37f-34c28a65ad76",
+      "pattern_id": "math-formalization-CA/complex-arg-of-cpow-root",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-bc26b67e-cda0-4996-a37f-34c28a65ad76",
+      "pattern_id": "math-formalization-CA/surj-via-oriented-root-preimage",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e",
+      "pattern_id": "math-formalization/cast-normalization",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-d2563094-59b1-45c1-902a-c28b5ad3ada3",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-d2563094-59b1-45c1-902a-c28b5ad3ada3",
+      "pattern_id": "math-informal/reduce-to-known-result",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-dda90056-d36e-4ae4-be4b-7f34e6754620",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-dda90056-d36e-4ae4-be4b-7f34e6754620",
+      "pattern_id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-e9f9c621-1686-4a86-a416-e258186384c4",
+      "pattern_id": "math-formalization-CA/measure-integration-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-e9f9c621-1686-4a86-a416-e258186384c4",
+      "pattern_id": "math-formalization/memlp-power-law-scalar-thresholds",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+      "pattern_id": "math-formalization-CV/holomorphic-disk-api",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+      "pattern_id": "math-informal/construct-auxiliary-object",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-fddf046d-3a4d-49fd-8403-f877d46ac12c",
+      "pattern_id": "math-formalization/coercion-bridge",
+      "status": "reviewed"
+    },
+    {
+      "memory_id": "e-fddf046d-3a4d-49fd-8403-f877d46ac12c",
+      "pattern_id": "math-formalization/memlp-power-law-scalar-thresholds",
+      "status": "reviewed"
+    }
+  ],
+  "canonical_pattern_count": 136,
+  "family_counts": {
+    "math-formalization": 31,
+    "math-formalization-CA": 23,
+    "math-formalization-CV": 7,
+    "math-formalization-FA": 3,
+    "math-formalization-GN": 2,
+    "math-formalization-GR": 2,
+    "math-formalization-MG": 1,
+    "math-informal": 24,
+    "math-informal-CA": 6,
+    "math-informal-CO": 2,
+    "math-informal-CT": 7,
+    "math-informal-LO": 1,
+    "math-informal-NA": 2,
+    "math-informal-RA": 2,
+    "math-strategy": 20,
+    "proof-search": 3
+  },
+  "catalog_coverage": 136,
+  "catalog_missing": [],
+  "declaration_count_watcher_committed": 141,
+  "distinct_ids_watcher_committed": 138,
+  "declarations_by_repo": {
+    "futon3": 136,
+    "futon3c": 5
+  },
+  "committed_coined_deposits": 18,
+  "coined_id_occurrences": 53,
+  "coined_distinct_ids": 51,
+  "untracked_deposit_path_count": 39,
+  "full_pattern_offer_eligible": 78,
+  "explicit_section_counts": {
+    "IF": 126,
+    "HOWEVER": 133,
+    "THEN": 135
+  },
+  "results": [
+    {
+      "id": "ode-source",
+      "problem": "m00A05",
+      "query": "differential equation initial value unique solution",
+      "target": "math-formalization-CA/ode-gronwall-api",
+      "applicability": "partial-method; endpoint bridge needed",
+      "fts_strategy": "four-token-OR",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-strategy/constraint-tension-resolution",
+            "score": 3,
+            "path": "library/math-strategy/constraint-tension-resolution.flexiarg",
+            "sha256": "049481902ba9fa34692b76935abdc426ab0efb9523ed50247349019dec0dbcd6"
+          },
+          {
+            "id": "math-informal/parametric-tension-dissolution",
+            "score": 2,
+            "path": "library/math-informal/parametric-tension-dissolution.flexiarg",
+            "sha256": "3ccadc4beaf772dac5551ec2224a31d22bd701b2016dccff464e50716df2555e"
+          },
+          {
+            "id": "math-formalization-CA/measure-integration-api",
+            "score": 1,
+            "path": "library/math-formalization-CA/measure-integration-api.flexiarg",
+            "sha256": "70ce720e3849f88487c4c6d3f34f347fc5cb03fc1094bc5ff50af8a0ec6ab5ce"
+          },
+          {
+            "id": "math-formalization-CA/uniform-continuity-boundedness",
+            "score": 1,
+            "path": "library/math-formalization-CA/uniform-continuity-boundedness.flexiarg",
+            "sha256": "a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c"
+          },
+          {
+            "id": "math-formalization/normalize-meromorphic-point-values-before-continuation",
+            "score": 1,
+            "path": "library/math-formalization/normalize-meromorphic-point-values-before-continuation.flexiarg",
+            "sha256": "3c3e15ed94b8411e0a46a5addc8542752a54dced30292a49116f379079c78ae9"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": 1,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          },
+          {
+            "id": "math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes",
+            "score": 1,
+            "path": "library/math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes.flexiarg",
+            "sha256": "79f8c56f42df4d1acc5cd30bc165f230e4d17e93ddcc4e9cdf609a46e9e06f83"
+          },
+          {
+            "id": "math-informal-CO/count-over-a-decomposition",
+            "score": 1,
+            "path": "library/math-informal-CO/count-over-a-decomposition.flexiarg",
+            "sha256": "b9c43ef3b1d7d8a37bfc3c1e4f44b4050399c11afa763e082f6cdc88452c2db6"
+          },
+          {
+            "id": "math-informal-CO/use-probabilistic-method",
+            "score": 1,
+            "path": "library/math-informal-CO/use-probabilistic-method.flexiarg",
+            "sha256": "dbeba326a16480bc8a55b97756db18994cb8641bce2b1c76d2a52ab1bdc86d8b"
+          },
+          {
+            "id": "math-informal-CT/compare-universal-properties",
+            "score": 1,
+            "path": "library/math-informal-CT/compare-universal-properties.flexiarg",
+            "sha256": "003e98c64d4733d1910c3da18dba9e9be034e9ae17d2e67927d95aa4c9955708"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-informal/parametric-tension-dissolution",
+            "score": -5.869098469076706,
+            "path": "library/math-informal/parametric-tension-dissolution.flexiarg",
+            "sha256": "3ccadc4beaf772dac5551ec2224a31d22bd701b2016dccff464e50716df2555e"
+          },
+          {
+            "id": "math-formalization/rewrite-orientation",
+            "score": -4.658512495970193,
+            "path": "library/math-formalization/rewrite-orientation.flexiarg",
+            "sha256": "2016b416e3b6bc630e1eafac27d30b91d8ebc47e154b046404c637f8ddc1837f"
+          },
+          {
+            "id": "math-informal/local-to-global",
+            "score": -4.55448196868114,
+            "path": "library/math-informal/local-to-global.flexiarg",
+            "sha256": "ac568c2e793843ca8deeda07d731352f15c5c8b7a03b1a8f93660fed79bcfb63"
+          },
+          {
+            "id": "math-informal-CO/count-over-a-decomposition",
+            "score": -4.447158239715023,
+            "path": "library/math-informal-CO/count-over-a-decomposition.flexiarg",
+            "sha256": "b9c43ef3b1d7d8a37bfc3c1e4f44b4050399c11afa763e082f6cdc88452c2db6"
+          },
+          {
+            "id": "math-informal-CT/verify-universal-property",
+            "score": -4.395494736604739,
+            "path": "library/math-informal-CT/verify-universal-property.flexiarg",
+            "sha256": "31666511ae87423b6a9261414627a5ab853b2ffb08554f3a0ace76e38bbe570e"
+          },
+          {
+            "id": "math-formalization-CV/entire-affine-by-divided-difference",
+            "score": -4.384262596798989,
+            "path": "library/math-formalization-CV/entire-affine-by-divided-difference.flexiarg",
+            "sha256": "75bd7893b6db8e5e5fa108ae2db3d11d48a1ff9f9fed408797b54812dbf806bc"
+          },
+          {
+            "id": "math-formalization/recover-radical-generators-from-a-reciprocal-polynomial-root",
+            "score": -4.357269908476852,
+            "path": "library/math-formalization/recover-radical-generators-from-a-reciprocal-polynomial-root.flexiarg",
+            "sha256": "954d33aae57c3f6dfa3fe87981fe3d0776aecf6f3de219fa45cd6d62e40a3790"
+          },
+          {
+            "id": "math-strategy/constraint-tension-resolution",
+            "score": -4.060237133471022,
+            "path": "library/math-strategy/constraint-tension-resolution.flexiarg",
+            "sha256": "049481902ba9fa34692b76935abdc426ab0efb9523ed50247349019dec0dbcd6"
+          },
+          {
+            "id": "math-informal-CT/chase-the-diagram",
+            "score": -3.9828363721190114,
+            "path": "library/math-informal-CT/chase-the-diagram.flexiarg",
+            "sha256": "50968510599d65b0ee04b96339576d53b558707e1b1edfba7e0899bedd515cb7"
+          },
+          {
+            "id": "math-informal-NA/numerical-scout",
+            "score": -3.707224841460255,
+            "path": "library/math-informal-NA/numerical-scout.flexiarg",
+            "sha256": "f67cb6a6c93a16d6090daa36a7e1daeb73191840d90fb093921254bb5481d721"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-informal-CT/verify-universal-property",
+            "score": -12.078127459125781,
+            "path": "library/math-informal-CT/verify-universal-property.flexiarg",
+            "sha256": "31666511ae87423b6a9261414627a5ab853b2ffb08554f3a0ace76e38bbe570e"
+          },
+          {
+            "id": "math-strategy/constraint-tension-resolution",
+            "score": -10.770234042127841,
+            "path": "library/math-strategy/constraint-tension-resolution.flexiarg",
+            "sha256": "049481902ba9fa34692b76935abdc426ab0efb9523ed50247349019dec0dbcd6"
+          },
+          {
+            "id": "math-informal/parametric-tension-dissolution",
+            "score": -8.563270226415256,
+            "path": "library/math-informal/parametric-tension-dissolution.flexiarg",
+            "sha256": "3ccadc4beaf772dac5551ec2224a31d22bd701b2016dccff464e50716df2555e"
+          },
+          {
+            "id": "math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes",
+            "score": -8.438144474426114,
+            "path": "library/math-formalization/vanishing-derivative-limit-via-fixed-interval-slopes.flexiarg",
+            "sha256": "79f8c56f42df4d1acc5cd30bc165f230e4d17e93ddcc4e9cdf609a46e9e06f83"
+          },
+          {
+            "id": "math-strategy/property-of-object-result",
+            "score": -7.295689992075547,
+            "path": "library/math-strategy/property-of-object-result.flexiarg",
+            "sha256": "5a0682496f3e891f053b2e26169183cd8dd0a9dc0dd8566dce754ecf6e2d710a"
+          },
+          {
+            "id": "math-informal/dualise-the-problem",
+            "score": -6.576632924923965,
+            "path": "library/math-informal/dualise-the-problem.flexiarg",
+            "sha256": "5e4cc312827749ffb6c5e2e9f99286eff3e95a341c5e1b858fc041198ac2c7bc"
+          },
+          {
+            "id": "math-informal-NA/numerical-scout",
+            "score": -6.536883555911504,
+            "path": "library/math-informal-NA/numerical-scout.flexiarg",
+            "sha256": "f67cb6a6c93a16d6090daa36a7e1daeb73191840d90fb093921254bb5481d721"
+          },
+          {
+            "id": "math-formalization/recover-radical-generators-from-a-reciprocal-polynomial-root",
+            "score": -5.846996147751148,
+            "path": "library/math-formalization/recover-radical-generators-from-a-reciprocal-polynomial-root.flexiarg",
+            "sha256": "954d33aae57c3f6dfa3fe87981fe3d0776aecf6f3de219fa45cd6d62e40a3790"
+          },
+          {
+            "id": "math-informal-CT/compare-universal-properties",
+            "score": -5.706273917477493,
+            "path": "library/math-informal-CT/compare-universal-properties.flexiarg",
+            "sha256": "003e98c64d4733d1910c3da18dba9e9be034e9ae17d2e67927d95aa4c9955708"
+          },
+          {
+            "id": "math-informal-CT/chase-the-diagram",
+            "score": -5.668228878167764,
+            "path": "library/math-informal-CT/chase-the-diagram.flexiarg",
+            "sha256": "50968510599d65b0ee04b96339576d53b558707e1b1edfba7e0899bedd515cb7"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": null,
+        "fts_component": null,
+        "pattern_fields_exploratory": null
+      }
+    },
+    {
+      "id": "operator-statement",
+      "problem": "m96J04",
+      "query": "compact linear operator Banach space no eigenvalues",
+      "target": "math-formalization-CA/ode-gronwall-api",
+      "applicability": "requires Volterra reduction; not in statement",
+      "fts_strategy": "four-token-OR",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-formalization-CA/continuous-linear-map-composition",
+            "score": 3,
+            "path": "library/math-formalization-CA/continuous-linear-map-composition.flexiarg",
+            "sha256": "ccf3e4e312a892170a618990b3eaedcb97627c48b8bc9a13efded5f4c7034b11"
+          },
+          {
+            "id": "math-formalization-CA/hilbert-projection-properties",
+            "score": 2,
+            "path": "library/math-formalization-CA/hilbert-projection-properties.flexiarg",
+            "sha256": "18a747b406f74c1b0fc7eb2b22879390f909bfe33697e4bc65a7b735b443ece8"
+          },
+          {
+            "id": "math-formalization-CA/lp-norm-comparison",
+            "score": 2,
+            "path": "library/math-formalization-CA/lp-norm-comparison.flexiarg",
+            "sha256": "56c502dda60e18ba6835be638ad134f6f22fd26b6bb974c4815c581667d010b5"
+          },
+          {
+            "id": "math-formalization-CA/measure-restrict-simplify",
+            "score": 2,
+            "path": "library/math-formalization-CA/measure-restrict-simplify.flexiarg",
+            "sha256": "4a160da612f4926253a62ebb51bf385db57e4cf48590dc028723d35423f97886"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": 2,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-formalization-CV/complex-liouville-periodicity",
+            "score": 2,
+            "path": "library/math-formalization-CV/complex-liouville-periodicity.flexiarg",
+            "sha256": "bf0aaf1e3402d26d47cc800f55237686c44673f33927751a88f7b74cfc2fc92b"
+          },
+          {
+            "id": "math-formalization-CV/complex-polynomial-bound",
+            "score": 2,
+            "path": "library/math-formalization-CV/complex-polynomial-bound.flexiarg",
+            "sha256": "0c92287b0eea43bf2fb4d1ed9c5a11f562cd9d911ce62906b8f2a498448bb9fd"
+          },
+          {
+            "id": "math-formalization-CV/entire-and-singularity-api",
+            "score": 2,
+            "path": "library/math-formalization-CV/entire-and-singularity-api.flexiarg",
+            "sha256": "d000848a444924111dc1f20a88fd46e46a95e4b3ae685783d0dcc90745416649"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": 2,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization-FA/lf-map-continuity-via-fixed-support-stages",
+            "score": 2,
+            "path": "library/math-formalization-FA/lf-map-continuity-via-fixed-support-stages.flexiarg",
+            "sha256": "91eb3e2df6fed3f71cc0ba571a96b0e33a5b3b772088ca2d3a04664ce8fc4416"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-formalization-FA/lf-map-continuity-via-fixed-support-stages",
+            "score": -13.561840984456936,
+            "path": "library/math-formalization-FA/lf-map-continuity-via-fixed-support-stages.flexiarg",
+            "sha256": "91eb3e2df6fed3f71cc0ba571a96b0e33a5b3b772088ca2d3a04664ce8fc4416"
+          },
+          {
+            "id": "math-formalization-CA/continuous-linear-map-composition",
+            "score": -9.46642549455014,
+            "path": "library/math-formalization-CA/continuous-linear-map-composition.flexiarg",
+            "sha256": "ccf3e4e312a892170a618990b3eaedcb97627c48b8bc9a13efded5f4c7034b11"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -9.330209922214689,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient",
+            "score": -8.722166352703178,
+            "path": "library/math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient.flexiarg",
+            "sha256": "2ac7ac1eaf90e504ddcc66478f8af6a2ee841b674717269130061a5366a5b6f2"
+          },
+          {
+            "id": "math-informal/construct-auxiliary-object",
+            "score": -7.714310224387676,
+            "path": "library/math-informal/construct-auxiliary-object.flexiarg",
+            "sha256": "3bc92f9b63422ea240ed964ca3460a9d79c249e700ee0ce6dcdfeb8c1779e05b"
+          },
+          {
+            "id": "math-strategy/exhaustion-as-theorem",
+            "score": -6.537188380656508,
+            "path": "library/math-strategy/exhaustion-as-theorem.flexiarg",
+            "sha256": "fcc5ca2f9ed58c7746e5d47243c06b32dd7851f5897c3f4fd92d9e1001e3c900"
+          },
+          {
+            "id": "math-formalization/minmax-normalization",
+            "score": -4.401144583166359,
+            "path": "library/math-formalization/minmax-normalization.flexiarg",
+            "sha256": "b14c6c162a2c195e610dd194762a7b9606e9780e16dcf8a7baa162c498440bb4"
+          },
+          {
+            "id": "math-formalization-CV/complex-liouville-periodicity",
+            "score": -4.000121905316978,
+            "path": "library/math-formalization-CV/complex-liouville-periodicity.flexiarg",
+            "sha256": "bf0aaf1e3402d26d47cc800f55237686c44673f33927751a88f7b74cfc2fc92b"
+          },
+          {
+            "id": "math-formalization-CA/hilbert-projection-properties",
+            "score": -3.9410057206338043,
+            "path": "library/math-formalization-CA/hilbert-projection-properties.flexiarg",
+            "sha256": "18a747b406f74c1b0fc7eb2b22879390f909bfe33697e4bc65a7b735b443ece8"
+          },
+          {
+            "id": "math-formalization/compact-thickening-upgrades-pointwise-analyticity",
+            "score": -3.7636854666824413,
+            "path": "library/math-formalization/compact-thickening-upgrades-pointwise-analyticity.flexiarg",
+            "sha256": "dbc1bf9be496ed96558e6d5559fae371fb4765ec41de3cfe1abbaf4cef20e04d"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-formalization-FA/lf-map-continuity-via-fixed-support-stages",
+            "score": -16.921801062173074,
+            "path": "library/math-formalization-FA/lf-map-continuity-via-fixed-support-stages.flexiarg",
+            "sha256": "91eb3e2df6fed3f71cc0ba571a96b0e33a5b3b772088ca2d3a04664ce8fc4416"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -14.587103876571113,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient",
+            "score": -11.845536350579396,
+            "path": "library/math-formalization/replace-orbit-combinatorics-by-a-cyclic-module-quotient.flexiarg",
+            "sha256": "2ac7ac1eaf90e504ddcc66478f8af6a2ee841b674717269130061a5366a5b6f2"
+          },
+          {
+            "id": "math-formalization-CA/continuous-linear-map-composition",
+            "score": -10.625974770348863,
+            "path": "library/math-formalization-CA/continuous-linear-map-composition.flexiarg",
+            "sha256": "ccf3e4e312a892170a618990b3eaedcb97627c48b8bc9a13efded5f4c7034b11"
+          },
+          {
+            "id": "math-informal/construct-auxiliary-object",
+            "score": -10.338201765268487,
+            "path": "library/math-informal/construct-auxiliary-object.flexiarg",
+            "sha256": "3bc92f9b63422ea240ed964ca3460a9d79c249e700ee0ce6dcdfeb8c1779e05b"
+          },
+          {
+            "id": "math-formalization-CA/hilbert-projection-properties",
+            "score": -8.806992055346381,
+            "path": "library/math-formalization-CA/hilbert-projection-properties.flexiarg",
+            "sha256": "18a747b406f74c1b0fc7eb2b22879390f909bfe33697e4bc65a7b735b443ece8"
+          },
+          {
+            "id": "math-strategy/exhaustion-as-theorem",
+            "score": -8.605349217403012,
+            "path": "library/math-strategy/exhaustion-as-theorem.flexiarg",
+            "sha256": "fcc5ca2f9ed58c7746e5d47243c06b32dd7851f5897c3f4fd92d9e1001e3c900"
+          },
+          {
+            "id": "math-informal-NA/hybrid-certification",
+            "score": -7.199671868279582,
+            "path": "library/math-informal-NA/hybrid-certification.flexiarg",
+            "sha256": "ce070a9f45f28bafd47bde128b10d01f51180556cbb109e1ccddc6003208d4a5"
+          },
+          {
+            "id": "math-informal-CA/pass-to-a-subsequence",
+            "score": -6.803786383546327,
+            "path": "library/math-informal-CA/pass-to-a-subsequence.flexiarg",
+            "sha256": "8f0a246c320c1c0a318eb3c16efd6d41dcdf1d1d0fa03c5161505a39080be8c0"
+          },
+          {
+            "id": "math-formalization-CA/measure-integration-api",
+            "score": -6.2322135145824165,
+            "path": "library/math-formalization-CA/measure-integration-api.flexiarg",
+            "sha256": "70ce720e3849f88487c4c6d3f34f347fc5cb03fc1094bc5ff50af8a0ec6ab5ce"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": null,
+        "fts_component": null,
+        "pattern_fields_exploratory": null
+      }
+    },
+    {
+      "id": "operator-residual",
+      "problem": "m96J04",
+      "query": "ODE uniqueness endpoint",
+      "target": "math-formalization-CA/ode-gronwall-api",
+      "applicability": "analyst residual query reused from earlier development probe",
+      "fts_strategy": "four-token-OR",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-formalization-CA/layer-cake-crossover-split",
+            "score": 1,
+            "path": "library/math-formalization-CA/layer-cake-crossover-split.flexiarg",
+            "sha256": "41f368ee1d8cb42ebd291a18f1e86392d6ffd827f61c056c0d7039cec21d5d5f"
+          },
+          {
+            "id": "math-formalization-CA/ode-gronwall-api",
+            "score": 1,
+            "path": "library/math-formalization-CA/ode-gronwall-api.flexiarg",
+            "sha256": "e851771dea23953da24158d26045f082e75b77f518832dedf4ba3e7074da8e0b"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": 1,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          },
+          {
+            "id": "math-formalization/weld-range-lemmas-at-representation-seams",
+            "score": 1,
+            "path": "library/math-formalization/weld-range-lemmas-at-representation-seams.flexiarg",
+            "sha256": "e8a8061d17a16d16bc56fc4fd88c69dabd841cfa0e870d717bab30f2d0c4815a"
+          },
+          {
+            "id": "math-informal-CO/use-probabilistic-method",
+            "score": 1,
+            "path": "library/math-informal-CO/use-probabilistic-method.flexiarg",
+            "sha256": "dbeba326a16480bc8a55b97756db18994cb8641bce2b1c76d2a52ab1bdc86d8b"
+          },
+          {
+            "id": "math-informal-RA/encode-as-algebra",
+            "score": 1,
+            "path": "library/math-informal-RA/encode-as-algebra.flexiarg",
+            "sha256": "eaf63466fd7d9bb61bd4d66d8ed0f3386a635fa72248845788bf13da96fbe81e"
+          },
+          {
+            "id": "math-informal/failure-mode-characterization",
+            "score": 1,
+            "path": "library/math-informal/failure-mode-characterization.flexiarg",
+            "sha256": "87d7c3af0f033d37b152e372b20e57e07b15ab9a46ef7132a1eb8b21df1eae66"
+          },
+          {
+            "id": "math-strategy/construction-before-estimates",
+            "score": 1,
+            "path": "library/math-strategy/construction-before-estimates.flexiarg",
+            "sha256": "2c8d08f511705918c729eaa3b17c3d86717bdafbfc030cd090a21948b8b01773"
+          },
+          {
+            "id": "math-strategy/preemptive-objection-clearance",
+            "score": 1,
+            "path": "library/math-strategy/preemptive-objection-clearance.flexiarg",
+            "sha256": "66a59acc196eaf7c163cc69c6b1dd86b238cb13a890624f1f52eef2d8b2f1e92"
+          },
+          {
+            "id": "proof-search/extend-library-not-proof",
+            "score": 1,
+            "path": "library/proof-search/extend-library-not-proof.flexiarg",
+            "sha256": "e5f3e84640a9831afb1d969916ae13a67f620a29cd55b1110064f68a5ae663eb"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-formalization/weld-range-lemmas-at-representation-seams",
+            "score": -6.05171710819049,
+            "path": "library/math-formalization/weld-range-lemmas-at-representation-seams.flexiarg",
+            "sha256": "e8a8061d17a16d16bc56fc4fd88c69dabd841cfa0e870d717bab30f2d0c4815a"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": -4.300052460118163,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          },
+          {
+            "id": "math-formalization-CA/layer-cake-crossover-split",
+            "score": -4.241628622120137,
+            "path": "library/math-formalization-CA/layer-cake-crossover-split.flexiarg",
+            "sha256": "41f368ee1d8cb42ebd291a18f1e86392d6ffd827f61c056c0d7039cec21d5d5f"
+          },
+          {
+            "id": "math-strategy/isolate-computational-kernel-before-transport",
+            "score": -4.239688610112762,
+            "path": "library/math-strategy/isolate-computational-kernel-before-transport.flexiarg",
+            "sha256": "aafc501844480e0068ddbc3c57e030e5deaef37a072c2a8dd0a728e5b5589512"
+          },
+          {
+            "id": "math-informal-CT/verify-universal-property",
+            "score": -4.126509229519387,
+            "path": "library/math-informal-CT/verify-universal-property.flexiarg",
+            "sha256": "31666511ae87423b6a9261414627a5ab853b2ffb08554f3a0ace76e38bbe570e"
+          },
+          {
+            "id": "math-informal-CT/factor-and-lift",
+            "score": -3.6845897524810205,
+            "path": "library/math-informal-CT/factor-and-lift.flexiarg",
+            "sha256": "ee2f55de656618c809d22b9a57346fe02faa98e31f872d56b7459fdde605d74d"
+          },
+          {
+            "id": "math-informal/structural-characterization",
+            "score": -3.668727558202723,
+            "path": "library/math-informal/structural-characterization.flexiarg",
+            "sha256": "f871b3df07adf366bf611f710a29573823f6aac3c7bd5dfd69f961f876ffad6c"
+          },
+          {
+            "id": "math-formalization/stamp-siblings-from-one-compiled-branch",
+            "score": -3.629316955112548,
+            "path": "library/math-formalization/stamp-siblings-from-one-compiled-branch.flexiarg",
+            "sha256": "d1593ee3808ec3027a69d3224e3b6a40db0bc490946d0058b57e1098fecaf14f"
+          },
+          {
+            "id": "math-formalization/transport-across-an-instance-diamond",
+            "score": -3.5844500561579378,
+            "path": "library/math-formalization/transport-across-an-instance-diamond.flexiarg",
+            "sha256": "aaf2ba4c433a6b7722aa766d6bc340423cfd25d615114279731d5cdb90559d40"
+          },
+          {
+            "id": "math-formalization-CA/ode-gronwall-api",
+            "score": -2.8858490590130903,
+            "path": "library/math-formalization-CA/ode-gronwall-api.flexiarg",
+            "sha256": "e851771dea23953da24158d26045f082e75b77f518832dedf4ba3e7074da8e0b"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-formalization-CA/ode-gronwall-api",
+            "score": -13.022578847061524,
+            "path": "library/math-formalization-CA/ode-gronwall-api.flexiarg",
+            "sha256": "e851771dea23953da24158d26045f082e75b77f518832dedf4ba3e7074da8e0b"
+          },
+          {
+            "id": "math-formalization-CA/fourier-inversion-for-real-oscillatory-integrals",
+            "score": -7.239813546349598,
+            "path": "library/math-formalization-CA/fourier-inversion-for-real-oscillatory-integrals.flexiarg",
+            "sha256": "c4a94f536edee28c9049f423943b2ffabdf557391d73cb9fd7d5cee9b05ac63a"
+          },
+          {
+            "id": "math-formalization/weld-range-lemmas-at-representation-seams",
+            "score": -6.2975190300631585,
+            "path": "library/math-formalization/weld-range-lemmas-at-representation-seams.flexiarg",
+            "sha256": "e8a8061d17a16d16bc56fc4fd88c69dabd841cfa0e870d717bab30f2d0c4815a"
+          },
+          {
+            "id": "math-formalization/stamp-siblings-from-one-compiled-branch",
+            "score": -5.478368416686549,
+            "path": "library/math-formalization/stamp-siblings-from-one-compiled-branch.flexiarg",
+            "sha256": "d1593ee3808ec3027a69d3224e3b6a40db0bc490946d0058b57e1098fecaf14f"
+          },
+          {
+            "id": "math-formalization-CA/layer-cake-crossover-split",
+            "score": -5.398824934848887,
+            "path": "library/math-formalization-CA/layer-cake-crossover-split.flexiarg",
+            "sha256": "41f368ee1d8cb42ebd291a18f1e86392d6ffd827f61c056c0d7039cec21d5d5f"
+          },
+          {
+            "id": "math-strategy/isolate-computational-kernel-before-transport",
+            "score": -5.397567472087036,
+            "path": "library/math-strategy/isolate-computational-kernel-before-transport.flexiarg",
+            "sha256": "aafc501844480e0068ddbc3c57e030e5deaef37a072c2a8dd0a728e5b5589512"
+          },
+          {
+            "id": "math-informal-CT/verify-universal-property",
+            "score": -4.920626722109632,
+            "path": "library/math-informal-CT/verify-universal-property.flexiarg",
+            "sha256": "31666511ae87423b6a9261414627a5ab853b2ffb08554f3a0ace76e38bbe570e"
+          },
+          {
+            "id": "math-formalization-CA/riemann-darboux-api",
+            "score": -4.7829866105337295,
+            "path": "library/math-formalization-CA/riemann-darboux-api.flexiarg",
+            "sha256": "ce58b92fd93507119f6f155b1b2f8f28d53c0b6e6cb47eb2f4d85228fdaab2e4"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": -4.638024274225431,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          },
+          {
+            "id": "math-informal-CT/factor-and-lift",
+            "score": -4.602780290343916,
+            "path": "library/math-informal-CT/factor-and-lift.flexiarg",
+            "sha256": "ee2f55de656618c809d22b9a57346fe02faa98e31f872d56b7459fdde605d74d"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": 2,
+        "fts_component": 10,
+        "pattern_fields_exploratory": 1
+      }
+    },
+    {
+      "id": "weak-positive",
+      "problem": "a93A03",
+      "query": "Hilbert weak convergence norm convergence",
+      "target": "math-formalization-FA/weak-convergence-hilbert",
+      "applicability": "established premises for part a",
+      "fts_strategy": "AND",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": 5,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": 3,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": 2,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-informal-CA/monotone-approximation",
+            "score": 2,
+            "path": "library/math-informal-CA/monotone-approximation.flexiarg",
+            "sha256": "a775db8d13b0fc8b45c5f59f1608ed1544215a8fcde4d5e8c5445468b778549e"
+          },
+          {
+            "id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+            "score": 2,
+            "path": "library/math-informal/convert-growth-counts-to-summability-by-geometric-shells.flexiarg",
+            "sha256": "f81aa5dcd8508b7fb8e6fe8aab31b5f3caa1f19b42b071c63951bb1f530e8e86"
+          },
+          {
+            "id": "math-formalization-CA/hilbert-projection-properties",
+            "score": 1,
+            "path": "library/math-formalization-CA/hilbert-projection-properties.flexiarg",
+            "sha256": "18a747b406f74c1b0fc7eb2b22879390f909bfe33697e4bc65a7b735b443ece8"
+          },
+          {
+            "id": "math-formalization-CA/lp-norm-comparison",
+            "score": 1,
+            "path": "library/math-formalization-CA/lp-norm-comparison.flexiarg",
+            "sha256": "56c502dda60e18ba6835be638ad134f6f22fd26b6bb974c4815c581667d010b5"
+          },
+          {
+            "id": "math-formalization-CA/ode-gronwall-api",
+            "score": 1,
+            "path": "library/math-formalization-CA/ode-gronwall-api.flexiarg",
+            "sha256": "e851771dea23953da24158d26045f082e75b77f518832dedf4ba3e7074da8e0b"
+          },
+          {
+            "id": "math-formalization-CA/pointwise-logderiv-bridge-interval-to-contour",
+            "score": 1,
+            "path": "library/math-formalization-CA/pointwise-logderiv-bridge-interval-to-contour.flexiarg",
+            "sha256": "59fd76b357aa147691131004a4b0cbd7e1215ba145eac934ad6e4046a2c97773"
+          },
+          {
+            "id": "math-formalization-CA/uniform-continuity-boundedness",
+            "score": 1,
+            "path": "library/math-formalization-CA/uniform-continuity-boundedness.flexiarg",
+            "sha256": "a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": -21.39176475111357,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -19.953941991117908,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": -24.215146018985546,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -22.64913793265236,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization-CA/hilbert-projection-properties",
+            "score": -10.588814142108513,
+            "path": "library/math-formalization-CA/hilbert-projection-properties.flexiarg",
+            "sha256": "18a747b406f74c1b0fc7eb2b22879390f909bfe33697e4bc65a7b735b443ece8"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": -10.081476344497304,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          },
+          {
+            "id": "math-informal/separate-into-independent-pieces",
+            "score": -10.002756237735857,
+            "path": "library/math-informal/separate-into-independent-pieces.flexiarg",
+            "sha256": "18ef11118f2dfea0ab1cf2ea1b50e68e7f958dbdedf5e5ad31e1c5ae0a763f52"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": -9.272186655503738,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-informal-CA/monotone-approximation",
+            "score": -8.926621715120922,
+            "path": "library/math-informal-CA/monotone-approximation.flexiarg",
+            "sha256": "a775db8d13b0fc8b45c5f59f1608ed1544215a8fcde4d5e8c5445468b778549e"
+          },
+          {
+            "id": "math-formalization-CA/series-evaluation-api",
+            "score": -8.804382323157668,
+            "path": "library/math-formalization-CA/series-evaluation-api.flexiarg",
+            "sha256": "ca7435ee8c32d1a0949654ddb15b6a18dae819ada316edb23827adeeff4e2ad9"
+          },
+          {
+            "id": "math-formalization-CA/measure-integration-api",
+            "score": -8.4990033235823,
+            "path": "library/math-formalization-CA/measure-integration-api.flexiarg",
+            "sha256": "70ce720e3849f88487c4c6d3f34f347fc5cb03fc1094bc5ff50af8a0ec6ab5ce"
+          },
+          {
+            "id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+            "score": -8.317362925303987,
+            "path": "library/math-informal/convert-growth-counts-to-summability-by-geometric-shells.flexiarg",
+            "sha256": "f81aa5dcd8508b7fb8e6fe8aab31b5f3caa1f19b42b071c63951bb1f530e8e86"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": 1,
+        "fts_component": 1,
+        "pattern_fields_exploratory": 1
+      }
+    },
+    {
+      "id": "weak-negative",
+      "problem": "m02A01",
+      "query": "weak convergence does not imply strong convergence counterexample",
+      "target": "math-formalization-FA/weak-convergence-hilbert",
+      "applicability": "reject forward upgrade; norm-limit premise absent in unit-vector example",
+      "fts_strategy": "four-token-OR",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": 4,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": 3,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-informal-CA/epsilon-of-room",
+            "score": 3,
+            "path": "library/math-informal-CA/epsilon-of-room.flexiarg",
+            "sha256": "536614e3e38bf1dd27993ec237cd40514bed0f404895a84d89fd5329739e4308"
+          },
+          {
+            "id": "math-informal-CA/monotone-approximation",
+            "score": 3,
+            "path": "library/math-informal-CA/monotone-approximation.flexiarg",
+            "sha256": "a775db8d13b0fc8b45c5f59f1608ed1544215a8fcde4d5e8c5445468b778549e"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": 2,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-informal-CT/strictify-via-coherence",
+            "score": 2,
+            "path": "library/math-informal-CT/strictify-via-coherence.flexiarg",
+            "sha256": "95538e7c2c869e584edb15041c68d1bacc44cf792090f161f02ddf667099d47c"
+          },
+          {
+            "id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+            "score": 2,
+            "path": "library/math-informal/convert-growth-counts-to-summability-by-geometric-shells.flexiarg",
+            "sha256": "f81aa5dcd8508b7fb8e6fe8aab31b5f3caa1f19b42b071c63951bb1f530e8e86"
+          },
+          {
+            "id": "math-strategy/preemptive-objection-clearance",
+            "score": 2,
+            "path": "library/math-strategy/preemptive-objection-clearance.flexiarg",
+            "sha256": "66a59acc196eaf7c163cc69c6b1dd86b238cb13a890624f1f52eef2d8b2f1e92"
+          },
+          {
+            "id": "math-formalization-CA/divisor-sum-to-root-count-without-monic",
+            "score": 1,
+            "path": "library/math-formalization-CA/divisor-sum-to-root-count-without-monic.flexiarg",
+            "sha256": "79b85c21f505e6993e9bb06ede520de2fd2348cb28a988862581b6b7f0f22948"
+          },
+          {
+            "id": "math-formalization-CA/fourier-inversion-for-real-oscillatory-integrals",
+            "score": 1,
+            "path": "library/math-formalization-CA/fourier-inversion-for-real-oscillatory-integrals.flexiarg",
+            "sha256": "c4a94f536edee28c9049f423943b2ffabdf557391d73cb9fd7d5cee9b05ac63a"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": -8.846863493495071,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -8.528712019046006,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-informal-CT/strictify-via-coherence",
+            "score": -5.294432722502831,
+            "path": "library/math-informal-CT/strictify-via-coherence.flexiarg",
+            "sha256": "95538e7c2c869e584edb15041c68d1bacc44cf792090f161f02ddf667099d47c"
+          },
+          {
+            "id": "math-formalization-CA/uniform-continuity-boundedness",
+            "score": -4.83890635254938,
+            "path": "library/math-formalization-CA/uniform-continuity-boundedness.flexiarg",
+            "sha256": "a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c"
+          },
+          {
+            "id": "math-informal-CT/factor-and-lift",
+            "score": -4.547854108306733,
+            "path": "library/math-informal-CT/factor-and-lift.flexiarg",
+            "sha256": "ee2f55de656618c809d22b9a57346fe02faa98e31f872d56b7459fdde605d74d"
+          },
+          {
+            "id": "math-formalization-CA/layer-cake-crossover-split",
+            "score": -4.470655506554505,
+            "path": "library/math-formalization-CA/layer-cake-crossover-split.flexiarg",
+            "sha256": "41f368ee1d8cb42ebd291a18f1e86392d6ffd827f61c056c0d7039cec21d5d5f"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": -4.423780156871722,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-formalization-CA/series-evaluation-api",
+            "score": -4.404366916229423,
+            "path": "library/math-formalization-CA/series-evaluation-api.flexiarg",
+            "sha256": "ca7435ee8c32d1a0949654ddb15b6a18dae819ada316edb23827adeeff4e2ad9"
+          },
+          {
+            "id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+            "score": -4.224765200396299,
+            "path": "library/math-informal/convert-growth-counts-to-summability-by-geometric-shells.flexiarg",
+            "sha256": "f81aa5dcd8508b7fb8e6fe8aab31b5f3caa1f19b42b071c63951bb1f530e8e86"
+          },
+          {
+            "id": "math-informal-CA/monotone-approximation",
+            "score": -3.8247732590009202,
+            "path": "library/math-informal-CA/monotone-approximation.flexiarg",
+            "sha256": "a775db8d13b0fc8b45c5f59f1608ed1544215a8fcde4d5e8c5445468b778549e"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-formalization-FA/weak-convergence-hilbert",
+            "score": -16.96468964843632,
+            "path": "library/math-formalization-FA/weak-convergence-hilbert.flexiarg",
+            "sha256": "9712cded92858e5bf6dd2cdb6da6348964f42f81e37eb8271f91bc0c8fc55aa8"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -14.100222488205327,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-informal/induction-and-well-ordering",
+            "score": -11.00833704744458,
+            "path": "library/math-informal/induction-and-well-ordering.flexiarg",
+            "sha256": "1b6a5cf113dde26eea7b954433e8cd2ea12726ddff3056c4d306744716c35bbc"
+          },
+          {
+            "id": "math-formalization-CA/series-evaluation-api",
+            "score": -9.539218208835303,
+            "path": "library/math-formalization-CA/series-evaluation-api.flexiarg",
+            "sha256": "ca7435ee8c32d1a0949654ddb15b6a18dae819ada316edb23827adeeff4e2ad9"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": -9.272187945233561,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-informal/convert-growth-counts-to-summability-by-geometric-shells",
+            "score": -9.12326468432634,
+            "path": "library/math-informal/convert-growth-counts-to-summability-by-geometric-shells.flexiarg",
+            "sha256": "f81aa5dcd8508b7fb8e6fe8aab31b5f3caa1f19b42b071c63951bb1f530e8e86"
+          },
+          {
+            "id": "math-informal-CA/pass-to-a-subsequence",
+            "score": -9.024714241628892,
+            "path": "library/math-informal-CA/pass-to-a-subsequence.flexiarg",
+            "sha256": "8f0a246c320c1c0a318eb3c16efd6d41dcdf1d1d0fa03c5161505a39080be8c0"
+          },
+          {
+            "id": "math-informal-CA/monotone-approximation",
+            "score": -8.926623710656413,
+            "path": "library/math-informal-CA/monotone-approximation.flexiarg",
+            "sha256": "a775db8d13b0fc8b45c5f59f1608ed1544215a8fcde4d5e8c5445468b778549e"
+          },
+          {
+            "id": "math-informal-CA/epsilon-of-room",
+            "score": -8.503888445559813,
+            "path": "library/math-informal-CA/epsilon-of-room.flexiarg",
+            "sha256": "536614e3e38bf1dd27993ec237cd40514bed0f404895a84d89fd5329739e4308"
+          },
+          {
+            "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+            "score": -8.08517702770599,
+            "path": "library/math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness.flexiarg",
+            "sha256": "1ca8ef3899dc1b37edf46ec4d00634a122526b11e9092f58f0b38d04edff4ddd"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": 2,
+        "fts_component": 1,
+        "pattern_fields_exploratory": 1
+      }
+    },
+    {
+      "id": "continuity-negative",
+      "problem": "m99A04",
+      "query": "complete metric spaces dense uniformly continuous extension",
+      "target": "math-formalization-CA/uniform-continuity-boundedness",
+      "applicability": "total boundedness not assumed; general bounded-image route invalid",
+      "fts_strategy": "four-token-OR",
+      "arms": {
+        "catalog_keyword_count": [
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": 3,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-formalization-CA/separation-function-from-distance",
+            "score": 2,
+            "path": "library/math-formalization-CA/separation-function-from-distance.flexiarg",
+            "sha256": "d4767663c4e0b412b4caeb8ae54325c0f8e6f79c149b4afba03bf6a1ef93dbe2"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": 2,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "math-formalization/compact-thickening-upgrades-pointwise-analyticity",
+            "score": 2,
+            "path": "library/math-formalization/compact-thickening-upgrades-pointwise-analyticity.flexiarg",
+            "sha256": "dbc1bf9be496ed96558e6d5559fae371fb4765ec41de3cfe1abbaf4cef20e04d"
+          },
+          {
+            "id": "math-formalization/stamp-siblings-from-one-compiled-branch",
+            "score": 2,
+            "path": "library/math-formalization/stamp-siblings-from-one-compiled-branch.flexiarg",
+            "sha256": "d1593ee3808ec3027a69d3224e3b6a40db0bc490946d0058b57e1098fecaf14f"
+          },
+          {
+            "id": "math-informal-RA/encode-as-algebra",
+            "score": 2,
+            "path": "library/math-informal-RA/encode-as-algebra.flexiarg",
+            "sha256": "eaf63466fd7d9bb61bd4d66d8ed0f3386a635fa72248845788bf13da96fbe81e"
+          },
+          {
+            "id": "proof-search/sorry-boundary-clustering",
+            "score": 2,
+            "path": "library/proof-search/sorry-boundary-clustering.flexiarg",
+            "sha256": "bda613ae597e8d54d5a5bbef83db346f7f5b9f273cd0e1aaa619d529d97113ae"
+          },
+          {
+            "id": "math-formalization-CA/continuous-linear-map-composition",
+            "score": 1,
+            "path": "library/math-formalization-CA/continuous-linear-map-composition.flexiarg",
+            "sha256": "ccf3e4e312a892170a618990b3eaedcb97627c48b8bc9a13efded5f4c7034b11"
+          },
+          {
+            "id": "math-formalization-CA/lp-norm-comparison",
+            "score": 1,
+            "path": "library/math-formalization-CA/lp-norm-comparison.flexiarg",
+            "sha256": "56c502dda60e18ba6835be638ad134f6f22fd26b6bb974c4815c581667d010b5"
+          },
+          {
+            "id": "math-formalization-CA/measure-restrict-simplify",
+            "score": 1,
+            "path": "library/math-formalization-CA/measure-restrict-simplify.flexiarg",
+            "sha256": "4a160da612f4926253a62ebb51bf385db57e4cf48590dc028723d35423f97886"
+          }
+        ],
+        "fts_component": [
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": -14.042720094027974,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-informal-CT/check-it-on-generators",
+            "score": -5.932683105998425,
+            "path": "library/math-informal-CT/check-it-on-generators.flexiarg",
+            "sha256": "6e9a10bb329597eea1858a6607e24fb4d3a2cfe1792159932aeeffda32578b3d"
+          },
+          {
+            "id": "math-informal-LO/complexity-classification",
+            "score": -5.783158951836392,
+            "path": "library/math-informal-LO/complexity-classification.flexiarg",
+            "sha256": "86baa7a90e0255e13bfdbfc21d996be04215be66cf2c3ffdede332762b0182ff"
+          },
+          {
+            "id": "math-formalization-CV/complex-polynomial-bound",
+            "score": -5.686151993067634,
+            "path": "library/math-formalization-CV/complex-polynomial-bound.flexiarg",
+            "sha256": "0c92287b0eea43bf2fb4d1ed9c5a11f562cd9d911ce62906b8f2a498448bb9fd"
+          },
+          {
+            "id": "math-informal/structural-characterization",
+            "score": -5.424246650015427,
+            "path": "library/math-informal/structural-characterization.flexiarg",
+            "sha256": "f871b3df07adf366bf611f710a29573823f6aac3c7bd5dfd69f961f876ffad6c"
+          },
+          {
+            "id": "math-formalization-CA/lp-norm-comparison",
+            "score": -5.375977794063697,
+            "path": "library/math-formalization-CA/lp-norm-comparison.flexiarg",
+            "sha256": "56c502dda60e18ba6835be638ad134f6f22fd26b6bb974c4815c581667d010b5"
+          },
+          {
+            "id": "math-formalization-CA/separation-function-from-distance",
+            "score": -5.303257729216561,
+            "path": "library/math-formalization-CA/separation-function-from-distance.flexiarg",
+            "sha256": "d4767663c4e0b412b4caeb8ae54325c0f8e6f79c149b4afba03bf6a1ef93dbe2"
+          },
+          {
+            "id": "math-informal-RA/encode-as-algebra",
+            "score": -5.288934735478853,
+            "path": "library/math-informal-RA/encode-as-algebra.flexiarg",
+            "sha256": "eaf63466fd7d9bb61bd4d66d8ed0f3386a635fa72248845788bf13da96fbe81e"
+          },
+          {
+            "id": "math-formalization/compact-thickening-upgrades-pointwise-analyticity",
+            "score": -4.787074022454911,
+            "path": "library/math-formalization/compact-thickening-upgrades-pointwise-analyticity.flexiarg",
+            "sha256": "dbc1bf9be496ed96558e6d5559fae371fb4765ec41de3cfe1abbaf4cef20e04d"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -4.54459250163816,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          }
+        ],
+        "pattern_fields_exploratory": [
+          {
+            "id": "math-formalization-CV/frontier-bound-from-arc-hypotheses",
+            "score": -16.134166156326522,
+            "path": "library/math-formalization-CV/frontier-bound-from-arc-hypotheses.flexiarg",
+            "sha256": "785f1d7648e1f8bca3425871ad668ac17c4068ff6a92f246d5fe64d537884d4e"
+          },
+          {
+            "id": "math-formalization-CA/metric-cauchy-convergence",
+            "score": -15.98811214864206,
+            "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+            "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1"
+          },
+          {
+            "id": "math-formalization-CA/uniform-continuity-boundedness",
+            "score": -13.847563177447356,
+            "path": "library/math-formalization-CA/uniform-continuity-boundedness.flexiarg",
+            "sha256": "a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c"
+          },
+          {
+            "id": "math-formalization-CA/separation-function-from-distance",
+            "score": -11.492910764105602,
+            "path": "library/math-formalization-CA/separation-function-from-distance.flexiarg",
+            "sha256": "d4767663c4e0b412b4caeb8ae54325c0f8e6f79c149b4afba03bf6a1ef93dbe2"
+          },
+          {
+            "id": "math-formalization/compact-thickening-upgrades-pointwise-analyticity",
+            "score": -11.08670947805521,
+            "path": "library/math-formalization/compact-thickening-upgrades-pointwise-analyticity.flexiarg",
+            "sha256": "dbc1bf9be496ed96558e6d5559fae371fb4765ec41de3cfe1abbaf4cef20e04d"
+          },
+          {
+            "id": "math-informal-CT/check-it-on-generators",
+            "score": -10.393816169680584,
+            "path": "library/math-informal-CT/check-it-on-generators.flexiarg",
+            "sha256": "6e9a10bb329597eea1858a6607e24fb4d3a2cfe1792159932aeeffda32578b3d"
+          },
+          {
+            "id": "math-formalization-FA/inner-product-space-api",
+            "score": -9.664676074425351,
+            "path": "library/math-formalization-FA/inner-product-space-api.flexiarg",
+            "sha256": "9f47077f5752c9c4fb073521b69380d1da6c13e1f9442040263492c5c20fcf76"
+          },
+          {
+            "id": "proof-search/sorry-boundary-clustering",
+            "score": -8.044877790767194,
+            "path": "library/proof-search/sorry-boundary-clustering.flexiarg",
+            "sha256": "bda613ae597e8d54d5a5bbef83db346f7f5b9f273cd0e1aaa619d529d97113ae"
+          },
+          {
+            "id": "math-informal-RA/encode-as-algebra",
+            "score": -6.399656902287448,
+            "path": "library/math-informal-RA/encode-as-algebra.flexiarg",
+            "sha256": "eaf63466fd7d9bb61bd4d66d8ed0f3386a635fa72248845788bf13da96fbe81e"
+          },
+          {
+            "id": "math-informal-LO/complexity-classification",
+            "score": -6.277029610086302,
+            "path": "library/math-informal-LO/complexity-classification.flexiarg",
+            "sha256": "86baa7a90e0255e13bfdbfc21d996be04215be66cf2c3ffdede332762b0182ff"
+          }
+        ]
+      },
+      "target_rank": {
+        "catalog_keyword_count": null,
+        "fts_component": null,
+        "pattern_fields_exploratory": 3
+      }
+    }
+  ]
+}

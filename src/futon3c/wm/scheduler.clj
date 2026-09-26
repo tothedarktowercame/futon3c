@@ -4,11 +4,14 @@
    Runs `futon2.report.war-machine/generate-war-machine` on a background
    schedule and stores per-window snapshots in `!wm-snapshot` so HTTP reads
    are O(1) and never block on the filesystem walk / repo scan."
-  (:require [cheshire.core :as json]
+  (:require [babashka.http-client :as http-client]
+            [cheshire.core :as json]
             [clojure.string :as str]
+            [futon3c.agency.registry :as reg]
             [futon3c.cyder :as cyder]
             [futon3c.transport.http :as http])
   (:import [java.time Instant]
+           [java.util UUID]
            [java.util.concurrent Executors ScheduledExecutorService
                                  ScheduledFuture TimeUnit]))
 
@@ -40,6 +43,30 @@
   (configured-days-windows))
 
 (def cyder-process-id "war-machine-scheduler")
+(def wm-agent-id "war-machine")
+(def wm-agent-source "wm-snapshot-scan")
+
+(defn ensure-war-machine-agent!
+  "Ensure the WM apparatus has one stable, non-invokable roster identity."
+  []
+  (or
+   (reg/get-agent wm-agent-id)
+   (reg/register-agent!
+    {:agent-id {:id/value wm-agent-id :id/type :apparatus}
+     :type :wm
+     :invoke-fn nil
+     :capabilities []
+     :metadata {:apparatus? true
+                :cwd "/home/joe/code/futon2"
+                :agency/contracts {:bell-on-complete? false}}})))
+
+(defn- report-snapshot-status!
+  [status activity]
+  (ensure-war-machine-agent!)
+  (reg/report-external-invoke!
+   wm-agent-id wm-agent-source
+   (cond-> {:status status}
+     activity (assoc :activity activity))))
 
 (defonce !wm-snapshot
   (atom nil))
@@ -55,7 +82,8 @@
          :error-count 0
          :last-tick-at nil
          :last-success-at nil
-         :last-error nil}))
+         :last-error nil
+         :last-error-data nil}))
 
 ;; Re-entrancy guard for tick! — set to true while a tick is mid-flight,
 ;; false otherwise.  `tick!` checks-and-sets via compare-and-set! so two
@@ -71,6 +99,72 @@
 (defonce !tick-in-progress?
   (atom false))
 
+(def ^:private field-desk-item-url
+  "http://127.0.0.1:7070/api/alpha/morning-brief/item")
+
+(defn- selection-failure-kind
+  [error-data]
+  (or
+   (:failure-kind error-data)
+   (cond
+     (= :phase5-admissible-projection (:first-failed-seam error-data))
+     :strategic-selection-empty-frontier
+
+     (or (:maximum-endpoint-ms error-data)
+         (:recheck-endpoint-latencies error-data))
+     :strategic-selection-cache-gate-failed
+
+     :else :strategic-selection-failed)))
+
+(defn deposit-selection-loss!
+  "Write a pre-actuation selection failure into the Field Desk loss ledger."
+  [throwable]
+  (let [error-data (or (ex-data throwable) {})
+        attempt-id (str "wm-selection-failure-" (UUID/randomUUID))
+        failure-kind (selection-failure-kind error-data)
+        payload
+        {:attempt-id attempt-id
+         :trigger :wm-scheduler-tick
+         :outcome :incomplete
+         :author "war-machine"
+         :reviewer "ground-control"
+         :achievement
+         {:tier :none
+          :summary "Strategic selection stopped before enactment"}
+         :failure
+         {:kind failure-kind
+          :stage :selection
+          :error (or (.getMessage ^Throwable throwable)
+                     "Strategic selection failed")
+          :first-failed-seam (:first-failed-seam error-data)
+          :error-data error-data}
+         :qa-targets
+         {:selection {:failure-kind failure-kind
+                      :first-failed-seam
+                      (:first-failed-seam error-data)}}}
+        response
+        (http-client/post
+         field-desk-item-url
+         {:headers {"Content-Type" "application/json"}
+          :body (json/generate-string payload)
+          :timeout 10000
+          :throw false})
+        body
+        (try
+          (json/parse-string (str (:body response)) true)
+          (catch Throwable _ {}))]
+    (if (and (<= 200 (long (or (:status response) 0)) 299)
+             (true? (:ok body)))
+      {:status :recorded
+       :attempt-id attempt-id
+       :item-ref (:item-ref body)
+       :failure-kind failure-kind}
+      {:status :record-failed
+       :attempt-id attempt-id
+       :failure-kind failure-kind
+       :http-status (:status response)
+       :response body})))
+
 (defn- compute-next-tick-at [last-tick-at period-seconds]
   (when (and last-tick-at period-seconds)
     (.plusSeconds ^Instant last-tick-at (long period-seconds))))
@@ -85,6 +179,7 @@
         snapshot @!wm-snapshot
         by-days (get snapshot :by-days {})]
     {:running? running?
+     :tick-in-progress? @!tick-in-progress?
      :period-seconds (:period-seconds s)
      :days-windows (:days-windows s)
      :started-at (some-> (:started-at s) str)
@@ -94,6 +189,7 @@
      :last-success-at (some-> (:last-success-at s) str)
      :next-tick-at (some-> next-tick-at str)
      :last-error (:last-error s)
+     :last-error-data (:last-error-data s)
      :cached-days
      (into {}
            (map (fn [[days entry]]
@@ -105,55 +201,71 @@
 (defn snapshot-for-days [days]
   (get-in @!wm-snapshot [:by-days days]))
 
-(defn- trim-action-predictions
-  "Drop the heavy per-action :prediction/:next-belief (a full belief map ~115KB each × ~121
-   actions ≈ 14MB, ~96% of the whole WM payload) from the judgement before serialization.
-   It is a transient forward-model byproduct retained only to score the action; the WM viewer
-   never reads it (core.cljs: 'this panel does not present predictions'). The light prediction
-   fields (:next-observation, :predicted-events, :action) are kept. Shrinks /api/alpha/war-machine
-   ~15MB → ~0.6MB. (Joe, 2026-06-12.)"
+(defn- strip-next-belief
+  "H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): the flat
+   :ranked-actions shrink is gone with the flat grain. What can still be
+   heavy is the cascade lane: a cascade decision's posterior candidates and
+   the per-target cascade problems may carry forward-model :prediction maps
+   whose :next-belief is a full belief map (~115KB each). The viewer never
+   reads :next-belief; strip it wherever it occurs inside the decision and
+   cascade-problems subtrees, leaving the light prediction fields."
+  [x]
+  (cond
+    (map? x) (into {}
+                   (keep (fn [[k v]]
+                           (when-not (= :next-belief k)
+                             [k (strip-next-belief v)])))
+                   x)
+    (vector? x) (mapv strip-next-belief x)
+    (sequential? x) (mapv strip-next-belief x)
+    :else x))
+
+(defn trim-cascade-predictions
+  "Shrink the served judgement's cascade lane (decision + cascade problems)
+   by dropping heavy :prediction :next-belief maps before serialization."
   [judgement]
-  (if (seq (:ranked-actions judgement))
-    (update judgement :ranked-actions
-            (fn [acts]
-              (mapv (fn [a]
-                      (if (get-in a [:prediction :next-belief])
-                        (update a :prediction dissoc :next-belief)
-                        a))
-                    acts)))
+  (if (map? judgement)
+    (cond-> judgement
+      (contains? judgement :decision)
+      (update :decision strip-next-belief)
+      (contains? judgement :cascade-problems)
+      (update :cascade-problems strip-next-belief))
     judgement))
 
 (defn- render-payload-json
-  [{:keys [data judgement] :as bundle}]
+  [bundle]
   (let [{:keys [data judgement]} (http/wm-response-payload bundle)
         payload (http/stringify-wm-response
                  (-> data
-                     (assoc :judgement (trim-action-predictions judgement))
+                     (assoc :judgement (trim-cascade-predictions judgement))
                      (assoc :pilot-inhabitations (http/derive-pilot-inhabitations))))]
     {:payload payload
      :body (json/generate-string payload)}))
 
 (defn- refresh-one-window! [generate days]
-  (let [started-ns (System/nanoTime)
-        started-at (Instant/now)
-        bundle (-> (generate days)
-                   http/apply-wm-operator-clear
-                   ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
-        {:keys [payload body]} (render-payload-json bundle)
-        finished-at (Instant/now)
-        duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]
-    (swap! !wm-snapshot assoc-in [:by-days days]
-           {:days days
-            :as-of finished-at
-            :started-at started-at
-            :duration-ms duration-ms
-            :body-bytes (.length ^String body)
-            :payload payload
-            :body body})
-    {:days days
-     :as-of finished-at
-     :duration-ms duration-ms
-     :body-bytes (.length ^String body)}))
+  (report-snapshot-status! :invoking
+                           (str "snapshot scan " days "d window"))
+  (try
+    (let [started-ns (System/nanoTime)
+          started-at (Instant/now)
+          bundle (http/apply-wm-operator-clear (generate days {}))
+          {:keys [payload body]} (render-payload-json bundle)
+          finished-at (Instant/now)
+          duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]
+      (swap! !wm-snapshot assoc-in [:by-days days]
+             {:days days
+              :as-of finished-at
+              :started-at started-at
+              :duration-ms duration-ms
+              :body-bytes (.length ^String body)
+              :payload payload
+              :body body})
+      {:days days
+       :as-of finished-at
+       :duration-ms duration-ms
+       :body-bytes (.length ^String body)})
+    (finally
+      (report-snapshot-status! :idle nil))))
 
 (defn tick!
   "Run one WM scheduler tick: regenerate the cached snapshot for each
@@ -178,24 +290,44 @@
       (swap! !state assoc :last-tick-at now)
       (try
         (let [generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)
+              ;; demand-driven, debounced belly refresh at score time — reuses
+              ;; THIS established tick (no separate poll loop; the retired
+              ;; turn-trigger loop froze the evidence store, 2026-06-26).
+              _ (when-let [ebf (requiring-resolve 'futon2.aif.c-vector/ensure-belly-fresh!)]
+                  (try (ebf) (catch Throwable _ nil)))
               days-windows (:days-windows @!state)
-              refreshed (mapv #(refresh-one-window! generate %) days-windows)]
+              refreshed
+              (mapv #(refresh-one-window!
+                      generate %)
+                    days-windows)]
           (swap! !state
                  (fn [s]
                    (-> s
                        (update :tick-count inc)
                        (assoc :last-success-at (Instant/now)
-                              :last-error nil))))
+                              :last-error nil
+                              :last-error-data nil))))
           (cyder/touch! cyder-process-id)
           {:ok true :refreshed refreshed})
         (catch Throwable t
-          (swap! !state
+          (let [loss-ledger
+                (try
+                  (deposit-selection-loss! t)
+                  (catch Throwable ledger-error
+                    {:status :record-failed
+                     :error (.getMessage ledger-error)}))]
+            (swap! !state
                  (fn [s]
                    (-> s
                        (update :error-count inc)
-                       (assoc :last-error (.getMessage t)))))
-          (cyder/touch! cyder-process-id)
-          {:ok false :error (.getMessage t)})
+                       (assoc :last-error (.getMessage t)
+                              :last-error-data
+                              (assoc (or (ex-data t) {})
+                                     :loss-ledger loss-ledger)))))
+            (cyder/touch! cyder-process-id)
+            {:ok false
+             :error (.getMessage t)
+             :loss-ledger loss-ledger}))
         (finally
           ;; Always clear the guard, even on Throwable — never leave the
           ;; scheduler permanently locked.
@@ -278,7 +410,8 @@
                   :error-count 0
                   :last-tick-at nil
                   :last-success-at nil
-                  :last-error nil)
+                  :last-error nil
+                  :last-error-data nil)
          initial-delay (if run-on-start? 0 period-seconds)
          handle (.scheduleWithFixedDelay
                  executor

@@ -78,17 +78,43 @@
       (with-meta kept {:_truncated (- (count cands) max-mined)})
       kept)))
 
+(defn- enacted-cascade-pattern
+  "H3 (2026-09-17): the judgement's decision is a cascade decision or a
+   typed abstention. When a cascade decision is enacted, its first acting
+   pattern (first of the chosen candidate's :precedence) is the step the
+   tick actually enacted; the recorded cascade posterior is consumed as the
+   enacted step's marginal (:chosen-action-mass). Returns nil for
+   abstentions — no pattern is invented."
+  [judgement]
+  (let [decision (g (or judgement {}) :decision)]
+    (when (and (map? decision)
+               (= "cascade-selection-posterior"
+                  (some-> (get-in decision [:selection-law :applied]) name)))
+      (let [action (g decision :action)
+            precedence (when (map? action) (g action :precedence))
+            posterior-mass (g decision :chosen-action-mass)]
+        (when (seq precedence)
+          (cond-> {:pattern (first precedence)
+                   :applied? true
+                   :role "enacted first step of the WM cascade decision"}
+            posterior-mass (assoc :posterior-mass posterior-mass)))))))
+
 (defn loop-learning-pass
   "Produce an auto-mined :learning block (repl_trace/learning shape).
-     :judgement       — live WM judgement (has :priorities, :ranked-actions)
+     :judgement       — live WM judgement (has :priorities and, when a
+                       cascade decision was enacted, its posterior and
+                       enacted first step; :ranked-actions is gone with the
+                       flat grain, H3 2026-09-17)
      :frame           — the cycle's frame (for :fork-warrant), optional
      :open-sorry-ids  — current registry open ids (avoid re-mining tracked gaps)"
   [{:keys [judgement frame open-sorry-ids]}]
   (let [mined (judgement-gap-sorries judgement (or open-sorry-ids []))
-        trunc (:_truncated (meta mined))]
+        trunc (:_truncated (meta mined))
+        enacted (enacted-cascade-pattern judgement)]
     (rt/learning
      {:derivation :auto-mined
-      :patterns-applied (patterns-from-frame frame)
+      :patterns-applied (cond-> (patterns-from-frame frame)
+                          enacted (conj enacted))
       :sorries-mined mined
       :notes (str "auto-mined v0: patterns = REPL-cycle structure + fork-warrant; "
                   "sorries = WM judgement gap-signals (missing-heads + channel-gaps) "

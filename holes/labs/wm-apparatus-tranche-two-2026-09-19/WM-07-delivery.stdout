@@ -1,0 +1,4 @@
+evidence-id test-registry-16a4c8315a4f534b7ef7676eefd7fd4fd8cb380f8c60837a28619b3d4be338ca
+warrant? true
+results {:assertions 35, :duration-ms 1034, :errors 0, :exit 0, :failures 0, :tests 9}
+bound WM-07-delivery -> test-registry-16a4c8315a4f534b7ef7676eefd7fd4fd8cb380f8c60837a28619b3d4be338ca

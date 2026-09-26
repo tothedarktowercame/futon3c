@@ -1,0 +1,106 @@
+{
+  "example_id": "inheritance-genetic",
+  "title": "Figure 2.4(b): Genetic inheritance model",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's corrected inheritance model. Only talent is transmitted across generations; each generation's luck affects only that generation's success and has no directed route to later generations.",
+  "variables": [
+    {
+      "key": "talent-0",
+      "name": "Talent 0",
+      "content": "The genetic component in generation 0."
+    },
+    {
+      "key": "success-0",
+      "name": "Success 0",
+      "content": "Success in generation 0, caused by that generation's displayed talent."
+    },
+    {
+      "key": "talent-1",
+      "name": "Talent 1",
+      "content": "The genetic component inherited by generation 1."
+    },
+    {
+      "key": "luck-1",
+      "name": "Luck 1",
+      "content": "The independent luck variation entering success in generation 1."
+    },
+    {
+      "key": "success-1",
+      "name": "Success 1",
+      "content": "Success in generation 1, caused by Talent 1 and Luck 1."
+    },
+    {
+      "key": "talent-2",
+      "name": "Talent 2",
+      "content": "The genetic component inherited by generation 2."
+    },
+    {
+      "key": "luck-2",
+      "name": "Luck 2",
+      "content": "The independent luck variation entering success in generation 2."
+    },
+    {
+      "key": "success-2",
+      "name": "Success 2",
+      "content": "Success in generation 2, caused by Talent 2 and Luck 2."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "talent-0",
+      "target": "talent-1",
+      "because": "Figure 2.4(b) transmits talent from generation 0 to generation 1."
+    },
+    {
+      "source": "talent-1",
+      "target": "talent-2",
+      "because": "Figure 2.4(b) transmits talent from generation 1 to generation 2."
+    },
+    {
+      "source": "talent-0",
+      "target": "success-0",
+      "because": "Figure 2.4(b) shows Talent 0 entering Success 0."
+    },
+    {
+      "source": "talent-1",
+      "target": "success-1",
+      "because": "Figure 2.4(b) shows Talent 1 entering Success 1."
+    },
+    {
+      "source": "luck-1",
+      "target": "success-1",
+      "because": "Figure 2.4(b) shows Luck 1 entering Success 1."
+    },
+    {
+      "source": "talent-2",
+      "target": "success-2",
+      "because": "Figure 2.4(b) shows Talent 2 entering Success 2."
+    },
+    {
+      "source": "luck-2",
+      "target": "success-2",
+      "because": "Figure 2.4(b) shows Luck 2 entering Success 2."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:8bf7388fb4982c6c",
+    "ta-book-of-why-2018:2996b80fe30f4b6e",
+    "ta-book-of-why-2018:69988cdcdf12cef8",
+    "ta-book-of-why-2018:432bfeee27f759fc",
+    "ta-book-of-why-2018:0d92473787505afe",
+    "ta-book-of-why-2018:0af4890f3bc5d55d",
+    "ta-book-of-why-2018:688cf2aadd136877",
+    "ta-book-of-why-2018:488be7737606c68f",
+    "ta-book-of-why-2018:d03d115be838c7ae",
+    "ta-book-of-why-2018:b340f0814e2f1133",
+    "ta-book-of-why-2018:30fa95a1efeac325",
+    "ta-book-of-why-2018:3b243dfd6e25cf11",
+    "ta-book-of-why-2018:80c581c277862dea",
+    "ta-book-of-why-2018:e42acac4b78b4874"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0075",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0076",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0077"
+  ]
+}

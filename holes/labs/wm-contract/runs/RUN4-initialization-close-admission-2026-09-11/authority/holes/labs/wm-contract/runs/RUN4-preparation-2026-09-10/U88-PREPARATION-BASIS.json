@@ -1,0 +1,30 @@
+{
+  "schema": "wm-run4-task-preparation-basis-v1",
+  "status": "reviewed-draft-not-activated",
+  "task": "M-u88-contextual-preferences",
+  "scope": "pure fixture interpreter only",
+  "source-pins": [
+    {
+      "repo": "futon2",
+      "path": "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-u88-contextual-preferences.md",
+      "sha256": "8fecf3daf99b58b6fe5f15182df017e3205530cc568af930452b59ca3ee89508"
+    },
+    {
+      "repo": "futon2",
+      "path": "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md",
+      "sha256": "47981b01c1ebbb5efa822ba9c7479e312323cd113c1bdd1f40cc61715678356d"
+    },
+    {
+      "repo": "futon2",
+      "path": "src/futon2/aif/mission_registry.clj",
+      "sha256": "07822ed0667f268350fc3b9d921adce4d0d8c78276463b3bf03e93f5a01b89da"
+    }
+  ],
+  "remaining": [
+    "casting",
+    "exact action pin",
+    "mission activation",
+    "launch wiring"
+  ],
+  "launch-authorized": false
+}

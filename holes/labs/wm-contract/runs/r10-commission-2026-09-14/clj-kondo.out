@@ -1,0 +1,2 @@
+src/futon3c/wm/r10_commission.clj:7:14: warning: namespace clojure.java.io is required but never used
+linting took 14ms, errors: 0, warnings: 1

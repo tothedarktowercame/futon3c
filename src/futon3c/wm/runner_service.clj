@@ -1,0 +1,567 @@
+(ns futon3c.wm.runner-service
+  "Single-flight, in-process service for one War Machine durée click.
+
+   The full-loop implementation remains in Futon2. This service owns only
+   serving-JVM lifecycle, direct apparatus visibility, and the HTTP-facing
+   status projection."
+  (:require [clojure.java.io :as io]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [futon2.aif.c-fold-config :as digest]
+            [futon3c.agency.registry :as reg]
+            [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
+            [futon3c.wm.run4-historical-projection :as run4-historical]
+            [futon3c.wm.run4-terminal-projection :as run4-terminal])
+  (:import [java.time Instant]
+           [java.util UUID]
+           [java.nio ByteBuffer]
+           [java.nio.channels FileChannel]
+           [java.nio.file Files StandardCopyOption StandardOpenOption]))
+
+(def war-machine-agent-id "war-machine")
+
+(def initial-status
+  {:running? false
+   :click-id nil
+   :phase nil
+   :attempt-id nil
+   :started-at nil
+   :last-result nil
+   :registry-publication nil})
+
+(defonce !status
+  (atom initial-status))
+
+(defonce ^:private !completion
+  ;; Completion is deliberately separate from the HTTP status projection.
+  ;; Tests and callers may reset or sample !status while the worker is still
+  ;; unwinding; that must not erase the only join handle for the actual thread.
+  (atom nil))
+
+(def ^:dynamic *click-run-binding-dir*
+  "/home/joe/code/futon3c/data/wm-click-run-bindings")
+
+(def ^:dynamic *run4-terminal-projection-dir*
+  "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
+
+(def ^:dynamic *run4-historical-projection-dir*
+  "/home/joe/code/futon3c/data/wm-run4-historical-projections")
+
+(def ^:dynamic *resolve-var*
+  "Resolver seam for tests. Production always delegates to requiring-resolve."
+  requiring-resolve)
+
+(def ^:dynamic *click-run-binding-persist-stage-hook*
+  "Fault-injection seam. Stages are :temp-forced before rename and :renamed
+   after authoritative replacement but before directory force."
+  nil)
+
+(defn status
+  "Return the current click service status."
+  []
+  (assoc @!status :serving-runner-code
+         (try
+           (if-let [status-fn (*resolve-var* 'futon3c.wm.code-identity/status)]
+             (status-fn)
+             {:availability :unavailable :reason :identity-status-unresolvable})
+           (catch Throwable throwable
+             {:availability :unavailable
+              :reason :identity-status-failed
+              :error (or (ex-message throwable)
+                         (.getName (class throwable)))}))))
+
+(defn- ensure-apparatus!
+  [agent-id]
+  (or
+   (reg/get-agent agent-id)
+   (when (= war-machine-agent-id agent-id)
+     (when-let [ensure! (*resolve-var*
+                         'futon3c.wm.scheduler/ensure-war-machine-agent!)]
+       (ensure!)))))
+
+(defn- phase-activity
+  [event click-id]
+  (str (name (or (:phase event) :unknown))
+       " "
+       (or (:attempt-id event) click-id)))
+
+(defn- publication-result!
+  [click-id stage result]
+  (swap! !status
+         (fn [current]
+           (if (= click-id (:click-id current))
+             (assoc current :registry-publication
+                    (assoc result :stage stage))
+             current))))
+
+(defn- publish-registry!
+  "Publish the secondary registry projection after the authoritative service
+   transition. Publication failure is loud and recorded, but cannot roll the
+   in-process lifecycle backward or replace its terminal result."
+  [click-id stage publish!]
+  (try
+    (publish!)
+    (publication-result! click-id stage {:status :published})
+    true
+    (catch Throwable throwable
+      (let [failure {:status :failed
+                     :error-class (.getName (class throwable))
+                     :cause (or (ex-message throwable)
+                                (.getName (class throwable)))}]
+        (publication-result! click-id stage failure)
+        (binding [*out* *err*]
+          (println "[wm-click] registry publication failed"
+                   (pr-str (assoc failure
+                                  :click-id click-id
+                                  :stage stage))))
+        false))))
+
+(defn- report-phase!
+  [agent-id click-id event]
+  ;; The service projection is the lifecycle authority. Cross that boundary
+  ;; before attempting the slower, fallible registry publication.
+  (swap! !status
+         (fn [current]
+           (if (= click-id (:click-id current))
+             (cond-> (assoc current
+                            :phase (:phase event)
+                            :registry-publication
+                            {:status :pending :stage :phase})
+               (:attempt-id event) (assoc :attempt-id (:attempt-id event)))
+             current)))
+  (let [activity (phase-activity event click-id)]
+    (publish-registry!
+     click-id :phase
+     (fn []
+       (ensure-apparatus! agent-id)
+       (reg/update-agent!
+        agent-id
+        :agent/status :invoking
+        :agent/invoke-activity activity
+        :agent/invoke-started-at
+        (or (:agent/invoke-started-at (reg/get-agent agent-id))
+            (Instant/now)))))))
+
+(defn- report-idle!
+  [agent-id]
+  ;; Clear the runner's legacy external-invoke source as well as the direct
+  ;; fields. The runner may keep emitting those harmless duplicate reports;
+  ;; the service's close boundary is authoritative for in-process lifecycle.
+  (reg/mark-agent-idle! agent-id)
+  (reg/clear-external-invoke! agent-id "wm-full-loop"))
+
+(defn- configured-runner-opts
+  [opts]
+  (let [bound-opts (machinery-cohort/apply-binding opts)]
+    (try
+      (if-let [config-fn (*resolve-var*
+                          'futon2.aif.full-loop-runner/config)]
+        (config-fn bound-opts)
+        bound-opts)
+      (catch Throwable _
+        bound-opts))))
+
+;; ---------------------------------------------------------------------------
+;; Cast preflight. A rationed ordinary click is consumed before the worker
+;; starts, and failed runs never refund a grant -- so a run that cannot reach
+;; selection for a reason knowable before it starts must be refused BEFORE the
+;; issue callback fires. On 2026-09-23 a bare POST spent click
+;; wm-click-ff7c0384 on default repair-reviewer codex-24, which is on no
+;; roster; the run ended :agent-unavailable 45 seconds later and the ledger
+;; kept the spend (claude-5's incident report).
+;;
+;; The readiness rule is the one already in use, not a new one: the runner's
+;; own available? requires presence + invoke-ready? + status "idle", and
+;; futon2/scripts/wm_click.sh additionally accepts "restored" (the runner
+;; wakes restored seats itself; rejecting them blocked every click after any
+;; server restart -- codex-15 went accepted -> text in nine seconds from
+;; "restored", claude-4 2026-09-19). A BUSY seat is different for the two
+;; callers: the script waits, the endpoint has no waiting semantics, so the
+;; endpoint refuses with :busy and lets the caller retry.
+;; ---------------------------------------------------------------------------
+
+(def ^:dynamic *roster-fn*
+  "Roster lookup for cast preflight, one argument (agency-base), returning the
+   /api/alpha/agents :agents map. Bound in tests; nil means resolve futon2's
+   agent-roster through *resolve-var* at call time, exactly as the runner
+   itself would read it."
+  nil)
+
+(defn cast-preflight-refusal
+  "Resolve the cast exactly as the runner will (same binding + config merge),
+   read the roster, and return nil when every seat is invoke-ready -- or a
+   typed refusal {:status 409 :error :wm-click-cast-not-invoke-ready
+   :unready {role {:seat ... :reason ...}}} naming each offending seat.
+   Reasons: :absent (not on the roster), :not-invoke-ready, :busy (registered
+   but invoking -- the endpoint refuses rather than waits), or the observed
+   status keyword. Only the three cast seats are checked, and only when they
+   resolve to names; a configuration that cannot name a seat at all is the
+   runner's to surface, not a preflight invention."
+  [opts]
+  (let [configured (configured-runner-opts opts)
+        seats (->> [[:author (:author configured)]
+                    [:reviewer (:reviewer configured)]
+                    [:repair-reviewer (:repair-reviewer configured)]]
+                   (filter (fn [[_ seat]] (and (string? seat)
+                                               (not (str/blank? seat))))))]
+    (when (seq seats)
+      (let [roster-fn (or *roster-fn*
+                          (*resolve-var* 'futon2.aif.full-loop-runner/agent-roster))
+            roster (try
+                     (when roster-fn (roster-fn (:agency-base configured)))
+                     (catch Throwable throwable
+                       (throw (ex-info "WM click refused: Agency roster unreadable, casting cannot be checked"
+                                       {:status 503
+                                        :error :wm-click-roster-unavailable
+                                        :cause (.getMessage throwable)}))))
+            unready (into {}
+                          (keep (fn [[role seat]]
+                                  (let [record (or (get roster (keyword seat))
+                                                   (get roster seat))
+                                        status (some-> (:status record) name)]
+                                    (cond
+                                      (nil? record)
+                                      [role {:seat seat :reason :absent}]
+                                      (not (true? (:invoke-ready? record)))
+                                      [role {:seat seat :reason :not-invoke-ready}]
+                                      (= "invoking" status)
+                                      [role {:seat seat :reason :busy}]
+                                      (not (contains? #{"idle" "restored"} status))
+                                      [role {:seat seat :reason (keyword (or status "unknown"))}]
+                                      :else nil))))
+                          seats)]
+        (when (seq unready)
+          {:status 409 :error :wm-click-cast-not-invoke-ready
+           :unready unready})))))
+
+(defn- append-phase!
+  [phase-log event]
+  (when phase-log
+    (io/make-parents phase-log)
+    (spit phase-log (str (pr-str event) "\n") :append true)))
+
+(defn- phase-sink
+  [agent-id click-id configured]
+  (let [delegate (:phase-log-fn configured)
+        phase-log (:phase-log configured)]
+    (fn [event]
+      (report-phase! agent-id click-id event)
+      (if delegate
+        (delegate event)
+        (append-phase! phase-log event)))))
+
+(defn- in-process-selection
+  ;; validated-selection, not current-selection: the phase1-4 allow-list is
+  ;; the bounded-autonomy boundary (919d975); the in-process path must refuse
+  ;; exactly what the HTTP bridge refuses (integration finding, M-omni-wm-runner).
+  [request]
+  (let [select (*resolve-var*
+                'futon3c.peripheral.live-wm-selection/validated-selection)]
+    {:ok true
+     :selection (select request)}))
+
+(defn- safe-id [x]
+  (str/replace (str x) #"[^A-Za-z0-9._-]" "_"))
+
+(defn- existing-run-id-clicks
+  "Return prior click ids that observed `run-id`. Legacy v1 bindings used
+   top-level :run/id; current records keep the raw value under the explicitly
+   observational :run-id-observation carrier. Unreadable binding evidence is
+   loud because silently skipping it could falsely certify uniqueness."
+  [dir click-id run-id]
+  (if (and (string? run-id) (not (str/blank? run-id)) (.exists dir))
+    (->> (.listFiles dir)
+         (filter #(and (.isFile %)
+                       (str/starts-with? (.getName %) "click-run-binding-")
+                       (str/ends-with? (.getName %) ".edn")))
+         (map (fn [file]
+                (try
+                  (edn/read-string (slurp file))
+                  (catch Throwable throwable
+                    (throw (ex-info "click-run binding history is unreadable"
+                                    {:path (.getAbsolutePath file)}
+                                    throwable))))))
+         (keep (fn [binding]
+                 (let [observed (or (get-in binding
+                                            [:run-id-observation :value])
+                                    (:run/id binding))]
+                   (when (and (= run-id observed)
+                              (not= click-id (:click/id binding)))
+                     (:click/id binding)))))
+         vec)
+    []))
+
+(defn- persist-click-run-binding!
+  [click-id result]
+  (let [terminal-projection (run4-terminal/persist!
+                             *run4-terminal-projection-dir* click-id result)
+        historical-projection (run4-historical/persist!
+                               *run4-historical-projection-dir* click-id result)
+        run-id (:run/id result)
+        run-record-path (:run-record result)
+        run-record-text (when run-record-path
+                          (try (slurp run-record-path)
+                               (catch Throwable _ nil)))
+        run-record (when run-record-text
+                     (try (edn/read-string run-record-text)
+                          (catch Throwable _ nil)))
+        _ (when (and terminal-projection
+                     (not= (:source-sha256 terminal-projection)
+                           (digest/sha256 run-record-text)))
+            (throw (ex-info "RUN4 run-record changed before binding publication"
+                            {:error :run4-terminal-source-changed})))
+        _ (when (and historical-projection
+                     (not= (:source-sha256 historical-projection)
+                           (digest/sha256 run-record-text)))
+            (throw (ex-info "RUN4 historical run-record changed before binding publication"
+                            {:error :run4-historical-source-changed})))
+        run-record-status
+        (cond
+          (nil? run-record-path) :absent
+          (nil? run-record) :unavailable
+          (not= run-id (:run/id run-record)) :identity-mismatch
+          (not= click-id (:click/id run-record)) :identity-mismatch
+          :else :present)
+        dir (io/file *click-run-binding-dir*)
+        duplicate-clicks (existing-run-id-clicks dir click-id run-id)
+        binding-status
+        (cond
+          (or (not (string? run-id)) (str/blank? (str run-id))) :absent
+          (= :identity-mismatch run-record-status) :identity-mismatch
+          (seq duplicate-clicks) :duplicate
+          (= :present run-record-status) :verified
+          :else :unavailable)
+        record (cond-> {:schema :wm-click-run-binding-v1
+                        :click/id click-id
+                        :attempt/id (:attempt-id result)
+                        :outcome (or (:outcome result) :unknown)
+                        :binding-status binding-status
+                        :run-id-observation
+                        (if (= :absent binding-status)
+                          {:status :absent
+                           :reason :runner-did-not-return-run-id}
+                          {:status :present
+                           :source :runner-return
+                           :value run-id})
+                        :run-record-status run-record-status
+                        :recorded-at (str (Instant/now))}
+                 run-record-path
+                 (assoc :run-record run-record-path)
+
+                 (not= :present run-record-status)
+                 (assoc :run-record-absence
+                        (case run-record-status
+                          :absent (or (:run-record-absence result)
+                                      :runner-did-not-return-run-record)
+                          :unavailable :run-record-unreadable
+                          :identity-mismatch :run-record-identity-mismatch))
+
+                 (seq duplicate-clicks)
+                 (assoc :duplicate-of-clicks duplicate-clicks)
+
+                 terminal-projection
+                 (assoc :run4/terminal-projection terminal-projection)
+
+                 historical-projection
+                 (assoc :run4/historical-projection historical-projection))
+        target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
+        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
+        renamed? (volatile! false)]
+    (io/make-parents target)
+    (try
+      (let [bytes (.getBytes (str (pr-str record) "\n") "UTF-8")]
+        (with-open [channel (FileChannel/open
+                             (.toPath tmp)
+                             (into-array StandardOpenOption
+                                         [StandardOpenOption/CREATE_NEW
+                                          StandardOpenOption/WRITE
+                                          StandardOpenOption/TRUNCATE_EXISTING]))]
+          (let [buffer (ByteBuffer/wrap bytes)]
+            (while (.hasRemaining buffer)
+              (.write channel buffer)))
+          (.force channel true)))
+      (when *click-run-binding-persist-stage-hook*
+        (*click-run-binding-persist-stage-hook*
+         :temp-forced {:target target :temporary tmp}))
+      (Files/move (.toPath tmp) (.toPath target)
+                  (into-array StandardCopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING]))
+      (vreset! renamed? true)
+      (when *click-run-binding-persist-stage-hook*
+        (*click-run-binding-persist-stage-hook*
+         :renamed {:target target :temporary tmp}))
+      (with-open [directory (FileChannel/open
+                             (.toPath dir)
+                             (into-array StandardOpenOption
+                                         [StandardOpenOption/READ]))]
+        (.force directory true))
+      (assoc record
+             :path (.getAbsolutePath target)
+             :durability :confirmed)
+      (catch Throwable throwable
+        (if @renamed?
+          ;; Atomic replacement is already authoritative. Report the weaker
+          ;; durability guarantee without pretending the binding is absent.
+          (assoc record
+                 :path (.getAbsolutePath target)
+                 :durability :unconfirmed
+                 :durability-warning
+                 {:error-class (.getName (class throwable))
+                  :cause (or (ex-message throwable)
+                             (.getName (class throwable)))})
+          (throw (ex-info "click-run binding persistence failed"
+                          {:path (.getAbsolutePath target)
+                           :temporary-path (.getAbsolutePath tmp)
+                           :committed? false
+                           :durability :not-committed
+                           :cause (or (ex-message throwable)
+                                      (.getName (class throwable)))}
+                          throwable))))
+      (finally
+        (Files/deleteIfExists (.toPath tmp))))))
+
+(defn- result-summary
+  [click-id result fallback-attempt-id]
+  (let [binding (persist-click-run-binding! click-id result)]
+    (cond-> {:click-id click-id
+             :attempt-id (or (:attempt-id result) fallback-attempt-id)
+             :outcome (or (:outcome result) :unknown)
+             :binding-status (:binding-status binding)
+             :run-id-observation (:run-id-observation binding)
+             :run-record-status (:run-record-status binding)
+             :run-binding (:path binding)
+             :binding-durability (:durability binding)}
+      (:durability-warning binding)
+      (assoc :binding-durability-warning (:durability-warning binding))
+      (:run-record binding)
+      (assoc :run-record (:run-record binding))
+
+      (:run-record-absence binding)
+      (assoc :run-record-absence (:run-record-absence binding))
+
+      (:duplicate-of-clicks binding)
+      (assoc :duplicate-of-clicks (:duplicate-of-clicks binding)))))
+
+(defn- close-click!
+  [agent-id click-id result]
+  (let [fallback-attempt-id (:attempt-id @!status)
+        summary (result-summary click-id result fallback-attempt-id)]
+    (swap! !status
+           (fn [current]
+             (if (= click-id (:click-id current))
+               (assoc current
+                      :running? false
+                      :phase nil
+                      :attempt-id (:attempt-id summary)
+                      :last-result summary
+                      :registry-publication {:status :pending :stage :close})
+               current)))
+    (publish-registry! click-id :close #(report-idle! agent-id))
+    (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
+    (flush)))
+
+(defn- fail-click!
+  [agent-id click-id throwable]
+  (let [attempt-id (:attempt-id @!status)
+        summary (cond-> {:attempt-id attempt-id
+                         :outcome :service-failed
+                         :error (or (.getMessage ^Throwable throwable)
+                                    (.getName (class throwable)))}
+                  (ex-data throwable) (assoc :error-data (ex-data throwable)))]
+    (swap! !status
+           (fn [current]
+             (if (= click-id (:click-id current))
+               (assoc current
+                      :running? false
+                      :phase nil
+                      :last-result summary
+                      :registry-publication {:status :pending :stage :failure})
+               current)))
+    (publish-registry! click-id :failure #(report-idle! agent-id))
+    (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
+    (flush)))
+
+(defn- run-click!
+  [click-id opts completion]
+  (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
+    (try
+      (let [configured (configured-runner-opts opts)
+            run! (*resolve-var*
+                  'futon2.aif.full-loop-runner/run-opportunity!)
+            runner-opts
+            (-> configured
+                (dissoc :wm-agent-id)
+                (assoc :click-id click-id
+                       :phase-log-fn
+                       (phase-sink agent-id click-id configured)
+                       :strategic-selection-invoke-fn
+                       in-process-selection))]
+        (close-click! agent-id click-id (run! runner-opts)))
+      (catch Throwable throwable
+        (fail-click! agent-id click-id throwable))
+      (finally
+        (deliver completion {:status :completed :click-id click-id})))))
+
+(defn await-click!
+  "Wait for the worker identified by `click-id`, independently of the mutable
+   HTTP status projection. Returns a typed result; it never guesses completion
+   from `:running? false`."
+  ([click-id]
+   (let [{tracked-id :click-id completion :completion} @!completion]
+     (if (and completion (= click-id tracked-id))
+       @completion
+       {:status :not-tracked :click-id click-id})))
+  ([click-id timeout-ms]
+   (let [{tracked-id :click-id completion :completion thread :thread} @!completion]
+     (if (and completion (= click-id tracked-id))
+       (deref completion timeout-ms
+              {:status :timed-out :click-id click-id :timeout-ms timeout-ms
+               :thread-state (some-> ^Thread thread .getState str)
+               :thread-at (some-> ^Thread thread .getStackTrace first str)})
+       {:status :not-tracked :click-id click-id}))))
+
+(defn click!
+  "Start one in-process duration click.
+
+   Returns {:click-id ... :started-at ...} when accepted. While a click is
+   running, returns {:rejected :already-running :click-id ...} without
+   starting another thread."
+  [opts]
+  (loop []
+    (let [current @!status]
+      (if (:running? current)
+        {:rejected :already-running
+         :click-id (:click-id current)}
+        (let [click-id (str "wm-click-" (UUID/randomUUID))
+              started-at (str (Instant/now))
+              next-status (assoc current
+                                 :running? true
+                                 :click-id click-id
+                                 :phase :starting
+                                 :attempt-id nil
+                                 :started-at started-at
+                                 :registry-publication nil)]
+          (if-not (compare-and-set! !status current next-status)
+            (recur)
+            (let [completion (promise)
+                  _ (reset! !completion {:click-id click-id
+                                         :completion completion})
+                  runnable (bound-fn [] (run-click! click-id (dissoc opts :ordinary-click/issue!) completion))
+                  thread (Thread. ^Runnable runnable "wm-runner-click")]
+              (swap! !completion assoc :thread thread)
+              (.setDaemon thread true)
+              (try
+                (when-let [issue! (:ordinary-click/issue! opts)]
+                  (issue! click-id started-at))
+                (.start thread)
+                {:click-id click-id :started-at started-at}
+                (catch Throwable throwable
+                  (try
+                    (fail-click! (or (:wm-agent-id opts)
+                                     war-machine-agent-id)
+                                 click-id throwable)
+                    (finally
+                      (deliver completion {:status :start-failed
+                                           :click-id click-id})))
+                  (throw throwable))))))))))

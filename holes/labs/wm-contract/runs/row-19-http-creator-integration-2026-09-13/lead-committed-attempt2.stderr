@@ -1,0 +1,5 @@
+Execution error (ExceptionInfo) at futon3c.peripheral.common/load-specs-from-resource (common.clj:14).
+Missing peripherals.edn resource
+
+Full report at:
+/tmp/clojure-3548722628449677913.edn

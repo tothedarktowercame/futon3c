@@ -1,0 +1,2040 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pipeline Pattern Cascade</title>
+  <style>
+    :root {
+      --ink: #171717;
+      --muted: #5f5b52;
+      --line: #7a756c;
+      --paper: #f8f6ef;
+      --panel: #fffdf7;
+      --green: #0f6e56;
+      --gold: #8a5a10;
+      --blue: #295a8f;
+      --red: #9a382f;
+      --purple: #5e4b9a;
+      --hole: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    code {
+      overflow-wrap: anywhere;
+    }
+
+    main {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 24px 30px;
+      overflow: hidden;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      line-height: 1.1;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .source {
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 360px;
+    }
+
+    .frame {
+      background: var(--panel);
+      border: 1px solid #dad5c8;
+      border-radius: 8px;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+      max-width: 100%;
+    }
+
+    .upward-frame {
+      background: #fffdf7;
+      border: 1px solid #d8d1c4;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    .upward-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .upward-head h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .upward-head p {
+      max-width: 780px;
+    }
+
+    .upward-counts {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .upward-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .induction-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) 34px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 16px;
+    }
+
+    .induction-node {
+      border: 1px solid #cfc7b8;
+      border-radius: 8px;
+      background: #fbfaf4;
+      padding: 9px 10px;
+      min-height: 54px;
+    }
+
+    .induction-node strong {
+      display: block;
+      color: #173f3d;
+      font-size: 12px;
+      line-height: 1.2;
+      margin-bottom: 3px;
+    }
+
+    .induction-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.25;
+    }
+
+    .induction-arrow {
+      color: #6d766e;
+      font-size: 22px;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .basin {
+      position: relative;
+      min-width: 0;
+      min-height: 214px;
+      border: 1px solid #cfc7b8;
+      border-radius: 8px;
+      background: #fbfaf4;
+      padding: 12px;
+    }
+
+    .basin::before {
+      content: "";
+      position: absolute;
+      top: 55px;
+      left: 50%;
+      width: 1px;
+      height: 36px;
+      background: #8b857a;
+      opacity: 0.62;
+    }
+
+    .pattern-row {
+      display: flex;
+      gap: 6px;
+      min-height: 35px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .pattern-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #171717;
+      color: #fff;
+      font-size: 8px;
+      line-height: 1;
+      font-weight: 760;
+    }
+
+    .pattern-dot.minor {
+      background: #4d4a44;
+    }
+
+    .basin-card {
+      position: relative;
+      border: 1px solid #6f9c90;
+      background: #e9f2ee;
+      border-radius: 8px;
+      padding: 10px 10px 9px;
+      min-height: 88px;
+      z-index: 1;
+    }
+
+    .basin-card.thin {
+      border-color: #bd9d50;
+      background: #f4eedc;
+    }
+
+    .basin-card.sparse {
+      border-color: #9e9e9e;
+      background: #f7f7f7;
+      border-style: dashed;
+    }
+
+    .basin-title {
+      font-size: 13px;
+      line-height: 1.2;
+      font-weight: 720;
+      color: #173f3d;
+      margin-bottom: 6px;
+    }
+
+    .basin-meta,
+    .basin-terms,
+    .basin-citers {
+      font-size: 11px;
+      line-height: 1.35;
+      color: #5e5a52;
+    }
+
+    .vocab-label {
+      margin-top: 10px;
+      border-top: 1px dashed #c9c1b2;
+      padding-top: 8px;
+      color: #5f5b52;
+      font-size: 10.5px;
+      line-height: 1.35;
+    }
+
+    .m0-breakdown {
+      margin-top: 10px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .m0-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 7px;
+      align-items: center;
+      font-size: 10.5px;
+      line-height: 1.25;
+      color: #4d4942;
+    }
+
+    .m0-row strong {
+      color: #173f3d;
+      font-size: 10.5px;
+    }
+
+    .m0-row span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .m0-row em {
+      font-style: normal;
+      color: #777167;
+      white-space: nowrap;
+    }
+
+    .hole-basin {
+      min-height: 88px;
+      border: 1px dashed #aaa398;
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .hole-basin .basin-title {
+      color: #5f5b52;
+    }
+
+    .downward-frame {
+      background: #fffdf7;
+      border: 1px solid #d8d1c4;
+      border-radius: 8px;
+      padding: 18px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .downward-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 14px;
+    }
+
+    .down-node {
+      min-height: 126px;
+      border: 1px solid #c7bdad;
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfaf4;
+      position: relative;
+    }
+
+    .down-node::after {
+      content: "→";
+      position: absolute;
+      right: -14px;
+      top: 43%;
+      color: #7f786c;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .down-node:last-child::after {
+      content: "";
+    }
+
+    .down-node strong {
+      display: block;
+      color: #173f3d;
+      font-size: 12px;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .down-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.3;
+    }
+
+    .down-node .source-tag {
+      margin-top: 8px;
+      color: #6d5d3a;
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+    .roadmap-staging {
+      margin-top: 18px;
+      border-top: 1px dashed #d1c8b8;
+      padding-top: 14px;
+    }
+
+    .roadmap-staging h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .roadmap-card {
+      min-height: 112px;
+      border: 1px solid #cfc7b8;
+      border-radius: 8px;
+      padding: 9px;
+      background: #fbfaf4;
+    }
+
+    .roadmap-card.strong {
+      border-color: #6d9d8d;
+      background: #eef7f3;
+    }
+
+    .roadmap-card.partial {
+      border-color: #bd9d50;
+      background: #f8f2df;
+    }
+
+    .roadmap-card.missing {
+      border-color: #aaa398;
+      border-style: dashed;
+      background: #fff;
+    }
+
+    .roadmap-card strong {
+      display: block;
+      color: #173f3d;
+      font-size: 11.5px;
+      line-height: 1.25;
+      margin-bottom: 5px;
+    }
+
+    .roadmap-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .roadmap-card .warrant {
+      margin-top: 7px;
+      font-weight: 650;
+    }
+
+    .roadmap-card.strong .warrant { color: #0f6e56; }
+    .roadmap-card.partial .warrant { color: #8a5a10; }
+    .roadmap-card.missing .warrant { color: #6a6259; }
+
+    .forward-sources {
+      margin-top: 18px;
+      border-top: 1px dashed #d1c8b8;
+      padding-top: 14px;
+    }
+
+    .forward-sources h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .source-feed-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .source-feed {
+      border: 1px solid #b9c5b7;
+      border-radius: 8px;
+      padding: 11px;
+      background: #f3f8f1;
+    }
+
+    .source-feed.pudding {
+      border-color: #c6b681;
+      background: #faf5e7;
+    }
+
+    .source-feed strong {
+      display: block;
+      color: #173f3d;
+      font-size: 12.5px;
+      line-height: 1.25;
+      margin-bottom: 4px;
+    }
+
+    .source-feed span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.35;
+    }
+
+    .source-feed ul {
+      margin: 9px 0 0;
+      padding-left: 16px;
+      color: #49443e;
+      font-size: 10.5px;
+      line-height: 1.35;
+    }
+
+    .source-feed code {
+      font-size: 10px;
+    }
+
+    @media (max-width: 900px) {
+      header,
+      .upward-head {
+        grid-template-columns: 1fr;
+      }
+
+      .source,
+      .upward-counts {
+        text-align: left;
+        white-space: normal;
+      }
+
+      .upward-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .downward-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .roadmap-grid,
+      .source-feed-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .down-node::after {
+        right: 50%;
+        top: auto;
+        bottom: -17px;
+        transform: rotate(90deg);
+      }
+
+      .induction-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .induction-arrow {
+        transform: rotate(90deg);
+      }
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(0, 0, 0, 0.035), transparent 1px),
+        radial-gradient(circle at 72% 46%, rgba(0, 0, 0, 0.025), transparent 1px),
+        var(--panel);
+      background-size: 23px 23px, 29px 29px, auto;
+    }
+
+    .class-band {
+      fill: none;
+      stroke: #c9c1b2;
+      stroke-width: 1;
+      stroke-dasharray: 6 6;
+    }
+
+    .class-label {
+      fill: var(--ink);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .class-note {
+      fill: var(--muted);
+      font-size: 10.5px;
+    }
+
+    .feature-edge {
+      fill: none;
+      stroke: #456b6a;
+      stroke-width: 1.2;
+      stroke-dasharray: 5 4;
+      opacity: 0.72;
+    }
+
+    .warrant-edge {
+      fill: none;
+      stroke: #303030;
+      stroke-width: 1;
+      stroke-dasharray: 2 3;
+      opacity: 0.7;
+    }
+
+    .warrant-node circle {
+      fill: #161616;
+      stroke: #161616;
+      stroke-width: 1.1;
+    }
+
+    .warrant-node text {
+      fill: #fff;
+      font-size: 8.5px;
+      font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .warrant-label {
+      fill: var(--muted);
+      font-size: 9px;
+      text-anchor: middle;
+    }
+
+    .feature-card {
+      fill: #e9f2ee;
+      stroke: #6d9d8d;
+      stroke-width: 1.1;
+    }
+
+    .feature-card.emerging {
+      fill: #f4eedc;
+      stroke: #bd9d50;
+    }
+
+    .feature-card.declared {
+      fill: #f7f7f7;
+      stroke: #9e9e9e;
+      stroke-dasharray: 5 3;
+    }
+
+    .promoted-card {
+      fill: #eef0f7;
+      stroke: #7d80a8;
+      stroke-width: 1;
+    }
+
+    .promoted-card.weak {
+      fill: #ffffff;
+      stroke: #a9a299;
+      stroke-dasharray: 4 3;
+    }
+
+    .promoted-text {
+      fill: #292d63;
+      font-size: 9.5px;
+      font-weight: 720;
+      text-anchor: middle;
+    }
+
+    .promoted-subtext {
+      fill: #5f627f;
+      font-size: 8.2px;
+      text-anchor: middle;
+    }
+
+    .promoted-edge {
+      fill: none;
+      stroke: #6f7194;
+      stroke-width: 1;
+      stroke-dasharray: 3 3;
+      opacity: 0.78;
+    }
+
+    .promoted-pattern circle {
+      fill: #25264a;
+      stroke: #25264a;
+      stroke-width: 1;
+    }
+
+    .promoted-pattern text {
+      fill: #fff;
+      font-size: 7px;
+      font-weight: 760;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .promoted-pattern.missing circle {
+      fill: #fff;
+      stroke: #4e4a44;
+      stroke-dasharray: 3 2;
+    }
+
+    .promoted-pattern.missing text {
+      fill: #4e4a44;
+    }
+
+    .feature-text {
+      fill: #173f3d;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+
+    .feature-subtext {
+      fill: #56605b;
+      font-size: 9.5px;
+      text-anchor: middle;
+    }
+
+    .apparatus-edge {
+      fill: none;
+      stroke: #9a9489;
+      stroke-width: 1;
+      stroke-dasharray: 3 4;
+      opacity: 0.78;
+    }
+
+    .apparatus-card {
+      fill: #f7f1e4;
+      stroke: #c9b98d;
+      stroke-width: 1;
+    }
+
+    .apparatus-card.hole {
+      fill: #ffffff;
+      stroke-dasharray: 4 3;
+    }
+
+    .apparatus-text {
+      fill: #5c4b25;
+      font-size: 10px;
+      font-weight: 650;
+      text-anchor: middle;
+    }
+
+    .apparatus-subtext {
+      fill: #786d5d;
+      font-size: 9px;
+      text-anchor: middle;
+    }
+
+    .story-edge {
+      fill: none;
+      stroke: #9a5b65;
+      stroke-width: 1;
+      stroke-dasharray: 4 5;
+      opacity: 0.82;
+    }
+
+    .story-card {
+      fill: #fff8f8;
+      stroke: #b9808a;
+      stroke-width: 1;
+      stroke-dasharray: 5 4;
+    }
+
+    .story-text {
+      fill: #713541;
+      font-size: 9.5px;
+      font-weight: 650;
+      text-anchor: middle;
+    }
+
+    .story-subtext {
+      fill: #7f6166;
+      font-size: 8.8px;
+      text-anchor: middle;
+    }
+
+    .edge {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 1.25;
+      opacity: 0.72;
+    }
+
+    .edge.strong {
+      stroke: var(--ink);
+      stroke-width: 1.8;
+      opacity: 0.88;
+    }
+
+    .edge.missing {
+      stroke-dasharray: 5 5;
+      opacity: 0.62;
+    }
+
+    .node circle {
+      stroke: var(--ink);
+      stroke-width: 1.6;
+    }
+
+    .node.pattern circle { fill: #161616; }
+    .node.hole circle { fill: var(--hole); stroke-dasharray: 4 3; }
+    .node.partial circle { fill: #e7dfc9; }
+
+    .node text {
+      font-size: 9.8px;
+      font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .node.pattern text { fill: #fff; }
+    .node.hole text, .node.partial text { fill: var(--ink); }
+
+    .node-label {
+      fill: var(--muted);
+      font-size: 10.5px;
+      text-anchor: middle;
+    }
+
+    .legend-title {
+      fill: var(--ink);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .legend-text {
+      fill: var(--muted);
+      font-size: 11px;
+    }
+
+    .because {
+      fill: #f5ead4;
+      stroke: #c99b48;
+      stroke-width: 1;
+    }
+
+    .panel-label {
+      fill: #6a4309;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .panel-text {
+      fill: #725a34;
+      font-size: 10.5px;
+    }
+
+    .foot {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 14px 16px 16px;
+      border-top: 1px solid #e1dbcf;
+      background: #fbfaf4;
+    }
+
+    .foot h2 {
+      margin: 0 0 5px;
+      font-size: 13px;
+    }
+
+    .foot p {
+      font-size: 12px;
+    }
+
+    .story-prose {
+      margin-top: 18px;
+      padding: 18px 20px 20px;
+      background: #fffdf7;
+      border: 1px solid #dad5c8;
+      border-radius: 8px;
+    }
+
+    .story-prose h2 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .story-prose h3 {
+      margin: 18px 0 6px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .story-prose p {
+      max-width: 860px;
+    }
+
+    .story-prose ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 900px;
+    }
+
+    @media (max-width: 760px) {
+      main { padding: 14px 12px 20px; }
+      header { grid-template-columns: 1fr; }
+      .source { text-align: left; }
+      .foot { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<nav style="max-width:1180px;margin:0 auto;padding:10px 30px 0;font:13px/1.6 ui-sans-serif,system-ui;color:#555;">
+  <b style="color:#6d3aa8">Explainer series</b> <span style="color:#999">(open in tabs ↗):</span>&nbsp;
+  <a href="../../../futon2/holes/aif-wiring-explainer.html" target="_blank" style="color:#0e7490;font-weight:600">AIF · theory ↗</a> &nbsp;·&nbsp;
+  <a href="../../../futon2/holes/ct-wiring-explainer.html" target="_blank" style="color:#0e7490;font-weight:600">CT / DarkTower · semantics ↗</a> &nbsp;·&nbsp;
+  <span style="color:#aaa">fold · implementation (planned)</span> &nbsp;·&nbsp;
+  <span style="font-weight:700;color:#222">● cascade · operational sketch (here)</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;<span style="color:#888">related:</span> <a href="../../../futon2/holes/substrate-2-explainer.html" target="_blank" style="color:#0e7490">substrate-2 ↗</a>
+</nav>
+<main>
+  <section id="live-cascade" style="max-width:1180px;margin:14px auto 0;padding:16px 20px;border:2px solid #1a7f5a;border-radius:10px;background:linear-gradient(180deg,#f0fff8,#ffffff);font:13px/1.5 ui-sans-serif,system-ui;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <div style="font-weight:800;color:#0b5;font-size:15px">● LIVE — the cascade, real data from the stack</div>
+      <div style="color:#888" id="live-asof">connecting…</div>
+    </div>
+    <div id="live-body" style="margin-top:10px;color:#555">querying <code>/api/alpha/cascade-real</code> …</div>
+  </section>
+  <header>
+    <div>
+      <h1>Pipeline Pattern Cascade</h1>
+      <p>
+        A Moran-style control sketch: mission clusters form feature basins,
+        concrete cited patterns warrant those basins, and hollow regions mark
+        where the cascade suggests a missing pattern or scan.
+      </p>
+    </div>
+    <div class="source">
+      Seed: <code>pipeline-pattern-map.edn</code><br>
+      Upward layer: <code>pipeline-semilattice-clusters.edn</code>
+    </div>
+  </header>
+
+  <section class="upward-frame">
+    <div class="upward-head">
+      <div>
+        <h2>Upward Structure From Mission Clusters To Cited Patterns</h2>
+        <p>
+          The first upward layer uses direct mission citations, not pattern
+          clustering: each basin below is a mission cluster, and the dark dots
+          above it are concrete <code>futon3/library</code> patterns cited by
+          missions inside that basin.
+        </p>
+      </div>
+      <div class="upward-counts">
+        229 missions · 12 mission clusters<br>
+        6 clusters with direct pattern warrants · 550 resolved citations
+      </div>
+    </div>
+
+    <div class="induction-strip" aria-label="Inductive attachment rule for growing the cascade upward">
+      <div class="induction-node">
+        <strong>1. Start from attested nodes</strong>
+        <span>built capability cards, existing scan classes, direct mission citations</span>
+      </div>
+      <div class="induction-arrow">→</div>
+      <div class="induction-node">
+        <strong>2. Attach the next basin</strong>
+        <span>use concrete cited-pattern overlap before using embedding proximity</span>
+      </div>
+      <div class="induction-arrow">→</div>
+      <div class="induction-node">
+        <strong>3. Split when a basin is mixed</strong>
+        <span>M0 becomes M0P1, M0P2, M0P13, M0P6, M0P0</span>
+      </div>
+    </div>
+
+    <div class="upward-grid">
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="futon-theory/stop-the-line">STL</span>
+          <span class="pattern-dot" title="invariant-coherence/reachable-from-boot">RFB</span>
+          <span class="pattern-dot" title="math-informal/reduce-to-known-result">RKR</span>
+          <span class="pattern-dot minor" title="futon-theory/structural-tension-as-observation">STO</span>
+          <span class="pattern-dot minor" title="peripherals/surface-earns-inhabitation">SEI</span>
+        </div>
+        <div class="basin-card">
+          <div class="basin-title">M0 refined basin family</div>
+          <div class="basin-meta">211 cited patterns · 76 citing missions</div>
+          <div class="basin-terms">terms: stack, pattern, evidence, substrate, clj</div>
+          <div class="basin-citers">examples: capability-star-map, bounded-in-flight, f6-arxiv</div>
+        </div>
+        <div class="m0-breakdown" aria-label="M0 subclusters by dominant cited pattern cluster">
+          <div class="m0-row"><strong>M0P1</strong><span>coordination, stop-the-line, source-of-truth</span><em>15 missions</em></div>
+          <div class="m0-row"><strong>M0P2</strong><span>AIF / operator / surface inhabitation</span><em>20 missions</em></div>
+          <div class="m0-row"><strong>M0P13</strong><span>math proof strategy and rational reconstruction</span><em>11 missions</em></div>
+          <div class="m0-row"><strong>M0P6</strong><span>runtime invariants, boot reachability, snapshots</span><em>8 missions</em></div>
+          <div class="m0-row"><strong>M0P0</strong><span>writing, pattern discipline, categorical objects</span><em>7 missions</em></div>
+        </div>
+        <div class="vocab-label">Pattern clusters act as a secondary split of M0; the cascade edge remains citation-backed.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="f6/pattern-as-strategy">PAS</span>
+          <span class="pattern-dot minor" title="agency/single-routing-authority">SRA</span>
+          <span class="pattern-dot minor" title="agent/evidence-over-assertion">E/A</span>
+          <span class="pattern-dot minor" title="agent/pause-is-not-failure">PNF</span>
+        </div>
+        <div class="basin-card">
+          <div class="basin-title">M1: peripheral / essay / parity basin</div>
+          <div class="basin-meta">29 cited patterns · 6 citing missions</div>
+          <div class="basin-terms">terms: peripheral, essays, parity, emacs, plan</div>
+          <div class="basin-citers">examples: peripheral-phenomenology, f6-agents, peeragogy</div>
+        </div>
+        <div class="vocab-label">Concrete citations already warrant peripheral readout and coordination work.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="agent/sense-deliberate-act">SDA</span>
+          <span class="pattern-dot minor" title="aif/expected-free-energy-scorecard">EFE</span>
+          <span class="pattern-dot minor" title="aif/predictive-coding-belief-update">PC</span>
+          <span class="pattern-dot minor" title="aif/structured-observation-vector">OV</span>
+        </div>
+        <div class="basin-card thin">
+          <div class="basin-title">M2: operational readiness / pilot basin</div>
+          <div class="basin-meta">14 cited patterns · 3 citing missions</div>
+          <div class="basin-terms">terms: date, operational readiness, stability</div>
+          <div class="basin-citers">examples: pilot-appearance, readiness checks</div>
+        </div>
+        <div class="vocab-label">AIF-style observation and action patterns sit directly above the basin.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="system-coherence/argue-empirically-not-persuasively">AEP</span>
+          <span class="pattern-dot minor" title="aif/belief-state-operational-hypotheses">BSH</span>
+          <span class="pattern-dot minor" title="aif/candidate-pattern-action-space">CPA</span>
+          <span class="pattern-dot minor" title="aif/evidence-precision-registry">EPR</span>
+        </div>
+        <div class="basin-card thin">
+          <div class="basin-title">M5: training / research-system basin</div>
+          <div class="basin-meta">23 cited patterns · 2 citing missions</div>
+          <div class="basin-terms">terms: OR training, simulation, research</div>
+          <div class="basin-citers">examples: OR training as learning system</div>
+        </div>
+        <div class="vocab-label">This basin is smaller, but its warrants are already methodologically explicit.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="realtime/structured-events-only">SEO</span>
+          <span class="pattern-dot minor" title="futon-theory/all-or-nothing">AON</span>
+          <span class="pattern-dot minor" title="futon-theory/single-source-of-truth">SST</span>
+          <span class="pattern-dot minor" title="realtime/loop-failure-signals">LFS</span>
+        </div>
+        <div class="basin-card thin">
+          <div class="basin-title">M6: Codex / IRC / Agency basin</div>
+          <div class="basin-meta">5 cited patterns · 4 citing missions</div>
+          <div class="basin-terms">terms: codex, cli, irc, agency, agent</div>
+          <div class="basin-citers">examples: codex-agent-behaviour, agency routing</div>
+        </div>
+        <div class="vocab-label">Realtime loop discipline warrants this basin more than embedding proximity does.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot" title="exotic/live-sync-source-truth">LST</span>
+          <span class="pattern-dot minor" title="hdm/deep-storage-to-active-graph">DSG</span>
+          <span class="pattern-dot minor" title="invariant-coherence/state-snapshot-witness">SSW</span>
+          <span class="pattern-dot minor" title="system-coherence/present-graph-topology-not-adjacency-lists">PGT</span>
+        </div>
+        <div class="basin-card sparse">
+          <div class="basin-title">M11: WebArxana / interface basin</div>
+          <div class="basin-meta">4 cited patterns · 1 citing mission</div>
+          <div class="basin-terms">terms: webarxana, UI improvements, interface</div>
+          <div class="basin-citers">example: web-arxana-ui-improvements</div>
+        </div>
+        <div class="vocab-label">Sparse, but direct: UI graph topology and source-truth patterns are named.</div>
+      </section>
+
+      <section class="basin">
+        <div class="pattern-row">
+          <span class="pattern-dot minor" title="No direct applied-pattern citations in this data source">?</span>
+          <span class="pattern-dot minor" title="Needs explicit mission-to-pattern warrant links">?</span>
+          <span class="pattern-dot minor" title="Candidate pattern back-links should be seeded">?</span>
+        </div>
+        <div class="hole-basin">
+          <div class="basin-title">6 remaining mission clusters</div>
+          <div class="basin-meta">0 direct cited-pattern warrants in the applied scope table</div>
+          <div class="basin-terms">read as weakly warranted feature basins, not as absent features</div>
+        </div>
+        <div class="vocab-label">These are the best upward holes: either add explicit pattern back-links or seed new patterns.</div>
+      </section>
+    </div>
+  </section>
+
+  <section class="frame">
+    <svg viewBox="0 0 1220 1320" role="img" aria-labelledby="title desc">
+      <title id="title">Pipeline pattern cascade over current patterns and holes</title>
+      <desc id="desc">
+        Six scan-template regions are drawn as a dependency cascade. Dark nodes
+        are existing library patterns; hollow nodes are expected missing
+        patterns or scans.
+      </desc>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                markerWidth="5.5" markerHeight="5.5" orient="auto">
+          <path d="M 1 1 L 8 5 L 1 9" fill="none" stroke="context-stroke"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <rect x="26" y="28" width="840" height="1262" rx="20" class="class-band"/>
+      <text x="446" y="56" text-anchor="middle" class="class-label">
+        Capability semilattice slice: built features above, scans below
+      </text>
+      <text x="446" y="75" text-anchor="middle" class="class-note">
+        Top cards are stereolithography-style capability states. Lower boxes show pattern-backed scans and holes.
+      </text>
+
+      <!-- Promoted mission-cluster blocks brought up from the staging area -->
+      <text x="446" y="102" text-anchor="middle" class="class-note">
+        Promoted basin blocks attached inductively into the semilattice
+      </text>
+
+      <g class="promoted-pattern" transform="translate(95 124)">
+        <title>futon-theory/stop-the-line</title>
+        <circle r="10"/><text>STL</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(123 124)">
+        <title>coordination/par-as-obligation</title>
+        <circle r="10"/><text>PAR</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(151 124)">
+        <title>futon-theory/single-source-of-truth</title>
+        <circle r="10"/><text>SST</text>
+      </g>
+      <rect x="56" y="142" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="123" y="158" class="promoted-text">M0P1</text>
+      <text x="123" y="172" class="promoted-subtext">coordination law</text>
+
+      <g class="promoted-pattern" transform="translate(245 124)">
+        <title>aif/expected-free-energy-scorecard</title>
+        <circle r="10"/><text>EFE</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(273 124)">
+        <title>peripherals/surface-earns-inhabitation</title>
+        <circle r="10"/><text>SEI</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(301 124)">
+        <title>aif/term-to-channel-traceability</title>
+        <circle r="10"/><text>TCT</text>
+      </g>
+      <rect x="206" y="142" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="273" y="158" class="promoted-text">M0P2</text>
+      <text x="273" y="172" class="promoted-subtext">AIF / operator</text>
+
+      <g class="promoted-pattern" transform="translate(395 124)">
+        <title>math-informal/reduce-to-known-result</title>
+        <circle r="10"/><text>RKR</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(423 124)">
+        <title>math-informal/construct-an-explicit-witness</title>
+        <circle r="10"/><text>CEW</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(451 124)">
+        <title>math-strategy/compose-independent-lemmas</title>
+        <circle r="10"/><text>CIL</text>
+      </g>
+      <rect x="356" y="142" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="423" y="158" class="promoted-text">M0P13</text>
+      <text x="423" y="172" class="promoted-subtext">proof strategy</text>
+
+      <g class="promoted-pattern" transform="translate(545 124)">
+        <title>invariant-coherence/reachable-from-boot</title>
+        <circle r="10"/><text>RFB</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(573 124)">
+        <title>invariant-coherence/state-snapshot-witness</title>
+        <circle r="10"/><text>SSW</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(601 124)">
+        <title>invariant-coherence/drain-channel-shape</title>
+        <circle r="10"/><text>DCS</text>
+      </g>
+      <rect x="506" y="142" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="573" y="158" class="promoted-text">M0P6</text>
+      <text x="573" y="172" class="promoted-subtext">runtime witness</text>
+
+      <g class="promoted-pattern" transform="translate(695 124)">
+        <title>pattern-discipline/patterns-as-categorical-objects</title>
+        <circle r="10"/><text>PCO</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(723 124)">
+        <title>writing-coherence/meet-the-reader-where-they-are</title>
+        <circle r="10"/><text>MR</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(751 124)">
+        <title>writing-coherence/name-what-you-drop</title>
+        <circle r="10"/><text>NWD</text>
+      </g>
+      <rect x="656" y="142" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="723" y="158" class="promoted-text">M0P0</text>
+      <text x="723" y="172" class="promoted-subtext">pattern discipline</text>
+
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 123 180 C 126 250 138 360 152 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 273 180 C 292 250 326 360 350 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 423 180 C 444 250 512 360 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 573 180 C 568 250 558 360 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 723 180 C 725 250 735 360 746 414"/>
+
+      <g class="promoted-pattern" transform="translate(95 206)">
+        <title>f6/pattern-as-strategy</title>
+        <circle r="10"/><text>PAS</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(123 206)">
+        <title>agency/single-routing-authority</title>
+        <circle r="10"/><text>SRA</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(151 206)">
+        <title>agent/evidence-over-assertion</title>
+        <circle r="10"/><text>E/A</text>
+      </g>
+      <rect x="56" y="224" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="123" y="240" class="promoted-text">M1</text>
+      <text x="123" y="254" class="promoted-subtext">peripheral parity</text>
+
+      <g class="promoted-pattern" transform="translate(245 206)">
+        <title>agent/sense-deliberate-act</title>
+        <circle r="10"/><text>SDA</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(273 206)">
+        <title>aif/expected-free-energy-scorecard</title>
+        <circle r="10"/><text>EFE</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(301 206)">
+        <title>aif/predictive-coding-belief-update</title>
+        <circle r="10"/><text>PC</text>
+      </g>
+      <rect x="206" y="224" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="273" y="240" class="promoted-text">M2</text>
+      <text x="273" y="254" class="promoted-subtext">readiness pilot</text>
+
+      <g class="promoted-pattern" transform="translate(395 206)">
+        <title>system-coherence/argue-empirically-not-persuasively</title>
+        <circle r="10"/><text>AEP</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(423 206)">
+        <title>aif/belief-state-operational-hypotheses</title>
+        <circle r="10"/><text>BSH</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(451 206)">
+        <title>aif/candidate-pattern-action-space</title>
+        <circle r="10"/><text>CPA</text>
+      </g>
+      <rect x="356" y="224" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="423" y="240" class="promoted-text">M5</text>
+      <text x="423" y="254" class="promoted-subtext">training research</text>
+
+      <g class="promoted-pattern" transform="translate(545 206)">
+        <title>realtime/structured-events-only</title>
+        <circle r="10"/><text>SEO</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(573 206)">
+        <title>futon-theory/all-or-nothing</title>
+        <circle r="10"/><text>AON</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(601 206)">
+        <title>futon-theory/single-source-of-truth</title>
+        <circle r="10"/><text>SST</text>
+      </g>
+      <rect x="506" y="224" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="573" y="240" class="promoted-text">M6</text>
+      <text x="573" y="254" class="promoted-subtext">agency realtime</text>
+
+      <g class="promoted-pattern" transform="translate(695 206)">
+        <title>exotic/live-sync-source-truth</title>
+        <circle r="10"/><text>LST</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(723 206)">
+        <title>hdm/deep-storage-to-active-graph</title>
+        <circle r="10"/><text>DSG</text>
+      </g>
+      <g class="promoted-pattern" transform="translate(751 206)">
+        <title>system-coherence/present-graph-topology-not-adjacency-lists</title>
+        <circle r="10"/><text>PGT</text>
+      </g>
+      <rect x="656" y="224" width="134" height="38" rx="7" class="promoted-card"/>
+      <text x="723" y="240" class="promoted-text">M11</text>
+      <text x="723" y="254" class="promoted-subtext">webarxana graph</text>
+
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 123 262 C 144 310 146 370 152 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 273 262 C 300 310 328 370 350 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 423 262 C 462 310 512 370 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 573 262 C 568 310 558 370 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 723 262 C 725 310 735 370 746 414"/>
+
+      <g class="promoted-pattern missing" transform="translate(109 288)">
+        <title>M3 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="54" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="109" y="322" class="promoted-text">M3</text>
+      <text x="109" y="336" class="promoted-subtext">maintenance probe</text>
+
+      <g class="promoted-pattern missing" transform="translate(235 288)">
+        <title>M4 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="180" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="235" y="322" class="promoted-text">M4</text>
+      <text x="235" y="336" class="promoted-subtext">forum org</text>
+
+      <g class="promoted-pattern missing" transform="translate(361 288)">
+        <title>M7 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="306" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="361" y="322" class="promoted-text">M7</text>
+      <text x="361" y="336" class="promoted-subtext">perfect crime</text>
+
+      <g class="promoted-pattern missing" transform="translate(487 288)">
+        <title>M8 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="432" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="487" y="322" class="promoted-text">M8</text>
+      <text x="487" y="336" class="promoted-subtext">stack HUD</text>
+
+      <g class="promoted-pattern missing" transform="translate(613 288)">
+        <title>M9 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="558" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="613" y="322" class="promoted-text">M9</text>
+      <text x="613" y="336" class="promoted-subtext">pattern discovery</text>
+
+      <g class="promoted-pattern missing" transform="translate(739 288)">
+        <title>M10 has no direct applied-pattern warrant in this data source</title>
+        <circle r="10"/><text>?</text>
+      </g>
+      <rect x="684" y="306" width="110" height="38" rx="7" class="promoted-card weak"/>
+      <text x="739" y="322" class="promoted-text">M10</text>
+      <text x="739" y="336" class="promoted-subtext">reader eval</text>
+
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 109 344 C 122 366 138 390 152 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 235 344 C 272 366 320 390 350 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 361 344 C 406 366 504 390 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 487 344 C 512 366 536 390 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 613 344 C 608 366 580 390 548 414"/>
+      <path class="promoted-edge" marker-end="url(#arrow)" d="M 739 344 C 740 366 744 390 746 414"/>
+
+      <!-- Pattern warrants above the attested capability layer -->
+      <text x="446" y="364" text-anchor="middle" class="class-note">
+        Concrete pattern warrants still sit above each attested feature
+      </text>
+
+      <g class="warrant-node" transform="translate(98 378)">
+        <title>sidecar/per-id-audit-timeline-linkage</title>
+        <circle r="13"/><text>TL</text>
+      </g>
+      <g class="warrant-node" transform="translate(134 378)">
+        <title>futon-theory/retroactive-canonicalization</title>
+        <circle r="13"/><text>RC</text>
+      </g>
+      <g class="warrant-node" transform="translate(170 378)">
+        <title>futon-theory/single-source-of-truth</title>
+        <circle r="13"/><text>SST</text>
+      </g>
+      <g class="warrant-node" transform="translate(206 378)">
+        <title>agent/evidence-over-assertion</title>
+        <circle r="13"/><text>E/A</text>
+      </g>
+      <text x="152" y="404" class="warrant-label">linked, canonical, grounded</text>
+
+      <g class="warrant-node" transform="translate(296 378)">
+        <title>peripherals/read-only-first-then-extend</title>
+        <circle r="13"/><text>RO</text>
+      </g>
+      <g class="warrant-node" transform="translate(332 378)">
+        <title>peripherals/pilot-plus-ground-control</title>
+        <circle r="13"/><text>PG</text>
+      </g>
+      <g class="warrant-node" transform="translate(368 378)">
+        <title>peripherals/inhabitation-feeds-evolution</title>
+        <circle r="13"/><text>IFE</text>
+      </g>
+      <g class="warrant-node" transform="translate(404 378)">
+        <title>aif/structured-observation-vector</title>
+        <circle r="13"/><text>OV</text>
+      </g>
+      <text x="350" y="404" class="warrant-label">readable, inhabited, observed</text>
+
+      <g class="warrant-node" transform="translate(494 378)">
+        <title>agent/evidence-over-assertion</title>
+        <circle r="13"/><text>E/A</text>
+      </g>
+      <g class="warrant-node" transform="translate(530 378)">
+        <title>futon-theory/curry-howard-operational</title>
+        <circle r="13"/><text>CH</text>
+      </g>
+      <g class="warrant-node" transform="translate(566 378)">
+        <title>invariant-coherence/state-snapshot-witness</title>
+        <circle r="13"/><text>SS</text>
+      </g>
+      <g class="warrant-node" transform="translate(602 378)">
+        <title>peripherals/canonical-typed-event-vs-side-channel</title>
+        <circle r="13"/><text>TE</text>
+      </g>
+      <text x="548" y="404" class="warrant-label">evidence, proof, snapshot, event</text>
+
+      <g class="warrant-node" transform="translate(692 378)">
+        <title>agent/evidence-over-assertion</title>
+        <circle r="13"/><text>E/A</text>
+      </g>
+      <g class="warrant-node" transform="translate(728 378)">
+        <title>futon-theory/single-source-of-truth</title>
+        <circle r="13"/><text>SST</text>
+      </g>
+      <g class="warrant-node" transform="translate(764 378)">
+        <title>invariant-coherence/protocol-family-naming</title>
+        <circle r="13"/><text>PF</text>
+      </g>
+      <g class="warrant-node" transform="translate(800 378)">
+        <title>sidecar/per-id-audit-timeline-linkage</title>
+        <circle r="13"/><text>TL</text>
+      </g>
+      <text x="746" y="404" class="warrant-label">evidence, source, family, timeline</text>
+
+      <path class="warrant-edge" marker-end="url(#arrow)" d="M 152 406 L 152 412"/>
+      <path class="warrant-edge" marker-end="url(#arrow)" d="M 350 406 L 350 412"/>
+      <path class="warrant-edge" marker-end="url(#arrow)" d="M 548 406 L 548 412"/>
+      <path class="warrant-edge" marker-end="url(#arrow)" d="M 746 406 L 746 412"/>
+
+      <!-- Built capability layer from VSATARCS / stack stereolithography -->
+      <rect x="62" y="414" width="180" height="58" rx="9" class="feature-card"/>
+      <text x="152" y="436" class="feature-text">self-describing docs</text>
+      <text x="152" y="454" class="feature-subtext">exists: VSATARCS lifted stories</text>
+
+      <rect x="260" y="414" width="180" height="58" rx="9" class="feature-card"/>
+      <text x="350" y="436" class="feature-text">operator-visible state</text>
+      <text x="350" y="454" class="feature-subtext">exists: WM / Arxana readouts</text>
+
+      <rect x="458" y="414" width="180" height="58" rx="9" class="feature-card emerging"/>
+      <text x="548" y="436" class="feature-text">evidence-backed claims</text>
+      <text x="548" y="454" class="feature-subtext">emerging: witnesses + boundaries</text>
+
+      <rect x="656" y="414" width="180" height="58" rx="9" class="feature-card declared"/>
+      <text x="746" y="436" class="feature-text">capability printout</text>
+      <text x="746" y="454" class="feature-subtext">declared: stereolithography mission</text>
+
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 152 472 C 130 486 126 494 170 504"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 350 472 C 382 486 420 494 458 504"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 548 472 C 450 482 260 494 170 504"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 548 472 C 640 484 705 496 746 504"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 746 472 C 738 486 742 496 746 504"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 746 472 C 672 516 584 554 508 738"/>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 746 472 C 800 516 806 554 800 738"/>
+
+      <g transform="translate(0 400)">
+      <!-- Class regions -->
+      <rect x="58" y="104" width="225" height="145" rx="12" class="class-band"/>
+      <text x="170" y="126" text-anchor="middle" class="class-label">witness / schema</text>
+      <text x="170" y="144" text-anchor="middle" class="class-note">claims need proof objects</text>
+
+      <rect x="346" y="104" width="225" height="145" rx="12" class="class-band"/>
+      <text x="458" y="126" text-anchor="middle" class="class-label">operator readout</text>
+      <text x="458" y="144" text-anchor="middle" class="class-note">read-only surface plus behaviour vector</text>
+
+      <rect x="634" y="104" width="225" height="145" rx="12" class="class-band"/>
+      <text x="746" y="126" text-anchor="middle" class="class-label">boundary generalization</text>
+      <text x="746" y="144" text-anchor="middle" class="class-note">one owner, typed event, no side path</text>
+
+      <rect x="104" y="338" width="225" height="145" rx="12" class="class-band"/>
+      <text x="216" y="360" text-anchor="middle" class="class-label">deferred-stub lift</text>
+      <text x="216" y="378" text-anchor="middle" class="class-note">latent A vs stronger record P</text>
+
+      <rect x="396" y="338" width="225" height="145" rx="12" class="class-band"/>
+      <text x="508" y="360" text-anchor="middle" class="class-label">principled deferral</text>
+      <text x="508" y="378" text-anchor="middle" class="class-note">hold with trigger, owner, evidence</text>
+
+      <rect x="688" y="338" width="225" height="145" rx="12" class="class-band"/>
+      <text x="800" y="360" text-anchor="middle" class="class-label">ontology / narrative</text>
+      <text x="800" y="378" text-anchor="middle" class="class-note">freshness, canonicalization, timeline</text>
+
+      <!-- Edges -->
+      <path class="edge strong" marker-end="url(#arrow)" d="M 170 218 C 260 312 390 322 478 406"/>
+      <path class="edge" marker-end="url(#arrow)" d="M 458 218 C 530 306 640 322 720 402"/>
+      <path class="edge strong" marker-end="url(#arrow)" d="M 746 218 C 690 318 585 322 535 402"/>
+      <path class="edge" marker-end="url(#arrow)" d="M 746 218 C 620 318 390 318 256 405"/>
+      <path class="edge missing" marker-end="url(#arrow)" d="M 216 452 C 360 565 572 560 764 452"/>
+      <path class="edge missing" marker-end="url(#arrow)" d="M 508 452 C 560 535 680 548 800 452"/>
+      <path class="edge" marker-end="url(#arrow)" d="M 458 218 C 490 266 500 330 508 402"/>
+      <path class="edge missing" marker-end="url(#arrow)" d="M 170 218 C 260 300 570 305 746 405"/>
+
+      <!-- Witness/schema nodes -->
+      <g class="node pattern" transform="translate(98 180)">
+        <title>agent/evidence-over-assertion: every substantive claim needs evidence.</title>
+        <circle r="17"/><text>E/A</text>
+      </g>
+      <text x="98" y="212" class="node-label">evidence</text>
+      <g class="node pattern" transform="translate(170 174)">
+        <title>futon-theory/curry-howard-operational: program as proof of spec.</title>
+        <circle r="17"/><text>CH</text>
+      </g>
+      <text x="170" y="206" class="node-label">proof</text>
+      <g class="node partial" transform="translate(242 180)">
+        <title>invariant-coherence/state-snapshot-witness: technical subcase; boot/on-demand snapshots exist.</title>
+        <circle r="17"/><text>SS</text>
+      </g>
+      <text x="242" y="212" class="node-label">snapshot</text>
+      <g class="node hole" transform="translate(170 224)">
+        <title>Expected hole: mission witness/proof path inventory, likely via Pudding Prover and M-typed-holes.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="170" y="256" class="node-label">mission witnesses</text>
+
+      <path class="apparatus-edge" d="M 98 198 C 104 238 118 254 134 271"/>
+      <path class="apparatus-edge" d="M 170 191 C 170 230 170 250 170 271"/>
+      <path class="apparatus-edge" d="M 242 198 C 236 238 222 254 206 271"/>
+      <rect x="86" y="272" width="168" height="48" rx="8" class="apparatus-card"/>
+      <text x="170" y="291" class="apparatus-text">Pudding / typed holes / snapshots</text>
+      <text x="170" y="309" class="apparatus-subtext">concrete witnesses below the pattern layer</text>
+
+      <!-- Operator nodes -->
+      <g class="node pattern" transform="translate(386 180)">
+        <title>peripherals/read-only-first-then-extend: observer stage before write stage.</title>
+        <circle r="17"/><text>RO</text>
+      </g>
+      <text x="386" y="212" class="node-label">observer</text>
+      <g class="node pattern" transform="translate(458 174)">
+        <title>peripherals/inhabitation-feeds-evolution: usage data evolves the surface.</title>
+        <circle r="17"/><text>IFE</text>
+      </g>
+      <text x="458" y="206" class="node-label">inhabit</text>
+      <g class="node pattern" transform="translate(530 180)">
+        <title>aif/structured-observation-vector: normalize behaviour/trace facts into comparable observations.</title>
+        <circle r="17"/><text>OV</text>
+      </g>
+      <text x="530" y="212" class="node-label">vector</text>
+      <g class="node hole" transform="translate(458 224)">
+        <title>Expected hole: Joe-behaviour readout from logged turns, distinct from operator dashboard.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="458" y="256" class="node-label">behaviour readout</text>
+
+      <path class="apparatus-edge" d="M 386 198 C 396 238 410 254 422 271"/>
+      <path class="apparatus-edge" d="M 458 191 C 458 230 458 250 458 271"/>
+      <path class="apparatus-edge" d="M 530 198 C 520 238 506 254 494 271"/>
+      <rect x="374" y="272" width="168" height="48" rx="8" class="apparatus-card"/>
+      <text x="458" y="291" class="apparatus-text">WM operator / Arxana / HUD</text>
+      <text x="458" y="309" class="apparatus-subtext">behaviour vector remains a hole</text>
+
+      <!-- Boundary nodes -->
+      <g class="node pattern" transform="translate(674 180)">
+        <title>agency/single-routing-authority: one authoritative route/owner.</title>
+        <circle r="17"/><text>SRA</text>
+      </g>
+      <text x="674" y="212" class="node-label">owner</text>
+      <g class="node pattern" transform="translate(746 174)">
+        <title>invariant-coherence/protocol-family-naming: shape/instance IDs rather than schema bloat.</title>
+        <circle r="17"/><text>PF</text>
+      </g>
+      <text x="746" y="206" class="node-label">family</text>
+      <g class="node pattern" transform="translate(818 180)">
+        <title>peripherals/canonical-typed-event-vs-side-channel: no side channel when a typed event is needed.</title>
+        <circle r="17"/><text>TE</text>
+      </g>
+      <text x="818" y="212" class="node-label">event</text>
+      <g class="node hole" transform="translate(746 224)">
+        <title>Expected hole: write-class scan over state-changing verbs and boundaries.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="746" y="256" class="node-label">write-class scan</text>
+
+      <path class="apparatus-edge" d="M 674 198 C 684 238 698 254 710 271"/>
+      <path class="apparatus-edge" d="M 746 191 C 746 230 746 250 746 271"/>
+      <path class="apparatus-edge" d="M 818 198 C 808 238 794 254 782 271"/>
+      <rect x="662" y="272" width="168" height="48" rx="8" class="apparatus-card"/>
+      <text x="746" y="291" class="apparatus-text">evidence boundary already exists</text>
+      <text x="746" y="309" class="apparatus-subtext">general write-class scan is hollow</text>
+
+      <!-- Deferred-stub nodes -->
+      <g class="node pattern" transform="translate(146 414)">
+        <title>invariant-coherence/subsumption-witness: latent artifact A is obsolete relative to stronger record P.</title>
+        <circle r="17"/><text>SW</text>
+      </g>
+      <text x="146" y="446" class="node-label">subsumption</text>
+      <g class="node pattern" transform="translate(216 408)">
+        <title>invariant-coherence/protocol-family-naming: deferred-stub siblings are instances of a shared shape.</title>
+        <circle r="17"/><text>PF</text>
+      </g>
+      <text x="216" y="440" class="node-label">shape</text>
+      <g class="node partial" transform="translate(286 414)">
+        <title>Current apparatus: deferred probe taps exist, but some may need live checks or honest retirement.</title>
+        <circle r="17"/><text>DT</text>
+      </g>
+      <text x="286" y="446" class="node-label">deferred taps</text>
+      <g class="node hole" transform="translate(216 458)">
+        <title>Expected hole: classify each deferred family as lift-now, defer-with-criteria, source-update, or retire.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="216" y="490" class="node-label">lift/retire classifier</text>
+
+      <path class="apparatus-edge" d="M 146 432 C 154 478 170 496 184 516"/>
+      <path class="apparatus-edge" d="M 216 425 C 216 472 216 494 216 516"/>
+      <path class="apparatus-edge" d="M 286 432 C 278 478 262 496 248 516"/>
+      <rect x="132" y="518" width="168" height="50" rx="8" class="apparatus-card"/>
+      <text x="216" y="537" class="apparatus-text">deferred taps + archaeology</text>
+      <text x="216" y="555" class="apparatus-subtext">classifier still missing</text>
+
+      <!-- Deferral nodes -->
+      <g class="node pattern" transform="translate(438 414)">
+        <title>agent/provisional-claims-ledger: unresolved claims get owner, evidence, expiry.</title>
+        <circle r="17"/><text>PCL</text>
+      </g>
+      <text x="438" y="446" class="node-label">ledger</text>
+      <g class="node pattern" transform="translate(508 408)">
+        <title>agent/pause-is-not-failure: holding/asking can be correct progress.</title>
+        <circle r="17"/><text>PNF</text>
+      </g>
+      <text x="508" y="440" class="node-label">pause</text>
+      <g class="node pattern" transform="translate(578 414)">
+        <title>correspondence-coherence/mission-unlocks-eoi: deferred action with named gate.</title>
+        <circle r="17"/><text>G</text>
+      </g>
+      <text x="578" y="446" class="node-label">gate</text>
+      <g class="node hole" transform="translate(508 458)">
+        <title>Expected hole: common held/deferred schema with reason, owner, trigger, wake event.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="508" y="490" class="node-label">deferral schema</text>
+
+      <path class="apparatus-edge" d="M 438 432 C 448 478 464 496 476 516"/>
+      <path class="apparatus-edge" d="M 508 425 C 508 472 508 494 508 516"/>
+      <path class="apparatus-edge" d="M 578 432 C 568 478 552 496 540 516"/>
+      <rect x="424" y="518" width="168" height="50" rx="8" class="apparatus-card hole"/>
+      <text x="508" y="537" class="apparatus-text">held/deferred schema</text>
+      <text x="508" y="555" class="apparatus-subtext">gated examples exist, common shape not yet</text>
+
+      <path class="story-edge" marker-end="url(#arrow)" d="M 508 568 C 508 588 508 598 508 612"/>
+      <rect x="378" y="612" width="260" height="62" rx="9" class="story-card"/>
+      <text x="508" y="632" class="story-text">forward-model story: what the schema buys</text>
+      <text x="508" y="650" class="story-subtext">held item = reason + owner + evidence + wake trigger</text>
+      <text x="508" y="666" class="story-subtext">turns repeated deferrals into candidate patterns</text>
+
+      <path class="story-edge" d="M 508 674 C 452 690 432 698 402 710"/>
+      <path class="story-edge" d="M 508 674 C 508 690 508 698 508 710"/>
+      <path class="story-edge" d="M 508 674 C 564 690 584 698 614 710"/>
+      <rect x="326" y="710" width="152" height="42" rx="8" class="story-card"/>
+      <text x="402" y="727" class="story-text">wake-trigger</text>
+      <text x="402" y="742" class="story-subtext">what resumes the hold?</text>
+      <rect x="432" y="710" width="152" height="42" rx="8" class="story-card"/>
+      <text x="508" y="727" class="story-text">operator memory</text>
+      <text x="508" y="742" class="story-subtext">queryable, not folklore</text>
+      <rect x="538" y="710" width="152" height="42" rx="8" class="story-card"/>
+      <text x="614" y="727" class="story-text">re-entry protocol</text>
+      <text x="614" y="742" class="story-subtext">returns via a gate</text>
+
+      <!-- Narrative nodes -->
+      <g class="node pattern" transform="translate(730 414)">
+        <title>sidecar/per-id-audit-timeline-linkage: contiguous narrative for each claim/object.</title>
+        <circle r="17"/><text>TL</text>
+      </g>
+      <text x="730" y="446" class="node-label">timeline</text>
+      <g class="node pattern" transform="translate(800 408)">
+        <title>futon-theory/retroactive-canonicalization: after-the-fact narrative becomes canonical under discipline.</title>
+        <circle r="17"/><text>RC</text>
+      </g>
+      <text x="800" y="440" class="node-label">canon</text>
+      <g class="node pattern" transform="translate(870 414)">
+        <title>futon-theory/single-source-of-truth: authoritative source when narrative and substrate disagree.</title>
+        <circle r="17"/><text>SST</text>
+      </g>
+      <text x="870" y="446" class="node-label">truth</text>
+      <g class="node hole" transform="translate(800 458)">
+        <title>Expected hole: narrative freshness scan for VSATARCS, stack essays, forward-model mints.</title>
+        <circle r="17"/><text>?</text>
+      </g>
+      <text x="800" y="490" class="node-label">freshness scan</text>
+
+      <path class="apparatus-edge" d="M 730 432 C 740 478 756 496 768 516"/>
+      <path class="apparatus-edge" d="M 800 425 C 800 472 800 494 800 516"/>
+      <path class="apparatus-edge" d="M 870 432 C 860 478 844 496 832 516"/>
+      <rect x="716" y="518" width="168" height="50" rx="8" class="apparatus-card"/>
+      <text x="800" y="537" class="apparatus-text">VSATARCS feeder / integrity lane</text>
+      <text x="800" y="555" class="apparatus-subtext">general freshness scan remains open</text>
+
+      <!-- Because clauses -->
+      <rect x="102" y="785" width="240" height="88" rx="10" class="because"/>
+      <text x="222" y="808" text-anchor="middle" class="panel-label">because clause</text>
+      <text x="222" y="831" text-anchor="middle" class="panel-text">each node should expose</text>
+      <text x="222" y="849" text-anchor="middle" class="panel-text">its claim, warrant, and</text>
+      <text x="222" y="867" text-anchor="middle" class="panel-text">evidence path</text>
+
+      <rect x="390" y="785" width="240" height="88" rx="10" class="because"/>
+      <text x="510" y="808" text-anchor="middle" class="panel-label">control problem</text>
+      <text x="510" y="831" text-anchor="middle" class="panel-text">holes mark where the</text>
+      <text x="510" y="849" text-anchor="middle" class="panel-text">cascade needs an adviser,</text>
+      <text x="510" y="867" text-anchor="middle" class="panel-text">not a static roadmap</text>
+
+      <rect x="678" y="785" width="240" height="88" rx="10" class="because"/>
+      <text x="798" y="808" text-anchor="middle" class="panel-label">next graph layer</text>
+      <text x="798" y="831" text-anchor="middle" class="panel-text">turn hollow nodes into EDN</text>
+      <text x="798" y="849" text-anchor="middle" class="panel-text">scans over current stack</text>
+      <text x="798" y="867" text-anchor="middle" class="panel-text">artifacts</text>
+      </g>
+
+      <!-- Legend -->
+      <rect x="910" y="28" width="282" height="1172" rx="20" fill="#fbfaf4" stroke="#d8d1c4"/>
+      <text x="946" y="66" class="legend-title">Legend</text>
+      <rect x="931" y="83" width="26" height="18" rx="5" class="feature-card"/>
+      <text x="972" y="97" class="legend-text">built capability exists</text>
+      <rect x="931" y="116" width="26" height="18" rx="5" class="feature-card emerging"/>
+      <text x="972" y="130" class="legend-text">capability emerging</text>
+      <rect x="931" y="149" width="26" height="18" rx="5" class="feature-card declared"/>
+      <text x="972" y="163" class="legend-text">capability declared</text>
+      <path class="feature-edge" marker-end="url(#arrow)" d="M 932 188 C 952 176 976 176 996 188"/>
+      <text x="1010" y="192" class="legend-text">capability supported by scan</text>
+
+      <g transform="translate(0 122)">
+      <g class="node pattern" transform="translate(944 102)">
+        <circle r="13"/><text>AA</text>
+      </g>
+      <text x="972" y="106" class="legend-text">existing library pattern</text>
+      <g class="node partial" transform="translate(944 140)">
+        <circle r="13"/><text>SS</text>
+      </g>
+      <text x="972" y="144" class="legend-text">partial apparatus already exists</text>
+      <g class="node hole" transform="translate(944 178)">
+        <circle r="13"/><text>?</text>
+      </g>
+      <text x="972" y="182" class="legend-text">expected hole / new scan pattern</text>
+      <rect x="931" y="204" width="26" height="18" rx="5" class="apparatus-card"/>
+      <text x="972" y="218" class="legend-text">apparatus warranted by pattern nodes</text>
+      <path class="edge strong" marker-end="url(#arrow)" d="M 932 250 C 952 238 976 238 996 250"/>
+      <text x="1010" y="254" class="legend-text">strong dependency</text>
+      <path class="edge missing" marker-end="url(#arrow)" d="M 932 288 C 952 276 976 276 996 288"/>
+      <text x="1010" y="292" class="legend-text">speculative / missing link</text>
+      </g>
+
+      <text x="946" y="440" class="legend-title">Reading</text>
+      <text x="946" y="468" class="legend-text">The graph now reads upward</text>
+      <text x="946" y="488" class="legend-text">and downward: current patterns</text>
+      <text x="946" y="508" class="legend-text">warrant apparatus, while the</text>
+      <text x="946" y="528" class="legend-text">apparatus supports built</text>
+      <text x="946" y="548" class="legend-text">capabilities and exposes</text>
+      <text x="946" y="568" class="legend-text">remaining holes.</text>
+
+      <text x="946" y="620" class="legend-title">Primary holes</text>
+      <text x="946" y="648" class="legend-text">1. mission witness inventory</text>
+      <text x="946" y="668" class="legend-text">2. behaviour readout vector</text>
+      <text x="946" y="688" class="legend-text">3. write-class scan</text>
+      <text x="946" y="708" class="legend-text">4. lift/retire classifier</text>
+      <text x="946" y="728" class="legend-text">5. deferral schema</text>
+      <text x="946" y="748" class="legend-text">6. narrative freshness scan</text>
+
+      <text x="946" y="800" class="legend-title">Upward sources</text>
+      <text x="946" y="828" class="legend-text">VSATARCS.html supplies the</text>
+      <text x="946" y="848" class="legend-text">already-built narrative reader;</text>
+      <text x="946" y="868" class="legend-text">M-stack-stereolithography</text>
+      <text x="946" y="888" class="legend-text">supplies the capability-status</text>
+      <text x="946" y="908" class="legend-text">semilattice discipline;</text>
+      <text x="946" y="928" class="legend-text">M-capability-star-map supplies</text>
+      <text x="946" y="948" class="legend-text">the prior structure-view over</text>
+      <text x="946" y="968" class="legend-text">capabilities and prerequisites.</text>
+    </svg>
+
+    <div class="foot">
+      <div>
+        <h2>Why This Shape</h2>
+        <p>
+          Moran's lesson is that static cascades expose the control problem.
+          The hollow nodes are places where the adviser would ask for a new
+          pattern or scan, not places to hand-maintain a list.
+        </p>
+      </div>
+      <div>
+        <h2>Data Source</h2>
+        <p>
+          Populated from <code>pipeline-semilattice-clusters.edn</code> and
+          <code>pipeline-pattern-map.edn</code>: twelve mission clusters, six
+          directly warranted mission basins, concrete cited-pattern warrants,
+          six scan classes, and one prospective forward-model story.
+        </p>
+      </div>
+      <div>
+        <h2>Next Useful Step</h2>
+        <p>
+          Use this as a hand-built slice of the stereolithography printout:
+          promote the built capability cards into generated EDN rows, then
+          attach devmap, invariant, mission, and VSATARCS evidence.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="downward-frame">
+    <div class="upward-head">
+      <div>
+        <h2>Downward Growth From M-futon-forward-model</h2>
+        <p>
+          The upward semilattice says what exists or is missing. The forward
+          model grows it downward: each capability basin becomes a projection
+          about where future work lands, what it is worth, and which linear
+          trace is justified by the underlying cascade.
+        </p>
+      </div>
+      <div class="upward-counts">
+        Source: <code>M-futon-forward-model.md</code><br>
+        Status: best-guess projection layer
+      </div>
+    </div>
+
+    <div class="downward-grid">
+      <div class="down-node">
+        <strong>1. Backlog → basin</strong>
+        <span>Map unfinished missions to shared code/feature basins rather than treating backlog rows as a flat roadmap.</span>
+        <span class="source-tag">§2.2 / §7</span>
+      </div>
+      <div class="down-node">
+        <strong>2. Valuable path</strong>
+        <span>Pick the provenance-credible subset whose pursuit would explain the next useful stack growth.</span>
+        <span class="source-tag">§4 / §7.2</span>
+      </div>
+      <div class="down-node">
+        <strong>3. Market × interest</strong>
+        <span>Generate candidate deliverables, then compare market pull with Joe-interest instead of letting either axis dominate.</span>
+        <span class="source-tag">§7.3</span>
+      </div>
+      <div class="down-node">
+        <strong>4. ROI / cash gate</strong>
+        <span>Ask which deliverables clear positive expected ROI once buyer-finding is modelled as a process.</span>
+        <span class="source-tag">§7.5</span>
+      </div>
+      <div class="down-node">
+        <strong>5. Piano-roll trace</strong>
+        <span>Emit a time projection only as a view over the semilattice, not as the ontology itself.</span>
+        <span class="source-tag">§7.5 + pipeline note</span>
+      </div>
+      <div class="down-node">
+        <strong>6. Selected pipeline</strong>
+        <span>For one chosen pressure, derive a linear trace with a pointer back to the semilattice node and scan witness.</span>
+        <span class="source-tag">E-pipeline §2</span>
+      </div>
+    </div>
+
+    <div class="roadmap-staging">
+      <h3>Roadmap Deliverables Staged From Below</h3>
+      <p>
+        These are generated future-feature cards from
+        <code>M-futon-forward-model.roadmap.edn</code> joined to the ROI pass.
+        Warrant status is a first pass against current <code>futon3/library</code>
+        patterns: strong means several concrete pattern warrants exist; partial
+        means adjacent warrants exist but the feature shape is not yet covered;
+        missing means the library probably needs a new pattern.
+      </p>
+
+      <div class="roadmap-grid">
+        <div class="roadmap-card strong">
+          <strong>Story-as-service</strong>
+          <span>Jul · ROI +2550 · market 0.90</span>
+          <span>VSATARCS / 3D anthology authoring.</span>
+          <span class="warrant">strong: timeline, canon, source-truth</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Proof-pipeline SaaS</strong>
+          <span>Sep · ROI +1300 · market 0.75</span>
+          <span>Sorry→proof pipeline for Lean/spec clients.</span>
+          <span class="warrant">strong: CH, RKR, explicit witness</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Living docs</strong>
+          <span>Sep · ROI +620 · market 0.75</span>
+          <span>Docs regenerate from code and flag drift.</span>
+          <span class="warrant">strong: source-truth, inhabitation</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Repro / research QA</strong>
+          <span>Aug · ROI +450 · market 0.50</span>
+          <span>Research-QA / reproducibility diagnostics.</span>
+          <span class="warrant">strong: empirical-not-persuasive</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Pattern atlas API</strong>
+          <span>Nov · ROI +283 · market 0.60</span>
+          <span>Math-reasoning pattern dataset/API.</span>
+          <span class="warrant">strong: categorical patterns, landscape map</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Evidence audit</strong>
+          <span>Oct · ROI +175 · market 0.60</span>
+          <span>AI-code provenance and audit layer.</span>
+          <span class="warrant">strong: evidence, snapshots</span>
+        </div>
+        <div class="roadmap-card strong">
+          <strong>Agent orchestrator</strong>
+          <span>Oct · ROI +67 · market 0.60</span>
+          <span>Consent-gated multi-agent coordination.</span>
+          <span class="warrant">strong: routing, structured events</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Formalization audit</strong>
+          <span>Sep · ROI -38 · market 0.50</span>
+          <span>Predict effort and suggest proof strategy.</span>
+          <span class="warrant">partial: proof patterns exist; audit wrapper thin</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Invariant-as-service</strong>
+          <span>Oct · ROI -217 · market 0.60</span>
+          <span>Architecture fitness / verified invariants.</span>
+          <span class="warrant">partial: invariants strong; service shape open</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Manifold dashboard</strong>
+          <span>Nov · ROI -338 · market 0.50</span>
+          <span>Codebase growth-attractor dashboard.</span>
+          <span class="warrant">partial: topology patterns exist</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Audience intelligence</strong>
+          <span>Nov · ROI -425 · market 0.50</span>
+          <span>Interest-network as lead/audience fit.</span>
+          <span class="warrant">partial: coupling exists; product pattern thin</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Mission Control PM</strong>
+          <span>Dec · ROI -531 · market 0.40</span>
+          <span>Probability-gated semilattice PM.</span>
+          <span class="warrant">partial: semilattice apparatus exists</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Consent autopen</strong>
+          <span>Dec · ROI -531 · market 0.40</span>
+          <span>Supervised→autonomous migration tooling.</span>
+          <span class="warrant">partial: consent gate exists; migration thin</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Frontier detector</strong>
+          <span>Dec · ROI -554 · market 0.40</span>
+          <span>Embedding-outlier research scouting.</span>
+          <span class="warrant">partial: scout/proxy patterns exist</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Living KG</strong>
+          <span>Nov · ROI -838 · market 0.50</span>
+          <span>Annotation-over-hypergraph sensemaking.</span>
+          <span class="warrant">partial: graph/source patterns exist</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>AIF eval harness</strong>
+          <span>Nov · ROI -951 · market 0.50</span>
+          <span>Active-inference agent-evaluation framework.</span>
+          <span class="warrant">partial: AIF patterns exist; eval product thin</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>Learning diagnostic</strong>
+          <span>Dec · ROI -451 · market 0.50</span>
+          <span>Learning-model diagnostics for orgs/systems.</span>
+          <span class="warrant">partial: AIF/empirical patterns exist</span>
+        </div>
+        <div class="roadmap-card partial">
+          <strong>REPL cockpit</strong>
+          <span>Dec · ROI -877 · market 0.25</span>
+          <span>Agent-control peripheral for power users.</span>
+          <span class="warrant">partial: peripheral patterns exist</span>
+        </div>
+        <div class="roadmap-card missing">
+          <strong>Cyborg HUD</strong>
+          <span>Dec · ROI -1177 · market 0.25</span>
+          <span>Operator-augmentation / interoception HUD.</span>
+          <span class="warrant">missing: needs a real augmentation pattern</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="forward-sources">
+      <h3>Certification Feeds: Realized And Future Cards</h3>
+      <p>
+        The roadmap is not the only source of card evidence. Two live registries
+        certify in both directions: satisfied stars and cleared Pudding levels
+        can warrant past or realized cards, while held stars, held sorries, and
+        open observables seed future downward cards.
+      </p>
+
+      <div class="source-feed-grid">
+        <div class="source-feed">
+          <strong>Capability-star certification feed</strong>
+          <span><code>M-capability-star-map.graph.edn</code>: 37 stars, 23 satisfied, 13 held, 1 active.</span>
+          <span>Realized certification: <code>:satisfied</code>. Future pressure: <code>:held</code>, <code>:active</code>.</span>
+          <ul>
+            <li><code>:distributed-proofreaders</code> active corpus QA frontier</li>
+            <li><code>:cold-eoi-authored-outbox</code>, <code>:cold-eoi-sent</code>, <code>:cold-send-response</code>, <code>:cold-response-conversion</code></li>
+            <li><code>:full-arxiv-mining</code>, <code>:symbol-grounding</code>, <code>:ai-passes-prelims</code></li>
+            <li><code>:efe-trustworthy-over-starmap</code>, <code>:hypergraph-operator</code>, <code>:wm-overnight-unsupervised</code></li>
+          </ul>
+        </div>
+
+        <div class="source-feed pudding">
+          <strong>Pudding Prover certification feed</strong>
+          <span><code>pudding-prover-registry.edn</code>: 47 sorries, 24 satisfied, 22 held, plus 7 open observables.</span>
+          <span>Realized certification: <code>:satisfied</code>, <code>:observed</code>. Future pressure: <code>:held</code>, <code>:open</code>.</span>
+          <ul>
+            <li><code>T2.2</code> through <code>T2.5</code>: outbox, send, response, conversion</li>
+            <li><code>T3.3</code>, <code>T3.4</code>: ArXiv mining and prelim capability</li>
+            <li><code>T4.3</code>, <code>T4.4</code>: governance and Anthropic hook</li>
+            <li><code>T5.1</code>, <code>T5.2</code>: hypergraph semantics and language/formal bridge</li>
+            <li><code>O-cross-mission-unlocking</code>, <code>O-semilattice-rollout-reconciliation</code>, <code>O-scheduled-cadence</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-prose">
+    <h2>Forward-Model Story: Held / Deferred Schema</h2>
+    <p>
+      The <code>held/deferred schema</code> node is the clearest place in this
+      slice where the graph is informed mainly by expected patterns rather than
+      by existing apparatus. The story is still concrete: if this schema existed,
+      every parked obligation would become a typed object with a reason, owner,
+      evidence condition, wake trigger, expiry or review rule, and re-entry path.
+    </p>
+
+    <h3>What We Would Get</h3>
+    <ul>
+      <li><strong>Bounded deferral memory.</strong> Held work would stop living as folklore in mission prose or chat history; every pause would have a durable record and a named condition for being revisited.</li>
+      <li><strong>Operator-safe re-entry.</strong> The operator could ask what should wake up now, and the answer would be governed by evidence, dates, or dependency events rather than by manual archaeology.</li>
+      <li><strong>Mission pressure signal.</strong> Repeated held items with the same reason or missing evidence would become visible pressure for new missions, invariants, or substrate work.</li>
+      <li><strong>Pattern-seeding loop.</strong> As deferrals accumulate, repeated reason/trigger/outcome shapes would seed real library patterns rather than remaining one-off exceptions.</li>
+    </ul>
+
+    <h3>Candidate Patterns Seeded By The Story</h3>
+    <ul>
+      <li><code>agent/held-item-wake-trigger</code>: a held item is well formed only if it names the event, evidence, or date that wakes it back into work.</li>
+      <li><code>agent/deferral-ledger-as-operator-memory</code>: deferred obligations should live in a queryable ledger rather than in prose-only mission margins.</li>
+      <li><code>mission/deferred-work-reentry-protocol</code>: when a held item wakes, it must re-enter through a declared mission phase or operator review gate rather than becoming an unscoped task.</li>
+    </ul>
+  </section>
+</main>
+<script>
+(function(){
+  var EP="http://localhost:7070/api/alpha/cascade-real";
+  var DIMS=[["O1","mined-move arrows (keystone)"],["O3","lineage"],["O4","upward clusters"],
+            ["O5","honest holes"],["O2","mine · read-consumer"]];
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function render(d){
+    var asof=new Date(d["as-of-ms"]).toLocaleTimeString();
+    document.getElementById("live-asof").innerHTML="as of "+asof+" · "+
+      (d["consistent?"]?"<b style='color:#0b5'>composed ✓ consistent</b>":"<b style='color:#a33'>INCONSISTENT</b>");
+    var dim=d.dimensions||{}, own=d.owners||{}, comp=d.composition||{}, std=d.standards||{};
+    var rows=DIMS.map(function(p){var k=p[0];return "<span style='display:inline-block;margin:2px 8px 2px 0;padding:3px 8px;border-radius:6px;background:#eef2ff;'>"+
+      "<b>"+k+"</b> "+esc(p[1])+" · <b>"+(dim[k]||0)+"</b> · <i style='color:#789'>"+esc(own[k]||"")+"</i></span>";}).join("");
+    var spine=(d.spine||{})["canonical-mission-nodes"]||0;
+    var holes=Object.keys(d.holes||{}).map(function(k){return esc(k)+": <b>"+d.holes[k]+"</b>";}).join(" · ")||"none";
+    var sdots=Object.keys(std).map(function(k){return "<span title='"+esc(k)+"' style='color:"+(std[k]?"#0b5":"#c33")+"'>●</span>";}).join(" ");
+    document.getElementById("live-body").innerHTML=
+      "<div style='margin-bottom:6px'>"+rows+"</div>"+
+      "<div style='margin:6px 0'><b>Spine:</b> "+spine+" canonical mission nodes — the one shared identity every dimension keys.</div>"+
+      "<div style='margin:6px 0'><b>Composition (the cascade is ONE graph, not seven pictures):</b> "+
+        "O1×O4 share <b>"+(comp.O1xO4||0)+"</b> mission nodes · O5×O1 <b>"+(comp.O5xO1||0)+"</b> · O4×O3 "+(comp.O4xO3||0)+" · O1×O3 "+(comp.O1xO3||0)+"</div>"+
+      "<div style='margin:6px 0'><b>Honest holes (the point):</b> "+holes+"</div>"+
+      "<div style='margin:6px 0'><b>Clause-1 standards:</b> "+sdots+" <span style='color:#888'>(regenerates · evidence · reconstitution · honest-holes · composed)</span></div>"+
+      "<div style='color:#999;font-size:11px;margin-top:6px'>The diagram below is the design; this panel is the live data it is now made of — fetched from substrate-2. Reload to re-read.</div>";
+  }
+  fetch(EP).then(function(r){return r.json();}).then(render).catch(function(){
+    document.getElementById("live-asof").textContent="(offline)";
+    document.getElementById("live-body").innerHTML="<span style='color:#a33'>Can't reach the stack at "+EP+
+      " — showing the static sketch below. Start the futon3c server (:7070) to see live data.</span>";
+  });
+})();
+</script>
+</body>
+</html>

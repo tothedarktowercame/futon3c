@@ -40,7 +40,10 @@
  ;; Every organ value below is a CELL.  The two constructors:
  :cell
  {:term  {:shape {:judgment "the organ's value (organ-specific, see :organs)"
-                  :ground   "the evidence licensing it (organ-specific)"}
+                  :ground   "the evidence licensing it (organ-specific). v0.4
+                              producer-derived grounds are typed maps with
+                              :ground/kind; legacy/pre-wrapped pilot cells may
+                              still carry strings, keywords, or maps."}
           :rule  "a :term without :ground is a violation (R5); grounds are
                   data the maker did not manufacture at render time —
                   no-self-certification"}
@@ -50,6 +53,32 @@
           :rule  "an absence without :kind is a violation (R2); a sorry is
                   type-without-term with context fixed by :flight/id —
                   the standing sorrys.edn sense, not a wishlist entry"}}
+
+ :ground
+ {:shape {:ground/kind "keyword naming the verification mode"
+          "...         " "kind-specific witness fields"}
+  :kinds [:begin-scan        ; begin artifact + scan timestamp
+          :organ-ref         ; this organ is grounded by another organ
+          :ref               ; findable external/source ref
+          :pilot-synthesis   ; recorded reasoning is the witness
+          :queued            ; queued warrant, not yet determined
+          :inline-evidence   ; evidence lines live inside the judgment
+          :cycle-metadata
+          :model-output
+          :artifact-ref
+          :evidence-ref
+          :missing-witness
+          :derived
+          :event-log
+          :absence
+          :settle-protocol
+          :backfilled-frame
+          :supplied-at-close]
+  :rule "The producer emits typed maps for every ground it derives. A pilot
+         may still supply a pre-wrapped {:judgment :ground} cell whose
+         :ground is legacy prose; the composer passes it through rather than
+         pretending to understand it. The migration is complete when new
+         producer records no longer manufacture prose grounds."}
 
  :sorry/kinds
  [:proposal-mode      ; typed absence by design (consent gate not crossed)

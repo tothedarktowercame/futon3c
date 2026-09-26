@@ -1,0 +1,48 @@
+{
+  "arrows" : [ {
+    "from" : "injury_severity",
+    "to" : "tourniquet_use"
+  }, {
+    "from" : "injury_severity",
+    "to" : "pre_admission_survival"
+  }, {
+    "from" : "injury_severity",
+    "to" : "post_admission_survival"
+  }, {
+    "from" : "tourniquet_use",
+    "to" : "pre_admission_survival"
+  }, {
+    "from" : "pre_admission_survival",
+    "to" : "post_admission_survival"
+  }, {
+    "from" : "tourniquet_use",
+    "to" : "post_admission_survival"
+  } ],
+  "id" : "tourniquet-selection-mediation",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "non-Boolean value domains are graph-only: categorical", "numeric observational distributions are not evaluated" ],
+    "source-file" : "tourniquet-selection-mediation.json"
+  },
+  "variables" : [ {
+    "id" : "injury_severity",
+    "kind" : "observed",
+    "mfuton_value_domain" : "categorical",
+    "name" : "Injury Severity"
+  }, {
+    "id" : "tourniquet_use",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Tourniquet Use"
+  }, {
+    "id" : "pre_admission_survival",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Pre-Admission Survival"
+  }, {
+    "id" : "post_admission_survival",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Post-Admission Survival"
+  } ]
+}

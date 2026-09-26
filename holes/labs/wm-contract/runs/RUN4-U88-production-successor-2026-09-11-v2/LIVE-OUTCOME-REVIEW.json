@@ -1,0 +1,68 @@
+{
+  "schema": "wm/successor-v2-outcome-review-v1",
+  "at": "2026-09-11T11:33:39.828835+00:00",
+  "click": "wm-click-9526b317-e016-4865-aed1-9a0812c38db3",
+  "outcome": "incomplete",
+  "binding": "unavailable",
+  "run-record": "absent",
+  "projection": "absent",
+  "worker-jobs": [],
+  "same-step-observation": {
+    "http-status": 500,
+    "body": {
+      "error": "run4-terminal-evidence-refused",
+      "reason": "invalid-click-run-binding",
+      "message": "RUN4 terminal evidence refused"
+    }
+  },
+  "report": {
+    "refused": "invalid-click-run-binding"
+  },
+  "repair057": "awaiting-validation",
+  "current-stop-line": "repair-attempt-058-untyped-failure",
+  "current-stop-line-is-historical-selection-proof": false,
+  "visibility": "stale working/pending",
+  "accepted": false,
+  "sources": [
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/001-time-step.edn",
+      "sha256": "7ece44f44e64f1efd7aaf6b67f26b2c6daf2454be5574e26368b3208df5d4a5f"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/003-construction.edn",
+      "sha256": "dd72b3cb4029ea2d891aeb6373dea54872903d0b3c7625f237e069f3ebac60a2"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/004-dispatch.edn",
+      "sha256": "936b2348b90b99f0196c124b7cd9c83d732d156d087a452baf5f16ef0256e131"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/005-build.edn",
+      "sha256": "dd5bd9e9e6010a9c43ebb040c702864ea73821df4410a992edcf3c3180286d50"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/002-selection.edn",
+      "sha256": "6836c6caf4c9087e15ae2052ede8c848fd3b078aa5df90630d9d881784663221"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/006-adjudication.edn",
+      "sha256": "82b2c3725c11de0a717b087f4f32d495ca4c7287112431ed6a518071951cbca8"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/cohort-data/run4-u88-production-successor-20260911-v2/attempt-001/007-closed.edn",
+      "sha256": "b572358898e57271b788d897bb0fd975b1d93367d62fd9b2e0fa8cf82fef71b6"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/controller/001-started.edn",
+      "sha256": "ffba010c30c0b9db3a5336efa21a0fce9e90d7424ba1399f95ea41cbb384a372"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/bindings/click-run-binding-wm-click-9526b317-e016-4865-aed1-9a0812c38db3.edn",
+      "sha256": "1177cda51460b9b91464b8ef675917c9c8f0b120c0ffcde69c7eaf9ba352d963"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/visibility/run-visibility.json",
+      "sha256": "9d5514ed390a50c0851a3b4edb203f166250529db6c3e8f0ce7ba2b53f837113"
+    }
+  ]
+}

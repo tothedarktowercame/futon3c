@@ -1,0 +1,71 @@
+diff --git a/problems/b01A04/lean/Main.lean b/problems/b01A04/lean/Main.lean
+index b53352f..56ee83b 100644
+--- a/problems/b01A04/lean/Main.lean
++++ b/problems/b01A04/lean/Main.lean
+@@ -97,7 +97,33 @@ theorem apm_b01A04_bridge_compositum_restrict_equiv
+     (hinf : K ⊓ L = ⊥) (hsup : K ⊔ L = ⊤) :
+     Nonempty
+       ((E ≃ₐ[F] E) ≃* ((K ≃ₐ[F] K) × (L ≃ₐ[F] L))) := by
+-  sorry
++  let rK : (E ≃ₐ[F] E) →* (K ≃ₐ[F] K) := AlgEquiv.restrictNormalHom K
++  let rL : (E ≃ₐ[F] E) →* (L ≃ₐ[F] L) := AlgEquiv.restrictNormalHom L
++  let r := rK.prod rL
++  refine ⟨MulEquiv.ofBijective r ?_⟩
++  apply (Nat.bijective_iff_injective_and_card r).2
++  constructor
++  · refine (injective_iff_map_eq_one r).2 fun φ hφ ↦ ?_
++    have hfixK : φ ∈ K.fixingSubgroup := by
++      rw [IntermediateField.mem_fixingSubgroup_iff]
++      intro x hx
++      have hx' := DFunLike.congr_fun (congr_arg Prod.fst hφ) (⟨x, hx⟩ : K)
++      simpa [r, rK, AlgEquiv.restrictNormalHom_apply] using congr_arg Subtype.val hx'
++    have hfixL : φ ∈ L.fixingSubgroup := by
++      rw [IntermediateField.mem_fixingSubgroup_iff]
++      intro x hx
++      have hx' := DFunLike.congr_fun (congr_arg Prod.snd hφ) (⟨x, hx⟩ : L)
++      simpa [r, rL, AlgEquiv.restrictNormalHom_apply] using congr_arg Subtype.val hx'
++    have hfix : φ ∈ (K ⊔ L).fixingSubgroup := by
++      rw [IntermediateField.fixingSubgroup_sup]
++      exact ⟨hfixK, hfixL⟩
++    rw [hsup, IntermediateField.fixingSubgroup_top] at hfix
++    exact hfix
++  · rw [Nat.card_prod, IsGalois.card_aut_eq_finrank,
++      IsGalois.card_aut_eq_finrank, IsGalois.card_aut_eq_finrank]
++    have hdisj : K.LinearDisjoint L :=
++      IntermediateField.LinearDisjoint.of_inf_eq_bot hinf
++    rw [← hdisj.finrank_sup, hsup, IntermediateField.finrank_top']
+ 
+ theorem apm_b01a04 :
+     apm_b01A04_isGaloisGroup (Multiplicative (ZMod 3)) ∧
+@@ -144,4 +170,30 @@ theorem apm_b01a04 :
+   disjoint pair. Those arithmetic constructions and the simultaneous
+   restriction equivalence for the compositum remain open.
+   -/
+-  sorry
++  rcases apm_b01A04_bridge_cubic_compositum_exists with ⟨E, hE, hrest⟩
++  letI : Field E := hE
++  rcases hrest with ⟨hA, hrest⟩
++  letI : Algebra ℚ E := hA
++  rcases hrest with ⟨hfd, K, L, hGalE, hGalK, hGalL, hfinK, hfinL, hinf, hsup⟩
++  letI : FiniteDimensional ℚ E := hfd
++  have hAlgK : (DivisionRing.toRatAlgebra : Algebra ℚ K) = K.algebra' := Subsingleton.elim _ _
++  have hAlgL : (DivisionRing.toRatAlgebra : Algebra ℚ L) = L.algebra' := Subsingleton.elim _ _
++  have hGalK' : @IsGalois ℚ _ K _ K.algebra' := hAlgK ▸ hGalK
++  have hGalL' : @IsGalois ℚ _ L _ L.algebra' := hAlgL ▸ hGalL
++  letI : Algebra ℚ K := K.algebra'
++  letI : Algebra ℚ L := L.algebra'
++  have hfinK' : Module.finrank ℚ K = 3 := by simpa [← hAlgK] using hfinK
++  have hfinL' : Module.finrank ℚ L = 3 := by simpa [← hAlgL] using hfinL
++  have eK := apm_b01A04_aut_mulEquiv_zmod_three K hfinK'
++  have eL := apm_b01A04_aut_mulEquiv_zmod_three L hfinL'
++  constructor
++  · exact ⟨K, inferInstance, inferInstance, hGalK', eK⟩
++  · have eProd := apm_b01A04_bridge_compositum_restrict_equiv
++      ℚ E K L hGalK' hGalL' hinf hsup
++    have hprod : apm_b01A04_isGaloisGroup
++        (Multiplicative (ZMod 3) × Multiplicative (ZMod 3)) := by
++      rcases eK with ⟨eK⟩
++      rcases eL with ⟨eL⟩
++      rcases eProd with ⟨eProd⟩
++      exact ⟨E, hE, hA, hGalE, ⟨eProd.trans (eK.prodCongr eL)⟩⟩
++    exact (apm_b01A04_isGaloisGroup_multiplicative_prod_iff (ZMod 3) (ZMod 3)).2 hprod

@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Testing futon3c.test-registry.validation-test
+
+Ran 7 tests containing 55 assertions.
+0 failures, 0 errors.

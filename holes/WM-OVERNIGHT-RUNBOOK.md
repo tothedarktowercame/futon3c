@@ -1,5 +1,38 @@
 # WM Guardrailed Overnight Run — pilot runbook (claude-1, 2026-06-06)
 
+> ## ⏸ PAUSED — re-arm condition (written at the switch per WR-26, 2026-08-08)
+>
+> **Why paused (specific, not a mood):** the *engineering* phase is complete —
+> the WM works (guardrails apparatus live-verified, bounded autonomy armed,
+> star-map C3 passed). The **"so what" phase has not started**, and the pause
+> exists because we do not yet have an instrumentation that would allow us to
+> even begin to answer "so what." Running overnight before that instrument
+> exists would produce cycles whose value cannot be measured.
+>
+> **Re-arm condition (countable):** this runbook re-arms for guardrails-mode
+> overnight runs when the evaluation instrument produces its **first fleet
+> capability measurement — one qualified cohort scored end-to-end with zero
+> operator-adjudication events** (checkable from receipts). No judgment call
+> at re-arm time; the condition discharges mechanically or it doesn't.
+>
+> **The "so what" paper:** `~/code/p4ng/science-2026.tex` (the driver that
+> carries the formal apparatus but not the pattern catalogue). The pause ends
+> where that paper's evaluation section begins.
+>
+> **Reference implementation for the pairing:**
+> `~/code/futon5/holes/tech-notes/paper/supplement5.tex` — the MetaCA miner,
+> an AIF-driven search process (policy precision β × epistemic weight κ) that
+> almost-worked-as-specified: it scores a parameter surface, moves under a
+> learned surrogate, and reports where it went; its honest negative (*no
+> self-driving search was achieved*) is stated as the point, and it worked
+> well enough to discover something interesting. What it suggests: pair the
+> AIF-driven WM with an evaluation harness in the Part III register (criteria
+> fixed in advance; live-vs-frozen-vs-blind gate comparisons;
+> `TN-part-III-b-baldwin-recovery` as the design exemplar).
+>
+> Cross-refs: WR-26 + WR-27 (`futon3/holes/war-room.md`), War Bulletin 15
+> Finding 3 (`futon3/holes/war-bulletin-15.md`).
+
 The `/loop`-driven pilot protocol for a guardrailed overnight outing. Composes the
 first-outing harness (`M-war-machine-first-outing.md` §8.7–8.9) with guardrails mode
 (`WM-GUARDRAILS-SPEC.md`) + the new pieces (Units 3/4). This is the inductive-step

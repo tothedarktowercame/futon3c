@@ -1,0 +1,979 @@
+{:plan
+ {:constraints [],
+  :owner-questions [],
+  :construction-parameters
+  {:budget
+   {:value {:max-moves 4, :max-expansions 20000},
+    :authority
+    {:by "claude-10",
+     :date "2026-09-24",
+     :ruling :none-found,
+     :commit "891b4af6"}},
+   :move-cost
+   {:value 0,
+    :authority
+    {:by "claude-10",
+     :date "2026-09-24",
+     :ruling :none-found,
+     :reason
+     "a construction move is computation inside the tick, not in G's units; cost 1 made the constructor decline M-aif-eig's plan (gain 0.33, :acting-worth-more)",
+     :commit "891b4af6"}}},
+  :answer-path
+  "Agency bell (mode work, requisition = target), poll to terminal, reply grammar :wm/want-interpretation-response-v1",
+  :unlocated [],
+  :store "/home/joe/code/futon2/data/wm-interpretations",
+  :clicks
+  {:max 1,
+   :run-ids "<date>-flight-d00574c8-click-<n>",
+   :via
+   "POST /api/alpha/wm/click with flight-edn: an ordinary click (budget consume + cast-seat preflight); runner/run-opportunity! in the serving JVM"},
+  :coverage-questions nil,
+  :resolved-steps
+  {:bb "bb",
+   :enact
+   "flight-runner/enact-fn over the click's run record (observe-publication-fn inside it)",
+   :library-root "/home/joe/code/futon3/library",
+   :cascades {:absent :no-cascades-dir},
+   :checker
+   "/home/joe/code/futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj",
+   :quotes {:absent :no-quotes},
+   :dispatch-step {:absent :no-dispatch-configured},
+   :wc "flight-runner/wc-verdict-fn with the checker and bb",
+   :field-entry {:absent :no-field-entry}},
+  :run? true,
+  :horizon
+  {:value 4,
+   :authority
+   {:source :cascade-sources,
+    :declarations
+    [{:source "T-repair-occ-444fb018.edn", :horizon-steps 4}]}},
+  :want-source
+  {:kind :a-exits,
+   :repo "futon3c",
+   :path "holes/missions/M-autoclock-in.md",
+   :lifecycle nil,
+   :text-read? true},
+  :criteria-from :none,
+  :open-wants [],
+  :requisition "M-autoclock-in",
+  :readings-it-would-request
+  {:coverage nil,
+   :constraints
+   {:mission-sha "text-8c765057668d3e96", :tokens-an-edge-may-join 0},
+   :criteria
+   {:sections-read
+    ["Mission: M-autoclock-in"
+     "HEAD (Joe, 2026-06-02, verbatim sense)"
+     "The tension"
+     "The idea (to refine in MAP/DERIVE)"
+     "Relations"
+     "IDENTIFY exit (when picked up)"
+     "MAP (2026-06-03)"
+     "Existing Infrastructure"
+     "Ready vs Missing"
+     "MAP Findings"
+     "DERIVE (2026-06-03)"
+     "Witnessed-Promotion Rule"
+     "Design Decisions"
+     "Audit Shape"
+     "INSTANTIATE-1 (2026-06-03)"
+     "INSTANTIATE-1 Smoke Checks"
+     "INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)"
+     "Remaining Work"
+     "INSTANTIATE-2 (2026-06-04) — creation-clock"
+     "INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)"
+     "INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)"
+     "INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)"
+     "DIAGNOSIS 2026-09-21"
+     "1. Implementation, runtime evidence, and firing receipts"
+     "2. Last-seven-day coverage"
+     "3. Why today's roster is nil"
+     "4. Missing inference and the first fix"
+     "INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)"
+     "INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)"
+     "Surface check, 2026-09-21 18:47:40Z (report only)"
+     "INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)"
+     "INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)"
+     "Top-level catalog correction (2026-09-21)"
+     "INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)"]},
+   :locators []},
+  :constraint-questions nil,
+  :answering-seat "claude-5",
+  :requests-it-would-issue [],
+  :placement {:target "M-autoclock-in", :target-source :hand-placed},
+  :published-already [],
+  :wants {:in-view [], :out-of-view [], :unlocated []},
+  :needs-in-serving-jvm
+  "futon3c b7340968 (flight-edn) and futon2 runner/war-machine at this checkout, reloaded from master",
+  :flight-id "flight-d00574c8",
+  :machine-located []},
+ :flight
+ {:needs
+  [{:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h1dae607747ce,
+    :request-id "request-b3b0022ddda2f999",
+    :seat "claude-5",
+    :job-id "invoke-1790368741658-24428-7c7d3cad"}
+   {:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h5c6933e5e2fc,
+    :request-id "request-aa2a403a784b34cd",
+    :seat "claude-5",
+    :job-id "invoke-1790368768536-24429-bb630b1f"}
+   {:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h7afd70f40a29,
+    :request-id "request-1dca471fe48d375a",
+    :seat "claude-5",
+    :job-id "invoke-1790368798337-24430-11ca2910"}
+   {:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h0c55648e57e5,
+    :request-id "request-c77cd371342af81d",
+    :seat "claude-5",
+    :job-id "invoke-1790368850860-24433-c0f1f3bd"}
+   {:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h0f3acdf222d7,
+    :request-id "request-7653ad0d9b42e737",
+    :seat "claude-5",
+    :job-id "invoke-1790368868751-24434-86a76a59"}
+   {:kind :rejected,
+    :missing :locator,
+    :want :exit/h59adca2cd730,
+    :request-id "request-bed3d583bc43e333",
+    :seat "claude-5",
+    :job-id "invoke-1790368892425-24435-1437e853"}
+   {:kind :unparseable-response,
+    :missing :locator,
+    :want :exit/h3ec5f3fe6a95,
+    :request-id "request-04ec41b1cd77f3d7",
+    :seat "claude-5",
+    :job-id "invoke-1790368916331-24436-9470cf6f"}
+   {:kind :unparseable-response,
+    :missing :constraints,
+    :want :constraints,
+    :request-id "request-f45fcf455b763517",
+    :seat "claude-5",
+    :job-id "invoke-1790368936935-24437-16693c6f"}
+   {:request-id "request-9d8434ffa33ec59c",
+    :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+    :question
+    "What is the mission's overall done-when? The Status line still reads INSTANTIATE-1 while the body runs to INSTANTIATE-8, and no section states an exit for the whole mission.",
+    :alternatives
+    ["Done when the IDENTIFY exit is met (already satisfied by DERIVE/INSTANTIATE-1)"
+     "Done when every accepted turn carries a durable clock decision and the subsequent behaviours (inheritance, code-file inference, restoration) are delivered"
+     "Done only after the open items at the end (inherited reclocking, live Kimi summary check, in-job compaction) close"],
+    :kind :owner-question,
+    :want nil,
+    :notified true,
+    :missing :owner-answer,
+    :span
+    {:lines [3 3],
+     :quote
+     "**Status:** INSTANTIATE-1 (first implementation, 2026-06-03) — explicit resolved target auto-promotion is implemented in `agent-chat.el`; broader confirmation/XTDB witnesses remain future work."},
+    :to "claude-4"}
+   {:request-id "request-9d8434ffa33ec59c",
+    :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+    :question
+    "Are the open items closing INSTANTIATE-8 (inherited reclocking via bells, a live Kimi summary check, single-job compaction) completion criteria for this mission, or follow-ups owned elsewhere?",
+    :alternatives
+    ["They are outstanding criteria of M-autoclock-in"
+     "They are follow-ups for the Kimi seat work and do not gate this mission"],
+    :kind :owner-question,
+    :want nil,
+    :notified true,
+    :missing :owner-answer,
+    :span
+    {:lines [865 868],
+     :quote
+     "Inherited reclocking is wanted (Joe): a bell carries its sender's clock to\nwhoever does the work. Open: a live check of the summary call against Kimi\n(written while the 5-hour window was exhausted), and compaction inside a\nsingle long job."},
+    :to "claude-4"}
+   {:request-id "request-3700db0370e216bd",
+    :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+    :question
+    "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+    :alternatives
+    ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+     "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+     "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."],
+    :kind :owner-question,
+    :want :exit/h82097c2c3790,
+    :notified true,
+    :missing :owner-answer,
+    :span
+    {:lines [66 66],
+     :quote
+     "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+    :to "claude-4"}
+   {:kind :rejected,
+    :missing :interpretation,
+    :want :exit/h1dae607747ce,
+    :request-id "request-98f357e9bba64e6f",
+    :seat "claude-5",
+    :job-id "invoke-1790369023027-24439-07e93896"}
+   {:kind :rejected,
+    :missing :interpretation,
+    :want :exit/h5c6933e5e2fc,
+    :request-id "request-396a3326f5c6c3bd",
+    :seat "claude-5",
+    :job-id "invoke-1790369112824-24441-513abdc4"}
+   {:kind :rejected,
+    :missing :interpretation,
+    :want :exit/h7afd70f40a29,
+    :request-id "request-4428124b73f89ea6",
+    :seat "claude-5",
+    :job-id "invoke-1790369189688-24442-ab57aea9"}
+   {:kind :rejected,
+    :missing :interpretation,
+    :want :exit/h0c55648e57e5,
+    :request-id "request-11b88b0a9f14cabe",
+    :seat "claude-5",
+    :job-id "invoke-1790369290758-24444-fc7ddc82"}
+   {:kind :unparseable-response,
+    :missing :interpretation,
+    :want :exit/h0f3acdf222d7,
+    :request-id nil,
+    :seat "claude-5",
+    :job-id "invoke-1790369386910-24446-7b23739b"}
+   {:kind :unparseable-response,
+    :missing :interpretation,
+    :want :exit/h59adca2cd730,
+    :request-id nil,
+    :seat "claude-5",
+    :job-id "invoke-1790369467819-24447-a742f8ce"}
+   {:kind :unparseable-response,
+    :missing :interpretation,
+    :want :exit/h3ec5f3fe6a95,
+    :request-id nil,
+    :seat "claude-5",
+    :job-id "invoke-1790369547801-24448-9753bf46"}
+   {:click-id "2026-09-25-flight-d00574c8-click-1",
+    :kind :click-not-started,
+    :missing :click}],
+  :flight/id "flight-d00574c8",
+  :readings
+  [{:asked
+    [{:kind :criteria,
+      :want :criteria,
+      :request-id "request-9d8434ffa33ec59c",
+      :seat "claude-5",
+      :job-id "invoke-1790368678557-24427-e4783296",
+      :outcome :published}
+     {:kind :locator,
+      :want :exit/h1dae607747ce,
+      :request-id "request-b3b0022ddda2f999",
+      :seat "claude-5",
+      :job-id "invoke-1790368741658-24428-7c7d3cad",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :locator,
+      :want :exit/h5c6933e5e2fc,
+      :request-id "request-aa2a403a784b34cd",
+      :seat "claude-5",
+      :job-id "invoke-1790368768536-24429-bb630b1f",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :locator,
+      :want :exit/h7afd70f40a29,
+      :request-id "request-1dca471fe48d375a",
+      :seat "claude-5",
+      :job-id "invoke-1790368798337-24430-11ca2910",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :locator,
+      :want :exit/h82097c2c3790,
+      :request-id "request-3700db0370e216bd",
+      :seat "claude-5",
+      :job-id "invoke-1790368823593-24431-3f453f28",
+      :outcome :questions,
+      :questions
+      [{:question
+        "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+        :span
+        {:lines [66 66],
+         :quote
+         "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+        :alternatives
+        ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+         "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+         "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."]}]}
+     {:kind :locator,
+      :want :exit/h0c55648e57e5,
+      :request-id "request-c77cd371342af81d",
+      :seat "claude-5",
+      :job-id "invoke-1790368850860-24433-c0f1f3bd",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :locator,
+      :want :exit/h0f3acdf222d7,
+      :request-id "request-7653ad0d9b42e737",
+      :seat "claude-5",
+      :job-id "invoke-1790368868751-24434-86a76a59",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :locator,
+      :want :exit/h59adca2cd730,
+      :request-id "request-bed3d583bc43e333",
+      :seat "claude-5",
+      :job-id "invoke-1790368892425-24435-1437e853",
+      :outcome :rejected,
+      :reasons
+      [{:reason :cue-not-in-criterion,
+        :quote
+        "run a complete isolated session through each surface ... Every accepted turn must have a persisted decision ... Repeat with an existing valid resolved clock input and expect the positive decision. Read both cases back through a newly constructed real durable backend client; retry the same turn and assert no duplicate decision. If recording fails, assert it is surfaced as an accounting failure"}]}
+     {:kind :locator,
+      :want :exit/h3ec5f3fe6a95,
+      :request-id "request-04ec41b1cd77f3d7",
+      :seat "claude-5",
+      :job-id "invoke-1790368916331-24436-9470cf6f",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:kind :constraints,
+      :want :constraints,
+      :request-id "request-f45fcf455b763517",
+      :seat "claude-5",
+      :job-id "invoke-1790368936935-24437-16693c6f",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}],
+    :served-by
+    {:outcomes
+     {:filter-counts {:outcomes 0, :rejected 2, :facets 0},
+      :schema :wm/mission-outcomes-v5,
+      :extractor
+      {:script "scripts/wm/extract-outcomes.clj",
+       :cue-rules
+       [:cue/closing-ask
+        :cue/wants-a
+        :cue/so-party-could
+        :cue/could-not
+        :cue/had-to
+        :cue/intended-end
+        :cue/exit-is
+        :cue/do-not
+        :cue/develops
+        :cue/recorded-form
+        :cue/not-what-wanted
+        :cue/must-impersonate
+        :cue/every-later-must
+        :cue/otherwise
+        :cue/cost-of
+        :cue/contrast-with-you-can
+        :cue/contrast-lets-you
+        :cue/contrast-property-not],
+       :consolidation :e1-same-instance-or-party-and-artefact,
+       :filter :e4-e5-four-clause-H-C-DEF-S2,
+       :served-by-basis :shared-named-artefact,
+       :coupling-artefacts
+       [:provider-parsed-from-agent-id
+        :first-implementation-impersonated
+        :second-implementation-kept-in-sync
+        :hardcoded-prompt-text
+        :emacs-turn-record-seam]},
+      :rejected
+      [{:instance nil,
+        :failed-cue [9 9],
+        :rules [:cue/so-party-could],
+        :cues
+        [{:quote
+          "\"let's work on M-foo\") that already exists on the filesystem / in XTDB — so we could **auto-promote** it: detect the mission in the turn, confirm it exists, and clock in.",
+          :cue [9 9],
+          :span [774 944],
+          :rules [:cue/so-party-could]}],
+        :reason :clause2/no-party-no-artefact,
+        :id :o-1,
+        :whose :the-mission,
+        :clause 2,
+        :reads
+        "attributes to no party and names no artefact whose state could close a discrepancy",
+        :clause-failures
+        [{:clause 2,
+          :reason :clause2/no-party-no-artefact,
+          :reads
+          "attributes to no party and names no artefact whose state could close a discrepancy",
+          :cue [9 9],
+          :quote
+          "\"let's work on M-foo\") that already exists on the filesystem / in XTDB — so we could **auto-promote** it: detect the mission in the turn, confirm it exists, and clock in."}]}
+       {:instance nil,
+        :failed-cue [128 128],
+        :rules [:cue/so-party-could],
+        :cues
+        [{:quote
+          "Review (claude-3, of `a1add6d`) found the detector promoted on *any* exact resolved token, including a mission named in passing while already clocked — so it could switch you off active work.",
+          :cue [128 128],
+          :span [10025 10216],
+          :rules [:cue/so-party-could]}],
+        :reason :clause2/no-party-no-artefact,
+        :id :o-2,
+        :whose :the-mission,
+        :clause 2,
+        :reads
+        "attributes to no party and names no artefact whose state could close a discrepancy",
+        :clause-failures
+        [{:clause 2,
+          :reason :clause2/no-party-no-artefact,
+          :reads
+          "attributes to no party and names no artefact whose state could close a discrepancy",
+          :cue [128 128],
+          :quote
+          "Review (claude-3, of `a1add6d`) found the detector promoted on *any* exact resolved token, including a mission named in passing while already clocked — so it could switch you off active work."}]}],
+      :mission
+      {:path "futon3c/holes/missions/M-autoclock-in.md",
+       :lines 868,
+       :sha256
+       "2c13893a24d17a6f3c8b9279d5e96961826c0dc845b5614174a5f0b0d27f28c0"},
+      :weighting
+      {:absent :unstated,
+       :note "no line assigns a magnitude or compares two outcomes"},
+      :served-by {:absent :no-instances-anchor},
+      :unlinked {:count 0, :outcomes []},
+      :facets [],
+      :sections-read
+      [{:level 1, :title "Mission: M-autoclock-in", :line 1}
+       {:level 2,
+        :title "HEAD (Joe, 2026-06-02, verbatim sense)",
+        :line 7}
+       {:level 2, :title "The tension", :line 11}
+       {:level 2,
+        :title "The idea (to refine in MAP/DERIVE)",
+        :line 16}
+       {:level 2, :title "Relations", :line 24}
+       {:level 2, :title "IDENTIFY exit (when picked up)", :line 32}
+       {:level 2, :title "MAP (2026-06-03)", :line 36}
+       {:level 3, :title "Existing Infrastructure", :line 38}
+       {:level 3, :title "Ready vs Missing", :line 45}
+       {:level 3, :title "MAP Findings", :line 54}
+       {:level 2, :title "DERIVE (2026-06-03)", :line 60}
+       {:level 3, :title "Witnessed-Promotion Rule", :line 62}
+       {:level 3, :title "Design Decisions", :line 76}
+       {:level 3, :title "Audit Shape", :line 88}
+       {:level 2, :title "INSTANTIATE-1 (2026-06-03)", :line 106}
+       {:level 3, :title "INSTANTIATE-1 Smoke Checks", :line 119}
+       {:level 2,
+        :title
+        "INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)",
+        :line 126}
+       {:level 3, :title "Remaining Work", :line 136}
+       {:level 2,
+        :title "INSTANTIATE-2 (2026-06-04) — creation-clock",
+        :line 151}
+       {:level 2,
+        :title
+        "INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)",
+        :line 162}
+       {:level 2,
+        :title
+        "INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)",
+        :line 212}
+       {:level 2,
+        :title
+        "INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)",
+        :line 226}
+       {:level 2, :title "DIAGNOSIS 2026-09-21", :line 278}
+       {:level 3,
+        :title
+        "1. Implementation, runtime evidence, and firing receipts",
+        :line 287}
+       {:level 3, :title "2. Last-seven-day coverage", :line 360}
+       {:level 3, :title "3. Why today's roster is nil", :line 399}
+       {:level 3,
+        :title "4. Missing inference and the first fix",
+        :line 450}
+       {:level 2,
+        :title
+        "INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)",
+        :line 507}
+       {:level 2,
+        :title
+        "INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)",
+        :line 589}
+       {:level 3,
+        :title "Surface check, 2026-09-21 18:47:40Z (report only)",
+        :line 668}
+       {:level 2,
+        :title
+        "INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)",
+        :line 695}
+       {:level 2,
+        :title
+        "INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)",
+        :line 723}
+       {:level 2,
+        :title "Top-level catalog correction (2026-09-21)",
+        :line 768}
+       {:level 2,
+        :title
+        "INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)",
+        :line 802}],
+      :offset-unit :unicode-codepoints-zero-based-end-exclusive,
+      :outcomes
+      {:absent :no-stated-outcome,
+       :sections-read
+       ["Mission: M-autoclock-in"
+        "HEAD (Joe, 2026-06-02, verbatim sense)"
+        "The tension"
+        "The idea (to refine in MAP/DERIVE)"
+        "Relations"
+        "IDENTIFY exit (when picked up)"
+        "MAP (2026-06-03)"
+        "Existing Infrastructure"
+        "Ready vs Missing"
+        "MAP Findings"
+        "DERIVE (2026-06-03)"
+        "Witnessed-Promotion Rule"
+        "Design Decisions"
+        "Audit Shape"
+        "INSTANTIATE-1 (2026-06-03)"
+        "INSTANTIATE-1 Smoke Checks"
+        "INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)"
+        "Remaining Work"
+        "INSTANTIATE-2 (2026-06-04) — creation-clock"
+        "INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)"
+        "INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)"
+        "INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)"
+        "DIAGNOSIS 2026-09-21"
+        "1. Implementation, runtime evidence, and firing receipts"
+        "2. Last-seven-day coverage"
+        "3. Why today's roster is nil"
+        "4. Missing inference and the first fix"
+        "INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)"
+        "INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)"
+        "Surface check, 2026-09-21 18:47:40Z (report only)"
+        "INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)"
+        "INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)"
+        "Top-level catalog correction (2026-09-21)"
+        "INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)"]}},
+     :text-sha256
+     "2c13893a24d17a6f3c8b9279d5e96961826c0dc845b5614174a5f0b0d27f28c0",
+     :served-by {:absent :no-instances-anchor},
+     :proposals {:absent :no-quotes}},
+    :text-sha256
+    "2c13893a24d17a6f3c8b9279d5e96961826c0dc845b5614174a5f0b0d27f28c0",
+    :needs
+    [{:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h1dae607747ce,
+      :request-id "request-b3b0022ddda2f999",
+      :seat "claude-5",
+      :job-id "invoke-1790368741658-24428-7c7d3cad"}
+     {:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h5c6933e5e2fc,
+      :request-id "request-aa2a403a784b34cd",
+      :seat "claude-5",
+      :job-id "invoke-1790368768536-24429-bb630b1f"}
+     {:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h7afd70f40a29,
+      :request-id "request-1dca471fe48d375a",
+      :seat "claude-5",
+      :job-id "invoke-1790368798337-24430-11ca2910"}
+     {:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h0c55648e57e5,
+      :request-id "request-c77cd371342af81d",
+      :seat "claude-5",
+      :job-id "invoke-1790368850860-24433-c0f1f3bd"}
+     {:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h0f3acdf222d7,
+      :request-id "request-7653ad0d9b42e737",
+      :seat "claude-5",
+      :job-id "invoke-1790368868751-24434-86a76a59"}
+     {:kind :rejected,
+      :missing :locator,
+      :want :exit/h59adca2cd730,
+      :request-id "request-bed3d583bc43e333",
+      :seat "claude-5",
+      :job-id "invoke-1790368892425-24435-1437e853"}
+     {:kind :unparseable-response,
+      :missing :locator,
+      :want :exit/h3ec5f3fe6a95,
+      :request-id "request-04ec41b1cd77f3d7",
+      :seat "claude-5",
+      :job-id "invoke-1790368916331-24436-9470cf6f"}
+     {:kind :unparseable-response,
+      :missing :constraints,
+      :want :constraints,
+      :request-id "request-f45fcf455b763517",
+      :seat "claude-5",
+      :job-id "invoke-1790368936935-24437-16693c6f"}
+     {:request-id "request-9d8434ffa33ec59c",
+      :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+      :question
+      "What is the mission's overall done-when? The Status line still reads INSTANTIATE-1 while the body runs to INSTANTIATE-8, and no section states an exit for the whole mission.",
+      :alternatives
+      ["Done when the IDENTIFY exit is met (already satisfied by DERIVE/INSTANTIATE-1)"
+       "Done when every accepted turn carries a durable clock decision and the subsequent behaviours (inheritance, code-file inference, restoration) are delivered"
+       "Done only after the open items at the end (inherited reclocking, live Kimi summary check, in-job compaction) close"],
+      :kind :owner-question,
+      :want nil,
+      :notified true,
+      :missing :owner-answer,
+      :span
+      {:lines [3 3],
+       :quote
+       "**Status:** INSTANTIATE-1 (first implementation, 2026-06-03) — explicit resolved target auto-promotion is implemented in `agent-chat.el`; broader confirmation/XTDB witnesses remain future work."},
+      :to "claude-4"}
+     {:request-id "request-9d8434ffa33ec59c",
+      :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+      :question
+      "Are the open items closing INSTANTIATE-8 (inherited reclocking via bells, a live Kimi summary check, single-job compaction) completion criteria for this mission, or follow-ups owned elsewhere?",
+      :alternatives
+      ["They are outstanding criteria of M-autoclock-in"
+       "They are follow-ups for the Kimi seat work and do not gate this mission"],
+      :kind :owner-question,
+      :want nil,
+      :notified true,
+      :missing :owner-answer,
+      :span
+      {:lines [865 868],
+       :quote
+       "Inherited reclocking is wanted (Joe): a bell carries its sender's clock to\nwhoever does the work. Open: a live check of the summary call against Kimi\n(written while the 5-hour window was exhausted), and compaction inside a\nsingle long job."},
+      :to "claude-4"}
+     {:request-id "request-3700db0370e216bd",
+      :notification {:job-id "invoke-1790368965260-24438-54e85e2b"},
+      :question
+      "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+      :alternatives
+      ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+       "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+       "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."],
+      :kind :owner-question,
+      :want :exit/h82097c2c3790,
+      :notified true,
+      :missing :owner-answer,
+      :span
+      {:lines [66 66],
+       :quote
+       "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+      :to "claude-4"}],
+    :before-click 1}],
+  :carried-wants [],
+  :clicks
+  [{:unreached-wants [],
+    :n 1,
+    :click-id "2026-09-25-flight-d00574c8-click-1",
+    :advanced [],
+    :open-after
+    [:exit/h1dae607747ce
+     :exit/h5c6933e5e2fc
+     :exit/h7afd70f40a29
+     :exit/h0c55648e57e5
+     :exit/h0f3acdf222d7
+     :exit/h59adca2cd730
+     :exit/h3ec5f3fe6a95],
+    :want-source
+    {:path "holes/missions/M-autoclock-in.md",
+     :constraints {:requires [], :unresolved []},
+     :criteria-by-token
+     #:exit{:h1dae607747ce
+            {:kind :extracted-criterion,
+             :line 32,
+             :phase "EXTRACTED",
+             :stated
+             "## IDENTIFY exit (when picked up)\n\nName the resolution rule (turn → candidate target → existence witness → confirm/switch) and the override surface, such that auto-clock can never *silently* mislabel a turn. Until then: manual clock-in + the hydra are the floor; this stub holds the idea so it isn't winged."},
+            :h5c6933e5e2fc
+            {:kind :extracted-criterion,
+             :line 18,
+             :phase "EXTRACTED",
+             :stated
+             "Auto-promote a mission/campaign/excursion target identified in a turn **iff**:\n1. it **resolves** to a real `M-*`/`C-*`/`E-*` that exists (filesystem + ideally XTDB), not a fuzzy guess;\n2. it respects **single-active** (auto-promote *switches*, never stacks — same constraint as manual clock-in);\n3. it is **operator-overridable / confirmable**, never silent — the promotion is a *witnessed* proposal (status-as-witness discipline), surfaced (e.g. a prompt or a one-key confirm in the repl hydra), not an assertion;\n4. it leaves an audit trail (why it auto-clocked) so a mis-promote is diagnosable."},
+            :h7afd70f40a29
+            {:kind :extracted-criterion,
+             :line 14,
+             :phase "EXTRACTED",
+             :stated
+             "- *Risk:* auto-clocking on a fuzzy mention (the exact anti-pattern `M-vsatarcs-invariants-integration` principle #8 warns about — *explicit, not fuzzy*) would mislabel turns and corrupt `turn→mission` ground truth. A wrong auto-clock is worse than `[no mission]`."},
+            :h82097c2c3790
+            {:kind :extracted-criterion,
+             :line 64,
+             :phase "EXTRACTED",
+             :stated
+             "A user turn becomes an auto-clock-in only when all of the following are true:\n\n0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)\n1. The turn contains one or more explicit target tokens matching `C-*`, `M-*`, or `E-*`.\n2. Every target token resolves by exact ID against the filesystem-backed completion candidates for its level.\n3. The turn names at most one campaign, at most one mission, and at most one excursion.\n4. The resolved target differs from the current buffer clock target.\n5. The promotion switches the single active path to exactly the resolved `C › M › E` components; absent components become nil rather than being guessed.\n6. The promotion records an audit witness with rule name, source, explicit tokens, old target, and new target.\n\nIf a target is already clocked, or any explicit target is unresolved, or multiple targets at the same level are named, no auto-clock promotion happens."},
+            :h0c55648e57e5
+            {:kind :extracted-criterion,
+             :line 482,
+             :phase "EXTRACTED",
+             :stated
+             "**Proposed first fix: one behaviour—every accepted turn has one durable,\nexplicit clock decision, including the negative decision.** Make this the\nturn-admission accounting contract across Emacs, bell, and Marimo; use\nexisting resolved clock inputs for the positive case and explicit\n:unclocked/reason for the otherwise case. Use a stable turn/job identity for\nidempotent recording. This first handoff establishes observable completeness;"},
+            :h0f3acdf222d7
+            {:kind :extracted-criterion,
+             :line 474,
+             :phase "EXTRACTED",
+             :stated
+             "**No inferable mission must be a recorded decision**, e.g.\n`{:status :unclocked :reason :no-inferable-mission ...}`, with distinct\nreasons for ambiguous candidates, unresolved explicit target, or unavailable\ninference evidence. Include agent, exact session, turn/job ID, time,\nconsidered sources and relevant provenance. Distinguish a known absence from\nan unavailable dependency. Do not silently preserve a stale unrelated target\nor invent a mission."},
+            :h59adca2cd730
+            {:kind :extracted-criterion,
+             :line 492,
+             :phase "EXTRACTED",
+             :stated
+             "Acceptance must construct the current bad case: run a complete isolated\nsession through each surface, with no manual clock, no named target, no\ninherited clock and no qualifying edits; finish it. Every accepted turn must\nhave a persisted decision, and session history must end with explicit\n:unclocked/:no-inferable-mission rather than missing fields. Repeat with an\nexisting valid resolved clock input and expect the positive decision. Read\nboth cases back through a newly constructed real durable backend client;\nretry the same turn and assert no duplicate decision. If recording fails,\nassert it is surfaced as an accounting failure, not reported as a successful\nrecorded decision. Keep absence and storage failure distinct."},
+            :h3ec5f3fe6a95
+            {:kind :extracted-criterion,
+             :line 487,
+             :phase "EXTRACTED",
+             :stated
+             "idempotent recording. This first handoff establishes observable completeness;\nit does not claim to improve inference coverage. Caller inheritance,\nagent code-file inference, and state restoration/projection are separate\nsubsequent behaviours. Do not combine those repairs into this first fix."}},
+     :unlocated
+     [{:token :exit/h1dae607747ce,
+       :line 32,
+       :kind :extracted-criterion}
+      {:token :exit/h5c6933e5e2fc,
+       :line 18,
+       :kind :extracted-criterion}
+      {:token :exit/h7afd70f40a29,
+       :line 14,
+       :kind :extracted-criterion}
+      {:token :exit/h0c55648e57e5,
+       :line 482,
+       :kind :extracted-criterion}
+      {:token :exit/h0f3acdf222d7,
+       :line 474,
+       :kind :extracted-criterion}
+      {:token :exit/h59adca2cd730,
+       :line 492,
+       :kind :extracted-criterion}
+      {:token :exit/h3ec5f3fe6a95,
+       :line 487,
+       :kind :extracted-criterion}],
+     :known-tokens
+     [{:token :exit/h1dae607747ce,
+       :text
+       "## IDENTIFY exit (when picked up)\n\nName the resolution rule (turn → candidate target → existence witness → confirm/switch) and the override surface, such that auto-clock can never *silently* mislabel a turn. Until then: manual clock-in + the hydra are the floor; this stub holds the idea so it isn't winged."}
+      {:token :exit/h5c6933e5e2fc,
+       :text
+       "Auto-promote a mission/campaign/excursion target identified in a turn **iff**:\n1. it **resolves** to a real `M-*`/`C-*`/`E-*` that exists (filesystem + ideally XTDB), not a fuzzy guess;\n2. it respects **single-active** (auto-promote *switches*, never stacks — same constraint as manual clock-in);\n3. it is **operator-overridable / confirmable**, never silent — the promotion is a *witnessed* proposal (status-as-witness discipline), surfaced (e.g. a prompt or a one-key confirm in the repl hydra), not an assertion;\n4. it leaves an audit trail (why it auto-clocked) so a mis-promote is diagnosable."}
+      {:token :exit/h7afd70f40a29,
+       :text
+       "- *Risk:* auto-clocking on a fuzzy mention (the exact anti-pattern `M-vsatarcs-invariants-integration` principle #8 warns about — *explicit, not fuzzy*) would mislabel turns and corrupt `turn→mission` ground truth. A wrong auto-clock is worse than `[no mission]`."}
+      {:token :exit/h82097c2c3790,
+       :text
+       "A user turn becomes an auto-clock-in only when all of the following are true:\n\n0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)\n1. The turn contains one or more explicit target tokens matching `C-*`, `M-*`, or `E-*`.\n2. Every target token resolves by exact ID against the filesystem-backed completion candidates for its level.\n3. The turn names at most one campaign, at most one mission, and at most one excursion.\n4. The resolved target differs from the current buffer clock target.\n5. The promotion switches the single active path to exactly the resolved `C › M › E` components; absent components become nil rather than being guessed.\n6. The promotion records an audit witness with rule name, source, explicit tokens, old target, and new target.\n\nIf a target is already clocked, or any explicit target is unresolved, or multiple targets at the same level are named, no auto-clock promotion happens."}
+      {:token :exit/h0c55648e57e5,
+       :text
+       "**Proposed first fix: one behaviour—every accepted turn has one durable,\nexplicit clock decision, including the negative decision.** Make this the\nturn-admission accounting contract across Emacs, bell, and Marimo; use\nexisting resolved clock inputs for the positive case and explicit\n:unclocked/reason for the otherwise case. Use a stable turn/job identity for\nidempotent recording. This first handoff establishes observable completeness;"}
+      {:token :exit/h0f3acdf222d7,
+       :text
+       "**No inferable mission must be a recorded decision**, e.g.\n`{:status :unclocked :reason :no-inferable-mission ...}`, with distinct\nreasons for ambiguous candidates, unresolved explicit target, or unavailable\ninference evidence. Include agent, exact session, turn/job ID, time,\nconsidered sources and relevant provenance. Distinguish a known absence from\nan unavailable dependency. Do not silently preserve a stale unrelated target\nor invent a mission."}
+      {:token :exit/h59adca2cd730,
+       :text
+       "Acceptance must construct the current bad case: run a complete isolated\nsession through each surface, with no manual clock, no named target, no\ninherited clock and no qualifying edits; finish it. Every accepted turn must\nhave a persisted decision, and session history must end with explicit\n:unclocked/:no-inferable-mission rather than missing fields. Repeat with an\nexisting valid resolved clock input and expect the positive decision. Read\nboth cases back through a newly constructed real durable backend client;\nretry the same turn and assert no duplicate decision. If recording fails,\nassert it is surfaced as an accounting failure, not reported as a successful\nrecorded decision. Keep absence and storage failure distinct."}
+      {:token :exit/h3ec5f3fe6a95,
+       :text
+       "idempotent recording. This first handoff establishes observable completeness;\nit does not claim to improve inference coverage. Caller inheritance,\nagent code-file inference, and state restoration/projection are separate\nsubsequent behaviours. Do not combine those repairs into this first fix."}],
+     :readings-needed
+     {:criteria? false,
+      :coverage? nil,
+      :locators
+      [:exit/h1dae607747ce
+       :exit/h5c6933e5e2fc
+       :exit/h7afd70f40a29
+       :exit/h0c55648e57e5
+       :exit/h0f3acdf222d7
+       :exit/h59adca2cd730
+       :exit/h3ec5f3fe6a95],
+      :constraints? true,
+      :mission-sha "text-8c765057668d3e96",
+      :sections-read
+      ["Mission: M-autoclock-in"
+       "HEAD (Joe, 2026-06-02, verbatim sense)"
+       "The tension"
+       "The idea (to refine in MAP/DERIVE)"
+       "Relations"
+       "IDENTIFY exit (when picked up)"
+       "MAP (2026-06-03)"
+       "Existing Infrastructure"
+       "Ready vs Missing"
+       "MAP Findings"
+       "DERIVE (2026-06-03)"
+       "Witnessed-Promotion Rule"
+       "Design Decisions"
+       "Audit Shape"
+       "INSTANTIATE-1 (2026-06-03)"
+       "INSTANTIATE-1 Smoke Checks"
+       "INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)"
+       "Remaining Work"
+       "INSTANTIATE-2 (2026-06-04) — creation-clock"
+       "INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)"
+       "INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)"
+       "INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)"
+       "DIAGNOSIS 2026-09-21"
+       "1. Implementation, runtime evidence, and firing receipts"
+       "2. Last-seven-day coverage"
+       "3. Why today's roster is nil"
+       "4. Missing inference and the first fix"
+       "INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)"
+       "INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)"
+       "Surface check, 2026-09-21 18:47:40Z (report only)"
+       "INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)"
+       "INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)"
+       "Top-level catalog correction (2026-09-21)"
+       "INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)"]},
+     :via "futon2.aif.mission-criteria",
+     :criteria 8,
+     :coverage-questions nil,
+     :lifecycle nil,
+     :criteria-from :machine-reading,
+     :constraint-questions nil,
+     :kind :a-exits,
+     :out-of-view
+     [{:token :exit/h82097c2c3790,
+       :reason :owner-question,
+       :questions
+       [{:question
+         "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+         :span
+         {:lines [66 66],
+          :quote
+          "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+         :alternatives
+         ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+          "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+          "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."]}]}],
+     :repo "futon3c",
+     :text-read? true,
+     :machine-located []},
+    :abstention {:kind :click-not-started, :missing :click},
+    :progress? false,
+    :wants
+    [:exit/h1dae607747ce
+     :exit/h5c6933e5e2fc
+     :exit/h7afd70f40a29
+     :exit/h0c55648e57e5
+     :exit/h0f3acdf222d7
+     :exit/h59adca2cd730
+     :exit/h3ec5f3fe6a95]}],
+  :started-at nil,
+  :enactments
+  [{:enactment {:absent :no-decision},
+    :click-id "2026-09-25-flight-d00574c8-click-1"}],
+  :want-source
+  {:kind :a-exits,
+   :repo "futon3c",
+   :path "holes/missions/M-autoclock-in.md",
+   :store "/home/joe/code/futon2/data/wm-interpretations"},
+  :status :no-progress,
+  :target-source :hand-placed,
+  :chosen-because {:kind :requested, :by "flight-driver"},
+  :target "M-autoclock-in",
+  :asks
+  [{:asked
+    [{:request-id "request-98f357e9bba64e6f",
+      :job-id "invoke-1790369023027-24439-07e93896",
+      :reasons
+      [{:reason :construction-refused,
+        :refusal
+        {:target "M-autoclock-in",
+         :kind :universe-not-admitted,
+         :missing :universes}}],
+      :library-root "/home/joe/code/futon3/library",
+      :retrieval {:absent :no-appended-runs},
+      :outcome :rejected,
+      :want :exit/h1dae607747ce,
+      :seat "claude-5"}
+     {:request-id "request-396a3326f5c6c3bd",
+      :job-id "invoke-1790369112824-24441-513abdc4",
+      :reasons
+      [{:reason :construction-refused,
+        :refusal
+        {:target "M-autoclock-in",
+         :kind :universe-not-admitted,
+         :missing :universes}}],
+      :library-root "/home/joe/code/futon3/library",
+      :retrieval {:absent :no-appended-runs},
+      :outcome :rejected,
+      :want :exit/h5c6933e5e2fc,
+      :seat "claude-5"}
+     {:request-id "request-4428124b73f89ea6",
+      :job-id "invoke-1790369189688-24442-ab57aea9",
+      :reasons
+      [{:reason :construction-refused,
+        :refusal
+        {:target "M-autoclock-in",
+         :kind :universe-not-admitted,
+         :missing :universes}}],
+      :library-root "/home/joe/code/futon3/library",
+      :retrieval {:absent :no-appended-runs},
+      :outcome :rejected,
+      :want :exit/h7afd70f40a29,
+      :seat "claude-5"}
+     {:request-id "request-11b88b0a9f14cabe",
+      :job-id "invoke-1790369290758-24444-fc7ddc82",
+      :reasons
+      [{:reason :construction-refused,
+        :refusal
+        {:target "M-autoclock-in",
+         :kind :universe-not-admitted,
+         :missing :universes}}],
+      :library-root "/home/joe/code/futon3/library",
+      :retrieval {:absent :no-appended-runs},
+      :outcome :rejected,
+      :want :exit/h0c55648e57e5,
+      :seat "claude-5"}
+     {:want :exit/h0f3acdf222d7,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369386910-24446-7b23739b",
+      :library-root "/home/joe/code/futon3/library",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:want :exit/h59adca2cd730,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369467819-24447-a742f8ce",
+      :library-root "/home/joe/code/futon3/library",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}
+     {:want :exit/h3ec5f3fe6a95,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369547801-24448-9753bf46",
+      :library-root "/home/joe/code/futon3/library",
+      :outcome :unparseable-response,
+      :detail {:forms 2, :fenced-blocks 2}}],
+    :needs
+    [{:kind :rejected,
+      :missing :interpretation,
+      :want :exit/h1dae607747ce,
+      :request-id "request-98f357e9bba64e6f",
+      :seat "claude-5",
+      :job-id "invoke-1790369023027-24439-07e93896"}
+     {:kind :rejected,
+      :missing :interpretation,
+      :want :exit/h5c6933e5e2fc,
+      :request-id "request-396a3326f5c6c3bd",
+      :seat "claude-5",
+      :job-id "invoke-1790369112824-24441-513abdc4"}
+     {:kind :rejected,
+      :missing :interpretation,
+      :want :exit/h7afd70f40a29,
+      :request-id "request-4428124b73f89ea6",
+      :seat "claude-5",
+      :job-id "invoke-1790369189688-24442-ab57aea9"}
+     {:kind :rejected,
+      :missing :interpretation,
+      :want :exit/h0c55648e57e5,
+      :request-id "request-11b88b0a9f14cabe",
+      :seat "claude-5",
+      :job-id "invoke-1790369290758-24444-fc7ddc82"}
+     {:kind :unparseable-response,
+      :missing :interpretation,
+      :want :exit/h0f3acdf222d7,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369386910-24446-7b23739b"}
+     {:kind :unparseable-response,
+      :missing :interpretation,
+      :want :exit/h59adca2cd730,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369467819-24447-a742f8ce"}
+     {:kind :unparseable-response,
+      :missing :interpretation,
+      :want :exit/h3ec5f3fe6a95,
+      :request-id nil,
+      :seat "claude-5",
+      :job-id "invoke-1790369547801-24448-9753bf46"}],
+    :before-click 1}]}}

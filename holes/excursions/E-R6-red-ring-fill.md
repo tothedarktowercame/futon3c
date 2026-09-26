@@ -1,0 +1,249 @@
+# E-R6-red-ring-fill — the candidate space, and four ways of not generating
+
+**Opened:** 2026-08-26 · claude-13, from Joe: *"What I fear for R6 is another
+example of the same pattern: a selection over a small pre-ordained whitelist, or
+a 'wired' component that just no-ops, etc."*
+
+**The fear is correct, and it is not one mechanism but four. The ring's own note
+describes none of them accurately.**
+
+## Status at 2026-08-26 end of day
+
+**Verdict so far: R6 is red for none of the reasons recorded.** The tension
+proposer is built and live-installed; the ring says it is unbuilt. What is
+actually wrong is that the stratum **cannot account for what it generated or
+failed to generate**.
+
+| | state |
+|---|---|
+| the ring's stated reason | **FALSIFIED** — `aif2/tension.clj`, live at `war_machine.clj:4378` since 2026-06-01 |
+| requirements | **STATED** — A (attestation), B (as-of), C (WR-20 registry), below |
+| module property | **NAMED** — `surveyedSpace`, family 9 of the rosetta; `CandidateSpace.lean` unwritten |
+| slice 1 — artifact provenance | **OPEN**, and blocking the module |
+| slice 2 — full-loop proposer set | **OPEN**, cheap |
+| WR-20 has no ring | **OPEN — Joe's call** |
+
+**Not yet done, and deliberately:** no salience work. R6's pattern already
+carries a dated 香 (*"the War Machine exhausted its proposer-fed queue into
+learn-action-class"*) and a named bearer (*"the War Machine's own"*), so unlike
+R14 this excursion does not stall on who bears the cost.
+
+## The ring says the proposer is unbuilt. It is built and live.
+
+`wr-overlay.edn`: `{:node "R6" :wr "WR-19" :holds false :note "tension must
+GENERATE, not only rank -- the candidate space is ranked, not proposed;
+**tension-proposer unbuilt**"}`
+
+**`futon2/src/futon2/aif2/tension.clj`** — *"M-aif2 slice-1: the
+**tension-proposer** as a credited + admissibility-gated S1 registry entry"* —
+built, and **live-installed** at `scripts/futon2/report/war_machine.clj:4378`
+(*"M-aif2 slice-1 live install (consent-gated, Joe 2026-06-01)"*). The live
+composition is five proposers, not one:
+
+    bootstrap · pattern-enumerator · mission-enumerator · sorry-enumerator · tension
+
+So "the candidate space is ranked, not proposed" is wrong as stated. This is the
+**fifth** absence claim to fail on inspection on 2026-08-26, and the first one
+that is in an artifact the paper draws on.
+
+*(How it was missed here too: greps globbed `src/futon2/aif/*.clj`. The tension
+proposer is in `src/futon2/aif2/`. Same error class as the truncated-`head` miss
+earlier today — the search was scoped, not exhausted.)*
+
+## The four mechanisms
+
+### 1. The generative proposer generates from a four-entry frozen file
+
+`tension/read-curvature-signal` reads
+`futon3c/holes/missions/M-substrate-metric.R2-curvature-full.json`. That file
+**exists** — and is dated **2026-06-03**, ~12 weeks stale. Its
+`top_propose_candidates` key is a list of **four**.
+
+So R6's generative component is generating from a static four-entry snapshot.
+**Same cardinality and same shape as `reviewed-candidate-cleans`**, the four-entry
+whitelist that `E-R8-red-ring-fill` slice 5 is about. Joe's phrase — *"a small
+pre-ordained whitelist"* — is literally what is on disk.
+
+**Open, and the first thing to check:** what regenerates that artifact, and has
+it run since 2026-06-03? This is the producer/consumer question of `E-R8` at a
+different stratum, and it should not be assumed either way.
+
+### 2. The action-class inventory is a set literal, against a ruling
+
+`forward_model.clj:25-32` — `action-types` is a hardcoded 14-element set, whose
+docstring says extending it means editing two multimethod arms.
+
+**WR-20 (2026-05-31, Joe)** rules exactly against this: *"Move action-class
+support **and the proposer set** from code into extensible registries"*, and
+*"Represent support and the proposer set as data in an extensible registry."*
+Its BECAUSE: *"Recursion occurs in data rather than through new code."*
+
+Neither half holds. The classes are a set literal; the proposer set is a
+hardcoded vector at `war_machine.clj:4370`. **`WR-20` appears zero times in
+`wr-overlay.edn`** — a ruling with no ring, while R6 carries only WR-19.
+
+*(Fair reading, recorded: a closed **type** inventory is defensible — new action
+kinds genuinely need prediction code. WR-20's demand is about the **registry**,
+and `aif2/tension.clj` is explicitly its S1 instance. So the primitive exists at
+one stratum and not at the others.)*
+
+### 3. A live component that no-ops on absent input
+
+`war_machine.clj:4367` — *"Fail-safe — absent/malformed ⇒ `[]` ⇒ tension-proposer
+silent ⇒ WM unchanged."* Correct engineering, and the R8 shape at the proposer
+stratum: armed, live, and silent when starved. Nothing reports the difference
+between "no tension" and "no signal".
+
+### 4. A component dark by flag
+
+`portfolio_action_proposer.clj` — `:close-mission`, `:survey-mission`,
+`:apply-cascade` — `*portfolio-proposer-active?*` `false`, bound `true` only in
+`test/futon2/portfolio_dry_run.clj:36`. Never run live.
+
+## What the 07-15 archive shows, and what it does not
+
+All 24 attempts recorded *"no addressable entities for X in current substrate"*
+across seven classes and selected `:learn-action-class` 22 times. That string is
+generated by `action_proposer/gap-actions`, so **the bootstrap proposer was the
+only one emitting**.
+
+**Not established:** whether that run composed the same five proposers. The
+composition read above is in `war_machine.clj`'s judge path; the 07-15 run went
+through the full-loop runner. Which proposers that path installs is the second
+check, and it is cheap.
+
+## The requirements, in the family vocabulary
+
+*The four mechanisms above are evidence, not a fix-list. Joe, 2026-08-26: a
+sentence naming four things to repair is still an implied to-do. Stated as
+requirements, in the shape `E-R8-red-ring-fill` uses — the family, the naive fix
+that recreates the defect, and the fix that removes the need for the entry.*
+
+### The mechanism all four share
+
+Nothing distinguishes **"the space is genuinely empty"** from **"the generator
+did not run."**
+
+- tension silent — no tension, or no signal?
+- portfolio dark — no `:close-mission` candidates, or the proposer is off?
+- artifact frozen — these are the high-curvature nodes, or this is a June file?
+- set literal — these are the action kinds, or nobody added the fifteenth?
+
+Four indistinguishabilities, one property. And it is **family 2 at the SELECT
+stratum** — the same requirement as `typedAbsence` in `GainChain.lean`
+(out-of-domain ≠ no-data) and the same as R5's *an absence is reported with the
+discipline of a poor score*. One family, three columns.
+
+### Requirement A — family 2, non-empty handle, at the proposer stratum
+
+**An empty contribution is a record, not a missing row.** For every *registered*
+proposer, the composed space carries whether it ran, on what input, and what it
+produced — including `0`.
+
+**The implementation locus is exact.** `action-proposer/compose-proposers` is
+three lines: `(mapcat propose) → distinct → vec`. The protocol declares
+`proposer-id` *"for tracing / logging"* at `action_proposer.clj:31` and the
+composer **never calls it**. Two of five proposers self-stamp provenance into
+their own candidates — `pattern_registry.clj:360` `:proposer-id
+:pattern-enumerator`, `aif2/tension.clj:125` `:provenance {:proposer-id …}` —
+and bootstrap, sorry-enumerator and portfolio do not.
+
+**❌ The naive fix: make every proposer stamp its id.** It recreates the defect
+exactly. **A proposer that emits nothing stamps nothing** — provenance carried on
+emitted items cannot express absence. Five stamping proposers still produce a
+silent, unattributable space.
+
+**✅ The requirement-satisfying fix:** the *composer* writes one attestation per
+**registered** proposer, whether or not it emitted — `{:proposer-id … :ran? …
+:input-ref … :emitted n}`. The record is keyed by the registry, not by the
+output, so absence has somewhere to live.
+
+**Acceptance.** On a tick where nothing is addressable, the trace names five
+proposers with `:emitted 0` and a reason each. The 2026-07-15 archive is the
+counter-case: 24 attempts, `"no addressable entities"` seven times each, and no
+record of which proposers ran — so the operator learned it at attempt 24 rather
+than attempt 2.
+
+### Requirement B — family 3, self-contained record, in its dual
+
+**A live decision must not depend on evidence whose age is unstated.** Family 3
+in `GainChain.lean` is `selfContainedRecord` — a durable record's reconstruction
+may not depend on state that can change afterwards. The dual: **a live read must
+carry its as-of, and its consumer must declare a staleness bound.**
+
+**❌ The naive fix: regenerate `M-substrate-metric.R2-curvature-full.json`.** It
+is stale again in twelve weeks and nothing says so. This is *"repair the eight
+rejected deposits"* from `E-R8` slice 4, one stratum up.
+
+**✅** The signal carries `:as-of`; `read-curvature-signal` returns
+`fresh(sig) | stale(sig, age) | absent` — three values, not `[]` — and the
+proposer's contribution is typed accordingly. Whether stale still proposes is a
+policy; that it is *reported* is the requirement.
+
+**Acceptance.** A tick reading a June artifact in August records `stale` with the
+age. No tick reads an undated signal.
+
+### Requirement C — family 5, declared domain, and WR-20's own ruling
+
+**A stratum's inventory is data, and extension does not edit code.** This is not
+a new requirement — it is **WR-20 (2026-05-31)**, unimplemented at two of three
+strata.
+
+**❌ The naive fix: add the missing action classes to the set literal.** Editing
+a list. `E-R8`'s test — *does this fix scale by editing a list?* — answers itself.
+
+**✅** `action-types` and the proposer vector become registry entries with the
+per-entry admissibility gate WR-20 specifies. **The primitive already exists**:
+`aif2/tension.clj` is its S1 instance, *"a credited + admissibility-gated S1
+registry entry"*. So this is instantiation at the remaining strata, not design.
+
+**Acceptance.** A new action class or proposer is added with no edit to
+`forward_model.clj` and no edit to `war_machine.clj:4370`.
+
+### The module property
+
+In the shape module 1 established, and family 9 of the rosetta
+(`M-formal-war-machine` §2.1b), whose Lean cell currently reads *"unstated — the
+R6 module's slot"*:
+
+> **`surveyedSpace`** — the ordering step consumes only a space in which every
+> registered contributor is accounted for, each contribution carrying its
+> input's as-of.
+
+`DarkTower/WarMachine/CandidateSpace.lean` at the light standard, with refusal
+theorems named after the dated incidents — **2026-06-03** (a signal read as
+current three months on) and **2026-07-15** (24 attempts, no attestation) — and a
+positive witness. Not before slice 1: the artifact's provenance may change what
+"contributor" means.
+
+### What all three share
+
+Every naive fix above **adds an entry** — one regenerated file, one armed flag,
+one more action class, one more stamp. Every requirement-satisfying fix **removes
+the need for entries**, by making the registry the thing that is recorded rather
+than the output. That is `E-R8`'s test, and R6 fails it in four places at once.
+
+## What this makes R6
+
+Not *"the proposer is unbuilt"*. R6 is **a stratum that can generate but cannot
+account for what it generated or failed to** — and the ring's recorded reason was
+the part nobody had checked, as with R8 and R14.
+
+## First slices
+
+1. **Provenance of the curvature artifact** — what writes it, when did it last
+   run, is it meant to be live? *(discovery, one packet)*
+2. **The full-loop runner's proposer composition** — same five, or fewer?
+3. **WR-20's ring** — it governs R6's substance and has no node. Does it want one,
+   or does R6's note want widening to name it? *Joe's call.*
+4. Only then: what "generate from tension" would mean with a live signal.
+
+## Related
+
+- `E-R14-red-ring-fill.md` — the SELECT-column predecessor; membership vs weights.
+- `E-R8-red-ring-fill.md` — the four-entry whitelist, one stratum down.
+- `p4ng/empirics-futon/NOTE-select-is-map-plus-derive.md` — why R6 is MAP, and why the node holds two functions.
+- `futon3/library/war-room/wr-20-action-class-inventory-becomes-data.flexiarg` — the unrung ruling.
+- `futon2/holes/missions/M-formal-war-machine.md` §2.1b — family 9, whose Lean cell this excursion fills.
+- `futon2/src/futon2/aif/action_proposer.clj:31,61` — `proposer-id`, declared and never composed.
+- `futon2/src/futon2/aif2/tension.clj` — the tension proposer, and WR-20's S1 instance.

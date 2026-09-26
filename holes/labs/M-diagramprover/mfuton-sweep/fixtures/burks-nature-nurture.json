@@ -1,0 +1,35 @@
+{
+  "example_id": "burks-nature-nurture",
+  "title": "Barbara Burks's nature-versus-nurture graph",
+  "topology_basis": "printed_diagram",
+  "content": "Under the book's left-to-right simplification, Social Status mediates part of the effect of Parental Intelligence on Child's Intelligence while also colliding Parental Intelligence with unmeasured remote causes X. Conditioning on Social Status therefore mutilates the total effect and opens collider bias.",
+  "variables": [
+    {"key": "parental", "name": "Parental Intelligence", "content": "The treatment whose direct and indirect effects Burks sought to separate."},
+    {"key": "social", "name": "Social Status", "content": "A mediator caused by Parental Intelligence and also a collider receiving unmeasured causes."},
+    {"key": "child", "name": "Child's Intelligence", "content": "The outcome receiving direct, mediated, and unmeasured influences."},
+    {"key": "x", "name": "X", "content": "Other unmeasured remote causes in Figure 9.2.", "observed": false}
+  ],
+  "arrows": [
+    {"source": "parental", "target": "social", "because": "The source's left-to-right simplification makes parental intelligence elevate social status."},
+    {"source": "social", "target": "child", "because": "Social standing in turn gives the child opportunities that affect intelligence."},
+    {"source": "parental", "target": "child", "because": "Figure 9.2 includes the direct nature path."},
+    {"source": "x", "target": "social", "because": "The source identifies Social Status as the collider Parental Intelligence -> Social Status <- X."},
+    {"source": "x", "target": "child", "because": "The source's stated opened back-door path continues from X to Child's Intelligence."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:21adfbe3a46d6bcd",
+    "ta-book-of-why-2018:6bc1e370ce761dd6",
+    "ta-book-of-why-2018:11b5adcfa64c71cd",
+    "ta-book-of-why-2018:8a1a6558005edb0b",
+    "ta-book-of-why-2018:184c3e46c5dc5923",
+    "ta-book-of-why-2018:a195199a768e2934",
+    "ta-book-of-why-2018:7d78e1f40de4312d",
+    "ta-book-of-why-2018:b132485e0b82631a",
+    "ta-book-of-why-2018:086c84b7411867c4",
+    "ta-book-of-why-2018:bee63a77382b3617"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0317",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0318"
+  ]
+}

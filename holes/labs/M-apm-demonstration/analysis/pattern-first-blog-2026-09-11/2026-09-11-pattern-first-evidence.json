@@ -1,0 +1,38 @@
+{
+  "description": "Source index for the pattern-first TA article. Paths identify retained research records; they are not public download URLs.",
+  "sources": [
+    {
+      "path": "ta-transfer-pilot-2026-09-10/README.md",
+      "sha256": "41881b06d769b19e0ce98c12a6e2e5ac6d3ff1fefcc1312e77cbab1ccb65eaf6"
+    },
+    {
+      "path": "ta-transfer-pilot-2026-09-10/TA-REVIEW.md",
+      "sha256": "6763ee38764d0e2fa957e932b4e34e438bd53aa174ab581477877aaf3a43b439"
+    },
+    {
+      "path": "ta-transfer-pilot-2026-09-10/materials/tasks.json",
+      "sha256": "08a8b985167a278c342317521f3f0eaa3fa8404c69b6959266bc9972db27780a"
+    },
+    {
+      "path": "ta-cascade-2026-09-10/a93A01-ta-cascade.json",
+      "sha256": "935d3d58cca4fd24171bf2e7254c502b87b872ad1a962cabdeab6d1fa1c2a908"
+    },
+    {
+      "path": "historical-pattern-reconstruction-2026-09-10/candidate-patterns.md",
+      "sha256": "9aaefc23909f431c21986f9ad1fb226e54bb2e5d0aa9449f05ab3971d00d87c9"
+    },
+    {
+      "path": "apm-v4-offline-2026-09-11/README.md",
+      "sha256": "f0f70da39f56d05497da9d8942844c338aa55d50e1cef5db1eaf457c5a4fece4"
+    },
+    {
+      "path": "apm-v4-offline-2026-09-11/result.json",
+      "sha256": "19a68f9a7312fb6d56d7ca2ed6d7d900182a7c325bafe612b1fafcd979f22f1f"
+    }
+  ],
+  "limits": [
+    "Five real Student turns, three same-session development cases.",
+    "Paper review, not fresh Lean elaboration or a controlled teaching-efficacy comparison.",
+    "Historical candidates are drafts; V4 component checks review completeness only."
+  ]
+}

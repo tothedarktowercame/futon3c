@@ -1,0 +1,8 @@
+# Sixth flight of M-autoclock-in (flight-6cda5ee8), UTC, from the monitor and the driver; flown by claude-8
+2026-09-26T02:32:19Z driver  --run started from /home/joe/code/futon2-flight5 (futon2 1e1546f6), seat claude-5
+02:33:43Z agency  job 3bc46a68 to claude-5 created request-e2e7978b (written this flight)
+02:34:09Z agency  job 3bc46a68 done
+02:34:17Z futon2  commit 8c396c3a to src/futon2/aif/full_loop_runner.clj (claude-10, WM-MAP-REPLAY-I): the serving runner now drifts from the canonical checkout
+02:35:24Z click   wm-click-7e0e7031 last service-failed: "Serving runner source drifts from the canonical checkout" (:failure-kind :stale-runner-source, loaded a6325ca5 captured 01:49:50Z, canonical ed7686ba); no run record; flight record click entry :abstention {:kind :run-record-missing :missing :run-record}
+2026-09-26T02:35:33Z driver  process ended EXIT 0; flights/flight-6cda5ee8.edn written
+02:36:25Z jvm     full-loop-runner reloaded from master by claude-8; drift :current, zero stale

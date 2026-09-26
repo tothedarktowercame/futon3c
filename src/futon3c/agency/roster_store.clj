@@ -8,11 +8,14 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str])
-  (:import [java.time Instant]))
+  (:import [java.nio.file AtomicMoveNotSupportedException CopyOption Files
+            StandardCopyOption]
+           [java.time Instant]))
 
 (def ^:private roster-version 1)
 (def ^:private registry-watch-key ::persist-roster)
 (def ^:private roster-drop-tolerance 1)
+(def ^:private persist-lock (Object.))
 
 (declare load-roster)
 
@@ -73,6 +76,8 @@
     (when (and agent-id agent-type)
       (cond-> {:agent-id agent-id
                :type agent-type}
+        (:agent/delivery-mode agent)
+        (assoc :delivery-mode (:agent/delivery-mode agent))
         (:agent/session-id agent)
         (assoc :session-id (:agent/session-id agent))
         (blank->nil (metadata-value metadata :session-file))
@@ -100,10 +105,23 @@
                                  :ws-bridge? "ws-bridge?"
                                  :note "note"))))))
 
+(defn- proxy-record?
+  "Federation proxies must NOT be persisted: their home is the peer box, and
+   restore-payload strips :proxy?/:origin-url, so a persisted proxy replays on
+   boot as a local phantom (AG-2 violation — the chi-claude-1/chi-codex-1
+   phantoms found on lucy 2026-07-12). The sync daemon re-imports live proxies
+   from the peer after boot; a dead peer's agents should be absent, not
+   phantom-local."
+  [agent]
+  (let [metadata (or (:agent/metadata agent) {})]
+    (boolean (or (metadata-value metadata :proxy?)
+                 (metadata-value metadata :remote-proxy?)))))
+
 (defn roster-snapshot [registry]
   {:version roster-version
    :generated-at (now)
    :agents (->> (vals registry)
+                (remove proxy-record?)
                 (keep restore-payload)
                 (sort-by :agent-id)
                 vec)})
@@ -134,36 +152,61 @@
           :drop drop
           :tolerance roster-drop-tolerance})))
 
+(defn- atomic-spit!
+  "Replace FILE atomically with CONTENT using a temporary sibling.
+
+  Roster reads run concurrently with registry watches. A direct `spit` exposes
+  its truncate/write interval and readers intermittently observe partial EDN
+  (`EOF while reading string`). Same-directory move gives readers either the
+  complete old snapshot or the complete new snapshot."
+  [file content]
+  (let [target (.toPath file)
+        parent (or (.getParent target) (.toPath (io/file ".")))
+        tmp (Files/createTempFile parent ".futon3c-agent-roster-" ".tmp"
+                                  (make-array java.nio.file.attribute.FileAttribute 0))]
+    (try
+      (spit (.toFile tmp) content)
+      (try
+        (Files/move tmp target
+                    (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                            StandardCopyOption/REPLACE_EXISTING]))
+        (catch AtomicMoveNotSupportedException _
+          (Files/move tmp target
+                      (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING]))))
+      (finally
+        (Files/deleteIfExists tmp)))))
+
 (defn persist-registry!
   "Persist REGISTRY as a durable roster EDN snapshot. Returns the snapshot."
   [registry]
   (let [snapshot (roster-snapshot registry)
         path (roster-store-path)
         file (io/file path)]
-    (try
-      (when-let [parent (.getParentFile file)]
-        (.mkdirs parent))
-      (if-let [{:keys [prev-count next-count drop tolerance]} (refuse-roster-clobber? path snapshot)]
-        (do
-          (println (str "[agent-roster] COUNTER-RATCHET REFUSED roster persist: "
-                        "on-disk agents=" prev-count
-                        " new agents=" next-count
-                        " drop=" drop
-                        " tolerance=" tolerance
-                        " path=" path
-                        " — durable snapshot preserved; set "
-                        "FUTON3C_ROSTER_ALLOW_DROP=true only for intentional bulk removal"))
-          (flush))
-        (do
-          ;; Rotate one backup before overwriting, so a clobber (e.g. a clean boot
-          ;; that came up with fewer agents) leaves the prior snapshot recoverable at
-          ;; <path>.bak. (M-agency-hardening roster safety, 2026-06-13.)
-          (when (.exists file)
-            (try (io/copy file (io/file (str path ".bak"))) (catch Throwable _)))
-          (spit file (pr-str snapshot))))
-      (catch Throwable t
-        (println (str "[agent-roster] persist failed: " (.getMessage t)))
-        (flush)))
+    (locking persist-lock
+      (try
+        (when-let [parent (.getParentFile file)]
+          (.mkdirs parent))
+        (if-let [{:keys [prev-count next-count drop tolerance]} (refuse-roster-clobber? path snapshot)]
+          (do
+            (println (str "[agent-roster] COUNTER-RATCHET REFUSED roster persist: "
+                          "on-disk agents=" prev-count
+                          " new agents=" next-count
+                          " drop=" drop
+                          " tolerance=" tolerance
+                          " path=" path
+                          " — durable snapshot preserved; set "
+                          "FUTON3C_ROSTER_ALLOW_DROP=true only for intentional bulk removal"))
+            (flush))
+          (do
+            ;; Rotate one backup before overwriting, so a clobber (e.g. a clean boot
+            ;; that came up with fewer agents) leaves the prior snapshot recoverable at
+            ;; <path>.bak. (M-agency-hardening roster safety, 2026-06-13.)
+            (when (.exists file)
+              (try (io/copy file (io/file (str path ".bak"))) (catch Throwable _)))
+            (atomic-spit! file (pr-str snapshot))))
+        (catch Throwable t
+          (println (str "[agent-roster] persist failed: " (.getMessage t)))
+          (flush))))
     snapshot))
 
 (defn load-roster
@@ -223,16 +266,34 @@
   (if-not (restore-enabled?)
     {:enabled? false :attempted 0 :restored 0 :results []}
     (let [agents (:agents (load-roster))
+          collisions (->> agents
+                          (keep (fn [{:keys [agent-id session-id]}]
+                                  (when session-id [session-id agent-id])))
+                          (group-by first)
+                          (keep (fn [[session-id entries]]
+                                  (let [agent-ids (mapv second entries)]
+                                    (when (> (count agent-ids) 1)
+                                      {:session-id session-id
+                                       :agent-ids agent-ids}))))
+                          vec)
+          collided-sessions (set (map :session-id collisions))
           results (mapv (fn [payload]
-                          (try
-                            (restore-fn (assoc payload :restored-detached? true))
-                            (catch Throwable t
-                              {:ok false
-                               :agent-id (:agent-id payload)
-                               :err "restore-exception"
-                               :message (.getMessage t)})))
+                          (if (contains? collided-sessions (:session-id payload))
+                            {:ok false
+                             :agent-id (:agent-id payload)
+                             :session-id (:session-id payload)
+                             :err "session-collision"
+                             :message "Refusing to restore a session owned by multiple agent identities"}
+                            (try
+                              (restore-fn (assoc payload :restored-detached? true))
+                              (catch Throwable t
+                                {:ok false
+                                 :agent-id (:agent-id payload)
+                                 :err "restore-exception"
+                                 :message (.getMessage t)}))))
                         agents)]
       {:enabled? true
        :attempted (count agents)
        :restored (count (filter :ok results))
+       :session-collisions collisions
        :results results})))

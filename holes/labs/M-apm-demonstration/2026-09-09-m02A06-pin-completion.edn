@@ -1,0 +1,32 @@
+{:new-queue-id
+ "4fa67e40c1a4b4303eb552bbd2cbf2111f6f87d5f9d504436afee3536133b524",
+ :replacement
+ {:problem/id "m02A06",
+  :repository "/home/joe/code/apm-lean",
+  :base-branch "master",
+  :revision "a9bc248c48440d2aa39b58a5e6cd1ac1be40f321",
+  :path "problems/m02A06/lean/Main.lean",
+  :blob "4f201239b3bc867bb510d771726fe9ed1968ba94",
+  :classification :non-excluded},
+ :recovery/type :complete-guide-source-pins,
+ :guide-job
+ "statement-repair-85226c8d61f815982bcd03123e35c2105ae9ea5a5abcd2b6fefdddaca1c81256",
+ :as-of "2026-09-09",
+ :old-queue-id
+ "35341b2b133d1a4a8eeab351e68234feb417558d9c6789c2ea4aad74ffab862d",
+ :operator "codex-17",
+ :validation
+ "Guide statement is an exact substring of committed source through := by; lake env lean exit 0, pre-existing sorry remains. No second repair attempt or changed guide receipt.",
+ :recovery
+ "Completed missing commit/source pins from the finished guide output, through revise-voided-slot and persist-launch-plan!. No change to proof acceptance or repair budget.",
+ :guide-receipt
+ {:obligation/id
+  "85226c8d61f815982bcd03123e35c2105ae9ea5a5abcd2b6fefdddaca1c81256",
+  :repair/role :guide,
+  :receipt/id
+  "e38ae7f6ca9ebf4ddd2c76409b37931ce68e86b07a63296c013cbd3eadc595b9",
+  :receipt/method
+  "sha256 of the repaired theorem statement text in problems/m02A06/lean/Main.lean",
+  :problem/id "m02A06",
+  :repair/attempt 1,
+  :evidence/id "e-97687700-4679-4db3-8865-3d0f92e4826d"}}

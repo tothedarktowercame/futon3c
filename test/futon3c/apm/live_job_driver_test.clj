@@ -1,0 +1,2195 @@
+(ns futon3c.apm.live-job-driver-test
+  (:require [clojure.set]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.job-state]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.live-job-driver :as sut]))
+
+(def request
+  {:dispatch/id "dispatch-1" :agent-id "f19-proctor" :frame-id "f19"
+   :problem-id "a01J05" :phase :preflight})
+
+(def f85-self-cancelled-job
+  ;; Verbatim terminal identity from f85 student-attempt-1, observed
+  ;; 2026-09-04T14:12:53Z after driver wrapper reconciliation.
+  {:job-id "apm-role-ab0d2cd4afab7f0ed4c750d9896450ab3b359d65d8083e51479a71da80693997"
+   :agent-id "f85-student"
+   :state :cancelled
+   :terminal-code :operator-cancelled
+   :terminal-message
+   "Cancelled by http-caller: typed-submission wrapper reconciliation"})
+
+(declare effects)
+
+(deftest real-f85-persisted-collection-outranks-self-cancellation
+  (let [job-id (:job-id f85-self-cancelled-job)
+        durable {:state/type :live-job-dispatched :request request
+                 :ticket {:job-id job-id} :activation/accepted? true
+                 :terminal-collection
+                 {:evidence {:job-id job-id} :submission {:payload {}}
+                  :budget sut/default-terminal-budget}
+                 :wrapper/reconciliation
+                 {:ok true :job-id job-id
+                  :response {:ok true :job-id job-id :state "cancelled"}}}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom f85-self-cancelled-job))
+                       :state durable
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :certified (:status result)))
+    (is (= (:terminal-collection durable)
+           (get-in result [:state :terminal-collection])))
+    (is (= :driver-wrapper-reconciliation-cancellation
+           (:condition/type
+            (sut/reconciled-self-cancellation durable
+                                              f85-self-cancelled-job))))))
+
+(deftest unfamiliar-cancellation-remains-terminal-failure
+  (let [job (assoc f85-self-cancelled-job
+                   :job-id "unfamiliar-job"
+                   :terminal-message "Cancelled by an unrelated operator")
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id "unfamiliar-job"} :activation/accepted? true}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom job))
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :live-job-terminal-failure (:error/code result)))
+    (is (nil? (sut/reconciled-self-cancellation state job)))))
+
+(deftest exact-self-cancellation-is-recognised-without-message-matching
+  (let [job-id (:job-id f85-self-cancelled-job)
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id job-id} :activation/accepted? true
+               :wrapper/reconciliation
+               {:ok true :job-id job-id
+                :response {:state "cancelled"}}}
+        job (assoc f85-self-cancelled-job
+                   :terminal-message "message text deliberately changed")
+        result (sut/drive!
+                (assoc (effects (atom []) (atom job))
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :terminal-collected (:status result)))
+    (is (not= :live-job-terminal-failure (:error/code result)))))
+
+(defn effects [calls job]
+  {:request request
+   :announce-fn (fn [_] (swap! calls conj :announce)
+                  {:ok true :job-id "job-1"})
+   :activate-fn (fn [_ _] (swap! calls conj :activate) {:ok true})
+   :job-fn (fn [_] (swap! calls conj :poll) @job)
+   :persist-fn (fn [state] (swap! calls conj [:persist (:state/type state)])
+                 {:ok true})
+   :terminal-validator (fn [_ _ _] (swap! calls conj :validate) {:ok true})
+   :receipt-provider (fn [_ _ _ _]
+                       (swap! calls conj :receipt)
+                       {:ok true :certificate {:receipt/id "receipt-1"}})})
+
+(deftest provider-usage-signatures-are-declared-and-extendable
+  (is (= :usage-limit
+         (:signature/id (sut/provider-usage-limit
+                         {:error/message "Provider usage limit reached"}))))
+  (is (= :glm-capacity
+         (:signature/id
+          (sut/provider-usage-limit
+           {:error/message "GLM seat capacity window is closed"}
+           [{:signature/id :glm-capacity
+             :provider :glm
+             :pattern #"GLM seat capacity window"}]))))
+  (is (nil? (sut/provider-usage-limit
+             {:error/message "ordinary invalid EDN"}))))
+
+(deftest announce-is-persisted-before-activation-and-never-repeated
+  (let [calls (atom []) job (atom {:state :running})
+        first-pass (sut/drive! (effects calls job))
+        state (:state first-pass)
+        waiting (sut/drive! (assoc (effects calls job) :state state))]
+    (is (= :awaiting-terminal (:status first-pass)))
+    (is (= [:announce [:persist :live-job-dispatched] :activate
+            [:persist :live-job-dispatched]]
+           (take 4 @calls)))
+    (is (= :awaiting-terminal (:status waiting)))
+    (is (= 1 (count (filter #{:announce} @calls))))
+    (is (= (:ticket/id (:ticket state))
+           (machine/ledger-digest [(dissoc (:ticket state) :ticket/id)])))))
+
+(deftest persisted-ticket-reconciles-observed-running-job-without-reactivation
+  (let [calls (atom []) job (atom {:state :queued})
+        failed (sut/drive!
+                (assoc (effects calls job)
+                       :activate-fn (fn [_ _]
+                                      (swap! calls conj :activate-failed)
+                                      {:ok false})))
+        _ (reset! job {:state :running})
+        retried (sut/drive! (assoc (effects calls job) :state (:state failed)))]
+    (is (= :live-job-activation-failed (:error/code failed)))
+    (is (= :awaiting-terminal (:status retried)))
+    (is (true? (get-in retried [:state :activation/accepted?])))
+    (is (= 1 (count (filter #{:announce} @calls))))
+    (is (= 1 (count (filter #{:activate-failed} @calls))))
+    (is (zero? (count (filter #{:activate} @calls))))
+    (is (= :running (get-in retried [:state :activation/reconciled-from])))))
+
+(deftest f85-unusable-announce-response-enters-bounded-transport-retry
+  (let [calls (atom [])
+        now (atom 1000)
+        inputs (assoc (effects calls (atom {:state :running}))
+                      :announce-fn
+                      (fn [_]
+                        (swap! calls conj :announce)
+                        {:ok true :status 200})
+                      :now-ms-fn #(deref now)
+                      :transport-retry-delay-ms 100
+                      :transport-retry-max-attempts 3)
+        first-result (sut/drive! inputs)]
+    (is (= :transport-retry-scheduled (:status first-result)))
+    (is (= :transport (:failure/class first-result)))
+    (is (= :delayed-retry (:failure/disposition first-result)))
+    (is (= :live-job-announce-failed
+           (get-in first-result [:transport-retry/history 0 :error/code])))
+    (is (= {:ok true :status 200}
+           (get-in first-result
+                   [:transport-retry/history 0 :finding :response])))
+    (let [waiting (sut/drive! (assoc inputs :state (:state first-result)))]
+      (is (= :transport-retry-scheduled (:status waiting)))
+      (is (= 1 (count (filter #{:announce} @calls)))))))
+
+(deftest exhausted-driver-transport-retries-escalate-with-history
+  (let [now (atom 1000)
+        inputs (assoc (effects (atom []) (atom {:state :running}))
+                      :announce-fn (constantly {:ok false :status 503})
+                      :now-ms-fn #(deref now)
+                      :transport-retry-delay-ms 10
+                      :transport-retry-max-attempts 3)
+        first-result (sut/drive! inputs)
+        _ (swap! now + 10)
+        second-result (sut/drive! (assoc inputs :state (:state first-result)))
+        _ (swap! now + 10)
+        exhausted (sut/drive! (assoc inputs :state (:state second-result)))
+        escalation (:finding exhausted)]
+    (is (= :awaiting-apparatus-repair (:status exhausted)))
+    (is (= :transport (:failure/class escalation)))
+    (is (= :apparatus-repair (:failure/disposition escalation)))
+    (is (= :live-job-transport-retry-exhausted (:error/code escalation)))
+    (is (= [1 2 3]
+           (mapv :attempt (:transport-retry/history escalation))))
+    (is (every? #(contains? % :finding)
+                (:transport-retry/history escalation)))))
+
+(deftest transport-envelope-on-activation-enters-the-same-retry-spine
+  (let [result
+        (sut/drive!
+         (assoc (effects (atom []) (atom {:state :queued}))
+                :activate-fn
+                (fn [& _]
+                  {:ok false :error/component :transport
+                   :error/code :http-service-unavailable
+                   :http/status 503})))]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :live-job-activation-failed
+           (get-in result [:transport-retry/history 0 :error/code])))
+    (is (= :http-service-unavailable
+           (get-in result [:transport-retry/history 0 :finding
+                           :error/code])))))
+
+(deftest corrupt-transport-attempt-count-fails-closed
+  (let [state {:state/type :live-job-dispatched :request request
+               :transport-retry/attempt "three"
+               :transport-retry/not-before-ms 999999}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom {:state :running}))
+                       :state state :now-ms-fn (constantly 0)))]
+    (is (= :live-job-transport-retry-attempt-count-invalid
+           (:error/code result)))
+    (is (= state (:state result)))))
+
+(deftest unaccepted-supersession-archives-cancellation-before-redispatch
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :state :queued})
+        saved (atom nil)
+        base (assoc (effects calls job)
+                    :state {:state/type :live-job-dispatched :request request
+                            :ticket {:job-id "job-1"}
+                            :activation/accepted? false
+                            :activation/failure {:ok false :error :timeout}}
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :cancel-fn (fn [id]
+                                 {:ok true :job-id id :state :cancelled})
+                    :activate-fn (fn [& _] {:ok true})
+                    :persist-fn (fn [state] (reset! saved state) {:ok true}))
+        superseded (sut/drive! base)]
+    (is (= :awaiting-terminal (:status superseded)))
+    (is (= "job-1" (get-in @saved [:superseded-tickets 0 :job-id])))
+    (is (= :cancelled
+           (get-in @saved [:superseded-tickets 0 :cancellation :state]))))
+  (let [announced (atom 0)
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id "job-1"} :activation/accepted? false
+               :activation/failure {:ok false}}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom {:job-id "job-1" :state :queued}))
+                       :state state :terminal-submission-provider (constantly nil)
+                       :cancel-fn (fn [_] {:ok true :state :cancelled})
+                       :persist-fn (fn [s]
+                                     (if (:superseded-tickets s)
+                                       {:ok false} {:ok true}))
+                       :announce-fn (fn [_]
+                                      (swap! announced inc)
+                                      {:ok true :job-id "job-2"})))]
+    (is (= :live-job-supersession-archive-persistence-failed
+           (:error/code result)))
+    (is (zero? @announced))))
+
+(deftest persisted-ticket-reconciles-terminal-job-before-validation
+  (let [calls (atom []) job (atom {:state :queued})
+        failed (sut/drive!
+                (assoc (effects calls job)
+                       :activate-fn (constantly {:ok false})))
+        _ (reset! job {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        reconciled (sut/drive! (assoc (effects calls job) :state (:state failed)))
+        certified (sut/drive! (assoc (effects calls job) :state (:state reconciled)))]
+    (is (= :awaiting-terminal (:status reconciled)))
+    (is (= :done (get-in reconciled [:state :activation/reconciled-from])))
+    (is (= :certified (:status certified)))
+    (is (= 1 (count (filter #{:validate} @calls))))))
+
+(deftest matching-terminal-job-is-validated-receipted-and-persisted
+  (let [calls (atom []) job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                                   :state :done})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        result (sut/drive! (assoc (effects calls job) :state dispatched))]
+    (is (= :certified (:status result)))
+    (is (= [:poll :validate :receipt [:persist :live-job-certified]]
+           (take-last 4 @calls)))))
+
+(deftest typed-submission-reconciles-a-stranded-running-invoke-job
+  ;; Live pin: f83/b97A01 job apm-role-f65f2382682c9e5c76d69bfe29a903d8a4bac09061caba4db4555d60dde690c7
+  ;; remained :running after submitting a clean Lean result at 05fdbfd181d29014b3482199b099575a1b4d9499.
+  (let [calls (atom [])
+        provider-calls (atom 0)
+        running-job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                           :state :running})
+        dispatched (:state (sut/drive! (effects calls running-job)))
+        submission {:schema :apm/role-submission-v1
+                    :request-id "dispatch-1"
+                    :job-id "job-1"
+                    :agent-id "f19-proctor"
+                    :payload {:outcome "complete"}}
+        fx (assoc (effects calls running-job)
+                  :cancel-fn
+                  (fn [job-id]
+                    (swap! calls conj :cancel)
+                    {:ok true :job-id job-id :state :cancelled})
+                  :terminal-submission-provider
+                  (fn [& _]
+                    (swap! provider-calls inc)
+                    submission)
+                  :terminal-validator
+                  (fn [_ _ job]
+                    (swap! calls conj :validate)
+                    {:ok (= :done (:state job))}))
+        collected (sut/drive! (assoc fx :state dispatched))
+        _ (reset! running-job {:job-id "job-1" :agent-id "f19-proctor"
+                               :state :cancelled
+                               :terminal-code :operator-cancelled
+                               :terminal-message
+                               (str "Cancelled by http-caller: typed-submission "
+                                    "wrapper reconciliation")})
+        certified (sut/drive! (assoc fx :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :running (get-in collected [:collection :terminal-state])))
+    (is (true? (get-in collected [:collection :submission/available?])))
+    (is (= :certified (:status certified)))
+    (is (= 1 @provider-calls))
+    (is (= 1 (count (filter #{:validate} @calls))))
+    (is (= 1 (count (filter #{:announce} @calls))))
+    (is (= 1 (count (filter #{:activate} @calls))))
+    (is (= 1 (count (filter #{:cancel} @calls))))
+    (is (= :cancelled
+           (get-in collected [:state :wrapper/reconciliation :state])))))
+
+(deftest proved-session-loss-is-persisted-as-orphan-without-a-terminal
+  (let [calls (atom [])
+        session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        diagnostic (str "2026-09-04T01:02:03Z ERROR codex_core::session: "
+                        "thread " session " not found")
+        job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                   :state :running :stderr diagnostic})
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :ticket {:job-id "job-1"} :activation/accepted? true}
+        result (sut/drive! (assoc (effects calls job)
+                                  :request (assoc request :session-id session)
+                                  :state state
+                                  :terminal-submission-provider (constantly nil)))]
+    (is (= :orphaned (:status result)))
+    (is (= {:observation/type :job-owner-orphaned
+            :finding :codex-session-not-found
+            :job-id "job-1" :agent-id "f19-proctor"
+            :session-id session
+            :evidence/source :canonical-codex-stderr}
+           (:orphan/observation result)))
+    (is (zero? (get-in result [:state :orphan/recovery-attempts])))
+    (is (nil? (get-in result [:state :terminal-collection])))
+    (is (not-any? #{:validate :receipt :announce :activate} @calls))))
+
+(deftest orphan-recovery-mints-fresh-session-without-synthesizing-terminal
+  (let [calls (atom [])
+        observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/observation observation
+               :orphan/recovery-attempts 0}
+        seen-request (atom nil)
+        result
+        (sut/drive!
+         (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                :state state :terminal-submission-provider (constantly nil)
+                :cancel-fn (fn [id] (swap! calls conj :cancel)
+                             {:ok true :job-id id :state :cancelled})
+                :announce-fn (fn [req] (reset! seen-request req)
+                               {:ok true :job-id "job-2"})
+                :ticket-register-fn (fn [& _] {:ok true})
+                :activate-fn (fn [& _] (swap! calls conj :activate) {:ok true})))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:orphan/recovered? result)))
+    (is (true? (:fresh-session? @seen-request)))
+    (is (string? (:fresh-session-nonce @seen-request)))
+    (is (= "job-1" (:orphan/of-job-id @seen-request)))
+    (is (= "job-2" (get-in result [:state :ticket :job-id])))
+    (is (nil? (get-in result [:state :terminal-collection])))
+    (is (not-any? #{:validate :receipt} @calls))))
+
+(deftest repeated-orphan-observation-preserves-lineage-attempts
+  (let [session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        diagnostic (str "2026-09-04T01:02:03Z ERROR codex_core::session: "
+                        "thread " session " not found")
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :active-request (assoc request :session-id session)
+               :ticket {:job-id "job-2"}
+               :activation/accepted? true
+               :orphan/recovery-attempts 1}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-2" :state :running
+                                       :stderr diagnostic}))
+                       :request (:active-request state)
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :orphaned (:status result)))
+    (is (= 1 (get-in result [:state :orphan/recovery-attempts])))))
+
+(deftest orphan-recovery-rejects-predecessor-job-identity
+  (let [calls (atom [])
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/recovery-attempts 0
+               :orphan/observation
+               {:observation/type :job-owner-orphaned
+                :finding :codex-session-not-found :job-id "job-1"
+                :agent-id "f19-proctor"
+                :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                :evidence/source :canonical-codex-stderr}}
+        result (sut/drive!
+                (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                       :state state :terminal-submission-provider (constantly nil)
+                       :cancel-fn (constantly {:ok true :state :cancelled})
+                       :announce-fn (constantly {:ok true :job-id "job-1"})))]
+    (is (= :awaiting-orphan-recovery (:status result)))
+    (is (= :live-job-orphan-successor-identity-reused
+           (get-in result [:finding :error/code])))
+    (is (= 1 (get-in result [:state :orphan/recovery-attempts])))
+    (is (not-any? #{:activate} @calls))))
+
+(deftest fabricated-provider-orphan-evidence-is-not-an-input-port
+  (let [session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :active-request (assoc request :session-id session)
+               :ticket {:job-id "job-1"} :activation/accepted? true}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-1" :state :running}))
+                       :request (:active-request state) :state state
+                       :terminal-submission-provider (constantly nil)
+                       :orphan-observation-provider
+                       (constantly {:observation/type :job-owner-orphaned
+                                    :finding :codex-session-not-found
+                                    :job-id "job-1" :session-id session
+                                    :evidence/source :fabricated})))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (nil? (get-in result [:state :orphan/observation])))))
+
+(deftest orphan-session-mint-exhaustion-is-distinct-and-bounded
+  (let [observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        saved (atom nil)
+        attempts (atom 0)
+        base (assoc (effects (atom []) (atom {:job-id "job-1" :state :running}))
+                    :state {:state/type :live-job-dispatched :request request
+                            :active-request request :ticket {:job-id "job-1"}
+                            :activation/accepted? true
+                            :orphan/observation observation
+                            :orphan/recovery-attempts 0}
+                    :terminal-submission-provider (constantly nil)
+                    :cancel-fn (fn [id] {:ok true :job-id id :state :cancelled})
+                    :announce-fn (fn [_] (swap! attempts inc) {:ok false})
+                    :persist-fn (fn [state] (reset! saved state) {:ok true})
+                    :orphan-recovery-max-attempts 2)
+        first-result (sut/drive! base)
+        second-result (sut/drive! (assoc base :state (:state first-result)))]
+    (is (= :awaiting-orphan-recovery (:status first-result)))
+    (is (= :live-job-orphan-recovery-exhausted (:error/code second-result)))
+    (is (= 2 (:recovery/attempts second-result)))
+    (is (= :failed-attempt-at-ceiling
+           (:recovery/exhaustion-reason second-result)))
+    (is (= 2 @attempts))
+    (is (nil? (:terminal-collection @saved)))))
+
+(deftest orphan-recovery-ceiling-refuses-before-a-successful-mint
+  (let [calls (atom [])
+        persisted (atom [])
+        observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/observation observation
+               :orphan/recovery-attempts 2}
+        result
+        (sut/drive!
+         (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                :state state :terminal-submission-provider (constantly nil)
+                :orphan-recovery-max-attempts 2
+                :orphan-recovery-request-fn
+                (fn [& _] (swap! calls conj :plan)
+                  {:ok true :request (assoc request :dispatch/id "new")})
+                :cancel-fn (fn [& _] (swap! calls conj :cancel) {:ok true})
+                :announce-fn (fn [& _] (swap! calls conj :announce)
+                               {:ok true :job-id "job-2"})
+                :ticket-register-fn
+                (fn [& _] (swap! calls conj :register) {:ok true})
+                :activate-fn (fn [& _] (swap! calls conj :activate) {:ok true})
+                :persist-fn (fn [value] (swap! persisted conj value) {:ok true})))]
+    (is (false? (:ok result)))
+    (is (= :live-job-orphan-recovery-exhausted (:error/code result)))
+    (is (= :attempt-ceiling-before-mint (:recovery/exhaustion-reason result)))
+    (is (= 2 (:recovery/attempts result)))
+    (is (= 2 (get-in result [:state :orphan/recovery-attempts])))
+    (is (empty? @persisted))
+    (is (not-any? #{:plan :cancel :announce :register :activate} @calls))))
+
+(deftest orphan-recovery-refuses-an-absent-durable-attempt-count
+  (let [state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true
+               :orphan/observation
+               {:observation/type :job-owner-orphaned}}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-1" :state :running}))
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (false? (:ok result)))
+    (is (= :live-job-orphan-recovery-attempt-count-invalid
+           (:error/code result)))
+    (is (nil? (get-in result [:state :orphan/recovery-attempts])))))
+
+(deftest receipt-provider-hold-never-certifies-a-nil-receipt
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        held (sut/drive!
+              (assoc (effects calls job) :state dispatched
+                     :receipt-provider
+                     (fn [& _] {:ok true :status :awaiting-apparatus-repair
+                                :findings [:candidate-not-materialized]})))
+        missing (sut/drive!
+                 (assoc (effects calls job) :state dispatched
+                        :receipt-provider
+                        (fn [& _] {:ok true :status :certified})))]
+    (is (= :awaiting-apparatus-repair (:status held)))
+    (is (= :live-job-dispatched (get-in held [:state :state/type])))
+    (is (= :live-job-certificate-missing (:error/code missing)))
+    (is (not-any? #{[:persist :live-job-certified]} @calls))))
+
+(deftest failure-and-mismatch-stop-closed
+  (testing "terminal failure never reaches receipt provider"
+    (let [calls (atom [])
+          dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+          result (sut/drive! (assoc (effects calls (atom {:state :failed}))
+                                    :state dispatched))]
+      (is (= :live-job-terminal-failure (:error/code result)))
+      (is (not-any? #{:validate :receipt} @calls))))
+  (testing "a different immutable request cannot reuse the ticket"
+    (let [calls (atom [])
+          dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+          result (sut/drive! (assoc (effects calls (atom {:state :done}))
+                                    :request (assoc request :dispatch/id "other")
+                                    :state dispatched))]
+      (is (= :live-job-request-state-mismatch (:error/code result))))))
+
+(deftest wall-clock-budget-exhaustion-enters-durable-terminal-repair
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "student-attempt-2"
+                              :state :failed :terminal-code :invoke-error
+                              :terminal-message "wall-clock-budget"}
+                    "job-2" {:job-id "job-2" :agent-id "student-attempt-2"
+                              :state :running}})
+        persisted (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (fn [id] (get @jobs id))
+                    :persist-fn (fn [state]
+                                  (swap! persisted conj state)
+                                  {:ok true})
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (fn [& _]
+                      (throw (ex-info "missing submission must be classified first" {})))
+                    :terminal-repair-request-fn
+                    (fn [r _ticket job failure]
+                      {:ok true
+                       :request (assoc r :dispatch/id "repair-dispatch"
+                                         :repair/of-job-id (:job-id job)
+                                         :repair/findings (:findings failure))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true}
+        collected (sut/drive! (assoc base :state dispatched))
+        repairing (sut/drive! (assoc base :state (:state collected)))
+        archived (first (get-in repairing [:state :superseded-terminals]))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (= "job-1" (get-in archived [:job :job-id])))
+    (is (= "wall-clock-budget" (get-in archived [:job :terminal-message])))
+    (is (= [:typed-submission-missing] (:findings archived)))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))
+    (is (some #(= :live-job-dispatched (:state/type %)) @persisted))))
+
+(deftest provider-request-timeout-enters-durable-terminal-repair
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "student-attempt-1"
+                              :state :failed :terminal-code :invoke-exception
+                              :terminal-message "request timed out"}
+                    "job-2" {:job-id "job-2" :agent-id "student-attempt-1"
+                              :state :running}})
+        base (assoc (effects calls (atom nil))
+                    :job-fn (fn [id] (get @jobs id))
+                    :persist-fn (constantly {:ok true})
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (fn [& _]
+                      (throw (ex-info "missing submission must be classified first" {})))
+                    :terminal-repair-request-fn
+                    (fn [r _ticket job failure]
+                      {:ok true
+                       :request (assoc r :dispatch/id "repair-dispatch"
+                                         :repair/of-job-id (:job-id job)
+                                         :repair/findings (:findings failure))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true}
+        collected (sut/drive! (assoc base :state dispatched))
+        repairing (sut/drive! (assoc base :state (:state collected)))
+        archived (first (get-in repairing [:state :superseded-terminals]))]
+    (is (= {:condition/type :provider-request-timeout}
+           (sut/expected-role-terminal-condition (get @jobs "job-1"))))
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (= "request timed out" (get-in archived [:job :terminal-message])))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))))
+
+(deftest provider-response-endpoint-404-enters-durable-terminal-repair
+  ;; Live pin: f84 preflight job apm-role-81159070dc7b44ea89205989964fbb879033022bc913c146bb804735dc89673c.
+  (let [calls (atom [])
+        diagnostic (str "Exit 1: unexpected status 404 Not Found: Unknown error, "
+                        "url: https://chatgpt.com/backend-api/codex/responses, "
+                        "cf-ray: a3558eb11f463379-AMS")
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "f84-proctor"
+                              :state :failed :terminal-code :invoke-error
+                              :terminal-message diagnostic}
+                    "job-2" {:job-id "job-2" :agent-id "f84-proctor"
+                              :state :running}})
+        base (assoc (effects calls (atom nil))
+                    :job-fn (fn [id] (get @jobs id))
+                    :persist-fn (constantly {:ok true})
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (fn [& _]
+                      (throw (ex-info "missing submission must be classified first" {})))
+                    :terminal-repair-request-fn
+                    (fn [r _ticket job failure]
+                      {:ok true
+                       :request (assoc r :dispatch/id "repair-dispatch"
+                                         :repair/of-job-id (:job-id job)
+                                         :repair/findings (:findings failure))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true}
+        collected (sut/drive! (assoc base :state dispatched))
+        repairing (sut/drive! (assoc base :state (:state collected)))]
+    (is (= {:condition/type :provider-response-endpoint-not-found}
+           (sut/expected-role-terminal-condition (get @jobs "job-1"))))
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))))
+
+(deftest unrecognized-terminal-failure-remains-fatal-with-submission-provider
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "student-attempt-2"
+                   :state :failed :terminal-code :invoke-error
+                   :terminal-message "worker-crashed"})
+        result (sut/drive!
+                (assoc (effects calls job)
+                       :state {:state/type :live-job-dispatched
+                               :request request
+                               :ticket {:job-id "job-1"}
+                               :activation/accepted? true}
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :live-job-terminal-failure (:error/code result)))
+    (is (not-any? #{:validate :receipt} @calls))))
+
+(deftest invalid-typed-terminal-gets-one-durable-repair-job
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "f19-proctor"
+                             :state :done}
+                    "job-2" {:job-id "job-2" :agent-id "f19-proctor"
+                             :state :running}})
+        base (-> (effects calls (atom nil))
+                 (assoc :job-fn (fn [id] (swap! calls conj [:poll id])
+                                  (get @jobs id))
+                        :announce-fn (fn [r]
+                                       (swap! calls conj [:announce (:dispatch/id r)])
+                                       {:ok true :job-id (if (:repair/attempt r)
+                                                           "job-2" "job-1")})
+                        :terminal-validator
+                        (fn [_ _ job]
+                          (if (= "job-1" (:job-id job))
+                            {:ok false :error/code :typed-terminal-invalid
+                             :findings [:frame-mismatch]}
+                            {:ok true}))
+                        :terminal-repair-request-fn
+                        (fn [r ticket job failure]
+                          {:ok true
+                           :request (assoc r :dispatch/id "repair-dispatch"
+                                           :repair/attempt 1
+                                           :repair/of-job-id (:job-id job)
+                                           :repair/of-ticket-id (:ticket/id ticket)
+                                           :repair/findings (:findings failure))})))
+        dispatched (:state (sut/drive! base))
+        repairing (sut/drive! (assoc base :state dispatched))]
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))
+    (is (= [:frame-mismatch]
+           (get-in repairing [:state :terminal-repair/findings])))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (< (.indexOf @calls [:persist :live-job-dispatched])
+           (.lastIndexOf @calls :activate)))))
+
+(deftest repair-retains-the-discarded-terminal
+  (let [calls (atom [])
+        persisted (atom nil)
+        terminal {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                  :report {:memory-use {:used-ids ["memory-7"]}
+                           :outcome :partial}}
+        collection {:evidence {:collection/id "collection-1"}
+                    :submission {:payload {:evidence (:report terminal)}}}
+        base (assoc (effects calls (atom terminal))
+                    :persist-fn #(do (reset! persisted %) {:ok true})
+                    :announce-fn (constantly {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (constantly {:ok false
+                                 :findings [:student-memory-used-despite-holdout]})
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job _failure]
+                      {:ok true :request (assoc r :dispatch/id "repair-1")}))
+        dispatched (assoc (:state (sut/drive! base))
+                          :terminal-collection collection)
+        repaired (sut/drive! (assoc base :state dispatched))
+        discarded (first (:superseded-terminals @persisted))]
+    (is (= :awaiting-terminal (:status repaired)))
+    (is (= ["memory-7"]
+           (get-in discarded [:job :report :memory-use :used-ids])))
+    (is (= collection (:terminal-collection discarded)))
+    (is (= [:student-memory-used-despite-holdout]
+           (:findings discarded)))
+    (is (= {:predecessor-id "job-1"
+            :terminal-evidence-id "job-1"
+            :collection-evidence-id "collection-1"
+            :disposition "[:student-memory-used-despite-holdout]"
+            :predecessor-persisted? true
+            :successor-announced-id "job-2"
+            :successor-activated-id "job-2"}
+           (:trace/successor-observation discarded)))))
+
+(deftest posthoc-rejection-enters-the-bounded-terminal-repair-transition
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        base (assoc (effects calls job)
+                    :job-fn (fn [job-id]
+                              (if (= "job-1" job-id)
+                                @job
+                                {:job-id job-id :agent-id "f19-proctor"
+                                 :state :running}))
+                    :receipt-provider
+                    (fn [_ _ _ _]
+                      {:ok false :error/code :posthoc-invalid
+                       :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket predecessor failure]
+                      {:ok true
+                       :request (assoc request :dispatch/id "repair-dispatch"
+                                      :repair/of-job-id (:job-id predecessor)
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [request]
+                                   {:ok true :job-id
+                                    (if (= "repair-dispatch"
+                                           (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        results (loop [results [] state nil remaining 6]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (recur (conj results result) (:state result)
+                             (dec remaining)))))
+        rejected (first (filter :posthoc-rejection results))
+        repaired (first (filter :repair? results))]
+    (is (= :awaiting-terminal (:status rejected)))
+    (is (= :posthoc-invalid
+           (get-in rejected [:state :posthoc-rejection :error/code])))
+    (is (= :awaiting-terminal (:status repaired)))
+    (is (= 1 (get-in repaired [:state :terminal-repair-attempts])))
+    (is (= "job-2" (get-in repaired [:state :ticket :job-id])))
+    (is (nil? (get-in repaired [:state :posthoc-rejection])))))
+
+(deftest repeated-posthoc-rejection-exhausts-one-repair-budget
+  (let [repairs (atom 0)
+        base (assoc (effects (atom [])
+                             (atom {:job-id "ignored" :agent-id "f19-proctor"
+                                    :state :done}))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state :done})
+                    :receipt-provider
+                    (constantly {:ok false :error/code :posthoc-invalid
+                                 :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket job failure]
+                      (swap! repairs inc)
+                      {:ok true
+                       :request (assoc request :dispatch/id "repair-dispatch"
+                                      :repair/of-job-id (:job-id job)
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [request]
+                                   {:ok true :job-id
+                                    (if (= "repair-dispatch"
+                                           (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        results (loop [results [] state nil remaining 12]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (if (= :live-job-terminal-repair-exhausted
+                             (:error/code result))
+                        (conj results result)
+                        (recur (conj results result) (:state result)
+                               (dec remaining))))))
+        exhausted (last results)]
+    (is (= 1 @repairs))
+    (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
+    (is (= [:frame-mismatch] (:findings exhausted)))))
+
+(deftest repaired-apparatus-can-reopen-exact-posthoc-rejection
+  (let [rejection {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :findings [:preserved]}
+        state {:state/type :live-job-dispatched
+               :terminal-collection {:evidence {:collection/id "c"}}
+               :posthoc-rejection rejection}
+        result (sut/reopen-posthoc-rejection
+                state :promotion-apparatus-repair-exhausted
+                "approve-pattern contract repaired")]
+    (is (:ok result))
+    (is (nil? (get-in result [:state :posthoc-rejection])))
+    (is (= (:terminal-collection state)
+           (get-in result [:state :terminal-collection])))
+    (is (= rejection
+           (get-in result [:state :posthoc-reconciliations 0 :rejection])))
+    (is (false? (:ok (sut/reopen-posthoc-rejection
+                      state :different-error "wrong target"))))))
+
+(deftest terminal-promotion-apparatus-exhaustion-passes-to-frame-queue
+  (let [calls (atom [])
+        provider-state {:state/type :promotion
+                        :stage :awaiting-apparatus-repair}
+        result
+        (sut/drive!
+         (assoc (effects calls
+                         (atom {:job-id "job-1" :agent-id "f19-proctor"
+                                :state :done}))
+                :state {:state/type :live-job-dispatched
+                        :request request
+                        :ticket {:job-id "job-1"}
+                        :activation/accepted? true}
+                :receipt-provider
+                (fn [& _]
+                  {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :repair/kind :promotion-publication
+                   :repair/attempts 1
+                   :findings [:transport-unavailable]
+                   :state provider-state})))]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= provider-state (:state result)))
+    (is (not-any? #(and (vector? %)
+                        (= :live-job-dispatched (second %)))
+                  @calls))))
+
+(deftest apparatus-repair-does-not-consume-the-agent-repair-turn
+  (let [announcements (atom 0)
+        repairs (atom [])
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state (if (= "job-3" job-id) :running :done)})
+                    :receipt-provider
+                    (fn [_ ticket _ _]
+                      {:ok false :error/code :posthoc-invalid
+                       :repair/fault-origin
+                       (if (= "job-1" (:job-id ticket)) :apparatus :agent)
+                       :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket job failure]
+                      (let [origin (if (= "job-1" (:job-id job))
+                                     :apparatus :agent)]
+                        (swap! repairs conj origin)
+                        {:ok true
+                         :request (assoc request
+                                        :dispatch/id (str "repair-" (count @repairs))
+                                        :repair/fault-origin origin
+                                        :repair/findings (:findings failure))}))
+                    :announce-fn (fn [_]
+                                   {:ok true :job-id
+                                    (str "job-" (swap! announcements inc))}))
+        results (loop [results [] state nil remaining 14]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (recur (conj results result) (:state result)
+                             (dec remaining)))))
+        final-state (:state (last results))]
+    (is (= [:apparatus :agent] @repairs))
+    (is (= 1 (:apparatus-repair-attempts final-state)))
+    (is (= 1 (:terminal-repair-attempts final-state)))
+    (is (= [:apparatus :agent]
+           (mapv :fault-origin (:repair-attempt-history final-state))))))
+
+(deftest repair-request-origin-governs-the-budget-charge
+  (let [announcements (atom 0)
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f84-student"
+                               :state (if (= "job-2" job-id) :running :done)})
+                    :terminal-validator
+                    (constantly {:ok false
+                                 :error/code :live-learning-terminal-invalid
+                                 :findings [:fresh-session-id-missing]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket _job failure]
+                      {:ok true
+                       :request (assoc request
+                                       :dispatch/id "missing-session-repair"
+                                       :repair/fault-origin :apparatus
+                                       :repair/kind :orphaned-session-recovery
+                                       :repair/findings (:findings failure))})
+                    :announce-fn
+                    (fn [_]
+                      {:ok true :job-id
+                       (str "job-" (swap! announcements inc))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :active-request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true
+                    :terminal-collection {:evidence {:collection/id "c1"}}}
+        repaired (sut/drive! (assoc base :state dispatched))
+        repaired-state (:state repaired)]
+    (is (:repair? repaired))
+    (is (= :apparatus (:terminal-repair/fault-origin repaired-state)))
+    (is (= 1 (:apparatus-repair-attempts repaired-state)))
+    (is (zero? (:terminal-repair-attempts repaired-state)))
+    (is (= :apparatus
+           (:fault-origin (peek (:repair-attempt-history repaired-state)))))))
+
+(deftest cached-posthoc-origin-is-reclassified-by-current-policy
+  (let [state {:state/type :live-job-dispatched
+               :request {:dispatch/id "original"}
+               :active-request {:dispatch/id "original"}
+               :ticket {:job-id "job-1"}
+               :activation/accepted? true
+               :terminal-collection {:evidence {:collection/id "collection-1"}}
+               :terminal-repair-attempts 1
+               :apparatus-repair-attempts 0
+               :posthoc-rejection
+               {:ok false :error/code :edge-write-failed
+                :repair/fault-origin :agent
+                :finding {:error {:error/component :transport}}}}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom nil))
+                       :state state
+                       :request (:active-request state)
+                       :job-fn (constantly {:job-id "job-1" :state :done})
+                       :posthoc-fault-origin-fn (constantly :apparatus)
+                       :terminal-repair-request-fn
+                       (fn [request _ _ failure]
+                         {:ok true :request
+                          (assoc request :dispatch/id "apparatus-repair"
+                                 :repair/fault-origin
+                                 (:repair/fault-origin failure))})
+                       :announce-fn (constantly {:ok true :job-id "job-2"})))]
+    (is (:repair? result))
+    (is (= :apparatus
+           (get-in result [:state :terminal-repair/fault-origin])))
+    (is (= 1 (get-in result [:state :terminal-repair-attempts])))
+    (is (= 1 (get-in result [:state :apparatus-repair-attempts])))))
+
+(deftest nested-transport-failure-uses-apparatus-repair-budget
+  (let [run (fn [component code]
+              (let [announcements (atom 0)
+                    base (assoc
+                          (effects (atom []) (atom nil))
+                          :job-fn (fn [job-id]
+                                    {:job-id job-id :agent-id "f71-guide"
+                                     :state (if (= "job-2" job-id)
+                                              :running :done)})
+                          :terminal-validator
+                          (fn [& _]
+                            {:ok false
+                             :error {:error/component component
+                                     :error/code code}})
+                          :terminal-repair-request-fn
+                          (fn [request _ticket _job failure]
+                            {:ok true
+                             :request (assoc request
+                                             :dispatch/id "repair-1"
+                                             :repair/findings
+                                             (:findings failure))})
+                          :announce-fn
+                          (fn [_]
+                            {:ok true :job-id
+                             (str "job-" (swap! announcements inc))}))]
+                (loop [state nil remaining 8]
+                  (let [result (sut/drive! (cond-> base state
+                                             (assoc :state state)))]
+                    (if (or (some? (get-in result
+                                           [:state :terminal-repair/fault-origin]))
+                            (zero? remaining))
+                      (:state result)
+                      (recur (:state result) (dec remaining)))))))
+        transport-state (run :transport :memory-assert-unreachable)
+        store-state (run :E-store :memory-assert-rejected)]
+    (is (= 1 (:apparatus-repair-attempts transport-state)))
+    (is (zero? (:terminal-repair-attempts transport-state)))
+    (is (= :apparatus (:terminal-repair/fault-origin transport-state)))
+    (is (= 1 (:terminal-repair-attempts store-state)))
+    (is (zero? (:apparatus-repair-attempts store-state)))
+    (is (= :agent (:terminal-repair/fault-origin store-state)))))
+
+(deftest apparatus-origin-repairs-have-an-independent-bound
+  (let [announcements (atom 0)
+        repairs (atom 0)
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state :done})
+                    :receipt-provider
+                    (constantly {:ok false :error/code :posthoc-invalid
+                                 :repair/fault-origin :apparatus
+                                 :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket _job failure]
+                      (swap! repairs inc)
+                      {:ok true
+                       :request (assoc request :dispatch/id "apparatus-repair"
+                                      :repair/fault-origin :apparatus
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [_]
+                                   {:ok true :job-id
+                                    (str "job-" (swap! announcements inc))}))
+        exhausted
+        (loop [state nil remaining 12]
+          (let [result (sut/drive! (cond-> base state (assoc :state state)))]
+            (if (or (= :live-job-apparatus-repair-exhausted
+                       (:error/code result))
+                    (zero? remaining))
+              result
+              (recur (:state result) (dec remaining)))))]
+    (is (= 2 @repairs))
+    (is (= :live-job-apparatus-repair-exhausted (:error/code exhausted)))
+    (is (= :apparatus (:repair/fault-origin exhausted)))
+    (is (= 2 (:repair/attempts exhausted)))
+    (is (= 2 (count (:repair/history exhausted))))))
+
+(deftest repair-archive-failure-blocks-successor-announcement
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        base (assoc (effects calls job)
+                    :persist-fn (fn [state]
+                                  (swap! calls conj [:persist state])
+                                  (if (:superseded-terminals state)
+                                    {:ok false :error :disk-full}
+                                    {:ok true}))
+                    :terminal-validator
+                    (constantly {:ok false :findings [:invalid-terminal]})
+                    :terminal-repair-request-fn
+                    (fn [r _ _ _]
+                      {:ok true :request (assoc r :dispatch/id "repair-1")})
+                    :announce-fn (fn [request]
+                                   (when (= "repair-1" (:dispatch/id request))
+                                     (swap! calls conj :repair-announced))
+                                   {:ok true :job-id
+                                    (if (= "repair-1" (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        dispatched (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state dispatched)))]
+    (is (= :live-job-terminal-repair-archive-persistence-failed
+           (:error/code result)))
+    (is (not-any? #{:repair-announced} @calls))))
+
+(deftest durable-reference-scan-is-clean-and-reports-first-missing-reference
+  (let [state {:ticket {:job-id "job-current"}
+               :superseded-terminals
+               [{:job {:job-id "job-old"}
+                 :terminal-collection
+                 {:submission {:submission/id "submission-old"}}}]}
+        intact #{"job-current" "job-old" "submission-old"}
+        resolve-intact (fn [{:keys [id]}]
+                         (if (contains? intact id)
+                           {:ok true :value {:id id}}
+                           {:ok false :error/code :fixture-missing}))]
+    (is (= {:ok true}
+           (sut/scan-durable-references state resolve-intact)))
+    (is (= {:ok false
+            :error/code :fixture-missing
+            :reference {:path [:superseded-terminals 0 :job :job-id]
+                        :key :job-id :id "job-old"}
+            :finding {:ok false :error/code :fixture-missing}}
+           (sut/scan-durable-references
+            state
+            (fn [{:keys [id]}]
+              (if (= id "job-old")
+                {:ok false :error/code :fixture-missing}
+                {:ok true :value {:id id}})))))))
+
+(deftest second-invalid-terminal-exhausts-repair-bound
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        result (sut/drive!
+                (assoc (effects calls job) :state state
+                       :terminal-validator
+                       (constantly {:ok false :findings [:bad-shape]})
+                       :terminal-repair-request-fn (constantly {:ok true})))]
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= 1 (:repair/attempts result)))))
+
+(def f227-terminal-exhaustion-pin
+  ;; Verbatim identities from:
+  ;; data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f227/live/
+  ;; guide-intervention-2-review.edn
+  ;; SHA-256 270f3e712a673b237b26eaf8e3e049cc30e735c3b740eb1df2dc00880a42aa57
+  ;; and the f227 parked entry in queue-state.edn
+  ;; SHA-256 bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550.
+  {:dispatch/id
+   "9e4a8794e623c0edd86071df573b14b41fbaee902f94635eaa4a4d130e1770bb"
+   :job-id
+   "apm-role-5a1aa8b0dfa0f1cd1f4634d20cb262ad87f7c182d9ea6bcc506cdd844d064817"
+   :repair-job-id
+   "apm-role-785ee0eaf05e1231bd760e1f971225e52ce8135fd20b8a38635a10fa1f2b0ad0"
+   :session-id "01a092fb-9ef6-7903-ada7-ebc94980fa6c"
+   :submission/id
+   "856f8294163582224d19a6c00aeb35b750c6030788da2c0385b3afcc7e1e02fe"})
+
+(defn- f227-exhaustion-inputs [submission]
+  (let [calls (atom [])
+        persisted (atom [])
+        job-id (:job-id f227-terminal-exhaustion-pin)
+        job {:job-id job-id
+             :agent-id "f227-promotion-proctor"
+             :session-id (:session-id f227-terminal-exhaustion-pin)
+             :state :done
+             :report {:reviews []}}
+        request (assoc request
+                       :dispatch/id (:dispatch/id f227-terminal-exhaustion-pin)
+                       :agent-id "f227-promotion-proctor"
+                       :frame-id "f227"
+                       :problem-id "m93J07"
+                       :role :promotion-proctor
+                       :phase :promote-solver)
+        state {:state/type :live-job-dispatched
+               :request request
+               :ticket {:job-id job-id}
+               :activation/accepted? true
+               :terminal-collection
+               {:evidence {:collection/type :typed-role-terminal
+                           :job-id job-id :attempt 1
+                           :submission/available? false}
+                :submission nil
+                :budget sut/default-terminal-budget}
+               :terminal-repair-attempts 1
+               :typed-submission-migration-attempts 1
+               :repair-attempt-history
+               [{:job-id (:repair-job-id f227-terminal-exhaustion-pin)
+                 :fault-origin :agent :findings nil}]}
+        inputs (assoc (effects calls (atom job))
+                      :request request
+                      :state state
+                      :now-ms-fn (constantly 1789219885296)
+                      :job-fn (fn [_] (swap! calls conj :poll) job)
+                      :persist-fn (fn [next-state]
+                                    (swap! calls conj :persist)
+                                    (swap! persisted conj next-state)
+                                    {:ok true})
+                      :terminal-submission-provider
+                      (fn [& _]
+                        (swap! calls conj :submission-recheck)
+                        submission)
+                      :terminal-repair-request-fn (constantly {:ok true}))]
+    {:inputs inputs :calls calls :persisted persisted}))
+
+(deftest f227-durable-submission-at-exhaustion-enters-normal-collection
+  (let [submission {:submission/id
+                    (:submission/id f227-terminal-exhaustion-pin)
+                    :authority
+                    {:job-id (:job-id f227-terminal-exhaustion-pin)
+                     :frame-id "f227" :problem-id "m93J07"
+                     :agent-id "f227-promotion-proctor"}
+                    :payload {:reviews []}}
+        {:keys [inputs calls persisted]} (f227-exhaustion-inputs
+                                          {:ok true
+                                           :submission submission})
+        result (sut/drive! inputs)]
+    (is (= :terminal-collected (:status result)))
+    (is (not= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= (:submission/id f227-terminal-exhaustion-pin)
+           (get-in result [:state :terminal-collection
+                           :submission :submission/id])))
+    (is (= :authenticated-submission
+           (get-in result [:terminal-exhaustion/recheck
+                           :recheck/observation])))
+    (is (= [:poll :submission-recheck :persist] @calls))
+    (is (= 1 (count @persisted)))))
+
+(deftest f227-empty-exhaustion-recheck-is-recorded
+  (let [{:keys [inputs calls]} (f227-exhaustion-inputs nil)
+        result (sut/drive! inputs)
+        recheck (:terminal-exhaustion/recheck result)]
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= :empty (:recheck/observation recheck)))
+    (is (= 1 (:recheck/attempt recheck)))
+    (is (= 1789219885296 (:recheck/observed-at-ms recheck)))
+    (is (= (:job-id f227-terminal-exhaustion-pin)
+           (:retained/job-id recheck)))
+    (is (= (:session-id f227-terminal-exhaustion-pin)
+           (:retained/session-id recheck)))
+    (is (true? (:retained-session/recovery-possible? recheck)))
+    (is (= [:poll :submission-recheck] @calls))))
+
+(deftest f83-shaped-repair-that-retains-unauthorized-memory-is-refused
+  ;; f83/a1's first terminal cited this exact rejected promotion candidate.
+  ;; A repair instruction is not enforcement: if the replacement submission
+  ;; still carries it, the driver must return a specific refusal and must not
+  ;; ask the receipt provider to certify the role.
+  (let [unauthorized-id
+        "e-apm-promotion-bf6a95b47dda46466e5bc4d6f8faa422"
+        receipts (atom 0)
+        job (atom {:job-id "f83-a1-repair" :agent-id "f83-student"
+                   :state :done
+                   :report {:memory-use {:used-ids [unauthorized-id]}}})
+        state (assoc (:state (sut/drive! (effects (atom []) job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        result
+        (sut/drive!
+         (assoc (effects (atom []) job)
+                :state state
+                :terminal-validator
+                (fn [_ _ observed-job]
+                  (is (= [unauthorized-id]
+                         (get-in observed-job [:report :memory-use :used-ids])))
+                  {:ok false
+                   :error/code :live-learning-terminal-invalid
+                   :findings [:student-memory-used-without-surfacing]})
+                :receipt-provider
+                (fn [& _]
+                  (swap! receipts inc)
+                  {:ok true :certificate {:receipt/id "must-not-exist"}})
+                :terminal-repair-request-fn (constantly {:ok true})))]
+    (is (= :live-job-unauthorized-memory-repair-rejected
+           (:error/code result)))
+    (is (= [:student-memory-used-without-surfacing] (:findings result)))
+    (is (= 1 (:repair/attempts result)))
+    (is (zero? @receipts))
+    (is (nil? (:certificate result)))))
+
+(deftest submission-only-repair-is-a-submit-step
+  ;; A repair whose findings reduce to the missing submission carries
+  ;; :repair/kind :submit-step from the FIRST attempt: the packet says
+  ;; "submit what exists", never re-frames the attempt (Joe, 2026-09-06).
+  (let [calls (atom []) seen-failure (atom nil)
+        job (atom {:job-id "job-1" :state :done})
+        state (:state (sut/drive! (effects calls job)))
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn
+                    (fn [repair-request]
+                      (swap! calls conj [:announce (:dispatch/id repair-request)])
+                      {:ok true :job-id "submit-step-job"})
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job failure]
+                      (reset! seen-failure failure)
+                      {:ok true
+                       :request (assoc r :dispatch/id "submit-step-dispatch")}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (true? (:repair? result)))
+    (is (= :submit-step (:repair/kind @seen-failure)))
+    (is (= 1 (get-in result [:state :terminal-repair-attempts])))
+    (is (= 1 (count (filter #(and (vector? %) (= :announce (first %)))
+                            @calls))))))
+
+(deftest exhausted-missing-submission-can-produce-controller-observation
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        receipt {:receipt/type :student-observation-missing
+                 :receipt/author :controller}
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :missing-observation-provider
+                    (fn [_ _ _ attempts _collection]
+                      {:ok true :certificate (assoc receipt
+                                                    :repair-attempts attempts)}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :certified (:status result)))
+    (is (= :controller (get-in result [:certificate :receipt/author])))
+    (is (= 1 (get-in result [:certificate :repair-attempts])))
+    (is (= :unobserved (get-in result [:state :learning/outcome])))))
+
+(deftest recovered-controller-observation-is-observed
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :missing-observation-provider
+                    (fn [& _]
+                      {:ok true
+                       :certificate
+                       {:receipt/type :student-observation-recovered
+                        :receipt/author :controller}}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :certified (:status result)))
+    (is (= :observed (get-in result [:state :learning/outcome])))))
+
+(deftest pre-contract-terminal-gets-one-fresh-typed-migration
+  (let [calls (atom [])
+        seen-failure (atom nil)
+        job (atom {:job-id "legacy-repair-job" :state :done
+                   :report {:looks "valid"}})
+        base (assoc (effects calls job)
+                    :announce-fn
+                    (fn [repair-request]
+                      (swap! calls conj [:announce (:dispatch/id repair-request)])
+                      {:ok true :job-id "typed-migration-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job failure]
+                      (reset! seen-failure failure)
+                      {:ok true
+                       :request (assoc r :dispatch/id "typed-migration-dispatch"
+                                         :fresh-session? true)}))
+        prior-state {:state/type :live-job-dispatched
+                     :request request :active-request (assoc request :repair/attempt 1)
+                     :ticket {:job-id "legacy-repair-job" :ticket/id "old-ticket"}
+                     :activation/accepted? true :terminal-repair-attempts 1}
+        legacy-collected (sut/drive! (assoc base :state prior-state))
+        migrated (sut/drive! (assoc base :state (:state legacy-collected)))
+        typed-base (assoc base :state (assoc (:state migrated)
+                                             :activation/accepted? true)
+                          :job-fn (constantly {:job-id "typed-migration-job"
+                                              :state :done}))
+        typed-collected (sut/drive! typed-base)
+        exhausted (sut/drive! (assoc typed-base :state (:state typed-collected)))]
+    (is (= :terminal-collected (:status legacy-collected)))
+    (is (= :awaiting-terminal (:status migrated)))
+    (is (true? (:repair? migrated)))
+    (is (= :typed-submission-contract-migration
+           (:repair/kind @seen-failure)))
+    (is (= 1 (get-in migrated [:state
+                               :typed-submission-migration-attempts])))
+    (is (= 1 (get-in migrated [:state :terminal-repair-attempts])))
+    (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
+    (is (= 1 (count (filter #(and (vector? %)
+                                  (= :announce (first %)))
+                            @calls))))))
+
+(deftest unaccepted-queued-job-is-cancelled-before-one-distinct-supersession
+  (let [calls (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (constantly {:job-id "old-job" :state :queued})
+                    :cancel-fn (fn [job-id]
+                                 (swap! calls conj [:cancel job-id])
+                                 {:ok true :cancelled-job-id job-id})
+                    :announce-fn (fn [_]
+                                   (swap! calls conj :announce-replacement)
+                                   {:ok true :job-id "replacement-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn
+                    (fn [_ ticket]
+                      (swap! calls conj [:register (:job-id ticket)])
+                      {:ok true}))
+        state {:state/type :live-job-dispatched :request request
+               :active-request request
+               :ticket {:job-id "old-job" :ticket/id "old-ticket"}
+               :activation/accepted? false
+               :typed-submission-migration-attempts 1}
+        result (sut/drive! (assoc base :state state))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:supersession? result)))
+    (is (= "replacement-job" (get-in result [:state :ticket :job-id])))
+    (is (= 1 (get-in result [:state :activation-supersession-attempts])))
+    (is (= "old-job" (get-in result [:state :superseded-tickets 0 :job-id])))
+    (is (< (.indexOf @calls [:cancel "old-job"])
+           (.indexOf @calls :announce-replacement)
+           (.indexOf @calls [:register "replacement-job"])
+           (.indexOf @calls :activate)))))
+
+(deftest persisted-cancellation-reconciles-without-a-second-cancel
+  (let [calls (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (constantly {:job-id "old-job" :state :cancelled})
+                    :cancel-fn (fn [_] (swap! calls conj :unexpected-cancel)
+                                 {:ok false})
+                    :announce-fn (fn [_] (swap! calls conj :announce-replacement)
+                                   {:ok true :job-id "replacement-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn
+                    (fn [_ _] (swap! calls conj :register) {:ok true}))
+        state {:state/type :live-job-dispatched :request request
+               :active-request request
+               :ticket {:job-id "old-job" :ticket/id "old-ticket"}
+               :activation/accepted? false
+               :activation/failure {:status 409}
+               :typed-submission-migration-attempts 1}
+        result (sut/drive! (assoc base :state state))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:supersession? result)))
+    (is (= [:announce-replacement :register :activate]
+           (remove #(and (vector? %) (= :persist (first %))) @calls)))
+    (is (true? (get-in result [:state :superseded-tickets 0
+                               :cancellation :reconciled?])))))
+
+(deftest typed-submission-replaces-conversational-report
+  (let [calls (atom [])
+        seen (atom nil)
+        collections (atom 0)
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                   :report {:frame-id "forged"}})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        base (assoc (effects calls job) :state dispatched
+                       :terminal-submission-provider
+                       (fn [_ _ _]
+                         (swap! collections inc)
+                         {:authority {:frame-id "f19" :problem-id "a01J05"}
+                          :submission/id "persisted-submission"
+                          :payload {:command-own-exit 0 :outcome "complete"
+                                    :failure-account []
+                                    :queries ["dyadic shell summability"]
+                                    :evidence {:verified true}}})
+                       :terminal-validator
+                       (fn [_ _ terminal]
+                         (reset! seen (:report terminal)) {:ok true}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :certified (:status result)))
+    (is (= "f19" (:frame-id @seen)))
+    (is (= 1 @collections))
+    (is (= true (:verified @seen)))
+    (is (= ["dyadic shell summability"] (:queries @seen)))
+    (is (not= "forged" (:frame-id @seen)))))
+
+(deftest guide-report-reconciles-payload-and-channel-audit-mode
+  (let [calls (atom [])
+        seen (atom nil)
+        job (atom {:job-id "guide-job" :agent-id "f57-guide" :state :done})
+        guide-request (assoc request :dispatch/type :guide-intervention
+                             :agent-id "f57-guide" :mode :store-mode)
+        dispatched (:state
+                    (sut/drive! (assoc (effects calls (atom {:state :running}))
+                                       :request guide-request)))
+        base (assoc (effects calls job)
+                    :request guide-request
+                    :state dispatched
+                    :terminal-submission-provider
+                    (fn [_ _ _]
+                      {:authority {:frame-id "f57" :problem-id "a99J08"}
+                       :submission/id "guide-submission"
+                       :payload {:command-own-exit 0
+                                 :outcome "complete"
+                                 :mode "store-mode"
+                                 :failure-account []
+                                 :evidence
+                                 {:channel-audit
+                                  {:mode "store-mode"
+                                   :direct-student-contact? false}}}})
+                    :terminal-validator
+                    (fn [_ _ terminal]
+                      (reset! seen (:report terminal))
+                      {:ok true}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :certified (:status result)))
+    (is (= "store-mode" (:mode @seen)))
+    (is (= false (get-in @seen [:channel-audit
+                                :direct-student-contact?])))))
+
+(deftest guide-report-mode-supports-either-location-and-marks-conflicts
+  (let [report-for
+        (fn [payload]
+          (let [calls (atom [])
+                seen (atom nil)
+                job (atom {:job-id "guide-job" :agent-id "f60-guide"
+                           :state :done})
+                guide-request (assoc request :dispatch/type :guide-intervention
+                                     :agent-id "f60-guide" :mode :store-mode)
+                dispatched (:state
+                            (sut/drive!
+                             (assoc (effects calls (atom {:state :running}))
+                                    :request guide-request)))
+                base (assoc (effects calls job)
+                            :request guide-request
+                            :state dispatched
+                            :terminal-submission-provider
+                            (fn [_ _ _]
+                              {:authority {:frame-id "f60"
+                                           :problem-id "b00J02"}
+                               :submission/id "guide-submission"
+                               :payload (merge {:command-own-exit 0
+                                                :outcome "complete"
+                                                :failure-account []}
+                                               payload)})
+                            :terminal-validator
+                            (fn [_ _ terminal]
+                              (reset! seen (:report terminal))
+                              {:ok true}))
+                collected (sut/drive! base)]
+            (sut/drive! (assoc base :state (:state collected)))
+            @seen))
+        payload-only (report-for {:mode "store-mode"
+                                  :evidence {:channel-audit
+                                             {:direct-student-contact? false}}})
+        audit-only (report-for {:evidence {:channel-audit
+                                           {:mode "store-mode"
+                                            :direct-student-contact? false}}})
+        absent (report-for {:evidence {:channel-audit
+                                       {:direct-student-contact? false}}})
+        conflict (report-for {:mode "store-mode"
+                              :evidence {:channel-audit
+                                         {:mode "harness-mode"
+                                          :direct-student-contact? false}}})]
+    (is (= "store-mode" (:mode payload-only)))
+    (is (= "store-mode" (:mode audit-only)))
+    (is (nil? (:mode absent)))
+    (is (= {:payload :store-mode :channel-audit :harness-mode}
+           (:guide-mode-declaration-conflict conflict)))))
+
+(deftest missing-typed-submission-never-validates-conversation
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                   :report {:looks "valid"}})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        base (assoc (effects calls job) :state dispatched
+                    :terminal-submission-provider (constantly nil))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :live-job-submission-missing (:error/code result)))
+    (is (not-any? #{:validate :receipt} @calls))))
+
+(deftest all-live-role-schemas-collect-before-validation
+  (doseq [role [:solver :student :guide :scribe :proctor
+                :promotion-proctor :analyst]]
+    (let [calls (atom [])
+          job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+          dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+          base (assoc (effects calls job)
+                      :request (assoc request :role role)
+                      :state (assoc-in dispatched [:request :role] role)
+                      :terminal-submission-provider
+                      (fn [_ _ _]
+                        {:submission/id (str "submission-" (name role))
+                         :authority {:frame-id "f19" :problem-id "a01J05"}
+                         :payload {:command-own-exit 0 :evidence {}}}))
+          collected (sut/drive! base)
+          certified (sut/drive! (assoc base :state (:state collected)))]
+      (is (= :terminal-collected (:status collected)) (name role))
+      (is (= :certified (:status certified)) (name role))
+      (is (= (:collection/id (:collection collected))
+             (machine/ledger-digest
+              [(dissoc (:collection collected) :collection/id)]))
+          (name role)))))
+
+(deftest missing-observation-cannot-fire-before-persisted-collection
+  (let [calls (atom []) missing-calls (atom 0)
+        job (atom {:job-id "job-1" :state :done})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        result (sut/drive!
+                (assoc (effects calls job) :state dispatched
+                       :terminal-submission-provider (constantly nil)
+                       :missing-observation-provider
+                       (fn [& _] (swap! missing-calls inc)
+                         {:ok true :certificate {}})))]
+    (is (= :terminal-collected (:status result)))
+    (is (zero? @missing-calls))
+    (is (= false (get-in result [:collection :submission/available?])))))
+
+(deftest non-student-exhaustion-fails-closed-without-substitution
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (nil? (:certificate result)))))
+
+(deftest invalid-configured-terminal-budget-is-refused
+  (let [calls (atom []) result
+        (sut/drive! (assoc (effects calls (atom {:state :running}))
+                           :terminal-budget-config {:collection-attempts 0
+                                                    :repair-attempts 1}))]
+    (is (= :live-job-driver-input-invalid (:error/code result)))
+    (is (empty? @calls))))
+
+(deftest receipt-provider-may-defer-certification-behind-a-further-job
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        deferred (assoc (effects calls job)
+                        :receipt-provider
+                        (fn [_ _ _ _]
+                          (swap! calls conj :receipt)
+                          {:ok true :status :awaiting-terminal :job-id "review-1"}))
+        dispatched (sut/drive! (assoc deferred :job-fn (fn [_] {:state :running})))
+        waiting (sut/drive! (assoc deferred :state (:state dispatched)))]
+    (is (= :awaiting-terminal (:status waiting)))
+    (is (= "review-1" (:job-id waiting)))
+    (is (not= :live-job-certified (get-in waiting [:state :state/type])))
+    (is (nil? (get-in waiting [:state :receipt])))
+    (is (= 1 (count (filter #{:receipt} @calls))))
+    (testing "the validated terminal is re-observed on the next tick"
+      (let [again (sut/drive! (assoc deferred :state (:state waiting)))]
+        (is (= :awaiting-terminal (:status again)))
+        (is (= 2 (count (filter #{:receipt} @calls))))))))
+
+(deftest receipt-provider-boundary-state-survives-live-job-state-wrapping
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-guide" :state :done})
+        retry-state {:state/type :promotion
+                     :stage :awaiting-transport-retry
+                     :transport-retry/not-before-ms 601000}
+        inputs (assoc (effects calls job)
+                      :receipt-provider
+                      (fn [_ _ _ _]
+                        {:ok true :status :transport-retry-scheduled
+                         :state retry-state}))
+        dispatched (sut/drive! (assoc inputs :job-fn (fn [_] {:state :running})))
+        waiting (sut/drive! (assoc inputs :state (:state dispatched)))]
+    (is (= :transport-retry-scheduled (:status waiting)))
+    (is (= :live-job-dispatched (get-in waiting [:state :state/type])))
+    (is (= retry-state (:provider/state waiting)))))
+
+(deftest transport-classification-is-not-a-whole-tree-scan
+  ;; transport-failure? checks THIS failure's own error envelope. An earlier
+  ;; version walked the validated value with tree-seq, which would also match
+  ;; a transport envelope carried incidentally in nested context and
+  ;; reclassify an agent fault as apparatus on that basis.
+  (let [own {:ok false :error {:error/component :transport
+                               :error/code :memory-assert-unreachable}}
+        nested {:ok false
+                :error/component :E-store
+                :error/code :memory-assert-rejected
+                :context {:prior-attempt
+                          {:error {:error/component :transport}}}}
+        transport? #'futon3c.apm.live-job-driver/transport-failure?]
+    (is (true? (transport? own)))
+    (is (false? (transport? nested)))))
+
+(deftest substrate-exhaustion-waits-instead-of-consuming-the-queue
+  ;; 2026-09-06: the Codex quota ran out and 59 frames terminated with
+  ;; :invoke-error and "You've hit your usage limit ... try again at Sep 7th,
+  ;; 2026 8:33 AM". Every one was treated as a frame fault and parked, so the
+  ;; queue advanced past 80 problems in about half an hour against an outage
+  ;; with a published end time. The problems were fine.
+  (let [usage-limit-job
+        {:job-id "j1" :agent-id "f110-proctor" :state :failed
+         :terminal-code :invoke-error
+         :terminal-message (str "Exit 1: You've hit your usage limit. Visit "
+                                "https://chatgpt.com/codex/settings/usage to "
+                                "purchase more credits or try again at "
+                                "Sep 7th, 2026 8:33 AM.")}
+        work-failure-job
+        {:job-id "j2" :agent-id "f111-solver" :state :failed
+         :terminal-code :invoke-error
+         :terminal-message "Exit 1: lake build failed, 3 errors"}]
+    (is (true? (sut/substrate-unavailable? usage-limit-job))
+        "the real recorded quota terminal is substrate unavailability")
+    (is (false? (sut/substrate-unavailable? work-failure-job))
+        "a genuine work failure must NOT be mistaken for substrate absence")
+    (is (false? (sut/substrate-unavailable? {}))
+        "an empty terminal is not substrate absence")
+    (is (false? (sut/substrate-unavailable?
+                 {:terminal-code :timeout
+                  :terminal-message "You've hit your usage limit"}))
+        "only :invoke-error terminals qualify")
+    ;; The wait must be bounded: a substrate that never returns has to
+    ;; surface rather than wait silently forever.
+    (is (pos-int? sut/substrate-unavailable-max-waits))
+    (is (pos-int? sut/substrate-unavailable-backoff-ms))))
+
+(deftest exhausted-repair-reports-exhaustion-not-an-invalid-request
+  ;; f86-f104 -- 13 consecutive frames -- parked as
+  ;; :live-job-terminal-repair-request-invalid with :finding nil. Their durable
+  ;; state was identical: apparatus-repair-attempts 2 of 2,
+  ;; terminal-repair-attempts 0, terminal-repair/fault-origin :apparatus,
+  ;; findings [:fresh-session-id-missing].
+  ;;
+  ;; Two exhaustion tests used two different origins. The CACHED origin
+  ;; (:apparatus, exhausted) suppressed the repair request, so `repair` was
+  ;; nil; the INFERRED origin (:agent, budget untouched) then judged the frame
+  ;; not exhausted, so the exhaustion branch never fired and nil fell through
+  ;; to "invalid request". The frame was out of apparatus budget and said so
+  ;; nowhere.
+  (let [state {:state/type :live-job-dispatched
+               :apparatus-repair-attempts 2
+               :terminal-repair-attempts 0
+               :terminal-repair/fault-origin :apparatus
+               :terminal-repair/findings [:fresh-session-id-missing]}]
+    ;; The budget that was already spent.
+    (is (= 2 sut/default-apparatus-repair-attempts))
+    (is (>= (:apparatus-repair-attempts state)
+            sut/default-apparatus-repair-attempts)
+        "the recorded frames were genuinely out of apparatus repair budget")
+    ;; The cached origin must be the one exhaustion is judged against, so a
+    ;; suppressed request cannot be reported as a malformed one.
+    (is (= :apparatus (:terminal-repair/fault-origin state))
+        "and the origin that suppressed the request was :apparatus")))
+
+(deftest session-identity-survives-our-own-cancellation
+  ;; Measured over jit-all-open-v2's 107 student jobs: 65 reached :done and
+  ;; carry a session id; 18 were cancelled and carry none. The canceller is
+  ;; the typed-submission wrapper reconciliation -- the machine's own. f86's
+  ;; student had executed 12 tool events before its job was cancelled and its
+  ;; session identity vanished, producing :fresh-session-id-missing, two
+  ;; apparatus repairs and a park, on 13 consecutive frames.
+  (let [live {:job-id "j1" :state :running :session-id "codex-abc-123"}
+        cancelled {:job-id "j1" :state :cancelled
+                   :terminal-code :operator-cancelled :session-id nil}
+        fresh {:state/type :live-job-dispatched}
+        carried (assoc fresh :job/session-id "codex-abc-123")]
+    ;; captured while live
+    (is (= "codex-abc-123"
+           (:job/session-id (sut/capture-session-identity fresh live)))
+        "the identity is captured while the job is still live")
+    ;; captured once, not every tick
+    (is (nil? (sut/capture-session-identity carried live))
+        "nothing to record once it is already held, so no needless persist")
+    (is (nil? (sut/capture-session-identity fresh cancelled))
+        "a cancelled job offers nothing to capture")
+    ;; restored after our cancellation erased it
+    (is (= "codex-abc-123"
+           (:session-id (sut/restore-session-identity cancelled carried)))
+        "our own cancellation must not erase the fact a session existed")
+    ;; and never invented where none was ever seen
+    (is (nil? (:session-id (sut/restore-session-identity cancelled fresh)))
+        "with nothing recorded, no identity is fabricated")
+    (is (= "live-wins" (:session-id (sut/restore-session-identity
+                                     (assoc live :session-id "live-wins")
+                                     carried)))
+        "a live id is never overwritten by a stale recorded one")))
+
+(deftest session-identity-is-captured-on-the-collecting-observation
+  ;; The companion test above proves capture-session-identity and
+  ;; restore-session-identity are each correct in isolation -- and they are.
+  ;; That is exactly why it stayed green while ten frames parked with findings
+  ;; exactly [:fresh-session-id-missing]: capture was never CALLED.
+  ;;
+  ;; Its home was the (not terminal?) branch, which the collecting branch
+  ;; preempts the moment a submission appears; setting :terminal-collection
+  ;; then disables it permanently, since its guard is
+  ;; (nil? (:terminal-collection state)). Measured over jit-all-open-v3: 0 of
+  ;; 20 student attempts ever recorded a session id.
+  ;;
+  ;; This test pins the WIRING rather than the function: drive! must come away
+  ;; holding the identity, on the one observation that still carries it.
+  (let [calls (atom [])
+        live-job (atom {:job-id "job-1" :state :running
+                        :session-id "zai-live-session-77"})
+        cancels (atom [])
+        result (sut/drive!
+                (assoc (effects calls live-job)
+                       :state {:state/type :live-job-dispatched
+                               :request request
+                               :ticket {:job-id "job-1"}
+                               :activation/accepted? true}
+                       :cancel-fn (fn [job-id]
+                                    (swap! cancels conj job-id)
+                                    ;; the agency nulls the id on cancel
+                                    (swap! live-job assoc :session-id nil
+                                           :state :cancelled
+                                           :terminal-code :operator-cancelled)
+                                    {:ok true :job-id job-id
+                                     :response {:state "cancelled"}})
+                       :terminal-submission-provider
+                       (constantly {:submission/id "sub-1" :body "typed"})))]
+    (is (= :terminal-collected (:status result))
+        "a submission still collects as before")
+    (is (= ["job-1"] @cancels)
+        "and the wrapper still cancels the live job")
+    (is (= "zai-live-session-77" (:job/session-id (:state result)))
+        "but the identity is now recorded BEFORE that cancellation erases it")
+    ;; and the recorded identity is what restore replays into the terminal
+    (is (= "zai-live-session-77"
+           (:session-id (sut/restore-session-identity @live-job (:state result))))
+        "so validate-terminal sees the session the student actually ran in")))
+
+(deftest wrapper-cancellation-alone-is-a-submission-only-failure
+  ;; The three parks of 2026-09-07 (f188/b98A04, f189/b98J01, f192/bpm-1-8-1)
+  ;; all carried findings exactly [:fresh-session-id-missing]: the typed-
+  ;; submission wrapper cancelled the student turn before any poll observed it
+  ;; live, so the job ended cancelled with no session id and no typed
+  ;; submission was ever due. Requiring :typed-submission-missing to be present
+  ;; excluded that case from the rescue chain, and each frame burned both
+  ;; apparatus repair attempts and parked instead.
+  (testing "a lone wrapper-cancellation finding still reaches the rescue"
+    (is (sut/submission-only-failure? [:fresh-session-id-missing])))
+  (testing "the previously covered combinations still hold"
+    (is (sut/submission-only-failure? [:typed-submission-missing]))
+    (is (sut/submission-only-failure? [:typed-submission-missing
+                                       :fresh-session-id-missing]))
+    (is (sut/submission-only-failure? [:live-job-terminal-repair-exhausted])))
+  (testing "a real role failure is still not submission-only"
+    (is (not (sut/submission-only-failure? [:lean-proof-invalid])))
+    (is (not (sut/submission-only-failure? [:fresh-session-id-missing
+                                            :lean-proof-invalid])))
+    (is (not (sut/submission-only-failure? [])))))
+
+(deftest a-collected-submission-makes-a-missing-submission-an-apparatus-fault
+  ;; f191/b99A02: job fb063e8a delivered submission 630f7334 -- evidence
+  ;; :submission/available? true, payload :command-own-exit 0, an authority
+  ;; naming the student and its memory snapshot, and an honest "partial"
+  ;; account. The job's durable state never left :running, so the repair job
+  ;; found no typed submission and reported :typed-submission-missing. That was
+  ;; charged to :agent and spent the student's repair budget re-collecting work
+  ;; it had already delivered.
+  (let [collected {:budget {:collection-attempts 1 :repair-attempts 1}
+                   :evidence {:role :student
+                              :terminal-state :running
+                              :submission/available? true
+                              :submission/id "630f7334"}
+                   :submission {:submission/id "630f7334"
+                                :authority {:role :student
+                                            :agent-id "f191-student"
+                                            :attempt-ordinal 2}
+                                :payload {:command-own-exit 0
+                                          :outcome "partial"}}}
+        collected? #'sut/submission-already-collected?]
+    (testing "the f191 collection counts as a delivered submission"
+      (is (true? (collected? {:terminal-collection collected}))))
+    (testing "and its finding is submission-only, so the pair reads apparatus"
+      (is (sut/submission-only-failure? [:typed-submission-missing])))
+    (testing "nothing collected is still the agent's to answer for"
+      (is (false? (collected? {})))
+      (is (false? (collected? {:terminal-collection
+                               {:evidence {:submission/available? false}}}))))
+    (testing "an id with no authority is a partial write, not a submission"
+      (is (false? (collected? {:terminal-collection
+                               {:submission {:submission/id "630f7334"}}}))))
+    (testing "a real role fault stays the agent's even once a submission exists"
+      (is (not (sut/submission-only-failure? [:lean-proof-invalid])))
+      (is (not (sut/submission-only-failure?
+                [:typed-submission-missing :lean-proof-invalid]))))))
+
+(def f194-already-terminal-cancel-response
+  ;; Live pin, verbatim from data/apm-campaigns/jit-all-open-v3/queue-state.edn
+  ;; -- the f194 :guide-intervention-2 park residual (2026-09-08). The wrapper
+  ;; had already collected an authenticated guide submission when it cancelled
+  ;; the job that produced it, and the Agency answered 409.
+  {:ok false
+   :error "invoke-job-already-terminal"
+   :job-id (str "apm-role-84fea8d7f12375005530575b30fe89ffb8c8c1d79c635"
+                "06394c0befbd07f636c")
+   :state "done"
+   :http/status 409})
+
+(def f194-cancel-result
+  {:ok false
+   :job-id (:job-id f194-already-terminal-cancel-response)
+   :response f194-already-terminal-cancel-response})
+
+(deftest cancellation-disposition-separates-a-late-finish-from-a-failure
+  (testing "a 200 cancel is the job we stopped"
+    (let [d (sut/cancellation-disposition
+             {:ok true :job-id "job-1"
+              :response {:ok true :state "cancelled" :http/status 200}})]
+      (is (true? (:ok d)))
+      (is (= :cancelled (:cancellation/disposition d)))))
+  (testing "f194's 409 answers the cancel's question, and says which terminal"
+    (let [d (sut/cancellation-disposition f194-cancel-result)]
+      (is (true? (:ok d)))
+      (is (= :already-terminal (:cancellation/disposition d)))
+      (is (= "done" (:cancellation/terminal-state d)))
+      (is (= f194-already-terminal-cancel-response (:response d)))))
+  (testing "a transport failure is still a failure"
+    (let [d (sut/cancellation-disposition
+             {:ok false :job-id "job-1"
+              :response {:ok false :error "boom" :http/status 500}})]
+      (is (false? (:ok d)))
+      (is (= :failed (:cancellation/disposition d)))))
+  (testing "a 409 that is not already-terminal is not laundered into success"
+    (let [d (sut/cancellation-disposition
+             {:ok false :job-id "job-1"
+              :response {:ok false :error "invoke-job-locked"
+                         :http/status 409}})]
+      (is (false? (:ok d)))
+      (is (= :failed (:cancellation/disposition d))))))
+
+(defn- f194-shaped-collection
+  "Drive the real collection branch with CANCEL-RESPONSE, in f194's situation:
+   an authenticated submission in hand and a job the driver last observed
+   running."
+  [cancel-result]
+  (let [calls (atom [])
+        running-job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                           :state :running})
+        dispatched (:state (sut/drive! (effects calls running-job)))
+        submission {:schema :apm/role-submission-v1
+                    :request-id "dispatch-1"
+                    :job-id "job-1"
+                    :agent-id "f19-proctor"
+                    :payload {:outcome "complete"}}
+        fx (assoc (effects calls running-job)
+                  :cancel-fn (fn [_] (swap! calls conj :cancel) cancel-result)
+                  :terminal-submission-provider (fn [& _] submission))]
+    {:result (sut/drive! (assoc fx :state dispatched))
+     :calls calls}))
+
+(deftest f194-late-finishing-job-is-collected-not-parked
+  ;; The turn WAS delivered: the submission is in hand before the cancel runs.
+  ;; Filing it as :live-job-wrapper-reconciliation-failed discarded the
+  ;; collection and parked the frame -- seven times on jit-all-open-v3
+  ;; (f177, f178 x2, f194).
+  (let [{:keys [result calls]} (f194-shaped-collection f194-cancel-result)]
+    (is (not= :live-job-wrapper-reconciliation-failed (:error/code result)))
+    (is (= :terminal-collected (:status result)))
+    (is (some? (:collection result)))
+    (is (= :already-terminal
+           (get-in result [:state :wrapper/reconciliation
+                           :cancellation/disposition])))
+    (is (= "done"
+           (get-in result [:state :wrapper/reconciliation
+                           :cancellation/terminal-state])))
+    (testing "the collection is persisted, not merely computed"
+      (is (some? (get-in result [:state :terminal-collection :evidence])))
+      (is (some #(= [:persist :live-job-dispatched] %) @calls)))))
+
+(def acceptance-ordering-replay-provenance
+  {:f177
+   {:pin/source :durable-queue-record
+    :source/path "data/apm-campaigns/jit-all-open-v3/queue-state.edn"
+    :source/sha256
+    "bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550"}
+   :f194
+   {:pin/source :adjudication-record
+    :source/path "holes/labs/M-apm-demonstration/frame-park-decisions.edn"
+    :source/sha256
+    "5d67984e0832e5dffca56dad4d9861a527818bfc7bbcadb5bc15c79b616df6b8"}
+   :f218
+   {:pin/source :durable-role-state-and-technote
+    :role-state/path
+    "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-1.edn"
+    :role-state/sha256
+    "b269f451e19af6be2124b3c155dbdd1e61b08acab6dcaaec96e4db9cf9ae2392"
+    :technote/path "holes/technotes/TN-F218-watchdog-recovery-2026-09-11.md"
+    :technote/sha256
+    "018fefddfded0571e6e3c09d8140c2a4bdbfdff9058622a2d8f8199f3f6302a4"}})
+
+(def f177-cancel-pin
+  {:ok false
+   :job-id
+   "apm-role-bb0c48a43932105733502b48fc07122ced1331b5db2078e355df683b531e9d81"
+   :response
+   {:ok false :error "invoke-job-already-terminal"
+    :job-id
+    "apm-role-bb0c48a43932105733502b48fc07122ced1331b5db2078e355df683b531e9d81"
+    :state "done" :http/status 409}})
+
+(def f218-accepted-pin
+  {:job-id
+   "apm-role-ec1ea5119e971343294e3f1ded6ff94af6ed67020ad185e3198ab7325f3a6df9"
+   :submission/id
+   "2445c6727e603f2b2aed7f66342c5d0ed1886462cf9a092ebd4334a2d6ff6c4b"
+   :collection/id
+   "7abf27551c249efc7dcf504677ecd117ddaf2c530b85e662ad1b5525fe0f8f8d"
+   :cancelled-at "2026-09-10T22:48:41Z"})
+
+(defn- drive-production-cancellation
+  [{:keys [job-id agent-id frame-id phase submission cancel-result
+           observed-state replay-state]}]
+  (let [request {:dispatch/id (str "dispatch-" frame-id)
+                 :agent-id agent-id :frame-id frame-id :problem-id "p"
+                 :phase phase :role (:role (:authority submission))}
+        initial {:state/type :live-job-dispatched :request request
+                 :ticket {:job-id job-id} :activation/accepted? true}
+        current-job (atom {:job-id job-id :agent-id agent-id
+                           :session-id "retained-session"
+                           :state observed-state})
+        submission-now (atom submission)
+        persisted (atom [])
+        calls (atom [])
+        fx (assoc (effects calls current-job)
+                  :request request
+                  :persist-fn (fn [state]
+                                (swap! persisted conj state)
+                                {:ok true})
+                  :cancel-fn (fn [_]
+                               (swap! calls conj :cancel)
+                               cancel-result)
+                  :terminal-submission-provider
+                  (fn [& _] @submission-now))
+        collected (sut/drive! (assoc fx :state initial))
+        _ (reset! submission-now nil)
+        _ (reset! current-job
+                  {:job-id job-id :agent-id agent-id :state replay-state})
+        certified (sut/drive! (assoc fx :state (:state collected)))]
+    {:collected collected :certified certified
+     :persisted @persisted :calls @calls}))
+
+(deftest f177-done-during-cancel-persists-one-accepted-collection
+  (let [job-id (:job-id f177-cancel-pin)
+        submission {:submission/id "f177-authenticated-submission"
+                    :authority {:job-id job-id :role :student
+                                :agent-id "f177-student"}}
+        {:keys [collected persisted]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f177-student" :frame-id "f177"
+          :phase :student-attempt-1 :submission submission
+          ;; The durable fault pins the cancel response's terminal state. The
+          ;; preceding poll must still be live for the real cancel branch to run.
+          :observed-state :running :replay-state :done
+          :cancel-result f177-cancel-pin})]
+    (is (= :durable-queue-record
+           (get-in acceptance-ordering-replay-provenance [:f177 :pin/source])))
+    (is (= :terminal-collected (:status collected)))
+    (is (= :already-terminal
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= 1 (count (distinct
+                     (keep #(get-in % [:terminal-collection
+                                       :evidence :collection/id])
+                           persisted)))))
+    (is (not= :live-job-wrapper-reconciliation-failed
+              (:error/code collected)))))
+
+(deftest f194-running-to-409-replay-certifies-idempotently
+  (let [job-id (:job-id f194-cancel-result)
+        ;; The adjudication record states that this exact Guide job's
+        ;; authenticated submission was already held; it does not embed the
+        ;; submission payload, so this is explicitly an adjudication pin.
+        submission {:submission/id "f194-authenticated-guide-submission"
+                    :authority {:job-id job-id :role :guide
+                                :agent-id "f194-guide"}}
+        {:keys [collected certified persisted calls]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f194-guide" :frame-id "f194"
+          :phase :guide-intervention-2 :submission submission
+          :observed-state :running :replay-state :done
+          :cancel-result f194-cancel-result})
+        collection (get-in collected [:state :terminal-collection])]
+    (is (= :adjudication-record
+           (get-in acceptance-ordering-replay-provenance [:f194 :pin/source])))
+    (is (= :already-terminal
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= :certified (:status certified)))
+    (is (= collection (get-in certified [:state :terminal-collection])))
+    (is (= 1 (count (distinct
+                     (keep #(get-in % [:terminal-collection
+                                       :evidence :collection/id])
+                           persisted)))))
+    (is (= 1 (count (filter #{:cancel} calls))))))
+
+(deftest f218-cancelled-wrapper-cannot-negate-its-accepted-guide-collection
+  (let [job-id (:job-id f218-accepted-pin)
+        submission {:submission/id (:submission/id f218-accepted-pin)
+                    :authority {:job-id job-id :role :guide
+                                :agent-id "f218-guide"}}
+        cancel-result
+        {:ok true :job-id job-id
+         :response {:ok true :job-id job-id :agent-id "f218-guide"
+                    :state "cancelled" :http/status 200 :finalized true}}
+        {:keys [collected certified]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f218-guide" :frame-id "f218"
+          :phase :guide-intervention-1 :submission submission
+          :observed-state :running :replay-state :cancelled
+          :cancel-result cancel-result})]
+    (is (= :durable-role-state-and-technote
+           (get-in acceptance-ordering-replay-provenance [:f218 :pin/source])))
+    (is (= :cancelled
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= :delivered-by-submission
+           (get-in collected [:collection :collection/disposition])))
+    (is (= :certified (:status certified)))
+    (is (= (:submission/id f218-accepted-pin)
+           (get-in certified [:state :terminal-collection
+                              :submission :submission/id])))
+    (is (not= :live-job-terminal-failure (:error/code certified)))))
+
+(deftest a-genuine-cancel-failure-still-parks-the-frame
+  (let [{:keys [result]}
+        (f194-shaped-collection
+         {:ok false :job-id "job-1"
+          :response {:ok false :error "connection refused" :http/status 500}})]
+    (is (= :live-job-wrapper-reconciliation-failed (:error/code result)))
+    (is (false? (:ok result)))
+    (is (= :failed (get-in result [:finding :cancellation/disposition])))))
+
+;; ---------------------------------------------------------------------------
+;; S5 slice 2: the collection disposition enum, and its exhaustiveness lint.
+;;
+;; Clojure will not tell us a cond stopped covering its inputs, so the lint is
+;; the fence. It checks BOTH directions, because each has cost this campaign a
+;; real defect: an uncovered input is how a success reached a failure arm
+;; (f194), and a declared-but-unreachable outcome is how dead code reads as
+;; coverage (:visibility-lag, declared and handled in three places, emitted by
+;; nothing).
+;; ---------------------------------------------------------------------------
+
+(deftest collection-disposition-is-total-over-the-declared-product
+  (doseq [p sut/collection-process-outcomes
+          s sut/collection-submission-outcomes]
+    (let [d (get sut/collection-disposition-table [p s])]
+      (is (some? d) (str "product cell [" p " " s "] names no disposition"))
+      (is (contains? sut/collection-dispositions d))))
+  (testing "the table declares exactly the product, no more"
+    (is (= (set (for [p sut/collection-process-outcomes
+                      s sut/collection-submission-outcomes]
+                  [p s]))
+           (set (keys sut/collection-disposition-table))))))
+
+(deftest every-declared-disposition-is-reachable-from-a-real-job
+  ;; The :visibility-lag lesson as a fence: a name nothing can produce is a
+  ;; defect, not a spare branch.
+  (let [job-states (concat (seq futon3c.apm.job-state/known-states)
+                           [:no-such-state nil])
+        submissions [{:submission/id "s-1"} nil]
+        produced (set (for [st job-states sub submissions]
+                        (sut/collection-disposition {:state st} sub)))]
+    (is (= sut/collection-dispositions produced)
+        (str "unreachable: "
+             (clojure.set/difference sut/collection-dispositions produced)))
+    (is (not (contains? produced nil))
+        "some real job state falls through the table")))
+
+(deftest process-outcome-separates-finishing-from-merely-ending
+  (is (= :completed (sut/collection-process-outcome {:state :done})))
+  (doseq [st [:failed :error :cancelled :timeout]]
+    (is (= :stopped (sut/collection-process-outcome {:state st}))
+        (str st " must not read as completed")))
+  (doseq [st [:queued :activating :running :overrun :delivering]]
+    (is (= :live (sut/collection-process-outcome {:state st}))))
+  (is (= :unknown (sut/collection-process-outcome {:state :invented})))
+  (is (= :unknown (sut/collection-process-outcome {}))))
+
+(deftest f194s-cell-is-a-named-success-not-a-fallthrough
+  (is (= :delivered-by-submission
+         (sut/collection-disposition {:state :running} {:submission/id "s-1"})))
+  (is (= :delivered
+         (sut/collection-disposition {:state :done} {:submission/id "s-1"})))
+  (is (= :stopped-without-submission
+         (sut/collection-disposition {:state :cancelled} nil))))
+
+(deftest the-collection-record-carries-the-disposition-it-was-built-under
+  (let [{:keys [result]} (f194-shaped-collection f194-cancel-result)
+        collection (:collection result)]
+    (is (= :terminal-collected (:status result)))
+    (is (= :delivered-by-submission (:collection/disposition collection)))
+    (testing "the disposition agrees with the loose fields it replaces"
+      (is (true? (:submission/available? collection)))
+      (is (= :running (:terminal-state collection))))))
+
+(deftest collection-authority-still-verifies-a-record-carrying-a-disposition
+  ;; The disposition is inside the digested body, so authority must still
+  ;; recompute cleanly over records minted by this code.
+  (let [{:keys [result]} (f194-shaped-collection f194-cancel-result)
+        stored (get-in result [:state :terminal-collection])]
+    (is (:ok (sut/terminal-collection-authority "job-1" stored)))))
+
+(deftest dormant-cancel-sites-read-a-late-finish-the-same-way
+  (testing "supersession"
+    (let [calls (atom [])
+          job (atom {:job-id "job-1" :state :queued})
+          dispatched (:state (sut/drive! (effects calls job)))
+          state (assoc dispatched
+                       :activation/accepted? false
+                       :typed-submission-migration-attempts 1)
+          result (sut/drive!
+                  (assoc (effects calls job)
+                         :state state
+                         :cancel-fn (fn [_] f194-cancel-result)
+                         :terminal-submission-provider (constantly nil)))]
+      (is (not= :live-job-unaccepted-cancellation-failed (:error/code result)))))
+  (testing "orphan recovery"
+    (let [d (sut/cancellation-disposition f194-cancel-result)]
+      (is (true? (:ok d)))
+      (is (= :already-terminal (:cancellation/disposition d))))))

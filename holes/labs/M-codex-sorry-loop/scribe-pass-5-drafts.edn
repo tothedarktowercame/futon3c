@@ -1,0 +1,236 @@
+[{:name "specialize-integral-fun-norm-addHaar-before-building-radial-coordinates"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Reduce radial integrability, radial `MemLp`, and radial integration in `EuclideanSpace ℝ (Fin 3)` to one-dimensional integrals."
+   :workhorse
+   "`MeasureTheory.integral_fun_norm_addHaar`"
+   :location
+   "`Mathlib.MeasureTheory.Constructions.HaarToSphere` (available through the imports used by `ConstructionTargets/RadialIntegrationR3.lean`)"
+   :general-statement-shape
+   "A radial integral over a finite-dimensional real normed space with additive Haar measure is a sphere-measure coefficient times a one-dimensional integral with density `r^(finrank - 1)`."
+   :specialization
+   ["Instantiate the Haar measure as `(volume : Measure (EuclideanSpace ℝ (Fin 3)))`."
+    "Simplify `finrank` and `Fintype.card (Fin 3)` so the radial density becomes `r²`."
+    "Use the same theorem directly for integrability and for the integrand `fun r => ‖g r‖ ^ p.toReal` after rewriting `MemLp` to integrability."]
+   :result
+   "The one general theorem yields `integrable_radial_R3_iff`, `memLp_radial_R3_iff`, and the integral identity used by `radial_integral_R3`."
+   :search-rule
+   "Before formalizing a coordinate chart and Jacobian, search current Mathlib for the stronger invariant or general-space formulation and specialize it."
+   :cross-row-recurrence
+   {:classification :inference-from-three-observed-library-pivots
+    :instances
+    [{:target "schwarz-equality-case"
+      :general-form
+      "Complex.affine_of_mapsTo_ball_of_norm_dslope_eq_div"
+      :outcome :complete-specialization}
+     {:target "rouche-root-count-transfer"
+      :general-form "MeromorphicOn.divisor plus Complex.JensenFormula"
+      :outcome :partial-api-reuse-with-argument-principle-frontier}
+     {:target "radial-integration-r3"
+      :general-form "MeasureTheory.integral_fun_norm_addHaar"
+      :outcome :complete-specialization}]
+    :scope
+    "All three sessions improved by searching the general API first, but only Schwarz and radial integration were fully discharged by specialization; the Rouché row retained a real frontier."}
+   :capture-kind :runner-narrated-and-cross-row-inference}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :mathlib-lemma, :id "integral_fun_norm_addHaar"}
+   #:ref{:type :process-pattern, :id "search-general-form-before-rebuilding"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t014"
+    "e-codexroll-019fa2c1-t003"
+    "e-codexroll-019f9b12-t013"]
+   :receipt-ids ["df80e646-a0d3-4b29-8cab-263bcc4a1481"]
+   :commits
+   ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"
+    "61edb1161bb1000d84656bf6dc3b7e2988b0657d"
+    "8814807"]
+   :problems
+   ["radial-integration-r3"
+    "schwarz-equality-case"
+    "rouche-root-count-transfer"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean"
+    "Mathlib/MeasureTheory/Constructions/HaarToSphere.lean:integral_fun_norm_addHaar"]}
+  :confidence :multi-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "normalize-r3-radial-coefficient-to-four-pi"
+  :lane :solve-lane
+  :level :proof-shape
+  :status :draft
+  :body
+  {:problem-class
+   "Normalize the general Haar radial coefficient in dimension three to the familiar `4π` factor."
+   :target
+   "∫ x : E, g ‖x‖ ∂volume = 4 * π * ∫ r in Ioi (0 : ℝ), g r * r ^ 2 ∂volume"
+   :proof-shape
+   ["Rewrite with `MeasureTheory.integral_fun_norm_addHaar (volume : Measure E) g`."
+    "Simplify the Euclidean dimension and scalar actions."
+    "Rewrite the real measure coefficient using `measureReal_def` and `EuclideanSpace.volume_ball_fin_three`."
+    "Supply positivity so the `ENNReal.toReal (ENNReal.ofReal ...)` coefficient reduces."
+    "Commute `r²` and `g r` pointwise, then close the remaining coefficient identity with ring normalization."]
+   :witness
+   {:declaration
+    "ConstructionTargets.RadialIntegrationR3.radial_integral_R3"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :boundary
+   "The theorem retains the downstream integrability hypothesis even though the underlying Bochner-integral identity is unconditional."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :normalization, :id "r3-radial-four-pi"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t014"]
+   :receipt-ids ["df80e646-a0d3-4b29-8cab-263bcc4a1481"]
+   :commits ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"]
+   :problems ["radial-integration-r3"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean:radial_integral_R3"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "supply-positivity-before-toReal-ofReal-coefficient-normalization"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "The radial coefficient contains `ENNReal.toReal (ENNReal.ofReal (π * 4 / 3))`."}
+   :before
+   "Ask simplification or ring normalization to remove `ENNReal.toReal` without first proving the real coefficient is nonnegative."
+   :failure
+   "`ENNReal.toReal` remains and blocks normalization."
+   :after
+   "Rewrite with `ENNReal.toReal_ofReal (by positivity : 0 ≤ π * 4 / 3)` before the final algebraic normalization."
+   :rule
+   "Expose the sign obligation explicitly before reducing an `ENNReal.ofReal`/`toReal` pair."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :lean-pattern, :id "toReal-ofReal-positivity"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t014"]
+   :commits ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"]
+   :problems ["radial-integration-r3"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean:radial_integral_R3"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "bridge-radial-integrand-order-with-pointwise-commutativity"
+  :lane :arc-lane
+  :level :rewrite
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "The general radial theorem produces `r ^ 2 * g r`, while the downstream statement uses `g r * r ^ 2`."}
+   :before
+   "Attempt to close the integral equality while the integrand functions differ syntactically by multiplication order."
+   :after
+   "Prove the pointwise function equality with `funext` and `ring`, rewrite by it, then normalize the outer coefficient."
+   :rule
+   "When an integral rewrite is blocked solely by commutative factor order, first bridge the integrands as functions rather than reshaping the whole integral expression."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :lean-pattern, :id "integrand-commutativity-function-equality"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t014"]
+   :commits ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"]
+   :problems ["radial-integration-r3"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean:radial_integral_R3"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation"
+  :lane :arc-lane
+  :level :elaboration
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A specialized `MemLp` proof for `EuclideanSpace ℝ (Fin 3)` chains radial integrability reductions in the presence of competing measurable-space instances."}
+   :before
+   "Reuse the separately specialized radial-integrability theorem inside the `MemLp` proof."
+   :failure
+   "Lean reports incompatible inferred measurable-space instances for the Euclidean space."
+   :after
+   "After rewriting `MemLp` with `integrable_norm_rpow_iff`, instantiate `MeasureTheory.integrable_fun_norm_addHaar` directly with the explicit measure `(volume : Measure E)` and transformed integrand."
+   :rule
+   "When chaining a specialization exposes an instance diamond, return to the general theorem and instantiate its measure and function explicitly at the use site."
+   :boundary
+   "This preserves the theorem statement and does not alter or locally override the global measurable-space instances."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :lean-pattern, :id "direct-instantiation-instance-diamond"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t014"]
+   :commits ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"]
+   :problems ["radial-integration-r3"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean:memLp_radial_R3_iff"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "distinguish-clean-measure-theory-recall-gap-from-malformed-query"
+  :lane :trajectory-lane
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :recall-empty
+   :target "radial-integration-r3"
+   :observed
+   {:terrain :measure-theory
+    :surfaced-count 0
+    :used-count 0
+    :recall-system :v1.2-normalized
+    :tokenization-status :clean-distinct-mathematical-terms}
+   :taxonomy
+   {:classification :genuine-terrain-gap
+    :contrast
+    "The preceding Rouché row's statement hint remained one unsplit phrase, so its empty result was classified as a dispatch defect. The radial receipt explicitly confirms that tokenization worked, making this empty result usable as evidence of a measure-theory recall gap."
+    :residual-defect
+    "Template boilerplate terms still leak into dispatch extraction; the outcome reports this separately and does not treat it as invalidating the repaired mathematical-term tokenization."}
+   :literature-route
+   {:anchor "217875-Is-there-code-for-X?/Spherical coordinates.json"
+    :status :consulted-then-superseded
+    :detail
+    "The archive thread pointed to `homeomorphUnitSphereProd` and noted the absence of full spherical coordinates. Current-library search then found the stronger `integral_fun_norm_addHaar`, which removed the need to construct a coordinate chart."}
+   :curriculum-signal
+   "Queue a measure-theory/integration recall pattern around general Haar radial decomposition and its Euclidean specializations."
+   :inference
+   "The terrain-gap label is scoped to relevant recall for this clean query; it is not an exhaustive claim that the store has no measure-theory memories."
+   :capture-kind :runner-narrated-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "radial-integration-r3"}
+   #:ref{:type :curriculum-terrain, :id "measure-theory"}
+   #:ref{:type :literature-thread, :id "Spherical coordinates"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t014"]
+   :receipt-ids ["df80e646-a0d3-4b29-8cab-263bcc4a1481"]
+   :commits ["c5a90e035861938d2a5b2cc2d69a45e5c8d3e859"]
+   :problems ["radial-integration-r3"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path "217875-Is-there-code-for-X?/Spherical coordinates.json"}]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

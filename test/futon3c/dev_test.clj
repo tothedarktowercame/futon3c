@@ -3,9 +3,9 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.agency.registry]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.registry :as registry]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -15,6 +15,44 @@
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
+
+(deftest pouch-unsolicited-route-targets-the-existing-claude-repl
+  (let [call (atom nil)]
+    (with-redefs [registry/get-agent
+                  (fn [_]
+                    {:agent/metadata {:emacs-socket "test-socket"}})
+                  futon3c.blackboard/blackboard-eval!
+                  (fn [elisp opts]
+                    (reset! call {:elisp elisp :opts opts})
+                    {:ok true})]
+      (#'dev/deliver-pouch-unsolicited-to-repl!
+       {:agent-id "claude-14"
+        :session-id "session-14"
+        :speaker (str "claude-14 " agent-pouch/agent-initiated-marker)
+        :text "background result"})
+      (is (= {:emacs-socket "test-socket"} (:opts @call)))
+      (is (re-find #"claude-repl-find-buffer-by-session-id" (:elisp @call)))
+      (is (re-find #"agent-chat-insert-message" (:elisp @call)))
+      (is (re-find #"AGENT-INITIATED" (:elisp @call)))
+      (is (re-find #"NOT A REPLY" (:elisp @call)))
+      (is (re-find #"background result" (:elisp @call))))))
+
+(deftest pouch-unsolicited-route-installation-is-load-dark
+  (testing "OFF does not register or replace a sink"
+    (let [registrations (atom [])]
+      (with-redefs [agent-pouch/demux? (constantly false)
+                    agent-pouch/set-unsolicited-sink!
+                    #(swap! registrations conj %)]
+        (is (nil? (dev/install-pouch-unsolicited-repl-sink!)))
+        (is (empty? @registrations)))))
+  (testing "ON registers the REPL adapter"
+    (let [registrations (atom [])]
+      (with-redefs [agent-pouch/demux? (constantly true)
+                    agent-pouch/set-unsolicited-sink!
+                    #(swap! registrations conj %)]
+        (is (true? (dev/install-pouch-unsolicited-repl-sink!)))
+        (is (= 1 (count @registrations)))
+        (is (fn? (first @registrations)))))))
 
 (deftest compatible-codex-ws-bridge-agent-detection
   (testing "existing codex ws-bridge registrations are recognized as reusable"
@@ -541,6 +579,58 @@
               result (invoke-fn "hello fallback" nil)]
           (is (= "cold-sid" (:session-id result)))
           (is (= "[no text or tool calls in this turn]" (:result result))))))))
+
+(deftest make-claude-invoke-fn-does-not-cold-fallback-after-warm-interrupt
+  (testing "An intentional warm-pouch interrupt cancels the turn instead of replaying it cold"
+    (let [feed-calls (atom 0)
+          evicted? (atom false)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [& _]
+                      (swap! feed-calls inc)
+                      (let [deadline (+ (System/currentTimeMillis) 2000)]
+                        (while (and (not @evicted?)
+                                    (< (System/currentTimeMillis) deadline))
+                          (Thread/sleep 20)))
+                      (throw (java.io.IOException. "Stream closed")))
+                    agent-pouch/evict!
+                    (fn [_] (reset! evicted? true) true)
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    futon3c.blackboard/blackboard!
+                    (fn [& _] nil)]
+        (let [claude-bin (doto (java.io.File/createTempFile "futon3c-claude-cold-unexpected-" ".sh")
+                           (.deleteOnExit))
+              _ (spit claude-bin
+                      (str "#!/usr/bin/env bash\n"
+                           "touch \"" (.getPath claude-bin) ".cold-ran\"\n"
+                           "printf '{\"type\":\"result\",\"session_id\":\"cold-sid\",\"is_error\":false}\\n'\n"))
+              _ (.setExecutable claude-bin true)
+              invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-interrupt"
+                                                    :claude-bin (.getPath claude-bin)
+                                                    :timeout-ms 5000})
+              result-f (future (invoke-fn "interrupt me" "warm-sid"))
+              deadline (+ (System/currentTimeMillis) 2000)]
+          (while (and (not (contains? @dev/!invoke-controls "claude-interrupt"))
+                      (< (System/currentTimeMillis) deadline))
+            (Thread/sleep 20))
+          (is (contains? @dev/!invoke-controls "claude-interrupt"))
+          (is (true? (:ok (dev/interrupt-agent-invoke! "claude-interrupt"))))
+          (let [result @result-f]
+            (is (= 1 @feed-calls))
+            (is (true? (:interrupted? result)))
+            (is (= "invoke interrupted" (:error result)))
+            (is (= "warm-sid" (:session-id result)))
+            (is (false? (.exists (io/file (str (.getPath claude-bin) ".cold-ran")))))))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"

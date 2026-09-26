@@ -104,8 +104,8 @@
       (is (contains? result :policies))
       (is (contains? result :tau))
       (is (contains? result :abstain?)))
-    (testing "policies has 5 entries (one per action)"
-      (is (= 5 (count (:policies result)))))
+    (testing "policies has 6 entries (one per action)"
+      (is (= 6 (count (:policies result)))))
     (testing "probabilities sum to ~1"
       (let [total (reduce + (map :probability (:policies result)))]
         (is (< (Math/abs (- 1.0 total)) 1e-10))))
@@ -113,13 +113,43 @@
       (is (contains? (set (:arena/actions pol/portfolio-arena))
                      (:action result))))))
 
-(deftest choose-action-abstains-at-low-tau
-  (let [low-tau-prec (assoc test-precision :tau 0.3)
-        result (pol/choose-action test-mu low-tau-prec test-observation
-                                  test-adjacent {})]
+;; M-wm-policies Track 3 — "not being stuck" is a niche-construction action.
+;; Abstain (τ < 0.55) no longer means FREEZE (:wait); it routes to the best non-committal
+;; action: :acquire-patterns on a flat/stuck field, :wait only when genuinely calm.
+
+(deftest choose-action-acquires-patterns-when-stuck-on-flat-field
+  (let [stuck-obs (assoc test-observation
+                         :gap-count 0.9 :stall-count 0.9 :blocked-ratio 0.9)
+        flat-prec (assoc test-precision
+                         :tau 0.3                                  ; low confidence → abstain
+                         :Pi-o (zipmap obs/channel-keys (repeat 0.3)))  ; flat field
+        result (pol/choose-action test-mu flat-prec stuck-obs test-adjacent {})]
     (testing "abstains when tau < 0.55"
-      (is (:abstain? result))
+      (is (:abstain? result)))
+    (testing "stuck on a flat field → constructs patterns instead of freezing"
+      (is (= :acquire-patterns (:action result))))))
+
+(deftest choose-action-waits-when-calm-not-stuck
+  (let [calm-obs (zipmap obs/channel-keys (repeat 0.5))
+        calm-mu (assoc-in test-mu [:sens] calm-obs)
+        confident-flat (assoc test-precision
+                              :tau 0.3                                   ; abstain
+                              :Pi-o (zipmap obs/channel-keys (repeat 1.0)))  ; NOT flat
+        result (pol/choose-action calm-mu confident-flat calm-obs [] {})]
+    (testing "abstains when tau < 0.55"
+      (is (:abstain? result)))
+    (testing "calm + not flat → :wait (no patterns to acquire, nothing to do)"
       (is (= :wait (:action result))))))
+
+(deftest choose-action-does-not-acquire-when-confident
+  ;; The τ gate must keep :acquire-patterns from hijacking normal operation: when
+  ;; confident (τ ≥ 0.55, no abstain) a pragmatic action wins, never niche-construction.
+  (let [result (pol/choose-action test-mu test-precision test-observation
+                                  test-adjacent {})]
+    (testing "does not abstain at default tau"
+      (is (not (:abstain? result))))
+    (testing "confident operation never selects :acquire-patterns"
+      (is (not= :acquire-patterns (:action result))))))
 
 (deftest choose-action-deterministic-without-rng
   (let [r1 (pol/choose-action test-mu test-precision test-observation

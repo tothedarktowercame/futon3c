@@ -1,0 +1,99 @@
+{:plan/id :apm-frame-map-reduce-v1
+ :plan/principle
+ "A frame maps independent role work into durable receipts, reduces those
+  receipts into a frame result, then exposes the closed result to a
+  tenure-scoped cross-frame analyst. Post-close work is never a prerequisite
+  for the close that wakes it."
+
+ :map/stages
+ [{:stage/id :solve
+   :role :solver
+   :card-role :solver
+   :multiplicity 1
+   :outputs #{:solve-receipt :committed-proof}}
+  {:stage/id :student-attempts
+   :role :student
+   :card-role :student
+   :multiplicity 3
+   :fresh-session-per-attempt? true
+   :information-channel :memory-substrate-only
+   :outputs #{:attempt-receipt :memory-use-receipt :failure-account}}
+  {:stage/id :guide-interventions
+   :role :guide
+   :card-role :guide
+   :placement :between-student-attempts
+   :mode-policy {:exactly-one-of #{:store-mode :harness-mode}
+                 :store-mode {:may #{:write-memory}
+                              :must-not #{:change-retrieval-harness}}
+                 :harness-mode {:may #{:change-retrieval-harness}
+                                :must-not #{:write-memory}}}
+   :inputs #{:solve-receipt :attempt-receipt :memory-use-receipt
+             :failure-account}
+   :outputs #{:guide-intervention-receipt :scoped-rewrite-rule
+              :retrieval-change-receipt}}
+  {:stage/id :scribe-reduce
+   :role :scribe
+   :card-role :scribe
+   :inputs #{:solve-receipt :attempt-receipt :memory-use-receipt
+             :failure-account}
+   :outputs #{:scribe-lane-receipt :memory-disposition-receipt
+              :promotion-review-receipt}}
+  {:stage/id :verify
+   :role :proctor
+   :card-role :proctor
+   :inputs #{:solve-receipt :committed-proof}
+   :outputs #{:verify-receipt}}]
+
+ :frame/reduce
+ {:stage/id :close-frame
+  :role :guide
+ :inputs #{:solve-receipt :attempt-receipt :scribe-lane-receipt
+            :guide-intervention-receipt
+            :memory-disposition-receipt :promotion-review-receipt
+            :verify-receipt}
+  :precondition-map-roles #{:solver :student :scribe :proctor}
+  :outputs #{:frame-close-receipt :frame-trace}
+  :note "The guide receipt is the close effect, not a precondition to itself."}
+
+ :series/reduce
+ {:stage/id :analyst-post-close
+  :role :analyst
+  :wake :terminal-frame-close
+  :tenure-frames 2
+  :state-scope :series
+  :observation-cadence :every-terminal-frame-close
+  :review-policy
+  {:initial-window-closed-frames 10
+   :window-kind :rolling
+   :required-output #{:batch-diagnosis :instrument-health-report}
+   :opportunity-driven-output #{:divergence-packets
+                                :memory-store-architecture-change
+                                :learning-loop-structure-change}
+   :early-triggers #{:end-to-end-canary-failure
+                     :artifact-witness-contradiction
+                     :attachment-projection-mismatch
+                     :repeated-route-relative-retrieval-failure
+                     :silent-tool-or-callback-failure}}
+  :inputs #{:frame-close-receipt :frame-trace}
+  :outputs #{:transfer-checks :series-entry :batch-diagnosis
+             :instrument-health-report :divergence-packets
+             :memory-store-architecture-change
+             :learning-loop-structure-change}
+  :tool-concept-kit
+  "holes/labs/M-apm-demonstration/analyst-tool-concept-kit-v1.edn"
+  :implementation-policy
+  {:divergence :dispatch-review-merge
+   :operator-gates :decisions
+   :analyst-gates :implementations}
+  :note "Every close contributes evidence, but architectural output is not a
+         per-problem quota. The initial review window is ten closed frames,
+         with earlier review only on an evidenced trigger. Two-frame seat
+         tenure does not truncate series evidence. Analyst work cannot gate
+         the frame close that wakes it."}
+
+ :contract/conflicts
+ [{:conflict/id :guide-persistence-scope
+   :guide-card-claim "The Guide is the only role that persists across a round."
+   :analyst-card-claim "The Guide is fresh every frame; the Analyst persists for two frames."
+   :status :operator-ruling-required-before-next-registration
+   :effect "Do not infer whether round equals frame or reuse a Guide session."}]}

@@ -1,0 +1,62 @@
+{
+  "example_id": "alice-education-salary-counterfactual",
+  "title": "Alice's education and salary counterfactual",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 8.3 and Equations 8.2-8.3 define an affine structural model used to infer Alice's salary under a college-education intervention.",
+  "variables": [
+    {
+      "key": "education",
+      "name": "Education",
+      "content": "Alice's education level: zero for high school and one for college.",
+      "value_domain": "rational"
+    },
+    {
+      "key": "experience",
+      "name": "Experience",
+      "content": "Years of work experience, modeled as listening to Education.",
+      "value_domain": "rational",
+      "affine_equation": {
+        "kind": "affine",
+        "intercept": 10,
+        "coefficients": {"education": -4},
+        "disturbance": "U_EX"
+      }
+    },
+    {
+      "key": "salary",
+      "name": "Salary",
+      "content": "Salary in dollars, modeled as listening to Education and Experience.",
+      "value_domain": "rational",
+      "affine_equation": {
+        "kind": "affine",
+        "intercept": 65000,
+        "coefficients": {"experience": 2500, "education": 5000},
+        "disturbance": "U_S"
+      }
+    }
+  ],
+  "arrows": [
+    {"source": "education", "target": "experience", "because": "Equation 8.3 makes Experience listen to Education.", "coefficient": "-4"},
+    {"source": "education", "target": "salary", "because": "Equation 8.2 makes Salary listen directly to Education.", "coefficient": "5000"},
+    {"source": "experience", "target": "salary", "because": "Equation 8.2 makes Salary listen to Experience.", "coefficient": "2500"}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:2dab13f5328f2e41",
+    "ta-book-of-why-2018:4c701c9d418e7b41",
+    "ta-book-of-why-2018:e5eeb305d4474c26",
+    "ta-book-of-why-2018:73a391ea8ad0b923",
+    "ta-book-of-why-2018:6dfbbe4e194f8ff6",
+    "ta-book-of-why-2018:c982a3c8528e0f44",
+    "ta-book-of-why-2018:5bbb296b869a1912",
+    "ta-book-of-why-2018:3e37ce49bda85215",
+    "ta-book-of-why-2018:55a5a6b6a5cfffd7",
+    "ta-book-of-why-2018:b01b5e2dda61d6ee"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0285",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0288",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0289",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0290",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0291"
+  ]
+}

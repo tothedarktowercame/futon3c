@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  }, {
+    "from" : "u",
+    "to" : "x"
+  }, {
+    "from" : "u",
+    "to" : "y"
+  } ],
+  "id" : "generic-linear-instrumental-variable",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric edge coefficients are graph-only" ],
+    "source-file" : "generic-linear-instrumental-variable.json"
+  },
+  "variables" : [ {
+    "id" : "u",
+    "kind" : "latent-unobserved",
+    "name" : "U"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Z"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "X"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Y"
+  } ]
+}

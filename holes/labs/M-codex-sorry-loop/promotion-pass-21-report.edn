@@ -1,0 +1,1 @@
+{:at "2026-07-28", :mode :commit, :patterns {}, :results [{:name "evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form", :pattern "math/measure-integration-api", :status :promoted}]}

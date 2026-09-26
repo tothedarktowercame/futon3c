@@ -1,0 +1,27 @@
+{
+  "example_id": "generic-frontdoor",
+  "title": "Basic front-door criterion",
+  "topology_basis": "printed_diagram",
+  "content": "C confounds X and Y, while M is a shielded mediator carrying every directed path from X to Y. This is the generic front-door pattern shown in Figure 7.2.",
+  "variables": [
+    {"key": "c", "name": "C", "content": "The unobserved confounder of X and Y."},
+    {"key": "x", "name": "X", "content": "The treatment."},
+    {"key": "m", "name": "M", "content": "The shielded mediator."},
+    {"key": "y", "name": "Y", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "c", "target": "x", "because": "Figure 7.2 makes C a cause of X."},
+    {"source": "c", "target": "y", "because": "Figure 7.2 makes C a cause of Y."},
+    {"source": "x", "target": "m", "because": "Figure 7.2 places M on the directed X-to-Y path."},
+    {"source": "m", "target": "y", "because": "Figure 7.2 places M on the directed X-to-Y path."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:c9a58d45009eb3ec",
+    "ta-book-of-why-2018:8fc116d84cae7db7",
+    "ta-book-of-why-2018:c90f4a17b753acbc",
+    "ta-book-of-why-2018:faf0b0541714914d"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0241"
+  ]
+}

@@ -1,0 +1,4 @@
+{"verdict": "approve",
+ "reviewer": "claude-10",
+ "at": "2026-08-05T10:05:00+01:00",
+ "notes": "Fidelity ADJUDICATED-APPROVED. conv definition verified verbatim against the source: h(y) = integral of f(y-x)g(x) dm(x). Hypotheses faithful: 1<p, 1<q, 1/p+1/q=1, MemLp f/g at ofReal p/q. Conclusion: Continuous (conv f g) AND vanishing at BOTH infinities (atTop and atBot, matching lim y->+-inf = 0). One SPECIALIZATION noted, not blocking: the source defines h into C; the formalization takes f,g real-valued - the analytic content (Holder pairing, C_c density, translation continuity) is scalar-field-independent and the complex case follows componentwise; recorded as a specialization rather than a repair. Gate: build 0, sorries 0, axioms verbatim clean on the frozen theorem, verified by hand pre-fold. Closer hop 1 (ams-codex-1, 3rd for 3). Memory-level citations in mechanical form throughout - grading with claude-12."}

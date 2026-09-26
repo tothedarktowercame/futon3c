@@ -1,0 +1,21 @@
+{
+  "example_id": "transport-toronto-randomized-clicks",
+  "title": "Transportability from Toronto: randomized trial and different click-through rate",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(e) removes the Age-to-Advertisement confounding edge because Toronto is a randomized trial, retains Age Z -> Purchase Y, and adds selector S -> Click-through Rate W. The source says the effect is estimable for Arkansas if X, W, and Y are measured there.",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Randomized advertisement exposure."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "Whether the consumer purchases the product."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, which still affects Purchase Decision."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "The mediator whose population mechanism differs."},
+    {"key": "s", "name": "Population Difference (S)", "content": "The difference-producing selector for Toronto click-through rate.", "selection": true}
+  ],
+  "arrows": [
+    {"source": "z", "target": "y", "because": "Figure 10.2(e) retains Age as a cause of Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Advertisement causes Click-through Rate in the randomized trial."},
+    {"source": "w", "target": "y", "because": "Click-through Rate causes Purchase Decision."},
+    {"source": "s", "target": "w", "because": "Figure 10.2(e) points selector S to Click-through Rate W."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:8e690c6ea82c134e", "ta-book-of-why-2018:32f701e652e391b4", "ta-book-of-why-2018:4063eef765c8c960", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac", "ta-book-of-why-2018:957ba9b5267517fd"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367"]
+}

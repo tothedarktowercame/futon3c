@@ -1,0 +1,38 @@
+{
+  "example_id": "deconfounding-game-2",
+  "title": "Deconfounding Game 2: smoking across two pregnancies",
+  "topology_basis": "printed_diagram",
+  "content": "First-pregnancy smoking and stable physiological causes meet at a latent abnormality. Prior miscarriage descends from that collider, so adjusting for it opens a back-door path between current smoking and future miscarriage unless either side of the path is also blocked.",
+  "variables": [
+    {"key": "prior_smoking", "name": "Prior Smoking (A)", "content": "Smoking during the first pregnancy."},
+    {"key": "prior_abnormality", "name": "Prior Abnormality (B)", "content": "An unobservable abnormality in the first pregnancy."},
+    {"key": "prior_miscarriage", "name": "Prior Miscarriage (C)", "content": "Observed miscarriage history, descended from B."},
+    {"key": "physiology", "name": "Other Physiological Causes (D)", "content": "Stable physiological causes shared across pregnancies."},
+    {"key": "current_smoking", "name": "Current Smoking (X)", "content": "Smoking at the beginning of the second pregnancy."},
+    {"key": "current_abnormality", "name": "Current Abnormality (E)", "content": "An unobservable abnormality in the second pregnancy."},
+    {"key": "future_miscarriage", "name": "Future Miscarriage (Y)", "content": "Miscarriage outcome in the second pregnancy."}
+  ],
+  "arrows": [
+    {"source": "prior_smoking", "target": "prior_abnormality", "because": "First-pregnancy smoking can induce the first abnormality."},
+    {"source": "prior_abnormality", "target": "prior_miscarriage", "because": "The first abnormality can cause the observed prior miscarriage."},
+    {"source": "prior_smoking", "target": "current_smoking", "because": "Smoking behavior can persist or change between pregnancies."},
+    {"source": "physiology", "target": "prior_abnormality", "because": "Other stable physiological causes can induce the first abnormality."},
+    {"source": "physiology", "target": "current_abnormality", "because": "The same physiological causes can induce the second abnormality."},
+    {"source": "current_smoking", "target": "current_abnormality", "because": "Current smoking can induce the second abnormality."},
+    {"source": "current_abnormality", "target": "future_miscarriage", "because": "The second abnormality can cause future miscarriage."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:f68af6a8b07eb779",
+    "ta-book-of-why-2018:f81f350d0af84b3d",
+    "ta-book-of-why-2018:51409d53577fbf48",
+    "ta-book-of-why-2018:0d24a4c073bf1593",
+    "ta-book-of-why-2018:fc9ff693ce5079d3",
+    "ta-book-of-why-2018:d0b9c3e07240e120",
+    "ta-book-of-why-2018:8027ce70c64888d9"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0171",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0172",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0175"
+  ]
+}

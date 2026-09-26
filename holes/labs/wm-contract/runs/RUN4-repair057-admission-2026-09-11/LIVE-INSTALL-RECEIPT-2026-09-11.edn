@@ -1,0 +1,30 @@
+{:schema :wm/run4-live-install-receipt-v1
+ :installed-at "2026-09-11T05:45Z"
+ :operator-authority "Joe direct live-loading and trial authorization"
+ :template-sha256 "397960a19a0b1909ef89e03cf7bb9607461cff76bbda930150e5acf4b284d6f9"
+ :series-ref "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/series-pin.edn"
+ :casting {:author "codex-10" :reviewer "codex-12" :repair-reviewer "codex-12"}
+ :stores {:controller-and-admission "/home/joe/run4/repair057-admission/controller"
+          :bindings "/home/joe/run4/repair057-admission/bindings"
+          :projections "/home/joe/run4/repair057-admission/projections"
+          :run-records "/home/joe/run4/repair057-admission/run-records"
+          :recordings "/home/joe/run4/repair057-admission/recordings"
+          :visibility "/home/joe/run4/repair057-admission/visibility"}
+ :execution-cohort
+ {:preregistration-sha256 "2c4f3004c32f5d9f978dcb8cc8aa7d2fee118933ebed41cb940e63c1147113ef"
+  :data-root "/home/joe/run4/repair057-admission/cohort-data"
+  :cohort-id :run4-repair057-admission-20260911-v1
+  :target 1 :remaining-at-install 1
+  :activation-sha256 "76ab2572bbf27cf8f366bccf5c92a322e2e21dce17f11e3a2086f18a85439df9"}
+ :historical-authority
+ {:verification-sha256 "6ca6f397b1f7531c91a0f4b9ab6cbc3d2712eb4b347c3c897b91a62c72958829"
+  :repair-root "/home/joe/code/futon2/data/wm-repair-obligations"}
+ :live-load {:method :canonical-load-file
+             :runner-idle-before-install true
+             :effective-flags true
+             :environment-values "1"}
+ :handler {:status :handler-reconfigured :run4-configured? true}
+ :preparation {:ok true
+               :attempt-id "historical-verification-admission-001"
+               :pin-sha256 "57bc2b984f7c331e139087d9ecf9cd69c7e078e7cb98abea38a50707e9a3422c"}
+ :series-step {:submitted? false}}

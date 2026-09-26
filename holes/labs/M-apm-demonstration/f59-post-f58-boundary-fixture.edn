@@ -1,0 +1,54 @@
+{:fixture/version 1
+ :fixture/id :f59-post-f58-stop-boundary
+ :campaign/id "jit-all-open-v2"
+ :frame/id "f59"
+ :problem/id "b00J01"
+ :fixture/purpose :memory-system-upgrade-failing-case
+ :fixture/finding :frame-minted-after-intended-f58-stop-boundary
+ :fixture/counts-as-experimental-evidence? false
+ :fixture/preserve-receipts? true
+ :fixture/frozen-artifacts
+ [{:path "live/student-attempt-1.edn"
+   :sha256
+   "12ed8d186ddf247cc55b863f7e0a5cd0cacf32e83d5ed2004ed7114ec8596c4a"
+   :used-ids []}
+  {:path "ledger.edn"
+   :sha256
+   "98fef581d88ea03bf97847e3dbb2d816fb142cd53ee0142c04ae45a405a16a6e"}]
+ :fixture/fingerprint-audit-replay
+ {:campaign "jit-all-open-v2"
+  :summary {:use-events 2
+            :fingerprinted 1
+            :not-adjudicable-by-token 1}
+  :rows
+  [{:frame "f59"
+    :attempt 1
+    :memory "e-01c38dee-a698-41e3-af98-d6700d3dd55c"
+    :use-kind "substitutive"
+    :verdict "fingerprinted"
+    :novel-hits ["f59SyntheticWitness"]}
+   {:frame "f59"
+    :attempt 1
+    :memory "e-apm-promotion-named-memory-id"
+    :use-kind "regulative"
+    :verdict "not-adjudicable-by-token"
+    :novel-hits []}]}
+ :fixture/ledger-path
+ "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f59/ledger.edn"
+ :void/classification :apparatus-invalidated
+ :void/failed-invariants [:post-f58-stop-boundary-violated]
+ :void/certificate-id
+ "177adafac5cd07ccc29860ff721274c9e25d7c463c00d78e633de505f50eaa1e"
+ :void/source-version 15
+ :void/source-ledger-digest
+ "ea936728e5bbaa926bdff4c88723222e84a5d45b82c1831841383c11733bc1d4"
+ :void/final-version 17
+ :void/final-ledger-digest
+ "85bfdc4453f3a5803f61a067f332ed3e6b88baa68fcefe5e314affe556ec0453"
+ :fixture/next-phase-gates
+ [:replay-close-frame-fingerprint-audit
+  :verify-regulative-vs-substitutive-verdicts
+  :verify-voided-frame-excluded-from-experimental-tallies
+  :verify-no-work-dispatch-while-coordinator-disabled]
+ :recorded-by "joe/codex-17"
+ :recorded-at "2026-08-30T11:00:08Z"}

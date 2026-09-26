@@ -1,0 +1,33 @@
+{:theta 0.8,
+ :targets
+ [{:instance "4",
+   :patterns 7,
+   :wants 3,
+   :expected-attempts 8.75,
+   :dangling-patterns [],
+   :share-of-attempts-dangling 0.0}
+  {:instance "4b",
+   :patterns 7,
+   :wants 3,
+   :expected-attempts 8.75,
+   :dangling-patterns [],
+   :share-of-attempts-dangling 0.0}
+  {:instance "5",
+   :patterns 8,
+   :wants 3,
+   :expected-attempts 10.0,
+   :dangling-patterns
+   [:or3/count-every-card-back :realtime/transport-pivot],
+   :share-of-attempts-dangling 0.25}
+  {:instance "6",
+   :patterns 8,
+   :wants 2,
+   :expected-attempts 10.0,
+   :dangling-patterns [],
+   :share-of-attempts-dangling 0.0}
+  {:instance "7",
+   :patterns 7,
+   :wants 3,
+   :expected-attempts 8.75,
+   :dangling-patterns [],
+   :share-of-attempts-dangling 0.0}]}

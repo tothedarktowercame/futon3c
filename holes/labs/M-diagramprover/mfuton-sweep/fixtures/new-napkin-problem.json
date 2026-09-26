@@ -1,0 +1,30 @@
+{
+  "example_id": "new-napkin-problem",
+  "title": "New Napkin Problem",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.5 gives an identifiable effect of X on Y even though no observed set satisfies the back-door criterion and no observed mediator satisfies the front-door criterion. The two unobserved variables induce distinct W-X and W-Y confounding relationships.",
+  "variables": [
+    {"key": "u1", "name": "U1", "content": "The unobserved common cause of W and Y.", "observed": false},
+    {"key": "u2", "name": "U2", "content": "The unobserved common cause of W and X.", "observed": false},
+    {"key": "w", "name": "W", "content": "An observed cause of Z confounded with X and Y."},
+    {"key": "z", "name": "Z", "content": "The observed child of W and cause of X."},
+    {"key": "x", "name": "X", "content": "The treatment whose causal effect on Y is sought."},
+    {"key": "y", "name": "Y", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "u1", "target": "w", "because": "Figure 7.5 makes U1 a hidden cause of W."},
+    {"source": "u1", "target": "y", "because": "Figure 7.5 makes U1 a hidden cause of Y."},
+    {"source": "u2", "target": "w", "because": "Figure 7.5 makes U2 a hidden cause of W."},
+    {"source": "u2", "target": "x", "because": "Figure 7.5 makes U2 a hidden cause of X."},
+    {"source": "w", "target": "z", "because": "Figure 7.5 directs W into Z."},
+    {"source": "z", "target": "x", "because": "Figure 7.5 directs Z into X."},
+    {"source": "x", "target": "y", "because": "Figure 7.5 directs X into Y."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:117babe402f05a6d",
+    "ta-book-of-why-2018:233b14245fc17556"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0252"
+  ]
+}

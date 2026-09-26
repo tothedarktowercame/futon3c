@@ -1,0 +1,66 @@
+{:preregistered
+ {:date "2026-07-27"
+  :battery :confirmation-collapse
+  :planted-target "M-planted-target"
+  :decoy "M-accidental-decoy"
+  :expected-floor-off
+  {:top-mission "M-accidental-decoy"
+   :target-hidden? true
+   :decoy-relation :repairs-control}
+  :expected-floor-on
+  {:top-mission "M-planted-target"
+   :target-recovered? true
+   :exploration-floor 0.2}
+  :epistemic-boundary
+  "Theta is an uncalibrated search heuristic; this synthetic battery does not promote an outcome model."}
+ :cases
+ [{:case-id :early-accidental-corroboration
+   :query "Which admitted mission should be investigated under misleading early corroboration?"
+   :planted-target "M-planted-target"
+   :decoy "M-accidental-decoy"
+   :k 5
+   :floor-off 0.0
+   :floor-on 0.2
+   :candidate-activation {"M-accidental-decoy" 10.0}
+   :pattern-activation
+   {"p4ng/R5-policy-evaluation" 1.0
+    "p4ng/R1-target-path-a" 1.0
+    "p4ng/R2-target-path-b" 1.0
+    "p4ng/R3-target-path-c" 1.0
+    "p4ng/R4-target-path-d" 1.0
+    "p4ng/R6-target-path-e" 1.0}
+   :relation-weights
+   {:repairs-control 1.0
+    :requires-control 1.0}
+   :challenge-memories
+   [{:memory-id "e-challenge-decoy-corroboration"
+     :control-pattern-id "p4ng/R5-policy-evaluation"
+     :independently-witnessed? true}
+    {:memory-id "e-challenge-hidden-target"
+     :control-pattern-id "p4ng/R1-target-path-a"
+     :independently-witnessed? true}]
+   :projection
+   {:candidates
+    [{:mission-id "M-accidental-decoy"
+      :support-relations
+      [{:control-pattern-id "p4ng/R5-policy-evaluation"
+        :relation :repairs-control
+        :memory-ids ["e-accidental-corroboration"
+                     "e-challenge-decoy-corroboration"]}]}
+     {:mission-id "M-planted-target"
+      :support-relations
+      [{:control-pattern-id "p4ng/R1-target-path-a"
+        :relation :requires-control
+        :memory-ids ["e-target-a" "e-challenge-hidden-target"]}
+       {:control-pattern-id "p4ng/R2-target-path-b"
+        :relation :requires-control
+        :memory-ids ["e-target-b"]}
+       {:control-pattern-id "p4ng/R3-target-path-c"
+        :relation :requires-control
+        :memory-ids ["e-target-c"]}
+       {:control-pattern-id "p4ng/R4-target-path-d"
+        :relation :requires-control
+        :memory-ids ["e-target-d"]}
+       {:control-pattern-id "p4ng/R6-target-path-e"
+        :relation :requires-control
+        :memory-ids ["e-target-e"]}]}]}}]}

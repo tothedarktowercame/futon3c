@@ -1,5 +1,7 @@
 # T-car3-queue-routing — Phase 1 design note
 
+**Status (triaged 2026-09-01): PARTIAL -- mechanism landed, capture-gap fallback still tolerated.** Persisted route + seq markers exist (turn_queue.clj:213,241,523); missing caller/surface still normalizes to "unknown" with generated msg-ids (turn_queue.clj:221-239, :msg-id-source records which). Close after either proving all accept sites supply stable :from/:surface/:msg-id or accepting the fallback as the contract. Triage codex-5, reviewed claude-1.
+
 Status: model-only proposal for ratification. No implementation is included in
 this phase.
 

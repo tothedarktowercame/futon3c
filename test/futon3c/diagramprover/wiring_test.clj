@@ -1,0 +1,466 @@
+(ns futon3c.diagramprover.wiring-test
+  (:require [clojure.edn]
+            [clojure.java.io]
+            [clojure.java.shell]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.diagramprover.graph :as graph]
+            [futon3c.diagramprover.wiring :as wiring]))
+
+(def apm-round1-pre-fix
+  {:spec/id :apm-round1-pre-fix
+   :boxes
+   [{:box/id :registration-edn
+     :writes [:reg/environment-revision :reg/harness-revision :reg/solver-seat
+              :lean-revision :required-measurement-fields]}
+    {:box/id :assign-checkouts :writes [:environment-checkouts]}
+    {:box/id :stamp-environment-outputs
+     :reads [:environment-checkouts] :writes [:environment-revision]}
+    {:box/id :environment-arms-match :reads [:environment-revision]}
+    {:box/id :validate-trace :reads [:reg/solver-seat :lean-revision]}
+    {:box/id :record-measurement :reads [:required-measurement-fields]}]})
+
+(deftest recorded-apm-orphan-writers-are-found
+  (let [g (wiring/ingest apm-round1-pre-fix)
+        findings (wiring/written-never-read g)]
+    (is (= [{:finding :written-never-read
+             :field :reg/environment-revision
+             :writers [:registration-edn]}
+            {:finding :written-never-read
+             :field :reg/harness-revision
+             :writers [:registration-edn]}]
+           findings))
+    (is (empty? (filter (comp #{:reg/solver-seat
+                                :lean-revision
+                                :required-measurement-fields
+                                :environment-checkouts
+                                :environment-revision}
+                              :field)
+                        findings)))))
+
+(deftest ingest-uses-one-field-vertex-and-one-box-edge
+  (let [g (wiring/ingest apm-round1-pre-fix)]
+    (is (= 7 (graph/num-vertices g)))
+    (is (= 6 (graph/num-edges g)))
+    (is (= #{:environment-checkouts :environment-revision :lean-revision
+             :reg/environment-revision :reg/harness-revision :reg/solver-seat
+             :required-measurement-fields}
+           (set (map (comp :field #(graph/vertex-data g %))
+                     (graph/vertices g)))))))
+
+(deftest empty-spec-has-no-findings
+  (is (= [] (wiring/written-never-read
+             (wiring/ingest {:spec/id :empty :boxes []})))))
+
+(deftest same-box-read-and-write-counts-as-read
+  (testing "self-loop incidence is a read, not an orphan writer"
+    (is (= []
+           (wiring/written-never-read
+            (wiring/ingest
+             {:spec/id :self-read
+              :boxes [{:box/id :self
+                       :reads [:field/x]
+                       :writes [:field/x]}]}))))))
+
+(def apm-close-pre-fix
+  {:spec/id :apm-close-pre-fix
+   :boxes
+   [{:box/id :assign-checkouts :writes [:environment-checkouts]}
+    {:box/id :advance-payload :writes [:environment-checkouts]}
+    {:box/id :stamp-environment-outputs
+     :reads [:environment-checkouts] :writes [:solver-attempt]}
+    {:box/id :emit-trace :reads [:retrieval-probes :solver-attempt] :writes [:trace]}
+    {:box/id :validate-trace :reads [:trace] :writes [:validation]}
+    {:box/id :write-authorization :reads [:validation]}]})
+
+(deftest recorded-apm-missing-producer-is-found
+  (let [findings (wiring/read-never-written
+                  (wiring/ingest apm-close-pre-fix))]
+    (is (= [{:finding :read-never-written
+             :field :retrieval-probes
+             :readers [:emit-trace]}]
+           findings))
+    (is (empty? (filter (comp #{:solver-attempt :trace :validation} :field)
+                        findings)))))
+
+(deftest recorded-apm-double-writer-is-found
+  (let [findings (wiring/multiply-written
+                  (wiring/ingest apm-close-pre-fix))]
+    (is (= [{:finding :multiply-written
+             :field :environment-checkouts
+             :writers [:advance-payload :assign-checkouts]}]
+           findings))
+    (is (empty? (filter (comp #{:solver-attempt :trace :validation} :field)
+                        findings)))))
+
+(deftest empty-spec-has-no-reader-or-multiple-writer-findings
+  (let [g (wiring/ingest {:spec/id :empty :boxes []})]
+    (is (= [] (wiring/read-never-written g)))
+    (is (= [] (wiring/multiply-written g)))))
+
+(deftest slice-one-fixture-has-only-single-writers
+  (is (= [] (wiring/multiply-written
+             (wiring/ingest apm-round1-pre-fix)))))
+
+(def site-sample
+  {:file "test/futon3c/diagramprover/fixtures/site_sample.clj"})
+
+(deftest conformance-finds-declaration-drift
+  (let [spec {:spec/id :declaration-drift
+              :boxes [{:box/id :present :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :absent :site site-sample
+                       :reads [:f/declared-but-absent]}]}
+        findings (wiring/conformance "." spec)]
+    (is (= [{:finding :declaration-without-occurrence
+             :box/id :absent
+             :field :f/declared-but-absent
+             :role :reads
+             :site site-sample}]
+           findings))
+    (is (not-any? #(= :f/declared-and-present (:field %)) findings))))
+
+(deftest conformance-finds-per-site-undeclared-occurrence
+  (let [spec {:spec/id :undeclared-occurrence
+              :boxes [{:box/id :at-site :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :universe-only
+                       :reads [:f/present-not-declared]}]}]
+    (is (= [{:finding :occurrence-without-declaration
+             :field :f/present-not-declared
+             :site site-sample
+             :declared-by []}]
+           (wiring/conformance "." spec)))))
+
+(deftest conformance-groups-boxes-sharing-a-site
+  (let [spec {:spec/id :shared-site
+              :boxes [{:box/id :reader :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :comment-owner :site site-sample
+                       :reads [:f/present-not-declared]}]}
+        findings (wiring/conformance "." spec)]
+    (is (empty? (filter #(= :occurrence-without-declaration (:finding %))
+                        findings)))
+    (is (= [] findings))))
+
+(deftest conformance-keyword-match-is-boundary-aware
+  (let [spec {:spec/id :keyword-boundary
+              :boxes [{:box/id :site-anchor :site site-sample}
+                      {:box/id :universe-only
+                       :reads [:environment-revision]}]}]
+    (is (= [] (wiring/conformance "." spec)))))
+
+(deftest declaration-without-site-is-exempt
+  (is (= []
+         (wiring/conformance
+          "."
+          {:spec/id :declaration-only
+           :boxes [{:box/id :no-site
+                    :reads [:f/absent-reader]
+                    :writes [:f/absent-writer]}]}))))
+
+(deftest unreadable-site-is-a-finding-not-an-exception
+  (let [findings (wiring/conformance
+                  "."
+                  {:spec/id :unreadable
+                   :boxes [{:box/id :ghost
+                            :site {:file "no/such/file.clj"}
+                            :reads [:f/x]}]})]
+    (is (= 1 (count findings)))
+    (is (= :site-unreadable (:finding (first findings))))
+    (is (= {:file "no/such/file.clj"} (:site (first findings))))
+    (is (string? (:error (first findings))))
+    (is (not-any? #(= :declaration-without-occurrence (:finding %)) findings)
+        "an unreadable site must not also emit drift findings")))
+
+(deftest namespace-sites-resolve-under-src
+  (is (= []
+         (wiring/conformance
+          "."
+          {:spec/id :namespace-site
+           :boxes [{:box/id :wiring-source
+                    :site {:ns "futon3c.diagramprover.wiring"}
+                    :reads [:declaration-without-occurrence]}]}))))
+
+(def apm-phases-pre-fix
+  {:spec/id :apm-phases-pre-fix
+   :phases {:order [:register :frame :guided-solve :intervene
+                    :student-attempts :adjudicate :promote :close]
+            :tools {:close #{:record-measurement :emit-capability-probes
+                             :emit-trace :validate-trace :write-authorization
+                             :advance-problem-phase}}}})
+
+(def apm-phases-post-fix
+  {:spec/id :apm-phases-post-fix
+   :phases {:order [:register :frame :guided-solve :intervene
+                    :student-attempts :adjudicate :promote :close :completed]
+            :tools {:close #{:record-measurement :emit-capability-probes
+                             :emit-trace :validate-trace :write-authorization
+                             :advance-problem-phase}
+                    :completed #{}}}})
+
+(deftest recorded-unreachable-close-tools-are-found
+  (is (= [{:finding :terminal-phase-with-tools
+           :phase :close
+           :tools [:advance-problem-phase :emit-capability-probes
+                   :emit-trace :record-measurement :validate-trace
+                   :write-authorization]}]
+         (wiring/phase-chain-findings apm-phases-pre-fix))))
+
+(deftest completed-sentinel-makes-close-enterable
+  (is (= [] (wiring/phase-chain-findings apm-phases-post-fix))))
+
+(deftest phase-tools-key-must-appear-in-order
+  (is (= [{:finding :phase-tools-without-phase :phase :ghost}]
+         (wiring/phase-chain-findings
+          {:spec/id :ghost-tools
+           :phases {:order [:start :completed]
+                    :tools {:completed #{} :ghost #{:haunt}}}}))))
+
+(deftest duplicate-phases-are-findings
+  (is (= [{:finding :duplicate-phase :phase :work}]
+         (wiring/phase-chain-findings
+          {:spec/id :duplicate
+           :phases {:order [:start :work :work :completed]
+                    :tools {:completed #{}}}}))))
+
+(deftest missing-phases-have-no-phase-chain-findings
+  (is (= [] (wiring/phase-chain-findings {:spec/id :no-phases}))))
+
+(deftest empty-order-makes-every-tools-key-orphaned
+  (is (= [{:finding :phase-tools-without-phase :phase :alpha}
+          {:finding :phase-tools-without-phase :phase :beta}]
+         (wiring/phase-chain-findings
+          {:spec/id :empty-order
+           :phases {:order [] :tools {:beta #{} :alpha #{:tool}}}}))))
+
+(deftest empty-terminal-tool-set-is-allowed
+  (is (= []
+         (wiring/phase-chain-findings
+          {:spec/id :empty-terminal
+           :phases {:order [:start :completed]
+                    :tools {:completed #{}}}}))))
+
+;; ---------------------------------------------------------------------------
+;; Control: the worked War Machine map, pinned at c474470f over futon2's files
+;; at a fixed sha (materialised from git, so futon2 moving does not move it).
+
+(def control
+  (clojure.edn/read-string
+   (slurp "test/futon3c/diagramprover/fixtures/wm-wiring-control-c474470f.edn")))
+
+(defn- control-root []
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wiring-control" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (doseq [p (:site-paths control)]
+      (let [{:keys [exit out err]} (clojure.java.shell/sh
+                                    "git" "-C" "/home/joe/code/futon2" "show"
+                                    (str (:futon2-sha control) ":" p))
+            f (clojure.java.io/file root p)]
+        (is (zero? exit) (str "control site not at the pinned futon2 sha: " p " " err))
+        (clojure.java.io/make-parents f)
+        (spit f out)))
+    (str root)))
+
+(defn- control-spec []
+  (clojure.edn/read-string (slurp (:spec control))))
+
+(deftest control-report-is-unchanged
+  (let [root (control-root)
+        spec (control-spec)
+        perturbed (-> spec
+                      (update-in [:boxes 0 :writes] conj :model-manifest-absent)
+                      (update :boxes conj {:box/id :universe-only :reads [:selection-law]}))]
+    (is (= (:report control) (wiring/conformance root spec)))
+    (is (= (:perturbed-report control) (wiring/conformance root perturbed)))
+    (is (= (:heuristic-report control) (wiring/conformance root spec {:heuristic? true}))
+        "only the three set-literal hashes; :likelihood-mode's direction matches the code")))
+
+;; ---------------------------------------------------------------------------
+;; Var-grain sites
+
+(def var-sample "test/futon3c/diagramprover/fixtures/var_sample.clj")
+
+(deftest var-grain-scopes-conformance-to-one-form
+  (let [file-site {:file var-sample}
+        var-site {:file var-sample :var "reads-g-terms"}
+        spec (fn [site] {:spec/id :var-grain
+                         :boxes [{:box/id :reader :site site :reads [:measurement]}]})]
+    (testing "the field is in another form: a finding at var grain"
+      (is (= [{:finding :declaration-without-occurrence :box/id :reader
+               :field :measurement :role :reads :site var-site}]
+             (wiring/conformance "." (spec var-site)))))
+    (testing "and not at file grain"
+      (is (= [] (wiring/conformance "." (spec file-site)))))))
+
+(deftest var-not-found-is-a-finding
+  (let [site {:file var-sample :var "no-such-fn"}
+        findings (wiring/conformance "." {:spec/id :ghost-var
+                                          :boxes [{:box/id :b :site site :reads [:g]}]})]
+    (is (= [{:finding :var-not-found :site site :var "no-such-fn"}] findings)
+        "no drift findings either: the scope does not exist")))
+
+(deftest var-grain-keeps-the-prefix-guard
+  ;; reads-g-terms mentions :g-terms only; :g must not be counted for it
+  (let [site {:file var-sample :var "reads-g-terms"}]
+    (is (= [{:finding :declaration-without-occurrence :box/id :b
+             :field :g :role :reads :site site}]
+           (wiring/conformance "." {:spec/id :prefix
+                                    :boxes [{:box/id :b :site site :reads [:g]}]})))))
+
+(deftest var-form-survives-strings-meta-and-comments
+  (let [text (slurp var-sample)]
+    (is (= "(defn ^:private reads-g-terms [m] (get m :g-terms))"
+           (:text (wiring/var-form text "reads-g-terms"))) "metadata before the name")
+    (is (= "(defn after-the-string [m] (:selected (get-in m [:decision :selection-law])))"
+           (:text (wiring/var-form text "after-the-string")))
+        "a string holding parens and an escaped quote does not shift the next form")
+    (is (nil? (wiring/var-form text "comment-field")))))
+
+;; ---------------------------------------------------------------------------
+;; The textual read/write heuristic
+
+(deftest field-usage-classifies-positions
+  (let [text (slurp var-sample)
+        u #(wiring/field-usage text %)]
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :g-terms)) "argument of get")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :measurement)) "key of assoc")
+    (is (= {:reads 0 :writes 1 :unclassified 1} (u :g))
+        "a map-literal key; the one in a string is unclassified; :g-terms is not counted")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :selected)) "keyword in function position")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :selection-law)) "a key in a get-in path")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :path)) "a key in an update-in path")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :universe)) "a destructuring :keys entry")
+    (is (= {:reads 0 :writes 0 :unclassified 1} (u :comment-field)) "only in a comment")))
+
+(deftest declared-role-without-a-positioned-occurrence
+  (let [site {:file var-sample}
+        spec {:spec/id :heuristic
+              :boxes [{:box/id :commenter :site site :writes [:comment-field]}
+                      {:box/id :writer :site site :reads [:measurement]}
+                      {:box/id :reader :site site :reads [:g-terms]}]}
+        findings (wiring/conformance "." spec {:heuristic? true})]
+    (is (= [{:finding :declared-read-not-found :box/id :writer :field :measurement
+             :role :reads :site site :usage {:reads 0 :writes 1 :unclassified 0}
+             :heuristic true}
+            {:finding :declared-write-not-found :box/id :commenter :field :comment-field
+             :role :writes :site site :usage {:reads 0 :writes 0 :unclassified 1}
+             :heuristic true}]
+           findings))
+    (is (= [] (wiring/conformance "." spec)) "off by default: today's report")))
+
+(deftest heuristic-is-per-var-at-var-grain
+  (let [site {:file var-sample :var "string-with-parens"}]
+    (is (= [{:finding :declared-write-not-found :box/id :b :field :g :role :writes
+             :site site :usage {:reads 0 :writes 0 :unclassified 1} :heuristic true}]
+           (wiring/conformance "." {:spec/id :var-heuristic
+                                    :boxes [{:box/id :b :site site :writes [:g]}]}
+                               {:heuristic? true}))
+        "the map-literal write of :g is in another form; in this one :g is in a string")))
+
+(deftest usage-reports-every-declared-field
+  (is (= [{:box/id :b :site {:file var-sample} :role :writes :field :order
+           :usage {:reads 0 :writes 1 :unclassified 0} :heuristic true}]
+         (wiring/usage "." {:spec/id :u :boxes [{:box/id :b :site {:file var-sample}
+                                                 :writes [:order]}]}))))
+
+;; ---------------------------------------------------------------------------
+;; Load closure (N0)
+
+(deftest sites-must-be-in-the-load-closure
+  (let [spec {:spec/id :closure
+              :boxes [{:box/id :in :site {:file var-sample :var "writes-measurement"}}
+                      {:box/id :ns-site :site {:ns "futon3c.diagramprover.wiring"}}
+                      {:box/id :out :site {:file "src/futon3c/not_loaded.clj"}}
+                      {:box/id :no-site :reads [:x]}]}
+        registry-shape [{:ns "futon3c.diagramprover.fixtures.var-sample" :path var-sample
+                         :sha256 "x"}
+                        {:ns "futon3c.diagramprover.wiring"
+                         :path "src/futon3c/diagramprover/wiring.clj" :sha256 "y"}]
+        findings (wiring/load-closure-findings "." spec registry-shape)]
+    (is (= [:site-not-in-load-closure] (map :finding findings)))
+    (is (= {:file "src/futon3c/not_loaded.clj"} (:site (first findings))))
+    (is (not (wiring/sites-resolve? "." spec registry-shape)))
+    (testing "the same closure as plain paths, one of them absolute"
+      (let [abs (str (.normalize (.toAbsolutePath (.toPath (clojure.java.io/file
+                                                            "src/futon3c/not_loaded.clj")))))]
+        (is (wiring/sites-resolve? "." spec (conj (mapv :path registry-shape) abs)))))
+    (testing "relative closure paths resolve against :closure-root, not the map's root"
+      (is (= 3 (count (wiring/load-closure-findings
+                       "." spec (map :path registry-shape) {:closure-root "/elsewhere"})))))))
+
+;; ---------------------------------------------------------------------------
+;; Thread-first steps (DIAGRAMPROVER-WIRING-I3)
+
+(deftest thread-first-steps-classify-the-threaded-call
+  (let [text (:text (wiring/var-form (slurp var-sample) "thread-steps"))
+        u #(wiring/field-usage text %)]
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc)) "-> (assoc :k v)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc-2)) "a second key of the same assoc")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-update)) "-> (update :k f)")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :t-get)) "-> (get :k)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc-in)) "cond-> (assoc-in [:k …] v)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-update-in)) "cond-> (update-in [:k] f)")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :t-test)) "a cond-> test is a plain call")
+    (testing "bad case: a key inside the step's VALUE is not the step's key"
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :other)))
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-in-value))
+          "counted once, as a map-literal key (the rule it has outside any thread)")
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :other2)))
+      (is (= {:reads 0 :writes 0 :unclassified 1} (u :t-in-vector))
+          "a keyword in a vector value is not a path: unclassified")))
+  (is (= {:reads 0 :writes 1 :unclassified 0}
+         (wiring/field-usage (:text (wiring/var-form (slurp var-sample) "thread-as")) :t-as))
+      "as-> names its value: an ordinary (assoc x :k v)")
+  (is (= {:reads 0 :writes 0 :unclassified 1}
+         (wiring/field-usage (:text (wiring/var-form (slurp var-sample) "not-a-thread")) :plain-v))
+      "outside a thread, a keyword VALUE at an odd position of assoc is not a key"))
+
+(def ^:private futon2-cases-sha "dd1c0561")
+
+(deftest recorded-heuristic-limits-are-writes-now
+  ;; the two :heuristic-limit entries of futon3c
+  ;; holes/labs/M-wm-wiring/wm-flight-wiring.edn (3e96fdce), at futon2 dd1c0561
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wiring-i3" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (doseq [p ["src/futon2/aif/enactment_habit.clj" "src/futon2/aif/construction.clj"]]
+      (let [{:keys [exit out]} (clojure.java.shell/sh "git" "-C" "/home/joe/code/futon2" "show"
+                                                      (str futon2-cases-sha ":" p))
+            f (clojure.java.io/file root p)]
+        (is (zero? exit))
+        (clojure.java.io/make-parents f)
+        (spit f out)))
+    (let [spec {:spec/id :i3
+                :boxes [{:box/id :r7 :site {:ns "futon2.aif.enactment-habit" :var "fold"}
+                         :writes [:enactment-records]}
+                        {:box/id :r4 :site {:ns "futon2.aif.construction" :var "containment-order"}
+                         :writes [:precedence-violations]}]}]
+      (is (= [] (wiring/conformance (str root) spec {:heuristic? true})))
+      ;; before I3 (the map's :usage): {2 0 2} and {0 0 2}; the docstring mentions stay unclassified
+      (is (= [{:reads 2 :writes 1 :unclassified 1} {:reads 0 :writes 1 :unclassified 1}]
+             (map :usage (wiring/usage (str root) spec)))))))
+
+;; ---------------------------------------------------------------------------
+;; select-keys reads (PROVER-READS-I). flight.clj:231 at futon2 HEAD reads
+;; :status :detail with select-keys; before this they were :unclassified.
+
+(deftest select-keys-vector-entries-are-reads
+  (let [t "(select-keys abstention [:kind :missing :declines :status :detail])"]
+    (is (= {:reads 1 :writes 0 :unclassified 0} (wiring/field-usage t :detail)))
+    (is (= {:reads 1 :writes 0 :unclassified 0} (wiring/field-usage t :kind)))
+    (is (= 5 (reduce + (map #(:reads (wiring/field-usage t %))
+                            [:kind :missing :declines :status :detail])))
+        "every entry of the key vector is a read"))
+  (is (= {:reads 1 :writes 0 :unclassified 0}
+         (wiring/field-usage "(-> m (select-keys [:detail]))" :detail))
+      "thread-first step form")
+  (testing "controls: not every vector entry is a read"
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(dissoc m :detail)" :detail)))
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(contains? m :detail)" :detail)))
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(f m [:detail])" :detail))
+        "a vector argument of any other call")
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(select-keys [:detail] ks)" :detail))
+        "a vector in select-keys' map position is not its key vector")))

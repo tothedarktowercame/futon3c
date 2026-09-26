@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# fdev — one consistent futon dev launcher for every box.
+#
+# Detects this box's role, ensures the ops Emacs daemon (fopsd), then launches
+# the role's server (futon3c/scripts/dev-<role>-env) in a respawn-protected
+# tmux session and attaches.
+#
+#   fdev                 launch for the detected role
+#   fdev --role linode   force a role
+#   fdev --dry-run       print the resolved plan and exit (no launch)
+#
+# Role resolution order:  --role flag  >  $FUTON_ROLE  >  ~/.futon-role  >  hostname map
+set -euo pipefail
+
+role="${FUTON_ROLE:-}"
+dry=0
+attach=1
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --role) role="$2"; shift 2 ;;
+    --dry-run) dry=1; shift ;;
+    --no-attach) attach=0; shift ;;
+    *) echo "fdev: unknown arg '$1'" >&2; exit 2 ;;
+  esac
+done
+
+# ~/.futon-role override file
+if [[ -z "$role" && -f "$HOME/.futon-role" ]]; then
+  role="$(tr -d '[:space:]' < "$HOME/.futon-role")"
+fi
+# hostname map (automatic default)
+if [[ -z "$role" ]]; then
+  case "$(hostname -s)" in
+    Dionysus) role=laptop  ;;   # the active laptop
+    lucy)     role=linode  ;;   # linode1 — coordination hub
+    metameso) role=linode2 ;;   # linode2 — worker
+    *) echo "fdev: unknown host '$(hostname -s)'. Set ~/.futon-role (laptop|linode|linode2) or pass --role." >&2
+       exit 1 ;;
+  esac
+fi
+
+project_root="${FUTON3C_ROOT:-${HOME}/code/futon3c}"
+launcher_rel="scripts/dev-${role}-env"
+if [[ ! -x "${project_root}/${launcher_rel}" ]]; then
+  echo "fdev: role '$role' has no launcher at ${project_root}/${launcher_rel}" >&2
+  echo "fdev: available roles:" >&2
+  ls "${project_root}"/scripts/dev-*-env 2>/dev/null | sed 's#.*/dev-\(.*\)-env#  \1#' >&2
+  exit 1
+fi
+
+# Per-role Emacs profile for fopsd: laptop uses chemacs 'graph'; the linodes
+# run plain Emacs (no chemacs), so default their profile to empty.
+case "$role" in
+  laptop) : "${FUTON_OPS_PROFILE:=graph}" ;;
+  *)      : "${FUTON_OPS_PROFILE=}" ;;
+esac
+export FUTON_OPS_PROFILE
+
+session_name="${FUTON_DEV_TMUX_SESSION:-futon-dev}"
+window_name="${FUTON_DEV_TMUX_WINDOW:-server}"
+server_name="${FUTON_OPS_SERVER:-futon-ops}"
+server_cmd="FUTON3C_EMACS_SOCKET=${server_name} ./${launcher_rel}"
+
+# CLJS watches run EMBEDDED inside the futon3c JVM (dev/shadow.clj watches
+# war-machine + webarxana in-process), so fdev does NOT spawn a standalone
+# `npx shadow-cljs` window by default — that would be a redundant second JVM
+# (CLAUDE.md I-0: pgrep java stays at one). Opt in with FUTON_WM_UI_WINDOW=wm-ui
+# only if you deliberately want a separate standalone watcher.
+wm_ui_window="${FUTON_WM_UI_WINDOW:-}"
+wm_ui_root="${FUTON_WM_UI_ROOT:-${HOME}/code/futon2/web/war-machine}"
+wm_ui_cmd="${FUTON_WM_UI_CMD:-npx shadow-cljs watch app}"
+
+if [[ "$dry" == 1 ]]; then
+  cat <<EOF
+fdev plan:
+  host          $(hostname -s)
+  role          ${role}
+  launcher      ${project_root}/${launcher_rel}
+  emacs daemon  ${server_name}  (profile: ${FUTON_OPS_PROFILE:-<plain>})
+  tmux session  ${session_name}:${window_name}
+  server cmd    ${server_cmd}
+  wm-ui window  ${wm_ui_window:-<disabled>}
+EOF
+  exit 0
+fi
+
+if ! command -v tmux >/dev/null 2>&1; then
+  echo "fdev: tmux is required" >&2
+  exit 1
+fi
+
+# Ensure the ops Emacs daemon is up before the server (idempotent).
+"${HOME}/bin/fopsd"
+
+tmux_window_exists() {
+  tmux list-windows -t "$1" -F '#W' 2>/dev/null | grep -Fxq "$2"
+}
+tmux_window_dead() {
+  local live_panes
+  live_panes="$(tmux list-panes -t "$1" -F '#{pane_dead}' 2>/dev/null | grep -Fx '0' || true)"
+  [[ -z "${live_panes}" ]]
+}
+
+if ! tmux has-session -t "${session_name}" 2>/dev/null; then
+  tmux new-session -d -s "${session_name}" -n "${window_name}" -c "${project_root}" \
+    "${server_cmd}"
+  tmux set-option -t "${session_name}" history-limit 200000 >/dev/null
+  tmux set-window-option -t "${session_name}:${window_name}" remain-on-exit on >/dev/null
+elif ! tmux_window_exists "${session_name}" "${window_name}"; then
+  tmux new-window -d -t "${session_name}:" -n "${window_name}" -c "${project_root}" \
+    "${server_cmd}"
+  tmux set-window-option -t "${session_name}:${window_name}" remain-on-exit on >/dev/null
+elif tmux_window_dead "${session_name}:${window_name}"; then
+  tmux respawn-window -k -t "${session_name}:${window_name}" -c "${project_root}" \
+    "${server_cmd}"
+  tmux set-window-option -t "${session_name}:${window_name}" remain-on-exit on >/dev/null
+fi
+
+if [[ -n "${wm_ui_window}" ]] \
+   && ! tmux_window_exists "${session_name}" "${wm_ui_window}"; then
+  tmux new-window -d -t "${session_name}:" -n "${wm_ui_window}" \
+       -c "${wm_ui_root}" "${wm_ui_cmd}"
+  tmux set-window-option -t "${session_name}:${wm_ui_window}" remain-on-exit on >/dev/null
+fi
+
+if [[ "$attach" == 1 ]]; then
+  exec tmux attach -t "${session_name}"
+fi
+echo "fdev: launched ${session_name} (role=${role}); --no-attach, not attaching."
+tmux list-windows -t "${session_name}" -F '  #W (#{?pane_dead,dead,live})' 2>/dev/null || true

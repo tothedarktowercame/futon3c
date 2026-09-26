@@ -1,0 +1,1 @@
+{:ok true, :status :started, :at "2026-09-11T15:18:00.612847703Z", :source-commit "17720cc6", :quiescence-witness {:state/type :durable-quiescence-witness, :coordinator/id "jit-queue:jit-all-open-v3", :regulator/epoch 31, :regulator/ticks 75290, :tick-claim nil, :witnessed-at "2026-09-11T15:18:00.453435565Z"}}

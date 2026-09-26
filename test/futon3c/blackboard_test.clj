@@ -41,11 +41,37 @@
                                       :invoke-ready? false
                                       :metadata {}}}})]
       (is (str/includes? result "Agents (3 registered, 2 invocable: 2 local, 0 ws, 1 unreachable)"))
-      (is (str/includes? result "codex-1 [codex, local, ws-bridge] idle"))
+      ;; ws-bridge? metadata documents the bridge; it is NOT the route, so a
+      ;; locally-invocable agent renders plain [codex, local] (blackboard.clj
+      ;; annotates ws-bridge only when the invoke actually flows via the bridge).
+      (is (str/includes? result "codex-1 [codex, local] idle"))
       (is (str/includes? result "— ready"))
       (is (str/includes? result "codex-vscode [codex, local, VS Code, lane=vscode] idle"))
       (is (str/includes? result "slot-1 [codex, unreachable] idle"))
       (is (str/includes? result "— registered-only")))))
+
+(deftest evidence-flow-alerts-appear-in-agents-roster
+  (testing "sampler alerts are visible where the operator watches agents"
+    (with-redefs [bb/evidence-flow-status
+                  (fn [] {:alerts ["dual-write-disabled" "evidence-write-stale"]
+                          :sample-age-seconds 12
+                          :record {:dual_write {:reason "same-target"}
+                                   :evidence_writes {:window_seconds 900}}})]
+      (let [result (bb/format-agent-status {:count 0 :agents {}})]
+        (is (str/includes? result "EVIDENCE FLOW ALERTS"))
+        (is (str/includes? result "dual-write-disabled — same-target"))
+        (is (str/includes? result "evidence-write-stale"))))))
+
+(deftest absent-vitality-producer-is-an-alert
+  (testing "stopping the producer ages into a visible failure instead of silence"
+    (let [state-file (java.io.File/createTempFile "vitality-state-" ".json")]
+      (.deleteOnExit state-file)
+      (spit state-file
+            "{\"sampled_at_epoch\":1000,\"latest_record\":{\"alerts\":[]}}")
+      (is (= ["no-recent-sample"]
+             (:alerts (bb/evidence-flow-status (.getPath state-file)
+                                                (* 1301 1000)
+                                                180)))))))
 
 (deftest format-process-status-shows-headless-codex-lanes
   (testing "process blackboard renders agent-lane state distinctly"
@@ -249,6 +275,129 @@
       (is (str/includes? result "target=L-5"))
       (is (str/includes? result "30min")))))
 
+;; -----------------------------------------------------------------------------
+;; :problem adaptor
+;; -----------------------------------------------------------------------------
+
+(deftest problem-mid-cycle-and-sentinel-rendering
+  (let [mid-cycle
+        {:problem-id "t00A05"
+         :cycle/mode :store-mode
+         :current-cycle-id "t00A05-cycle-93f5be7"
+         :current-phase :guided-solve
+         :cycles-completed 0
+         :conductor {:agent "claude-7" :proctor "claude-2"}
+         :cycle/outputs
+         {:registration {:reg/solver-seat "codex-4"
+                         :reg/attempt-caps {:s-frontier 10 :s-student 3}}
+          :solver-attempt {:attempt/id "solver/1"}
+          :student-attempts [{:attempt/id "student/1"}
+                             {:attempt/id "student/2"}]}
+         :steps [{:tool :begin-problem-cycle
+                  :result {:cycle/id "t00A05-cycle-93f5be7"}}
+                 {:tool :problem-save :result {:version 43}}
+                 {:tool :dispatch-solver
+                  :result {:job-id "invoke-live-solver"}}
+                 {:tool :dispatch-student-fresh
+                  :result {:job-id "invoke-live-student"
+                           :ground-control/recipient "zai-1"}}]}
+        rendered (bb/render-blackboard :problem mid-cycle)
+        awaiting-rendered
+        (bb/render-blackboard
+         :problem
+         {:problem-id "t00A05"
+          :cycle/mode :store-mode
+          :current-phase :guided-solve
+          :cycle/outputs
+          {:registration {:reg/solver-seat "codex-4"
+                          :reg/guide-seat "claude-7"
+                          :reg/student-seat "zai-1"}}
+          :steps [{:tool :dispatch-solver
+                   :result {:job-id "invoke-awaiting-solver"
+                            :ground-control/recipient "codex-4"}}]})
+        completed (bb/render-blackboard
+                   :problem
+                   (assoc mid-cycle :current-phase nil :current-cycle-id nil
+                          :cycles-completed 1))
+        other-cycle (bb/render-blackboard
+                     :problem
+                     (assoc mid-cycle
+                            :current-cycle-id "t00A05-cycle-a12bc34"))]
+    (is (str/includes? rendered "Problem: t00A05"))
+    (is (str/includes? rendered "Cycle: 93f5be7"))
+    (is (str/includes? rendered "Save: v43"))
+    (is (str/includes? rendered "Rendered-at: step 4"))
+    (is (str/includes? rendered "Phase: guided-solve (3/9)"))
+    (is (str/includes? rendered
+                       "intervene > promote-solver > student-attempts"))
+    (is (str/includes? rendered "register > frame > guided-solve > intervene"))
+    (is (str/includes? rendered "scribe=unstaffed"))
+    (is (str/includes? rendered "Attempts: solver 1/10  student 2/3"))
+    (is (str/includes? rendered "Seat activity:"))
+    (is (str/includes? rendered "solver   codex-4          attempt recorded (1 step ago)"))
+    (is (str/includes? rendered "guide    claude-7         dispatch-student-fresh (now)"))
+    (is (str/includes? rendered "student  zai-1            attempt recorded (now)"))
+    (is (re-find #"scribe\s+unstaffed\s+unstaffed" rendered))
+    (is (str/includes? awaiting-rendered
+                       "awaiting codex-4 (job invoke-awaiting-solver)"))
+    (is (str/includes? awaiting-rendered
+                       "solver   codex-4          working (job invoke-awaiting-solver)"))
+    (is (str/includes? awaiting-rendered
+                       "guide    claude-7         dispatch-solver (now)"))
+    (is (re-find #"proctor\s+unstaffed\s+unstaffed" awaiting-rendered))
+    (is (re-find #"scribe\s+unstaffed\s+unstaffed" awaiting-rendered))
+    (is (str/includes? rendered
+                       "Latest dispatch: dispatch-student-fresh  job=invoke-live-student"))
+    (is (str/includes? completed
+                       "Phase: COMPLETED (sentinel): t00A05/93f5be7"))
+    (is (not= rendered other-cycle))
+    (is (str/includes? other-cycle "Cycle: a12bc34"))))
+
+(deftest problem-header-renders-frame-from-registration-or-seats
+  (let [base {:problem-id "m03J01"
+              :cycle/mode :store-mode
+              :current-phase :register
+              :cycles-completed 0
+              :steps []}
+        registered
+        (bb/render-blackboard
+         :problem
+         (assoc base :cycle/outputs
+                {:registration {:reg/frame-id "f13"
+                                :reg/solver-seat "f12-solver"}}))
+        inferred
+        (bb/render-blackboard
+         :problem
+         (assoc base :cycle/outputs
+                {:registration {:reg/solver-seat "f12-solver"
+                                :reg/guide-seat "f12-guide"
+                                :reg/scribe-seat "f12-scribe"}}))
+        absent (bb/render-blackboard :problem base)]
+    (is (str/starts-with? registered "Frame: f13  Problem: m03J01"))
+    (is (str/starts-with? inferred "Frame: f12  Problem: m03J01"))
+    (is (not (str/includes? absent "Frame:")))))
+
+(deftest completed-problem-never-renders-stale-dispatches-as-working
+  (let [rendered
+        (bb/render-blackboard
+         :problem
+         {:problem-id "m03J01"
+          :cycle/mode :store-mode
+          :current-phase nil
+          :cycles-completed 1
+          :cycle/outputs
+          {:registration {:reg/solver-seat "f12-solver"
+                          :reg/guide-seat "f12-guide"}
+           :solver-attempt {:attempt/id "solver/final"}}
+          :steps [{:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-1"}}
+                  {:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-2"}}
+                  {:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-3"}}]})]
+    (is (not (str/includes? rendered "solver   f12-solver       working")))
+    (is (str/includes? rendered "In-flight: quiet"))))
+
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
 ;; =============================================================================
@@ -261,6 +410,53 @@
       (is (= "say \\\"hi\\\"" (escape "say \"hi\"")))
       (is (= "back\\\\slash" (escape "back\\slash"))))))
 
+(deftest async-emacsclient-coalesces-per-target-while-inflight
+  (testing "slow async snapshots coalesce, then a wedged client is reaped"
+    (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
+                   (.deleteOnExit))
+          run-async #'futon3c.blackboard/run-emacsclient-async!
+          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
+      (spit script "#!/usr/bin/env bash\nsleep 30\n")
+      (.setExecutable script true)
+      (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
+        (try
+          (reset! @inflight #{})
+          (let [first-result (run-async "(message \"one\")" "test-socket")
+                second-result (run-async "(message \"two\")" "test-socket")]
+            (is (= {:ok false :output "timeout"} first-result))
+            (is (= {:ok false :output "inflight"} second-result))
+            (is (contains? @@inflight "test-socket"))
+            (let [deadline (+ (System/currentTimeMillis) 4000)]
+              (while (and (contains? @@inflight "test-socket")
+                          (< (System/currentTimeMillis) deadline))
+                (Thread/sleep 25))
+              (is (not (contains? @@inflight "test-socket"))
+                  "bounded reap releases the target for a later snapshot")))
+          (finally
+            (reset! @inflight #{})))))))
+
+(deftest async-emacsclient-keeps-independent-panel-lanes
+  (testing "one slow live panel does not suppress another on the same socket"
+    (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
+                   (.deleteOnExit))
+          run-async #'futon3c.blackboard/run-emacsclient-async!
+          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
+      (spit script "#!/usr/bin/env bash\nsleep 30\n")
+      (.setExecutable script true)
+      (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
+        (try
+          (reset! @inflight #{})
+          (is (= "timeout" (:output (run-async "one" "test-socket" :agents))))
+          (is (= "inflight" (:output (run-async "two" "test-socket" :agents))))
+          (is (= "timeout" (:output (run-async "tree" "test-socket" :job-tree))))
+          (is (contains? @@inflight ["test-socket" :agents]))
+          (is (contains? @@inflight ["test-socket" :job-tree]))
+          (finally
+            (doseq [_ (range 120)
+                    :while (seq @@inflight)]
+              (Thread/sleep 25))
+            (reset! @inflight #{})))))))
+
 ;; =============================================================================
 ;; project! — integration of render + blackboard!
 ;; =============================================================================
@@ -269,6 +465,14 @@
   (testing "project! returns nil when render-blackboard returns nil"
     ;; :default returns nil, so project! should be a no-op
     (is (nil? (bb/project! :nonexistent {:any "state"})))))
+
+(deftest project-default-denies-non-serving-jvms
+  (let [calls (atom [])]
+    (with-redefs [bb/render-blackboard (fn [_ _] "must-not-project")
+                  bb/blackboard! (fn [& args] (swap! calls conj args))]
+      (is (false? bb/*enabled*))
+      (is (nil? (bb/project! :problem {:problem-id "test-fixture"})))
+      (is (empty? @calls)))))
 
 (deftest project-defaults-to-async-mode
   (testing "project! marks fire-and-forget projections async by default"
@@ -279,10 +483,25 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (is (nil? (bb/project! :mission-control {:steps []})))
+        (binding [bb/*enabled* true]
+          (is (nil? (bb/project! :mission-control {:steps []}))))
         (is (= 1 (count @calls)))
         (is (= "*mission-control*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
+
+(deftest problem-projection-keeps-cycle-specific-buffer-without-contending-for-apm-singleton
+  (let [calls (atom [])
+        state {:problem-id "a98A01"
+               :current-cycle-id "a98A01-cycle-93f5be7"
+               :current-phase :frame
+               :steps []}]
+    (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                   (swap! calls conj [buffer-name content opts])
+                                   {:ok true})]
+      (binding [bb/*enabled* true]
+        (is (nil? (bb/project! :problem state))))
+      (is (= ["*problem: a98A01-93f5be7*"]
+             (mapv first @calls))))))
 
 ;; Note: project! with a real peripheral-id would call emacsclient,
 ;; which we don't want in the test suite. The render tests above
@@ -298,7 +517,8 @@
                                      {:ok true})]
         (reset! bb/!display-agents-window true)
         (bb/set-external-hud-enabled! false)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (not (contains? (:opts (first @calls)) :no-display)))))))
@@ -312,7 +532,8 @@
                                                         :opts opts})
                                      {:ok true})]
         (bb/set-agents-window-display! false)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
@@ -328,7 +549,8 @@
                                      {:ok true})]
         (bb/set-agents-window-display! true)
         (bb/set-external-hud-enabled! true)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
@@ -343,7 +565,8 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (true? (get-in @calls [0 :opts :async?])))))))
 
@@ -355,7 +578,32 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (bb/project-processes! [])
+        (binding [bb/*enabled* true]
+          (bb/project-processes! []))
         (is (= 1 (count @calls)))
         (is (= "*processes*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
+
+(deftest format-agent-status-groups-by-site
+  (testing "roster groups agents under site | name rows (AG-8 roster-completeness display)"
+    (let [result (bb/format-agent-status
+                  {:count 3
+                   :agents {"lon-claude-1" {:type :claude :status :idle
+                                            :invoke-route :local
+                                            :metadata {}}
+                            "chi-claude-1" {:type :claude :status :idle
+                                            :invoke-route :none
+                                            :metadata {:proxy? true :remote? true
+                                                       :home-site :chi
+                                                       :origin-url "http://chi:7070"}}
+                            "chi-codex-1" {:type :codex :status :idle
+                                           :invoke-route :none
+                                           :metadata {:home-site "chi"}}}})]
+      ;; site prefix is stripped inside the agent's own site group
+      (is (str/includes? result "lon | claude-1 ["))
+      (is (str/includes? result "chi | claude-1 ["))
+      (is (str/includes? result "chi | codex-1 ["))
+      ;; groups are contiguous blocks, sites in sorted order
+      (is (< (long (str/index-of result "chi | claude-1"))
+             (long (str/index-of result "chi | codex-1"))
+             (long (str/index-of result "lon | claude-1")))))))

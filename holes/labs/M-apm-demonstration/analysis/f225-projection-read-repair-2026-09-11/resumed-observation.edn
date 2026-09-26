@@ -1,0 +1,32 @@
+{:queue/status nil,
+ :repair
+ {:hold/id
+  "bad82e9694d2ba65a3e0c6f9769f5bffd3863413fa38fcdeb273e0016bf05cdc",
+  :repair/status :verified,
+  :repair/commit "17dca50e3ec80850cc71b1a2f0ccbb5c95804d7a",
+  :validation/evidence
+  ["holes/labs/M-apm-demonstration/analysis/f225-projection-read-repair-2026-09-11/diagnostic.edn"
+   "holes/labs/M-apm-demonstration/analysis/f225-projection-read-repair-2026-09-11/freshness.log"
+   "holes/labs/M-apm-demonstration/analysis/f225-projection-read-repair-2026-09-11/validation.json"
+   "holes/labs/M-apm-demonstration/analysis/f225-projection-read-repair-2026-09-11/live-validation.edn"]},
+ :coordinator
+ #:regulator{:status :running,
+             :ticks 78335,
+             :tick-claim
+             {:state/type :live-regulator-tick-claim,
+              :regulator/id "jit-queue:jit-all-open-v3",
+              :tick/epoch 34,
+              :tick/ordinal 78336,
+              :tick/id "jit-queue:jit-all-open-v3:34:78336",
+              :tick/claimed-at "2026-09-11T20:33:02.633217454Z"}},
+ :completed-last
+ {:frame/id "f225",
+  :problem/id "m93J03",
+  :frame/result :partial,
+  :terminal-receipt/id
+  "67d0be4597ebb40180ca927c92390b93d4c62f56590132770b7e033eda8b63f4"},
+ :active {:frame/id "f226", :problem/id "m93J06"},
+ :at "2026-09-11T20:33:06.456346482Z",
+ :hold-id-retained? true,
+ :warnings-retained? true,
+ :hold-cleared? true}

@@ -1,0 +1,33 @@
+{:schema :wm/run4-disabled-deployment-template-v1 :enabled? false
+ :activation :operator-provisioned-only
+ :credential {:state :unprovisioned :format :lowercase-hex-256-bit
+              :principal "Joe" :value-present? false}
+ :casting {:author "codex-20" :reviewer "codex-18" :repair-reviewer "codex-19"}
+ :authority-root "/home/joe/code/futon2"
+ :manifest {:ref "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/series-pin.edn"
+            :sha256 "3e0e6db16cbc45fef001f29de54ed20f1b479c21476466f76cfdbcfdbb08d5c2"}
+ :pin-allowlist #{"holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/task-pin.edn"}
+ :source-allowlist
+ #{"holes/missions/M-f11-find-production-successor.md"
+   "holes/labs/wm-contract/worklist.edn"
+   "src/futon2/aif/mission_registry.clj"
+   "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/run-config.edn"
+   "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/cohort.edn"
+   "resources/run4/seeded-c.edn" "resources/run4/checkpoint-kernel.edn"}
+ :stores {:controller-and-admission "/home/joe/run4/F11-production-successor-20260912-v2/controller"
+          :bindings "/home/joe/run4/F11-production-successor-20260912-v2/bindings"
+          :projections "/home/joe/run4/F11-production-successor-20260912-v2/projections"
+          :run-records "/home/joe/run4/F11-production-successor-20260912-v2/run-records"
+          :recordings "/home/joe/run4/F11-production-successor-20260912-v2/recordings"
+          :visibility "/home/joe/run4/F11-production-successor-20260912-v2/visibility"}
+ :reserved-unwired {:battery "/home/joe/run4/F11-production-successor-20260912-v2/battery"
+                    :control-map-root "/home/joe/code/p4ng"
+                    :control-map-ref "empirics-futon/control-map-edges.edn"
+                    :control-map-sha256 "161d0abffd21551078ac2d7a87427e6cacafbfca0695c09a496260be21fafdec"}
+ :serving {:route "/api/alpha/wm/run4/series/step"
+           :request {:run4-series-ref "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/series-pin.edn"}
+           :single-flight :existing-runner-service-cas :automatic-start? false}
+ :mission {:id "M-f11-find-production-successor" :state :open
+           :activated-on "2026-09-12"
+           :activation-authority "Joe continuous WM direction; reviewed fold-path and pointer repair"
+           :activation-permitted? true}}

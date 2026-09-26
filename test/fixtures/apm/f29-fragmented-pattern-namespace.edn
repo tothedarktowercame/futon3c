@@ -1,0 +1,4 @@
+{:query "polynomial roots constrained by derivative critical points"
+ :search-result-pattern-id "math/polynomial-root-localization"
+ :f29-proposed-pattern-id "math-formalization/polynomial-root-localization"
+ :expected-error :canonical-pattern-reuse-unaccounted}

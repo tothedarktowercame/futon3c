@@ -1,0 +1,8 @@
+{
+  "src/futon3c/apm/promotion_pipeline.clj": "8b88b4ac5d70eca41873086208b88c82290199f9ee0ffa85f4c8d573c0b92180",
+  "src/futon3c/apm/typed_role_submission.clj": "80444c3a6788ee37d81189a9a7de70ae7000f329a1d19de66fbf2b9758b041da",
+  "src/futon3c/apm/live_promotion.clj": "616a23ce32faacd25b845affd79a186e13caa9a6e167e171f6aa119431d0aaec",
+  "src/futon3c/apm/live_proof_phases.clj": "fcb89017e48d623772dcfc304de01b38c6a9b2dadf62f04d28d8824542dbd05c",
+  "src/futon3c/apm/live_learning_phases.clj": "fbf6fc3af6dedad8c200e1669fda24c5039178559e547f1567a9990e75acbe9c",
+  "scripts/apm-read-job.py": "51040a7bd36e7d5a5f312db8dbdaade5b0ccf9eb123d184ea2fd9b233625203a"
+}

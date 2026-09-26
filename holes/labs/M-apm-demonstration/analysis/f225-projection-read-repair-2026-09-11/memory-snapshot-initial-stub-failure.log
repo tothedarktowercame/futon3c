@@ -1,0 +1,47 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.apm.memory-snapshot-test
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.651366242Z", :outcome :timeout, :exception-classes ["java.util.concurrent.ExecutionException" "java.net.http.HttpTimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.655813996Z", :outcome :unavailable, :exception-classes ["java.net.ConnectException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.656084402Z", :outcome :unavailable, :exception-classes ["java.lang.RuntimeException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.656243490Z", :outcome :unavailable, :exception-classes ["java.io.IOException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.656589898Z", :outcome :malformed, :exception-classes ["clojure.lang.ExceptionInfo"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:37.677342697Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo"]}
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:522)
+expected: (true? (sut/candidate-visible? candidate))
+  actual: (not (true? nil))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:523)
+expected: (= ["e-solver-1" "e-review-1"] (clojure.core/deref fetched))
+  actual: (not (= ["e-solver-1" "e-review-1"] []))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:529)
+expected: (false? (sut/candidate-visible? candidate))
+  actual: (not (false? nil))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:529)
+expected: (false? (sut/candidate-visible? candidate))
+  actual: (not (false? nil))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:529)
+expected: (false? (sut/candidate-visible? candidate))
+  actual: (not (false? nil))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:529)
+expected: (false? (sut/candidate-visible? candidate))
+  actual: (not (false? nil))
+
+FAIL in (projected-visibility-keeps-independent-review-and-current-state-gates) (memory_snapshot_test.clj:535)
+expected: (false? (sut/candidate-visible? candidate (constantly [edge]) {"e-solver-1" memory, "e-review-1" bad}))
+  actual: (not (false? nil))
+[apm-store-read-failure] {:memory-id "prior-timeout", :at "2026-09-11T20:28:54.346758695Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:54.350734987Z", :outcome :timeout, :exception-classes ["java.util.concurrent.TimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:54.350920554Z", :outcome :timeout, :exception-classes ["java.net.SocketTimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:54.351100982Z", :outcome :timeout, :exception-classes ["clojure.lang.ExceptionInfo" "java.util.concurrent.TimeoutException"]}
+[apm-store-read-failure] {:memory-id "e-solver-1", :at "2026-09-11T20:28:54.351198004Z", :outcome :timeout, :exception-classes ["java.lang.RuntimeException"]}
+
+Ran 24 tests containing 112 assertions.
+7 failures, 0 errors.

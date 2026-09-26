@@ -1,0 +1,60 @@
+{:paper/id "1005.2653"
+ :passage/id "1005.2653:antipode-from-duality:64-88"
+ :source {:lines [64 88] :kind :expository-proof}
+ :nodes
+ [{:id :V
+   :kind :object
+   :text "V = Vect_k, finite dimensional k-vector spaces"
+   :source {:lines [64 64]}}
+  {:id :A
+   :kind :object
+   :text "A is a finite representable k-linear flock, i.e. a finite V-herd"
+   :source {:lines [64 65]}}
+  {:id :finite-bimodules
+   :kind :object
+   :text "the category [A^op tensor A, Vect_k] of finite bimodules over A"
+   :source {:lines [67 70]}}
+  {:id :source-star-autonomous
+   :kind :claim
+   :text "[A^op tensor A,Vect_k] is star-autonomous"
+   :source {:lines [67 70]}}
+  {:id :extra-duality
+   :kind :claim
+   :text "A(b,tau(a,c,d))^* is isomorphic to A(a,tau(b,d,c))"
+   :source {:lines [72 73]}}
+  {:id :antipode-S
+   :kind :object
+   :text "S:H^op->H sends (x,y) to (y,x)"
+   :source {:lines [75 76]}}
+  {:id :H
+   :kind :definition
+   :text "H has objects pairs (a,b) in A^op tensor A and hom H((a,b),(c,d)) = A(tau(b,a,c),d)"
+   :source {:lines [79 81]}}
+  {:id :promonoidal-structure
+   :kind :definition
+   :text "the promonoidal structure on H is given by p and j"
+   :source {:lines [83 86]}}
+  {:id :convolution-star-autonomous
+   :kind :claim
+   :text "the convolution [H,Vect_k] is star-autonomous for the above S"
+   :source {:lines [83 88]}}]
+ :edges
+ [{:id :e-antipode
+   :kind :infer
+   :relation :then
+   :premise :extra-duality
+   :conclusion :antipode-S
+   :source {:lines [72 76]}}
+  {:id :e-convolution
+   :kind :infer
+   :relation :moreover
+   :given [:H :antipode-S :promonoidal-structure]
+   :premise :source-star-autonomous
+   :warrant {:kind :missing-warrant
+             :text "the promonoidal structure induced by the herd data transfers star-autonomy to the convolution category"}
+   :conclusion :convolution-star-autonomous
+   :source {:lines [83 88]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-convolution
+   :wanted :star-autonomy-of-convolution-from-promonoidal-herd-data}]}

@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "wi",
+    "to" : "d"
+  }, {
+    "from" : "wi",
+    "to" : "wf"
+  }, {
+    "from" : "d",
+    "to" : "wf"
+  }, {
+    "from" : "wi",
+    "to" : "y"
+  }, {
+    "from" : "wf",
+    "to" : "y"
+  } ],
+  "id" : "lords-paradox-wainer-brown",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "lords-paradox-wainer-brown.json"
+  },
+  "variables" : [ {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Diet"
+  }, {
+    "id" : "wi",
+    "kind" : "observed",
+    "name" : "Initial Weight"
+  }, {
+    "id" : "wf",
+    "kind" : "observed",
+    "name" : "Final Weight"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Gain"
+  } ]
+}

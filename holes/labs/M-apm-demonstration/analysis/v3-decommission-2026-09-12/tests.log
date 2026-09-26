@@ -1,0 +1,8 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.apm.problem-queue-supervisor-test
+
+Ran 42 tests containing 272 assertions.
+0 failures, 0 errors.

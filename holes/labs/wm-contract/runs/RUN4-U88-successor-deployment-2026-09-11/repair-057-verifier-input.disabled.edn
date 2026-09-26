@@ -1,0 +1,12 @@
+{:schema :wm/historical-verification-review-input-v1
+ :enabled? false
+ :repair-id "repair-attempt-057-untyped-failure"
+ :verification-id "repair-057-revalidation-20260911-v1"
+ :qualification-receipt
+ {:path "repair-057-revalidation-20260911-v1.qualification.edn"
+  :sha256 "32701a6ef7204828fa65608097ba865691ec47198ea7dbf33e5b9407fed6c582"}
+ :expected-checks [:full-runner-regression :repair-store-regression]
+ :qualification-passed? true
+ :independent-review {:status :required :job-id nil :verdict nil}
+ :repair-admission {:status :not-performed}
+ :historical-successor-link {:status :unmaterialized}}

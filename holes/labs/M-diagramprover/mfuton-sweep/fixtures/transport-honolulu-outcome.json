@@ -1,0 +1,21 @@
+{
+  "example_id": "transport-honolulu-outcome",
+  "title": "Transportability from Honolulu: different outcome mechanism",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(f) is a randomized trial with X -> W -> Y and Age Z -> Y, plus selector S -> Y because the product is more desirable in Honolulu. The total effect is not transportable, but the uncontaminated X -> W submechanism can estimate P(W | X).",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Randomized advertisement exposure."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "The outcome mechanism that differs from Arkansas."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, which affects Purchase Decision."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "The mediator whose X-to-W mechanism is not contaminated by S."},
+    {"key": "s", "name": "Population Difference (S)", "content": "The difference-producing selector for Honolulu product desirability.", "selection": true}
+  ],
+  "arrows": [
+    {"source": "z", "target": "y", "because": "Figure 10.2(f) retains Age as a cause of Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Advertisement causes Click-through Rate."},
+    {"source": "w", "target": "y", "because": "Click-through Rate causes Purchase Decision."},
+    {"source": "s", "target": "y", "because": "Figure 10.2(f) points selector S directly to Purchase Decision Y."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:8e690c6ea82c134e", "ta-book-of-why-2018:32f701e652e391b4", "ta-book-of-why-2018:4063eef765c8c960", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac", "ta-book-of-why-2018:10a18aabc59bea5f", "ta-book-of-why-2018:ed70c90312d5cfa7"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367", "ta-page:BOOK-OF-WHY-2018:pdf-0368"]
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "source": "/home/joe/run4/U88/controller/series.edn",
+    "sha256": "47dc4c3462e561a1f53f9c9117fa40e6ab52b04bc70704b3938576c4378387f0"
+  },
+  {
+    "source": "/home/joe/run4/U88/controller/001-started.edn",
+    "sha256": "ef71a2c708780bd6c49baf103997c748736a24ecbf538a3c96ceec3aa4c4fd11"
+  },
+  {
+    "source": "/home/joe/run4/U88/controller/u88-trial-1-attempt-1/reservation.edn",
+    "sha256": "9bec511ba3eadcf1231c71ed1e4e9dcc8f18cf692db2b8e904f90cc9159350c5"
+  },
+  {
+    "source": "/home/joe/run4/U88/controller/u88-trial-1-attempt-1/click-result.edn",
+    "sha256": "8dd9a98d3c83d6cdee708c8d7ed69a3e58f2f8ef29c3ffea10f569ebadae5e32"
+  },
+  {
+    "source": "/home/joe/run4/U88/bindings/click-run-binding-wm-click-560a7b67-0f29-4696-b062-66a84ea049a7.edn",
+    "sha256": "cf8cc9245a0e1276f30bd953da79b544922f027ca59cfc4338d4fff7feb5938a"
+  },
+  {
+    "source": "/home/joe/run4/U88/visibility/run-visibility.json",
+    "sha256": "11537510e6de092d22c2f930023d7e98e3ff3c5496a962d922ae339373e2c644"
+  }
+]

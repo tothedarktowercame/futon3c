@@ -1,0 +1,1 @@
+{:status :missing, :reason :no-token-comparison-at-this-close, :post-close-update {:status :not-run, :reason :close-not-accepted, :accepted? :no-acceptance-declared}}

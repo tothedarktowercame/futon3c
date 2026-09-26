@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "algebra_for_all",
+    "to" : "environment"
+  }, {
+    "from" : "environment",
+    "to" : "learning"
+  }, {
+    "from" : "algebra_for_all",
+    "to" : "learning"
+  } ],
+  "id" : "algebra-for-all-mediation",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "algebra-for-all-mediation.json"
+  },
+  "variables" : [ {
+    "id" : "algebra_for_all",
+    "kind" : "observed",
+    "name" : "Algebra for All"
+  }, {
+    "id" : "environment",
+    "kind" : "observed",
+    "name" : "Environment"
+  }, {
+    "id" : "learning",
+    "kind" : "observed",
+    "name" : "Learning"
+  } ]
+}

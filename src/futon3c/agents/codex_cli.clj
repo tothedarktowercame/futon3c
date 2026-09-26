@@ -6,7 +6,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.util.cwd :as cwd]))
+            [futon3c.util.cwd :as cwd]
+            [futon3c.agents.codex-activity :as codex-activity]))
 
 (defn- coerce-prompt
   [prompt]
@@ -72,6 +73,54 @@
     (when-not (or (= no-assistant-message-sentinel t)
                   (contains? activity-placeholder-texts (str/lower-case t)))
       t)))
+
+(defn event->ledger-event
+  "Translate one parsed Codex NDJSON event to the invoke-ledger stream schema.
+
+  Tool completion events are deliberately omitted: their matching start event
+  already announces the tool use. Returns nil for events with no follow-mode
+  representation."
+  [evt]
+  (let [event-type (:type evt)
+        item (:item evt)
+        item-type (:type item)]
+    (cond
+      (and (= "item.started" event-type)
+           (= "command_execution" item-type))
+      {:type "tool_use"
+       :tools ["bash"]
+       :tool_details [{:name "bash"
+                       :input {:command (:command item)}}]}
+
+      (and (= "item.started" event-type)
+           (= "tool_call" item-type))
+      (let [name (:name item)
+            arguments (:arguments item)]
+        {:type "tool_use"
+         :tools [name]
+         :tool_details [(cond-> {:name name}
+                          (map? arguments) (assoc :input arguments))]})
+
+      (and (= "item.completed" event-type)
+           (= "command_execution" item-type))
+      (when-let [output (some-> (or (:aggregated_output item)
+                                    (:output item))
+                                str not-empty)]
+        {:type "tool_result"
+         :results [{:content output}]})
+
+      (and (= "item.completed" event-type)
+           (= "agent_message" item-type))
+      (when-let [text (meaningful-agent-text (extract-agent-text item))]
+        {:type "text" :text text})
+
+      (= "error" event-type)
+      {:type "text" :text (str "[codex error] " (:message evt))}
+
+      (= "turn.failed" event-type)
+      {:type "text" :text (str "[codex error] " (get-in evt [:error :message]))}
+
+      :else nil)))
 
 
 (defn- titleize-token
@@ -205,10 +254,33 @@
                   (or (str/includes? t "invalid value: 'other'")
                       (str/includes? t "supported values are: 'search', 'open_page', and 'find_in_page'"))))))
 
+(defn oversized-resumed-session-error?
+  "True when `turn/start` refused because the RESUMED SESSION's replayed input
+  is over the server's character limit.
+
+  This is a property of the session, not of the moment, so retrying the same
+  session cannot succeed. On 2026-09-19 that cost the War Machine six repair
+  attempts on one obligation: codex-23 resumes a session opened 2026-09-12
+  whose rollout reached 90 MB, `turn/start` refused at actual_chars 1690401
+  against max_chars 1048576, and the runner's own infrastructure retry
+  re-dispatched to the same seat and the same session and was refused
+  identically -- 2.3 seconds, nothing executed, a new :build-failed finding
+  each time. Those findings are what T8 has been reporting as a livelock.
+
+  A fresh session is the cure, and the retry below already knows how to start
+  one; it was only reachable for stale action.type errors."
+  [error-text]
+  (let [t (some-> error-text str/lower-case)]
+    (boolean (and (string? t)
+                  (or (str/includes? t "input_too_large")
+                      (and (str/includes? t "turn/start")
+                           (str/includes? t "exceeds the maximum length")))))))
+
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex ... exec resume <sid> -`."
-  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort session-id]
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort session-id
+           mcp-server]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
          approval-policy "never"}}]
@@ -219,6 +291,11 @@
                            "--skip-git-repo-check"
                            "--sandbox" sandbox
                            "-c" (format "approval_policy=\"%s\"" approval-policy)]
+                     mcp-server
+                     (into ["-c" (str "mcp_servers.futon_memory.command="
+                                      (pr-str (:command mcp-server)))
+                            "-c" (str "mcp_servers.futon_memory.args="
+                                      (json/generate-string (:args mcp-server)))])
                      (and (string? model) (not (str/blank? model)))
                      (into ["--model" model])
                      (and (string? reasoning-effort) (not (str/blank? reasoning-effort)))
@@ -241,9 +318,40 @@
     (into ["cmd.exe" "/c"] cmd)
     cmd))
 
+(defn process-timeout-ms
+  "Effective wall-clock bound for one codex process. nil means unbounded.
+
+   Unbounded is the default. This adapter is not the lifecycle authority: the
+   durable job supervisor is (README-agency-cap.md). Destroying the process
+   here ends a turn the supervisor could still harvest, and it is the innermost
+   of several deadlines — which is why raising the outer ones never moved the
+   cliff.
+
+   Precedence:
+     1. FUTON3C_CODEX_PROCESS_TIMEOUT_MS — System property, then env. 0 or
+        negative restores 'unbounded'; any positive value is a hard bound.
+     2. the caller's TIMEOUT-MS — nil or non-positive means unbounded.
+
+   The override is read per call, not captured at registration, so an operator
+   can restore a bound on a live JVM whose invoke-fns already closed over the
+   old value."
+  [timeout-ms]
+  (let [raw (or (System/getProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS")
+                (System/getenv "FUTON3C_CODEX_PROCESS_TIMEOUT_MS"))
+        override (when-not (str/blank? (str raw))
+                   (try (Long/parseLong (str/trim raw)) (catch Exception _ nil)))]
+    (cond
+      (some? override) (when (pos? override) override)
+      (and (number? timeout-ms) (pos? (long timeout-ms))) (long timeout-ms)
+      :else nil)))
+
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
-   Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
+
+   :timeout-ms is advisory — see process-timeout-ms. The returned
+   :timeout-ms is the bound actually applied (nil when unbounded).
+   Returns {:exit :timed-out? :timeout-ms :session-id :text :error-text
+            :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
         _ (when-let [d (cwd/resolve-cwd cwd)]
@@ -272,7 +380,16 @@
         output-bytes* (atom 0)
         out-buf (StringBuilder.)
         err-buf (StringBuilder.)
+        consume-clock! (codex-activity/make-consumer (or (cwd/resolve-cwd cwd)
+                                                        (System/getProperty "user.dir")))
         handle-event! (fn [evt]
+                        (try
+                          (consume-clock! evt)
+                          (catch Exception e
+                            ;; Keep draining the process pipes. The activity
+                            ;; boundary also retains this error for turn finish.
+                            (swap! stream-errors* conj
+                                   {:stream :clock :error (exception-summary e)})))
                         (when (tool-event? evt)
                           (swap! tool-events* inc))
                         (when (command-event? evt)
@@ -379,8 +496,9 @@
                    (.getOutputStream proc)
                    java.nio.charset.StandardCharsets/UTF_8)]
       (.write w (str prompt-str "\n")))
-    (let [finished? (if (and (number? timeout-ms) (pos? (long timeout-ms)))
-                      (.waitFor proc (long timeout-ms) java.util.concurrent.TimeUnit/MILLISECONDS)
+    (let [effective-timeout-ms (process-timeout-ms timeout-ms)
+          finished? (if effective-timeout-ms
+                      (.waitFor proc (long effective-timeout-ms) java.util.concurrent.TimeUnit/MILLISECONDS)
                       (do
                         (.waitFor proc)
                         true))]
@@ -420,6 +538,7 @@
             (catch Throwable _)))
         {:exit exit
          :timed-out? (not finished?)
+         :timeout-ms effective-timeout-ms
          :session-id @sid*
          :text @text*
          :error-text (or @error*
@@ -444,17 +563,38 @@
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :reasoning-effort (optional, e.g. low|medium|high)
-   - :timeout-ms hard process timeout in milliseconds (default 1800000)
+   - :timeout-ms default process bound in ms; nil (the default) is unbounded.
+     See process-timeout-ms — this is a registration-time default only.
    - :cwd (optional working directory)
-   - :on-event (optional fn called with each parsed stream event)"
+   - :on-event (optional fn called with each parsed stream event)
+
+   The returned fn accepts three arities:
+     (f prompt)
+     (f prompt session-id)
+     (f prompt session-id {:timeout-ms n :model s :reasoning-effort s})
+   The third exists so measured per-call process configuration reaches the
+   process. Previously the only values were captured at registration, which
+   made caller-supplied bounds unable to extend anything and made model/effort
+   pins invisible to the CLI (README-agency-cap.md)."
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
+           mcp-server
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
-         approval-policy "never"
-         timeout-ms 1800000}}]
-  (let [!lock (Object.)]
-    (fn [prompt session-id]
+         approval-policy "never"}}]
+  (let [!lock (Object.)
+        invoke-once
+        (fn [prompt session-id call-opts]
+          (let [timeout-ms (if (contains? call-opts :timeout-ms)
+                             (:timeout-ms call-opts)
+                             timeout-ms)
+                model (or (:model call-opts) model)
+                reasoning-effort (or (:reasoning-effort call-opts)
+                                     reasoning-effort)
+                call-mcp-server
+                (cond-> mcp-server
+                  (and mcp-server (:dispatch-id call-opts))
+                  (update :args conj (str (:dispatch-id call-opts))))]
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
@@ -463,8 +603,9 @@
                                   :model model
                                   :sandbox sandbox
                                   :approval-policy approval-policy
-                                      :reasoning-effort reasoning-effort
-                                      :session-id session-id})
+                                  :reasoning-effort reasoning-effort
+                                  :mcp-server call-mcp-server
+                                  :session-id session-id})
                 {:keys [exit timed-out? text error-text stderr raw-output execution]
                  :as stream-result}
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
@@ -480,14 +621,18 @@
                                (meaningful-agent-text (:text parsed)))
                 final-error (or (some-> error-text str/trim not-empty)
                                 (when-not (zero? exit)
-                                  (some-> (:text parsed) str/trim not-empty))
+                                  (meaningful-agent-text (:text parsed)))
                                 (some-> stderr str/trim not-empty))
-                ;; Retry on stale session (action.type error)
+                ;; Retry on a session the server will not accept as it
+                ;; stands: a stale action.type, or a resumed transcript that
+                ;; is over the input limit. Both are cured by a fresh session
+                ;; and by nothing else, so retrying in place is wasted.
                 retry? (and (string? session-id)
                             (not (str/blank? session-id))
                             (not timed-out?)
                             (not (zero? exit))
-                            (stale-action-type-error? final-error))]
+                            (or (stale-action-type-error? final-error)
+                                (oversized-resumed-session-error? final-error)))]
             (if retry?
               ;; Fresh session retry
           (let [cmd2 (build-exec-args {:codex-bin codex-bin
@@ -495,8 +640,9 @@
                                        :model model
                                        :sandbox sandbox
                                        :approval-policy approval-policy
-                                           :reasoning-effort reasoning-effort
-                                           :session-id nil})
+                                       :reasoning-effort reasoning-effort
+                                       :mcp-server call-mcp-server
+                                       :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd
                                                            :on-event on-event
@@ -511,7 +657,7 @@
                 (cond
                   (:timed-out? r2)
                   {:result nil :session-id sid2 :execution exec2
-                   :error (str "codex timed out after " timeout-ms "ms")}
+                   :error (str "codex timed out after " (:timeout-ms r2) "ms")}
                   (zero? (:exit r2))
                   {:result (or txt2 "[Codex produced no text response]")
                    :session-id sid2 :execution exec2}
@@ -525,7 +671,7 @@
                 (cond
                   timed-out?
                   {:result nil :session-id final-sid :execution exec
-                   :error (str "codex timed out after " timeout-ms "ms")}
+                   :error (str "codex timed out after " (:timeout-ms stream-result) "ms")}
                   (zero? exit)
                   {:result (or final-text "[Codex produced no text response]")
                    :session-id final-sid :execution exec}
@@ -536,4 +682,8 @@
           (catch Exception e
             {:result nil
              :session-id session-id
-             :error (str "codex invocation error: " (exception-summary e))}))))))
+             :error (str "codex invocation error: " (exception-summary e))})))))]
+    (fn
+      ([prompt] (invoke-once prompt nil nil))
+      ([prompt session-id] (invoke-once prompt session-id nil))
+      ([prompt session-id call-opts] (invoke-once prompt session-id call-opts)))))

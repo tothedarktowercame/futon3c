@@ -1,0 +1,126 @@
+{:status :reviewed-dark-fixture
+ :domain :war-machine
+ :episodes
+ [{:memory/id "e-wm-compliance-support"
+   :memory/domain :war-machine
+   :memory/state :current
+   :memory/attachment-status :reviewed
+   :memory/witness-status :independently-witnessed
+   :memory/pattern-ids ["p4ng/R9-independent-witness"]
+   :memory/mission-ids ["M-wm-aif-policy-grain-compliance"]
+   :memory/hook "Feature-off trace remained identical under the dark policy-grain seam."
+   :memory/body {:event :observation
+                 :checker "dark trace comparator"
+                 :outcome :pass}}
+  {:memory/id "e-wm-compliance-challenge"
+   :memory/domain :war-machine
+   :memory/state :challenged
+   :memory/attachment-status :reviewed
+   :memory/witness-status :challenged
+   :memory/pattern-ids ["p4ng/R9-independent-witness"]
+   :memory/mission-ids ["M-wm-aif-policy-grain-compliance"]
+   :memory/hook "A controller-authored success claim had no independent witness."
+   :memory/body {:event :counterexample
+                 :failure :self-certification}}
+  {:memory/id "e-wm-memory-support"
+   :memory/domain :war-machine
+   :memory/state :current
+   :memory/attachment-status :reviewed
+   :memory/witness-status :independently-witnessed
+   :memory/pattern-ids ["p4ng/R6-candidate-pattern-action-space"]
+   :memory/mission-ids ["M-shared-memory-control-build-test"]
+   :memory/hook "Reviewed pattern endpoints recovered the corrected episode."
+   :memory/body {:event :observation
+                 :outcome :corrected-memory-recalled}}
+  {:memory/id "e-wm-memory-challenge"
+   :memory/domain :war-machine
+   :memory/state :challenged
+   :memory/attachment-status :reviewed
+   :memory/witness-status :challenged
+   :memory/pattern-ids ["p4ng/R6-candidate-pattern-action-space"]
+   :memory/mission-ids ["M-shared-memory-control-build-test"]
+   :memory/hook "A natural paraphrase initially omitted the intended candidate."
+   :memory/body {:event :counterexample
+                 :failure :lexical-coverage}}
+  {:memory/id "e-wm-eig-support"
+   :memory/domain :war-machine
+   :memory/state :current
+   :memory/attachment-status :reviewed
+   :memory/witness-status :independently-witnessed
+   :memory/pattern-ids ["p4ng/R5-policy-evaluation"]
+   :memory/mission-ids ["M-aif-policy-conditioned-eig"]
+   :memory/hook "EIG was evaluated over the policy-conditioned transition."
+   :memory/body {:event :intervention
+                 :outcome :policy-conditioned-eig}}
+  {:memory/id "e-wm-eig-challenge"
+   :memory/domain :war-machine
+   :memory/state :challenged
+   :memory/attachment-status :reviewed
+   :memory/witness-status :challenged
+   :memory/pattern-ids ["p4ng/R5-policy-evaluation"]
+   :memory/mission-ids ["M-aif-policy-conditioned-eig"]
+   :memory/hook "State-only EIG assigned the same value to distinct policies."
+   :memory/body {:event :counterexample
+                 :failure :policy-erasure}}
+  {:memory/id "e-wm-tripwire-support"
+   :memory/domain :war-machine
+   :memory/state :current
+   :memory/attachment-status :reviewed
+   :memory/witness-status :independently-witnessed
+   :memory/pattern-ids ["p4ng/R10-liveness"]
+   :memory/mission-ids ["M-wm-tripwires"]
+   :memory/hook "The independent health listener remained responsive under saturation."
+   :memory/body {:event :observation
+                 :outcome :liveness-preserved}}
+  {:memory/id "e-wm-tripwire-challenge"
+   :memory/domain :war-machine
+   :memory/state :challenged
+   :memory/attachment-status :reviewed
+   :memory/witness-status :challenged
+   :memory/pattern-ids ["p4ng/R10-liveness"]
+   :memory/mission-ids ["M-wm-tripwires"]
+   :memory/hook "The main accept loop became unavailable while work was queued."
+   :memory/body {:event :counterexample
+                 :failure :liveness-loss}}
+  {:memory/id "e-wm-tripwire-block"
+   :memory/domain :war-machine
+   :memory/state :current
+   :memory/attachment-status :reviewed
+   :memory/witness-status :independently-witnessed
+   :memory/pattern-ids ["p4ng/R10-liveness"]
+   :memory/mission-ids ["M-wm-tripwires"]
+   :memory/hook "The unresolved accept-loop loss blocks live admission."
+   :memory/body {:event :blocking-counterexample
+                 :failure :liveness-loss
+                 :disposition :block-live-admission}}]
+ :control-edges
+ [{:mission-id "M-wm-aif-policy-grain-compliance"
+   :control-pattern-id "p4ng/R9-independent-witness"
+   :relation :requires-control
+   :status :witnessed
+   :provenance [{:kind :fixture-review :reviewer "phase4-independent"}]
+   :memory-ids ["e-wm-compliance-support"]}
+  {:mission-id "M-shared-memory-control-build-test"
+   :control-pattern-id "p4ng/R6-candidate-pattern-action-space"
+   :relation :repairs-control
+   :status :witnessed
+   :provenance [{:kind :fixture-review :reviewer "phase4-independent"}]
+   :memory-ids ["e-wm-memory-support"]}
+  {:mission-id "M-aif-policy-conditioned-eig"
+   :control-pattern-id "p4ng/R5-policy-evaluation"
+   :relation :repairs-control
+   :status :witnessed
+   :provenance [{:kind :fixture-review :reviewer "phase4-independent"}]
+   :memory-ids ["e-wm-eig-support"]}
+  {:mission-id "M-wm-tripwires"
+   :control-pattern-id "p4ng/R10-liveness"
+   :relation :produces-evidence-for
+   :status :witnessed
+   :provenance [{:kind :fixture-review :reviewer "phase4-independent"}]
+   :memory-ids ["e-wm-tripwire-support"]}
+  {:mission-id "M-wm-tripwires"
+   :control-pattern-id "p4ng/R10-liveness"
+   :relation :blocked-by-control
+   :status :witnessed
+   :provenance [{:kind :fixture-review :reviewer "phase4-independent"}]
+   :memory-ids ["e-wm-tripwire-block"]}]}

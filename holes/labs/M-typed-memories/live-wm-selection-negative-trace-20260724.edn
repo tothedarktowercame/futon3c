@@ -1,0 +1,52 @@
+{:trace-id "live-wm-selection-negative-acceptance-20260724"
+ :packet :D
+ :candidate-boundary :unchanged-phase1-4-admissible-set
+ :selection-authority
+ {:basis :chain-integrity-and-auditability
+  :demonstrated-better-selection? false
+  :relation-weight-semantics :illustrative}
+ :negative-traces
+ [{:injection :remove-one-review
+   :expected :memory-cannot-admit-mission
+   :observed :candidate-absent
+   :passed? true
+   :test
+   "futon3c.peripheral.live-wm-selection-test/review-removal-and-warrant-retraction-fail-closed"}
+  {:injection :retract-one-relation-warrant
+   :expected :support-disappears
+   :observed :mission-absent
+   :passed? true
+   :test
+   "futon3c.peripheral.live-wm-selection-test/review-removal-and-warrant-retraction-fail-closed"}
+  {:injection :remove-transition-warrant
+   :expected :child-facet-ineligible
+   :observed :missing-transition-warrant-refinement-hole
+   :passed? true
+   :test
+   "futon3c.peripheral.dynamic-queries-test/missing-transition-warrant-remains-a-refinement-hole"}
+  {:injection :misleading-retrieval-seed
+   :expected :witnessed-outcome-recovers-or-explains-non-recovery
+   :observed :recovered-from-misleading-seed
+   :passed? true
+   :test
+   "futon3c.peripheral.live-wm-selection-test/live-selection-composes-the-reviewed-chain"}
+  {:injection :held-cascade-placeholder-zero
+   :expected :cannot-become-displayed-winner
+   :observed :authoritative-judgement-decision-remains-winner
+   :passed? true
+   :test
+   "futon3c.aif.live-recommendation-test/judgement-decision-is-the-only-presentation-winner"}
+  {:injection :no-op-with-better-presentation-score
+   :expected :cannot-suppress-valid-strategic-recommendation
+   :observed :reason-bearing-recommendation-issued
+   :passed? true
+   :test
+   "futon3c.aif.live-recommendation-test/judgement-decision-is-the-only-presentation-winner"}]
+ :suite
+ {:futon3c {:tests 45 :assertions 300 :failures 0 :errors 0}
+  :futon2 {:tests 65 :assertions 284 :failures 0 :errors 0}}
+ :evidence-receipt-id "e-47c4e886-64bc-4e02-801b-0b8306916641"
+ :actuation
+ {:status :not-started
+  :authorized? false
+  :executed? false}}

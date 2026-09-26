@@ -21,7 +21,9 @@
    - realtime/single-authority-registration (L6): one connection per agent-id
    - realtime/structured-events-only (R9): typed JSON frames only"
   (:require [futon3c.transport.protocol :as proto]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.federation :as federation]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -57,6 +59,24 @@
    :error/code code
    :error/message message
    :error/at (now-str)})
+
+(defn- fed-token []
+  (some-> (or (System/getProperty "FUTON3C_FED_TOKEN")
+              (System/getenv "FUTON3C_FED_TOKEN"))
+          str
+          str/trim
+          not-empty))
+
+(defn- fed-token-valid?
+  [token]
+  (let [expected (fed-token)]
+    (and (some? expected)
+         (string? token)
+         (= expected token))))
+
+(defn- logical-uplink-origin
+  [site]
+  (str "ws-uplink://" site))
 
 (defn- resolve-peripheral-id
   "Resolve which peripheral to start for a connection.
@@ -197,30 +217,53 @@
                  (let [agent-id (:agent-id parsed)
                        session-id (or (:session-id parsed)
                                       (str "sess-" (UUID/randomUUID)))
-                       ;; Build AgentConnection for S-presence verification
-                       conn-event {:conn/id (str "ws-" (UUID/randomUUID))
-                                   :conn/transport :websocket
-                                   :conn/agent-id {:id/value agent-id
-                                                   :id/type :continuity}
-                                   :conn/at (now-str)
-                                   :conn/metadata {:ready true}}
-                       result (presence/verify conn-event (registry-view))]
-                   (if (error? result)
-                     ;; Handshake failed — send error, close connection
-                     (do
-                       (send-fn ch (proto/render-ws-frame result))
-                       (close-fn ch))
-                     ;; Handshake succeeded — mark :connected, send ack
+                       observer? (:observer? parsed)]
+                   (if observer?
+                     ;; Observer (e.g. emacs-hud): broadcast-only, never an
+                     ;; invocable agent (I-1). Observers are intentionally not
+                     ;; registered agents, so S-presence would reject them
+                     ;; (:agent-not-found) — bypass it and join the broadcast
+                     ;; set with an :observer? marker so broadcast-frame!
+                     ;; reaches them while invoke! never targets them.
                      (do
                        (swap! !connections assoc ch
                               (assoc conn
                                      :agent-id agent-id
                                      :session-id session-id
-                                     :connected? true))
-                       (ws-invoke/register! agent-id #(send-fn ch %))
+                                     :connected? true
+                                     :observer? true))
+                       (ws-invoke/register! agent-id #(send-fn ch %)
+                                            {:observer? true
+                                             :connection ch})
                        (send-fn ch (proto/render-ready-ack))
                        (when on-connect-hook
-                         (on-connect-hook agent-id)))))
+                         (on-connect-hook agent-id)))
+                     ;; Real agent: S-presence handshake (R7).
+                     (let [;; Build AgentConnection for S-presence verification
+                           conn-event {:conn/id (str "ws-" (UUID/randomUUID))
+                                       :conn/transport :websocket
+                                       :conn/agent-id {:id/value agent-id
+                                                       :id/type :continuity}
+                                       :conn/at (now-str)
+                                       :conn/metadata {:ready true}}
+                           result (presence/verify conn-event (registry-view))]
+                       (if (error? result)
+                         ;; Handshake failed — send error, close connection
+                         (do
+                           (send-fn ch (proto/render-ws-frame result))
+                           (close-fn ch))
+                         ;; Handshake succeeded — mark :connected, send ack
+                         (do
+                           (swap! !connections assoc ch
+                                  (assoc conn
+                                         :agent-id agent-id
+                                         :session-id session-id
+                                         :connected? true))
+                           (ws-invoke/register! agent-id #(send-fn ch %)
+                                                {:connection ch})
+                           (send-fn ch (proto/render-ready-ack))
+                           (when on-connect-hook
+                             (on-connect-hook agent-id)))))))
 
                  ;; --- Message dispatch ---
                  :message
@@ -406,6 +449,102 @@
                            (send-fn ch (proto/render-evidence-ack
                                         (:evidence/id raw-entry))))))))
 
+                 ;; --- Federation uplink: client announces its local roster ---
+                 :fed-announce
+                 (if-not (fed-token-valid? (:fed/token parsed))
+                   (do
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :invalid-token
+                                                   "Invalid federation token")))
+                     (close-fn ch))
+                   (let [site (:fed/site parsed)
+                         ;; A client announcing THIS hub's own site code is a
+                         ;; misconfigured FUTON3C_FED_UPLINK (the <site> there
+                         ;; is the client's identity, not the hub's): the
+                         ;; return roster below would exclude the hub's own
+                         ;; agents and echo the client's back. Warn once per
+                         ;; connection (2026-07-18, dev-laptop-env as "lon").
+                         _ (when (and site
+                                      (= site (federation/site-prefix))
+                                      (not= site (get-in conn [:fed-uplink :site])))
+                             (println (str "[ws][WARN] fed-announce from remote claims this "
+                                           "hub's own site \"" site "\" — misconfigured "
+                                           "FUTON3C_FED_UPLINK on the client; its roster will "
+                                           "be misattributed and the return roster will omit "
+                                           "this hub's agents.")))
+                         pending (or (get-in conn [:fed-uplink :pending])
+                                     (atom {}))
+                         send-frame! (fn [frame]
+                                       (send-fn ch (proto/render-fed-invoke frame)))
+                         results (federation/import-uplink-roster!
+                                  (logical-uplink-origin site)
+                                  (:fed/roster parsed)
+                                  {:transport :ws-uplink
+                                   :uplink-site site
+                                   :invoke-fn-fn
+                                   (fn [remote-id]
+                                     (federation/make-uplink-invoke-fn
+                                      send-frame! pending remote-id))})
+                         export (federation/export-roster {:exclude-site site})]
+                     (swap! !connections assoc ch
+                            (assoc conn
+                                   :connected? true
+                                   :fed-uplink {:site site
+                                                :pending pending
+                                                :last-announce-at (now-str)
+                                                :last-results results}))
+                     (send-fn ch (proto/render-fed-roster
+                                  (or (federation/site-prefix) "hub")
+                                  export))))
+
+                 ;; --- Federation uplink: client-originated invoke via hub ---
+                 :fed-invoke
+                 (if-not (get-in conn [:fed-uplink :site])
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-federated
+                                                 "fed_invoke requires an authenticated federation uplink")))
+                   ;; Agent execution can take minutes.  Never occupy the
+                   ;; per-channel serial receiver: roster/status frames and
+                   ;; subsequent invoke results must remain dispatchable.
+                   (future
+                     (let [invoke-id (:fed/invoke-id parsed)
+                           agent-id (:fed/agent-id parsed)
+                           timeout-ms (long (or (:fed/timeout-ms parsed) 600000))
+                           result (try
+                                    (reg/invoke-agent! agent-id
+                                                       (:fed/prompt parsed)
+                                                       timeout-ms)
+                                    (catch Throwable t
+                                      (transport-error :invoke-failed
+                                                       (.getMessage t))))
+                           error (or (:error/message result) (:error result))
+                           ok? (and (nil? error)
+                                    (not (contains? result :error/code)))]
+                       (send-fn ch
+                                (proto/render-fed-invoke-result
+                                 (cond-> {:invoke-id invoke-id
+                                          :ok ok?}
+                                   ok? (assoc :result (:result result)
+                                              :session-id (:session-id result))
+                                   (not ok?) (assoc :error (or error
+                                                               (str result)))))))))
+
+                 ;; --- Federation uplink: result for a hub-originated invoke ---
+                 :fed-invoke-result
+                 (let [pending (get-in conn [:fed-uplink :pending])
+                       resolved? (and pending
+                                      (federation/resolve-uplink-invoke!
+                                       pending
+                                       (:fed/invoke-id parsed)
+                                       {:ok (:fed/ok parsed)
+                                        :result (:fed/result parsed)
+                                        :session-id (:fed/session-id parsed)
+                                        :error (:fed/error parsed)}))]
+                   (when-not resolved?
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :unknown-invoke
+                                                   "No pending federation invoke")))))
+
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
@@ -425,9 +564,11 @@
            (stop-peripheral! !connections ch conn "connection-closed"))
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
+           (when-let [site (get-in conn [:fed-uplink :site])]
+             (federation/mark-uplink-site-stale! site "uplink-closed"))
            (when-let [agent-id (:agent-id conn)]
-             (ws-invoke/unregister! agent-id)
-             (when on-disconnect-hook
+             (when (and (ws-invoke/unregister-current! agent-id ch)
+                        on-disconnect-hook)
                (on-disconnect-hook agent-id))))
          ;; Remove from connections regardless of state
          (swap! !connections dissoc ch)))}))
@@ -442,16 +583,41 @@
    config: same as make-ws-callbacks.
 
    Returns {:handler ring-fn, :connections atom}.
-   The handler upgrades HTTP requests to WebSocket via hk/as-channel."
+   The handler upgrades HTTP requests to WebSocket via hk/as-channel.
+
+   Frame handling is offloaded to a per-channel serial worker (a Clojure
+   agent), so the http-kit callback returns immediately. http-kit serializes
+   a channel's on-receive calls through a LinkingRunnable chain whose walk
+   only terminates when the callback outpaces frame arrival — a callback
+   slower than the arrival cadence keeps one walk alive indefinitely, and
+   the walk's root FutureTask then retains every frame ever chained (the
+   2026-07-18 GC-livelock leak: ~97k retained fed-announce frames). The
+   agent preserves per-channel ordering; on-close is routed through the
+   same worker so cleanup runs after all queued frames."
   [config]
   (let [{:keys [on-open on-receive on-close connections]}
-        (make-ws-callbacks config)]
+        (make-ws-callbacks config)
+        !workers (atom {})
+        run-serial! (fn [ch thunk]
+                      (if-let [worker (get @!workers ch)]
+                        (send-off worker
+                                  (fn [_]
+                                    (try (thunk)
+                                         (catch Throwable t
+                                           (println (str "[ws] handler error: "
+                                                         (.getMessage t)))))
+                                    nil))
+                        (thunk)))]
     {:handler
      (fn [request]
        (hk/as-channel request
-         {:on-open (fn [ch] (on-open ch request))
-          :on-receive on-receive
-          :on-close on-close}))
+         {:on-open (fn [ch]
+                     (swap! !workers assoc ch (agent nil))
+                     (on-open ch request))
+          :on-receive (fn [ch data] (run-serial! ch #(on-receive ch data)))
+          :on-close (fn [ch status]
+                      (run-serial! ch #(on-close ch status))
+                      (swap! !workers dissoc ch))}))
      :connections connections}))
 
 (defn connected-agents

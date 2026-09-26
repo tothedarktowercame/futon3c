@@ -1,0 +1,22 @@
+{
+  "example_id": "transport-los-angeles-age",
+  "title": "Transportability from Los Angeles: different age distribution",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(b) retains the Arkansas causal graph and adds selector S -> Age Z because the Los Angeles survey population is younger. Transport requires reweighting for Age.",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Exposure to the online advertisement."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "Whether the consumer purchases the product."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, the population characteristic that differs from Arkansas."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "The mediator between advertisement and purchase."},
+    {"key": "s", "name": "Population Difference (S)", "content": "The difference-producing selector for the Los Angeles age distribution.", "selection": true}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "The target causal structure has Age causing Advertisement exposure."},
+    {"source": "z", "target": "y", "because": "The target causal structure has Age causing Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Advertisement causes Click-through Rate."},
+    {"source": "w", "target": "y", "because": "Click-through Rate causes Purchase Decision."},
+    {"source": "s", "target": "z", "because": "Figure 10.2(b) points selector S to Age Z, marking the younger Los Angeles population."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:6220fad9ef1610b5", "ta-book-of-why-2018:e4d1cd2f403ad43d", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac", "ta-book-of-why-2018:324e56801575e33e", "ta-book-of-why-2018:5282d1e9a36caf29"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367"]
+}

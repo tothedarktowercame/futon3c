@@ -41,9 +41,9 @@
    :via "the discharging morphism: flights become the anatomy atlas's third corpus"}
   {:id :typed-grounds :role :concept
    :form "typed-grounds migration (grounds out of prose)"
-   :satiety {:hungry-for :design}
-   :owed "no plan yet — the second half of structured-events-only's debt (line 301)"
-   :via "the remaining interior gap between pretty-print and the want port"}]
+   :satiety :full
+   :witness "2026-07-06: flight_record.clj emits producer-derived grounds as typed :ground/kind maps; flight.spec.edn documents the ground vocabulary; holes/specs/traces/flight-typed-ground-witness.edn conforms under flight_spec_verify"
+   :via "producer-derived grounds are now typed, queryable action-trace fields; legacy pre-wrapped pilot cells remain pass-through compatibility, not a producer gap"}]
  :hyperedges
  [{:kind :composes
    :ends [{:role :from :node :have-port} {:role :to :node :schema-v04}]

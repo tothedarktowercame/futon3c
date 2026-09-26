@@ -97,7 +97,11 @@
 ;; futon5 API client
 ;; =============================================================================
 
-(def default-api-url "http://localhost:7071")
+(def default-api-url
+  ;; futon5 nonstarter API (FUTON5_PORT default 7072). The old :7071 default
+  ;; pointed at futon1a — a stale wrong port, flagged in the 2026-07-10 seam
+  ;; sweep (E-futon1b-operational-switchover B4).
+  (or (System/getenv "FUTON5_URL") "http://localhost:7072"))
 
 (defn fetch-heartbeat
   "Fetch a heartbeat from the futon5 nonstarter API."

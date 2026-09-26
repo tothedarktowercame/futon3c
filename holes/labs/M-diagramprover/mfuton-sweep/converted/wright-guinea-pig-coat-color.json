@@ -1,0 +1,162 @@
+{
+  "arrows" : [ {
+    "from" : "sire-d",
+    "to" : "sire-phenotype"
+  }, {
+    "from" : "sire-e",
+    "to" : "sire-phenotype"
+  }, {
+    "from" : "sire-h",
+    "to" : "sire-phenotype"
+  }, {
+    "from" : "sire-h",
+    "to" : "sire-g-o"
+  }, {
+    "from" : "sire-h",
+    "to" : "sire-g-o-prime"
+  }, {
+    "from" : "chance",
+    "to" : "sire-g-o"
+  }, {
+    "from" : "chance",
+    "to" : "sire-g-o-prime"
+  }, {
+    "from" : "dam-d",
+    "to" : "dam-phenotype"
+  }, {
+    "from" : "dam-e",
+    "to" : "dam-phenotype"
+  }, {
+    "from" : "dam-h",
+    "to" : "dam-phenotype"
+  }, {
+    "from" : "dam-h",
+    "to" : "dam-g-o"
+  }, {
+    "from" : "dam-h",
+    "to" : "dam-g-o-prime"
+  }, {
+    "from" : "chance",
+    "to" : "dam-g-o"
+  }, {
+    "from" : "chance",
+    "to" : "dam-g-o-prime"
+  }, {
+    "from" : "sire-g-o",
+    "to" : "offspring-o-h"
+  }, {
+    "from" : "dam-g-o",
+    "to" : "offspring-o-h"
+  }, {
+    "from" : "sire-g-o-prime",
+    "to" : "offspring-o-prime-h"
+  }, {
+    "from" : "dam-g-o-prime",
+    "to" : "offspring-o-prime-h"
+  }, {
+    "from" : "offspring-o-h",
+    "to" : "offspring-o"
+  }, {
+    "from" : "offspring-o-prime-h",
+    "to" : "offspring-o-prime"
+  }, {
+    "from" : "offspring-o-d",
+    "to" : "offspring-o"
+  }, {
+    "from" : "offspring-o-prime-d",
+    "to" : "offspring-o-prime"
+  }, {
+    "from" : "offspring-shared-e",
+    "to" : "offspring-o"
+  }, {
+    "from" : "offspring-shared-e",
+    "to" : "offspring-o-prime"
+  } ],
+  "id" : "wright-guinea-pig-coat-color",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric edge coefficients are graph-only" ],
+    "source-file" : "wright-guinea-pig-coat-color.json"
+  },
+  "variables" : [ {
+    "id" : "sire-d",
+    "kind" : "observed",
+    "name" : "Sire D"
+  }, {
+    "id" : "sire-e",
+    "kind" : "observed",
+    "name" : "Sire E"
+  }, {
+    "id" : "sire-h",
+    "kind" : "observed",
+    "name" : "Sire H''"
+  }, {
+    "id" : "sire-phenotype",
+    "kind" : "observed",
+    "name" : "Sire phenotype"
+  }, {
+    "id" : "chance",
+    "kind" : "observed",
+    "name" : "Chance"
+  }, {
+    "id" : "sire-g-o",
+    "kind" : "observed",
+    "name" : "Sire gamete for O (G)"
+  }, {
+    "id" : "sire-g-o-prime",
+    "kind" : "observed",
+    "name" : "Sire gamete for O' (G')"
+  }, {
+    "id" : "dam-d",
+    "kind" : "observed",
+    "name" : "Dam D"
+  }, {
+    "id" : "dam-e",
+    "kind" : "observed",
+    "name" : "Dam E"
+  }, {
+    "id" : "dam-h",
+    "kind" : "observed",
+    "name" : "Dam H'''"
+  }, {
+    "id" : "dam-phenotype",
+    "kind" : "observed",
+    "name" : "Dam phenotype"
+  }, {
+    "id" : "dam-g-o",
+    "kind" : "observed",
+    "name" : "Dam gamete for O (G'')"
+  }, {
+    "id" : "dam-g-o-prime",
+    "kind" : "observed",
+    "name" : "Dam gamete for O' (G''')"
+  }, {
+    "id" : "offspring-o-h",
+    "kind" : "observed",
+    "name" : "Offspring O heredity (H)"
+  }, {
+    "id" : "offspring-o-prime-h",
+    "kind" : "observed",
+    "name" : "Offspring O' heredity (H')"
+  }, {
+    "id" : "offspring-o-d",
+    "kind" : "observed",
+    "name" : "Offspring O D"
+  }, {
+    "id" : "offspring-o-prime-d",
+    "kind" : "observed",
+    "name" : "Offspring O' D"
+  }, {
+    "id" : "offspring-shared-e",
+    "kind" : "observed",
+    "name" : "Shared offspring E"
+  }, {
+    "id" : "offspring-o",
+    "kind" : "observed",
+    "name" : "Offspring O"
+  }, {
+    "id" : "offspring-o-prime",
+    "kind" : "observed",
+    "name" : "Offspring O'"
+  } ]
+}

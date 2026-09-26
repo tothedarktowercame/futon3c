@@ -1,0 +1,185 @@
+;; M-futon-seams instance 6 — prompts as an interface.
+;; Written to answer one question: does any instance of this mission exercise a
+;; CONFLICT, where two incomparable patterns are enabled together and one's
+;; :produces meets the other's :forbids? Instance 6 does, and the conflict is
+;; not manufactured -- it is the mission's own warning, in the schema's terms.
+;;
+;; The mission records both halves. mfuton_prompt_override.clj's docstring:
+;; "keep original prompt text in the source call sites and apply bounded
+;; rewrites here". And Rob's closing note: "the switch is a transitional state,
+;; not the destination ... the intended end state is the abstract path
+;; absorbing the hardcoded one and the flag disappearing". Keeping the original
+;; prose authoritative and generating the prose from a typed source are
+;; incompatible dispositions for the same call site, and today BOTH are live.
+;;
+;; This instance also carries a top context, futon-theory/mission-interface-
+;; signature, which instances 4, 5 and 7 do not yet have. That is deliberate:
+;; it lets the two shapes be compared against clause 0's meets requirement.
+;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
+{:schema :m-futon-seams/proto-cascade-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
+ :instance 6
+ :mission-sha "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
+
+ :tokens
+ {:signature-declared
+  {:statement "The interface has a declared signature — what a prompt carries as typed inputs and outputs — rather than being whatever the first call site happened to write."
+   :cue [1739 1807]}
+  :call-sites-enumerated
+  {:statement "Every call site that embeds a coupling in prompt text is listed, including the ones a grep for a literal will not find."
+   :cue [13512 13581]}
+  :grain-chosen
+  {:statement "The unit is the prompt fragment that carries one coupling — a path, a role, a provider — not the whole packet and not the call site."
+   :cue [13512 13581]}
+  :original-prose-authoritative
+  {:statement "The prose in the source call sites remains the authority; rewrites happen elsewhere, bounded, and only in the other mode."
+   :cue [12943 13025]}
+  :mode-gated
+  {:statement "The change is reachable only behind an explicit mode switch, so the untouched path stays available while the new one is unproven."
+   :cue [12680 12765]}
+  :prose-generated
+  {:statement "The typed source is canonical and the prompt prose is generated from it, so a coupling cannot be introduced by editing prose."
+   :cue [14180 14260]}
+  :one-authority
+  {:statement "Exactly one authoritative reader for each coupling a prompt carries; any second copy is a pin read by a comparator, or a defect."
+   :cue [14180 14260]}
+  :replacement-discipline
+  {:statement "Whatever discipline the mode flag was supplying — bounded rewrites, reviewed in one place — is installed in the same act that retires it."
+   :cue [14081 14136]}
+  :flag-retired
+  {:statement "FUTON3C_MFUTON_MODE and the shadow module are gone; the abstract path has absorbed the hardcoded one."
+   :cue [14081 14136]}}
+
+ :initial #{}
+ :want #{:one-authority :flag-retired}
+
+ :patterns
+ {:futon-theory/mission-interface-signature
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:signature-declared}
+   :receipt {:source {:path "futon3/library/futon-theory/mission-interface-signature.flexiarg"
+                      :sha256 "529ac0b8b91f0b92c6e9be3d73e5202e554c83c691a08057d2b57f45a0b43ef9"}
+             :reading "Rob's discipline stated as a library pattern: declare typed inputs, typed outputs and their wiring so internally correct work can compose. A prompt is an interface that was never given a signature, which is why its couplings are invisible to every tool."
+             :scope "The pattern is written for missions; the reading applies it to the prompt boundary. Its 'never empty' clause is the part that bites here — the prompt interface has no signature at all, not a thin one."
+             :author "claude-1"}
+   :forces "Not all output ports are known at mission start; discovery during implementation may reveal new boundary types, so the signature must be updatable and must never be empty."}
+
+  :or3/count-every-card-back
+  {:guard {:needs #{:signature-declared} :forbids #{}}
+   :produces #{:call-sites-enumerated}
+   :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                      :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+             :reading "Harder here than anywhere else in the mission: a coupling in prompt text cannot be grepped for a literal, which is why the existing retrofit matches natural language with regexes at runtime. Counting them back is the move, and the medium is what makes it expensive."
+             :scope "Counting discipline only."
+             :author "claude-1"}
+   :forces "Synthesis is where attribution dies — by the time a clean list exists nobody can say which item came from where."}
+
+  :cascade-construction/choose-the-grain-where-state-lives
+  {:guard {:needs #{:signature-declared} :forbids #{}}
+   :grain {:keyed-by :fragment
+           :statement "Keyed by the FRAGMENT carrying one coupling. Per-packet cannot fix a path without rewriting an instruction; per-call-site cannot say which of three couplings moved."}
+   :produces #{:grain-chosen}
+   :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
+                      :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
+             :reading "The grain is the fragment carrying one coupling. Per-packet is too coarse to fix a path without rewriting a whole instruction; per-call-site is too coarse to say which of three couplings moved."
+             :scope "Verbatim on grain selection."
+             :author "claude-1"}
+   :forces "The same problem can be modelled per item, per batch or per system."}
+
+  :realtime/mode-gate
+  {:guard {:needs #{:call-sites-enumerated :grain-chosen}
+           :forbids #{:prose-generated}}
+   :produces #{:mode-gated :original-prose-authoritative}
+   :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                      :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+             :reading "The retrofit Rob actually performed: FUTON3C_MFUTON_MODE, default 'futon', with the original prompt text left authoritative in the call sites and bounded rewrites applied elsewhere when the mode is 'mfuton'. It forbids :prose-generated because its whole discipline is that the original prose is the thing kept."
+             :scope "The pattern gates code-changing actions behind an explicit mode; here it gates a prompt rewrite. The forbids is the reading's claim, not the pattern's text, and is where a reviewer should push."
+             :author "claude-1"}
+   :forces "In mixed-mode conversation agents may act as if they have execution authority while the human is still orienting."}
+
+  :war-room/wr-8-typed-files-are-sources-of-truth
+  {:guard {:needs #{:call-sites-enumerated :grain-chosen}
+           :forbids #{:original-prose-authoritative}}
+   :produces #{:prose-generated}
+   :receipt {:source {:path "futon3/library/war-room/wr-8-typed-files-are-sources-of-truth.flexiarg"
+                      :sha256 "0e4d0d9bba19fabb6b0a7a6725f2cefc9cee70b8b25f64b325e6f46574055f14"}
+             :reading "The destination Rob names: make the typed argument files canonical and generate prose from them, so drift becomes detectable instead of perennial. Applied to prompts it is the seam this instance lacks. It forbids :original-prose-authoritative for the same reason mode-gate forbids its opposite — prose cannot be both generated and the authority."
+             :scope "WR-8 is about the self-model's prose; the reading extends it to instruction text sent to agents. The forbids is the reading's claim."
+             :author "claude-1"}
+   :forces "Prose drifted from intent because there was no machine-readable source it was generated from."}
+
+  :apparatus/one-authority-per-question
+  {:guard {:needs #{:prose-generated} :forbids #{}}
+   :produces #{:one-authority}
+   :receipt {:source {:path "futon3/library/apparatus/one-authority-per-question.flexiarg"
+                      :sha256 "b367ff7d0f8d122ea943f4507fe0c44c58ca08b61076935818ab84299c04a957"}
+             :reading "Its conclusion reads the override module exactly: a second copy is either a pin, readable only by a comparator with disagreement a loud fault, or a defect EVEN WHILE IT AGREES. mfuton_prompt_override.clj is kept in sync with a dependency map by hand, so it is the second kind."
+             :scope "Verbatim."
+             :author "claude-1"}
+   :forces "The second copy agrees most of the time, so it is read as authoritative by whoever finds it first."}
+
+  :war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied
+  {:guard {:needs #{:mode-gated} :forbids #{}}
+   :produces #{:replacement-discipline}
+   :receipt {:source {:path "futon3/library/war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied.flexiarg"
+                      :sha256 "8504fa06684ae81686350db9d973880f3036105057786839bfe1bbe5f2c0dbce"}
+             :reading "The mode flag supplies a discipline while it exists: rewrites are bounded, they live in one reviewable module, and the original is never edited in place. Retiring the flag without installing that discipline elsewhere removes the pressure silently."
+             :scope "Verbatim on retiring a proxy constraint."
+             :author "claude-1"}
+   :forces "Silently removing the pressure a constraint supplied leaves the work unmeasured rather than unconstrained."}
+
+  :iching/hexagram-49-ge
+  {:guard {:needs #{:one-authority :replacement-discipline} :forbids #{}}
+   :produces #{:flag-retired}
+   :receipt {:source {:path "futon3/library/iching/hexagram-49-ge.flexiarg"
+                      :sha256 "6e9f317cd451a4863296c0ed5d8e8158f2ec728ed245405fdb2d512da4dc0631"}
+             :reading "革: replace the old with the new, where timing and legitimacy are the conditions. Both conditions are the two needs above — the authority question settled, and the discipline the flag supplied installed elsewhere. Rob's own note is the timing clause: the switch is transitional, not the destination."
+             :scope "Read for its timing and legitimacy conditions, not as a claim about the hexagram's wider reading."
+             :author "claude-1"}
+   :forces "Premature revolution causes chaos."}}
+
+ :above
+ [{:context :futon-theory/mission-interface-signature
+   :pattern :or3/count-every-card-back
+   :kind :differentiates
+   :via "You count the call sites in order to say what the signature has to cover; with no signature to declare there is nothing the count is a count OF."}
+  {:context :futon-theory/mission-interface-signature
+   :pattern :cascade-construction/choose-the-grain-where-state-lives
+   :kind :differentiates
+   :via "A signature needs typed inputs and outputs at some grain; the grain question is the second thing the declaration opens, and it is independent of the counting."}
+  {:context :or3/count-every-card-back
+   :pattern :realtime/mode-gate
+   :kind :jointly-with
+   :via "A bounded rewrite must know every site it is bounded over. One of two joint contexts."}
+  {:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :realtime/mode-gate
+   :kind :jointly-with
+   :via "And it must know what a single rewrite is a rewrite of. The second joint context."}
+  {:context :or3/count-every-card-back
+   :pattern :war-room/wr-8-typed-files-are-sources-of-truth
+   :kind :jointly-with
+   :via "Generating prose requires knowing every place prose is currently authored. The same two contexts as mode-gate, which is why these two are incomparable and enabled together."}
+  {:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :war-room/wr-8-typed-files-are-sources-of-truth
+   :kind :jointly-with
+   :via "And it requires knowing the unit that is generated. The second joint context."}
+  {:context :war-room/wr-8-typed-files-are-sources-of-truth
+   :pattern :apparatus/one-authority-per-question
+   :kind :differentiates
+   :via "Once prose is generated, asking which copy is authoritative becomes answerable; while both are hand-maintained the question has no stable answer."}
+  {:context :realtime/mode-gate
+   :pattern :war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied
+   :kind :differentiates
+   :via "The discipline to be replaced is the one the gate supplies, so it can only be named once the gate exists."}
+  {:context :apparatus/one-authority-per-question
+   :pattern :iching/hexagram-49-ge
+   :kind :jointly-with
+   :via "Legitimacy: the authority question must be settled before the old path is removed. One of two joint contexts."}
+  {:context :war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied
+   :pattern :iching/hexagram-49-ge
+   :kind :jointly-with
+   :via "Timing: the replacement discipline must already be installed. The second joint context, and the reason retirement is not simply deletion."}]}

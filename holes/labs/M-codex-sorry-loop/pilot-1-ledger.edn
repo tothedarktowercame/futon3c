@@ -1,0 +1,62 @@
+{:lane "codex-pilot-1"
+ :prereg "pilot-1-prereg.md"
+ :rows
+ [{:row 1
+   :problem "young-convolution-L1-L2"
+   :runner-model :codex
+   :runner "codex-6"
+   :dispatches
+   [{:job-id "invoke-1785240826281-228-bafcab4b"
+     :outcome :misdispatch
+     :detail "ground-control config.toml corruption (TOML append into open table); receipted e-2b... n/a — receipt 0e003dd3"}
+    {:job-id "invoke-1785240935276-230-26db063f"
+     :outcome :partial
+     :commit "8208ca7"
+     :sorry-delta -1
+     :witness {:cmd "lake env lean YoungL2.lean" :exit 0 :sorries 1 :errors 0
+               :rerun-by "claude-6"}
+     :statements-intact? true
+     :proven ["eLpNorm_two_sub_right (unconditional)"
+              "convolution_L2_contraction_of_probability_kernel (CONDITIONAL on sorried main theorem)"]
+     :remaining ["young_convolution_inequality_L2 (L57)"]
+     :frontier {:name "integral-minkowski-eLpNorm-bochner"
+                :statement "eLpNorm (fun x => ∫ y, h y x ∂ν) 2 μ ≤ ∫⁻ y, eLpNorm (h y) 2 μ ∂ν"
+                :unblocks ["young_convolution_inequality_L2" "heat-semigroup contraction (per e-dfea2de9)"]
+                :status :named-not-attempted-deep}
+     :memory-use {:surfaced 3 :used 3
+                  :ids ["e-9751e537" "e-dfea2de9" "e-bb16ffa8"]
+                  :cross-model-transfer? true
+                  :note "all three zai-mined memories cited with specific behavioral effects — first codex consumption of zai-mined corpus"}
+     :receipts {:offered :written-by-dispatch
+                :outcome ["3052c7de-72e0-450f-a573-76e3cb9f2ef5"
+                          "e-2b2a4dfa-c9cc-469e-bb25-ae8c15d98440"]
+                :duplicate-note "TWO outcome halves for job -230: first write half-failed into the 12:15-12:23 OOM window but landed; retry landed post-restart. Append-only store: dedupe rule for all analysis = keep EARLIEST outcome half per job-id. Flagged for WS3 harness re-read."}
+     :rollout-harvest :done
+     :harvest-note "t001-t007 ingested 2026-07-28 (--allow-nonfixture); t007 = pilot turn"}]}
+  {:row :s6-frontier-1
+   :problem "young-convolution-L1-L2-frontier"
+   :runner-model :codex
+   :runner "codex-6"
+   :dispatches
+   [{:job-id "invoke-1785243793353-233-a32962a2"
+     :outcome :solved
+     :result :axiom-clean-zero
+     :route :a-elementary-weighted-cauchy-schwarz
+     :commit "ce77d41"
+     :sorry-delta -1
+     :witness {:cmd "lake env lean YoungL2.lean" :exit 0 :sorries 0 :errors 0
+               :rerun-by "claude-6"
+               :axiom-check {:rerun-by "claude-6" :method "/tmp/YoungL2AxCheck.lean scratch copy"
+                             :all-four-declarations "[propext, Classical.choice, Quot.sound]"
+                             :sorryAx false}}
+     :statements-intact? true
+     :upgrade "both row-1 statements :sorry-relocated -> :sorry-discharged; new lemma lintegral_weight_mul_sq_le"
+     :frontier-effect "integral-minkowski NOT built — bypassed for the Young demand by route (a); demand recompute due at S4 promotion; a96A04 heat contraction can now cite the UNCONDITIONAL corollary"
+     :memory-use {:surfaced 3 :used 3
+                  :ids ["e-9751e537" "e-dfea2de9" "e-bb16ffa8"]
+                  :note "second codex session, 3/3 used again — e-dfea2de9's two-branch decision structure exercised across sessions: row 1 declared the frontier, S6 proved the local Young"}
+     :receipts {:offered :written-by-dispatch
+                :outcome ["0f940e5f-b186-4049-a608-fc83c90d2c50"]}
+     :rollout-harvest {:row "e-codexroll-019f9b12-t008"
+                       :reasoning-summaries :STILL-ENCRYPTED-ONLY
+                       :verdict "config fix ineffective for RESUMED sessions; efficacy test moves to next fresh codex session"}}]}]}

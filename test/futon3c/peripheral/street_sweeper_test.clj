@@ -27,6 +27,13 @@
             [futon3c.peripheral.street-sweeper-shapes :as sss]
             [futon3c.peripheral.street-sweeper-backend :as ssb]))
 
+;; The suite must NOT cross the live Agency boundary. consent-gate-emit
+;; bells a hardcoded live agent-id; unmocked, every full-suite run by any
+;; agent in the shared tree delivers real bells to a real inbox (12 reached
+;; claude-10 on 2026-08-03 before this was found).
+(def ^:private no-live-bell
+  {:post-bell (fn [_body] {:status 200 :mocked? true})})
+
 (defn- sh!
   [dir & args]
   (let [r (apply shell/sh (concat args [:dir dir]))]
@@ -154,7 +161,7 @@
 (deftest inv-1-emit-binds-cg-id
   (let [r (ssb/consent-gate-emit {:repo "futon0"
                                   :intent :test
-                                  :files ["scripts/cr"]})]
+                                  :files ["scripts/cr"]} no-live-bell)]
     (is (:ok r))
     (is (true? (-> r :result :bound?)))
     (is (str/starts-with? (-> r :result :consent-gate-event-id) "cg-"))
@@ -162,7 +169,7 @@
 
 (deftest inv-1-stage-rejects-wrong-repo
   (let [emit (ssb/consent-gate-emit {:repo "futon0" :intent :test
-                                     :files ["scripts/cr"]})
+                                     :files ["scripts/cr"]} no-live-bell)
         cg-id (-> emit :result :consent-gate-event-id)
         bad   (ssb/repo-stage {:repo "futon3c"
                                :files ["src/futon3c/foo.clj"]
@@ -173,7 +180,7 @@
 
 (deftest inv-1-stage-rejects-files-outside-allowlist
   (let [emit (ssb/consent-gate-emit {:repo "futon0" :intent :test
-                                     :files ["scripts/cr"]})
+                                     :files ["scripts/cr"]} no-live-bell)
         cg-id (-> emit :result :consent-gate-event-id)
         bad   (ssb/repo-stage {:repo "futon0"
                                :files ["scripts/not-in-allowlist"]
@@ -212,7 +219,7 @@
       (sh! root "git" "add" ".")
       (let [emit (ssb/consent-gate-emit {:repo repo
                                           :intent :test
-                                          :files ["target.txt"]})
+                                          :files ["target.txt"]} no-live-bell)
             cg-id (-> emit :result :consent-gate-event-id)
             r (ssb/repo-commit {:repo repo
                                  :message "target: add file"

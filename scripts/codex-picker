@@ -25,11 +25,14 @@ else
 fi
 
 check_infra() {
-  local f1a_port="${FUTON1A_PORT:-7071}"
-  if (echo > "/dev/tcp/127.0.0.1/${f1a_port}") >/dev/null 2>&1; then
-    printf "${GREEN}futon1a${RESET} running on port %s\n" "$f1a_port"
+  # The live coordination infra is the futon3c Agency (7070); the old
+  # futon1a check (7071) reported a RETIRED service as "not running"
+  # on every launch (I-0: futon1a store is gone).
+  local agency_port="${FUTON3C_PORT:-7070}"
+  if (echo > "/dev/tcp/127.0.0.1/${agency_port}") >/dev/null 2>&1; then
+    printf "${GREEN}agency${RESET} (futon3c) running on port %s\n" "$agency_port"
   else
-    printf "${YELLOW}futon1a${RESET} not running (port %s). Start with: ${BOLD}make dev${RESET}\n" "$f1a_port"
+    printf "${YELLOW}agency${RESET} (futon3c) not running (port %s). Start with: ${BOLD}./scripts/dev-linode-env${RESET}\n" "$agency_port"
   fi
   echo
 }
@@ -58,6 +61,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/emacs-socket-lib.sh"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
+agency_base="${FUTON3C_AGENCY_BASE:-}"
 
 # --- Agent search/memory backstops (added 2026-06-05) -----------------------
 # A broad agent `rg` from ~/code mmapped tens of GB of data files under
@@ -146,15 +150,23 @@ print(hint, end="")' 2>/dev/null || true)"
   return 1
 }
 
+if [[ -z "${agency_base}" ]]; then
+  if [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
+    agency_base="${FUTON3C_SELF_URL}"
+  else
+    agency_base="$(pick_local_agency_base)"
+  fi
+fi
+
 if [[ -n "${FUTON3C_EVIDENCE_BASE:-}" ]]; then
   evidence_base="${FUTON3C_EVIDENCE_BASE}"
 elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
   evidence_base="${FUTON3C_SELF_URL}"
 else
-  evidence_base="$(pick_local_agency_base)"
+  evidence_base="${agency_base}"
 fi
 
-irc_send_base="$(pick_remote_agency_base "${evidence_base%/}" || true)"
+irc_send_base="$(pick_remote_agency_base "${agency_base%/}" || true)"
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
@@ -188,7 +200,7 @@ EOF
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   local agent_id="${1:-${agency_agent_id}}"
-  local primary_base="${evidence_base%/}"
+  local primary_base="${agency_base%/}"
   local remote_base="${irc_send_base%/}"
   local base status ok_any=0
   local -a bases=()
@@ -229,7 +241,7 @@ resolve_agent_session_id() {
   local agent_id="${1:-${agency_agent_id}}" payload sid
   command -v curl >/dev/null 2>&1 || return 1
   payload="$(curl -sS --max-time 2 \
-    "${evidence_base%/}/api/alpha/agents/${agent_id}" 2>/dev/null || true)"
+    "${agency_base%/}/api/alpha/agents/${agent_id}" 2>/dev/null || true)"
   [[ -n "${payload}" ]] || return 1
   if command -v jq >/dev/null 2>&1; then
     sid="$(printf '%s' "${payload}" \
@@ -282,10 +294,12 @@ launch_repl() {
     echo "EMACSCLIENT_TIMEOUT must be a positive integer (seconds)." >&2
     exit 1
   fi
+  local escaped_lane
+  escaped_lane="$(elisp_escape "${agency_agent_id}")"
   escaped_session_file="$(elisp_escape "${session_file}")"
   escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
-  escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
+  escaped_agency_base="$(elisp_escape "${agency_base%/}")"
   escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
   escaped_codex_sandbox="$(elisp_escape "${codex_sandbox}")"
   escaped_codex_approval="$(elisp_escape "${codex_approval_policy}")"
@@ -306,11 +320,13 @@ launch_repl() {
     new_form="nil"
   fi
 
-  if command -v timeout >/dev/null 2>&1; then
-    emacsclient_cmd=(timeout --kill-after=2 "${emacsclient_timeout}s" "${emacsclient_bin}")
-  else
-    emacsclient_cmd=("${emacsclient_bin}")
-  fi
+  # This launch path always uses emacsclient --no-wait.  Do not wrap it in
+  # GNU timeout: killing an emacsclient while Emacs is still processing the
+  # server handshake can leave a dead process in server-clients, which then
+  # surfaces as server-send-string "connection broken by remote peer" errors
+  # during the next request.  emacsclient's own --timeout handles unavailable
+  # sockets without severing an accepted client.
+  emacsclient_cmd=("${emacsclient_bin}")
   socket_name="$(futon_preferred_emacs_socket || true)"
   if [[ -n "${socket_name}" ]]; then
     emacsclient_cmd+=(--socket-name "${socket_name}")
@@ -329,20 +345,36 @@ launch_repl() {
         (when (and (process-live-p p)
                    (string-prefix-p \"codex-repl-codex\" (process-name p)))
           (delete-process p)))
-      (when (get-buffer \"*codex-repl*\")
-        (kill-buffer \"*codex-repl*\")))
+      (dolist (stale (list \"*codex-repl*\" (codex-repl--lane-buffer-name \"${escaped_lane}\")))
+        (when (get-buffer stale)
+          (kill-buffer stale))))
     (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\"
           agent-chat-agency-base-url \"${escaped_agency_base}\")
-    (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
     (setq codex-repl-irc-send-base-url ${irc_send_form})
     (setq codex-repl-sandbox \"${escaped_codex_sandbox}\")
     (setq codex-repl-approval-policy \"${escaped_codex_approval}\")
     (setq codex-repl-session-id ${sid_form})
-    (codex-repl))"
+    (codex-repl--open-instance (codex-repl--lane-buffer-name \"${escaped_lane}\")
+                               (codex-repl--lane-invoke-buffer-name \"${escaped_lane}\")
+                               codex-repl-api-url
+                               \"${escaped_lane}\"
+                               \"${escaped_session_file}\"
+                               default-directory
+                               'repl
+                               ${new_form}
+                               nil))"
 
+  # --reuse-frame needs a resolvable frame context; on a terminal-daemon
+  # host (Zone) it dies with "could not get terminal name" even from an
+  # interactive shell, while the same eval without it succeeds
+  # (2026-08-12, cx-on-Zone). Use it only under a display.
+  local -a frame_flags=()
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    frame_flags+=(--reuse-frame)
+  fi
   set +e
-  eval_out="$("${emacsclient_cmd[@]}" --timeout "${emacsclient_timeout}" --alternate-editor "" --reuse-frame --no-wait -e "${elisp}" 2>&1)"
+  eval_out="$("${emacsclient_cmd[@]}" --timeout "${emacsclient_timeout}" --alternate-editor "" "${frame_flags[@]}" --no-wait -e "${elisp}" 2>&1)"
   rc=$?
   set -e
   primary_eval_out="${eval_out}"
@@ -475,6 +507,51 @@ fi
 
 if $open_repl; then
   sid=""
+  # Lane identity (2026-08-12, Joe): numbering depends on WHAT NUMBERS
+  # EXIST, never on attached/busy status — status-based find-or-create
+  # minted a plain codex-1 that displayed as a duplicate of ams-codex-1
+  # (the blackboard strips site prefixes), the visual-twin disease
+  # again. Numbering counts only ids in the LOCAL site display column
+  # (plain codex-N and ${FUTON_SITE:-ams}-codex-N); other sites number
+  # themselves. --new mints the smallest unused N; bare cx attaches to
+  # the highest existing PLAIN codex-N (or mints if none);
+  # AGENCY_AGENT_ID (cx -a) short-circuits. This MUST run before any
+  # register_agent call — an early register with the codex-1 default
+  # was resurrecting the duplicate on every launch.
+  roster_scan="$(curl -sS --max-time 5 "${agency_base%/}/api/alpha/agents" 2>/dev/null \
+    | python3 -c '
+import json, re, sys
+mode = sys.argv[1]
+site = sys.argv[2]
+try:
+    ids = list((json.load(sys.stdin).get("agents") or {}).keys())
+except Exception:
+    ids = []
+used = set()
+plain = []
+for i in ids:
+    m = re.fullmatch(r"codex-([0-9]+)", i) or re.fullmatch(
+        re.escape(site) + r"-codex-([0-9]+)", i)
+    if m:
+        used.add(int(m.group(1)))
+    m2 = re.fullmatch(r"codex-([0-9]+)", i)
+    if m2:
+        plain.append(int(m2.group(1)))
+if mode == "attach" and plain:
+    print(f"codex-{max(plain)}")
+else:
+    n = 1
+    while n in used:
+        n += 1
+    print(f"codex-{n}")' "$( $start_new && echo new || echo attach )" "${FUTON_SITE:-ams}" 2>/dev/null || true)"
+  if [[ -n "${AGENCY_AGENT_ID:-}" ]]; then
+    agency_agent_id="${AGENCY_AGENT_ID}"
+  elif [[ -n "${roster_scan}" ]]; then
+    agency_agent_id="${roster_scan}"
+  fi
+  if [[ -z "${CODEX_SESSION_FILE:-}" ]]; then
+    session_file="/tmp/futon-codex-session-id-${agency_agent_id}"
+  fi
   register_agent "${agency_agent_id}"
   if $start_new; then
     rm -f "${session_file}"
@@ -493,10 +570,6 @@ if $open_repl; then
       if [[ -z "${sid}" && -f "${session_file}" ]]; then
         sid="$(tr -d '\r\n' < "${session_file}")"
       fi
-    fi
-
-    if [[ -z "${sid}" ]]; then
-      sid="$(latest_session_id || true)"
     fi
 
     if [[ -n "${sid}" ]]; then

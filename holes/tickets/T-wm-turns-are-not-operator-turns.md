@@ -1,0 +1,128 @@
+# T-wm-turns-are-not-operator-turns — the WM's ticks get none of the treatment operator turns get
+
+**Opened:** 2026-08-27 · claude-13, from Joe: *"my point was to try and align the
+WM with operator-facing considerations … WM 'turns' are not stored in quite such
+a durable or queriable or annotatable fashion."*
+
+**Status:** open. **Diagnosis substantially corrected 2026-08-27 — see
+"Correction" below. The repair is a switch and a verification, not a build.**
+
+## The finding
+
+Operator turns came out of the C1 exercise clean — 20 of 20 stored, and every
+reported loss turned out to be my own instrument. The asymmetry is that the War
+Machine's ticks were never in that régime at all.
+
+| | operator turn | WM tick |
+|---|---|---|
+| **where** | Evidence Landscape (futon1b, XTDB, bitemporal) | `futon2/data/wm-trace/*.edn`, 53 flat files |
+| **durable** | append-only store; survived a transcript rewrite this afternoon | **gitignored** — `.gitignore:46` is `data/*`; one host, no replication, no history |
+| **queryable** | HTTP API filtered by `session-id`, `author`, `tags`, `since`; JSON on `Accept: application/json` | open the file and parse EDN, and **the shape differs per day** — one file opens `{:timestamp …}`, the newest opens `{:habit-prior-state …}` |
+| **annotatable** | `:evidence/id` per record and `:evidence/in-reply-to` threading, so a later record can point at an earlier one | **no per-tick id**; the newest file is 829 KB and holds two `:timestamp` occurrences, so there is nothing stable to attach an annotation to |
+| **last written** | continuously | **2026-07-21 10:05** |
+
+**Bounds.** The store survey is over the most recent 1000 entries, in which no
+`wm-tick`-shaped event appears. The gitignore line, the file dates and the
+per-file shapes are direct reads and are not window-limited.
+
+## Correction, 2026-08-27 — built and switched off, not missing
+
+Joe named two records the original diagnosis had not searched, and both change
+the ticket:
+
+| what exists | where |
+|---|---|
+| a WM tick emitter to the Evidence Landscape, **disabled by default** behind `FUTON2_WM_EMIT_EVIDENCE`, emitting `wm-tick` / `wm-click` / `wm-cron` | `futon2/src/futon2/aif/evidence_emit.clj` |
+| a live click status route answering now — `{"running?":false,"click-id":null,"phase":null,"attempt-id":null,"started-at":null,"last-result":null}` | `GET /api/alpha/wm/click`, `futon3c/src/futon3c/wm/runner_service.clj` |
+| a deterministic visual surface over the traces | `futon2/scripts/wm_clicks_exhibit.bb` |
+| one complete attempt already cross-correlated against the paper's ①–㉙ steps — click `wm-click-f8569fae`, cohort 46, attempt-061 | `p4ng/empirics/TRACE-061-cross-correlation.md` |
+
+**So the "no per-tick id" row above is wrong.** A click carries a `click-id`, an
+`attempt-id`, a `phase` and a `started-at`, and a run has a three-level identity
+— cohort, attempt, click — which is *more* structure than the operator side
+carries. The store holds no `wm-tick` because an environment variable is unset.
+
+The repair is correspondingly smaller and differently shaped:
+
+1. Set `FUTON2_WM_EMIT_EVIDENCE` and run a click.
+2. **Read what it actually writes** against the acceptance below — a compact tick
+   summary may or may not carry a declared shape, and "best-effort" in the
+   docstring is a warning that a failed POST is likely swallowed.
+3. Only then decide what, if anything, needs building.
+
+The durability and annotatability rows still stand for `data/wm-trace/*.edn`.
+The queryability finding stands and is sharpened below. What does not stand is
+the framing that a writer must be built.
+
+## Why this is a ticket rather than a note
+
+**The WM's analogue of C1 is false by construction.** *"Every WM tick is stored
+in the Evidence Landscape"* cannot hold, because ticks are not written there at
+all. So the end-to-end criteria in `M-formal-war-machine` §3.1d can be stated for
+the operator half of the loop and not for the machine half — the wrong way round
+for a paper whose subject is the machine.
+
+And the deeper reason, which is what makes it worth doing rather than worth
+noting: **an apparatus that cannot be re-measured cannot be corrected.** Three
+extraction bugs in my operator-side measurement were all recoverable, because
+operator turns have ids, a query surface and a stable schema — I could re-query
+and find each one. The same class of error against `wm-trace` would not be
+recoverable; there is nothing to re-query against.
+
+## The repair
+
+**Three of the four rows are one change.** Durability, queryability and
+annotatability all follow from writing a tick as an evidence record with an id,
+rather than appending to a day file. This is not a new mechanism: it is the one
+the operator side already uses, and `family-fired`, `mission-sync-snapshot`,
+`memory-pull-use` and `process-alert` show non-conversational events already
+living in the store comfortably.
+
+### Acceptance
+
+1. A WM tick is written to the Evidence Landscape as a typed event with its own
+   `:evidence/id`.
+2. The tick body has a **declared shape** — the same fields every day. Where a
+   field is absent it is typed as absent, not omitted, so a schema change is
+   visible rather than silent.
+3. Ticks are retrievable by the same filtered query surface operator turns use.
+4. **The criterion becomes computable**: `every WM tick is stored in the Evidence
+   Landscape` can be measured the way `c1_turn_survival.py` measures its operator
+   analogue, and reports typed attrition rather than a bare count.
+5. Parse the store as JSON (`Accept: application/json`). Do not scrape EDN with
+   regexes — that produced three separate false findings in one afternoon, each
+   of which read as a defect in the pipeline rather than in the instrument.
+
+## Refinement, 2026-08-27 — the store is queryable at the envelope, not at the body
+
+Measured while writing `M-formal-war-machine` §3.1e. Of 408 entries in one
+session window, **185 have a map body a JSON client can read; 223 are EDN maps
+rendered as strings** — `{"prompt-preview" "…"}`, keys and values
+space-separated, which is not JSON and has no stdlib parser in Python.
+
+**The split runs straight through the events the machine writes about itself.**
+`chat-turn` and `turn-commits` are in the readable half; every `invoke-start`,
+`invoke-complete`, `invoke-error` and `context-retrieval` is in the unreadable
+half — and those are exactly the events a WM-side criterion would quantify over.
+
+So the *queryable* row above understates it. The problem is not only that
+`wm-trace` sits outside the store; it is that the machine-facing events which
+**are** in the store cannot be read by a client that parses the envelope
+correctly. This cost two false measurements in one afternoon. Either the body is
+served as JSON when JSON is asked for, or a parser is provided and used; scraping
+it with regexes is what produced three separate false findings today.
+
+## Split off deliberately — do not bundle
+
+**No tick has been recorded since 2026-07-21**, thirty-seven days. Whether the
+loop ran without tracing, or did not run, is **not established here**, and the
+two have very different consequences for what the paper may claim. That question
+should be answered *before* the writer is repaired: the repair is pointless if
+nothing is calling it, and misleading if something is.
+
+## Related
+
+- `futon2/holes/missions/M-formal-war-machine.md` §3.1d — end-to-end criteria.
+- `p4ng/empirics-futon/NOTE-red-ring-findings-vs-paper.md` — the claims audit.
+- `futon2/scripts/c1_turn_survival.py` — the operator-side measurement.
+- `futon3c/holes/excursions/E-R14-red-ring-fill.md`, `E-R8-red-ring-fill.md`.

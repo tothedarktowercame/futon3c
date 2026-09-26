@@ -1,0 +1,2 @@
+PASS: 11 unique nodes; acyclic obligations; source and pattern revisions verified.
+Scope: provenance/structure only. No Student trial or fresh Lean check.

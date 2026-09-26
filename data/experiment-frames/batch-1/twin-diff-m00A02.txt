@@ -1,0 +1,67 @@
+diff --git a/problems/m00A02/lean/Main.lean b/problems/m00A02/lean/Main.lean
+index a47bb68..787bac8 100644
+--- a/problems/m00A02/lean/Main.lean
++++ b/problems/m00A02/lean/Main.lean
+@@ -96,24 +96,27 @@ theorem apm_m00A02_derivative_expansion_coefficients
+     (hb : apm_m00A02_hasExpansion (deriv f) b) :
+     b = apm_m00A02_derivativeCoefficients a := by
+   /-
+-  Closer hop 4 rechecked the mathematical route.  The standard result is
+-  formal differentiation of Poincaré expansions under the additional
+-  hypothesis that the derivative itself has an expansion.  A proof avoiding
+-  improper integrability compares difference quotients on `[x, 2*x]` by the
+-  mean value theorem: convergence of a remainder and existence of an
+-  expansion for its derivative force the derivative's leading coefficient to
+-  be zero; subtracting one formal term and iterating yields
+-  `b (n+1) = -n * a n`.
+-
+-  Loogle searches for a theorem combining `Differentiable`, `Tendsto atTop`
+-  of a function, and `Tendsto atTop` of its derivative, and LeanSearch's
+-  natural-language query "differentiable function converges at infinity
+-  derivative converges derivative limit zero" returned no packaged bridge.
+-  DLMF §2.1 confirms the standard coefficient theorem but supplies no Lean
+-  formalization.  The exact missing reusable lemma is the base mean-value
+-  step: if `g` is differentiable and both `g x → 0` and `deriv g x → L`
+-  at `+∞`, then `L = 0`; the all-orders result follows by induction after
+-  algebraically removing successive inverse-power terms.
++  Frame boundary: the reusable route is Mathlib's filter-valued l'Hôpital
++  theorem `HasDerivAt.lhopital_zero_atTop`, rather than Bochner integration.
++  For each remainder
++
++    Fₙ(x) = f(x) - ∑ i ∈ range (n + 1), a i / x^i,
++
++  compare `Fₙ` with `x ↦ x⁻ⁿ`.  The hypothesis `ha n` gives the quotient
++  limit, while `hb` and the already-established lower coefficient identities
++  give the derivative-quotient limit.  L'Hôpital and uniqueness of limits then
++  force `b (n+1) = -n * a n`.
++
++  The delicate base is precisely `b 0 = b 1 = 0`: compare `f-a 0` with
++  `x⁻¹`.  If either coefficient is nonzero, the derivative quotient tends to
++  `atTop` or `atBot`, so filter-valued l'Hôpital contradicts the finite limit
++  supplied by `ha 1`.  This avoids the earlier unjustified assumption that a
++  merely differentiable derivative is interval-integrable.  The remaining
++  formal work is the eventual nonvanishing of `deriv (fun x : ℝ => x⁻ⁿ)`,
++  the polynomial derivative normalization, and the two signed-infinity base
++  cases.  Repo/index searches found no packaged custom-expansion theorem;
++  the local Zulip archive path named by the packet is absent.  No axiom,
++  opaque declaration, or `native_decide` is introduced.
+   -/
+   sorry
+ 
+@@ -198,13 +201,8 @@ theorem apm_m00a02 :
+     expansion. Searches found `intervalIntegral.integral_deriv_eq_sub` and
+     `integral_Ioi_rpow_of_lt`, but assembling their eventual hypotheses from
+     the raw `Tendsto` remainder and merely `Differentiable ℝ f` remains open.
+-
+-    Closer hop 4 observes that no further integration is needed in the main
+-    theorem once `apm_m00A02_derivative_expansion_coefficients` is available:
+-    coefficient equality rewrites the assumed expansion `hb` directly.  Thus
+-    the helper above is now the sole remaining sorry.
+     -/
+     intro f a b hf ha hb
+-    have hcoeff := apm_m00A02_derivative_expansion_coefficients hf ha hb
+-    rw [← hcoeff]
+-    exact hb
++    have hcoeff : b = apm_m00A02_derivativeCoefficients a :=
++      apm_m00A02_derivative_expansion_coefficients hf ha hb
++    simpa [← hcoeff] using hb

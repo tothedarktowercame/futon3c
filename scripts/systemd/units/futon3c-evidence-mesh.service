@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull and verify registered evidence corpora from the futon mesh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/futon3c/evidence-mesh.env
+ExecStart=%h/code/futon3c/scripts/evidence_mesh_sync.sh sync-all

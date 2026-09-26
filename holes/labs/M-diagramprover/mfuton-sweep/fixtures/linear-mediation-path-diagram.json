@@ -1,0 +1,29 @@
+{
+  "example_id": "linear-mediation-path-diagram",
+  "title": "Linear mediation path diagram",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.7 has a direct Treatment-to-Outcome effect of 7 and an indirect Treatment-to-Mediator-to-Outcome effect with coefficients 2 and 3. The sum-of-products rule gives indirect effect 6 and total effect 13.",
+  "variables": [
+    {"key": "treatment", "name": "Treatment", "content": "The treatment increased by one unit."},
+    {"key": "mediator", "name": "Mediator", "content": "The mediator increases by two units for a unit treatment increase."},
+    {"key": "outcome", "name": "Outcome", "content": "The outcome receives both direct and mediated effects."}
+  ],
+  "arrows": [
+    {"source": "treatment", "target": "mediator", "coefficient": "2", "because": "Figure 9.7 labels the Treatment-to-Mediator path coefficient 2."},
+    {"source": "mediator", "target": "outcome", "coefficient": "3", "because": "Figure 9.7 labels the Mediator-to-Outcome path coefficient 3."},
+    {"source": "treatment", "target": "outcome", "coefficient": "7", "because": "Figure 9.7 labels the direct Treatment-to-Outcome path coefficient 7."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:8f2beb54cc6be051",
+    "ta-book-of-why-2018:c16e43068cc299b5",
+    "ta-book-of-why-2018:cd290766bee90942",
+    "ta-book-of-why-2018:5c9f099f2af2582c",
+    "ta-book-of-why-2018:8147a7fc5d9e1e92",
+    "ta-book-of-why-2018:61e0a10c8d2a574b",
+    "ta-book-of-why-2018:dfbccf76ed73730b"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0335",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0336"
+  ]
+}

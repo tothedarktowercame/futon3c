@@ -1,0 +1,33 @@
+{
+  "example_id": "jtpa-job-training",
+  "title": "JTPA job-training study",
+  "topology_basis": "printed_diagram",
+  "content": "Motivation confounds program signup, service attendance, and earnings. Signed Up affects Showed Up, which affects Earnings, but the Motivation-to-Showed-Up arrow leaves that mediator unshielded; strict front-door identification therefore fails.",
+  "variables": [
+    {"key": "m", "name": "Motivation", "content": "The unobserved common cause affecting participation and earnings."},
+    {"key": "s", "name": "Signed Up", "content": "Whether a person registered for the program."},
+    {"key": "u", "name": "Showed Up", "content": "Whether an enrollee actually used the services."},
+    {"key": "e", "name": "Earnings", "content": "Earnings during the subsequent eighteen months."}
+  ],
+  "arrows": [
+    {"source": "m", "target": "s", "because": "Motivation affects whether a person signs up."},
+    {"source": "m", "target": "u", "because": "Figure 7.3 includes the unshielding Motivation-to-Showed-Up arrow."},
+    {"source": "m", "target": "e", "because": "Motivation affects later earnings independently of services."},
+    {"source": "s", "target": "u", "because": "A person must sign up before showing up for services."},
+    {"source": "u", "target": "e", "because": "The program can affect earnings only if the enrollee uses the services."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:bdad4054650af422",
+    "ta-book-of-why-2018:e8d0dc1e9cf49eb5",
+    "ta-book-of-why-2018:1e8114ec4c374ec4",
+    "ta-book-of-why-2018:8b05f44d87a089a6",
+    "ta-book-of-why-2018:52fa4db9fde7e847",
+    "ta-book-of-why-2018:a580e688efeddbf5",
+    "ta-book-of-why-2018:9a3afb1dade2264b",
+    "ta-book-of-why-2018:02dd2b839fbef0f2"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0241",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0242"
+  ]
+}

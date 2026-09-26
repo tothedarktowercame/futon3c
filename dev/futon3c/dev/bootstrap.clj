@@ -1,56 +1,145 @@
 (ns futon3c.dev.bootstrap
   "Bootstrap helpers and top-level startup orchestration for futon3c.dev."
   (:require [cheshire.core :as json]
-            [futon1a.system :as f1]
+            [futon1b-server :as f1b]
+            [futon3c.agency.fed-uplink :as fed-uplink]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.clock-decision :as clock-decision]
             [futon3c.agency.roster-store :as roster-store]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
             [futon3c.evidence.invariant :as evidence-invariant]
+            [futon3c.inbox-zero.sweeper :as inbox-zero-sweeper]
             [futon3c.logic.archaeology :as archaeology]
             [futon3c.logic.locus :as locus]
             [futon3c.logic.ratchet :as ratchet]
             [futon3c.logic.snapshot :as snapshot]
-            [futon3c.logic.tracer :as tracer]
+            [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
+            [futon3c.apm.library-lane-coordinator]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
+            [futon3c.wm.run4-boot :as run4-boot]
             [futon3c.watcher.multi :as multi-watcher]
+            [futon3c.watcher.roots :as watch-roots]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [org.httpkit.server :as hk]
             [repl.http :as drawbridge]))
 
+;; futon1a (XTDB 1) is retired (I-0 unification, 2026-07-14). The substrate
+;; store is now futon1b (XTDB 2), reached over HTTP (FUTON1A_URL/FUTON1B_URL
+;; → :7073; embedded/lucy → :7074). start-futon1a! is kept as a no-op so
+;; the injected call site in
+;; run-main! is unchanged; it always returns nil, so futon3c boots nodeless —
+;; exactly as it already did under FUTON1A_PORT=0. The XTDB2 node/HTTP is
+;; served either by the futon1b-server systemd unit or, when FUTON1B_EMBED=1,
+;; in-process by start-futon1b-embedded! below.
 (defn start-futon1a!
-  "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!, etc."
-  [direct-xtdb?]
-  (let [port (config/env-int "FUTON1A_PORT" 7071)
-        data-dir (config/env "FUTON1A_DATA_DIR"
-                             (str (System/getProperty "user.home")
-                                  "/code/storage/futon1a/default"))
-        static-dir (config/env "FUTON1A_STATIC_DIR" nil)
-        allowed-penholders (->> (config/env-list "FUTON1A_ALLOWED_PENHOLDERS" ["api" "joe"])
-                                (remove str/blank?)
-                                set)]
-    (println (str "[dev] Starting futon1a (XTDB: " data-dir ")..."))
-    (let [sys (f1/start! (cond-> {:data-dir data-dir
-                                  :port port
-                                  :allowed-penholders allowed-penholders
-                                  :expose-internals? direct-xtdb?}
-                           static-dir (assoc :static-dir static-dir)))]
-      (println (str "[dev] futon1a: http://localhost:" (:http/port sys)))
-      (println (str "[dev] futon1a allowed penholders: "
-                    (if (seq allowed-penholders)
-                      (str/join "," (sort allowed-penholders))
-                      "<none>")))
-      (when static-dir
-        (println (str "[dev] futon1a static: " static-dir)))
-      sys)))
+  "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
+   stack gets substrate/evidence over HTTP from futon1b (systemd :7073)."
+  [_direct-xtdb?]
+  (println "[dev] futon1a retired — substrate is futon1b/XTDB2 over HTTP (systemd :7073)")
+  nil)
+
+;; --- Embedded futon1b XTDB2 node (I-0 unification) ------------------------
+;; When FUTON1B_EMBED=1, run futon1b's XTDB2 node + HTTP server INSIDE this
+;; JVM instead of as the separate futon1b-server systemd process. futon3c
+;; keeps talking to :7074 over loopback — no call-site changes. Default OFF,
+;; so a plain `make dev` boots identically to the two-JVM setup.
+;;
+;; CUTOVER (operator, manual — XTDB2 stores are single-process, so the
+;; systemd node and an embedded node must NOT both open the same store):
+;;   systemctl --user stop futon1b-server      # unit stays installed = rollback
+;;   FUTON1B_EMBED=1 make dev
+;; FUTON1B_STORE_DIR must be ABSOLUTE (futon3c's CWD != futon1b's): default
+;; ~/code/futon1b/switchover-store; chicago sets ~/code/futon1b/chicago-store.
+(defonce ^:private !f1b-embedded (atom nil))
+
+(defn- port-in-use?
+  "True when PORT already has a listener. Probed with the same wildcard bind
+   futon1b's HttpServer uses (InetSocketAddress on the port alone), so this
+   sees a holder on any interface — loopback, IPv4 or IPv6 — the way the real
+   bind will."
+  [port]
+  (try
+    (with-open [s (java.net.ServerSocket.)]
+      (.bind s (java.net.InetSocketAddress. (int port)))
+      false)
+    (catch java.net.BindException _ true)
+    (catch Throwable _ false)))
+
+(defn- port-holder-hint
+  "Best-effort description of whatever is listening on PORT, for the error
+   message. nil when `ss` is unavailable or says nothing."
+  [port]
+  (try
+    (let [{:keys [exit out]} (shell/sh "ss" "-tlnp" "sport" "=" (str ":" port))]
+      (when (zero? exit)
+        (some->> (str/split-lines (str out))
+                 (drop 1)
+                 (map str/trim)
+                 (remove str/blank?)
+                 seq
+                 (str/join "; "))))
+    (catch Throwable _ nil)))
+
+(defn start-futon1b-embedded!
+  "Start futon1b's XTDB2 node + HTTP server in-process when FUTON1B_EMBED is
+   truthy. Returns the HttpServer, or nil (no-op) by default."
+  []
+  (when (config/env-bool "FUTON1B_EMBED" false)
+    (let [store-dir (config/env "FUTON1B_STORE_DIR"
+                                (str (System/getProperty "user.home")
+                                     "/code/futon1b/switchover-store"))
+          port (config/env-int "FUTON1B_PORT" 7074)
+          bind-host (config/env "FUTON1B_BIND_HOST" "127.0.0.1")]
+      (println (format "[dev] EMBEDDING futon1b XTDB2 node in-process (store %s, :%d) — the futon1b-server systemd unit MUST be stopped first"
+                       store-dir port))
+      ;; Preflight the port BEFORE f1b/start-server!, which opens the XTDB2
+      ;; store (single-process lock, ~20s) and only then binds. Without this a
+      ;; taken :7074 costs a full store open and reports a bare
+      ;; "Address already in use" naming neither the port nor the holder
+      ;; (bit us 2026-07-16). Name both, and name the two ways out.
+      (when (port-in-use? port)
+        (throw (ex-info
+                (str "futon1b embed cannot bind :" port " — something is already listening.\n"
+                     "  holder: " (or (port-holder-hint port) "unknown (ss gave nothing)") "\n"
+                     "  Usual causes, in order:\n"
+                     "    1. a previous `make dev` JVM is still up — check `pgrep -a java`, and\n"
+                     "       reload code over Drawbridge instead of restarting (I-0).\n"
+                     "    2. the futon1b-server systemd unit is running — under FUTON1B_EMBED\n"
+                     "       it must stay stopped: `systemctl --user stop futon1b-server`.\n"
+                     "  To run the two-JVM setup on purpose instead: FUTON1B_EMBED=0 make dev.")
+                {:port port :store-dir store-dir})))
+      (let [server (f1b/start-server! {:store-dir store-dir
+                                       :port port
+                                       :bind-host bind-host})]
+        (reset! !f1b-embedded server)
+        server))))
+
+(defn stop-futon1b-embedded!
+  "Stop the in-process futon1b server + close its XTDB2 node (releases the
+   single-process store lock). Safe to call when nothing is embedded."
+  []
+  (when-let [server @!f1b-embedded]
+    ;; start-server! returns a JDK com.sun.net.httpserver.HttpServer;
+    ;; futon1b dropped its stop-server! wrapper, so stop it directly.
+    (try (.stop ^com.sun.net.httpserver.HttpServer server 0) (catch Throwable _))
+    (reset! !f1b-embedded nil)
+    ;; best-effort node close via runtime resolve (avoids compile coupling)
+    (try
+      (when-let [nvar (resolve 'futon1b-server/!node)]
+        (when-let [node (deref (deref nvar))]
+          (.close node)))
+      (catch Throwable _))
+    (println "[dev] embedded futon1b stopped")))
 
 (defn start-futon5!
   "Start futon5 nonstarter heartbeat API. Returns system map or nil if disabled."
@@ -94,22 +183,24 @@
       (let [pattern-ids (if-let [s (config/env "FUTON3C_PATTERNS")]
                           (mapv keyword (remove empty? (.split s ",")))
                           [])
-            opts (cond-> {:patterns {:patterns/ids pattern-ids}
-                          :irc-send-fn irc-send-fn
-                          :irc-send-base irc-send-base}
+            run4-config (run4-boot/materialize
+                         (config/env-bool "FUTON3C_RUN4_U88_ENABLED" false))
+            opts (cond-> (merge {:patterns {:patterns/ids pattern-ids}
+                                 :irc-send-fn irc-send-fn
+                                 :irc-send-base irc-send-base}
+                                run4-config)
                    xtdb-node (assoc :xtdb-node xtdb-node)
                    evidence-store (assoc :evidence-store evidence-store))
             http-handler (make-http-handler opts)
             ws-opts (cond-> opts
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
             {:keys [handler connections]} (make-ws-handler ws-opts)
-            app (fn [request]
-                  (if (:websocket? request)
-                    (handler request)
-                    (http-handler request)))
-            result (http/start-server! app port)
+            app (http/compose-http-websocket-handler http-handler handler)
             restore-report (roster-store/restore-on-boot!
-                            #(restore-agent-via-handler! http-handler %))]
+                            #(restore-agent-via-handler! http-handler %))
+            clock-restore (clock-decision/restore-registered! evidence-store)
+            coordinator-recovery (jit-coordinator/recover!)
+            result (http/start-server! app port)]
         ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!
         ;; has consumed the saved roster. Installing at registry ns-load fired the
         ;; watch's initial persist against the empty boot registry and clobbered
@@ -130,9 +221,14 @@
           (println (str "[dev] agent roster restore: restored="
                         (:restored restore-report)
                         " attempted=" (:attempted restore-report))))
+        (when-not (:ok coordinator-recovery)
+          (println (str "[dev] durable coordinator recovery failed: "
+                        (pr-str coordinator-recovery))))
         (assoc result
                :ws-connections connections
-               :agent-restore restore-report)))))
+               :clock-restore clock-restore
+               :agent-restore restore-report
+               :coordinator-recovery coordinator-recovery)))))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil when disabled."
@@ -212,8 +308,11 @@
   (when (config/env-bool "FUTON3C_WEBARXANA_SERVER_AUTOSTART" true)
     (let [port (config/env-int "FUTON3C_WEBARXANA_PORT" 3100)
           futon1a-port (config/env-int "FUTON1A_PORT" 7071)
-          futon1a-url (config/env "FUTON4_BASE_URL"
-                                  (str "http://127.0.0.1:" futon1a-port))
+          ;; When futon1a is disabled (B3), FUTON1A_URL points WebArxana at
+          ;; the replacement substrate; FUTON4_BASE_URL still wins when set.
+          futon1a-url (or (config/env "FUTON4_BASE_URL" nil)
+                          (config/env "FUTON1A_URL" nil)
+                          (str "http://127.0.0.1:" futon1a-port))
           futon1a-url (str/replace futon1a-url #"/api/alpha/?$" "")
           emacs-socket (config/env "FUTON3C_EMACS_SOCKET" "server")
           start! (requiring-resolve 'webarxana.server.core/start!)
@@ -281,6 +380,9 @@
                                 (constantly (fn [] found)))
                 (println (str "  meme.db → " found " (auto-detected)")))))
         direct-xtdb? (direct-xtdb-enabled? role-cfg)
+        ;; I-0 unification: bring up the in-process XTDB2 node/HTTP first when
+        ;; FUTON1B_EMBED=1, so :7074 is serving before evidence-store uses it.
+        _ (start-futon1b-embedded!)
         f1-sys (start-futon1a! direct-xtdb?)
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
@@ -319,10 +421,9 @@
                (catch Throwable t
                  (println (str "[dev] archaeology/deferred-stub load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store)
-               (catch Throwable t
-                 (println (str "[dev] archaeology/pipeline-tracer load-time check threw: "
-                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Pipeline-tracer history is intentionally NOT scanned here. The check
+        ;; remains registered below as an explicit probe capability, but boot
+        ;; readiness must not require materializing the evidence corpus.
         _ (try (archaeology/check-stash-disposition-on-load! evidence-store)
                (catch Throwable t
                  (println (str "[dev] archaeology/stash-disposition load-time check threw: "
@@ -370,19 +471,25 @@
                (catch Throwable t
                  (println (str "[dev] register-metabolic-balance-taps! threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        ;; Ensure pipeline-tracer items exist in the durable store.
-        ;; Idempotent: re-emits only those track-ids missing from the
-        ;; persisted set. Reachable-from-boot discipline — tracer state
-        ;; is reconstructible from `tracer/default-tracers` (on-disk
-        ;; source) at every boot. M-reachable-from-boot 2026-05-01.
-        _ (try (let [r (tracer/ensure-default-tracers! evidence-store)]
-                 (println (str "[dev] tracer/ensure-default-tracers!: "
-                               "present=" (:already-present r)
-                               " emitted=" (:emitted r)
-                               " attempted=" (:attempted r))))
+        ;; D7a (M-populate-substrate-2): register substrate-2 commit-freshness as
+        ;; a probe family so the operational-families dashboard / probe sweep can
+        ;; surface a freeze. The LIVE alarm is driven by the watcher cycle
+        ;; (futon3c.watcher.multi run-cycle! → freshness/check+notify!); this
+        ;; registration adds the dashboard/stop-the-line view. The check reads
+        ;; the live watcher state (roots + commit-ingest? flag).
+        _ (try ((requiring-resolve 'futon3c.logic.probe/register-family-check!)
+                :substrate-2-commit-freshness
+                (fn []
+                  (let [s (some-> (requiring-resolve 'futon3c.watcher.multi/!state)
+                                  deref deref)]
+                    ((requiring-resolve 'futon3c.watcher.freshness/check)
+                     (:roots s) (boolean (:commit-ingest? s))))))
+               (println "[dev] registered substrate-2-commit-freshness probe family")
                (catch Throwable t
-                 (println (str "[dev] tracer/ensure-default-tracers! threw: "
+                 (println (str "[dev] register substrate-2-commit-freshness threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
+        ;; Pipeline tracers enter through explicit live projections. Historical
+        ;; defaults are unhooked, so boot does not query or seed tracer state.
         ;; State-snapshot-witness/inventory: emit one :inventory-snapshot
         ;; evidence entry per JVM boot, projecting the structural-law
         ;; inventory to a flat snapshot record. Mission:
@@ -409,19 +516,20 @@
                (catch Throwable t
                  (println (str "[dev] locus/agent-routing load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        _ (try (locus/check-artifact-live-copy-locus-on-load! evidence-store)
-               (catch Throwable t
-                 (println (str "[dev] locus/artifact-live-copy load-time check threw: "
-                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; artifact-live-copy is intentionally NOT scanned here. Walking every
+        ;; artifact glob across every repo made JVM readiness depend on an
+        ;; expensive whole-workspace traversal. The family remains registered
+        ;; above and can be evidenced explicitly with a one-family probe sweep.
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
-        _ (cyder/register!
-           {:id "futon1a"
-            :type :server
-            :stop-fn (:stop! f1-sys)
-            :state-fn #(let [s @!f1-sys]
-                         {:port (:http/port s)
-                          :direct-xtdb? direct-xtdb?})})
+        _ (when f1-sys
+            (cyder/register!
+             {:id "futon1a"
+              :type :server
+              :stop-fn (:stop! f1-sys)
+              :state-fn #(let [s @!f1-sys]
+                           {:port (:http/port s)
+                            :direct-xtdb? direct-xtdb?})}))
         ;; Multi-repo watcher (E-live-means-live Path B): in-JVM
         ;; replacement for the separate bb watcher process. Polls
         ;; the watched roots, dispatches per-file ingest into
@@ -434,26 +542,34 @@
         ;; (cold-scan? false). Wrapped defensively — boot continues
         ;; if watcher start throws.
         _ (try
-            (let [roots [{:path "/home/joe/code/futon0"  :label "futon0-d"}
-                         {:path "/home/joe/code/futon1"  :label "futon1-d"}
-                         {:path "/home/joe/code/futon1a" :label "futon1a-d"}
-                         {:path "/home/joe/code/futon2"  :label "futon2-d"}
-                         {:path "/home/joe/code/futon3"  :label "futon3-d"}
-                         {:path "/home/joe/code/futon3a" :label "futon3a-d"}
-                         {:path "/home/joe/code/futon3b" :label "futon3b-d"}
-                         {:path "/home/joe/code/futon3c" :label "futon3c-d"}
-                         {:path "/home/joe/code/futon4"  :label "futon4-elisp-d"}
-                         {:path "/home/joe/code/futon5"  :label "futon5-d2"}
-                         {:path "/home/joe/code/futon5a" :label "futon5a-d"}
-                         {:path "/home/joe/code/futon6"  :label "futon6-py-d"}
-                         {:path "/home/joe/code/futon7"  :label "futon7-d"}
-                         {:path "/home/joe/code/futon7a" :label "futon7a-d"}]
+            ;; The root table lives in futon3c.watcher.roots so the witness
+            ;; producer mints claim :repo/id from the same labels the watcher
+            ;; stamps on observations.
+            (let [roots watch-roots/watch-roots
                   interval-ms (config/env-int "FUTON3C_MULTI_WATCHER_INTERVAL_MS" 5000)
-                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" false)]
+                  ;; Default ON as of 2026-06-25 (M-populate-substrate-2 D0):
+                  ;; the prior default-false silently froze substrate-2's
+                  ;; commit/code-history layer at 2026-05-21. substrate-2 is
+                  ;; meant to be a LIVE model, so commit-ingest must run by
+                  ;; default. Set FUTON3C_MULTI_WATCHER_COMMIT_INGEST=false to
+                  ;; opt out if the commit sidecar reintroduces backpressure.
+                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" true)
+                  inbox-zero? (config/env-bool "FUTON3C_INBOX_ZERO_ENABLED" false)
+                  inbox-zero-options
+                  (when inbox-zero?
+                    {:state-path (or (config/env "FUTON3C_INBOX_ZERO_STATE_PATH")
+                                     "/home/joe/code/storage/inbox-zero/state.edn")
+                     :witness-path (or (config/env "FUTON3_INBOX_ZERO_WITNESS_DIR")
+                                       "/home/joe/code/storage/inbox-zero/witnesses")
+                     :followup-url (or (config/env "FUTON3C_INBOX_ZERO_FOLLOWUP_URL")
+                                       (str "http://127.0.0.1:"
+                                            (config/env-int "FUTON3C_PORT" 7070)
+                                            "/api/alpha/followups"))})]
               (multi-watcher/start! {:roots roots
                                      :interval-ms interval-ms
                                      :cold-scan? false
-                                     :commit-ingest? commit-ingest?})
+                                     :commit-ingest? commit-ingest?
+                                     :inbox-zero-options inbox-zero-options})
               (cyder/register!
                {:id "multi-watcher"
                 :type :daemon
@@ -468,6 +584,16 @@
               (println (str "[dev] multi-watcher start threw: "
                             (.getName (class t)) ": " (.getMessage t)
                             " — boot continues."))))
+        _ (when (config/env-bool "FUTON3C_INBOX_ZERO_SWEEPER" false)
+            (try
+              (inbox-zero-sweeper/start-loop!
+               {:interval-ms (config/env-int "FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS"
+                                             1800000)})
+              (println "[dev] inbox-zero commit-notice sweeper scheduled")
+              (catch Throwable t
+                (println (str "[dev] inbox-zero commit-notice sweeper start threw: "
+                              (.getName (class t)) ": " (.getMessage t)
+                              " — boot continues.")))))
         f5-sys (start-futon5!)
         _ (when f5-sys
             (cyder/register!
@@ -538,6 +664,15 @@
             (when-let [agent-record (reg/get-agent typed-id)]
               (federation/announce! agent-record)))
         fed-sync-results (federation/sync-peers!)
+        fed-sync-daemon (federation/start-sync-daemon!)
+        fed-uplink-status (when (config/env "FUTON3C_FED_UPLINK" nil)
+                            (fed-uplink/start-uplink!))
+        _ (when (:running? fed-uplink-status)
+            (cyder/register!
+             {:id "federation-uplink"
+              :type :daemon
+              :stop-fn fed-uplink/stop-uplink!
+              :state-fn fed-uplink/uplink-status}))
         fed-peers (federation/peers)
         fed-self (federation/self-url)
         mission-count (cyder/register-missions!)
@@ -560,6 +695,14 @@
                   (:unreachable agent-summary) " unreachable)"
                   " | CYDER: " (count (cyder/list-processes)) " processes"
                   " (" mission-count " missions)"))
+    (when (:enabled? fed-sync-daemon)
+      (println (str "[dev] Federation continuous sync enabled interval-ms="
+                    (:interval-ms fed-sync-daemon))))
+    (when fed-uplink-status
+      (println (str "[dev] Federation uplink running="
+                    (:running? fed-uplink-status)
+                    " connected=" (:connected? fed-uplink-status)
+                    " site=" (:site fed-uplink-status))))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
@@ -591,10 +734,14 @@
       (println "[dev]   Agents auto-join #futon on WS connect")
       (println))
     (if (seq fed-peers)
-      (do (println (str "[dev] Federation: self=" fed-self " peers=" fed-peers))
+      (do (println (str "[dev] Federation: self="
+                        (or fed-self "(unset; announcements disabled)")
+                        " peers=" fed-peers))
           (when (seq fed-sync-results)
             (println (str "[dev]   Peer sync results: " fed-sync-results)))
-          (println "[dev]   Agents registered locally will be announced to peers."))
+          (println (if fed-self
+                     "[dev]   Agents registered locally will be announced to peers."
+                     "[dev]   Set FUTON3C_SELF_URL to announce locally registered agents to peers.")))
       (println "[dev] Federation: no peers configured (set FUTON3C_PEERS, FUTON3C_SELF_URL)"))
     (println)
     (when-let [port (config/env-int "FUTON3C_PORT" 7070)]
@@ -651,6 +798,10 @@
         (reset! cyder/!processes {})
         (try (multi-watcher/stop!)
              (catch Throwable _))
+        (try (fed-uplink/stop-uplink!)
+             (catch Throwable _))
+        (try (federation/stop-sync-daemon!)
+             (catch Throwable _))
         ;; Drain embedded shadow-cljs FIRST so its runtime-loop sees a
         ;; clean stop signal while the JVM thread pools are still healthy.
         ;; Without this, shadow.remote.runtime.clj.local/runtime_loop races
@@ -669,5 +820,6 @@
             (stop! f5-sys)))
         (when-let [f1 @!f1-sys]
           ((:stop! f1)))
+        (stop-futon1b-embedded!)
         (println "[dev] Stopped."))))
     @(promise)))

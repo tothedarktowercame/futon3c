@@ -1,0 +1,16 @@
+{:schema :wm/run4-live-source-provenance-v1
+ :captured-at "2026-09-11T11:22Z"
+ :historical-qualification {:source-head "72d9beba7252ae362635d77fd81d213e6e22378d"
+                            :requalified? false :immutable? true}
+ :successor-source-head {:futon2 "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+                         :futon3c "58067d3df57a29a393bce6b1d57ae34ccce3bdc8"}
+ :loaded-sources
+ [{:path "/home/joe/code/futon2/src/futon2/aif/full_loop_cohort.clj" :sha256 "9f1c7d94e0ab9d089c00d5d5c14fad7ba68fe42684b276aa9e495ec1d2eaf8f3"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/repair_obligation.clj" :sha256 "4c432d6c449945c2107caf05a5cc00f54d4bf9aaf7d24cc426d7b108795c96fd"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj" :sha256 "1431e8f684cdaa30e1f13654c3d016c072f293e6e1440b20f9dd9b490217e0b3"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_terminal_evidence.clj" :sha256 "32feb321edbc3bc25f9b63b92ab514acd180d1f2edee35fc06dbd54fac011202"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_historical_projection.clj" :sha256 "27130f4daee3807e044f1e85f833eae7893c0949928f7f2dd0a89f9906f48796"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_historical_successor.clj" :sha256 "9ec1f9de93fe96266235f0a6b0c08177fa73ecb366514b4c6a4ab8b8532feedd"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_deployment_config.clj" :sha256 "85632d4bdc74a9716684b0f3a325d00117d11642b2abc0c5d3051e88c38d96f4"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_series_service.clj" :sha256 "2c3f7f5b603c0dcaa79bb19a6fa915eb4ac2371b46e8a46ef202539ca276244b"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_boot.clj" :sha256 "db6a07c27aafe11dcaed80a99ef81c722cdb10ae9472decb62bf037d72f6c00f"}]}

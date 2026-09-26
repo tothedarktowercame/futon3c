@@ -295,7 +295,9 @@ build up live as a greenfield mission grows."
   (let ((path (or path buffer-file-name)))
     (when (and path
                ;; M- missions and E- excursions both carry scope structure.
-               (string-match-p "/holes/missions/[ME]-[^/]+\\.md\\'" path))
+               ;; `missions/' is optional: futon2 missions live in `holes/' directly
+               ;; (M-goals-and-holes, M-points-de-fuite, …), futon3c in `holes/missions/'.
+               (string-match-p "/holes/\\(?:missions/\\)?[ME]-[^/]+\\.md\\'" path))
       (file-name-sans-extension (file-name-nondirectory path)))))
 
 (defun mission-mode--current-mission ()

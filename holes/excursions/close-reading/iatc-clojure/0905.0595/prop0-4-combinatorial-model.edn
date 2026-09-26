@@ -1,0 +1,76 @@
+{:paper/id "0905.0595"
+ :passage/id "0905.0595:prop0.4:combinatorial-model:240-258"
+ :source {:lines [240 258] :kind :proof}
+ :nodes
+ [{:id :prop0-4
+   :kind :claim
+   :text "Assuming there is a proper class of compact cardinals and K is complete, cocomplete, and bounded, the trivial model category K has a combinatorial model if and only if K is locally presentable."
+   :source {:lines [243 246]}}
+  {:id :lp-implies-comb
+   :kind :claim
+   :text "If K is locally presentable then the trivial model category K is combinatorial."
+   :source {:lines [248 248]}}
+  {:id :assume-combinatorial-model
+   :kind :claim
+   :text "Assume that the trivial model category K is equivalent to Ho M, where M is a combinatorial model category."
+   :source {:lines [248 249]}}
+  {:id :dense-x
+   :kind :object
+   :text "Let X be a dense subcategory of K."
+   :source {:lines [249 249]}}
+  {:id :rosicky-lambda
+   :kind :ref
+   :citation "Ro, proof of Theorem 4.1"
+   :text "There is a regular cardinal lambda such that X is contained in P(M_lambda) and H = E_{P(M_lambda)} P preserves lambda-filtered colimits."
+   :source {:lines [250 254]}}
+  {:id :pmlambda-dense
+   :kind :claim
+   :text "Since P(M_lambda) is dense in K, E_{P(M_lambda)} is a full embedding."
+   :source {:lines [256 257]}}
+  {:id :k-full-image
+   :kind :claim
+   :text "K is a full image of H."
+   :source {:lines [257 257]}}
+  {:id :k-locally-presentable
+   :kind :claim
+   :text "Following Ro2, K is locally presentable."
+   :source {:lines [257 258]}}]
+ :edges
+ [{:id :e-forward
+   :kind :infer
+   :relation :if
+   :premise :lp-implies-comb
+   :conclusion :prop0-4
+   :source {:lines [243 248]}}
+  {:id :e-choose-lambda
+   :kind :infer
+   :relation :following
+   :given [:assume-combinatorial-model :dense-x]
+   :premise :rosicky-lambda
+   :conclusion :rosicky-lambda
+   :source {:lines [248 254]}}
+  {:id :e-full-image
+   :kind :infer
+   :relation :since
+   :given :rosicky-lambda
+   :premise :pmlambda-dense
+   :conclusion :k-full-image
+   :source {:lines [256 257]}}
+  {:id :e-local-presentable
+   :kind :infer
+   :relation :following
+   :given [:assume-combinatorial-model :rosicky-lambda :k-full-image]
+   :warrant {:kind :missing-warrant
+             :text "Rosicky's compact-cardinal accessibility result turns this full image preserving filtered colimits into local presentability."}
+   :conclusion :k-locally-presentable
+   :source {:lines [257 258]}}
+  {:id :e-converse
+   :kind :infer
+   :relation :establishes
+   :premise :k-locally-presentable
+   :conclusion :prop0-4
+   :source {:lines [248 258]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-local-presentable
+   :wanted :rosicky-full-image-local-presentability-theorem}]}

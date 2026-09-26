@@ -1,0 +1,100 @@
+{:at "2026-09-11T20:27:23.624423462Z",
+ :diagnostic-only true,
+ :hold
+ {:resume/status nil,
+  :queue/id
+  "0fd4ef2b818ef3c97d56e4d615015352434b3e26a28b410ff8042751d70f9964",
+  :frame/id "f225",
+  :warnings
+  [{:warning/threshold-ms 5000,
+    :read/outcome :returned,
+    :frame/id "f225",
+    :warning/at "2026-09-11T19:16:33.107644308Z",
+    :trace-id "substrate-read:d27e28ff-6e69-48f4-8e83-8ad41e3d28af",
+    :problem/id "m93J03",
+    :url
+    "http://127.0.0.1:7073/api/alpha/hyperedges?end=e-apm-promotion-1d12442254ef2337685e79dfe079120b&limit=10&include-total=false",
+    :warning/type :slow-store-read,
+    :warning/id
+    "3aaec00759af80c16142f922fc81a462c0381839e2f43d4fe4393734b945a3ca",
+    :elapsed-ms 6248,
+    :timeout-ms 30000}
+   {:warning/threshold-ms 5000,
+    :read/outcome :returned,
+    :frame/id "f225",
+    :warning/at "2026-09-11T19:16:39.762095357Z",
+    :trace-id "substrate-read:af039a79-239d-4942-a617-eab738e49747",
+    :problem/id "m93J03",
+    :url
+    "http://127.0.0.1:7073/api/alpha/hyperedges?end=e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d&limit=10&include-total=false",
+    :warning/type :slow-store-read,
+    :warning/id
+    "d3718cf14069d8e5aaf7817e3142d3153500249ecf141e15d7ba3d3d99b7df75",
+    :elapsed-ms 6007,
+    :timeout-ms 30000}],
+  :terminal-receipt/id
+  "67d0be4597ebb40180ca927c92390b93d4c62f56590132770b7e033eda8b63f4",
+  :hold/id
+  "bad82e9694d2ba65a3e0c6f9769f5bffd3863413fa38fcdeb273e0016bf05cdc",
+  :problem/id "m93J03",
+  :repair/agent-id "codex-16",
+  :dispatch/id
+  "store-repair-bad82e9694d2ba65a3e0c6f9769f5bffd3863413fa38fcdeb273e0016bf05cdc"},
+ :observations
+ [{:operation :generic-endpoint,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 1506,
+   :result
+   [#:hx{:id "hx-mem-apm-promotion-1d12442254ef2337685e79dfe079120b",
+         :type :memory/assert}]}
+  {:operation :projection-endpoint,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 45,
+   :result
+   [#:hx{:id "hx-mem-apm-promotion-1d12442254ef2337685e79dfe079120b",
+         :type :memory/assert}]}
+  {:operation :generic-endpoint,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 1460,
+   :result
+   [#:hx{:id "hx-mem-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+         :type :memory/assert}]}
+  {:operation :projection-endpoint,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 42,
+   :result
+   [#:hx{:id "hx-mem-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+         :type :memory/assert}]}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 168,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 168,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 182,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 213,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 303,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 303,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b",
+   :elapsed-ms 345,
+   :result true}
+  {:operation :full-candidate-visibility,
+   :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+   :elapsed-ms 346,
+   :result true}],
+ :warnings []}

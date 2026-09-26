@@ -202,9 +202,18 @@
              (= :chat-turn (:event body))))))
 
 (defn fetch-turns [{:keys [base-url since limit]}]
-  (let [backend (http-backend/make-http-backend base-url)]
-    (->> (backend/-query backend {:query/since since
-                                  :query/limit (or limit 100)})
+  (let [backend (http-backend/make-http-backend base-url)
+        result (backend/-query backend {:query/since since
+                                        :query/limit (or limit 100)})]
+    ;; A failed read is never "no chat turns" (AR-43): abort the report at
+    ;; this CLI boundary with the typed error rather than filtering a
+    ;; substituted [] into a zero-turn report.
+    (when (:error/code result)
+      (throw (ex-info "evidence read failed: fetch-turns cannot conclude zero turns"
+                      {:failure :evidence-read-failed
+                       :read-error (select-keys result [:error/component :error/code
+                                                        :error/kind :status :url])})))
+    (->> result
          (filter turn-entry?)
          vec)))
 
@@ -264,9 +273,12 @@
     (re-find #"(?i)\bhappy\b" text) "joy"
     :else "-"))
 
+(defn- detect-affect [text]
+  (#'affect/detect-affect text))
+
 (defn affect-row [entry]
   (let [text (text-of entry)
-        detected (affect/detect-affect text)]
+        detected (detect-affect text)]
     {:id (id-of entry)
      :before (legacy-affect-label text)
      :after (or (some-> detected :type name) "-")
@@ -348,7 +360,7 @@
         backend (http-backend/make-http-backend (:base-url opts))
         affect-rows (mapv affect-row turns)
         detections (keep (fn [entry]
-                           (when-let [detected (affect/detect-affect (text-of entry))]
+                           (when-let [detected (detect-affect (text-of entry))]
                              [entry (affect-json-row entry detected)]))
                          turns)
         resolutions (keep (fn [entry]

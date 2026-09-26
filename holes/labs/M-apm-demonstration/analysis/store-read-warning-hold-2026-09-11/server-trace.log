@@ -1,0 +1,4 @@
+Sep 11 19:01:36 zone clojure[2166403]: [futon1b-request] start method=GET uri=/api/alpha/hyperedges?end=e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b&limit=10 trace-id=codex16-read-health-20260911 admission={:request-task/id 442844, :queue-wait-ms 0}
+Sep 11 19:01:36 zone clojure[2166403]: [futon1b-expensive-read] start id=27923 shape=/api/alpha/hyperedges?end&limit trace-id=codex16-read-health-20260911 holders=1
+Sep 11 19:01:37 zone clojure[2166403]: [futon1b-expensive-read] end id=27923 shape=/api/alpha/hyperedges?end&limit trace-id=codex16-read-health-20260911 elapsed-ms=1377 outcome=ok
+Sep 11 19:01:37 zone clojure[2166403]: [futon1b-request] end method=GET uri=/api/alpha/hyperedges?end=e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b&limit=10 trace-id=codex16-read-health-20260911 elapsed-ms=1378 outcome=ok

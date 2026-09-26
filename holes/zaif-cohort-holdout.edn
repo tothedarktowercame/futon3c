@@ -1,0 +1,2180 @@
+{
+  :as-of {
+    :written-by "futon3 LA5 HELD-OUT cohort snapshot"
+    :written-at "2026-09-02"
+    :why-held-out "repair 6 of the second pre-run review: two unused rules are a weak anti-fitting guard, and what would establish one is a second task the rule table was not written against. NOTHING in checks/construct_zaif_cascade.clj, checks/zaif-cascade.edn or scripts/zaif_cascade_gate.clj was changed for this cohort -- the cascade and all four rules are exactly the ones committed in futon3 c4b4831 and futon3c 9994dc71, and the gate reads this file only through --cohort."
+    :source "futon3c evidence store, GET /api/alpha/evidence?tag=arm-choice and ?tag=turn-round, since=2026-01-01"
+    :turn-id "zai-turn-4d7eafbc-2c74-4dd0-a75f-0e1dbbf44734"
+    :session-id "zai-c0c8586f697a408688590ca69b0a4de7"
+    :agent "zai-3"
+    :a-different-agent-and-a-different-problem-from-the-primary-cohort true
+    :rounds 137
+    :rounds-with-a-shipped-v0-decision 37
+    :rounds-with-a-transcript 137
+    :tool-round-budget 24
+    :tool-round-budget-source "futon3c/src/futon3c/agents/zai_api.clj:1033-1037"}
+  :rounds [{
+    :round 1
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-4725835e-b389-4ad1-aefb-4f00eed0e2bd"
+      :final false
+      :calls [:run_readonly :run_readonly :run_readonly :boot_context]
+      :text-chars 130
+      :at "2026-08-06T06:20:06.830855047Z"}} {
+    :round 2
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d64655a8-4fc8-4a54-b7f5-b3e6d81d74d9"
+      :final false
+      :calls [:read_file :read_file :read_file :read_file]
+      :text-chars 72
+      :at "2026-08-06T06:20:14.343314168Z"}} {
+    :round 3
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-46a72ed9-51b8-4d87-872b-edd0d336e544"
+      :final false
+      :calls [:run_readonly :run_readonly :psr_search :memory_search]
+      :text-chars 63
+      :at "2026-08-06T06:21:16.893421600Z"}} {
+    :round 4
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-840c9c3f-2ab9-495c-83a7-c02ea7f87a25"
+      :final false
+      :calls [:list_files :list_files :run_readonly]
+      :text-chars 207
+      :at "2026-08-06T06:21:38.481448365Z"}} {
+    :round 5
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-41ddbe55-9836-4a04-a5be-e390cc5bd786"}
+    :transcript {
+      :evidence-id "e-50b7a0fd-9c79-4a2a-a701-69dac73b1075"
+      :final false
+      :calls [:read_file :read_file :read_file]
+      :text-chars 108
+      :at "2026-08-06T06:21:51.197382772Z"}} {
+    :round 6
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-08365a1f-9e92-4126-8335-617a8baeb0f6"}
+    :transcript {
+      :evidence-id "e-9476901d-0e7a-47af-8b6a-88b092a0423e"
+      :final false
+      :calls [:read_file :read_file :read_file]
+      :text-chars 172
+      :at "2026-08-06T06:22:07.888203233Z"}} {
+    :round 7
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-45705a89-a66f-461a-8055-638821934ade"
+      :final false
+      :calls [:read_file :run_readonly :run_readonly]
+      :text-chars 718
+      :at "2026-08-06T06:22:32.095332397Z"}} {
+    :round 8
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-fb90901a-78b4-44c7-9e80-8279544e4300"}
+    :transcript {
+      :evidence-id "e-e6aca9c6-189e-4464-b1aa-dfd08c6cae56"
+      :final false
+      :calls [:list_files :list_files :list_files]
+      :text-chars 86
+      :at "2026-08-06T06:23:06.049992442Z"}} {
+    :round 9
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-38c0fb63-ab5c-4356-a05b-de7d9556d2a4"
+      :g-terms {
+        :retrieve 0.5289028597771422
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "7b971a0951769ae8"
+        :chars 211}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 353
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 706}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-b1067869-1a4f-4cb2-992c-44113187571e"}
+    :transcript {
+      :evidence-id "e-693f2515-b6bf-4e1d-8597-8a1b0e6679a3"
+      :final false
+      :calls [:read_file :read_file]
+      :text-chars 0
+      :at "2026-08-06T06:23:11.200464061Z"}} {
+    :round 10
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-fadd6731-956c-492b-9856-405468298a2c"
+      :g-terms {
+        :retrieve 0.5289028597771422
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "7b971a0951769ae8"
+        :chars 211}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 353
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 706}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-c2ea78c0-af4b-42b7-a557-1ebfcdf7eddc"
+      :final false
+      :calls [:psr_select]
+      :text-chars 170
+      :at "2026-08-06T06:23:19.370566154Z"}} {
+    :round 11
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-1ef6a34f-fd06-45c9-a114-dcab21bd069f"
+      :final false
+      :calls [:psr_select]
+      :text-chars 0
+      :at "2026-08-06T06:23:31.831414642Z"}} {
+    :round 12
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-1350c98a-1fe3-4852-9c47-6c8e41ab8e3f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 171
+      :at "2026-08-06T06:23:49.723286783Z"}} {
+    :round 13
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f115c3da-0393-406a-82e1-350a68a78071"
+      :final false
+      :calls [:run_shell]
+      :text-chars 777
+      :at "2026-08-06T06:24:07.245740182Z"}} {
+    :round 14
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f2f59a5b-c812-4178-bb1f-7a2136e1c8e6"
+      :final false
+      :calls [:run_shell]
+      :text-chars 230
+      :at "2026-08-06T06:24:15.882825110Z"}} {
+    :round 15
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-cb9f7bf6-4d18-4050-81aa-f69302af87ff"}
+    :transcript {
+      :evidence-id "e-22e44da1-fb2d-43ea-898d-064fa80235a2"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:24:24.956993032Z"}} {
+    :round 16
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b551c6bd-1d74-4b89-8906-60d544c5f5a9"
+      :final false
+      :calls [:read_file]
+      :text-chars 69
+      :at "2026-08-06T06:24:31.671757073Z"}} {
+    :round 17
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-4d01cfa7-a51c-4190-859c-2cb7578d0576"
+      :final false
+      :calls [:run_shell]
+      :text-chars 1579
+      :at "2026-08-06T06:24:54.674081841Z"}} {
+    :round 18
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-13b9c14f-14a4-4347-af66-4fae3cc4ed75"
+      :g-terms {
+        :retrieve 0.5289028597771422
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "7b971a0951769ae8"
+        :chars 211}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 353
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 706}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-221fa30e-d704-460c-ad8b-94030945c0cc"}
+    :transcript {
+      :evidence-id "e-305ac736-3145-480a-9b70-a9eb585ca2e0"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:25:13.956099902Z"}} {
+    :round 19
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-2b35478b-b151-4f15-9c8c-718ebc275fb7"}
+    :transcript {
+      :evidence-id "e-a5a6b7e3-3b9c-4b62-a91b-c0ee2e62b003"
+      :final false
+      :calls [:run_shell]
+      :text-chars 1206
+      :at "2026-08-06T06:25:43.945698010Z"}} {
+    :round 20
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-99700654-f3de-4fa9-9440-5cc2ecb44b43"
+      :final false
+      :calls [:run_shell]
+      :text-chars 80
+      :at "2026-08-06T06:25:52.621597205Z"}} {
+    :round 21
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-1f6b49d3-7902-4248-acb2-89fa1a397a3a"
+      :g-terms {
+        :retrieve 0.5289028597771422
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "7b971a0951769ae8"
+        :chars 211}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 353
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 706}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-2de7472d-a023-429b-969e-200c315bf52a"}
+    :transcript {
+      :evidence-id "e-935e7c76-f00c-4b5b-b127-348455a1c9c4"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:25:57.274150402Z"}} {
+    :round 22
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-076aba94-5e1b-49e4-92db-3fab4ad08ac7"
+      :final false
+      :calls [:run_shell]
+      :text-chars 208
+      :at "2026-08-06T06:26:05.680760139Z"}} {
+    :round 23
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-02b82f62-f329-4389-a76a-f937d2fb7ecd"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:26:13.077398563Z"}} {
+    :round 24
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-db38b41e-0011-487f-941c-982b0c4e8652"
+      :g-terms {
+        :retrieve 0.5289028597771422
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "7b971a0951769ae8"
+        :chars 211}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 353
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 706}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-2a79ce41-b161-4d84-8ef1-b29d8c1fd264"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:27:06.849573177Z"}} {
+    :round 25
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-10ef26e0-2dde-4273-8f5c-8ddd0fdec774"}
+    :transcript {
+      :evidence-id "e-f1bc5272-5eb3-424b-b203-2be9338df922"
+      :final false
+      :calls [:run_shell]
+      :text-chars 47
+      :at "2026-08-06T06:27:46.565571903Z"}} {
+    :round 26
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-23acb3dc-2fea-447d-9ddc-3bd6200823af"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:28:31.042739409Z"}} {
+    :round 27
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-cf0ab216-90d1-4513-b609-b1445058f7d8"
+      :final false
+      :calls [:run_shell]
+      :text-chars 94
+      :at "2026-08-06T06:28:36.631372213Z"}} {
+    :round 28
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-d2b7e64f-08e8-4663-9eae-0c5ad3c82357"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-016fbb88-f167-4acc-b3bc-6cb82544ffdc"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:28:53.837717265Z"}} {
+    :round 29
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-505b9d0b-8d0c-4725-bfe4-698298218116"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d731fc7b-0228-4788-9b4f-1f54068410a4"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:29:41.820942541Z"}} {
+    :round 30
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f03fa188-5e97-458f-ad78-4ea8536c58b5"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:29:56.364103842Z"}} {
+    :round 31
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-75f19cbd-3b3b-4793-b982-254dd64b9cc8"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-dad4383f-7ee4-476b-a969-a7fdb0a68326"}
+    :transcript {
+      :evidence-id "e-27cee656-896f-4455-8328-144e47465f71"
+      :final false
+      :calls [:run_shell]
+      :text-chars 1023
+      :at "2026-08-06T06:30:25.740600942Z"}} {
+    :round 32
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f6bc2aa0-bebe-4b2b-aa0f-d8ae5f80f908"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:30:42.273364126Z"}} {
+    :round 33
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-ee83dc73-27cf-4f08-bd1f-653ee032700b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:31:00.707667201Z"}} {
+    :round 34
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-8d5f2fde-1d0b-433f-8836-b48a094188bb"
+      :final false
+      :calls [:run_shell]
+      :text-chars 42
+      :at "2026-08-06T06:31:27.842940514Z"}} {
+    :round 35
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-68c03c0d-8560-4caa-9010-b32b359d248a"
+      :final false
+      :calls [:run_shell]
+      :text-chars 233
+      :at "2026-08-06T06:31:55.018764672Z"}} {
+    :round 36
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-7e71627b-178c-4d05-b4fc-4dba913b5d5b"}
+    :transcript {
+      :evidence-id "e-12d6ba2e-1b82-425d-8fe2-fc0a53567895"
+      :final false
+      :calls [:run_shell]
+      :text-chars 22
+      :at "2026-08-06T06:32:15.095222672Z"}} {
+    :round 37
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-f609f8bc-0ba5-4ef1-a6d6-a80bb249fb42"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b6ec7946-ae15-4079-95e7-4a3d4c1467ba"
+      :final false
+      :calls [:run_shell]
+      :text-chars 83
+      :at "2026-08-06T06:32:33.381093022Z"}} {
+    :round 38
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f8803c83-8612-4417-a579-396f5df329c9"
+      :final false
+      :calls [:run_shell]
+      :text-chars 146
+      :at "2026-08-06T06:32:50.674076838Z"}} {
+    :round 39
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-66fa4564-89ff-4608-90ef-c6adfc1c4272"
+      :final false
+      :calls [:run_shell]
+      :text-chars 149
+      :at "2026-08-06T06:33:08.700992526Z"}} {
+    :round 40
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-55a62bd6-12a4-47c0-bfb1-1c6479b343e1"}
+    :transcript {
+      :evidence-id "e-5e9155d7-8c86-4d69-a3db-f3d3c7c7805b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 27
+      :at "2026-08-06T06:33:24.924396239Z"}} {
+    :round 41
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-05c550f5-0cb7-4114-8dcd-39564cf53858"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-8b80493e-967a-483d-84c4-86475b45cbe4"}
+    :transcript {
+      :evidence-id "e-5f1e7f04-083d-4875-9b08-4567d1198d86"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:33:41.575587955Z"}} {
+    :round 42
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-c1e72d90-2da3-44e2-9b4d-937d2bab8ed5"
+      :final false
+      :calls [:run_shell]
+      :text-chars 32
+      :at "2026-08-06T06:33:57.992032284Z"}} {
+    :round 43
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-6443c4f4-62e0-491c-93d0-ea1e254f0589"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:34:09.081949986Z"}} {
+    :round 44
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-301171ee-3233-4fb2-ae40-c5b7e1e0f0ea"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-71117c67-a08d-4e7f-8f84-c627b9e09dcb"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:34:21.863831022Z"}} {
+    :round 45
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-e050fc29-2795-4748-8a38-0be80ee06edc"}
+    :transcript {
+      :evidence-id "e-c6bcb226-b025-4766-8562-05c07254aaf5"
+      :final false
+      :calls [:run_shell]
+      :text-chars 36
+      :at "2026-08-06T06:34:35.968362800Z"}} {
+    :round 46
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-eb2128ff-b3d1-4c42-9251-a13903f866ce"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-0a29c05d-626c-4be1-8c79-3e8158761230"
+      :final false
+      :calls [:run_shell]
+      :text-chars 617
+      :at "2026-08-06T06:34:51.313395510Z"}} {
+    :round 47
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-29c232ec-6f0c-4200-b887-3b0b92f82de6"
+      :final false
+      :calls [:run_shell]
+      :text-chars 138
+      :at "2026-08-06T06:35:06.777004456Z"}} {
+    :round 48
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f3951805-8600-4a19-a6ad-f37e51013d84"
+      :final false
+      :calls [:run_shell]
+      :text-chars 32
+      :at "2026-08-06T06:35:17.891126237Z"}} {
+    :round 49
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-dd619141-075c-44cf-826b-d86d005d5a02"
+      :final false
+      :calls [:run_shell]
+      :text-chars 70
+      :at "2026-08-06T06:35:28.526094320Z"}} {
+    :round 50
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-9f09d92e-a247-43a1-88a9-971b60ad2ea3"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-db4b40ac-cd1d-481e-a2b1-83d162b0863f"}
+    :transcript {
+      :evidence-id "e-34cd2a61-bb43-4116-bfe7-a9279ed7397f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 137
+      :at "2026-08-06T06:35:43.367302103Z"}} {
+    :round 51
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-e96102f0-461c-45f3-b294-c6e5da983c4b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 132
+      :at "2026-08-06T06:36:01.331326744Z"}} {
+    :round 52
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-5a48c6f0-5e09-487a-b7b0-d559c5135bd2"
+      :final false
+      :calls [:run_shell]
+      :text-chars 60
+      :at "2026-08-06T06:36:13.575540826Z"}} {
+    :round 53
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-f3842653-7b3d-46a5-a7e1-ab4b17f8c52b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 561
+      :at "2026-08-06T06:36:36.415695243Z"}} {
+    :round 54
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-194a57fc-8eab-462d-baa8-49bf6f0291bc"
+      :final false
+      :calls [:run_shell]
+      :text-chars 272
+      :at "2026-08-06T06:36:54.193608548Z"}} {
+    :round 55
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-54fe0b7d-2ebb-480e-9c43-82fc3de20a4f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 473
+      :at "2026-08-06T06:37:23.578779208Z"}} {
+    :round 56
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-3eda227f-4cc0-4138-9bf0-095d3eeb0d18"
+      :final false
+      :calls [:run_shell]
+      :text-chars 53
+      :at "2026-08-06T06:37:49.210245210Z"}} {
+    :round 57
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-bc104780-cfaa-44dd-8f7c-ae100d4a8ec7"}
+    :transcript {
+      :evidence-id "e-53b96f94-1ebf-45ce-8d71-1cc15fbdf213"
+      :final false
+      :calls [:run_shell]
+      :text-chars 277
+      :at "2026-08-06T06:38:13.350529969Z"}} {
+    :round 58
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-29af013c-537d-4878-8590-e5ca71a1cf44"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-e5f767e3-a55c-4f9c-bd21-dea4b5f4299f"}
+    :transcript {
+      :evidence-id "e-2be764fe-0b82-42af-8c3b-c3ec9dab084a"
+      :final false
+      :calls [:run_shell]
+      :text-chars 74
+      :at "2026-08-06T06:38:45.517236007Z"}} {
+    :round 59
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-ba82eb45-d0ef-460a-8514-edcd02f4448e"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-bd2b027c-6210-4807-b605-3db24a867286"}
+    :transcript {
+      :evidence-id "e-cab8e098-7773-46e5-a33c-7aae972a8736"
+      :final false
+      :calls [:run_shell]
+      :text-chars 127
+      :at "2026-08-06T06:39:53.505339646Z"}} {
+    :round 60
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-abd488ee-a9a4-4578-9fd9-f50ca6075028"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-71324f3f-7ffd-4295-a324-c9876af5dd5d"}
+    :transcript {
+      :evidence-id "e-057410f4-e62d-43d9-b010-d5cd7b546a9f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 247
+      :at "2026-08-06T06:41:11.191373916Z"}} {
+    :round 61
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-1491236a-6242-4791-837a-8fe15e6081d3"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-ec8bd83a-346f-4e81-b71e-6fe072dfe275"}
+    :transcript {
+      :evidence-id "e-254df3ef-99dc-41ae-ba9c-bcd31c926dd1"
+      :final false
+      :calls [:run_shell]
+      :text-chars 63
+      :at "2026-08-06T06:42:19.327508943Z"}} {
+    :round 62
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-84aa0f4a-5613-4dad-af35-ed1282f1f3a7"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-119081e7-322d-4538-a055-10b48acbda22"}
+    :transcript {
+      :evidence-id "e-c23dfc17-73ea-4707-b801-27a45b1b9f65"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:42:38.436878858Z"}} {
+    :round 63
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-9e19a652-c476-442b-b4ef-a7322318898e"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-0d1e01b0-76d5-4667-a258-0918b3ea1f2f"}
+    :transcript {
+      :evidence-id "e-2d14d239-26d4-4503-9302-e36a1ba1dcfd"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:42:53.822590483Z"}} {
+    :round 64
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-0f4da2ed-24ff-477e-b559-9b9c10813dcb"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-161b48e3-a8e6-4b90-9a00-5bb5fef34363"}
+    :transcript {
+      :evidence-id "e-da75ed3c-f1cc-46f1-8a22-756426d6db38"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:43:07.251891796Z"}} {
+    :round 65
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-90aa0a34-1579-49b7-a347-b75a7339a822"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-d0eb3a19-f2d0-4e6a-8433-06e51d79d57b"}
+    :transcript {
+      :evidence-id "e-6412d8ba-9a6f-4914-ae15-e431419e0f89"
+      :final false
+      :calls [:run_shell]
+      :text-chars 121
+      :at "2026-08-06T06:43:19.847018287Z"}} {
+    :round 66
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-47a3db89-bf11-401f-bbb2-81b23480a1ac"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-0009c344-e051-44a6-97ec-1b400dffa04b"}
+    :transcript {
+      :evidence-id "e-575a690f-7a24-4004-a696-5a6112013038"
+      :final false
+      :calls [:run_shell]
+      :text-chars 902
+      :at "2026-08-06T06:43:35.284702754Z"}} {
+    :round 67
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-d15131d2-9586-4186-b7db-d9c57bcde927"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-de52e2bb-2404-4407-a748-2ddfbbf4e0b1"}
+    :transcript {
+      :evidence-id "e-f879e295-45d5-46e4-8b32-82ca60d09944"
+      :final false
+      :calls [:run_shell]
+      :text-chars 216
+      :at "2026-08-06T06:43:47.377733198Z"}} {
+    :round 68
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-25fa9e23-03a1-4ba2-8393-e4d15c023e02"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-41d31406-f3f1-4cf9-ad68-74f29f8dae33"}
+    :transcript {
+      :evidence-id "e-c90f245b-a795-4a18-af18-6d8a2a6af761"
+      :final false
+      :calls [:run_shell]
+      :text-chars 165
+      :at "2026-08-06T06:43:59.411583830Z"}} {
+    :round 69
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-63160386-2e21-4331-8b90-f7f4d6113b91"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-f0a3e6ed-f025-4157-935a-30dc1557da54"}
+    :transcript {
+      :evidence-id "e-be9481bf-3636-4c62-b159-516187286569"
+      :final false
+      :calls [:run_shell]
+      :text-chars 163
+      :at "2026-08-06T06:44:13.275433580Z"}} {
+    :round 70
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-6be74d95-d4fe-45c0-b1b5-210ce958a89f"}
+    :transcript {
+      :evidence-id "e-8f0388dd-441f-416e-9022-218723ffe680"
+      :final false
+      :calls [:run_shell]
+      :text-chars 133
+      :at "2026-08-06T06:44:24.587287437Z"}} {
+    :round 71
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-0de2e214-20ad-4803-bb79-521335cfd569"
+      :final false
+      :calls [:run_shell]
+      :text-chars 97
+      :at "2026-08-06T06:44:35.160007104Z"}} {
+    :round 72
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b850f308-7f9e-4b20-b912-f07dfc340234"
+      :final false
+      :calls [:run_shell]
+      :text-chars 282
+      :at "2026-08-06T06:44:46.702456461Z"}} {
+    :round 73
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-c9cdea1b-a939-42f6-a6c8-1afc3e3827fb"
+      :final false
+      :calls [:run_shell]
+      :text-chars 61
+      :at "2026-08-06T06:44:51.345551358Z"}} {
+    :round 74
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-818b24f3-3239-40be-87ae-41085397a6e1"}
+    :transcript {
+      :evidence-id "e-4f45c9c0-624d-4736-8edd-8a7b787ae9a1"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:44:54.824087293Z"}} {
+    :round 75
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-9d646f94-b7b8-42ea-970d-edd36bdd9526"
+      :final false
+      :calls [:run_shell]
+      :text-chars 60
+      :at "2026-08-06T06:45:02.317511612Z"}} {
+    :round 76
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-51562576-c60a-4d2f-b838-7e10e1337d6e"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:45:08.935219141Z"}} {
+    :round 77
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-0eb8cd05-91e7-4d24-963a-ac9c67965d25"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:45:19.658478057Z"}} {
+    :round 78
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b610fa40-03f2-4137-b510-7cae7d523a63"
+      :final false
+      :calls [:run_shell]
+      :text-chars 78
+      :at "2026-08-06T06:45:37.028910080Z"}} {
+    :round 79
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-5803ed27-765e-4360-aec9-998e71f2b46f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:45:41.693141908Z"}} {
+    :round 80
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-4ad26b1f-56b4-43cd-9d9a-f107937a3de6"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-bb173497-65d7-4d65-a929-8c63372a0764"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:45:47.217757333Z"}} {
+    :round 81
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-cb542295-cda5-4baa-99c3-0742cefdcee8"
+      :final false
+      :calls [:run_shell]
+      :text-chars 64
+      :at "2026-08-06T06:45:53.340915791Z"}} {
+    :round 82
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-2e97e8d2-4107-458d-8ff5-d19c514f75b8"
+      :final false
+      :calls [:run_shell]
+      :text-chars 292
+      :at "2026-08-06T06:46:18.416331295Z"}} {
+    :round 83
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-45f2482b-9ab3-47ca-a8ed-39a371e95ca1"
+      :final false
+      :calls [:run_shell]
+      :text-chars 96
+      :at "2026-08-06T06:46:38.949266090Z"}} {
+    :round 84
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-117c2d66-ccc6-4c83-9fb9-19b8b7031f4b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 338
+      :at "2026-08-06T06:47:05.964816027Z"}} {
+    :round 85
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-90641fc2-6784-4771-aee6-e800c5721e27"
+      :final false
+      :calls [:run_shell]
+      :text-chars 136
+      :at "2026-08-06T06:47:28.329346152Z"}} {
+    :round 86
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-7476b1d8-6bf6-4e15-8c08-9e0af43a98bb"}
+    :transcript {
+      :evidence-id "e-8f3b2520-fe93-4765-9e3f-f2c852a2f1ba"
+      :final false
+      :calls [:run_shell]
+      :text-chars 250
+      :at "2026-08-06T06:47:56.495195488Z"}} {
+    :round 87
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d265d44f-3ed4-43e4-8ffb-73896f496590"
+      :final false
+      :calls [:run_shell]
+      :text-chars 52
+      :at "2026-08-06T06:48:19.427828722Z"}} {
+    :round 88
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-e5b676f7-b613-46e5-be19-3395a0af6006"
+      :final false
+      :calls [:run_shell]
+      :text-chars 201
+      :at "2026-08-06T06:48:48.043028342Z"}} {
+    :round 89
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d099f3f3-b0f6-467c-a3b0-266fc90fbf70"
+      :final false
+      :calls [:run_shell]
+      :text-chars 181
+      :at "2026-08-06T06:49:12.891368303Z"}} {
+    :round 90
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-6dd75f52-46eb-475f-a8a9-506576997ff6"
+      :final false
+      :calls [:run_shell]
+      :text-chars 220
+      :at "2026-08-06T06:49:36.951662045Z"}} {
+    :round 91
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-ead10b0b-9d06-48fb-b6a9-edda367f4a42"}
+    :transcript {
+      :evidence-id "e-16070ae7-8fe8-48c4-97bf-a337b539379b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 149
+      :at "2026-08-06T06:49:57.868727418Z"}} {
+    :round 92
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-f159800c-5d79-4292-be8c-5fdbf6c79dce"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b02b04be-883d-475c-8f60-27076c767809"
+      :final false
+      :calls [:run_shell]
+      :text-chars 447
+      :at "2026-08-06T06:50:22.340846833Z"}} {
+    :round 93
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-ec1c7427-6107-448d-b46e-53cabba04d6f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 213
+      :at "2026-08-06T06:50:44.231103004Z"}} {
+    :round 94
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-53ab1fda-fdec-4c85-bc1b-318e7fd574dd"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-fb034f87-201a-4201-ad0e-2c7b9802e078"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:50:55.027379758Z"}} {
+    :round 95
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-98f91be8-c289-4579-a457-c53b2c4c88c0"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:51:00.004486543Z"}} {
+    :round 96
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-04621590-ba4a-4e49-bcfc-35d4534c13b5"
+      :final false
+      :calls [:run_shell]
+      :text-chars 100
+      :at "2026-08-06T06:51:24.780548198Z"}} {
+    :round 97
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-a9f8fce3-fcbd-4622-98e2-319258cb00d6"
+      :final false
+      :calls [:run_shell]
+      :text-chars 115
+      :at "2026-08-06T06:52:04.242409598Z"}} {
+    :round 98
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-ba14d5bf-faac-45b6-8f02-263139cb8060"
+      :final false
+      :calls [:run_shell]
+      :text-chars 144
+      :at "2026-08-06T06:52:09.860187031Z"}} {
+    :round 99
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-0875004e-59ad-4d67-910d-0c0d9616c786"
+      :final false
+      :calls [:run_shell]
+      :text-chars 382
+      :at "2026-08-06T06:52:51.941326137Z"}} {
+    :round 100
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-1ac8dc96-2606-4864-a221-e819a45fed92"
+      :final false
+      :calls [:run_shell]
+      :text-chars 319
+      :at "2026-08-06T06:53:07.260444475Z"}} {
+    :round 101
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-49c5f787-a6cc-4a4c-b806-aba5a1bacd94"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:53:15.200232787Z"}} {
+    :round 102
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-a47b243c-53fc-4426-9421-6904ba85d2ba"
+      :final false
+      :calls [:run_shell]
+      :text-chars 158
+      :at "2026-08-06T06:53:38.357942544Z"}} {
+    :round 103
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-1ba3300b-40ca-4865-af7a-3a8c32937690"
+      :final false
+      :calls [:run_shell]
+      :text-chars 449
+      :at "2026-08-06T06:54:21.396226216Z"}} {
+    :round 104
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-6a0841e0-6cb9-4669-ad45-71334451d3dd"
+      :final false
+      :calls [:run_shell]
+      :text-chars 201
+      :at "2026-08-06T06:54:56.463816110Z"}} {
+    :round 105
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-e9cf87d8-b8f1-4df7-9337-a00c4cd75855"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-cad3e998-e8d9-4715-a5bb-7550b2e34d69"
+      :final false
+      :calls [:run_shell]
+      :text-chars 263
+      :at "2026-08-06T06:55:35.933950114Z"}} {
+    :round 106
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-ae7a02c3-ca59-4f49-ba1d-e6ed369dbd44"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-48ffb99e-a0b3-4168-bc85-bb60c4ba1fc8"
+      :final false
+      :calls [:run_shell]
+      :text-chars 314
+      :at "2026-08-06T06:56:15.049098957Z"}} {
+    :round 107
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-69fde43f-9a82-4e9e-9b07-88398de0414d"
+      :final false
+      :calls [:run_shell]
+      :text-chars 365
+      :at "2026-08-06T06:56:24.174771899Z"}} {
+    :round 108
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-564508ee-9d1b-4fea-811b-2d58a893f2a2"
+      :final false
+      :calls [:run_shell]
+      :text-chars 191
+      :at "2026-08-06T06:56:59.258635515Z"}} {
+    :round 109
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d169238f-0831-4f9e-93f5-00280f72188b"
+      :final false
+      :calls [:run_shell]
+      :text-chars 389
+      :at "2026-08-06T06:57:34.849617399Z"}} {
+    :round 110
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-aa19dc46-6c84-42e7-bd73-2b393e243533"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-78889cf3-eca4-484d-90d7-9a181b3139a0"
+      :final false
+      :calls [:run_shell]
+      :text-chars 245
+      :at "2026-08-06T06:58:19.408134969Z"}} {
+    :round 111
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-037c725e-34c1-4978-bdc8-6aaa17b36596"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-09308274-10ed-46eb-931b-b254217ffb3a"
+      :final false
+      :calls [:edit_file]
+      :text-chars 300
+      :at "2026-08-06T06:58:26.724418339Z"}} {
+    :round 112
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-862db794-d096-40d5-b2ac-9a6cf470820f"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:58:41.707734818Z"}} {
+    :round 113
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-067b3b55-e0a4-4126-b077-47b19fef53cd"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-06fa8c69-601f-471b-a7e1-8ba44519f35a"
+      :final false
+      :calls [:run_shell]
+      :text-chars 224
+      :at "2026-08-06T06:58:47.019468817Z"}} {
+    :round 114
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-e3e06945-99c4-4748-b117-8ef91622833d"}
+    :transcript {
+      :evidence-id "e-121423e2-4406-4e10-afd8-85da9c3e0c37"
+      :final false
+      :calls [:run_shell]
+      :text-chars 262
+      :at "2026-08-06T06:59:19.970218363Z"}} {
+    :round 115
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-1e8f626d-6e7f-4e9c-8032-423cfc708a4d"
+      :final false
+      :calls [:run_shell]
+      :text-chars 122
+      :at "2026-08-06T06:59:25.395061302Z"}} {
+    :round 116
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-c98f025e-3b34-4ec6-b63f-930fa69bff12"}
+    :transcript {
+      :evidence-id "e-82c4a29c-0f21-4586-82ca-b2bd8617d4f2"
+      :final false
+      :calls [:edit_file]
+      :text-chars 156
+      :at "2026-08-06T06:59:30.624048478Z"}} {
+    :round 117
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-7735000c-8f4d-4e1f-9726-491584ce6af7"
+      :final false
+      :calls [:edit_file]
+      :text-chars 0
+      :at "2026-08-06T06:59:34.518548957Z"}} {
+    :round 118
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-e515ae86-a168-45b8-8ec8-7425c19ec90c"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T06:59:47.965428114Z"}} {
+    :round 119
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-8b654406-a30f-4ac2-a6a8-82a4a1d13f11"}
+    :transcript {
+      :evidence-id "e-396baa8b-884c-4add-8df7-e13de92afb7b"
+      :final false
+      :calls [:edit_file]
+      :text-chars 37
+      :at "2026-08-06T06:59:53.590839900Z"}} {
+    :round 120
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-adf7bec8-38ae-45b8-b2e3-8c4a15602ffa"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T07:00:04.988112692Z"}} {
+    :round 121
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-8e31dc36-27f2-4836-926d-cbf3b224d20d"
+      :final false
+      :calls [:edit_file]
+      :text-chars 116
+      :at "2026-08-06T07:00:13.668235289Z"}} {
+    :round 122
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-c2155817-94e7-4480-876d-2e516a7ba281"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T07:00:26.556949532Z"}} {
+    :round 123
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-7163b2da-7f65-474a-98f9-3a5a15fedd68"}
+    :transcript {
+      :evidence-id "e-0c88bf55-d0b5-43e3-9c9c-f081651c8121"
+      :final false
+      :calls [:run_shell]
+      :text-chars 170
+      :at "2026-08-06T07:00:41.693352132Z"}} {
+    :round 124
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-b2c30faa-a92f-46ea-9b34-df67bc223055"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-c4459dbf-e6ea-4759-a36f-e69b39adcaa3"
+      :final false
+      :calls [:read_file]
+      :text-chars 327
+      :at "2026-08-06T07:00:46.661377818Z"}} {
+    :round 125
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-125177dc-f1ee-4d46-b589-3dfa0d180301"
+      :final false
+      :calls [:write_file]
+      :text-chars 248
+      :at "2026-08-06T07:01:22.485559896Z"}} {
+    :round 126
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-0724f7d6-0abd-4855-b0e5-730292a48745"
+      :final false
+      :calls [:run_shell]
+      :text-chars 42
+      :at "2026-08-06T07:01:36.776577286Z"}} {
+    :round 127
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-24750569-6f4b-4675-8134-c898298f29cb"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-5f440cd5-7fb3-4db6-af47-0998c7ae49a3"
+      :final false
+      :calls [:run_shell]
+      :text-chars 105
+      :at "2026-08-06T07:01:54.025582874Z"}} {
+    :round 128
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-b0c5986d-5ae7-4f53-8992-926bb80a54ea"
+      :final false
+      :calls [:edit_file]
+      :text-chars 165
+      :at "2026-08-06T07:01:59.181390783Z"}} {
+    :round 129
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-d4585174-87fe-4f13-a035-1ed9132a2ee4"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T07:02:02.845328211Z"}} {
+    :round 130
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-97097efd-0b65-49ae-83e4-5ea2da6b428c"
+      :final false
+      :calls [:pur_update]
+      :text-chars 82
+      :at "2026-08-06T07:02:09.454310420Z"}} {
+    :round 131
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-8bc9f01b-3780-47dd-9c14-a89a17cc664d"}
+    :transcript {
+      :evidence-id "e-48a815cb-4a22-4473-afb4-acd441ff7d61"
+      :final false
+      :calls [:pur_update]
+      :text-chars 0
+      :at "2026-08-06T07:02:16.746280876Z"}} {
+    :round 132
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-2d034349-28f8-4b86-b03e-05c57cbc4cbd"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-43337dec-0790-4ceb-a8dd-5530bdd54160"}
+    :transcript {
+      :evidence-id "e-5450e09d-213c-4369-984d-a3df10d2f136"
+      :final false
+      :calls [:memory_record]
+      :text-chars 47
+      :at "2026-08-06T07:02:59.013600593Z"}} {
+    :round 133
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-445a3542-eded-469d-af89-d2b1f78c69f3"
+      :final false
+      :calls [:par_punctuate]
+      :text-chars 134
+      :at "2026-08-06T07:05:52.924307415Z"}} {
+    :round 134
+    :v0 nil
+    :v0-sweep {
+      :arm :retrieve
+      :operator-attention-cost 0.15
+      :evidence-id "e-c3eb7466-1425-4f2d-b784-0502425c5844"}
+    :transcript {
+      :evidence-id "e-63d3538f-7923-49f6-a7f8-23962b36388b"
+      :final false
+      :calls [:par_punctuate]
+      :text-chars 0
+      :at "2026-08-06T07:06:08.642151685Z"}} {
+    :round 135
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-9752089b-0150-4565-b835-ca722c861085"
+      :final false
+      :calls [:run_shell]
+      :text-chars 55
+      :at "2026-08-06T07:06:18.246692456Z"}} {
+    :round 136
+    :v0 {
+      :arm :retrieve
+      :operator-attention-cost 0.65
+      :evidence-id "e-76d16305-1fc0-44c6-89f1-463c5d5fb2b6"
+      :g-terms {
+        :retrieve 0.7715735963827294
+        :act 0.0
+        :ask -0.35000000000000003
+        :yield 0.0}
+      :gamma-used 1.0
+      :inputs-digest {
+        :sha256-16 "f2f9c72747bfebc5"
+        :chars 209}
+      :inputs-snapshot {
+        :task-belief {}
+        :c-belief {
+          :operator-c-uncertainty 0.3}
+        :gamma "{nil {:policy-precision 1.0}}"
+        :observations {
+          :posting-stats {
+            :total-docs 35
+            :dfs [1 1 1 1 1 1 1 1 1 1]
+            :estimated-tokens 70}}}}
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-279b9ebf-dd1e-4d35-8eb4-51033a4b11a9"
+      :final false
+      :calls [:run_shell]
+      :text-chars 0
+      :at "2026-08-06T07:06:28.858090396Z"}} {
+    :round 137
+    :v0 nil
+    :v0-sweep nil
+    :transcript {
+      :evidence-id "e-50390520-6466-40bb-8a1f-c6e0f18d415c"
+      :final true
+      :calls []
+      :text-chars 1741
+      :at "2026-08-06T07:06:42.545200791Z"}}]}

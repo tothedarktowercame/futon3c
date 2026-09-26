@@ -1,0 +1,66 @@
+{:paper/id "0807.1872"
+ :passage/id "0807.1872:C1.7:brown:617-642"
+ :source {:lines [617 642] :kind :proof}
+ :nodes
+ [{:id :homological-functor-def
+   :kind :definition
+   :text "a functor from a triangulated category to abelian groups is homological if it takes triangles to long exact sequences"
+   :source {:lines [617 619]}}
+  {:id :brown-def
+   :kind :definition
+   :text "a triangulated category satisfies Brown representability if it has small coproducts and every suitable homological functor is representable"
+   :source {:lines [620 626]}}
+  {:id :ac-products-coproducts
+   :kind :claim
+   :text "Ac(A) has small products and coproducts"
+   :source {:lines [633 633]}}
+  {:id :inclusion-respects-both
+   :kind :claim
+   :text "the inclusion i:Ac(A)->K(A) respects products and coproducts"
+   :source {:lines [633 638]}}
+  {:id :brown-implies-right-adjoint
+   :kind :ref
+   :citation "Neeman99 Proposition 9.1.19"
+   :text "if Brown representability holds for Ac(A), then the inclusion has a right adjoint"
+   :source {:lines [638 640]}}
+  {:id :dual-brown-implies-left-adjoint
+   :kind :claim
+   :text "if Brown representability holds for the dual of Ac(A), then a left adjoint would have to exist"
+   :source {:lines [641 642]}}
+  {:id :no-adjoints
+   :kind :claim
+   :text "Corollary C1.6 says the inclusion has neither adjoint"
+   :source {:lines [642 642]}}
+  {:id :no-brown
+   :kind :claim
+   :text "Ac(A) does not satisfy Brown representability"
+   :source {:lines [628 629]}}
+  {:id :no-dual-brown
+   :kind :claim
+   :text "the dual of Ac(A) does not satisfy Brown representability"
+   :source {:lines [628 629]}}]
+ :edges
+ [{:id :e-no-brown
+   :kind :infer
+   :relation :contrapositive
+   :given [:ac-products-coproducts :inclusion-respects-both]
+   :premise [:brown-implies-right-adjoint :no-adjoints]
+   :warrant {:kind :missing-warrant
+             :text "contrapositive of the cited right-adjoint criterion"}
+   :conclusion :no-brown
+   :source {:lines [633 642]}}
+  {:id :e-no-dual-brown
+   :kind :infer
+   :relation :contrapositive
+   :premise [:dual-brown-implies-left-adjoint :no-adjoints]
+   :warrant {:kind :missing-warrant
+             :text "contrapositive of the dual left-adjoint criterion"}
+   :conclusion :no-dual-brown
+   :source {:lines [641 642]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-no-brown
+   :wanted :contrapositive-of-neeman-right-adjoint-brown-criterion}
+  {:kind :missing-warrant
+   :edge :e-no-dual-brown
+   :wanted :contrapositive-of-dual-left-adjoint-brown-criterion}]}

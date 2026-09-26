@@ -14,25 +14,23 @@
 
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.store :as store]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.probe :as probe]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
+    (let [evidence-backend (backend/->AtomBackend (atom {:entries {} :order []}))]
       (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
+        (binding [*evidence-backend* evidence-backend]
           (reset! probe/family-check-fns {})
           (f))
         (finally
           (reset! probe/family-check-fns {})
-          (try (probe/stop-probe-loop!) (catch Throwable _ nil))
-          (.close node))))))
+          (try (probe/stop-probe-loop!) (catch Throwable _ nil)))))))
 
 ;; -----------------------------------------------------------------------------
 ;; run-family-check
@@ -40,7 +38,7 @@
 
 (deftest run-family-check-returns-inactive-when-unregistered
   (testing "no check registered → :outcome :inactive"
-    (let [r (probe/run-family-check *xtdb-backend* :no-such-family)]
+    (let [r (probe/run-family-check *evidence-backend* :no-such-family)]
       (is (= :no-such-family (:family-id r)))
       (is (= :inactive (:outcome r)))
       (is (string? (get-in r [:detail :reason]))))))
@@ -49,7 +47,7 @@
   (testing "registered check returning {:outcome :ok}"
     (probe/register-family-check! :always-ok
                                   (fn [_store] {:outcome :ok :detail {:n 1}}))
-    (let [r (probe/run-family-check *xtdb-backend* :always-ok)]
+    (let [r (probe/run-family-check *evidence-backend* :always-ok)]
       (is (= :always-ok (:family-id r)))
       (is (= :ok (:outcome r)))
       (is (= 1 (get-in r [:detail :n]))))))
@@ -60,7 +58,7 @@
                                   (fn [_store]
                                     {:outcome :violation
                                      :detail {:reason "test"}}))
-    (let [r (probe/run-family-check *xtdb-backend* :always-violation)]
+    (let [r (probe/run-family-check *evidence-backend* :always-violation)]
       (is (= :violation (:outcome r)))
       (is (= "test" (get-in r [:detail :reason]))))))
 
@@ -69,7 +67,7 @@
     (probe/register-family-check! :throwing
                                   (fn [_store]
                                     (throw (ex-info "boom" {:x 1}))))
-    (let [r (probe/run-family-check *xtdb-backend* :throwing)]
+    (let [r (probe/run-family-check *evidence-backend* :throwing)]
       (is (= :violation (:outcome r)))
       (is (re-find #"boom" (get-in r [:detail :exception]))))))
 
@@ -77,7 +75,7 @@
   (testing "check returning a non-conforming map → :violation"
     (probe/register-family-check! :nonsense
                                   (fn [_store] {:not-an-outcome true}))
-    (let [r (probe/run-family-check *xtdb-backend* :nonsense)]
+    (let [r (probe/run-family-check *evidence-backend* :nonsense)]
       (is (= :violation (:outcome r)))
       (is (re-find #"non-conforming" (get-in r [:detail :reason]))))))
 
@@ -93,7 +91,7 @@
                                   (fn [_store] {:outcome :violation
                                                 :detail {:n 3}}))
     (let [family-ids [:graph-symmetry :status-discipline :unregistered-family]
-          summary (probe/run-probe-sweep! *xtdb-backend* family-ids)
+          summary (probe/run-probe-sweep! *evidence-backend* family-ids)
           counts (:counts summary)]
       (is (string? (:probe-run-id summary)))
       (is (string? (:at summary)))
@@ -115,10 +113,10 @@
   (testing "evidence entries are tagged for query-by-outcome and -family-id"
     (probe/register-family-check! :graph-symmetry
                                   (fn [_store] {:outcome :ok}))
-    (let [summary (probe/run-probe-sweep! *xtdb-backend* [:graph-symmetry])
-          all (store/query* *xtdb-backend* {:query/tags [:family-fired]})
-          ok-tagged (store/query* *xtdb-backend* {:query/tags [:ok]})
-          family-tagged (store/query* *xtdb-backend* {:query/tags [:graph-symmetry]})]
+    (let [summary (probe/run-probe-sweep! *evidence-backend* [:graph-symmetry])
+          all (store/query* *evidence-backend* {:query/tags [:family-fired]})
+          ok-tagged (store/query* *evidence-backend* {:query/tags [:ok]})
+          family-tagged (store/query* *evidence-backend* {:query/tags [:graph-symmetry]})]
       (is (pos? (count all)) "at least one :family-fired entry exists")
       (is (pos? (count ok-tagged)) "at least one :ok entry exists")
       (is (pos? (count family-tagged))
@@ -137,7 +135,7 @@
 
 (deftest probe-now-is-equivalent-to-run-probe-sweep
   (testing "probe-now! returns the same shape as run-probe-sweep!"
-    (let [r (probe/probe-now! *xtdb-backend*)]
+    (let [r (probe/probe-now! *evidence-backend*)]
       (is (string? (:probe-run-id r)))
       (is (contains? r :results))
       (is (contains? r :counts))
@@ -153,9 +151,9 @@
                                   (fn [_store] {:outcome :ok}))
     ;; Run two manual sweeps (the autoshutter macro form) and assert there
     ;; are two distinct probe-run-ids on disk.
-    (probe/run-probe-sweep! *xtdb-backend* [:graph-symmetry])
-    (probe/run-probe-sweep! *xtdb-backend* [:graph-symmetry])
-    (let [all (store/query* *xtdb-backend* {:query/tags [:family-fired]})
+    (probe/run-probe-sweep! *evidence-backend* [:graph-symmetry])
+    (probe/run-probe-sweep! *evidence-backend* [:graph-symmetry])
+    (let [all (store/query* *evidence-backend* {:query/tags [:family-fired]})
           run-ids (->> all
                        (map (fn [e] (get-in e [:evidence/body :probe-run-id])))
                        distinct
@@ -170,11 +168,11 @@
 (deftest start-probe-loop-is-idempotent
   (testing "second start returns the existing state without spawning a new executor"
     (let [s1 (probe/start-probe-loop!
-              {:evidence-store *xtdb-backend*
+              {:evidence-store *evidence-backend*
                :cadence-ms 1000
                :initial-delay-ms 60000})
           s2 (probe/start-probe-loop!
-              {:evidence-store *xtdb-backend*
+              {:evidence-store *evidence-backend*
                :cadence-ms 1000
                :initial-delay-ms 60000})]
       (is (true? (probe/probe-loop-running?)))

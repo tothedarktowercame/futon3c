@@ -1,0 +1,37 @@
+{:preparation/version 2
+ :preparation/id "1fbf074e76607e285b86172e54a0f6f7a284f0f31d90857803a2445eb76fe6a5"
+ :campaign/id "apm-f20-one-off-v1"
+ :frame/id "f20" :problem/id "a01J06"
+ :manifest/id "7d05986658ee194247e8829f8746ca015c215a6cd451a0e75a4414fd5769f7ab"
+ :ledger {:version 5
+          :digest "12c795f16e1a7d30376a64303a91e0d13f0bb39214d8e8a7d91b6631602ab401"
+          :phase :preflight :claim nil}
+ :workspaces
+ {:solver
+  {:role :solver :repository/path "/home/joe/code/apm-lean" :frame/id "f20"
+   :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/f20-one-off-v1/f20-a01J06-solver"
+   :problem/blob "eb1ad6e7536eef7e0aa0e769624e644118232092"
+   :problem/id "a01J06" :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/f20-one-off-a01J06-solver" :created-at "2026-08-21T15:09:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "8b72373fda83011770df487d992fd8a17f2c8f28cdf42971f7ccba3868a689f5"
+   :problem/path "problems/a01J06/lean/Main.lean"}
+  :student
+  {:role :student :repository/path "/home/joe/code/apm-lean" :frame/id "f20"
+   :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/f20-one-off-v1/f20-a01J06-student"
+   :problem/blob "eb1ad6e7536eef7e0aa0e769624e644118232092"
+   :problem/id "a01J06" :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/f20-one-off-a01J06-student" :created-at "2026-08-21T15:09:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "52783b7463d14bd86b97bad6072f39e648224390fd9970b2046ac4338fb4bb0b"
+   :problem/path "problems/a01J06/lean/Main.lean"}}
+ :seats
+ {:solver {:agent-id "f20-solver" :type :codex}
+  :student {:agent-id "f20-student" :type :zai}
+  :guide {:agent-id "f20-guide" :type :claude}
+  :proctor {:agent-id "f20-proctor" :type :codex}
+  :scribe {:agent-id "f20-scribe" :type :zai}}
+ :seat-policy {:fresh-sessions? true :invoke-ready? true
+               :turn-timeout-ms 3600000 :zai-request-timeout-ms 300000}}

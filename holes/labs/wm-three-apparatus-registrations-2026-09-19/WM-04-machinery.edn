@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :subject-id "WM-04-machinery"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.observation-admission-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/wm-three-apparatus-registrations-2026-09-19/WM-04-machinery"
+ :code-paths ["src/futon2/aif/observation_admission.clj"]
+ :test-paths ["test/futon2/aif/observation_admission_test.clj"]}

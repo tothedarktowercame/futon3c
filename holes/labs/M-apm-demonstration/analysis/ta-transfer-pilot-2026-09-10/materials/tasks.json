@@ -1,0 +1,17 @@
+[
+  {
+    "id": "C1",
+    "label": "good existing-pattern coverage; cross-problem target",
+    "task": "Let (X,d) be a nonempty totally bounded metric space, Y a normed real vector space, and F a nonempty family of maps X\u2192Y. Assume uniform equicontinuity: for each \u03b5>0 one \u03b4>0 works for every f in F and every x,y in X. Assume pointwise boundedness: for each x there exists finite B_x\u22650 with ||f(x)||\u2264B_x for every f in F. Prove one finite M bounds ||f(x)|| for all f and x. Explain whether merely requiring each f to be uniformly continuous suffices."
+  },
+  {
+    "id": "C2",
+    "label": "tempting method with missing prerequisite",
+    "task": "Let X=N with d(m,n)=1 for m\u2260n and 0 otherwise. Set f(n)=n in R. Is the assertion \u201cevery uniformly continuous real map on a bounded metric space has bounded image\u201d true? Give full premise checks, and identify exactly which finite-net source step works or fails."
+  },
+  {
+    "id": "C3",
+    "label": "candidate library gap (bounded search only)",
+    "task": "Let A be a dense subset of a metric space X, Y a complete metric space, and f:A\u2192Y uniformly continuous. Construct the unique uniformly continuous extension F:X\u2192Y. Prove existence, independence of choices, extension, uniform continuity, and uniqueness. Is completeness of X required? Identify what the available patterns supply and what construction they leave to you."
+  }
+]

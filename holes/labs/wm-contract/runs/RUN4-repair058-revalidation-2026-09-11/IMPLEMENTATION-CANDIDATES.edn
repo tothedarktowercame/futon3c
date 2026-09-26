@@ -1,0 +1,20 @@
+{:schema :wm/historical-implementation-candidates-v1
+ :repair-id "repair-attempt-058-untyped-failure"
+ :qualification-id "repair-058-revalidation-20260911-v1"
+ :source-head "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+ :first-commit "9ab503bd61be1d63e7a24731e8e8aa285a9e44da"
+ :last-commit "af82d3b883be8699def50598583beb9589294ef9"
+ :candidate-roles
+ [{:commit "9ab503bd61be1d63e7a24731e8e8aa285a9e44da"
+   :role :patient-selection-retry-ladder}
+  {:commit "3bdc381e76518e69f90077397fa46495da98e61c"
+   :role :typed-retry-eligibility-and-per-attempt-evidence}
+  {:commit "cea3ad03a067532e7466e173dd931667e0e46685"
+   :role :transport-failure-classification-by-class}
+  {:commit "af82d3b883be8699def50598583beb9589294ef9"
+   :role :local-closed-socket-fail-closed-boundary}]
+ :claim-boundary
+ {:qualification-only true
+  :independent-review-performed false
+  :repair-admitted false
+  :production-successor-performed false}}

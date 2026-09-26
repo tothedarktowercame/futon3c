@@ -48,6 +48,15 @@
     (is (= "live-test-0001" (:flight/id r)))
     (is (= :full (:flight/derivation r)))))
 
+(deftest producer-derived-grounds-are-typed
+  (let [r (compose {})]
+    (is (= :begin-scan (get-in r [:organs :field-read :ground :ground/kind])))
+    (is (= :organ-ref (get-in r [:organs :velocity :ground :ground/kind])))
+    (is (= :warrant (get-in r [:organs :velocity :ground :organ])))
+    (is (= :model-output (get-in r [:organs :prediction :ground :ground/kind])))
+    (is (= :missing-witness (get-in r [:organs :measurement :ground :ground/kind])))
+    (is (= :derived (get-in r [:organs :counterfactual :ground :ground/kind])))))
+
 (deftest nothing-is-fabricated
   (let [r (compose {})]
     (testing "no pilot judgment supplied -> typed sorries, not guesses"
@@ -110,10 +119,10 @@
                                               :chosen-hole "l:1"}
                                :window window-fixture}})]
       (is (= :standing-contract (get-in r [:organs :warrant :judgment :determined-by :kind])))
-      (is (.contains ^String (get-in r [:organs :warrant :ground]) "QUEUE.md#x")
+      (is (= "QUEUE.md#x" (get-in r [:organs :warrant :ground :ref]))
           "warrant ground derived from the ref inside the judgment")
       (is (= "l:1" (get-in r [:organs :verification :judgment :chosen-hole])))
-      (is (string? (get-in r [:organs :verification :ground])))
+      (is (= :inline-evidence (get-in r [:organs :verification :ground :ground/kind])))
       (is (= window-fixture (get-in r [:organs :window :judgment])))))
   (testing "pre-wrapped cells pass through untouched (no double-wrap)"
     (let [warrant-cell {:judgment {:determined? false :queued {:queue-ref "q#1"}}
@@ -126,7 +135,8 @@
     (let [r (compose {:flight {:warrant {:determined? true
                                          :determined-by {:kind :pilot-synthesis
                                                          :reasoning "wall blocks pairs AND substrate is the safe default"}}}})]
-      (is (.contains ^String (get-in r [:organs :warrant :ground]) "wall blocks pairs")))))
+      (is (= "wall blocks pairs AND substrate is the safe default"
+             (get-in r [:organs :warrant :ground :reasoning]))))))
 
 (deftest fallback-class-derives-mechanically
   (let [r (compose {:realised-source :target-absent-fallback :realised -4.1})]

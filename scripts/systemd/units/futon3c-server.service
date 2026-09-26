@@ -1,0 +1,33 @@
+[Unit]
+Description=Futon3c Agency serving JVM (I-0 lifecycle boundary)
+After=network.target futon1b-server.service
+Wants=futon1b-server.service
+
+[Service]
+Type=simple
+Slice=futon-services.slice
+WorkingDirectory=%h/code/futon3c
+Environment=FUTON3C_SYSTEMD=1
+ExecStartPre=%h/code/futon3c/scripts/systemd/server-guard assert-zero
+ExecStart=%h/code/futon3c/scripts/dev-laptop-env
+ExecStartPost=%h/code/futon3c/scripts/systemd/server-guard assert-one --wait 90
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+SendSIGKILL=yes
+TimeoutStopSec=45
+ManagedOOMPreference=avoid
+OOMPolicy=stop
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+TasksAccounting=yes
+MemoryHigh=6G
+MemoryMax=8G
+MemorySwapMax=1G
+TasksMax=512
+
+[Install]
+WantedBy=default.target

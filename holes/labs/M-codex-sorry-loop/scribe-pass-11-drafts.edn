@@ -1,0 +1,127 @@
+[{:name "prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity"
+  :lane :arc-lane
+  :level :proof-route
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Prove convergence of finite-exponent `eLpNorm` to the essential supremum on the unit interval."}
+   :trigger-vocabulary
+   ["eLpNorm" "essential supremum" "superlevel set"
+    "exponent monotonicity" "probability measure" "tendsto_order"]
+   :route
+   ["Replace an a.e.-strongly-measurable function by its measurable representative using `AEStronglyMeasurable.mk`."
+    "For `α < eLpNorm f ⊤ μ`, choose `α < β < eLpNorm f ⊤ μ` and form the measurable superlevel set `{x | β < ‖g x‖ₑ}`."
+    "Show the superlevel set has positive measure; otherwise `eLpNormEssSup_le_of_ae_enorm_bound` contradicts the choice of `β`."
+    "Choose a finite natural exponent at which `β * μ(s)^(1/n)` already exceeds `α`, and apply `le_eLpNorm_of_bddBelow`."
+    "Install the `IsProbabilityMeasure` instance for `volume.restrict (Icc 0 1)` and use `eLpNorm_le_eLpNorm_of_exponent_le` for eventual exponent monotonicity."
+    "Assemble the lower and upper eventual bounds with `tendsto_order`."]
+   :key-api
+   ["AEStronglyMeasurable.mk"
+    "eLpNormEssSup_le_of_ae_enorm_bound"
+    "le_eLpNorm_of_bddBelow"
+    "eLpNorm_le_eLpNorm_of_exponent_le"
+    "tendsto_order"]
+   :witness
+   {:declarations ["lower_bound" "eLpNorm_tendsto_top"]
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For finite-exponent `eLpNorm` convergence to the essential supremum, obtain the lower bound from a positive-measure superlevel set and obtain the upper bound from exponent monotonicity after exposing the probability-measure instance."
+   :capture-kind :runner-route-commit-witnessed-and-ground-control-verified}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J01"}
+   #:ref{:type :mathlib-api, :id "eLpNorm"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t021" "e-codexroll-019f9b12-t022"]
+   :receipt-ids
+   ["18555ecc-223e-480d-a73e-5786874a1837"
+    "e-523b776a-6f96-46a6-b480-2f56fa0522d1"]
+   :commits ["2c3a7eb195c1cc492d7f1556aa0ddf489058ecad"]
+   :problems ["a00J01-eLpNorm-tendsto-top"]
+   :artifacts
+   ["problems/a00J01/lean/Main.lean:lower_bound"
+    "problems/a00J01/lean/Main.lean:eLpNorm_tendsto_top"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "record-unused-hypothesis-as-stronger-than-stated-signal"
+  :lane :trajectory-lane
+  :level :statement-faithfulness-positive
+  :status :draft
+  :body
+  {:headline-observation
+   "The proof of `eLpNorm_tendsto_top` does not use the hypothesis `eLpNorm f ⊤ μ < ⊤`; renaming its binder from `hf_top` to `_hf_top` leaves the proposition alpha-equivalent while making that non-use visible."
+   :formal-status
+   {:proposition-changed? false
+    :hypothesis-still-present? true
+    :hypothesis-used-in-proof? false
+    :declarations-axiom-clean? true}
+   :meaning
+   "The checked proof establishes the stated conclusion even when the essential-supremum norm is infinite; in that case the upper half of the `tendsto_order` characterization is vacuous."
+   :qa-rule
+   "Treat an unused-hypothesis underscore as an honest statement-strength signal: verify that the proposition is unchanged, record the non-use, and consider removing the assumption in a separately reviewed statement change."
+   :candidate-follow-up
+   {:classification :inference
+    :proposal
+    "Consider strengthening the source declaration by removing the finiteness hypothesis, while checking call sites and named-argument compatibility."
+    :action-status :not-applied}
+   :relation-to-vacuity
+   {:classification :inference
+    :note
+    "This is the positive mirror of the witnessed vacuity classes: those rows proved less mathematical content than their presentation suggested, whereas this row proves more than its stated assumptions require."}
+   :boundary
+   "This is a source-level strengthening candidate, not a claim that a new Mathlib-facing theorem has been established."
+   :capture-kind :receipt-confirmed-statement-strength-signal}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J01"}
+   #:ref{:type :process-pattern, :id "unused-hypothesis-strength-signal"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t022"]
+   :receipt-ids
+   ["18555ecc-223e-480d-a73e-5786874a1837"
+    "e-523b776a-6f96-46a6-b480-2f56fa0522d1"]
+   :commits ["2c3a7eb195c1cc492d7f1556aa0ddf489058ecad"]
+   :problems ["a00J01-eLpNorm-tendsto-top"]
+   :artifacts ["problems/a00J01/lean/Main.lean:eLpNorm_tendsto_top"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "separate-lexical-sorry-count-from-real-proof-hole-count"
+  :lane :trajectory-lane
+  :level :measurement-discipline
+  :status :draft
+  :body
+  {:observed-case
+   {:problem "a00J01"
+    :lexical-corpus-count {:before 344 :after 341 :delta -3}
+    :real-proof-holes {:before 2 :after 0 :delta -2}
+    :cause
+    "The commit discharged two proof holes and also rewrote a prose comment containing the token `sorry`."}
+   :measurement-rule
+   "Report lexical token counts and real proof-hole counts as separate measures. Use elaborated declaration checks and absence of `sorryAx` for the axiom-clean completion gate; do not infer proof-hole closure from a lexical zero alone."
+   :interpretation
+   {:classification :inference
+    :note
+    "A lexical count remains useful as a conservative discovery and reconciliation measure, but the observed one-token discrepancy shows that it is not a sound substitute for proof-hole accounting."}
+   :boundary
+   "This draft specifies the measurement invariant; it does not prescribe or claim an implemented parser for the proof-hole meter."
+   :capture-kind :commit-and-receipt-confirmed-meter-divergence}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J01"}
+   #:ref{:type :process-pattern, :id "proof-hole-meter-discipline"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t022"]
+   :receipt-ids
+   ["18555ecc-223e-480d-a73e-5786874a1837"
+    "e-523b776a-6f96-46a6-b480-2f56fa0522d1"]
+   :commits ["2c3a7eb195c1cc492d7f1556aa0ddf489058ecad"]
+   :problems ["a00J01-eLpNorm-tendsto-top"]
+   :artifacts ["problems/a00J01/lean/Main.lean"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

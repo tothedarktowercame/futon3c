@@ -1,0 +1,13 @@
+{:schema :wm/run4-historical-admission-preparation-v1
+ :enabled? false
+ :repair-id "repair-attempt-057-untyped-failure"
+ :verification-id "repair-057-revalidation-20260911-v1"
+ :qualification-plan
+ {:path "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-repair057-revalidation-2026-09-11/qualification-plan.disabled.edn"
+  :sha256 "23cea4e01492e412a4e2f76416fb8e91b9ae6a32f63b75d5133adf2d8692f9ce"}
+ :expected-checks [:full-runner-regression :repair-store-regression]
+ :execution {:status :not-performed}
+ :historical-successor-link {:status :unmaterialized
+                             :requires [:immutable-verification-admission
+                                        :typed-verification-attempt
+                                        :frozen-successor-identity]}}

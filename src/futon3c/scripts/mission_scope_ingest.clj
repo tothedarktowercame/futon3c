@@ -1,5 +1,5 @@
 (ns futon3c.scripts.mission-scope-ingest
-  "Ingest mission scope-tree JSON into futon1a as scope entities and hyperedges."
+  "Ingest mission scope-tree JSON into the live futon1b scope substrate."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -11,7 +11,9 @@
            (java.security MessageDigest)))
 
 (def ^:private default-scope-dir "/home/joe/code/futon6/data/mission-scope-trees")
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7073"))
 (def ^:private default-penholder "api")
 (def ^:private code-root "/home/joe/code")
 (def ^:private canonical-phases
@@ -19,9 +21,26 @@
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"])
-(def ^:private pattern-library-limit 5000)
+   "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
+   "operator-gate"])
+(def ^:private archival-binders #{"operator-gate"})
+;; `/entities` accepts 5,000 rows, but `/hyperedges` accepts at most 1,000 and
+;; exposes an `after` cursor. `hyperedges-by-type` therefore walks 250-row pages:
+;; small enough to remain comfortable under live hydration latency, but exact
+;; across populations larger than one server page. A per-type request budget
+;; fails closed if a cursor walk does not terminate; partial rows are never used
+;; as if complete. This matches `futon3c.substrate.client`'s paging discipline.
+(def ^:private substrate-page-limit
+  (or (some-> (System/getenv "FUTON3C_SUBSTRATE_PAGE_LIMIT") parse-long) 5000))
+(def ^:private hyperedge-page-size 250)
+(def ^:private hyperedge-request-budget 50)
+(def ^:private pattern-library-limit substrate-page-limit)
 (def ^:private !pattern-library-cache (atom nil))
+(def ^:private !entity-cache (atom {}))
+(def ^:private !run-telemetry (atom {}))
+
+(defn- bump-telemetry! [k]
+  (swap! !run-telemetry update k (fnil inc 0)))
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -38,6 +57,10 @@
   (URLEncoder/encode (str s) "UTF-8"))
 
 (defn- http-client [] (HttpClient/newHttpClient))
+(def ^:dynamic *retry-sleep!* (fn [millis] (Thread/sleep millis)))
+(def ^:private max-expensive-read-retries 300)
+(def ^:private http-timeout-seconds
+  (or (some-> (System/getenv "FUTON3C_SUBSTRATE_HTTP_TIMEOUT_S") parse-long) 120))
 
 (defn- http-edn
   ([client method url] (http-edn client method url nil))
@@ -49,11 +72,17 @@
          req (-> builder
                  (.header "accept" "application/edn")
                  (.header "content-type" "application/edn")
+                 ;; A request with no deadline parked a backlog worker for
+                 ;; 10+ minutes on one entities read (2026-08-25). Time out,
+                 ;; throw, and let the caller record the mission as FAILED.
+                 (.timeout (java.time.Duration/ofSeconds http-timeout-seconds))
                  (.build))
          resp (.send client req (HttpResponse$BodyHandlers/ofString))
          body-text (.body resp)]
      {:status (.statusCode resp)
-      :body (when (seq body-text) (edn/read-string body-text))})))
+      :body (when (seq body-text)
+              (try (edn/read-string body-text)
+                   (catch Exception _ body-text)))})))
 
 (defn- ok!
   [resp context]
@@ -61,17 +90,53 @@
     (throw (ex-info "futon1a request failed" (assoc context :response resp))))
   resp)
 
+(defn- http-edn-read
+  "Honor futon1b's retryable expensive-read admission signal without
+  bypassing its single-scan gate. Other responses return immediately."
+  [client url]
+  (loop [attempt 0]
+    (let [resp (http-edn client :get url)
+          retry? (and (= 503 (:status resp))
+                      (= :expensive-read-busy (get-in resp [:body :error])))]
+      (if (and retry? (< attempt max-expensive-read-retries))
+        (let [seconds (max 1 (long (or (get-in resp [:body :retry-after-seconds]) 1)))]
+          (*retry-sleep!* (* 1000 seconds))
+          (recur (inc attempt)))
+        resp))))
+
 (defn- get-entity [client base-url id-or-name]
-  (let [resp (http-edn client :get
-                       (str base-url "/api/alpha/entity/" (url-encode id-or-name)))]
-    (when (<= 200 (:status resp) 299)
-      (get-in resp [:body :entity]))))
+  (if-let [cached (find @!entity-cache id-or-name)]
+    (val cached)
+    (let [resp (http-edn client :get
+                         (str base-url "/api/alpha/entity/" (url-encode id-or-name)))
+          entity (when (<= 200 (:status resp) 299)
+                   (get-in resp [:body :entity]))]
+      (bump-telemetry! (if entity :get-entity-hit-count :get-entity-miss-count))
+      ;; Cache nil deliberately: absent exact ids are the common and expensive
+      ;; case before `resolve-pattern-node` falls through to the library index.
+      (swap! !entity-cache assoc id-or-name entity)
+      entity)))
+
+(def ^:dynamic *dry-run?*
+  "True suppresses every substrate WRITE. Checked inside the three write
+   PRIMITIVES rather than threaded through call sites, so no code path can route
+   around it.
+
+   That is not a style preference. `--dry-run` was parsed by `-main` and passed
+   to every branch EXCEPT the default ingest one, and `ingest-scope-tree!` never
+   accepted a :dry-run? key -- so the flag was silently inert on the main path.
+   On 2026-08-23 a run believed to be a dry run wrote 63 mission-scope/pattern
+   hyperedges. A safety flag that silently does nothing is worse than no flag,
+   because it manufactures the confidence that spends someone else's gate."
+  false)
 
 (defn- post-entity! [client base-url penholder payload]
-  (-> (http-edn client :post (str base-url "/api/alpha/entity")
-                (assoc payload :penholder penholder))
-      (ok! {:op :entity :payload payload})
-      (get-in [:body :entity])))
+  (if *dry-run?*
+    payload                             ; shape-compatible: callers read :id
+    (-> (http-edn client :post (str base-url "/api/alpha/entity")
+                  (assoc payload :penholder penholder))
+        (ok! {:op :entity :payload payload})
+        (get-in [:body :entity]))))
 
 (defn- ensure-entity!
   [client base-url penholder {:keys [id name type external-id source props]}]
@@ -84,30 +149,67 @@
                     (seq merged-props) (assoc :props merged-props)))))
 
 (defn- post-hyperedge! [client base-url penholder payload]
-  (-> (http-edn client :post (str base-url "/api/alpha/hyperedge")
-                (assoc payload :penholder penholder))
-      (ok! {:op :hyperedge :payload payload})
-      (get-in [:body :hyperedge])))
+  (if *dry-run?*
+    payload                             ; also covers `retract-hyperedge!`
+    (-> (http-edn client :post (str base-url "/api/alpha/hyperedge")
+                  (assoc payload :penholder penholder))
+        (ok! {:op :hyperedge :payload payload})
+        (get-in [:body :hyperedge]))))
 
-(defn- write-tx! [client base-url penholder tx-ops claim]
-  (-> (http-edn client :post (str base-url "/write")
-                {:penholder penholder
-                 :model {}
-                 :identity nil
-                 :tx-ops tx-ops
-                 :counter-ratchet {:allow-drop-classes #{:entity}}
-                 :claim claim})
-      (ok! {:op :write :tx-ops tx-ops})
-      :body))
+(defn- get-hyperedge [client base-url id]
+  (let [resp (http-edn client :get
+                       (str base-url "/api/alpha/hyperedge/" (url-encode id)))]
+    (when (<= 200 (:status resp) 299)
+      (:body resp))))
 
-(defn- delete-docs! [client base-url penholder ids]
-  (let [ids (->> ids (remove str/blank?) distinct vec)]
-    (when (seq ids)
-      (write-tx! client base-url penholder
-                 (mapv (fn [id] [:xtdb.api/delete id]) ids)
-                 {:op :mission-scope/retract-legacy-position-anchors
-                  :doc-count (count ids)}))
-    {:deleted-count (count ids)}))
+(defn- unported-retraction-route? [{:keys [status]}]
+  (contains? #{404 405} status))
+
+(defn- retract-hyperedge! [client base-url penholder id]
+  (when-let [h (get-hyperedge client base-url id)]
+    (post-hyperedge! client base-url penholder
+                     {:hx/id id
+                      :hx/type (:hx/type h)
+                      :hx/endpoints (:hx/endpoints h)
+                      :hx/op "retract"})))
+
+(defn- delete-docs!
+  "Prefer futon1b's atomic document-retraction route. Before that route is
+  deployed, fall back only on its unported 404/405 signature: retract graph
+  membership hyperedges through the already-live sanctioned route and retain
+  now-unreachable entity documents as archival records. Other failures abort."
+  [client base-url penholder documents]
+  (let [documents (->> documents
+                       (filter (fn [{:keys [id]}] (not (str/blank? id))))
+                       distinct
+                       vec)]
+    (cond
+      *dry-run?*
+      {:deleted-count (count documents) :retraction-mode :dry-run}
+
+      (empty? documents)
+      {:deleted-count 0 :retraction-mode :none}
+
+      :else
+      (let [resp (http-edn client :post
+                           (str base-url "/api/alpha/documents/retract")
+                           {:penholder penholder
+                            :documents documents
+                            :claim {:op :mission-scope/retract
+                                    :doc-count (count documents)}})]
+        (if (unported-retraction-route? resp)
+          (let [hyperedge-ids (mapv :id (filter #(= :hyperedges (:table %)) documents))
+                retained-ids (mapv :id (filter #(= :entities (:table %)) documents))]
+            (doseq [id hyperedge-ids]
+              (retract-hyperedge! client base-url penholder id))
+            {:deleted-count (count hyperedge-ids)
+             :retained-entity-count (count retained-ids)
+             :retraction-mode :per-hyperedge-archival})
+          (do
+            (ok! resp {:op :documents-retract :documents documents})
+            {:deleted-count (count documents)
+             :retained-entity-count 0
+             :retraction-mode :batch}))))))
 
 (def ^:private !hyperedge-type-cache (atom {}))
 
@@ -119,20 +221,75 @@
    the caches still coalesce repeated reads."
   []
   (reset! !hyperedge-type-cache {})
-  (reset! !pattern-library-cache nil))
+  (reset! !pattern-library-cache nil)
+  (reset! !entity-cache {})
+  (reset! !run-telemetry {}))
+
+(defn- walk-hyperedges
+  "Every row of a futon1b /api/alpha/hyperedges QUERY (a query-string fragment
+   such as \"type=…\"), following the keyset cursor page by page. Fails closed
+   — throws — if the walk stops before the population is exhausted, so a
+   partial read is never used as if complete."
+  [client base-url query context]
+  (let [hxs (loop [after nil
+                   requests 0
+                   rows []]
+              (if (>= requests hyperedge-request-budget)
+                (with-meta (vec rows)
+                  {:partial? true
+                   :reason :request-budget-exhausted
+                   :next-cursor after
+                   :requests requests
+                   :request-budget hyperedge-request-budget})
+                (let [resp (-> (http-edn-read
+                                client
+                                (str base-url "/api/alpha/hyperedges?" query
+                                     "&limit=" hyperedge-page-size
+                                     "&include-total=false"
+                                     (when after
+                                       (str "&after=" (url-encode after)))))
+                               (ok! (assoc context :after after)))
+                      page (or (get-in resp [:body :hyperedges]) [])
+                      rows' (into rows page)
+                      requests' (inc requests)
+                      next-cursor (get-in resp [:body :next-cursor])]
+                  (cond
+                    next-cursor
+                    (recur next-cursor requests' rows')
+
+                    (= hyperedge-page-size (count page))
+                    (with-meta (vec rows')
+                      {:partial? true
+                       :reason :server-page-full-without-cursor
+                       :requests requests'
+                       :request-budget hyperedge-request-budget})
+
+                    :else
+                    (vec rows')))))]
+    (when (true? (:partial? (meta hxs)))
+      (throw (ex-info "futon1b hyperedge pagination stopped early"
+                      (merge context {:returned (count hxs)} (meta hxs)))))
+    hxs))
 
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
-    (let [hxs (-> (http-edn client :get
-                            (str base-url "/api/alpha/hyperedges?type="
-                                 (url-encode hx-type)
-                                 "&limit=5000"))
-                  (ok! {:op :hyperedges-by-type :type hx-type})
-                  (get-in [:body :hyperedges])
-                  (or []))]
+    (let [hxs (walk-hyperedges client base-url
+                               (str "type=" (url-encode hx-type))
+                               {:op :hyperedges-by-type :type hx-type})]
       (swap! !hyperedge-type-cache assoc hx-type hxs)
       hxs)))
+
+(defn- mission-scope-hyperedges
+  "Stored mission-scope/BINDER rows for MISSION only, pushed down on futon1b's
+   denormalized prop/mission column. The per-binder ingest needs one mission's
+   rows; reading the whole type instead cost ~13 s per 1000 hydrated rows on
+   Zone, for ~15 types per -main call."
+  [client base-url binder mission]
+  (walk-hyperedges client base-url
+                   (str "type=" (url-encode (str "mission-scope/" binder))
+                        "&mission=" (url-encode mission))
+                   {:op :mission-scope-hyperedges :binder binder :mission mission}))
 
 (defn- repo-name-from-path [path]
   (or (second (re-find #"/code/([^/]+)/" (str path)))
@@ -171,6 +328,12 @@
 (defn- boundary-item-text [scope]
   (:boundary-item-text scope))
 
+(defn- operator-gate-kind [scope]
+  (:gate-kind scope))
+
+(defn- operator-gate-text [scope]
+  (:gate-text scope))
+
 (defn- anchor-text [scope]
   (case (:binder-type scope)
     "map-item" (map-item-title scope)
@@ -179,6 +342,7 @@
     ("pattern" "psr" "pur") (or (target-pattern-ident scope) (heading-title scope))
     "mission-scope-in" (or (boundary-item-text scope) (heading-title scope))
     "mission-scope-out" (or (boundary-item-text scope) (heading-title scope))
+    "operator-gate" (or (operator-gate-text scope) (heading-title scope))
     (heading-title scope)))
 
 (defn- env-phase [scope]
@@ -260,7 +424,8 @@
   [client base-url end-id]
   (let [resp (http-edn client :get
                        (str base-url "/api/alpha/hyperedges?end="
-                            (url-encode end-id) "&limit=1"))]
+                            (url-encode end-id)
+                            "&limit=1&include-total=false"))]
     (boolean (and (<= 200 (:status resp) 299)
                   (seq (get-in resp [:body :hyperedges]))))))
 
@@ -306,12 +471,48 @@
 (defn- resolve-pattern-library-entity [client base-url pattern-ident pattern-ref]
   (let [key (pattern-library-key pattern-ref)
         candidates (cond-> #{pattern-ident}
-                     key (conj key))]
-    (some (fn [entity]
-            (when (or (contains? candidates (:external-id entity))
-                      (contains? candidates (:name entity)))
-              entity))
-          (pattern-library-entities client base-url))))
+                     key (conj key))
+        entities (pattern-library-entities client base-url)]
+    (or (some (fn [entity]
+                (when (or (contains? candidates (:external-id entity))
+                          (contains? candidates (:name entity)))
+                  entity))
+              entities)
+        ;; Bare-slug fallback. Library entities are keyed namespaced
+        ;; (`writing-coherence/section-bridge-missing`), but a mission may cite
+        ;; the bare slug, which matches neither :name nor :external-id. Before
+        ;; the futon1b point read was repaired this was invisible; afterwards
+        ;; `get-entity` began resolving those bare slugs to whatever else
+        ;; happened to own the id — four `:scope/loose-section` nodes, in the
+        ;; first full run (2026-08-23).
+        ;;
+        ;; Only an UNAMBIGUOUS suffix counts: 18 of 1351 library slugs are
+        ;; shared across namespaces (`invariants`, `right-action`, ...), and a
+        ;; guess between them would fabricate a citation. Those stay
+        ;; unresolved, which is the honest answer and what the detached count
+        ;; is for.
+        (when-not (str/includes? (str pattern-ident) "/")
+          (let [bare (str pattern-ident)
+                matches (into [] (filter #(= bare (peek (str/split (str (:name %)) #"/"))))
+                              entities)]
+            (when (= 1 (count matches))
+              (first matches)))))))
+
+(defn- pattern-entity?
+  "True when ENTITY is actually a pattern node.
+
+   `get-entity` matches on id alone, so a pattern slug that collides with a
+   mission's own scope node resolves to that node and wins before the library
+   fallback. Measured on the first full run (2026-08-23): all 6 exact-id
+   resolutions were such collisions — four `:scope/loose-section` nodes under
+   `E-ukrn-paper-v2.4-comments/`, each shadowing a real
+   `writing-coherence/<slug>` pattern/library entity. The branch contributed
+   zero correct targets and six wrong ones.
+
+   This became reachable only when the futon1b point read was repaired: while
+   `/entity/<id>` 404'd on everything, branch 1 never fired."
+  [entity]
+  (some-> entity :type str (str/replace #"^:" "") (str/starts-with? "pattern/")))
 
 (defn- resolve-pattern-node
   "Resolve a cited flexiarg pattern to an existing substrate-2 node. The
@@ -321,18 +522,64 @@
    succeeds only when `?end=<candidate>&limit=1` finds substrate evidence."
   [client base-url pattern-ident pattern-ref]
   (when (seq (str pattern-ident))
-    (let [endpoint (flexiarg-endpoint pattern-ref)]
-      (or (get-entity client base-url pattern-ident)
-          (resolve-pattern-library-entity client base-url pattern-ident pattern-ref)
-          (when (seq (str pattern-ref))
-            (get-entity client base-url pattern-ref))
-          (when endpoint
-            (or (get-entity client base-url endpoint)
-                (when (endpoint-exists? client base-url endpoint)
+    (let [endpoint (flexiarg-endpoint pattern-ref)
+          typed (fn [e] (when (pattern-entity? e) e))
+          exact (typed (get-entity client base-url pattern-ident))]
+      (cond
+        exact
+        (do (bump-telemetry! :pattern-resolved-by-get-entity-count) exact)
+
+        :else
+        (if-let [library (resolve-pattern-library-entity client base-url
+                                                         pattern-ident pattern-ref)]
+          (do (bump-telemetry! :pattern-resolved-by-library-count) library)
+          (if-let [by-ref (when (seq (str pattern-ref))
+                           (typed (get-entity client base-url pattern-ref)))]
+            (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-ref)
+            (if-let [by-endpoint (when endpoint
+                                   (typed (get-entity client base-url endpoint)))]
+              (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-endpoint)
+              (if (and endpoint (endpoint-exists? client base-url endpoint))
+                (do
+                  (bump-telemetry! :pattern-resolved-by-endpoint-count)
                   {:id endpoint
                    :name pattern-ident
                    :type "pattern/flexiarg"
-                   :endpoint-only? true})))))))
+                   :endpoint-only? true})
+                (do (bump-telemetry! :pattern-unresolved-count) nil)))))))))
+
+(defn- decoded-endpoint [end]
+  (let [candidate (if (and (map? end) (= #{:entity-id} (set (keys end))))
+                    (:entity-id end)
+                    end)]
+    (cond
+      (map? candidate) candidate
+      (string? candidate) (try
+                            (let [decoded (edn/read-string candidate)]
+                              (when (map? decoded) decoded))
+                            (catch Exception _ nil))
+      :else nil)))
+
+(defn- target-pattern-endpoint [h]
+  (some (fn [end]
+          (let [{:keys [role entity-id]} (decoded-endpoint end)]
+            (when (contains? #{:target-pattern "target-pattern"} role)
+              entity-id)))
+        (concat (:hx/ends h) (:hx/endpoints h))))
+
+(defn- record-pattern-edge-plan! [mission scope desired existing]
+  (let [new-target (target-pattern-endpoint desired)
+        old-target (some-> existing target-pattern-endpoint)]
+    (bump-telemetry! (if existing
+                       :pattern-edge-update-count
+                       :pattern-edge-create-count))
+    (when (and existing (not= old-target new-target))
+      (swap! !run-telemetry update :pattern-target-changes (fnil conj [])
+             {:mission mission
+              :scope-id (:scope-id scope)
+              :pattern-ident (:target-pattern-ident scope)
+              :current-target old-target
+              :proposed-target new-target}))))
 
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
@@ -577,6 +824,35 @@
       (str base "--" (subs (sha1 (str pattern-ident "|" original-id)) 0 8))
       base)))
 
+(defn- stable-operator-gate-scopes
+  [mission mission-path all-scopes scopes]
+  (let [gate-counts (frequencies (map (juxt operator-gate-kind
+                                             operator-gate-text)
+                                      scopes))]
+    (mapv
+     (fn [scope]
+       (let [kind (operator-gate-kind scope)
+             text (operator-gate-text scope)
+             duplicate? (> (get gate-counts [kind text] 0) 1)
+             stem (str/replace-first (str mission) #"^M-" "")
+             base (str stem "/operator-gate/" (slug kind) "/"
+                       (truncated-slug text))
+             stable-id (if duplicate?
+                         (str base "--" (subs (sha1 (:scope-id scope)) 0 8))
+                         base)
+             anchor (anchor-for-scope mission-path all-scopes scope)]
+         (assoc scope
+                :original-scope-id (:scope-id scope)
+                :scope-id stable-id
+                :stable-scope-id stable-id
+                :canonical-scope-id base
+                :heading-slug (str "operator-gate/" (slug kind) "/"
+                                   (truncated-slug text))
+                :duplicate-heading? duplicate?
+                :anchor anchor
+                :parent nil)))
+     scopes)))
+
 (defn- scope-boundary-polarity [scope]
   (case (:binder-type scope)
     "mission-scope-in" :scope/in
@@ -785,6 +1061,9 @@
 (defn- legacy-scope-id? [id]
   (boolean (re-matches #"^M-.+:scope-[0-9]+$" (str id))))
 
+(defn- archival-binder? [binder]
+  (contains? archival-binders (name binder)))
+
 (defn- scope-endpoint-id [h]
   (or (some (fn [end]
               (when (= :environment (:role end))
@@ -806,38 +1085,50 @@
   generation at once (caught live by Joe on M-first-flights 2026-06-11:
   three '## 3. DERIVE' generations, 46 scopes). For this mission+binder,
   any stored scope whose id is absent from SELECTED-IDS is retracted."
-  [client base-url penholder mission-entity binder-filter selected-ids]
-  (let [stale-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
-                       (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
-                       (remove #(let [sid (or (get-in % [:hx/props :scope/id])
-                                              (scope-endpoint-id %))]
-                                  (or (nil? sid) (contains? selected-ids sid))))
-                       vec)
+  [client base-url penholder mission mission-entity binder-filter selected-ids]
+  (let [stale-hxs (if (archival-binder? binder-filter)
+                    []
+                    (->> (mission-scope-hyperedges client base-url binder-filter mission)
+                         (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                         (remove #(let [sid (or (get-in % [:hx/props :scope/id])
+                                                (scope-endpoint-id %))]
+                                    (or (nil? sid) (contains? selected-ids sid))))
+                         vec))
         hx-ids (keep :hx/id stale-hxs)
         scope-ids (->> stale-hxs
                        (keep scope-endpoint-id)
                        (remove #(contains? selected-ids %)))
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:stale-hyperedge-retract-count (count (distinct hx-ids))
-     :stale-entity-retract-count (count (distinct scope-ids))
-     :stale-doc-retract-count (count ids)}))
+     :stale-entity-retract-count (- (count (distinct scope-ids))
+                                    (:retained-entity-count retraction 0))
+     :stale-entity-retained-count (:retained-entity-count retraction 0)
+     :stale-retraction-mode (:retraction-mode retraction)
+     :stale-doc-retract-count (count documents)}))
 
 (defn- retract-legacy-position-scopes!
-  [client base-url penholder mission-entity binder-filter]
-  (let [legacy-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
-                        (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
-                        (filter #(legacy-position-scope-hyperedge? binder-filter %))
-                        vec)
+  [client base-url penholder mission mission-entity binder-filter]
+  (let [legacy-hxs (if (archival-binder? binder-filter)
+                     []
+                     (->> (mission-scope-hyperedges client base-url binder-filter mission)
+                          (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                          (filter #(legacy-position-scope-hyperedge? binder-filter %))
+                          vec))
         hx-ids (keep :hx/id legacy-hxs)
         scope-ids (->> legacy-hxs
                        (keep scope-endpoint-id)
                        (filter legacy-scope-id?))
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:legacy-hyperedge-retract-count (count (distinct hx-ids))
-     :legacy-entity-retract-count (count (distinct scope-ids))
-     :legacy-doc-retract-count (count ids)}))
+     :legacy-entity-retract-count (- (count (distinct scope-ids))
+                                     (:retained-entity-count retraction 0))
+     :legacy-entity-retained-count (:retained-entity-count retraction 0)
+     :legacy-retraction-mode (:retraction-mode retraction)
+     :legacy-doc-retract-count (count documents)}))
 
 (defn- scope-entity-spec [mission path scope]
   {:id (:scope-id scope)
@@ -886,7 +1177,11 @@
                    :pattern/detached-reason (:pattern-detached-reason scope))
             (:scope-polarity scope)
             (assoc :scope/polarity (:scope-polarity scope)
-                   :scope/boundary-text (:boundary-item-text scope)))})
+                   :scope/boundary-text (:boundary-item-text scope))
+            (:gate-kind scope)
+            (assoc :operator-gate/kind (:gate-kind scope)
+                   :operator-gate/text (:gate-text scope)
+                   :operator-gate/source-line (:source-line scope)))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -929,6 +1224,9 @@
            :record/notes (get-in scope [:facets :notes])
            :scope/polarity (:scope-polarity scope)
            :scope/boundary-text (:boundary-item-text scope)
+           :operator-gate/kind (:gate-kind scope)
+           :operator-gate/text (:gate-text scope)
+           :operator-gate/source-line (:source-line scope)
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
@@ -1181,7 +1479,12 @@
   (let [s (-> (str stem)
               (str/replace #"\.md$" "")
               (str/replace #"\.json$" ""))]
-    (if (str/starts-with? s "M-") s (str "M-" s))))
+    ;; Missions are prefixed C- (campaign), E- (excursion) or M- (mission).
+    ;; Forcing "M-" onto an already-prefixed stem made `--mission` unable to
+    ;; target any C- or E- mission -- 246 of 647 in the live corpus -- which is
+    ;; how a targeted repair of E-ukrn-paper-v2.4-comments failed with
+    ;; "Mission file not found" (2026-08-23).
+    (if (re-find #"^[CEM]-" s) s (str "M-" s))))
 
 (defn- find-mission-file [stem]
   (let [mission (mission-ident-from-stem stem)
@@ -1244,6 +1547,7 @@
       "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+      "operator-gate" (stable-operator-gate-scopes mission mission-path raw-scopes (vec scopes))
       ("pattern" "psr" "pur") (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
       (vec scopes))))
 
@@ -1255,18 +1559,22 @@
             structural-binders)))
 
 (defn- hyperedges-by-end [client base-url end-id]
-  (-> (http-edn client :get
-                (str base-url "/api/alpha/hyperedges?end="
-                     (url-encode end-id)
-                     "&limit=5000"))
-      (ok! {:op :hyperedges-by-end :end end-id})
-      (get-in [:body :hyperedges])
-      (or [])))
+  (let [resp (-> (http-edn-read client
+                                (str base-url "/api/alpha/hyperedges?end="
+                                     (url-encode end-id)
+                                     "&limit=" substrate-page-limit))
+                 (ok! {:op :hyperedges-by-end :end end-id}))
+        hxs (or (get-in resp [:body :hyperedges]) [])
+        total (get-in resp [:body :count])]
+    (when (and (integer? total) (> total (count hxs)))
+      (throw (ex-info "futon1b hyperedge result truncated"
+                      {:op :hyperedges-by-end :end end-id
+                       :returned (count hxs) :total total})))
+    hxs))
 
 (defn- stored-scope-hyperedges-for-mission [client base-url mission]
   (->> structural-binders
-       (mapcat (fn [binder]
-                 (hyperedges-by-type client base-url (str "mission-scope/" binder))))
+       (mapcat (fn [binder] (mission-scope-hyperedges client base-url binder mission)))
        (filter #(= mission (get (hx-props %) :mission)))
        vec))
 
@@ -1279,13 +1587,18 @@
   [client base-url penholder mission tree-binders]
   (let [stale-hxs (->> (stored-scope-hyperedges-for-mission client base-url mission)
                        (remove #(contains? tree-binders (name (:hx/type %))))
+                       (remove #(archival-binder? (name (:hx/type %))))
                        vec)
         hx-ids (keep :hx/id stale-hxs)
         scope-ids (keep scope-endpoint-id stale-hxs)
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:absent-binder-hyperedge-retract-count (count (distinct hx-ids))
-     :absent-binder-entity-retract-count (count (distinct scope-ids))
+     :absent-binder-entity-retract-count (- (count (distinct scope-ids))
+                                            (:retained-entity-count retraction 0))
+     :absent-binder-entity-retained-count (:retained-entity-count retraction 0)
+     :absent-binder-retraction-mode (:retraction-mode retraction)
      :absent-binder-types (->> stale-hxs (map #(name (:hx/type %))) distinct sort vec)}))
 
 (defn- concept-ids-from-hx [h]
@@ -1379,10 +1692,15 @@
 (defn- delete-scope-docs! [client base-url penholder scope-id hx-id]
   (let [edge-ids (->> (hyperedges-by-end client base-url scope-id)
                       (keep :hx/id))
-        ids (distinct (concat [scope-id hx-id] edge-ids))]
-    (delete-docs! client base-url penholder ids)
-    {:deleted-count (count ids)
-     :deleted-ids ids}))
+        documents (distinct
+                   (concat [{:table :entities :id scope-id}]
+                           (map #(hash-map :table :hyperedges :id %)
+                                (cons hx-id edge-ids))))
+        retraction (delete-docs! client base-url penholder documents)]
+    {:deleted-count (:deleted-count retraction)
+     :retained-entity-count (:retained-entity-count retraction 0)
+     :retraction-mode (:retraction-mode retraction)
+     :deleted-ids (mapv :id documents)}))
 
 (defn- anchor-props [scope]
   {:anchor/state (:state (:anchor scope))
@@ -1512,12 +1830,16 @@
                       :detected-count (count new-scopes)
                       :added-count 0
                       :removed-count 0
+                      :archived-count 0
                       :reworded-count 0
                       :unchanged-count 0
                       :detached-count 0
                       :dry-run? (boolean dry-run?)})]
     (doseq [[stored new-scope] matched]
       (cond
+        (and (nil? new-scope) (archival-binder? (:binder stored)))
+        (swap! report update :archived-count inc)
+
         (nil? new-scope)
         (do
           (swap! report update :removed-count inc)
@@ -1585,6 +1907,7 @@
                  "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+                 "operator-gate" (stable-operator-gate-scopes mission mission-path raw-scopes (vec scopes))
                  "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
                  ("psr" "pur") (stable-record-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
@@ -1599,16 +1922,20 @@
                                         :props {:mission/id mission
                                                 :mission/path mission-path}})
         legacy-report (if binder-filter
-                        (retract-legacy-position-scopes! client base-url penholder mission-entity binder-filter)
+                        (retract-legacy-position-scopes! client base-url penholder mission mission-entity binder-filter)
                         {:legacy-hyperedge-retract-count 0
                          :legacy-entity-retract-count 0
+                         :legacy-entity-retained-count 0
+                         :legacy-retraction-mode :none
                          :legacy-doc-retract-count 0})
         stale-report (if binder-filter
                        (retract-stale-generation-scopes! client base-url penholder
-                                                         mission-entity binder-filter
+                                                         mission mission-entity binder-filter
                                                          selected-ids)
                        {:stale-hyperedge-retract-count 0
                         :stale-entity-retract-count 0
+                        :stale-entity-retained-count 0
+                        :stale-retraction-mode :none
                         :stale-doc-retract-count 0})
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})
@@ -1617,7 +1944,12 @@
         linked-sources (atom #{})
         dangling-sources (atom #{})
         linked-patterns (atom #{})
-        dangling-patterns (atom #{})]
+        dangling-patterns (atom #{})
+        existing-pattern-hxs (when (= "pattern" binder-filter)
+                               (into {}
+                                     (map (juxt :hx/id identity))
+                                     (hyperedges-by-type client base-url
+                                                         "mission-scope/pattern")))]
     (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
@@ -1683,8 +2015,11 @@
                                            :entity pattern-entity}]))
                                vec)]
         (swap! entity-ids into (map (comp :id :entity) slot-entities))
-        (let [hx (post-hyperedge! client base-url penholder
-                                  (scope-hyperedge mission-entity scope-entity slot-entities scope))]
+        (let [desired-hx (scope-hyperedge mission-entity scope-entity slot-entities scope)
+              _ (when (= "pattern" (:binder-type scope))
+                  (record-pattern-edge-plan! mission scope desired-hx
+                                             (get existing-pattern-hxs (:hx/id desired-hx))))
+              hx (post-hyperedge! client base-url penholder desired-hx)]
           (swap! hx-ids conj (:hx/id hx)))
         (when-let [parent (:parent scope)]
           (when (contains? selected-ids parent)
@@ -1704,9 +2039,13 @@
      :duplicate-heading-count (count (filter :duplicate-heading? scopes))
      :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
      :legacy-entity-retract-count (:legacy-entity-retract-count legacy-report)
+     :legacy-entity-retained-count (:legacy-entity-retained-count legacy-report)
+     :legacy-retraction-mode (:legacy-retraction-mode legacy-report)
      :legacy-doc-retract-count (:legacy-doc-retract-count legacy-report)
      :stale-hyperedge-retract-count (:stale-hyperedge-retract-count stale-report)
      :stale-entity-retract-count (:stale-entity-retract-count stale-report)
+     :stale-entity-retained-count (:stale-entity-retained-count stale-report)
+     :stale-retraction-mode (:stale-retraction-mode stale-report)
      :stale-doc-retract-count (:stale-doc-retract-count stale-report)
      :linked-target-count (count @linked-targets)
      :dangling-target-count (count @dangling-targets)
@@ -1826,15 +2165,19 @@
 
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
-        files (scope-tree-files default-scope-dir missions)
-        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts) (:true-up? opts))
-                  (mapv #(ingest-scope-tree! {:client client
-                                              :base-url default-futon1a-url
-                                              :penholder default-penholder
-                                              :binder-filter (:binder-filter opts)
-                                              :path (.getAbsolutePath %)})
-                        files))]
-    (cond
+        files (scope-tree-files default-scope-dir missions)]
+    ;; Bind ONCE, around every branch. The other branches also pass :dry-run?
+    ;; explicitly; this is the belt that catches the next branch someone adds
+    ;; and forgets to thread it through -- the exact failure being repaired.
+    (binding [*dry-run?* (boolean (:dry-run? opts))]
+     (let [reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts) (:true-up? opts))
+                     (mapv #(ingest-scope-tree! {:client client
+                                                 :base-url default-futon1a-url
+                                                 :penholder default-penholder
+                                                 :binder-filter (:binder-filter opts)
+                                                 :path (.getAbsolutePath %)})
+                           files))]
+      (cond
       (:true-up? opts)
       (println (pr-str {:true-up
                         (mapv (fn [file]
@@ -1899,7 +2242,13 @@
                           :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
                           :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
                           :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))
+                          :stale-hyperedge-retract-count (reduce + (map :stale-hyperedge-retract-count reports))
+                          :stale-entity-retract-count (reduce + (map :stale-entity-retract-count reports))
+                          :stale-doc-retract-count (reduce + (map :stale-doc-retract-count reports))
                           :linked-target-count (reduce + (map :linked-target-count reports))
                           :dangling-target-count (reduce + (map :dangling-target-count reports))
                           :linked-source-count (reduce + (map :linked-source-count reports))
-                          :dangling-source-count (reduce + (map :dangling-source-count reports))}))))))
+                          :dangling-source-count (reduce + (map :dangling-source-count reports))
+                          :linked-pattern-count (reduce + (map :linked-pattern-count reports))
+                          :dangling-pattern-count (reduce + (map :dangling-pattern-count reports))
+                          :resolution-telemetry @!run-telemetry}))))))))

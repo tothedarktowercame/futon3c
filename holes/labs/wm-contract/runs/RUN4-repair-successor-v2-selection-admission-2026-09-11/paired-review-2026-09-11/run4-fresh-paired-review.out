@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.run4-real-paired-test
+[wm-click] {:run-binding "/tmp/u88-roundtrip10634045483597191798/store-bindings/click-run-binding-wm-click-b4be8619-fb61-4995-a9af-8b51ac2687e7.edn", :run-record "/tmp/u88-roundtrip10634045483597191798/store-run-records/tick-run-record-9a729b87-db60-413a-9ecb-f7680aa0d8f9.edn", :click-id "wm-click-b4be8619-fb61-4995-a9af-8b51ac2687e7", :attempt-id "attempt-001", :outcome :grounded-change, :binding-durability :confirmed, :binding-status :verified, :run-id-observation {:status :present, :source :runner-return, :value "9a729b87-db60-413a-9ecb-f7680aa0d8f9"}, :run-record-status :present}

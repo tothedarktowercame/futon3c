@@ -12,6 +12,13 @@
    - :setup-tools      #{tools} available when no cycle is active
    - :tool-ops         {tool -> :observe|:action} operation classification
    - :required-outputs {phase -> #{keys}} mandatory outputs before advancing
+   - :enforce-required-outputs? opt-in accumulated output gate (default false)
+   - :state-io-tools  optional {:save tool :load tool}; save receives engine state
+   - :always-available-tools optional tools allowed during setup and every phase
+   - :state-runtime-keys optional keys excluded from saves and retained across loads
+   - :state-validate-fn optional (fn [current loaded] -> nil | failure map)
+   - :output-stamp-fn optional (fn [state advance-payload] -> advance-payload)
+   - :derived-tools optional {tool-id (fn [state args] -> result)}
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
    - :state-init-fn    (fn [context] -> domain-state-map) additional state at start
@@ -29,15 +36,22 @@
      味 = required-outputs (evaluation: did this phase produce enough?)
      🔮 = phase gating (regulation: constrain tools to prevent harm)
      捨 = stop with reason (set-down when boundary is reached)"
-  (:require [futon3c.blackboard :as bb]
+  (:require [clojure.set]
+            [futon3c.blackboard :as bb]
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.tools :as tools])
+  (:import [java.util UUID]))
 
 ;; =============================================================================
 ;; Configuration validation
 ;; =============================================================================
+
+(def identity-keys
+  "State keys that establish WHOSE cycle this is. Never persistable-exempt: see
+  the :state-runtime-keys check below."
+  #{:session-id :current-cycle-id})
 
 (defn valid-domain-config?
   "Check that a domain config has the required keys."
@@ -49,6 +63,44 @@
        (set? (:setup-tools config))
        (map? (:tool-ops config))
        (map? (:required-outputs config))
+       (or (nil? (:always-available-tools config))
+           (set? (:always-available-tools config)))
+       (or (nil? (:state-runtime-keys config))
+           (and (set? (:state-runtime-keys config))
+                ;; Identity keys must never be runtime keys. Validation runs
+                ;; AFTER reattachment, so declaring one of these would make the
+                ;; engine compare current state against itself and the guard
+                ;; would always pass -- verified: with :session-id declared, a
+                ;; load of a FOREIGN session succeeded and its steps and
+                ;; :cycle/outputs were installed relabelled as ours. A guard
+                ;; that configuration can silently switch off is not a guard.
+                (empty? (clojure.set/intersection
+                         (:state-runtime-keys config)
+                         identity-keys))))
+       (or (nil? (:state-io-tools config))
+           (let [{:keys [save load] :as state-io} (:state-io-tools config)]
+             (and (= #{:save :load} (set (keys state-io)))
+                  (keyword? save)
+                  (keyword? load)
+                  (not= save load))))
+       (or (nil? (:state-validate-fn config))
+           (fn? (:state-validate-fn config)))
+       (or (nil? (:output-stamp-fn config))
+           (fn? (:output-stamp-fn config)))
+       (or (nil? (:backend-args-fn config))
+           (fn? (:backend-args-fn config)))
+       (or (nil? (:derived-tools config))
+           (and (map? (:derived-tools config))
+                (every? (fn [[tool-id derive]]
+                          (and (keyword? tool-id) (fn? derive)))
+                        (:derived-tools config))))
+       (or (nil? (:output-invariants config))
+           (and (vector? (:output-invariants config))
+                (every? (fn [invariant]
+                          (and (keyword? (:id invariant))
+                               (set? (:requires invariant))
+                               (fn? (:check invariant))))
+                        (:output-invariants config))))
        (keyword? (:cycle-begin-tool config))
        (keyword? (:cycle-advance-tool config))
        (fn? (:fruit-fn config))
@@ -58,17 +110,13 @@
 ;; Phase logic (generic)
 ;; =============================================================================
 
-(defn- phase-transitions
-  "Build phase transition map from phase order vector."
-  [phase-order]
-  (into {} (map vector phase-order (rest phase-order))))
-
 (defn- current-phase-tools
   "Get the set of tools allowed in the current cycle phase."
-  [{:keys [phase-tools setup-tools]} state]
-  (if-let [phase (:current-phase state)]
-    (get phase-tools phase #{})
-    setup-tools))
+  [{:keys [phase-tools setup-tools always-available-tools]} state]
+  (into (or always-available-tools #{})
+        (if-let [phase (:current-phase state)]
+          (get phase-tools phase #{})
+          setup-tools)))
 
 (defn- phase-allows-tool?
   "Check if the current phase allows the given tool."
@@ -79,6 +127,83 @@
   "Return :observe or :action for a tool, or nil."
   [{:keys [tool-ops]} tool]
   (get tool-ops tool))
+
+(defn- required-through-phase [config phase]
+  (let [phases (take-while #(not= phase %) (:phase-order config))
+        phases (conj (vec phases) phase)]
+    (apply clojure.set/union #{} (map #(get-in config [:required-outputs %] #{})
+                                      phases))))
+
+(defn- advance-payload [args]
+  (let [payload (nth args 2 {})]
+    (if (map? payload) payload {})))
+
+(defn- output-invariant-failure
+  "First failing invariant whose :requires are all present in outputs, or nil.
+
+  A predicate that THROWS is itself a failure, never a pass: operands are
+  supplied by tools, so a malformed one must be rejected as a structured error
+  rather than crash the cycle or slip through the gate."
+  [config outputs]
+  (some (fn [{:keys [id requires check]}]
+          (when (clojure.set/subset? requires (set (keys outputs)))
+            (when-let [failure (try (check outputs)
+                                    (catch Throwable t
+                                      {:failure :invariant-check-threw
+                                       :thrown (.getMessage t)}))]
+              (assoc failure :invariant/id id))))
+        (:output-invariants config)))
+
+(defn- loaded-state-failure
+  [config current loaded]
+  (cond
+    (not (map? loaded))
+    {:failure :loaded-state-not-map}
+
+    (not= (:session-id current) (:session-id loaded))
+    {:failure :loaded-state-session-mismatch
+     :expected (:session-id current)
+     :actual (:session-id loaded)}
+
+    (and (some? (:current-phase loaded))
+         (not (contains? (set (:phase-order config))
+                         (:current-phase loaded))))
+    {:failure :loaded-state-invalid-phase
+     :phase (:current-phase loaded)}
+
+    ;; The engine stores the cycle id as :current-cycle-id (see the assoc at
+    ;; cycle-begin); :cycle/id is the key on the BACKEND RESULT, not on state.
+    ;; This guard first read :cycle/id from state and was therefore dead -- and
+    ;; its test passed only because the test set that key itself, building a
+    ;; precondition that never occurs. Without the guard, a same-session load of
+    ;; a foreign cycle succeeds and silently switches cycles, merging two cycles'
+    ;; :cycle/outputs -- where the measurements live. A nil current id is a
+    ;; resume into a fresh peripheral, not a switch, so it stays permitted.
+    ;; BOTH must be present: a loaded state with no cycle id is a rewind to
+    ;; before this cycle began, which is a legitimate -- indeed the most extreme
+    ;; -- step-back. Only a DIFFERENT live cycle is the hole. The first version
+    ;; omitted the second some? and broke exactly that legitimate case.
+    (and (some? (:current-cycle-id current))
+         (some? (:current-cycle-id loaded))
+         (not= (:current-cycle-id current) (:current-cycle-id loaded)))
+    {:failure :loaded-state-cycle-mismatch
+     :expected (:current-cycle-id current)
+     :actual (:current-cycle-id loaded)}
+
+    :else
+    (when-let [validate (:state-validate-fn config)]
+      (try
+        (validate current loaded)
+        (catch Throwable t
+          {:failure :loaded-state-domain-validation-threw
+           :thrown (.getMessage t)})))))
+
+(defn- branch-marker [state args]
+  {:branch/id (str "branch-" (UUID/randomUUID))
+   :branch/loaded-at (str (java.time.Instant/now))
+   :branch/load-args args
+   :branch/from-phase (:current-phase state)
+   :branch/from-step-count (count (:steps state))})
 
 ;; =============================================================================
 ;; Evidence enrichment
@@ -109,7 +234,21 @@
     err
     (let [{:keys [tool args]} (common/normalize-action action)
           cycle-begin (:cycle-begin-tool config)
-          cycle-advance (:cycle-advance-tool config)]
+          cycle-advance (:cycle-advance-tool config)
+          state-save (get-in config [:state-io-tools :save])
+          state-load (get-in config [:state-io-tools :load])
+          raw-advance-payload (when (= tool cycle-advance)
+                                (advance-payload args))
+          stamped-advance-payload
+          (when raw-advance-payload
+            (if-let [stamp (:output-stamp-fn config)]
+              (stamp state raw-advance-payload)
+              raw-advance-payload))
+          advance-outputs (when (= tool cycle-advance)
+                            (merge (:cycle/outputs state)
+                                   stamped-advance-payload))
+          invariant-failure (when advance-outputs
+                              (output-invariant-failure config advance-outputs))]
       (cond
         ;; Phase gating
         (not (phase-allows-tool? config state tool))
@@ -120,14 +259,89 @@
                              :phase (or (:current-phase state) :setup)
                              :allowed (vec (current-phase-tools config state)))
 
+        ;; Derived tools bypass backend dispatch, not the peripheral envelope.
+        ;; Preserve the same spec and scope gates dispatch-tool applies.
+        (and (get-in config [:derived-tools tool])
+             (not (tools/allowed? tool spec)))
+        (runner/runner-error (:domain-id config) :tool-not-allowed
+                             (str "Tool " tool
+                                  " is not in this peripheral's tool set")
+                             :tool tool
+                             :allowed (:peripheral/tools spec))
+
+        (and (get-in config [:derived-tools tool])
+             (not (tools/in-scope? tool args spec)))
+        (runner/runner-error (:domain-id config) :out-of-scope
+                             (str "Tool " tool
+                                  " args are outside this peripheral's scope")
+                             :tool tool :args (vec args)
+                             :scope (:peripheral/scope spec))
+
         ;; Operation classification must be total
         (nil? (tool-operation-kind config tool))
         (runner/runner-error (:domain-id config) :unclassified-tool
                              (str "Tool " tool " has no observe/action classification")
                              :tool tool)
 
+        (and (= tool cycle-advance)
+             (:enforce-required-outputs? config)
+             (seq (clojure.set/difference
+                   (required-through-phase config (:current-phase state))
+                   (set (keys advance-outputs)))))
+        (let [available (set (keys advance-outputs))
+              missing (clojure.set/difference
+                       (required-through-phase config (:current-phase state))
+                       available)]
+          (runner/runner-error (:domain-id config) :missing-required-outputs
+                               "Cannot advance with required outputs missing"
+                               :phase (:current-phase state)
+                               :missing (vec missing)))
+
+        invariant-failure
+        (let [failure invariant-failure]
+          (runner/runner-error
+           (:domain-id config) (:failure failure)
+           "Cycle output invariant failed"
+           :phase (:current-phase state)
+           :invariant (:invariant/id failure)
+           :details (dissoc failure :failure :invariant/id)))
+
         :else
-        (let [dispatch-result (tools/dispatch-tool tool args spec backend)]
+        (let [derived-fn (get-in config [:derived-tools tool])
+              runtime-keys (:state-runtime-keys config)
+              persisted-state (if runtime-keys
+                                (apply dissoc state runtime-keys)
+                                state)
+              backend-args (if (= tool state-save)
+                             (into [persisted-state] args)
+                             args)
+              backend-args (if-let [f (:backend-args-fn config)]
+                             (f state tool backend-args)
+                             backend-args)
+              ;; A derived tool is computed inside the engine from authoritative
+              ;; state. Backends never gain state access, and are not invoked.
+              dispatch-result
+              (if derived-fn
+                (try
+                  {:ok true :result (derived-fn state args)}
+                  (catch Throwable t
+                    {:ok false
+                     :error (str "derived tool failed: " (.getMessage t))}))
+                (tools/dispatch-tool tool backend-args spec backend))
+              ;; Validate the exact candidate the engine would install. Runtime
+              ;; resources belong to the live peripheral, so a rewind retains
+              ;; them from current state rather than trusting serialized values.
+              loaded-state (when (and (= tool state-load)
+                                      (:ok dispatch-result))
+                             (let [loaded (:result dispatch-result)]
+                               (if (map? loaded)
+                                 (merge loaded
+                                        (select-keys state runtime-keys))
+                                 loaded)))
+              load-failure (when (and (= tool state-load)
+                                      (:ok dispatch-result))
+                             (loaded-state-failure config state
+                                                   loaded-state))]
           (cond
             (common/social-error? dispatch-result)
             dispatch-result
@@ -137,8 +351,19 @@
                                  "Tool execution failed"
                                  :tool tool :args args :result dispatch-result)
 
+            load-failure
+            (runner/runner-error
+             (:domain-id config) (:failure load-failure)
+             "Loaded cycle state failed validation"
+             :tool tool
+             :details (dissoc load-failure :failure))
+
             :else
-            (let [result (:result dispatch-result)
+            (let [result (if (= tool state-load)
+                           loaded-state
+                           (:result dispatch-result))
+                  marker (when (= tool state-load) (branch-marker state args))
+                  state-base (if marker result state)
                   ev (evidence/make-step-evidence
                       (:domain-id config) (:session-id state) (:author state)
                       tool args result (:last-evidence-id state))
@@ -149,12 +374,19 @@
                   new-cycle-id (when (= tool cycle-begin)
                                  (:cycle/id result))
                   last-phase (last (:phase-order config))
-                  new-state (cond-> state
+                  step-record (cond-> {:tool tool :args args :result result
+                                       :evidence/id (:evidence/id ev)}
+                                marker (assoc :branch-marker marker))
+                  new-state (cond-> state-base
                               true (assoc :last-evidence-id (:evidence/id ev))
-                              true (update :steps conj {:tool tool :args args :result result})
+                              true (update :steps (fnil conj []) step-record)
+                              marker (update :branch-markers (fnil conj []) marker)
                               new-phase (assoc :current-phase new-phase)
+                              new-phase (update :cycle/outputs merge
+                                                stamped-advance-payload)
                               new-cycle-id (assoc :current-cycle-id (:cycle/id result)
-                                                  :current-phase (first (:phase-order config)))
+                                                  :current-phase (first (:phase-order config))
+                                                  :cycle/outputs {})
                               ;; When cycle completes, clear active cycle
                               (= new-phase last-phase)
                               (-> (dissoc :current-phase :current-cycle-id)
@@ -227,11 +459,15 @@
             {:ok true :state state :evidence ev})))))
 
   (step [_ state action]
-    (let [effective-config (or (:cycle-config state) config)
-          result (dispatch-step effective-config spec backend state action)]
-      (when (:ok result)
-        (bb/project! (:domain-id effective-config) (:state result)))
-      result))
+    (if-not (map? state)
+      (runner/runner-error (:domain-id config) :absent-state
+                           "Cycle step requires state from a successful start or load"
+                           :action action)
+      (let [effective-config (or (:cycle-config state) config)
+            result (dispatch-step effective-config spec backend state action)]
+        (when (:ok result)
+          (bb/project! (:domain-id effective-config) (:state result)))
+        result)))
 
   (stop [_ state reason]
     (let [effective-config (or (:cycle-config state) config)

@@ -1418,6 +1418,9 @@ machinery for unattended operation.
 
 **NOT yet done (named follow-ons, not silent gaps):**
 - Multi-cycle **autonomous overnight runs** — machinery present, not yet run.
+- **Pilot contract-compliance** — the WM cleaning phase (the `:street-sweeper` hop) is built + live but
+  runs only on a *manual* trigger, not autonomously; it last ran for real 2026-05-25/27. The finding +
+  a "run-via-WM command" use case are captured in `E-pilot-contract-compliance.md` (cron deferred). [2026-06-15]
 - **LOOP-learning automation** is v0 (WM-gap-signals only; transcript-mining + substrate-2 typed-`:sorry` emission still owned by `M-a-sorry-enterprise`, Checkpoint there).
 - **Hole-budget governance** (`E-cheesemonger.md`) — charter scoped; regression-watch / verify-closure / provenance-ledger / anti-Goodhart / GC are OPEN.
 - **Doc-currency automation** + the **immersive WM→VSATARCS storyteller** (`E-storyteller.md`) — scoped, not built.

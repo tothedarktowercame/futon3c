@@ -1,9 +1,22 @@
 (ns futon3c.watcher.commit-ingest-test
   (:require [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [babashka.http-client :as http]
             [futon3c.agency.registry :as registry]
             [futon3c.watcher.commit-ingest :as sut]))
+
+(deftest cold-start-cursor-asks-store-for-one-latest-commit
+  (let [seen-url (atom nil)]
+    (with-redefs [http/get (fn [url _]
+                             (reset! seen-url url)
+                             {:status 200
+                              :body (pr-str {:hyperedges
+                                             [{:hx/id "hx:code/v05/commit:abc123"}]})})]
+      (is (= "abc123" (sut/last-indexed-commit-sha-from-store "demo")))
+      (is (str/includes? @seen-url "repo=demo"))
+      (is (str/includes? @seen-url "latest=true&limit=1")))))
 
 (defn- tmp-dir []
   (doto (java.io.File/createTempFile "commit-ingest-" "")
@@ -54,7 +67,7 @@
                 :n-mana-credited 0}
                (sut/ingest-new-commits! {:repo-root "/tmp/repo"
                                          :repo-label "demo"
-                                         :file->vars (constantly nil)})))
+                                         :file->structure (constantly nil)})))
         (is (= ["demo" "merge-head"] @recorded))))))
 
 (deftest ingest-new-commits-falls-back-to-latest-commit-when-head-missing
@@ -72,7 +85,7 @@
                                                 (reset! recorded [repo-label sha]))]
         (sut/ingest-new-commits! {:repo-root "/tmp/repo"
                                   :repo-label "demo"
-                                  :file->vars (constantly nil)})
+                                  :file->structure (constantly nil)})
         (is (= ["demo" "only-new"] @recorded))))))
 
 (deftest parses-mission-trailer-from-real-commit

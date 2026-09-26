@@ -1,0 +1,23 @@
+{:schema :wm/run4-historical-admission-service-packet-v1
+ :enabled? false
+ :casting {:author "codex-10" :reviewer "codex-12"
+           :repair-reviewer "codex-12"}
+ :repair-id "repair-attempt-057-untyped-failure"
+ :verification
+ {:id "repair-057-revalidation-20260911-v1"
+  :path "repair-057-revalidation-20260911-v1.verification.edn"
+  :sha256 "6ca6f397b1f7531c91a0f4b9ab6cbc3d2712eb4b347c3c897b91a62c72958829"}
+ :proposed-execution-cohort
+ {:id :run4-repair057-admission-20260911-v1 :target 1
+  :status :disabled-unprovisioned}
+ :proposed-series
+ {:series-id "run4-repair057-admission-20260911-v1"
+  :trial-id "historical-verification-admission"
+  :attempt-id "historical-verification-admission-001"
+  :status :disabled-unfrozen}
+ :execution {:status :not-performed :identity nil}
+ :repair-admission {:status :not-performed}
+ :successor {:status :not-materialized
+             :requires [:immutable-historical-execution-receipt
+                        :separate-frozen-task-pin
+                        :fresh-capacity]}}

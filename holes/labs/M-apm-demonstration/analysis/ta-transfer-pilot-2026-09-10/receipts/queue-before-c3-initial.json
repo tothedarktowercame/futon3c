@@ -1,0 +1,1047 @@
+{
+  "agents": [
+    {
+      "agent-id": "codex-ta-transfer-20260910",
+      "pending": 3,
+      "draining": true,
+      "queued": [
+        {
+          "id": "turn-38ad501b-8c8a-4e93-a7a6-6d1a26369aef",
+          "seq": 2,
+          "from": "auto-bellback",
+          "surface": "auto-bellback",
+          "msg-id": "generated-542b86cf4fe262be",
+          "accepted-at": "2026-09-10T17:06:40.664932045Z",
+          "preview": "\ud83d\udd14 RE: your bell \u2014 job `invoke-1789059902616-19036-11a648a1` to zai-student-transfer-20260910 finished (state `done`). C1 INITIAL complete. Summary: **Bounded search (2 of 3 queries, exact commands..."
+        },
+        {
+          "id": "turn-7514687a-637a-4e72-b8d7-c7c1b3d4cb75",
+          "seq": 3,
+          "from": "auto-bellback",
+          "surface": "auto-bellback",
+          "msg-id": "generated-e349cb98a4cacfcd",
+          "accepted-at": "2026-09-10T17:08:27.651137466Z",
+          "preview": "\ud83d\udd14 RE: your bell \u2014 job `invoke-1789060039883-19041-e098a859` to zai-student-transfer-20260910 finished (state `done`). C1 REVISED complete \u2014 written to `student/c1-revised.md`, initial file untouch..."
+        },
+        {
+          "id": "turn-169f648b-2f04-4002-9a16-843023f97706",
+          "seq": 4,
+          "from": "auto-bellback",
+          "surface": "auto-bellback",
+          "msg-id": "generated-abdc3721990c8776",
+          "accepted-at": "2026-09-10T17:09:55.499494603Z",
+          "preview": "\ud83d\udd14 RE: your bell \u2014 job `invoke-1789060152372-19047-af4590c9` to zai-student-transfer-20260910 finished (state `done`). C2 complete \u2014 saved to `student/c2.md`. **Verdict: the assertion is FALSE.** -..."
+        }
+      ]
+    },
+    {
+      "agent-id": "codex-10",
+      "pending": 1,
+      "draining": true,
+      "queued": [
+        {
+          "id": "turn-557b9f75-3ec8-483b-b597-ac6df2316faa",
+          "seq": 1561,
+          "from": "topology-build-loop",
+          "surface": "bell",
+          "msg-id": "generated-3f559511cda3ce22",
+          "accepted-at": "2026-09-10T17:05:34.410707434Z",
+          "preview": "ROWS AWAITING REVIEW: coefficient-range-intersection-to-right-comparison-implementation-refill50 -- review the first only. # Topology build-loop independent review Review only the first `:done-unre..."
+        }
+      ]
+    },
+    {
+      "agent-id": "ZZ-probe-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "abl-codex-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "air-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-air-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-claude-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-claude-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-codex-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-codex-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-scribe-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "ams-zai-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "analyst-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "analyst-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "analyst-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "analyst-4",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "apm-driver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-10",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-11",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-12",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-13",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-14",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-15",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-16",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-17",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-18",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-19",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-20",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-4",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-5",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-6",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-7",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-8",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-9",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-cli",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-clink-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "claude-compact-cold-1542",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-11",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-12",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-13",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-14",
+      "pending": 0,
+      "draining": true,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-15",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-16",
+      "pending": 0,
+      "draining": true,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-17",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-18",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-19",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-20",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-21",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-22",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-4",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-5",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-6",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-7",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-8",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "codex-9",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "compression-pilot",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "countdown-control",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "definitely-not-an-agent",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f10-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f10-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f10-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f10-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f11-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f11-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f11-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f11-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f12-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f12-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f12-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f12-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f13-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f13-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f13-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f15-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f15-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f15-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f15-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f16-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f16-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f16-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f16-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f16-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f17-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f17-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f17-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f17-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f18-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f18-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f191-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f24-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f25-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f27-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f28-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f29-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f30-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f32-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f33-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f34-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f35-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f37-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f39-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f40-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f41-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f42-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f44-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f46-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f47-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f49-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f50-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f51-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f52-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f56-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f57-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f58-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f60-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f61-proctor",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f7-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f7-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f7-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f8-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f8-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f8-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f8-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f9-guide",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f9-scribe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f9-solver",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f9-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "f99-student",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "http-caller",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "joe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-claude-11",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-claude-13",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-claude-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-claude-7",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-10",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-16",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-4",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-6",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-codex-7",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-zai-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-zai-2",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "oxf-zai-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "sink-proof-bell-20260822",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "topology-build-loop",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-evidence",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-full-loop",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-lane-probe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-nouns",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-organization",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-verbs",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "wm-zai-probe",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-1",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-2",
+      "pending": 0,
+      "draining": true,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-3",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-4",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-5",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-6",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    },
+    {
+      "agent-id": "zai-student-transfer-20260910",
+      "pending": 0,
+      "draining": false,
+      "queued": []
+    }
+  ],
+  "held": {},
+  "total-pending": 4,
+  "ok": true
+}

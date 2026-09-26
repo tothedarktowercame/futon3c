@@ -8,16 +8,22 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.agency.job-tree :as job-tree]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.dev.config :as config]
             [futon3c.util.cwd :as cwd])
   (:import [java.io BufferedReader BufferedWriter InputStreamReader OutputStreamWriter]
            [java.time Instant]
-           [java.util.concurrent TimeUnit TimeoutException]))
+           [java.util.concurrent ArrayBlockingQueue LinkedBlockingQueue
+            RejectedExecutionException ThreadFactory ThreadPoolExecutor
+            TimeUnit TimeoutException]
+           [java.util.concurrent.locks ReentrantLock]))
 
 (defonce ^:private !pouches (atom {}))
 (defonce ^:private !registry-lock (Object.))
 
-(def ^:private default-timeout-ms (* 30 60 1000))
+(def ^:private default-timeout-ms (* 60 60 1000))
+(def ^:private default-missing-trailer-grace-ms 90000)
 (def ^:private default-idle-ttl-ms (* 30 60 1000))
 (def ^:private default-max-warm 8)
 
@@ -41,11 +47,75 @@
   []
   (bool-prop-or-env "FUTON3C_KANGAROO" false))
 
+(defn demux?
+  "Load-dark flag for the demultiplexing pouch reader (D6, E-unsolicited-pouch-turns).
+   Default OFF; the OFF path is byte-for-byte the original synchronous read."
+  []
+  (bool-prop-or-env "FUTON3C_POUCH_DEMUX" false))
+
+(defonce ^:private !unsolicited-sink (atom nil))
+
+(def agent-initiated-marker
+  "Visible attribution for a pouch turn that no operator turn solicited."
+  "[AGENT-INITIATED — NOT A REPLY]")
+
+(defn make-unsolicited-sink
+  "Adapt DELIVER! to the `(fn [agent-id turn])` pouch sink contract.
+   DELIVER! receives a surface-neutral map whose speaker contains the mandatory
+   agent-initiated marker; operator-surface adapters must preserve that speaker."
+  [deliver!]
+  (fn [agent-id turn]
+    (deliver! {:agent-id (str agent-id)
+               :session-id (:session-id turn)
+               :speaker (str agent-id " " agent-initiated-marker)
+               :text (str (:result turn))})))
+
+(defn set-unsolicited-sink!
+  "Register (fn [agent-id turn]) for turns the agent took that no feed-turn!
+   solicited — a background-task completion re-invoking it. Without a sink
+   they are logged. They must never be discarded silently (the old
+   drain-pending! behaviour) nor returned to the next caller (the desync)."
+  [f]
+  (reset! !unsolicited-sink f))
+
+(defonce ^:private unsolicited-delivery-executor
+  ;; The demux thread is the pouch's sole stdout reader. It must never execute
+  ;; an operator-surface adapter inline: Emacs, a socket, or a test sink may
+  ;; block indefinitely. A bounded queue also prevents an unavailable surface
+  ;; from turning a burst of autonomous completions into unbounded memory use.
+  (ThreadPoolExecutor.
+   1 1 0 TimeUnit/MILLISECONDS
+   (ArrayBlockingQueue. 256)
+   (reify ThreadFactory
+     (newThread [_ runnable]
+       (doto (Thread. ^Runnable runnable "pouch-unsolicited-delivery")
+         (.setDaemon true))))))
+
 (defn idle-ttl-ms []
   (long-prop-or-env "FUTON3C_KANGAROO_IDLE_TTL_MS" default-idle-ttl-ms))
 
+(defn missing-trailer-grace-ms
+  "How long a solicited, text-only assistant event may remain quiescent before
+   the demux treats the absent protocol `result` as a missing trailer.
+
+   This is deliberately longer than the observed pause between an intermediate
+   prose block and its following tool call. Any later protocol event cancels the
+   inference. Set FUTON3C_POUCH_MISSING_TRAILER_GRACE_MS to tune in tests or
+   operations."
+  []
+  (long-prop-or-env "FUTON3C_POUCH_MISSING_TRAILER_GRACE_MS"
+                    default-missing-trailer-grace-ms))
+
 (defn max-warm []
   (long-prop-or-env "FUTON3C_KANGAROO_MAX_WARM" default-max-warm))
+
+(defn max-rss-mb
+  "Per-pouch RSS ceiling in MB. Long-lived warm pouches grow without bound
+   (two kernel-OOM box deaths on 2026-07-04: pouch processes at 12 GB and
+   16.4 GB anon RSS); pouches over this ceiling are recycled at the next
+   sweep — the cold-fallback path resumes the session from its transcript."
+  []
+  (long-prop-or-env "FUTON3C_KANGAROO_MAX_RSS_MB" 4096))
 
 ;; =============================================================================
 ;; Joey gate — warm only SMALL sessions; a monster needs an explicit override
@@ -127,6 +197,68 @@
       (flush))
     bytes))
 
+;; -- E-monster-to-joey: compact a monster's COLD transcript so it can warm -----
+;; Flag-gated (default OFF). Compaction rewrites the transcript IN PLACE under the
+;; same session-id (agent clock/evidence/pouch key untouched), backing up the
+;; original; safe because this fires only at the monster-cold decision, where the
+;; session has no warm writer. See scripts/compact_session.py.
+
+(def ^:private default-compact-script
+  "/home/joe/code/futon3c/scripts/compact_session.py")
+
+(defn compact-monsters-enabled?
+  "Flag (default ON as of 2026-07-01, FUTON3C_KANGAROO_COMPACT_MONSTERS): compact a
+   monster's cold transcript so it becomes a warm-able joey instead of cold-spawning
+   every turn. Verified live on real agents (E-monster-to-joey). Set the flag to
+   false to disable."
+  []
+  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" true))
+
+(defn- compact-script []
+  (or (some-> (System/getProperty "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
+      (some-> (config/env "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
+      default-compact-script))
+
+(defn- compact-target-mib []
+  (or (some-> (or (System/getProperty "FUTON3C_KANGAROO_COMPACT_TARGET_MIB")
+                  (config/env "FUTON3C_KANGAROO_COMPACT_TARGET_MIB"))
+              str/trim not-empty)
+      "1.7"))
+
+(defn compact-session!
+  "Run the recency-shell compactor on SESSION-ID's cold transcript, in place
+   (backup kept). Returns true on success. Loud-failure: logs and returns false on
+   any error. Only meaningful on a COLD session (no warm writer)."
+  [session-id]
+  (let [sid    (some-> session-id str str/trim not-empty)
+        script (compact-script)]
+    (when (and sid (.isFile (io/file script)))
+      (try
+        (let [sh (requiring-resolve 'clojure.java.shell/sh)
+              {:keys [exit out err]} (sh "python3" script sid
+                                         "--target-mib" (compact-target-mib))]
+          (println (format "[kangaroo] compact %s: exit=%s %s" sid (str exit)
+                           (str/trim (str (or out "")
+                                          (when (seq err) (str " ERR:" err))))))
+          (flush)
+          (zero? (long exit)))
+        (catch Throwable t
+          (println (str "[kangaroo] compact failed for " sid ": " (.getMessage t)))
+          (flush)
+          false)))))
+
+(defn joey-eligible-or-compact?
+  "Like `joey-eligible?`, but when a monster is found and compaction is enabled
+   (FUTON3C_KANGAROO_COMPACT_MONSTERS), compact the cold transcript in place and
+   re-check the gate — so a shrunk monster warms instead of staying cold.
+   SIDE EFFECT (only on a monster + flag on): rewrites the transcript."
+  [agent-id session-id]
+  (or (joey-eligible? agent-id session-id)
+      (and (compact-monsters-enabled?)
+           (some? (some-> session-id str str/trim not-empty))
+           (compact-session! session-id)
+           (joey-eligible? agent-id session-id))))
+
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now [] (str (Instant/now)))
 
@@ -171,18 +303,50 @@
   (boolean (and (:process pouch)
                 (.isAlive ^Process (:process pouch)))))
 
+(defn- fail-demux-waiters!
+  "Atomically close DEMUX and fail its current owner plus every queued waiter.
+
+   Registration uses the same DEMUX monitor. Therefore shutdown is linear:
+   a waiter is either present here and failed, or observes :closed? and never
+   registers. There is no third state where it is added after the sole reader
+   has exited and can wait forever."
+  [demux error]
+  (when demux
+    (locking demux
+      (reset! (:closed? demux) true)
+      ;; The current turn is removed from :waiters at init time. It must stay
+      ;; reachable here or eviction can kill the process while leaving the
+      ;; invoke promise parked forever (claude-2, 2026-08-06).
+      (when-let [owner-atom (:owner demux)]
+        (when-let [w @owner-atom]
+          (reset! owner-atom nil)
+          (deliver (:promise w) {:error error})))
+      (let [^LinkedBlockingQueue q (:waiters demux)]
+        (loop []
+          (when-let [w (.poll q)]
+            (deliver (:promise w) {:error error})
+            (recur)))))))
+
 (defn- destroy-pouch! [pouch]
+  ;; Mark the demux closed and fail its waiters first. Terminate the subprocess
+  ;; BEFORE closing its BufferedReader: BufferedReader.close synchronizes with
+  ;; readLine and can itself block behind the sole reader thread until the
+  ;; process produces output. Process death is what reliably releases readLine.
+  (fail-demux-waiters!
+   (:demux pouch)
+   (ex-info "pouch was evicted while a turn was waiting"
+            {:agent-id (:agent-id pouch)}))
   (when-let [w (:writer pouch)]
     (try (.close ^BufferedWriter w) (catch Throwable _)))
-  (when-let [r (:reader pouch)]
-    (try (.close ^BufferedReader r) (catch Throwable _)))
   (when-let [p (:process pouch)]
     (try
       (when (.isAlive ^Process p)
         (.destroy ^Process p)
         (when-not (.waitFor ^Process p 200 TimeUnit/MILLISECONDS)
           (.destroyForcibly ^Process p)))
-      (catch Throwable _))))
+      (catch Throwable _)))
+  (when-let [r (:reader pouch)]
+    (try (.close ^BufferedReader r) (catch Throwable _))))
 
 (defn evict!
   "Evict AGENT-ID's pouch if present."
@@ -214,6 +378,40 @@
                         (< (long (:last-used-ms pouch 0)) cutoff))]
        (when (evict! aid)
          (swap! evicted conj aid)))
+     @evicted)))
+
+(defn- pouch-rss-kb
+  "Resident set size of POUCH's process in kB via `ps`, or nil when
+   unreadable (dead process). NB: Java reads of /proc/<pid>/status throw
+   EINVAL in this JVM (verified 2026-07-04), hence the subprocess."
+  [pouch]
+  (try
+    (when-let [p ^Process (:process pouch)]
+      (when (.isAlive p)
+        (let [ps (.start (ProcessBuilder. ["ps" "-o" "rss=" "-p" (str (.pid p))]))
+              out (with-open [r (clojure.java.io/reader (.getInputStream ps))]
+                    (slurp r))]
+          (.waitFor ps 2000 TimeUnit/MILLISECONDS)
+          (some-> (re-find #"\d+" out) parse-long))))
+    (catch Throwable _ nil)))
+
+(defn evict-oversized!
+  "Evict pouches whose RSS exceeds the ceiling. Mid-turn pouches are never
+   killed (same rule as evict-idle!) — a ballooned pouch is recycled at the
+   first sweep after its turn ends. Returns [[agent-id rss-mb] ...]."
+  ([] (evict-oversized! (max-rss-mb)))
+  ([limit-mb]
+   (let [limit-kb (* (long limit-mb) 1024)
+         evicted (atom [])]
+     (doseq [[aid pouch] @!pouches
+             :when (not (:in-flight? pouch))]
+       (when-let [rss-kb (pouch-rss-kb pouch)]
+         (when (> rss-kb limit-kb)
+           (println (str "[kangaroo] " aid " pouch over RSS ceiling ("
+                         (quot rss-kb 1024) "MB > " limit-mb
+                         "MB); recycling — next invoke resumes cold"))
+           (when (evict! aid)
+             (swap! evicted conj [aid (quot rss-kb 1024)])))))
      @evicted)))
 
 (defn- enforce-cap! []
@@ -257,30 +455,57 @@
                :process proc
                :writer (BufferedWriter. (OutputStreamWriter. (.getOutputStream proc)))
                :reader (BufferedReader. (InputStreamReader. (.getInputStream proc)))
-               :lock (Object.)
+               :lock (ReentrantLock.)
                :session-id session-id
                :claude-bin (or claude-bin "claude")
                :model model
                :cwd cwd
+               :permission-mode (or permission-mode "bypassPermissions")
                :spawned-at (now)
                :spawned-at-ms (now-ms)
                :last-used-ms (now-ms)
                :turn-count 0
-               :stderr stderr}]
+               :stderr stderr
+               ;; Decided once, at spawn: a pouch must not switch read models
+               ;; mid-life if the flag is flipped under it.
+               :demux (when (demux?)
+                        {:waiters (LinkedBlockingQueue.)
+                         :turns (atom 0)
+                         ;; Every parsed event advances this clock. A delayed
+                         ;; missing-trailer check is valid only while its event
+                         ;; remains the most recent event for the same turn.
+                         :activity-seq (atom 0)
+                         ;; Monotone observation clock for task_notification.
+                         ;; A waiter records this value when registered so the
+                         ;; reader can distinguish "notification already seen,
+                         ;; then operator prompt" from "operator prompt queued,
+                         ;; then an already-buffered autonomous notification".
+                         :notification-seq (atom 0)
+                         ;; Unlike a local volatile in demux-loop!, this owner
+                         ;; remains reachable by destroy-pouch!/eviction.
+                         :owner (atom nil)
+                         :thread (atom nil)
+                         :closed? (atom false)})}]
     (stderr-drainer proc stderr)
     pouch))
 
-(defn- compatible? [pouch {:keys [session-id model cwd claude-bin]}]
+(defn- compatible? [pouch {:keys [session-id model cwd claude-bin permission-mode]}]
   (and (or (nil? session-id)
            (= (some-> session-id str) (some-> (:session-id pouch) str)))
        (= (some-> model str) (some-> (:model pouch) str))
        (= (some-> cwd str) (some-> (:cwd pouch) str))
-       (= (some-> (or claude-bin "claude") str) (some-> (:claude-bin pouch) str))))
+       (= (some-> (or claude-bin "claude") str) (some-> (:claude-bin pouch) str))
+       ;; A permission change must not be silently absorbed by a warm pouch:
+       ;; claude-2's 2026-08-10 re-registration (default -> bypassPermissions)
+       ;; never took effect because the old pouch kept serving.
+       (= (str (or permission-mode "bypassPermissions"))
+          (str (or (:permission-mode pouch) "bypassPermissions")))))
 
 (defn- ensure-pouch! [agent-id opts]
   (let [aid (str agent-id)]
     (locking !registry-lock
       (evict-idle!)
+      (evict-oversized!)
       (let [existing (get @!pouches aid)]
         (if (and existing (alive? existing) (compatible? existing opts))
           existing
@@ -297,6 +522,29 @@
     :message {:role "user"
               :content [{:type "text" :text (prompt-str prompt)}]}}))
 
+(defn- control-line []
+  (json/generate-string
+   {:type "user"
+    :message {:role "user" :content "/compact"}}))
+
+(defn- note-total-cost!
+  "Record the CLI's `total_cost_usd` from a result EVENT on AGENT-ID's pouch.
+   A stream-json process reports its running total, not the turn's cost
+   (a warm compact of claude-15 read $113.95 against a session at ~$95,
+   2026-09-12); compact-pouch! subtracts the last total to price itself."
+  [agent-id event]
+  (let [c (:total_cost_usd event)
+        aid (str agent-id)]
+    (when (number? c)
+      (swap! !pouches
+             (fn [m] (cond-> m
+                       (contains? m aid)
+                       (assoc-in [aid :last-total-cost-usd] c)))))))
+
+(defn- compaction-cost [before after]
+  (when (and (number? before) (number? after) (>= after before))
+    (- after before)))
+
 (defn- read-turn* [pouch on-event]
   (let [text (StringBuilder.)
         tools (java.util.ArrayList.)
@@ -308,7 +556,20 @@
                           {:agent-id (:agent-id pouch)})))
         (if (str/blank? line)
           (recur)
-          (let [event (json/parse-string line true)]
+          ;; A pouch's stdout is a JSON-event stream, but it is a
+          ;; SUBPROCESS's stdout: whatever the runtime beneath it prints lands
+          ;; here too. On 2026-09-07 the JVM exhausted its 4g direct-buffer
+          ;; limit, and the resulting "Cannot reserve 309 bytes of direct
+          ;; buffer memory" line reached this reader, where an unguarded parse
+          ;; threw JsonParseException, killed the regulator tick
+          ;; (:live-regulator-tick-threw) and stopped the whole
+          ;; jit-all-open-v3 campaign. One stray line must cost one line, not
+          ;; the campaign. An unparseable line becomes an event of unknown
+          ;; :type, which the case below already answers with (recur).
+          ;; Line ~833 of this file has always read its stream this way.
+          (let [event (or (try (json/parse-string line true)
+                               (catch Throwable _ nil))
+                          {:type "pouch/unparseable-line" :raw line})]
             (when on-event
               ;; Observability hook (e.g. surfacing tool activity to the
               ;; registry); a hook failure must never kill the turn.
@@ -323,6 +584,7 @@
 
               "result"
               (do
+                (note-total-cost! (:agent-id pouch) event)
                 (when-let [event-sid (:session_id event)]
                   (reset! sid event-sid))
                 {:result (let [s (str text)]
@@ -358,14 +620,402 @@
           (recur (inc n)))
         n))))
 
-(defn- read-turn-with-timeout [pouch timeout-ms on-event]
-  (let [f (future (read-turn* pouch on-event))
-        v (deref f (long timeout-ms) ::timeout)]
-    (if (= v ::timeout)
-      (do
-        (future-cancel f)
-        (throw (TimeoutException. (str "pouch feed timed out after " timeout-ms "ms"))))
-      v)))
+(defn- compact-status-event? [event]
+  (and (= "system" (:type event))
+       (= "status" (:subtype event))
+       (contains? event :compact_result)))
+
+(defn- read-compact*
+  "Read the reply to a `/compact` control line.
+
+   Measured against the claude CLI (2026-09-01, /tmp/compact-probe/probe.py):
+   system/status (compaction started) -> ... -> system/status with
+   :compact_result -> system/init -> system/compact_boundary -> result with
+   num_turns 0. So the compaction's own `result` always FOLLOWS a status that
+   carries :compact_result.
+
+   A `result` seen before any such status therefore belongs to a turn that was
+   already in flight when the control was written — an agent-initiated turn
+   (task notification) that drain-pending! could not tell from stale output
+   (claude-1, 2026-09-01 18:24: the drain dropped 142 lines of a report, and
+   read-turn* returned that turn's result as the compaction's, so Emacs showed
+   a bare `[compact] error` while the CLI compacted for two more minutes and
+   the next user turn was fed into the compaction). Consume it, count it, and
+   keep reading; the count is reported so the caller can say so."
+  [pouch on-event]
+  (let [sid (atom (:session-id pouch))
+        status (atom nil)
+        orphans (atom 0)]
+    (loop []
+      (let [line (.readLine ^BufferedReader (:reader pouch))]
+        (when (nil? line)
+          (throw (ex-info "pouch process closed stdout before compact result"
+                          {:agent-id (:agent-id pouch)})))
+        (if (str/blank? line)
+          (recur)
+          ;; A pouch's stdout is a JSON-event stream, but it is a
+          ;; SUBPROCESS's stdout: whatever the runtime beneath it prints lands
+          ;; here too. On 2026-09-07 the JVM exhausted its 4g direct-buffer
+          ;; limit, and the resulting "Cannot reserve 309 bytes of direct
+          ;; buffer memory" line reached this reader, where an unguarded parse
+          ;; threw JsonParseException, killed the regulator tick
+          ;; (:live-regulator-tick-threw) and stopped the whole
+          ;; jit-all-open-v3 campaign. One stray line must cost one line, not
+          ;; the campaign. An unparseable line becomes an event of unknown
+          ;; :type, which the case below already answers with (recur).
+          ;; Line ~833 of this file has always read its stream this way.
+          (let [event (or (try (json/parse-string line true)
+                               (catch Throwable _ nil))
+                          {:type "pouch/unparseable-line" :raw line})]
+            (when on-event
+              (try (on-event event) (catch Throwable _)))
+            (when (compact-status-event? event)
+              (reset! status event))
+            (case (:type event)
+              "result"
+              (do
+                (note-total-cost! (:agent-id pouch) event)
+                (when-let [event-sid (:session_id event)]
+                  (reset! sid event-sid))
+                (if @status
+                  {:result ""
+                   :session-id @sid
+                   :pouch/warm? true
+                   :pouch/agent-id (:agent-id pouch)
+                   :compact/status @status
+                   :compact/orphaned-turns @orphans}
+                  (do
+                    (swap! orphans inc)
+                    (println (str "[pouch] " (:agent-id pouch)
+                                  " consumed the result of an unsolicited turn"
+                                  " while awaiting /compact (" @orphans ")"))
+                    (flush)
+                    (recur))))
+
+              "error"
+              (throw (ex-info "pouch stream emitted an error event"
+                              {:agent-id (:agent-id pouch) :event event}))
+
+              (recur))))))))
+
+(defn- read-turn-with-timeout
+  "Read one turn, optionally bounded. TIMEOUT-MS nil or non-positive reads
+   until the result event arrives. READ-FN (default read-turn*) is the
+   reader; compact-pouch! passes read-compact*.
+
+   Unlike the codex adapter this keeps a default bound (see
+   default-timeout-ms). The pouch is a persistent stdio protocol: abandoning a
+   read leaves an unconsumed `result` that shifts every later turn one behind
+   (the desync drain-pending! exists to repair), so removing the bound here
+   needs a pouch-level cancel first. Tracked in README-agency-cap.md."
+  [pouch timeout-ms on-event & [read-fn]]
+  (let [f (future ((or read-fn read-turn*) pouch on-event))
+        bound (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))]
+    (if-not bound
+      @f
+      (let [v (deref f bound ::timeout)]
+        (if (= v ::timeout)
+          (do
+            (future-cancel f)
+            (throw (TimeoutException. (str "pouch feed timed out after " bound "ms"))))
+          v)))))
+
+;; ---------------------------------------------------------------------------
+;; Demultiplexing reader (D6 — the single-READER dual of D3's single-writer).
+;;
+;; The pouch has a second turn source: the agent itself. A background task
+;; completing re-invokes it, producing a full turn and its own `result` that no
+;; feed-turn! is waiting on (measured 2026-08-03 on claude-11: 23 self-initiated
+;; turns against 11 fed). read-turn* returns on the FIRST result it sees, so each
+;; unsolicited one shifts every later REPL reply a turn behind.
+;;
+;; drain-pending! cannot fix this, and not only because "the process is idle
+;; between turns" is false. Peeking at a stream you are not continuously
+;; consuming cannot distinguish an orphaned COMPLETE turn from an in-flight
+;; turn's PARTIAL output — and draining the latter both destroys the agent's
+;; work and leaves the next read starting mid-turn. The repair has to be a
+;; reader that never stops reading.
+;;
+;; Correlation (measured against a live pouch, 2026-08-03 — not assumed):
+;;
+;;    6.6  result  success             <- the fed turn ends
+;;   12.9  system  task_notification   <- background task completed
+;;   13.0  system  init                <- a NEW turn starts, solicited by nobody
+;;   19.3  result  success
+;;
+;; Every turn opens with `system`/`init`, so turn boundaries are explicit; and an
+;; agent-initiated turn is ANNOUNCED by a `system`/`task_notification` emitted
+;; between turns. Ownership is therefore decided by the protocol, not by timing:
+;; a turn whose init follows a pending task_notification belongs to no waiter.
+;;
+;; An earlier draft correlated by counting turns seen before the write. It was
+;; wrong — the count reflects what the reader has PROCESSED, not what the process
+;; has EMITTED, so a turn already sitting in the pipe was invisible and got handed
+;; to the next caller: the very bug being fixed. The tests caught it.
+;;
+;; Assumption worth stating: one pending task_notification is taken to explain one
+;; autonomous turn (the flag is reset, not decremented). If a burst of
+;; notifications ever produced several distinct turns, the later ones could still
+;; be mis-attributed. `system`/`task_started` is NOT a trigger — it occurs inside
+;; a turn, when the agent launches the job.
+;; ---------------------------------------------------------------------------
+
+(defn- report-unsolicited! [agent-id turn]
+  (if-let [f @!unsolicited-sink]
+    (try
+      (.execute unsolicited-delivery-executor
+                ^Runnable
+                (fn []
+                  (try
+                    (f agent-id turn)
+                    (catch Throwable t
+                      (println (str "[pouch] " agent-id
+                                    " unsolicited delivery failed: "
+                                    (.getMessage t)))
+                      (flush)))))
+      (catch RejectedExecutionException _
+        (println (str "[pouch] " agent-id
+                      " unsolicited delivery queue full — delivery rejected"))
+        (flush)))
+    (do (println (str "[pouch] " agent-id " unsolicited turn (agent-initiated, no"
+                      " waiter): " (subs (str (:result turn))
+                                         0 (min 160 (count (str (:result turn)))))))
+        (flush))))
+
+(defn- demux-loop!
+  "Own the pouch's stdout for the process's whole life: segment it into turns
+   and route each to its waiter, or to the unsolicited sink."
+  [pouch]
+  (let [{:keys [waiters turns notification-seq activity-seq] :as demux}
+        (:demux pouch)
+        ^BufferedReader r (:reader pouch)
+        ^LinkedBlockingQueue q waiters
+        aid (:agent-id pouch)
+        owner (or (:owner demux) (atom nil))
+        text (volatile! (StringBuilder.))
+        tools (volatile! (java.util.ArrayList.))
+        sid (volatile! (:session-id pouch))
+        turn-id (volatile! nil)
+        open? (volatile! false)
+        agent-initiated? (volatile! false)]
+    (letfn [(start-turn! []
+              (swap! turns inc)
+              ;; Bind at turn START, not at result, so a waiter's on-event
+              ;; streams live and only ever sees its own turn's events.
+              ;; A pending notification is not enough by itself: if the head
+              ;; waiter registered AFTER that notification was observed, its
+              ;; user input supersedes the notification and owns this init.
+              ;; If the notification was observed AFTER waiter registration,
+              ;; the init may already have been buffered before the write, so
+              ;; preserve it as autonomous (the original one-behind defect).
+              (let [candidate (.peek q)
+                    autonomous? (and @agent-initiated?
+                                     (or (nil? candidate)
+                                         (< (long (:notification-seq candidate -1))
+                                            (long @notification-seq))))]
+                (reset! owner (when-not autonomous? (.poll q))))
+              (vreset! turn-id
+                       (if-let [w @owner]
+                         (or (:turn-id w)
+                             (str "pouch-turn-" (java.util.UUID/randomUUID)))
+                         (str "pouch-autonomous-" (java.util.UUID/randomUUID))))
+              (vreset! agent-initiated? false)
+              (vreset! text (StringBuilder.))
+              (vreset! tools (java.util.ArrayList.))
+              (vreset! open? true))
+            (ensure-open! [] (when-not @open? (start-turn!)))
+            (finish-turn! [event trailer-inferred?]
+              (when-let [s (:session_id event)] (vreset! sid s))
+              (let [body (str @text)
+                    turn (cond->
+                           {:result (if (str/blank? body)
+                                      (no-text-summary (vec @tools))
+                                      body)
+                            :session-id @sid
+                            :turn-id @turn-id
+                            :pouch/warm? true
+                            :pouch/agent-id aid}
+                           trailer-inferred?
+                           (assoc :pouch/trailer-inferred? true))]
+                (if-let [w @owner]
+                  (deliver (:promise w) {:ok turn})
+                  (report-unsolicited! aid turn)))
+              (reset! owner nil)
+              (vreset! open? false))
+            (emit! [event]
+              (when-let [w @owner]
+                (when-let [f (:on-event w)]
+                  (try (f (assoc event :turn-id @turn-id))
+                       (catch Throwable _ nil)))))
+            (schedule-missing-trailer! [event event-seq]
+              ;; Claude's stream-json process has twice emitted a genuine final
+              ;; assistant message but no terminal `result`, leaving the waiter
+              ;; and HTTP stream open forever. A text-only event is only a
+              ;; candidate: an intermediate paragraph followed by thinking or
+              ;; a tool is cancelled by the next event's activity sequence.
+              (let [candidate-owner @owner
+                    candidate-turn @turn-id]
+                (future
+                  (Thread/sleep (missing-trailer-grace-ms))
+                  (locking demux
+                    (when (and @open?
+                               candidate-owner
+                               (identical? candidate-owner @owner)
+                               (= candidate-turn @turn-id)
+                               (= event-seq @activity-seq))
+                      (println (str "[pouch] " aid " inferred missing result trailer for "
+                                    candidate-turn " after "
+                                    (missing-trailer-grace-ms) "ms quiescence"))
+                      (flush)
+                      (emit! {:type "result"
+                              :subtype "missing_trailer_inferred"
+                              :session_id @sid})
+                      (finish-turn! event true))))))]
+      (try
+        (loop []
+          (if-let [line (.readLine r)]
+            (do
+              (when-not (str/blank? line)
+                (when-let [event (try (json/parse-string line true)
+                                      (catch Throwable _ nil))]
+                  (job-tree/observe-event!
+                   {:agent-id aid
+                    :turn-id @turn-id
+                    :root-pid (.pid ^Process (:process pouch))
+                    :event event})
+                  (let [event-seq (swap! activity-seq inc)]
+                    (case (:type event)
+                    "system"
+                    (condp = (str (:subtype event))
+                      ;; Claude may emit more than one init record while
+                      ;; starting a fresh --print process. A duplicate belongs
+                      ;; to the open turn; polling q again would orphan the
+                      ;; current owner and park its invoke forever.
+                      "init" (do (ensure-open!) (emit! event))
+                      ;; Announced between turns: the next turn to open is the
+                      ;; agent answering its own background work unless a user
+                      ;; prompt is subsequently registered before that init.
+                      "task_notification" (do (swap! notification-seq inc)
+                                              (vreset! agent-initiated? true))
+                      (do (ensure-open!) (emit! event)))
+
+                    "assistant"
+                    (do (ensure-open!)
+                        (emit! event)
+                        (let [t (text-from-assistant event)]
+                          (when-not (str/blank? t)
+                            (.append ^StringBuilder @text t)
+                            (when (empty? (tool-names-from-assistant event))
+                              (schedule-missing-trailer! event event-seq))))
+                        (doseq [n (tool-names-from-assistant event)]
+                          (.add ^java.util.ArrayList @tools n)))
+
+                    "result"
+                    (locking demux
+                      (note-total-cost! aid event)
+                      (ensure-open!)
+                      (emit! event)
+                      (finish-turn! event false))
+
+                      (do (ensure-open!) (emit! event))))))
+              (recur))
+            ;; stdout closed: fail every outstanding waiter rather than
+            ;; leaving them to time out one by one.
+            (do (vreset! open? false)
+                (fail-demux-waiters!
+                 (:demux pouch)
+                 (ex-info "pouch process closed stdout" {:agent-id aid})))))
+        (catch Throwable t
+          (fail-demux-waiters! (:demux pouch) t))))))
+
+(defn- ensure-demux! [pouch]
+  (let [{:keys [thread]} (:demux pouch)]
+    (when (nil? @thread)
+      (let [t (doto (Thread. ^Runnable #(demux-loop! pouch)
+                             (str "pouch-demux-" (:agent-id pouch)))
+                (.setDaemon true))]
+        (when (compare-and-set! thread nil t)
+          (.start t))))))
+
+(defn- feed-line-demux!
+  "ON path: enqueue a waiter, write LINE, and await THIS turn's result."
+  [pouch line timeout-ms on-event turn-id]
+  (let [{:keys [waiters closed?] :as demux} (:demux pouch)
+        ^LinkedBlockingQueue q waiters]
+    (ensure-demux! pouch)
+    (let [w {:promise (promise)
+             :on-event on-event
+             :turn-id turn-id
+             :notification-seq @(:notification-seq demux)}]
+      ;; Pair with fail-demux-waiters!: close-and-drain and check-and-register
+      ;; share one monitor, so a waiter can never appear after shutdown drained
+      ;; the queue and the sole reader exited.
+      (locking demux
+        (when @closed?
+          (throw (ex-info "pouch stdout already closed"
+                          {:agent-id (:agent-id pouch)})))
+        (.add q w))
+      (try
+        (.write ^BufferedWriter (:writer pouch) (str line "\n"))
+        (.flush ^BufferedWriter (:writer pouch))
+        (catch Throwable t
+          (.remove q w)
+          (throw t)))
+      (let [v (if (and timeout-ms (pos? (long timeout-ms)))
+                (deref (:promise w) (long timeout-ms) ::timeout)
+                @(:promise w))]
+        (cond
+          (= ::timeout v)
+          (do (.remove q w)
+              (throw (TimeoutException.
+                      (str "pouch feed timed out after " timeout-ms "ms"))))
+          (:error v) (throw (:error v))
+          :else (:ok v))))))
+
+(defn- feed-turn-demux! [pouch prompt timeout-ms on-event turn-id]
+  (feed-line-demux! pouch (user-line prompt) timeout-ms on-event turn-id))
+
+(defn- run-pouch-turn!
+  "Run F with the pouch's exclusive turn ownership and bookkeeping.
+   WAIT? false returns ::busy rather than waiting for an active turn."
+  [agent-id pouch wait? f]
+  (let [aid (str agent-id)
+        ^ReentrantLock lock (:lock pouch)
+        acquired? (if wait? (do (.lock lock) true) (.tryLock lock))]
+    (if-not acquired?
+      ::busy
+      (try
+        (when-not (alive? pouch)
+          (throw (ex-info "pouch process is not alive" {:agent-id aid})))
+        (swap! !pouches
+               (fn [m] (cond-> m
+                         (contains? m aid)
+                         (update aid assoc :in-flight? true :last-used-ms (now-ms)))))
+        (when-not (:demux pouch)
+          (let [drained (drain-pending! pouch)]
+            (when (pos? drained)
+              (println (str "[pouch] " aid " drained " drained
+                            " stale line(s) before turn — resynced response alignment"))
+              (flush))))
+        (let [result (f)]
+          (swap! !pouches update aid
+                 #(when %
+                    (assoc %
+                           :session-id (:session-id result)
+                           :last-used-ms (now-ms)
+                           :turn-count (inc (long (:turn-count % 0))))))
+          (when (:pouch/trailer-inferred? result)
+            (evict! aid))
+          result)
+        (catch Throwable t
+          (evict! aid)
+          (throw t))
+        (finally
+          (swap! !pouches
+                 (fn [m] (cond-> m
+                           (contains? m aid)
+                           (update aid dissoc :in-flight?))))
+          (.unlock lock))))))
 
 (defn feed-turn!
   "Feed PROMPT to AGENT-ID's warm pouch and read until the result event.
@@ -375,48 +1025,85 @@
    :on-event (fn [parsed-event] — called for every stream event; exceptions
    are swallowed so observability can't kill the turn).
    Throws on spawn/feed/read failure so callers can cold-fallback."
-  [agent-id prompt {:keys [timeout-ms on-event] :as opts}]
+  [agent-id prompt {:keys [timeout-ms on-event turn-id] :as opts}]
   (let [pouch (ensure-pouch! agent-id opts)
-        timeout (or timeout-ms default-timeout-ms)
-        lock (:lock pouch)]
-    (locking lock
-      (try
-        (when-not (alive? pouch)
-          (throw (ex-info "pouch process is not alive" {:agent-id (str agent-id)})))
-        ;; Mark in-flight + touch last-used BEFORE the (possibly very long) turn,
-        ;; so idle-eviction/cap enforcement never destroys a pouch mid-turn.
-        (swap! !pouches
-               (fn [m] (cond-> m
-                         (contains? m (str agent-id))
-                         (update (str agent-id) assoc
-                                 :in-flight? true :last-used-ms (now-ms)))))
-        ;; Resync guard: drop any stale buffered output before writing, so this
-        ;; turn reads its own result (not a prior turn's). A no-op normally.
-        (let [drained (drain-pending! pouch)]
-          (when (pos? drained)
-            (println (str "[pouch] " (str agent-id) " drained " drained
-                          " stale line(s) before turn — resynced response alignment"))
-            (flush)))
-        (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
-        (.flush ^BufferedWriter (:writer pouch))
-        (let [result (read-turn-with-timeout pouch timeout on-event)]
-          (swap! !pouches update (str agent-id)
-                 #(when %
-                    (assoc %
-                           :session-id (:session-id result)
-                           :last-used-ms (now-ms)
-                           :turn-count (inc (long (:turn-count % 0))))))
-          result)
-        (catch Throwable t
-          (evict! agent-id)
-          (throw t))
-        (finally
-          ;; Only clear the flag on a still-registered pouch — after an evict!
-          ;; (error path) there is no entry, and update would reinstate a nil one.
-          (swap! !pouches
-                 (fn [m] (cond-> m
-                           (contains? m (str agent-id))
-                           (update (str agent-id) dissoc :in-flight?)))))))))
+        timeout (or timeout-ms default-timeout-ms)]
+    (run-pouch-turn!
+     agent-id pouch true
+     (fn []
+        (when-not (:demux pouch)
+          (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
+          (.flush ^BufferedWriter (:writer pouch)))
+        (if (:demux pouch)
+          (feed-turn-demux! pouch prompt timeout on-event
+                            (or turn-id turn-queue/*turn-id*))
+          (read-turn-with-timeout pouch timeout on-event))))))
+
+(defn compact-pouch!
+  "Send the raw /compact control to an already-warm AGENT-ID pouch.
+   By default, refuse an active/contended pouch immediately. `:wait? true` is
+   for callers already serialized by the agent turn queue: it waits for the
+   pouch lock and rechecks liveness under that ownership."
+  [agent-id {:keys [timeout-ms wait?] :as _opts}]
+  (let [aid (str agent-id)
+        pouch (get @!pouches aid)]
+    (cond
+      (or (nil? pouch) (not (alive? pouch)))
+      {:ok false :error "no warm pouch"}
+
+      (and (:in-flight? pouch) (not wait?))
+      {:ok false :error "turn in flight"}
+
+      :else
+      (let [status (atom nil)
+            result-event (atom nil)
+            before-cost (atom nil)
+            on-event (fn [event]
+                       (when (and (= "system" (:type event))
+                                  (= "status" (:subtype event))
+                                  (contains? event :compact_result))
+                         (reset! status event))
+                       (when (= "result" (:type event))
+                         (reset! result-event event)))
+            timeout (or timeout-ms default-timeout-ms)]
+        (try
+          (let [result
+                (run-pouch-turn!
+                 aid pouch (boolean wait?)
+                 (fn []
+                   ;; Read under the pouch lock, before /compact is written.
+                   (reset! before-cost (:last-total-cost-usd (get @!pouches aid)))
+                   (if (:demux pouch)
+                     (feed-line-demux! pouch (control-line) timeout on-event
+                                       (str "pouch-compact-" (java.util.UUID/randomUUID)))
+                     (do
+                       (.write ^BufferedWriter (:writer pouch)
+                               (str (control-line) "\n"))
+                       (.flush ^BufferedWriter (:writer pouch))
+                       (read-turn-with-timeout pouch timeout on-event
+                                               read-compact*)))))]
+            (if (= ::busy result)
+              {:ok false :error "turn in flight"}
+              (let [compact-result (:compact_result @status)
+                    compact-error (:compact_error @status)
+                    orphans (long (or (:compact/orphaned-turns result) 0))]
+                (cond-> {:ok (= "success" compact-result)
+                         :compact-result compact-result
+                         :compact-error compact-error
+                         :orphaned-turns orphans
+                         :session-id (:session-id result)
+                         :usage (:usage @result-event)
+                         ;; The CLI reports the process's running total; price the
+                         ;; compaction as the increase over the last turn's total.
+                         :total-cost-usd (compaction-cost @before-cost
+                                                          (:total_cost_usd @result-event))
+                         :pouch-total-cost-usd (:total_cost_usd @result-event)}
+                  ;; Never answer `ok false` without saying why: Emacs renders
+                  ;; a reasonless payload as a bare "[compact] error".
+                  (nil? compact-result)
+                  (assoc :error "no compact status arrived before the result")))))
+          (catch Throwable t
+            {:ok false :error (.getMessage t)}))))))
 
 (defn snapshot []
   (into {}

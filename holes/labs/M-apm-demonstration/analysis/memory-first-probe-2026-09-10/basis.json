@@ -1,0 +1,19 @@
+{
+  "futon3c-head": "330315fe413ea1273439d948061f4e96a380be10",
+  "apm-lean-head": "d0b56c5f053b8b7320e82ebeb506a058391f7551",
+  "source-sha256": {
+    "/home/joe/code/apm-lean/problems/m00A05/problem.md": "1db154aae9736eec3adcf230e5d702338bc68d4473412f6c02aa963f61cbd239",
+    "/home/joe/code/apm-lean/problems/m96J04/problem.md": "b745534d7953d5f6d884f63354c6b6009d5409bab1a2159e5511010e4e20e178",
+    "/home/joe/code/apm-lean/problems/m96J04/lean/Main.lean": "be29e886f3b71c29cbde7a6f638403e9c979a1478464b7bacf945e40c4cea5be",
+    "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f196/live/student-attempt-1-source/18d4b2817a50d66c328c2fbaa4c6787048987cd0-Main.lean": "7e25b70b538d870c55bdf95d1cceb866ea5e2f089731c81a284698b9890f5a20"
+  },
+  "claim-boundary": "memory-first retrospective feasibility; reference proof consulted original source; no blinded student or causal gain claim",
+  "artifact-sha256": {
+    "EndpointTransfer.lean": "9f8753d1a67395362976f076381f7648d3f65203b71f55ae369ece8a08a4a6ce",
+    "lean-check.txt": "369e27900a54d8ac61d446c4b9671b881110b511d014bbcbf377faa90ca4711a",
+    "memory.json": "5dadb6ba0fe46e79e018a7f9eeed55d270b13267d78e2d4f82d7ecc7fc1b268f",
+    "retrieval.clj": "ba29e2fe7ec82a48d69bed48a01cbd9f457d3e13a8a7406df160fe56acc0efb9",
+    "retrieval.json": "5be381a9ae29f3618b4445260eb9a664b71199528a968b78a7cc1dc12cd126df",
+    "review.json": "9979fcbb7fd535f6f908a61a3625308a78e0f448be9e15d5efc3a91ae6dc96d2"
+  }
+}

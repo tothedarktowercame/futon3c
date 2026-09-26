@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>zone.hyperreal.enterprises</title>
+<link rel="stylesheet" href="style.css">
+
+<header>
+  <a href="/">zone.hyperreal.enterprises</a>
+  <div class="sub">decisions, with the evidence attached</div>
+</header>
+
+<p>A running log of decisions taken on Zone, written so they can be reviewed
+without a terminal. Each entry states what is proposed, shows real data from
+the live system rather than an invented example, and names the part that needs
+a ruling.</p>
+
+<ul class="posts">
+  <li>
+    <a href="2026-09-11-pattern-first-ta.html">Teaching the construction: patterns, proof cascades, and an APM TA</a>
+    <span class="d">2026-09-11 — a worked finite-net proof, what the TA–Student
+    pilot actually showed, and the first steps toward a pattern-first APM V4.</span>
+  </li>
+
+  <li>
+    <a href="2026-08-17-drain-never-performed.html">The index proved a coverage it had never scanned</a>
+    <span class="d">2026-08-17 &mdash; we merged two evidence stores by replaying 7,249
+    documents, and the index then wrote a formal proof of completeness over six days
+    it had never looked at. Every component behaved correctly. Why the claim was
+    still false, and whether the store should refuse to make it.</span>
+  </li>
+  <li>
+    <a href="2026-08-14-inexpressible-in-lean.html">The proof assistant held the refutation, and was never asked</a>
+    <span class="d">2026-08-14 — a sorry-free Lean file could have refuted a
+    claim we made in LaTeX. It never did, because in Lean the claim was not
+    false but <em>inexpressible</em>. Eleven lines of Clojure caught it. What
+    that says about proofs versus bridges, and the three cheap practices we are
+    adopting.</span>
+  </li>
+  <li>
+    <a href="2026-08-13-relations-retraction.html">Why deleting a pattern needs <code>:relations</code></a>
+    <span class="d">2026-08-13 — one pattern is 15 documents; we can currently
+    delete 8 of them. What a one-line change to the retraction allow-list buys,
+    and the one reason it might not be a one-liner.</span>
+  </li>
+</ul>
+
+<footer>
+  Static files under <code>/var/www/zone.hyperreal.enterprises</code>, served by
+  Caddy. No build step — plain HTML and one stylesheet, so an entry is a file.
+</footer>
+</html>

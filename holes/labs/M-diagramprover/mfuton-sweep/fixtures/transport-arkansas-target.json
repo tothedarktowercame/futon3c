@@ -1,0 +1,20 @@
+{
+  "example_id": "transport-arkansas-target",
+  "title": "Transportability target population: Arkansas",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(a) is the target-population causal graph for the effect of Advertisement X on Purchase Decision Y. Age Z confounds X and Y, while Click-through Rate W mediates X to Y.",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Exposure to the online advertisement."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "Whether the consumer purchases the product."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, a confounder of advertisement exposure and purchase."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "Clicking for more information, the mediator between advertisement and purchase."}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "Figure 10.2(a) draws Age as a cause of Advertisement exposure."},
+    {"source": "z", "target": "y", "because": "Figure 10.2(a) draws Age as a cause of Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Figure 10.2(a) draws Advertisement as a cause of Click-through Rate."},
+    {"source": "w", "target": "y", "because": "Figure 10.2(a) draws Click-through Rate as a cause of Purchase Decision."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:6220fad9ef1610b5", "ta-book-of-why-2018:e4d1cd2f403ad43d", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367"]
+}

@@ -1,0 +1,7 @@
+[Unit]
+Description=Sample futon1b cgroup memory pressure and health latency
+After=futon1b-server.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/code/futon3c/scripts/systemd/futon1b-vitality.py

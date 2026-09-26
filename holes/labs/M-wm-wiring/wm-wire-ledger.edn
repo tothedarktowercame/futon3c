@@ -1,0 +1,573 @@
+{:adjacency
+ {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
+  :rev "874cb7f4",
+  :map "08482abe"},
+ :definition futon3c.diagramprover.wm-wire-ledger-test,
+ :counts
+ {:verified 5, :witnessed-hermetically 73, :unverified 85, :wires 163},
+ :wires
+ [{:wire
+   [:ask-merge-published :construction-assemble-one :interpretations],
+   :status :unverified}
+  {:wire
+   [:ask-merge-published :construction-construct :interpretations],
+   :status :unverified}
+  {:wire [:c8-registry-get :c8-entry :message],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/the-exception-message-reaches-the-entry-refusal}
+  {:wire [:c8-registry-get :c8-entry :timeout-ms],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/the-timeout-reaches-the-entry-refusal}
+  {:wire [:c8-registry-get :c8-latest :message],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/the-exception-message-reaches-the-latest-refusal}
+  {:wire [:c8-registry-get :c8-latest :timeout-ms],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
+  {:wire [:clock-in :r1-outer-cascade :clock-lineage],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r13-family-parameters
+    [:horizon-steps {:record :cascade-problem}]],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r4-kernel
+    [:want {:record :cascade-spec}]],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r9-decision
+    [:want {:record :cascade-problem}]],
+   :status :unverified}
+  {:wire [:construction-construct :r4-order-use :construction-receipt],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/the-construction-receipt-reaches-order-use}
+  {:wire [:construction-construct :r9-decision :construction-receipt],
+   :status :unverified}
+  {:wire
+   [:construction-construct
+    :selection-candidate-derivations
+    :construction-receipt],
+   :status :unverified}
+  {:wire [:dispatch :clock-in :mission-id], :status :unverified}
+  {:wire [:eligibility :r1-outer-cascade :eligible],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-eligibility-ruling-reaches-the-cascade}
+  {:wire [:flight-cast :click-start :author],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test/the-author-seat-reaches-the-click-endpoint}
+  {:wire [:flight-cast :click-start :repair-reviewer],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test/the-repair-reviewer-seat-reaches-the-click-endpoint}
+  {:wire [:flight-cast :click-start :reviewer],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test/the-reviewer-seat-reaches-the-click-endpoint}
+  {:wire [:flight-click :flight-cast-test :cast],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test/the-cast-reaches-the-components-own-test}
+  {:wire [:flight-click :flight-record-click :cast],
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/flight-ada87008/flight-ada87008.edn",
+    :sha256
+    "85f7dcf9cd75f33e5e8ad5834cb7fb18264ab0f31e0d43644870bf541a3ff4de"},
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test/the-clicks-cast-reaches-the-flight-records-click-entry}
+  {:wire [:flight-click :flight-record-click :detail],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/the-refused-clicks-detail-reaches-the-click-entry}
+  {:wire [:flight-click :flight-record-click :status],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
+  {:wire [:flight-click :r9-measured-a-version :status],
+   :status :unverified}
+  {:wire [:flight-click-wants :click-start :wants],
+   :status :unverified}
+  {:wire [:flight-click-wants :flight-judge-opts :universe],
+   :status :unverified}
+  {:wire [:flight-click-wants :flight-judge-opts :wants],
+   :status :unverified}
+  {:wire [:flight-click-wants :tick-flight-assembly :universe],
+   :status :unverified}
+  {:wire [:flight-click-wants :tick-flight-assembly :wants],
+   :status :unverified}
+  {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :flight-click [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry :flight-judge-opts [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :flight-run [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :loop-test :target-source],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test/the-placement-reaches-the-loop-test}
+  {:wire [:flight-entry :r0-enact-step [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry
+    :r10-observe-publication
+    [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :r2-flight-read [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :r9-close-cause [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-record-summary :click-reason-test :failure],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-click-reason-test-failure-test/the-close-failure-reaches-the-components-own-test}
+  {:wire [:flight-record-summary :flight-click-close-test :chosen],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test/the-clicks-selection-reaches-the-components-own-test}
+  {:wire [:flight-record-summary :flight-record-click :chosen],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/the-clicks-selection-reaches-the-click-entry}
+  {:wire [:flight-record-summary :flight-record-click :failure],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
+  {:wire [:flight-record-summary :flight-run :chosen],
+   :status :unverified}
+  {:wire [:flight-run :flight-driver-summary :needs],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test/the-flights-needs-reach-the-drivers-summary}
+  {:wire [:flight-run :flight-driver-summary :readings],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test/the-flights-readings-reach-the-drivers-summary}
+  {:wire
+   [:flight-run
+    :flight-steps-source
+    [:step {:record :enactment-entry}]],
+   :status :unverified}
+  {:wire [:gate-refuse :gate-refusal-read :error],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test/the-gates-error-reaches-gate-refusal}
+  {:wire [:loop-entry :loop-plan :trigger], :status :unverified}
+  {:wire [:loop-entry :r1-outer-cascade :trigger],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test/the-trigger-reaches-the-cascade}
+  {:wire
+   [:morning-brief-fold
+    :r7-fold-call
+    [:belief {:record :morning-brief-fold}]],
+   :status :unverified}
+  {:wire [:r0-enact-step :r0-test :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-test-attempts-test/the-attempts-reach-the-row-0-test}
+  {:wire [:r0-enact-step :r0-test :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/the-gate-refusal-reaches-the-row-0-test}
+  {:wire [:r0-enact-step :r5-test :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-r5-test-attempts-test/the-attempts-reach-the-grain-gate-test}
+  {:wire [:r0-enact-step :r5-test :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test/the-gate-pass-reaches-the-grain-gate-test}
+  {:wire [:r0-enact-step :r7-flight-call :attempts],
+   :status :unverified}
+  {:wire [:r0-enact-step :r7-increment :attempts], :status :unverified}
+  {:wire [:r0-enact-step :wc-checker :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-wc-attempts-test/the-attempts-reach-the-wc-checker}
+  {:wire [:r0-enact-step :wc-checker :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/the-gate-pass-reaches-the-wc-checker}
+  {:wire [:r1-outer-cascade :flight-entry :chosen-target],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-chosen-target-reaches-the-flight-entry}
+  {:wire [:r1-outer-cascade :flight-entry :draw-seed],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
+  {:wire [:r1-outer-cascade :flight-entry :target-selection],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :target-selection],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :target-selection],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-test :draw-seed],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-draw-seed-reaches-the-loop-test}
+  {:wire [:r1-outer-cascade :r1-test :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :r1-test :draw-seed],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-draw-seed-reaches-the-r1-test}
+  {:wire [:r1-outer-cascade :r1-test :target-selection],
+   :status :unverified}
+  {:wire [:r1-target-field :r1-outer-cascade :next-step],
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-wire-is-unverified-because-the-reader-reads-no-next-step}
+  {:wire
+   [:r10-observe-publication :r0-enact-step :publication-observed],
+   :status :unverified}
+  {:wire [:r10-observe-publication :r0-test :publication-observed],
+   :status :unverified}
+  {:wire
+   [:r10-observe-publication :r1-outer-cascade :publication-observed],
+   :status :unverified}
+  {:wire [:r10-observe-publication :r10-test :publication-observed],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r10-publication-observed-test/the-observation-reaches-the-enactment-record}
+  {:wire
+   [:r13-policy-depth-anticipation
+    :r7-fold-call
+    [:horizon-steps {:record :depth-anticipation}]],
+   :status :unverified}
+  {:wire
+   [:r13-sources-horizon
+    :construction-assemble
+    [:horizon-steps {:record :sources}]],
+   :status :unverified}
+  {:wire
+   [:r2-judge-observation
+    :r3a-channel-prediction-error
+    :tick-observation],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/the-tick-observation-reaches-the-channel-prediction-error}
+  {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
+   :status :verified,
+   :record
+   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
+    :sha256
+    "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"},
+   :test
+   futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/the-read-steps-text-pin-reaches-the-flight-record}
+  {:wire [:r2-served-by-reading :r2-test :text-sha256],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-test-text-sha256-test/the-text-pin-reaches-the-components-test}
+  {:wire [:r2-served-by-reading :r2-test :want-span],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-test-want-span-test/the-want-span-reaches-the-components-test}
+  {:wire [:r2-served-by-reading :r2-verifier :text-sha256],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test/the-text-pin-reaches-the-verifier}
+  {:wire [:r2-served-by-reading :r2-verifier :want-span],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/the-want-span-reaches-the-verifier}
+  {:wire
+   [:r2-store-constraints-read
+    :r3-store-constraints-read
+    :constraints-read],
+   :status :unverified}
+  {:wire [:r2-store-coverage :r3-store-coverage :coverage],
+   :status :unverified}
+  {:wire [:r2-store-criteria :r3-store-criteria :criteria],
+   :status :unverified}
+  {:wire
+   [:r2-store-locator-declines
+    :r3-store-locator-declines
+    :locator-declines],
+   :status :unverified}
+  {:wire
+   [:r2-store-locator-questions
+    :r3-store-locator-questions
+    :locator-questions],
+   :status :unverified}
+  {:wire [:r2-store-locators :r3-store-locators :locators],
+   :status :unverified}
+  {:wire [:r2-store-locators :r9-measured-a-version :locators],
+   :status :unverified}
+  {:wire
+   [:r3-aggregate-driver
+    :r7-fold-call
+    [:driver {:record :r3d-driver}]],
+   :status :unverified}
+  {:wire [:r3-flight-ask :r3-prompt :library-root],
+   :status :unverified}
+  {:wire [:r3-flight-ask :r3-test :library-root], :status :unverified}
+  {:wire
+   [:r3a-prediction-error
+    :r7-weighted-error
+    [:error {:record :prediction-error}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test/the-prediction-error-reaches-the-reweighting}
+  {:wire [:r4-constructor :r4-coapply-test :descent],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-coapply-descent-test/the-descent-reaches-the-coapplication-kernel-test}
+  {:wire [:r4-constructor :r4-coapply-test :units],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-coapply-units-test/the-units-reach-the-coapplication-kernel-test}
+  {:wire [:r4-constructor :r4-order-use :descent],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/the-descent-reaches-order-use}
+  {:wire [:r4-constructor :r4-order-use :precedence-violations],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/the-precedence-violations-reach-order-use}
+  {:wire [:r4-constructor :r4-order-use :units],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-units-test/the-units-reach-order-use}
+  {:wire
+   [:r4-evaluate-state
+    :r4-push-forward
+    [:kernel {:record :evaluation}]],
+   :status :unverified}
+  {:wire [:r4-kernel :fpi-policy-free-energy :rates],
+   :status :unverified}
+  {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
+  {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
+  {:wire [:r4-kernel :r9-measured-a-version :rates],
+   :status :unverified}
+  {:wire [:r4-kernel :r9-selection-law :controller-score],
+   :status :unverified}
+  {:wire [:r5-flight-call :r5-grain-gate :grain],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r5-gate-grain-test/the-candidates-grain-reaches-the-gate}
+  {:wire [:r5-flight-call :r5-test :grain],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r5-test-grain-test/the-candidates-grain-reaches-the-grain-gate-test}
+  {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
+   :status :unverified}
+  {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
+   :status :unverified}
+  {:wire
+   [:r6-sourced-rates
+    :r6-cascade-lane
+    [:rates {:record :sourced-rates}]],
+   :status :unverified}
+  {:wire [:r6-sourced-rates :r6-test :measurement],
+   :status :unverified}
+  {:wire [:r6-sourced-rates :r9-measured-a-version :measurement],
+   :status :unverified}
+  {:wire [:r7-flight-call :flight-run :increment], :status :unverified}
+  {:wire [:r7-flight-call :r7-call-test :wc],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-flight-call-wc-test/the-wc-verdict-reaches-the-call-test}
+  {:wire [:r7-flight-call :r7-fold-source :increment],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-flight-call-increment-test/the-increment-receipt-reaches-the-fold-source}
+  {:wire [:r7-fold :r1-outer-cascade :enactment-records],
+   :status :unverified}
+  {:wire [:r7-fold :r7-selection :enactment-records],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
+  {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
+  {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
+   :status :unverified}
+  {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
+   :status :unverified}
+  {:wire
+   [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
+   :status :unverified}
+  {:wire [:r7-fold-call :r9-decision :conditioning-steps],
+   :status :unverified}
+  {:wire [:r7-fold-call :r9-decision :enactment-fold],
+   :status :unverified}
+  {:wire [:r7-increment :r7-call-test :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-call-delta-test/the-delta-reaches-the-call-test}
+  {:wire [:r7-increment :r7-call-test :wc-failures],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test/the-wc-failures-reach-the-call-test}
+  {:wire [:r7-increment :r7-fold :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/the-delta-reaches-the-fold}
+  {:wire [:r7-increment :r7-test :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/the-delta-reaches-the-selection-test}
+  {:wire [:r7-selection :r7-test :e-source],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
+  {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/the-weighted-error-reaches-the-driver-aggregation}
+  {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-wire-is-unverified-because-the-reader-reads-no-pair-overlap}
+  {:wire [:r8-overlap :r8-test :pair-overlap],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test/the-pair-overlap-reaches-the-r8-test}
+  {:wire [:r9-classify-target :r9-decision :class],
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test/the-relation-class-reaches-the-decision}
+  {:wire [:r9-classify-target :r9-relation-test :class],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-classify-target-relation-test-class-test/the-class-reaches-the-relation-test}
+  {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test/the-close-cause-reaches-the-components-test}
+  {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/the-close-cause-reaches-finding-failure-cause}
+  {:wire [:r9-close-cause :r9-finding-store :failure-cause],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
+  {:wire [:r9-decision :flight-record-click :kind],
+   :status :unverified}
+  {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
+  {:wire [:r9-decision :r9-class-model :target-class],
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/the-target-class-reaches-the-class-model}
+  {:wire [:r9-decision :r9-judge-refusal-read :kind],
+   :status :unverified}
+  {:wire [:r9-decision :r9-judge-refusal-test :kind],
+   :status :unverified}
+  {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-embedding-neighbour-classify-target-derived-via-test/the-embedding-receipt-reaches-classify-target}
+  {:wire [:r9-embedding-neighbour :r9-relation-test :derived-via],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-embedding-neighbour-relation-test-derived-via-test/the-embedding-receipt-reaches-the-relation-test}
+  {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test/the-sorry-cells-judge-refusal-reaches-the-abstention-carrier}
+  {:wire [:r9-judge-refusal :r9-judge-refusal-test :judge-refusal],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test/the-judge-refusal-reaches-the-components-test}
+  {:wire
+   [:r9-judge-refusal-abstention :r9-failure-classifier :outcome],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/the-abstentions-outcome-reaches-the-failure-classifier}
+  {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test/the-phase-kind-reaches-the-components-test}
+  {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/the-phase-kind-reaches-the-failure-classifier}
+  {:wire [:r9-selection-law :r0-enact-step :candidate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
+  {:wire [:r9-selection-law :r0-enact-step :enacted-steps],
+   :status :unverified}
+  {:wire [:r9-selection-law :r7-increment :candidate],
+   :status :unverified}
+  {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/the-posterior-mode-reaches-the-decision}
+  {:wire [:r9-selection-law :r9-test :candidate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-candidate-reaches-the-selection-test}
+  {:wire [:r9-selection-law :r9-test :enacted-steps],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-enacted-steps-reach-the-selection-test}
+  {:wire [:r9-selection-law :r9-test :per-policy-argmax],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
+  {:wire [:r9-selection-law :wc-checker :candidate],
+   :status :unverified}
+  {:wire
+   [:run-record-publication
+    :r10-observe-publication
+    :repair/publication],
+   :status :unverified}
+  {:wire [:tick-flight-assembly :construction-assemble-one :universes],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/the-flights-universe-reaches-assembly}
+  {:wire
+   [:tick-flight-assembly
+    :construction-assemble-one
+    [:wants {:record :sources}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
+  {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
+   :status :unverified}
+  {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}
+  {:wire [:wc-checker :r7-test :wc-verdict], :status :unverified}]}

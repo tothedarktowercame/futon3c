@@ -1,0 +1,23 @@
+{
+  "status": "inherited reviewed snapshot assertions; not fresh review or Student reads",
+  "rows": [
+    {
+      "memory-id": "e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd",
+      "pattern-ids": [
+        "math-informal/local-to-global",
+        "math-formalization/cast-normalization"
+      ],
+      "attachment-status": "reviewed",
+      "review-evidence-id": "e-review-f29-81a44d2c",
+      "reviewer": "f29-promotion-proctor",
+      "depositor": "f29-scribe",
+      "content-digest": "a0b163ab9977fa7d4ab4129656e2f571bf7b3d2805ae000598e0e950b161feec",
+      "provenance": {
+        "campaign-id": "jit-all-open-nontopology-v1",
+        "frame-id": "f29",
+        "problem-id": "a01J05",
+        "provenance/repaired?": true
+      }
+    }
+  ]
+}

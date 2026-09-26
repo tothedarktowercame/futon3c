@@ -122,6 +122,18 @@
       (let [xs (store/query {:query/include-ephemeral? true})]
         (is (= 2 (count xs)))))))
 
+(deftest count-star-matches-query-filters
+  (testing "count* applies query filters and excludes ephemeral entries by default"
+    (let [s (fix/make-artifact-ref :mission "M1")]
+      (store/append! {:evidence-id "e-a" :subject s :type :reflection :claim-type :observation :author "alice" :body {} :tags [:foo]})
+      (store/append! {:evidence-id "e-b" :subject s :type :reflection :claim-type :observation :author "bob" :body {} :tags [:foo]})
+      (store/append! {:evidence-id "e-ephemeral" :subject s :type :reflection :claim-type :observation :author "alice" :body {} :tags [:foo]
+                      :ephemeral? true})
+      (is (= 2 (store/count* store/!store {:query/tags [:foo]})))
+      (is (= 1 (store/count* store/!store {:query/author "alice"})))
+      (is (= 2 (store/count* store/!store {:query/author "alice"
+                                           :query/include-ephemeral? true}))))))
+
 (deftest get-entry-returns-entry-or-nil
   (testing "get-entry returns entry by id, nil for missing"
     (let [r (store/append! {:evidence-id "e-1"

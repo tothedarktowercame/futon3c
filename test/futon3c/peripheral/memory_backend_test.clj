@@ -1,0 +1,157 @@
+(ns futon3c.peripheral.memory-backend-test
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.clock-store :as clock-store]
+            [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.substrate.client :as substrate]))
+
+(use-fixtures
+  :each
+  (fn [f]
+    (clock-store/reset-store!)
+    (estore/reset-store!)
+    (f)
+    (clock-store/reset-store!)
+    (estore/reset-store!)))
+
+(defn- with-temp-code-repo
+  [f]
+  (let [root (.toFile
+              (java.nio.file.Files/createTempDirectory
+               (.toPath (io/file "/home/joe/code"))
+               "futon3c-memory-backend-test-"
+               (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (f root)
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (.delete ^java.io.File file))))))
+
+(defn- write-doc!
+  [root rel]
+  (let [file (io/file root rel)]
+    (.mkdirs (.getParentFile file))
+    (spit file (str "# Test doc\n\n"
+                    "**Status:** TEST\n\n"
+                    "## Checkpoint\n\n"
+                    "known checkpoint\n"))
+    (.getCanonicalPath file)))
+
+(deftest mission-context-defaults-from-excursion-clock
+  (testing "an excursion-only clock is a valid default target"
+    (with-temp-code-repo
+      (fn [root]
+        (write-doc! root "holes/excursions/E-clocked.md")
+        (clock-store/set-dispatch-mission! "zai-test" "sid" "E-clocked")
+        (let [resp (memory-backend/mission-context
+                    {:agent-id "zai-test" :session-id "sid" :cwd (.getPath root)}
+                    {:limit 5})]
+          (is (true? (:ok resp)))
+          (is (= {:store :mission :target "E-clocked"}
+                 (get-in resp [:result :query])))
+          (is (some #(str/ends-with? (str (:file %)) "E-clocked.md")
+                    (get-in resp [:result :items]))))))))
+
+(deftest mission-context-preserves-explicit-excursion-target
+  (testing "explicit E-* targets are not rewritten to M-E-*"
+    (with-temp-code-repo
+      (fn [root]
+        (write-doc! root "holes/excursions/E-explicit.md")
+        (let [resp (memory-backend/mission-context
+                    {:agent-id "zai-test" :session-id "sid" :cwd (.getPath root)}
+                    {:target "E-explicit" :limit 5})]
+          (is (true? (:ok resp)))
+          (is (= "E-explicit" (get-in resp [:result :query :target])))
+          (is (not= "M-E-explicit" (get-in resp [:result :query :target])))
+          (is (some #(str/ends-with? (str (:file %)) "E-explicit.md")
+                    (get-in resp [:result :items]))))))))
+
+(deftest mission-context-bare-target-defaults-to-mission
+  (testing "bare target shorthand still resolves as M-*"
+    (with-temp-code-repo
+      (fn [root]
+        (write-doc! root "holes/missions/M-bare.md")
+        (let [resp (memory-backend/mission-context
+                    {:agent-id "zai-test" :session-id "sid" :cwd (.getPath root)}
+                    {:target "bare" :limit 5})]
+          (is (true? (:ok resp)))
+          (is (= "M-bare" (get-in resp [:result :query :target])))
+          (is (some #(str/ends-with? (str (:file %)) "M-bare.md")
+                    (get-in resp [:result :items]))))))))
+
+(deftest neighborhood-uses-authoritative-substrate-client
+  (with-redefs [substrate/hyperedges-by-end
+                (fn [end opts]
+                  (is (= "mission:M-x" end))
+                  (is (= 5 (:limit opts)))
+                  [{:hx/id "hx:test" :hx/type :test/edge
+                    :hx/endpoints ["mission:M-x" "cap:y"]}])]
+    (let [resp (memory-backend/evidence-graph
+                {} {:mode :neighborhood :end-id "mission:M-x" :limit 5})]
+      (is (true? (:ok resp)))
+      (is (= 1 (get-in resp [:result :query :count])))
+      (is (= [{:id "hx:test" :type :test/edge
+               :endpoints ["mission:M-x" "cap:y"]}]
+             (get-in resp [:result :items]))))))
+
+(deftest memory-read-opens-one-recorded-memory-without-leaking-list-bodies
+  (let [ctx {:agent-id "zai-test" :session-id "session-1"
+             :domain :mathematics :evidence-store estore/!store}
+        payload {:name "readable-memory"
+                 :kind :feedback
+                 :hook "when a search result needs detail"
+                 :body {:lesson "the full body survived the second hop"}
+                 :subjects [{:ref/type :problem :ref/id "p"}]}
+        receipt (with-redefs [memory-write/post-hyperedge!
+                              (fn [_ _] {:ok true})]
+                  (memory-write/record-memory! ctx payload))
+        evidence-id (:id receipt)
+        opened (memory-backend/memory-read ctx {:evidence-id evidence-id})
+        item (get-in opened [:result :items 0])
+        missing (memory-backend/memory-read ctx {:evidence-id "e-unknown"})
+        invalid (memory-backend/memory-read ctx {})
+        listed (memory-backend/memory-search ctx {:type :memory})
+        list-item (first (get-in listed [:result :items]))]
+    (is (:ok receipt))
+    (is (= "the full body survived the second hop"
+           (get-in item [:body :body :lesson])))
+    (is (= "readable-memory" (:name item)))
+    (is (= "when a search result needs detail" (:hook item)))
+    (is (true? (:ok missing)))
+    (is (empty? (get-in missing [:result :items])))
+    (is (false? (:ok invalid)))
+    (is (= :evidence-id (get-in invalid [:error :error/field])))
+    (is (not (contains? list-item :body))
+        "memory_search remains an envelope view without body leakage")))
+
+(deftest lone-tag-search-also-matches-the-problem-subject
+  (let [entry (fn [id subject tags at]
+                {:evidence/id id :evidence/subject subject
+                 :evidence/type :memory :evidence/claim-type :assert
+                 :evidence/author "guide" :evidence/at at
+                 :evidence/body {:name id} :evidence/tags tags})
+        subject-only (entry "e-subject-only"
+                            {:ref/type :problem :ref/id "a03J04"}
+                            [:memory :memory/assert]
+                            "2026-08-17T07:09:12Z")
+        tagged (entry "e-tagged"
+                      {:ref/type :problem :ref/id "other"}
+                      [:memory :a03J04]
+                      "2026-08-17T07:10:12Z")]
+    (is (:ok (estore/append! subject-only)))
+    (is (:ok (estore/append! tagged)))
+    (let [single (memory-backend/memory-search
+                  {} {:tags ["a03J04"] :limit 10})
+          multi (memory-backend/memory-search
+                 {} {:tags ["a03J04" "memory"] :limit 10})]
+      (is (= ["e-tagged" "e-subject-only"]
+             (mapv :id (get-in single [:result :items]))))
+      (is (= ["e-tagged"]
+             (mapv :id (get-in multi [:result :items])))
+          "multi-tag AND behavior remains tag-only and unchanged")
+      (is (= [{:query/tags [:lean]}]
+             (memory-backend/search-queries {:query/tags [:lean]}))
+          "ordinary single-tag queries remain exactly one tag query"))))

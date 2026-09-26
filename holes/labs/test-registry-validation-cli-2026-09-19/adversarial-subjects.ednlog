@@ -1,0 +1,2 @@
+{:entry/type :subject-binding, :entry/id "5b447b6f-b224-41d6-b089-cba03b7c380c", :subject-id "test-registry/validation-cli", :warrant-id "test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7", :actor "codex-2", :at "2026-09-19T16:18:01.230830508Z"}
+{:entry/type :subject-binding, :entry/id "32c935d1-8c36-40a8-aab9-92e6eaae9181", :subject-id "acceptance/fabricated", :warrant-id "test-registry-fabricated-validation-cli-repair", :actor "codex-2", :at "2026-09-19T16:18:01.230830508Z"}

@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 24 — 2026-06-24 (claude-5, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.93).
+
+**EVAL / DID.** Supervised-proposal cycle as pilot claude-5. Guardrails picked autonomous v = address-sorry/pattern-measure-never-target (rank 2; rank-1 learn-action-class stepped past as needs-operator). Attempted the Car-3 act-path = apply an acquired/cascade policy under the act-gate (delta-F AND delta-G); found it unreachable through begin-live-cycle!.
+
+**PRINT / FOUND.** acquire-patterns is absent from ranked-actions (field in :multiplied mode, not flat/stalled) — the acquired/cascade policy exists only in the read-only :cascade-policies and :pattern-gaps lanes, never as an executable v in the dT differential. ΔF leg IS present (pattern-gaps F-free-energy: M-bayesian-structure-learning F=-0.01 gap?=true). ΔG/rollout leg is ABSENT from the served judgement (cascades carry wholeness, not G(π); rollout was only ever a hand-built 2-step demo). consent-gate-emit scope records neither leg. Loop did not close (proposal held for operator per WM-I4).  _[predicted G=-4.78, realised G=-4.78]_
+
+**PUR.** Car-3 BLOCKED at three named seams: (1) no apply-cascade action in ranked-actions; (2) rollout G(π) not joined into the served judgement; (3) consent gate has no ΔF∧ΔG slot. This names the remaining Car-3 build. Mode: supervised-proposal.
+
 ## Turn 23 — 2026-06-12 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `M-first-flights` (G=-4.12).

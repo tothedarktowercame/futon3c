@@ -1,0 +1,32 @@
+{
+  "example_id": "deconfounding-game-5",
+  "title": "Deconfounding Game 5: extended M-bias",
+  "topology_basis": "printed_diagram",
+  "content": "The extended M-graph adds childhood asthma as a cause of smoking and a proposed smoking-to-adult-asthma effect. Adjusting for childhood asthma closes one back-door path but opens the M-shaped path unless another variable closes it; asthma predisposition alone is sufficient.",
+  "variables": [
+    {"key": "a", "name": "Parental Smoking (A)", "content": "A cause of both the individual's smoking and childhood asthma."},
+    {"key": "x", "name": "Smoking (X)", "content": "The exposure whose effect on adult asthma is sought."},
+    {"key": "b", "name": "Childhood Asthma (B)", "content": "A cause of smoking and collider of parental smoking with predisposition."},
+    {"key": "c", "name": "Asthma Predisposition (C)", "content": "An unobservable common cause of childhood and adult asthma.", "observed": false},
+    {"key": "y", "name": "Adult Asthma (Y)", "content": "The outcome with a proposed causal arrow from smoking."}
+  ],
+  "arrows": [
+    {"source": "a", "target": "x", "because": "Parental smoking influences later smoking behavior."},
+    {"source": "a", "target": "b", "because": "Parental smoking can influence childhood asthma."},
+    {"source": "c", "target": "b", "because": "Asthma predisposition influences childhood asthma."},
+    {"source": "c", "target": "y", "because": "The same predisposition influences adult asthma."},
+    {"source": "b", "target": "x", "because": "Childhood asthma can influence later smoking behavior."},
+    {"source": "x", "target": "y", "because": "This is the proposed smoking effect on adult asthma."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:9df5ffc535ae8926",
+    "ta-book-of-why-2018:c703a154b4ac6ca7",
+    "ta-book-of-why-2018:baaebe87bf4c29b5",
+    "ta-book-of-why-2018:d4e7978231c34b4b",
+    "ta-book-of-why-2018:6b2cdbfd3f716e47"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0174",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0175"
+  ]
+}

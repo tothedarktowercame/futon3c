@@ -1,0 +1,44 @@
+{:hole/id :apm-review-dispatch-resolution-witness
+ :hole/status :open
+ :opened-at "2026-08-25"
+ :opened-by "claude-12"
+ :authority :apm-cycle-machine-lean
+ :introduced-by "mathlib4-apm-validation b5d6d08edc (Model resolvable promotion review dispatches)"
+
+ :reason
+ "ValidReviewDispatch makes unreviewable material unconstructible, and
+  valid_dispatch_excludes_apparatus_failure proves the six apparatus causes
+  uninhabited from a valid dispatch. But the resolution witnesses are
+  self-reported booleans -- candidatePersisted, candidateFetchable,
+  parentPatternFetchable, baseProblemBlobFetchable, solverFinalHeadFetchable,
+  and per-trace fetchable are fields someone fills in. Nothing ties
+  candidatePersisted = true to the candidate actually being persisted. So the
+  model currently proves: IF the controller says everything resolves, THEN the
+  enumerated failures do not occur. That is the F32 shape one layer out --
+  TN-fable-F32-model section 2, 'Lean verifies that Clojure reports its own
+  hand-written schema as satisfied' -- and it is declared here rather than
+  discovered later, because a hole that is named bounds what the validation
+  claims. The dispatch precondition is sound UP TO THIS HOLE."
+
+ :intended-closure
+ "Replace each boolean assertion with a content-addressed witness, the move
+  already idiomatic in this model: APMCampaignTraceChecker's TraceReviewSnapshot
+  carries snapshotDigest and contentDigest and requires them equal, so a named
+  snapshot is content-addressed rather than merely non-empty (26b3ba9668 and
+  d996dde673). Resolution should be witnessed the same way -- the fetched
+  content's digest, which the id determines -- so that a controller cannot
+  assert resolution it did not perform."
+
+ :sequencing
+ "Closes with the Clojure enforcement packet rather than before it. That packet
+  is where the controller must actually PRODUCE the resolution record, and so
+  is where the field is decided to be a claim or a witness. Splitting them
+  would land a Lean witness type with no producer, which is the defect class
+  this campaign exists to remove."
+
+ :closure-test
+ "ReviewCandidateResolution and ReviewerInputResolution carry content digests
+  rather than booleans; a dispatch whose asserted digest does not match the
+  fetched content is not constructible as ValidReviewDispatch; the Clojure
+  controller derives those digests from the fetch it performed, and a test
+  shows a fabricated digest is refused."}

@@ -1,0 +1,68 @@
+{
+  "example_id": "cholestyramine-noncompliance",
+  "title": "Cholestyramine randomized trial with noncompliance",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.11 separates randomized assignment Z from actual receipt X. Hidden traits U affect receipt and cholesterol reduction Y, while receipt affects the outcome. Table 7.1 reports the observed joint distribution of X and Y within each assignment arm.",
+  "variables": [
+    {"key": "u", "name": "Confounder (U)", "content": "Unobserved traits that affect both compliance and cholesterol response.", "observed": false},
+    {"key": "z", "name": "Assigned (Z)", "content": "Randomized assignment to cholestyramine or placebo.", "value_domain": "boolean"},
+    {"key": "x", "name": "Received (X)", "content": "Whether the patient actually took cholestyramine.", "value_domain": "boolean"},
+    {"key": "y", "name": "Cholesterol (Y)", "content": "Whether cholesterol fell by the fixed outcome threshold.", "value_domain": "boolean"}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "Random assignment affects whether treatment is received."},
+    {"source": "u", "target": "x", "because": "Unobserved patient traits affect compliance."},
+    {"source": "u", "target": "y", "because": "The same unobserved traits may affect cholesterol response."},
+    {"source": "x", "target": "y", "because": "Receiving cholestyramine may reduce cholesterol."}
+  ],
+  "observational_distributions": [
+    {
+      "key": "table-7-1",
+      "content": "Table 7.1 observed frequencies of receipt and cholesterol reduction, separately normalized within randomized assignment arms.",
+      "table": {
+        "kind": "conditional_joint",
+        "rows": [
+          {
+            "given": {"z": false},
+            "probabilities": [
+              {"event": {"x": false, "y": false}, "probability": {"numerator": 919, "denominator": 1000}},
+              {"event": {"x": true, "y": false}, "probability": {"numerator": 0, "denominator": 1000}},
+              {"event": {"x": false, "y": true}, "probability": {"numerator": 81, "denominator": 1000}},
+              {"event": {"x": true, "y": true}, "probability": {"numerator": 0, "denominator": 1000}}
+            ]
+          },
+          {
+            "given": {"z": true},
+            "probabilities": [
+              {"event": {"x": false, "y": false}, "probability": {"numerator": 315, "denominator": 1000}},
+              {"event": {"x": true, "y": false}, "probability": {"numerator": 139, "denominator": 1000}},
+              {"event": {"x": false, "y": true}, "probability": {"numerator": 73, "denominator": 1000}},
+              {"event": {"x": true, "y": true}, "probability": {"numerator": 473, "denominator": 1000}}
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:8416f3a6dc216e39",
+    "ta-book-of-why-2018:d8696b3088f9e504",
+    "ta-book-of-why-2018:c1b9ff9bfa961603",
+    "ta-book-of-why-2018:815293120d8a8441",
+    "ta-book-of-why-2018:04a2b48f81adee0c",
+    "ta-book-of-why-2018:323edabfc1e2a3e5",
+    "ta-book-of-why-2018:8c6a5054a573feb0",
+    "ta-book-of-why-2018:e801ab69a861414a",
+    "ta-book-of-why-2018:9870b8b04d6430c1",
+    "ta-book-of-why-2018:67f0780a4a4fe660",
+    "ta-book-of-why-2018:3f3747789fa97d95",
+    "ta-book-of-why-2018:293a16d32e938a80",
+    "ta-book-of-why-2018:10571cb34386319d",
+    "ta-book-of-why-2018:5b8c81e15f65f52c",
+    "ta-book-of-why-2018:ebb11e812556be85"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0265",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0266"
+  ]
+}

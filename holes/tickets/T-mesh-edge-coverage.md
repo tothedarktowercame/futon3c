@@ -1,5 +1,7 @@
 # T-mesh-edge-coverage (Car 1) — make every agent→agent invoke visible in the mesh
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** Typed mesh-edge evidence, the three bypass-caller migrations, GET /api/alpha/coordination/edges, and the merged mesh_trace.py source all shipped and are tested. Close.
+
 Parent mission: `holes/missions/M-agency-hardening.md` (W3 evidence/audit;
 invariant #3 typed evidence). Dispatched by claude-6 (in-flight mechanic),
 2026-06-10. Reviewer: claude-6.

@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :subject-id "WM-07-delivery"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.parameter-delivery-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/wm-apparatus-tranche-two-2026-09-19/WM-07-delivery"
+ :code-paths ["src/futon2/aif/parameter_delivery.clj"]
+ :test-paths ["test/futon2/aif/parameter_delivery_test.clj"]}

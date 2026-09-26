@@ -1,0 +1,4 @@
+binding-entries 26
+current-subject-bindings 17
+report-rows 17
+row-count-equals-current-bindings True

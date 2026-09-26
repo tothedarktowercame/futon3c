@@ -1,0 +1,28 @@
+{
+  "arrows" : [ {
+    "from" : "d1",
+    "to" : "h"
+  }, {
+    "from" : "d2",
+    "to" : "h"
+  } ],
+  "id" : "berksons-paradox",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "berksons-paradox.json"
+  },
+  "variables" : [ {
+    "id" : "d1",
+    "kind" : "observed",
+    "name" : "Disease 1"
+  }, {
+    "id" : "d2",
+    "kind" : "observed",
+    "name" : "Disease 2"
+  }, {
+    "id" : "h",
+    "kind" : "observed",
+    "name" : "Hospitalization"
+  } ]
+}

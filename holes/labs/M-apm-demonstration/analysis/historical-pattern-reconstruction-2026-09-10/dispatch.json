@@ -1,0 +1,10 @@
+{
+  "job-id": "invoke-1789060433628-19057-54cf8df8",
+  "agent-id": "zai-pattern-reconstruction-20260910",
+  "caller": "codex-16",
+  "state": "running",
+  "started-at": "2026-09-10T17:13:55.200839272Z",
+  "created-at": "2026-09-10T17:13:53.628986934Z",
+  "accepted": true,
+  "mission": "historical-pattern-reconstruction-2026-09-10"
+}

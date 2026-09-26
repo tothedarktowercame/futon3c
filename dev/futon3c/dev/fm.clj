@@ -296,6 +296,7 @@
                                       aggregate
                                       {:previous-hyperedges previous-hyperedges
                                        :futon1a-url (or invariant-futon1a-url
+                                                        (System/getenv "FUTON1A_URL")
                                                         "http://localhost:7071")
                                        :penholder (or invariant-penholder
                                                       "fm-conductor")}))))

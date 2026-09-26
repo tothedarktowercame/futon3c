@@ -1,0 +1,126 @@
+{:flight/id "typed-ground-witness-0001",
+ :flight/derivation :full,
+ :flight/links [],
+ :organs
+ {:field-read
+  {:judgment
+   {:gauge
+    {:ref "typed-ground-witness-0001.begin.edn :pre :dT-snapshot",
+     :count 1},
+    :neighbourhood
+    {:sorry
+     {:kind :not-yet,
+      :note
+      "decision neighbourhood not externalised this flight (the seat-read's articulation cost)"}}},
+   :ground
+   {:begin-artifact "typed-ground-witness-0001.begin.edn",
+    :scan-as-of "2026-07-06T12:44:30Z",
+    :ground/kind :begin-scan}},
+  :prediction
+  {:judgment
+   {:scaled {:g -1.0, :g-grain :one-step-action},
+    :constant {:g -1.1, :g-grain :one-step-action},
+    :policy {:sorry {:kind :not-yet, :blocked-by :rollout-engine}}},
+   :ground
+   {:ground/kind :model-output,
+    :source :begin-field-entry,
+    :model :wm-forward-model}},
+  :counterfactual
+  {:judgment {:constant-error 0.29900000000000004},
+   :ground
+   {:ground/kind :derived,
+    :inputs [:measurement :prediction],
+    :formula "|realised - predicted-constant|"}},
+  :verification
+  {:judgment
+   {:holes
+    [{:hole "typed-grounds",
+      :class :bounded-doable,
+      :evidence "producer-derived grounds emit :ground/kind maps"}],
+    :chosen-hole "typed-grounds"},
+   :ground
+   {:ground/kind :inline-evidence,
+    :method :select-time-grep-read,
+    :note "evidence lines inline in the judgment"}},
+  :act
+  {:judgment
+   {:state :executed,
+    :witness
+    {:ref "futon3c typed-ground witness",
+     :verified-by "codex-1",
+     :verification
+     "flight_record_test + flight_spec_verify + pretty_print_test"}},
+   :ground
+   {:ground/kind :evidence-ref,
+    :ref "futon3c typed-ground witness",
+    :rule :close-live-cycle-requires-evidence-ref}},
+  :window
+  {:judgment
+   {:begin "2026-07-06T12:45:00Z",
+    :commit "2026-07-06T12:45:20Z",
+    :threshold "2026-07-06T12:46:40Z",
+    :scans
+    [{:as-of "2026-07-06T12:47:00Z",
+      :g {:g -0.8, :g-grain :one-step-action}}
+     {:as-of "2026-07-06T12:48:00Z",
+      :g {:g -0.801, :g-grain :one-step-action}}],
+    :epsilon 0.005,
+    :agreement 0.001},
+   :ground
+   {:ground/kind :settle-protocol, :source :pilot-close-time-labour}},
+  :self-record
+  {:judgment
+   {:gamma-ref "holes/specs/traces/typed-ground-witness-frame.edn",
+    :turn-record-count 1,
+    :pilots-log-turn 0},
+   :ground
+   {:ground/kind :artifact-ref,
+    :ref "holes/specs/traces/typed-ground-witness-frame.edn",
+    :kind :repl-trace-frame}},
+  :measurement
+  {:judgment
+   {:predicted {:g -1.0, :g-grain :one-step-action},
+    :predicted-constant {:g -1.1, :g-grain :one-step-action},
+    :realised {:g -0.801, :g-grain :one-step-action},
+    :error 0.19899999999999995,
+    :class :clean,
+    :realised-source :measured,
+    :window :window},
+   :ground {:ground/kind :organ-ref, :organ :window}},
+  :out-of-band
+  {:judgment
+   [{:type :operator-design,
+     :at "2026-07-06T12:45:20Z",
+     :note "typed grounds design fixture"}],
+   :ground
+   {:ground/kind :event-log,
+    :events :present,
+    :source "discipline-events.edn"}},
+  :begin-state
+  {:judgment
+   {:begin-at "2026-07-06T12:45:00Z",
+    :target-g {:g -1.0, :g-grain :one-step-action},
+    :scan-as-of "2026-07-06T12:44:30Z"},
+   :ground
+   {:ground/kind :artifact-ref,
+    :ref "typed-ground-witness-0001.begin.edn"}},
+  :attribution
+  {:judgment :operator-directed,
+   :ground
+   {:ground/kind :cycle-metadata, :cg-id "typed-ground-witness"}},
+  :warrant
+  {:judgment
+   {:determined? true,
+    :determined-by
+    {:kind :operator-direction,
+     :ref
+     "futon3c/holes/excursions/E-first-flights-transferred-work.md#W2"}},
+   :ground
+   {:ground/kind :ref,
+    :ref
+    "futon3c/holes/excursions/E-first-flights-transferred-work.md#W2",
+    :kind :operator-direction}},
+  :velocity
+  {:judgment
+   {:action {:type :advance-mission, :target "M-first-flights"}},
+   :ground {:ground/kind :organ-ref, :organ :warrant}}}}

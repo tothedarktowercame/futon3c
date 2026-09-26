@@ -1,0 +1,188 @@
+% Annex to capability-proof-arxiv.tex — included via \input{}.
+\appendix
+\section{Annex: one paper, end to end}
+\label{sec:annex}
+
+The warrant table asserts that the stages work. This annex shows one paper's
+artifacts against its own source, so the assertion can be checked rather than
+believed. The paper is \texttt{arXiv:2311.05789}, chosen because it is small
+enough to display whole and complete across every layer: 2 proof passages, 2
+CLean typings, 6 expository scopes. Nothing here is reformatted for
+presentation --- the EDN is as the pipeline emitted it, and the source lines
+are as \texttt{dp\_paper\_view} numbers them.
+
+\subsection*{A.1 The source, with what each stage took from it}
+
+\begin{center}
+\small
+\begin{tabular}{r|p{0.52\textwidth}|p{0.29\textwidth}}
+\textbf{line} & \textbf{source (\LaTeX, truncated)} & \textbf{stage annotation}\\
+\hline
+\multicolumn{3}{l}{\emph{\quad Introduction --- expository region, S4 window L102--120}}\\
+\hline
+104 & \texttt{Monoidal categories were defined in \textbackslash cite\{be\} and further studied in \dots} & S1 citation marks\\
+112 & \texttt{The concept of \{\textbackslash em fusion\} \dots\ originated in high energy physics} & \\
+114 & \texttt{Currently the largest consumer of fusion categories is condensed matter physics (topological states of matter)} & \textbf{S4} $\to$ \texttt{:connection/}\linebreak\texttt{application-domain}\\
+\hline
+\multicolumn{3}{l}{\emph{\quad Definitions --- proof passage \texttt{p0}, S3 window L170--180}}\\
+\hline
+174 & \texttt{commutes for any \$X,Y\textbackslash in\textbackslash C\$.} & \\
+176 & \texttt{Clearly composites of semi-groupal functors and natural transformations are semi-groupal.} & \textbf{S3} node \texttt{:semi-groupal-}\linebreak\texttt{composition} (\emph{anchored} \texttt{171--172}; \textbf{H21})\\
+179 & \texttt{A semi-groupal category \$\textbackslash C\$ is \{\textbackslash em monoidal\} if it has an object \$I\textbackslash in\textbackslash C\$ \dots} & \textbf{S3} node \texttt{:monoidal-}\linebreak\texttt{category-def} (\emph{anchored} \texttt{173--180})\\
+180 & \texttt{\textbackslash beq\textbackslash lb\{uc\}\textbackslash xygraph\{} & \textbf{S3} node \texttt{:unit-}\linebreak\texttt{coherence-diagram}\\
+\hline
+\multicolumn{3}{l}{\emph{\quad Module categories --- proof passage \texttt{p1}, S3 window L307--331}}\\
+\hline
+307 & \texttt{A \{\textbackslash em pivotal structure\} on a rigid monoidal \$\textbackslash C\$ is a monoidal isomorphism \$\textbackslash tau\$ \dots} & \textbf{S3} \texttt{:pivotal-def} \emph{(307--307 --- exact)}\\
+308 & \texttt{The group \$Aut\_\textbackslash ot(Id\_\textbackslash C)\$ acts freely on the set of pivotal structures \dots} & \textbf{S3} \texttt{:aut-action} \emph{(308--308 --- exact)}\\
+310 & \texttt{For an endomorphism \$f:X\textbackslash to X\$ \dots\ \$tr(f)=ev\_\{X\^{}*\}(\textbackslash tau\_X f\textbackslash ot 1)coev\_X\$} & \textbf{S3} \texttt{:trace-def} \emph{(310--310 --- exact)}\\
+311 & \texttt{A pivotal category \$\textbackslash C\$ is \{\textbackslash em spherical\} if \$tr(f\^{}*) = tr(f)\$ \dots} & \textbf{S3} \texttt{:spherical-def} \emph{(311--311 --- exact)}\\
+319 & \texttt{A category \$\textbackslash M\$ is a \{\textbackslash em (left) module\} category over \$\textbackslash C\$ \dots} & \textbf{S3} \texttt{:module-}\linebreak\texttt{category-def} \emph{(exact)}\\
+325 & \texttt{A natural transformation \$c:F\textbackslash to G\$ between \$\textbackslash C\$-module functors \dots} & \textbf{S3} \texttt{:module-natural-}\linebreak\texttt{trans} \emph{(anchored 327 --- off by 2)}\\
+\hline
+\end{tabular}
+\end{center}
+
+Read the third column as the pipeline's own claim about the second. The
+\emph{content} is faithful throughout: every node text is a recognisable gloss
+of the line it names, and none is invented. The \emph{anchors} are exact for
+five of six nodes in \texttt{p1} and drift four to five lines in \texttt{p0} ---
+which is \hz{H21}, visible here in a way no aggregate count reached, and the
+reason this annex exists.
+
+\subsection*{A.2 What S3 produced (verbatim, passage \texttt{p0})}
+
+\begin{center}\small
+\begin{minipage}{0.93\textwidth}\ttfamily\raggedright\footnotesize
+\{:paper/id "2311.05789", :passage/id "2311.05789:monoidal-def:170-180",\\
+\ :source \{:lines [170 180], :kind :proof\},\\
+\ :nodes [\{:id :semi-groupal-composition, :kind :claim,\\
+\ \ \ \ \ \ \ \ \ :text "composites of semi-groupal functors and natural transformations are semi-groupal",\\
+\ \ \ \ \ \ \ \ \ :source \{:lines [171 172]\}\}\\
+\ \ \ \ \ \ \ \ \{:id :monoidal-category-def, :kind :claim, :text "a semi-groupal category C is monoidal if it\\
+\ \ \ \ \ \ \ \ \ has a monoidal unit I and natural isomorphisms l\_X, r\_X satisfying the unit coherence condition"\dots\}\\
+\ \ \ \ \ \ \ \ \{:id :unit-coherence-diagram, :kind :object, \dots\}],\\
+\ :edges [\{:id :e-monoidal-def, :kind :infer, :relation :defines,\\
+\ \ \ \ \ \ \ \ \ :premise :semi-groupal-composition, :conclusion :monoidal-category-def,\\
+\ \ \ \ \ \ \ \ \ :warrant \{:kind :missing-warrant,\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :wanted :semi-groupal-composition-is-closed-under-composition\}\}\\
+\ \ \ \ \ \ \ \ \{:id :e-coherence, :relation :requires, \dots\ :wanted :naturality-and-coherence-for-monoidal-structure\}],\\
+\ :holes [\{:kind :missing-warrant, :edge :e-monoidal-def, \dots\} \{\dots\}]\}
+\end{minipage}
+\end{center}
+
+Two things are worth noticing, because they are the whole point of the IATC
+layer. First, the edge from ``composites are semi-groupal'' to the monoidal
+definition is typed \texttt{:defines} and carries an explicit
+\texttt{missing-warrant} naming what the prose skipped:
+\texttt{semi-groupal-} \texttt{composition-is-closed-} \texttt{under-composition}.
+The word \emph{Clearly} in line 176 is exactly the deletion the warrant records.
+Second, every such hole is mirrored in the top-level \texttt{:holes} vector,
+which is what the gate checks; a graph asserting a hole it does not declare is
+rejected.
+
+\subsection*{A.3 What S7 made of it, and S4 beside it}
+
+\begin{center}\small
+\begin{minipage}{0.46\textwidth}\ttfamily\footnotesize\raggedright
+\{:clean/proof "2311.05789\_\_p0"\\
+\ :clean/typing-source :llama\\
+\ :clean/seq [:construct-auxiliary-object\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ :reduce-to-known-result]\\
+\ :clean/boxes\\
+\ [\{:id :e-monoidal-def\\
+\ \ \ :method :construct-auxiliary-object\\
+\ \ \ :consumes [:semi-groupal-composition]\\
+\ \ \ :produces :monoidal-category-def\\
+\ \ \ :hole \{:kind :sorry :discharge :sorryProof\\
+\ \ \ \ \ \ \ \ \ :satiety :payoff\\
+\ \ \ \ \ \ \ \ \ :wanted "semi-groupal-composition-\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is-closed-under-composition"\}\}\\
+\ \ \{:id :e-coherence\\
+\ \ \ :method :reduce-to-known-result \dots\}]\}
+\end{minipage}\hfill
+\begin{minipage}{0.46\textwidth}\ttfamily\footnotesize\raggedright
+\% S4, leaf-0001 (L102--120)\\
+\{:kind :connection/application-domain\\
+\ :source \{:lines [102 120]\}\\
+\ :slot-fill \{:application "condensed matter\\
+\ \ \ physics (topological states of matter)"\}\}\\[6pt]
+\% S4, leaf-0003 (L392--425)\\
+\{:kind :connection/example-source\\
+\ :source \{:lines [392 425]\}\\
+\ :slot-fill \{:example "the category of sets,\\
+\ \ \ abelian groups, and vector spaces over\\
+\ \ \ a fixed field k"\}\}\\[6pt]
+\% S4, leaf-0002 (L225--276)\\
+\{:kind :connection\\
+\ :slot-fill \{:other-structure "braided and\\
+\ \ \ symmetric monoidal categories"\}\}
+\end{minipage}
+\end{center}
+
+S7 types the two inference steps into the method vocabulary
+(\texttt{construct-auxiliary-object} then \texttt{reduce-to-known-result}) and
+carries the IATC hole through as a \texttt{:sorry} with a discharge obligation
+--- which is the bridge to the APM formalisation machinery, the same
+\texttt{:sorry} vocabulary on both sides. S4, working the same paper's prose
+rather than its proofs, recovers what the introduction is \emph{doing}: naming
+an application domain, offering an example source, connecting to a neighbouring
+structure. Neither layer sees the other's spans.
+
+\subsection*{A.4 The two open gaps, as fixtures}
+
+The following are \textbf{illustrative fixtures, not measurements} --- they show
+the shape the missing artifacts would take, so that closing \hz{H13} and
+\hz{S11} is a matter of producing this rather than of deciding what to produce.
+
+\paragraph{\hz{H13} --- what an S5 row looks like when rung-3 exists.}
+Today every row reads as the left column: the strategy half is absent, so the
+verdict cannot discriminate. With \texttt{rung3\_technique} promoted to a
+stage, the same rows would carry the right column, and \texttt{weak-proof}
+becomes reachable --- distinguishing \emph{we extracted badly} from \emph{the
+proof is thin}, which is the distinction S5 exists to draw.
+
+\begin{center}\small
+\begin{tabular}{l|ccccc|l}
+ & \texttt{noun} & \texttt{s:r3} & \texttt{s:pr} & \texttt{strat} & \texttt{comp} & \textbf{verdict}\\
+\hline
+\emph{today} (real) & 1.00 & \texttt{--} & 0.00 & 0.00 & 0.00 & \texttt{weak-extraction}\\
+\emph{today} (real) & 1.00 & \texttt{--} & 0.00 & 0.00 & 0.00 & \texttt{weak-extraction}\\
+\hline
+\emph{fixture} & 1.00 & 0.75 & 0.40 & 0.62 & 0.81 & \texttt{comprehended}\\
+\emph{fixture} & 1.00 & 0.20 & 0.10 & 0.15 & 0.34 & \texttt{weak-proof}\\
+\emph{fixture} & 0.25 & 0.60 & 0.55 & 0.58 & 0.31 & \texttt{weak-extraction}\\
+\end{tabular}
+\end{center}
+
+\paragraph{\hz{S11} --- what the structural canon looks like when it persists.}
+S11 computes a canonical-shape census and whole-paper signatures and then
+discards them. The fixture below is the artifact shape we propose:
+\texttt{<run-dir>/structural-canon.json}, one record per canonical shape with
+its population and exemplars, plus one signature per paper. The real S7 macro
+census (5 archetypes, $67\%$ \emph{reduce-to-known}) is the evidence that a
+census of this shape is computable; what is missing is only that S11 writes it.
+
+\begin{center}\small
+\begin{minipage}{0.86\textwidth}\ttfamily\footnotesize\raggedright
+\{"run\_id": "mark7z", "corpus\_id": "math-ct-e2e-12",\\
+\ "shapes": [\{"shape": "define-then-verify-coherence", "n": 34,\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ "exemplars": ["2311.05789\_\_p0", "0708.1921\_\_p2"]\},\\
+\ \ \ \ \ \ \ \ \ \ \ \ \{"shape": "reduce-to-adjunction", "n": 21, "exemplars": [\dots]\}],\\
+\ "signatures": [\{"paper": "2311.05789", "archetype": "definitional-survey",\\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "seq": [:construct-auxiliary-object :reduce-to-known-result]\}]\}
+\end{minipage}
+\end{center}
+
+\subsection*{A.5 What this annex is evidence for, and what it is not}
+
+It is evidence that the layers do what the warrant table says: S1 marks, S3
+recovers a typed argument DAG with declared holes, S4 recovers rhetorical
+structure from the same paper's prose, S7 types the argument into a method
+vocabulary carrying the hole forward as a discharge obligation. All of it is
+checkable against the source printed beside it.
+
+It is \emph{not} evidence of corpus-scale quality: one paper, chosen for being
+displayable. Its value is the opposite of the census's --- the census counts
+many things approximately, the annex checks a few things exactly, and \hz{H21}
+is precisely the defect that only the second can see.

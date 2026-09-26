@@ -1,0 +1,26 @@
+{:schema :wm/historical-qualification-preparation-v1
+ :repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure"
+ :verification-id "repair-successor-v2-selection-revalidation-20260911-v1"
+ :source-repository "/home/joe/code/futon3c"
+ :source-head-at-execution "88e73bd455a0b07435f3d431b69cd8f3f2d8d62b"
+ :qualified-futon2-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
+ :plan {:path "qualification-plan.disabled.edn"
+        :sha256 "dff0fe4c54e37013eedddee48189d6d9d10c7f66b860ab666217c78fc92b4c3b"}
+ :receipt
+ {:path "offline-evidence/repair-successor-v2-selection-revalidation-20260911-v1.qualification.edn"
+  :sha256 "92a51fb83e2de7ebe992bde58faf7efdb535b375053b1c8bc6e1b4d0f0300545"
+  :bytes 11531 :check-count 3 :passed-count 3 :timed-out-count 0}
+ :checks
+ [{:id :actual-stop-line-selection-controls :exit 0 :timed-out? false
+   :timeout-ms 120000 :tests 1 :assertions 16
+   :stdout-sha256 "b3db027a0614eb78d4460472020a0f8802b4f6a8e570cf5a9ffa236812ec0b7d"}
+  {:id :new-admission-and-replay-controls :exit 0 :timed-out? false
+   :timeout-ms 120000 :tests 9 :assertions 50
+   :stdout-sha256 "323f4f9a95ec3bfdb7c7059aa3ad9a78cb8299093fabb6b06ad6666babc4d007"}
+  {:id :exact-target-inspection-and-lock-controls :exit 0 :timed-out? false
+   :timeout-ms 180000 :tests 14 :assertions 81
+   :stdout-sha256 "af519f9e0d08c285f09d52f77a9815dfd6cdd2e9338e319f9ce01366e7d5b7c7"}]
+ :qualification-passed? true
+ :independent-review :not-performed
+ :repair-admitted? false
+ :live-effects :none}

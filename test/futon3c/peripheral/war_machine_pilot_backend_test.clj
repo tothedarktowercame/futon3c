@@ -13,6 +13,14 @@
 (def ^:private anchors-fixture
   "/home/joe/code/futon5a/data/wm-ui-anchors.edn")
 
+;; Tests must not cross the live Agency boundary. Exercise the real emitter
+;; while replacing only its incidental bell transport.
+(defn- capturing-no-live-bell
+  [captured]
+  {:post-bell (fn [body]
+                (reset! captured body)
+                {:status 200 :mocked? true})})
+
 (defn- temp-anchors-path
   []
   (str (System/getProperty "java.io.tmpdir")
@@ -210,6 +218,24 @@
         (is (false? (:ok result)))
         (is (str/includes? (:error result) "outside pilot-action v0 allowed roots")))
       (io/delete-file path true))))
+
+(deftest consent-gate-emit-binds-id-without-live-bell
+  (testing "the emitted consent-gate id is the id carried by the transport payload"
+    (let [captured (atom nil)
+          payload {:intent :test
+                   :scope ["wm-ui-anchor:0010"]
+                   :constraints [:read-before-write]
+                   :success-criteria [:anchor-addressed]}
+          result (backend/consent-gate-emit
+                  payload
+                  (capturing-no-live-bell captured))
+          cg-id (get-in result [:result :consent-gate-event-id])]
+      (is (:ok result))
+      (is (str/starts-with? cg-id "cg-"))
+      (is (= cg-id (:consent-gate-event-id @captured)))
+      (is (= :pilot/consent-gate-emit (:pilot-event @captured)))
+      (is (= payload (:consent-gate-payload @captured)))
+      (is (= 200 (get-in result [:result :status]))))))
 
 (deftest heartbeat-emit-posts-typed-progress-bell
   (testing "heartbeat-emit emits a typed progress heartbeat distinct from completion"

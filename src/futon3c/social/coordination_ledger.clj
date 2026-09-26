@@ -6,12 +6,47 @@
    wrapped invoke emits exactly one :invoke edge before the call and exactly one
    :invoke-result edge after the call, with nil/blank callers normalized to
    \"unknown\" rather than dropped."
-  (:require [clojure.string :as str]
+  (:require [futon3c.agency.clock-decision :as clock-decision]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.futon1b-backend]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [futon3c.evidence.backend AtomBackend]
+           [futon3c.evidence.futon1b_backend Futon1bBackend]))
+
+(def ^:dynamic *test-evidence-store*
+  "Explicit unit-test store binding. Production never falls back to an atom."
+  nil)
+
+(defn- dev-evidence-store
+  "Read the existing boot authority without loading dev or creating a store."
+  []
+  (when-let [dev-ns (find-ns 'futon3c.dev)]
+    (when-let [store-var (ns-resolve dev-ns '!evidence-store)]
+      @(var-get store-var))))
+
+(defn mesh-evidence-store
+  "Resolve and validate the mesh backend before performing any work.
+   Omitted stores use dev's boot-configured authority. Volatile stores require
+   an explicit *test-evidence-store* binding; nil never selects estore/!store."
+  ([] (mesh-evidence-store nil))
+  ([store]
+   (let [store (or store *test-evidence-store* (dev-evidence-store))]
+     (if (or (instance? Futon1bBackend store)
+             (and *test-evidence-store*
+                  (or (instance? clojure.lang.IAtom store)
+                      (instance? AtomBackend store))))
+       store
+       (throw (ex-info "Mesh evidence requires the configured durable backend"
+                       {:error/code :mesh/non-durable-evidence-store
+                        :store-kind (cond
+                                      (nil? store) :missing
+                                      (instance? AtomBackend store) :atom-backend
+                                      (instance? clojure.lang.IAtom store) :raw-atom
+                                      :else :unsupported)}))))))
 
 (defn- now-str []
   (str (Instant/now)))
@@ -75,11 +110,64 @@
      :evidence/session-id edge-id*}))
 
 (defn record-invoke-edge!
-  "Append one mesh-edge evidence entry. Accepts optional :evidence-store for
-   tests; defaults to the process evidence store."
+  "Append a mesh edge to the explicit or boot-configured durable backend."
   [{:keys [evidence-store] :as edge}]
-  (boundary/append! (or evidence-store estore/!store)
+  (boundary/append! (mesh-evidence-store evidence-store)
                     (make-mesh-edge-evidence edge)))
+
+(defn- refuse-scheduled-dispatch!
+  [code message data]
+  (throw (ex-info message
+                  (merge {:error/type :process-assurance-refusal
+                          :error/code code
+                          :node :R10}
+                         data))))
+
+(defn run-scheduled-dispatch!
+  "R10 scheduled-entrypoint boundary: require a named commission, dispatch it,
+   and durably record the receipt joined to that commission. DISPATCH-FN receives
+   the R10-linked commission and must echo both :node and :commission/id in its
+   receipt; an unlinked or missing receipt refuses the scheduled run."
+  [{:keys [commission dispatch-fn evidence-store]}]
+  (let [commission-id (some-> (:commission/id commission) str str/trim not-empty)]
+    (when-not (and commission-id (fn? dispatch-fn))
+      (refuse-scheduled-dispatch!
+       :r10/invalid-commission
+       "R10 scheduled dispatch requires a commission identity and dispatch function"
+       {:commission commission}))
+    (let [linked-commission (assoc commission :node :R10)
+          receipt (dispatch-fn linked-commission)]
+      (when-not (and (map? receipt)
+                     (= :R10 (:node receipt))
+                     (= commission-id (some-> (:commission/id receipt) str))
+                     (some-> (:dispatch/id receipt) str str/trim not-empty))
+        (refuse-scheduled-dispatch!
+         :r10/unlinked-dispatch-receipt
+         "R10 scheduled dispatch receipt must identify its dispatch and commission"
+         {:commission/id commission-id :receipt receipt}))
+      (let [at (now-str)
+            entry {:evidence/id (str "e-" (UUID/randomUUID))
+                   :evidence/subject {:ref/type :task :ref/id commission-id}
+                   :evidence/type :coordination
+                   :evidence/claim-type :step
+                   :evidence/author (normalize-from (:commission/from commission))
+                   :evidence/at at
+                   :evidence/body {:node :R10
+                                   :process/stage :dispatched
+                                   :commission/id commission-id
+                                   :commission linked-commission
+                                   :dispatch/receipt receipt}
+                   :evidence/tags [:coordination :scheduled-dispatch :R10]
+                   :evidence/session-id (str (:dispatch/id receipt))}
+            recorded (boundary/append! (or evidence-store estore/!store) entry)]
+        (when-not (:ok recorded)
+          (refuse-scheduled-dispatch!
+           :r10/recording-failed
+           "R10 scheduled dispatch receipt was not recorded"
+           {:commission/id commission-id :dispatch/receipt receipt
+            :recording-result recorded}))
+        {:ok true :commission linked-commission :receipt receipt
+         :evidence/id (:evidence/id entry)}))))
 
 (defn invoke-with-edge!
   "Invoke an agent and record the social mesh edge around it.
@@ -94,9 +182,13 @@
               :session-id edge-id :evidence-store evidence-store}]
     (record-invoke-edge! (assoc base :kind :invoke))
     (try
-      (let [result (if (some? timeout-ms)
-                     (reg/invoke-agent! to* prompt timeout-ms)
-                     (reg/invoke-agent! to* prompt))]
+      (let [result (reg/invoke-agent!
+                    to* prompt
+                    (cond-> {:turn-id edge-id :surface surface*
+                             :evidence-store evidence-store
+                             :inherited-clock (clock-decision/dispatch-inheritance
+                                               evidence-store from* surface*)}
+                      (some? timeout-ms) (assoc :timeout-ms timeout-ms)))]
         (record-invoke-edge! (assoc base
                                     :kind :invoke-result
                                     :ok? (true? (:ok result))
@@ -126,8 +218,10 @@
 (defn recent-mesh-edges
   "Return recent social-layer mesh-edge records, newest first."
   ([] (recent-mesh-edges 50))
-  ([limit]
-   (->> (estore/query {:query/type :coordination
+  ([limit] (recent-mesh-edges limit nil))
+  ([limit evidence-store]
+   (->> (estore/query* (mesh-evidence-store evidence-store)
+                      {:query/type :coordination
                        :query/tags [:coordination :mesh-edge]
                        :query/limit (or limit 50)})
         (filter #(get-in % [:evidence/body :edge/from]))

@@ -1,0 +1,36 @@
+{:schema :wm/historical-qualification-plan-v1
+ :verification-id "repair-successor-v2-selection-revalidation-20260911-v1"
+ :repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure"
+ :sources
+ [{:path "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure.edn"
+   :sha256 "b888bcdd80d014c072f60faaa28d912908e4dc7674edce2f50d1ca6b45fc6068"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj"
+   :sha256 "1431e8f684cdaa30e1f13654c3d016c072f293e6e1440b20f9dd9b490217e0b3"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/repair_obligation.clj"
+   :sha256 "4c432d6c449945c2107caf05a5cc00f54d4bf9aaf7d24cc426d7b108795c96fd"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_deployment_config.clj"
+   :sha256 "4958fbcf28bc11fce6c41ffca8c68dd50be73110c2c7cb3ea56fd7f8215c5c48"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_historical_action.clj"
+   :sha256 "9048f039fcbdfe55bb6f5010b302b218aed3e5518eee9a4f2c93d149438e2c97"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_trusted_entry.clj"
+   :sha256 "d8f41db873e3beff1af7cda8f3304ce1d9e7e2d08d45a280018ca76742d01a93"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_series_service.clj"
+   :sha256 "4003fbc19bd63d0aa44badb807fc613d5b62aac35df544b16b3c8c7f3406ebe3"}
+  {:path "/home/joe/code/futon3c/src/futon3c/wm/run4_series_controller.clj"
+   :sha256 "0bf68363286328f279fbb9bf7d41d39a5b4ea008072122b07f9c5dbf1c133acd"}
+  {:path "/home/joe/code/futon3c/test/futon3c/wm/run4_historical_verification_test.clj"
+   :sha256 "8954fb16b09611da0106c814aabdc70b905c251fd96359216a554c9a7bde43f0"}
+  {:path "/home/joe/code/futon3c/test/futon3c/wm/run4_trusted_entry_test.clj"
+   :sha256 "095b0650e85237da587d8d850c19de337377f6e7ad660262dd910a021a76bc5f"}
+  {:path "/home/joe/code/futon3c/test/futon3c/wm/run4_series_service_test.clj"
+   :sha256 "0b1bed64b2f346474c765fc865c523b2e120ee32552e0ed06ccfbd59a2b21791"}]
+ :checks
+ [{:id :actual-stop-line-selection-controls
+   :argv ["bash" "-lc" "cd /home/joe/code/futon3c && clojure -M:test:test-all -n futon3c.wm.run4-historical-verification-test"]
+   :timeout-ms 120000}
+  {:id :new-admission-and-replay-controls
+   :argv ["bash" "-lc" "cd /home/joe/code/futon3c && clojure -M:test:test-all -n futon3c.wm.run4-trusted-entry-test"]
+   :timeout-ms 120000}
+  {:id :exact-target-inspection-and-lock-controls
+   :argv ["bash" "-lc" "cd /home/joe/code/futon3c && clojure -M:test:test-all -n futon3c.wm.run4-series-service-test"]
+   :timeout-ms 180000}]}

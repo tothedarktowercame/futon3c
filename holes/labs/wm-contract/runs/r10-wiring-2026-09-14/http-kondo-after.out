@@ -1,0 +1,2 @@
+src/futon3c/transport/http.clj:7796:18: info: Redundant boolean coercion: expression already has type boolean
+linting took 298ms, errors: 0, warnings: 0

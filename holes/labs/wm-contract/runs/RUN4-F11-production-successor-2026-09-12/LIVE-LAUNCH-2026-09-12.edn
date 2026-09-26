@@ -1,0 +1,22 @@
+{:schema :wm/run4-f11-live-launch-v1
+ :launched-at "2026-09-12T16:43:00Z"
+ :series-id "run4-f11-production-successor-20260912-v1"
+ :trial-id "M-f11-find-production-successor"
+ :controller-attempt-id "f11-production-successor-20260912-attempt-001"
+ :click-id "wm-click-b118a6da-12b5-4fe5-aacd-43eee6dc2245"
+ :cohort {:id :run4-f11-production-successor-20260912-v1
+          :local-attempt-expected "attempt-001"
+          :preregistration-sha256 "681d6e42a3949bbf6225b6bda1c5708fd2d7c0fc2c5f6f652af71e8c6601de71"
+          :target 1 :remaining-before-launch 1}
+ :packet {:futon2-head "07a6b7ec"
+          :manifest-sha256 "4cc5068d5df95e9f92d86c38c361788eac6ce02db389c877d9eea101628d27a3"
+          :task-pin-sha256 "9a6475b72a4cd5500f10cdc1756aec209d0cb7aade81ca53433371199d1c368f"}
+ :casting {:author "codex-20" :reviewer "codex-18"
+           :repair-reviewer "codex-19" :fold-seat "codex-21"}
+ :repair-successor-for
+ {:repair-id "repair-attempt-024-feature-card-missing-or-invalid"
+  :replacement-commit "a0bd18be8ba400a9930ae7b773652076df4981ad"
+  :resolution-condition :ordinary-f11-gates-pass}
+ :selection-enaction {:capture :live :outcomes #{:match :typed-divergence}}
+ :metrics {:i8/item 1 :operator-interventions-before-terminal 0}
+ :claims {:task-success :not-yet-known :lean-attestation :suspended-vocabulary}}

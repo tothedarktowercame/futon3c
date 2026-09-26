@@ -1,0 +1,93 @@
+;; expository-scope-hierarchy.edn
+;; Seed vocabulary for the expository-scope-detector, derived from the 427-record
+;; close reading of six math.CT paper openings (2026-06-15). See the dogfood
+;; section of ../E-question-driven-scope-coverage.md.
+;;
+;; PURPOSE: the controlled-but-growing scope-kind hierarchy the detector votes
+;; into. Agents bin each expository scope into an existing :kind (required) and
+;; MAY suggest a new sub-kind with evidence. The consolidation store mints a
+;; suggested sub-kind only when it clears the mint-threshold; otherwise the
+;; proposal resolves DOWN to its recognized :parent (fringe -> nearest known).
+;;
+;; FORMAL KINDS ARE OUT OF SCOPE HERE. The 22 golden-graph kinds (states, defines,
+;; quantifies, constrains, logical, proof-step, cites, ...) are "covered" — owned
+;; by existing detectors + the IATC/typed-bells (illocutionary) work. The
+;; close-reading measured formal-genre openings at 94% covered. This file is the
+;; missing EXPOSITORY layer only.
+
+{:policy
+ {:mint-threshold {:min-papers 5 :min-agents 2}     ; promote a fringe sub-kind to first-class only at/above this
+  :fringe-resolution :resolve-to-parent             ; below threshold -> mark with the recognized parent kind (no coverage loss)
+  :saturation-signal "last ~50 papers mint ~0 new kinds => vocabulary sufficient"
+  :formal-kinds :covered-elsewhere}                 ; do not mint/relabel formal scope-syntax kinds here
+
+ :families
+ [{:kind :rationale/telos
+   :parent :root
+   :synonyms [:motivates :motivation-rationale :rationale :motivation]   ; shape:motivation maps here
+   :definition "Links a construction/definition/result to the problem it solves or the goal it is designed to serve — the 'why this exists'."
+   :hole {:slot :telos :type "the problem/goal/impetus the construct serves"}
+   :fill "the motivating problem or design goal named in the prose"
+   :evidence-count {:hx 17 :shape-motivation 24 :recurs-in 5}
+   :anchors [{:paper "0711.1761" :line 165 :quote "A major impetus behind many developments in 2-dimensional category theory has been the observation that ..."}
+             {:paper "0801.2567" :line 129 :quote "Frobenius algebras are interesting ..."}]}
+
+  {:kind :connection
+   :parent :root
+   :synonyms [:connects-structures :anticipates-connection :speculates-connection :identifies]
+   :definition "Asserts that the object/theory under discussion relates to another (often external) structure or theory."
+   :hole {:slot :other-structure :type "the structure/theory connected to"}
+   :fill "the named external structure and the nature of the link"
+   :evidence-count {:hx 9 :shape-connection 18 :recurs-in "all expository"}
+   :anchors [{:paper "0801.2567" :line 185 :quote "unifying Lie algebras and quandles ..."}
+             {:paper "1012.1220" :line 113 :quote "undoubtedly also a connection ..."}]
+   :children
+   [{:kind :connection/transfer
+     :synonyms [:transfer-interpretation :analogy-transfer :interprets-diagrammatically]
+     :definition "Reads/transports a statement or structure AS another (re-interpretation, analogy, diagrammatic reading)."
+     :hole {:slot :read-as :type "the alternative reading/interpretation"}
+     :evidence-count {:hx-shape-transfer "9 hx + 10 transfer shapes"}
+     :anchors [{:paper "0711.1761" :line 184 :quote "A priori, this is merely a statement about individual bicategories; but we may also read it as ..."}
+               {:paper "1012.1220" :line 163 :quote "The dual view of context-dependent functions as coKleisli maps of a comonad is equally useful ..."}]}
+    {:kind :connection/literature-gap
+     :synonyms [:literature-gap]
+     :definition "Positions the work against prior literature — what a cited source did or did NOT establish; the gap being filled."
+     :hole {:slot :prior-result :type "the cited result and its limitation/absence"}
+     :anchors [{:paper "0905.0595" :line 203 :quote "Condition (2) is not stated explicitly in \\cite{AR} ..."}]}]}
+
+  {:kind :open-problem/status
+   :parent :root
+   :synonyms [:open-status :open-question]
+   :definition "Declares an unresolved question, a limitation, or the open status of a claim."
+   :hole {:slot :unresolved :type "the question/claim whose truth is not settled"}
+   :fill "a later proof, refutation, or scoping of the open question"
+   :evidence-count {:across-axes 7 :recurs-in 3}
+   :anchors [{:paper "0905.0595" :line 132 :quote "We do not know whether this is true for standardly defined cofibrantly generated model categories ..."}
+             {:paper "0905.0595" :line 237 :quote "Thus we do not know whether Vopenka's principle follows from the original result from \\cite{R...} ..."}]}
+
+  {:kind :universal-property/characterizes
+   :parent :root
+   :synonyms [:universal-property :characterization]
+   :definition "States the universal property / defining characterization of an object — the CT-native 'why this is the right definition' (adjointness, uniqueness-up-to-iso)."
+   :hole {:slot :characterizing-property :type "the universal/defining property"}
+   :fill "the adjunction/uniqueness statement that pins the object down"
+   :evidence-count {:low-count true :ct-central true :recurs-in 2}
+   :anchors [{:paper "1012.1220" :line 361 :quote "For any coalgebra (A,u), object B and map k : A -> B, there is a unique map f : A -> D B ..."}]}
+
+  {:kind :computes-invariant/calculation
+   :parent :root
+   :synonyms [:computes-invariant :calculation]
+   :definition "A computational/derivational step that produces a value or invariant (distinct from a logical proof-step)."
+   :hole {:slot :computed-value :type "the invariant/value being computed"}
+   :evidence-count {:hx 5 :shape-calculation 7 :recurs-in 2}
+   :anchors [{:paper "0801.2567" :line 347 :quote "We compute ..."}]}
+
+  ;; --- candidate (lower frequency; below comfortable mint-threshold on its own; kept as a watch-item) ---
+  {:kind :obstruction
+   :parent :root
+   :status :candidate
+   :synonyms [:obstructs]
+   :definition "Identifies what would have to hold for a (failed) construction to work — the obstruction in a counterexample/no-go argument."
+   :hole {:slot :missing-condition :type "the condition whose failure obstructs"}
+   :evidence-count {:hx 2 :shape-obstruction 6 :recurs-in 1 :note "concentrated in the counterexample paper 0807.1872"}
+   :anchors [{:paper "0807.1872" :line 610 :quote "For this, the category \\D(\\ca) would have to have small \\Hom-sets."}]}]}

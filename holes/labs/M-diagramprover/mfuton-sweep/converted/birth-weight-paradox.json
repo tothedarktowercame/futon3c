@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "s",
+    "to" : "w"
+  }, {
+    "from" : "s",
+    "to" : "m"
+  }, {
+    "from" : "w",
+    "to" : "m"
+  }, {
+    "from" : "d",
+    "to" : "w"
+  }, {
+    "from" : "d",
+    "to" : "m"
+  } ],
+  "id" : "birth-weight-paradox",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "birth-weight-paradox.json"
+  },
+  "variables" : [ {
+    "id" : "s",
+    "kind" : "observed",
+    "name" : "Smoking"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "Birth Weight"
+  }, {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Birth Defect"
+  }, {
+    "id" : "m",
+    "kind" : "observed",
+    "name" : "Mortality of Child"
+  } ]
+}

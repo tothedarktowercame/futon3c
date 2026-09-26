@@ -6,20 +6,210 @@
    invoke-missing → SocialError (R4), bounded-lifecycle/TTL (R5),
    typed-identifiers (R6)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [cheshire.core :as json]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.clock-store :as clock]
+            [futon3c.agency.clock-decision :as decision]
             [futon3c.blackboard]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
-            [futon3c.transport.ws.invoke :as ws-invoke]))
+            [futon3c.transport.ws.invoke :as ws-invoke])
+  (:import [java.util.concurrent CountDownLatch TimeUnit]))
 
 (use-fixtures
   :each
   (fn [f]
     (reg/reset-registry!)
+    (clock/reset-store!)
     ;; Suppress live-file pollution during tests: hop! / hop-back!
     ;; would otherwise append entries to pilot-inhabitations.edn.
-    (binding [reg/*enable-hop-event-emission?* false]
+    (binding [reg/*enable-hop-event-emission?* false
+              decision/*test-store* (atom {:entries {} :order []})
+              decision/*repo-roots* {}]
       (f))))
+
+(deftest status-publication-can-suppress-uplink-echo
+  (testing "an imported roster can update HUDs without announcing back upstream"
+    (let [projected (atom 0)
+          broadcast (atom 0)
+          announced (atom 0)]
+      (with-redefs-fn
+        {(ns-resolve 'futon3c.agency.registry 'broadcast-agents-ws!)
+         #(swap! broadcast inc)
+         (ns-resolve 'futon3c.agency.registry 'announce-uplink-roster!)
+         #(swap! announced inc)
+         #'futon3c.blackboard/project-agents!
+         (fn [_] (swap! projected inc))}
+        #(reg/publish-agents-status! {:announce-uplink? false}))
+      (is (= 1 @projected))
+      (is (= 1 @broadcast))
+      (is (zero? @announced)
+          "fed_roster import must not trigger another fed_announce"))))
+
+(defn- await-latch!
+  [^CountDownLatch latch message]
+  (is (.await latch 3 TimeUnit/SECONDS) message))
+
+(defn- register-test-agent!
+  ([agent-id]
+   (register-test-agent! agent-id {}))
+  ([agent-id metadata]
+   (reg/register-agent!
+    {:agent-id (fix/make-agent-id agent-id)
+     :type :codex
+     :invoke-fn (fn [_prompt _session-id] {:result "ok"})
+     :capabilities [:edit]
+     :metadata metadata})))
+
+(defn- registry-key-count
+  []
+  (count @(var-get (ns-resolve 'futon3c.agency.registry '!registry))))
+
+(deftest persona-aliases-resolve-without-adding-registry-identities
+  (register-test-agent! "codex-persona-target")
+  (register-test-agent! "registered-persona")
+  (register-test-agent! "proxy-persona-target" {:proxy? true})
+  (let [target (reg/get-agent "codex-persona-target")
+        bare-winner (reg/get-agent "registered-persona")
+        key-count (registry-key-count)]
+    (with-redefs [reg/agent-personas
+                  (constantly {"countdown-control" "codex-persona-target"
+                               "missing-persona" "not-registered"
+                               "proxy-persona" "proxy-persona-target"
+                               "registered-persona" "not-registered"})]
+      (testing "a persona resolves to the registered target record everywhere"
+        (is (identical? target (reg/get-agent "countdown-control")))
+        (is (reg/agent-registered? "countdown-control"))
+        (is (contains? (reg/addressable-names) "countdown-control")))
+      (testing "missing and proxy targets do not resolve"
+        (is (nil? (reg/get-agent "missing-persona")))
+        (is (nil? (reg/get-agent "proxy-persona")))
+        (is (not (contains? (reg/addressable-names) "missing-persona")))
+        (is (not (contains? (reg/addressable-names) "proxy-persona"))))
+      (testing "a registered bare id takes precedence over its persona binding"
+        (is (identical? bare-winner (reg/get-agent "registered-persona"))))
+      (testing "persona lookup never adds registry keys"
+        (is (= key-count (registry-key-count)))))))
+
+(deftest empty-persona-map-preserves-ordinary-resolution
+  (register-test-agent! "ordinary-agent")
+  (with-redefs [reg/agent-personas (constantly {})]
+    (is (= "ordinary-agent"
+           (get-in (reg/get-agent "ordinary-agent") [:agent/id :id/value])))
+    (is (nil? (reg/get-agent "unregistered-persona")))
+    (is (contains? (reg/addressable-names) "ordinary-agent"))
+    (is (not (contains? (reg/addressable-names) "unregistered-persona")))))
+
+(deftest persona-bindings-can-be-reloaded-without-restarting
+  (let [read-personas (ns-resolve 'futon3c.agency.registry
+                                  'read-agent-personas)]
+    (try
+      (with-redefs-fn {read-personas
+                       (constantly {"countdown-control" "claude-owner"})}
+        #(is (= {"countdown-control" "claude-owner"}
+                (reg/reload-agent-personas!))))
+      (is (= {"countdown-control" "claude-owner"} (reg/agent-personas)))
+      (finally
+        (reg/reload-agent-personas!)))))
+
+(defn- await-status-publish-idle!
+  []
+  (let [state (var-get
+               (ns-resolve 'futon3c.agency.registry
+                           '!agents-status-publish-state))
+        idle (promise)
+        watch-key (gensym "await-status-publish-idle-")]
+    (add-watch state watch-key
+               (fn [_ _ _ current]
+                 (when (= :idle (:phase current))
+                   (deliver idle true))))
+    (when (= :idle (:phase @state))
+      (deliver idle true))
+    (try
+      (is (true? (deref idle 3000 false))
+          "async status publisher should return to idle")
+      (finally
+        (remove-watch state watch-key)))))
+
+(deftest async-status-publication-runs-once-when-idle
+  (let [calls (atom 0)
+        published (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (swap! calls inc)
+                    (.countDown published))]
+      (is (true? (:scheduled? (reg/publish-agents-status-async!))))
+      (await-latch! published "the leading publication should run")
+      (await-status-publish-idle!)
+      (is (= 1 @calls)))))
+
+(deftest async-status-publication-runs-a-trailing-publication
+  (let [calls (atom 0)
+        order (atom [])
+        first-started (CountDownLatch. 1)
+        release-first (CountDownLatch. 1)
+        second-finished (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (let [call (swap! calls inc)]
+                      (swap! order conj [:start call])
+                      (when (= 1 call)
+                        (.countDown first-started)
+                        (.await release-first 3 TimeUnit/SECONDS))
+                      (swap! order conj [:finish call])
+                      (when (= 2 call)
+                        (.countDown second-finished))))]
+      (is (true? (:scheduled? (reg/publish-agents-status-async! {:run 1}))))
+      (await-latch! first-started "the leading publication should start")
+      (is (false? (:scheduled? (reg/publish-agents-status-async! {:run 2}))))
+      (.countDown release-first)
+      (await-latch! second-finished "the trailing publication should finish")
+      (await-status-publish-idle!)
+      (is (= 2 @calls))
+      (is (= [[:start 1] [:finish 1] [:start 2] [:finish 2]] @order)))))
+
+(deftest async-status-publication-coalesces-to-latest-options
+  (let [seen-opts (atom [])
+        first-started (CountDownLatch. 1)
+        release-first (CountDownLatch. 1)
+        second-finished (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [opts]
+                    (let [call (count (swap! seen-opts conj opts))]
+                      (when (= 1 call)
+                        (.countDown first-started)
+                        (.await release-first 3 TimeUnit/SECONDS))
+                      (when (= 2 call)
+                        (.countDown second-finished))))]
+      (reg/publish-agents-status-async! {:request 0})
+      (await-latch! first-started "the leading publication should start")
+      (doseq [request (range 1 21)]
+        (is (false?
+             (:scheduled?
+              (reg/publish-agents-status-async! {:request request})))))
+      (.countDown release-first)
+      (await-latch! second-finished "the coalesced trailing publication should finish")
+      (await-status-publish-idle!)
+      (is (= [{:request 0} {:request 20}] @seen-opts)))))
+
+(deftest async-status-publication-recovers-after-exception
+  (let [calls (atom 0)
+        first-called (CountDownLatch. 1)
+        second-called (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (case (swap! calls inc)
+                      1 (do
+                          (.countDown first-called)
+                          (throw (ex-info "expected test failure" {})))
+                      2 (.countDown second-called)))]
+      (reg/publish-agents-status-async!)
+      (await-latch! first-called "the throwing publication should run")
+      (await-status-publish-idle!)
+      (is (true? (:scheduled? (reg/publish-agents-status-async!))))
+      (await-latch! second-called "a later publication should run normally")
+      (await-status-publish-idle!)
+      (is (= 2 @calls)))))
 
 ;; =============================================================================
 ;; Ported from futon3: timeout enforcement
@@ -37,6 +227,56 @@
     (let [resp (reg/invoke-agent! (fix/make-agent-id "t-timeout") "hi" 50)]
       (is (false? (:ok resp)))
       (is (= :invoke-error (:error/code (:error resp)))))))
+
+(deftest invoke-timeout-detaches-rather-than-killing
+  (testing "the deadline ends the caller's wait, not the work"
+    (let [finished (promise)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-detach")
+        :type :codex
+        :invoke-fn (fn [_prompt _session-id]
+                     (Thread/sleep 200)
+                     (deliver finished true)
+                     {:result "late but real" :session-id "sid-detached"})
+        :capabilities [:edit]})
+      (let [resp (reg/invoke-agent! (fix/make-agent-id "t-detach") "hi" 50)]
+        (is (false? (:ok resp)))
+        (is (true? (get-in resp [:error :error/context :detached?]))
+            "callers must be able to tell 'still running' from 'nothing happened'")
+        ;; The old code called future-cancel here, interrupting the worker.
+        (is (true? (deref finished 3000 false))
+            "the turn runs to completion instead of being abandoned")
+        ;; And the lane is released by the real completion, not by the deadline.
+        (let [idle? (fn [] (= :idle (:agent/status (reg/get-agent "t-detach"))))]
+          (loop [n 0]
+            (when (and (not (idle?)) (< n 60))
+              (Thread/sleep 50)
+              (recur (inc n))))
+          (is (idle?) "the detached turn releases the lane when it really finishes"))))))
+
+(deftest invoke-prefers-the-three-arity-contract
+  (testing "a per-call timeout reaches an invoke-fn that accepts one"
+    (let [seen (atom ::none)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-arity3")
+        :type :codex
+        :invoke-fn (fn
+                     ([p] (reset! seen ::one) {:result p})
+                     ([p _s] (reset! seen ::two) {:result p})
+                     ([p _s opts] (reset! seen (:timeout-ms opts)) {:result p}))
+        :capabilities [:edit]})
+      (reg/invoke-agent! (fix/make-agent-id "t-arity3") "hi" 5000)
+      (is (= 5000 @seen))))
+  (testing "a 2-arity invoke-fn still works and is not probed by exception"
+    (let [calls (atom 0)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-arity2")
+        :type :codex
+        :invoke-fn (fn [p _s] (swap! calls inc) {:result p})
+        :capabilities [:edit]})
+      (let [resp (reg/invoke-agent! (fix/make-agent-id "t-arity2") "hi" 5000)]
+        (is (true? (:ok resp)))
+        (is (= 1 @calls) "the turn must be dispatched exactly once")))))
 
 ;; =============================================================================
 ;; Ported from futon3: no resurrect after unregister
@@ -70,6 +310,32 @@
       (let [r2 (reg/register-agent! {:agent-id aid :type :codex :invoke-fn inv-fn :capabilities [:edit]})]
         (is (= false (:ok r2)) "second registration fails")
         (is (= :duplicate-registration (:error/code (:error r2))))))))
+
+(deftest one-session-has-one-agent-identity
+  (testing "registration and update refuse a session already owned by another id"
+    (let [invoke-fn (fn [_prompt _session-id] {:result "ok"})
+          first-result (reg/register-agent!
+                        {:agent-id (fix/make-agent-id "codex-owner")
+                         :type :codex
+                         :invoke-fn invoke-fn
+                         :capabilities [:edit]
+                         :session-id "session-singular"})
+          second-result (reg/register-agent!
+                         {:agent-id (fix/make-agent-id "codex-alias")
+                          :type :codex
+                          :invoke-fn invoke-fn
+                          :capabilities [:edit]
+                          :session-id "session-singular"})]
+      (is (= "session-singular" (:agent/session-id first-result)))
+      (is (= :session-already-owned (:error/code (:error second-result))))
+      (reg/register-agent! {:agent-id (fix/make-agent-id "codex-empty")
+                            :type :codex
+                            :invoke-fn invoke-fn
+                            :capabilities [:edit]})
+      (let [update-result (reg/update-agent! "codex-empty"
+                                             :agent/session-id "session-singular")]
+        (is (= :session-already-owned (:error/code (:error update-result))))
+        (is (nil? (:agent/session-id (reg/get-agent "codex-empty"))))))))
 
 ;; =============================================================================
 ;; R3: Atomic state transitions
@@ -305,6 +571,48 @@
       :capabilities []})
     (is (= 1 (:count (reg/registry-status))))))
 
+(defn- register-stale-invoking-agent!
+  [agent-id & [metadata]]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id agent-id)
+    :type :mock
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []
+    :metadata metadata})
+  (reg/update-agent!
+   agent-id
+   :agent/status :invoking
+   :agent/invoke-started-at (.minusSeconds (java.time.Instant/now) 31536000)))
+
+(deftest reconcile-never-sweeps-federated-proxies
+  (testing "a proxy's home site remains the sole authority for runtime status"
+    (register-stale-invoking-agent! "remote-worker" {:proxy? true})
+    (is (empty? (reg/reconcile-stale-invoking! 120000)))
+    (is (= :invoking (:agent/status (reg/get-agent "remote-worker"))))))
+
+(deftest reconcile-preserves-fresh-invoke-activity
+  (testing "fresh stream activity proves a ledger-less local turn is alive"
+    (register-stale-invoking-agent! "active-repl")
+    (reg/update-invoke-activity! "active-repl" "using bash")
+    (is (empty? (reg/reconcile-stale-invoking! 120000)))
+    (is (= :invoking (:agent/status (reg/get-agent "active-repl"))))))
+
+(deftest reconcile-repairs-stale-local-agent-without-liveness
+  (testing "a genuinely abandoned local invocation is still repaired"
+    (register-stale-invoking-agent! "abandoned-local")
+    (is (= ["abandoned-local"]
+           (reg/reconcile-stale-invoking! 120000)))
+    (is (= :idle (:agent/status (reg/get-agent "abandoned-local"))))))
+
+(deftest registry-status-does-not-repair-stale-invocations
+  (testing "reading the roster twice does not mutate agent runtime status"
+    (register-stale-invoking-agent! "read-pure")
+    (let [first-read (reg/registry-status)
+          second-read (reg/registry-status)]
+      (is (= :invoking (get-in first-read [:agents "read-pure" :status])))
+      (is (= :invoking (get-in second-read [:agents "read-pure" :status])))
+      (is (= :invoking (:agent/status (reg/get-agent "read-pure")))))))
+
 (deftest registry-status-detects-external-codex-invocation
   (testing "codex agent marked invoking when matching external codex process session is active"
     (reg/register-agent!
@@ -345,6 +653,55 @@
         (is (= "Command Execution" (:invoke-activity info))))
       (reg/clear-external-invoke! "codex-repl" "emacs-codex-repl")
       (is (= :idle (get-in (reg/registry-status) [:agents "codex-repl" :status]))))))
+
+(deftest external-invoke-heartbeat-announces-uplink-roster
+  (testing "externally driven REPL invokes publish to the federation uplink promptly"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-uplink")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (let [announced (promise)]
+      (with-redefs [reg/running-codex-session-ids (constantly #{})
+                    futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                    futon3c.blackboard/project-agents! (fn [_] nil)]
+        (binding [reg/*resolve-uplink-announce*
+                  (fn [] (fn [] (deliver announced :announced)))]
+          (reg/report-external-invoke!
+           "codex-uplink"
+           "emacs-codex-repl"
+           {:status :invoking
+            :prompt-preview "active prompt"})))
+      (is (= :announced (deref announced 1000 :timeout))))))
+
+(deftest agents-status-broadcast-advertises-invoke-pattern
+  (testing "WS agents_status carries the same invoke preview fields as registry-status"
+    (let [sent (promise)]
+      (try
+        (reg/register-agent!
+         {:agent-id (fix/make-agent-id "codex-broadcast")
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit]})
+        (ws-invoke/register! "registry-test-hud" #(deliver sent %) {:observer? true})
+        (with-redefs [reg/running-codex-session-ids (constantly #{})
+                      futon3c.blackboard/project-agents! (fn [_] nil)]
+          (reg/report-external-invoke!
+           "codex-broadcast"
+           "emacs-codex-repl"
+           {:status :invoking
+            :prompt-preview "--- CURRENT TURN ---\nSurface: emacs-repl\nCaller: joe"
+            :activity "using bash"}))
+        (let [frame (json/parse-string (deref sent 1000 "{}") true)
+              agent (get-in frame [:agents :codex-broadcast])]
+          (is (= "agents_status" (:type frame)))
+          (is (= "invoking" (:status agent)))
+          (is (= "using bash" (:invoke-activity agent)))
+          (is (= "--- CURRENT TURN ---\nSurface: emacs-repl\nCaller: joe"
+                 (:invoke-prompt-preview agent)))
+          (is (string? (:invoke-started-at agent))))
+        (finally
+          (ws-invoke/unregister! "registry-test-hud"))))))
 
 (deftest registry-status-treats-heartbeating-codex-as-idle-when-clear
   (testing "codex agent stays idle after clear even if resume process is running"
@@ -459,6 +816,32 @@
         (is (= :invoking (:status info)))
         (is (= 1 (:running-jobs info)))
         (is (= 1 (:nonterminal-jobs info)))))))
+
+(deftest invoke-publishes-status-transitions-to-federation-uplink
+  (testing "both invoking and idle transitions reach a peer-hosted agents HUD"
+    (let [uplink-announced (atom 0)
+          peer-statuses (atom [])]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "zai-federated")
+        :type :zai
+        :invoke-fn (fn [_ _] {:result "hi"})
+        :capabilities [:coordination/execute]})
+      (with-redefs [reg/*resolve-uplink-announce*
+                    (fn [] (fn [] (swap! uplink-announced inc)))
+                    reg/*resolve-peer-announce*
+                    (fn [] (fn [agent]
+                             (swap! peer-statuses conj (:agent/status agent))))]
+        (is (:ok (reg/invoke-agent! "zai-federated" "just say hi")))
+        (loop [attempt 0]
+          (when (and (or (< @uplink-announced 2)
+                         (< (count @peer-statuses) 2))
+                     (< attempt 100))
+            (Thread/sleep 10)
+            (recur (inc attempt))))
+        (is (= 2 @uplink-announced)
+            "invoke start and completion must each announce the uplink roster")
+        (is (= [:invoking :idle] @peer-statuses)
+            "HTTP peers must receive both runtime transitions")))))
 
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"

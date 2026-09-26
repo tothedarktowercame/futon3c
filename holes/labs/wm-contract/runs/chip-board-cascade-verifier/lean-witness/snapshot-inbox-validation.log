@@ -1,0 +1,71 @@
+BOARD|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4
+INPUTS|sha256:cb45070fa6189bec07bae3784eba70ea60d0382fd6c16dcd92d6dd30cc42dbd9
+END|end/yield
+CHIP|ck/keypress|keypress||ck/yield|ck/smell
+CHIP|ck/smell|smell||ck/look-first|ck/sing-clean
+CHIP|ck/look-first|look|futon5a|ck/feel-target|ck/yield
+CHIP|ck/feel-target|feel|futon5a|ck/sing-flag-live|ck/zap-commit
+CHIP|ck/zap-commit|zap|futon5a|ck/yield|ck/yield
+CHIP|ck/sing-clean|sing||ck/yield|
+CHIP|ck/sing-flag-live|sing||ck/yield|
+CHIP|ck/yield|yield|||
+ROW|ck/keypress|keypress|false|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||
+ROW|ck/smell|smell|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||observe
+ROW|ck/look-first|look|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|observe
+ROW|ck/feel-target|feel|false|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|
+ROW|ck/zap-commit|zap|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|commit:futon5a
+ROW|ck/yield|yield|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||yield-turn
+'DarkTower.WarMachine.ChipBoardWitness.fixtureFollowsWires' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.fixtureTwoWires' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.checkedObservationHasEitherWire' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.executorNamedHazard' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.nilZapExecutesWithoutFeel' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.replayDoesNotCertifyEffects' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.fixtureExecutes' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.fixtureNamedHazard' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.fixtureDeltasZero' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.repairedHazard' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.nilZapNowImpossible' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.nilNowRefuses' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.replayCertifiesModeledEffects' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.alteredEffectsNowRefuse' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.compareMoveReference' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.fixtureStillExecutes' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.Repaired.fixtureFullHazard' depends on axioms: [propext, Quot.sound]
+{
+  "state": "validated",
+  "scope": "pinned-projection-and-repaired-base-verb-hazard",
+  "matching_lines": 17,
+  "deltas": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "runtime_certificate_status": "pending",
+  "blockers": [
+    "mutable-registry-not-bound-by-certificate",
+    "arbitrary-validated-board-can-still-throw"
+  ],
+  "input_digest": "retained carrier only; original observation packet absent",
+  "hashes": {
+    "/home/joe/code/mathlib4/DarkTower/WarMachine/ChipBoardWitness.lean": "8861f52c71951c7857fd38d6a4026f24be853293ca695937fe1fadea91323be1",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-inbox-zero/lean-witness/readback.clj": "9230a2b80ba56536995561a079d4b0125973eea563e8920fdfb5c389ff05f510",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-inbox-zero/run-2026-09-12.txt": "875560963b7db5d1e64ed46bbbd5690c76e2e19d0e78181a8bd2f3710db309d4",
+    "/home/joe/code/futon3c/src/futon3c/agents/chip_board.clj": "a0489ed3aa0ca184e8878e1dfda1bcb1e7f3dbc21e612dc6c098d7f8c0b4716c",
+    "/home/joe/code/futon3c/src/futon3c/agents/inbox_zero_board.clj": "e6e6effaa410e11ee403d4ed0153ae95188b3f5b382c6e6fbbbb371611be0e88"
+  }
+}

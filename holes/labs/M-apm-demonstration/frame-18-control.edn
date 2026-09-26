@@ -1,0 +1,84 @@
+{:frame/id "f18"
+ :frame/specification-version 1
+ :frame/mode :operator-stepped
+ :frame/control-branch "frame/18-control"
+ :frame/control-base "2adc316979cd85ce059ec5fb6e2a5f4b26e11c33"
+ :problem/id "a97J07"
+ :problem/classification {:topology? false
+                          :source :operator-non-topology-rule}
+ :problem/repository "/home/joe/code/apm-lean"
+ :problem/branch "repair/m97A06-energy-regularity"
+ :problem/revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+ :problem/path "problems/a97J07/lean/Main.lean"
+ :problem/blob "69f1a6c35eab92f234beed1697fc59d1eac12445"
+ :problem/preflight {:lean-exit 0 :sorry-declarations 1 :errors 0
+                     :recorded-infrastructure-blocker? false}
+ :frame/seat-policy
+ {:solver {:turn-minutes 60}
+  :student {:request-minutes 5 :turn-minutes 60}
+  :guide {:turn-minutes 60}
+  :scribe {:turn-minutes 60}
+  :proctor {:turn-minutes 60}
+  :analyst {:turn-minutes 60}}
+ :frame/timeout-policy {:frame-minutes 240}
+ :frame/cast
+ {:solver {:type :codex}
+  :student {:type :zai}
+  :guide {:type :claude}
+  :scribe {:type :zai}
+  :proctor {:type :codex}
+  :analyst {:type :claude}}
+ :frame/apparatus
+ {:repository "/home/joe/code/futon3c"
+  :branch "master"
+  :revision "4c08c2e64d6725a54ca85f981a4109a4947dad11"
+  :role-cards
+  {:solver
+   {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v4.md"
+    :blob "ad63c4dc908a0061ee38d16fb51dacb31110a303"}
+   :student
+   {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md"
+    :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide
+   {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide.md"
+    :blob "b475f85cb1114184329f7e7b0a5e423085201218"}
+   :scribe
+   {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+    :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor
+   {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md"
+    :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :analyst
+   {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"
+    :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
+ :frame/workspaces
+ {:solver
+  {:repository "/home/joe/code/apm-lean"
+   :branch "exp/frame-18-a97J07-solver-r2"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-solver-r2"
+   :execution-substrate
+   {:kind :shared-lake
+    :path "/home/joe/code/apm-lean/.lake"
+    :lean-version "Lean (version 4.29.0-rc8, x86_64-unknown-linux-gnu, commit 513160ea59dfd60defec325636bbc5215a8a6e7e, Release)"
+    :lake-manifest-sha256 "9332ecbdfcce272b3329870dc0849c1685b49850537247fd54a1e32d7c2d85f0"
+    :dependency-policy :solver-discovered
+    :probe {:command ["lake" "env" "lean" "problems/a97J07/lean/Main.lean"]
+            :expected-exit 0}}}
+  :student
+  {:repository "/home/joe/code/apm-lean"
+   :branch "exp/frame-18-a97J07-student-r2"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-student-r2"
+   :execution-substrate
+   {:kind :shared-lake
+    :path "/home/joe/code/apm-lean/.lake"
+    :lean-version "Lean (version 4.29.0-rc8, x86_64-unknown-linux-gnu, commit 513160ea59dfd60defec325636bbc5215a8a6e7e, Release)"
+    :lake-manifest-sha256 "9332ecbdfcce272b3329870dc0849c1685b49850537247fd54a1e32d7c2d85f0"
+    :dependency-policy :solver-discovered
+    :probe {:command ["lake" "env" "lean" "problems/a97J07/lean/Main.lean"]
+            :expected-exit 0}}}}
+ :frame/continuation-policy {:durable-required? true :wake-test-required? true}
+ :frame/separation-policy {:author-reviewer-distinct? true :arms-isolated? true}
+ :countdown/block "countdown-10"
+ :qualification/plan "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"}

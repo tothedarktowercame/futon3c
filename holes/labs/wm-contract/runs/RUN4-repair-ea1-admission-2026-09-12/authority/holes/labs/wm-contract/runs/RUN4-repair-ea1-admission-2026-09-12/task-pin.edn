@@ -1,0 +1,23 @@
+{:schema :wm/run4-task-pin-v1
+ :series-id "run4-ea1-admission-20260912-v1"
+ :trial-id "M-u88-contextual-preferences"
+ :series-order :as-declared
+ :candidate-task-ids ["M-u88-contextual-preferences"]
+ :selected-task-id "M-u88-contextual-preferences"
+ :sources [{:path "holes/missions/M-u88-contextual-preferences.md"
+            :sha256 "8212ec999123468aa10a8bfc657028a0d06ec3c51be7b97a0bcb517f4040c146"}
+           {:path "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md"
+            :sha256 "47981b01c1ebbb5efa822ba9c7479e312323cd113c1bdd1f40cc61715678356d"}
+           {:path "src/futon2/aif/mission_registry.clj"
+            :sha256 "07822ed0667f268350fc3b9d921adce4d0d8c78276463b3bf03e93f5a01b89da"}
+           {:path "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json"
+            :sha256 "64db034c9ae02282a169337d1683fc707abe2e4f05ddbd1e198b48b36778545c"}
+           {:path "holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12/cohort.edn"
+            :sha256 "42fe31f6444645b961c2366ba204f7a8912b57115c1b35b4ffcf690116c45c19"}]
+ :config {:path "holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12/run-config.edn"
+          :sha256 "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"}
+ :casting {:author "zai-5" :reviewer "zai-1" :repair-reviewer "zai-1"}
+ :operator-selection {:mode :operator-selected :operator "Joe"
+                      :authority-ref "Joe-authorized ea1 artifact-binding revalidation preparation; 2026-09-12"}
+ :mapping {:mission-id "M-u88-contextual-preferences"
+           :action {:type :advance-mission :target "M-u88-contextual-preferences"}}}

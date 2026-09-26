@@ -1,0 +1,51 @@
+{:date "2026-07-09",
+ :run-id "zai4-wm-pilot-cycle-001",
+ :agent "zai-4",
+ :v-attribution :pilot-autonomous,
+ :consent-gate-event-id "cg-zai4-learning-loop-cycle-001",
+ :trace
+ [{:step :READ
+   :v {:type :advance-mission
+       :target "M-learning-loop"
+       :mission-path "/home/joe/code/futon5a/holes/missions/M-learning-loop.md"
+       :open-hole-count 6
+       :rank 1
+       :G-total 17.539257534647287}
+   :dT-snapshot-note "ranked-actions[0] = M-learning-loop; 107 ranked actions total; G-gap=0.0 (core-driven, not gap-driven)"
+   :predicted-discharge 17.539257534647287}
+  {:step :EVAL
+   :v-accepted "M-learning-loop"
+   :cg-id "cg-zai4-learning-loop-cycle-001"
+   :predicted-discharge 17.539257534647287
+   :rationale "top-ranked action; mission at IDENTIFY→MAP transition with concrete next-move flagged in Checkpoint 2"}
+  {:step :PRINT
+   :hole-advanced "MAP phase started — pipeline v0 pair-consumption on M-trip-journal IDENTIFY-exit hinge"
+   :work-done "Wrote Checkpoint 3 to M-learning-loop.md: ran mining pipeline Steps 2a (existing-pattern check) + 2b (novel-candidate proposal) on actual hinge-log data. Produced: 2 existing-pattern matches (cook-ting strong, hinge-point structural), 1 novel candidate tracked (apparatus-to-end reframing, n=1, medium confidence), 1 contrast-baseline comparison performed. Concrete anchor citations to M-trip-journal sidecar."
+   :earned-closure? false
+   :closure-note "No scanner-counted hole closed. The 6 open-hole-count comprises 2 lexical false positives (prose 'sorry:' on L43, 'TBD' on L115) and 4 explicitly held 'Open questions'. My MAP checkpoint did not modify any of these. The work advanced the mission's actual phase (IDENTIFY→MAP) but the WM's lexical hole-scanner cannot detect phase transitions."}
+  {:step :LOOP
+   :tick-observed-at "2026-07-09T09:01:00.427890347Z"
+   :tick-count-before 66
+   :tick-count-after 67
+   :before {:target "M-learning-loop" :open-hole-count 6 :G-total 17.539257534647287 :rank 1}
+   :after {:target "M-learning-loop" :open-hole-count 6 :G-total 17.539257534647287 :rank 1}
+   :top-shifted? false
+   :open-hole-count-changed? false
+   :realised-discharge 0.0
+   :prediction-error 17.539257534647287
+   :field-moved? false
+   :field-did-not-move-reason "The WM's open-hole-count is a lexical scanner (regex over TODO/FIXME/TBD/sorry:/open-section-items). My MAP checkpoint advanced the mission semantically (phase transition + pipeline v0 demonstration) but added no new lexical hole-signals and removed none. The scanner cannot see phase transitions or substantive content additions. The 6 counted signals are stable: 2 prose false-positives + 4 held open-questions."}
+  {:step :VERIFY
+   :v1-conformant? true
+   :v2-no-teleport? true
+   :note "No closure claimed. Work is honestly partial: MAP started, pipeline v0 demonstrated on real data, but no hole closed and field did not move on the hole-count axis."}]
+ :learning
+ {:patterns-applied []
+  :sorries-mined
+  [{:id "sorry/lexical-hole-scanner-blind-to-phase-transitions"
+    :signal "WM open-hole-count is lexical; phase transitions are invisible to it"
+    :rating :high-value
+    :note "A pilot cycle that advances a mission's phase (IDENTIFY→MAP) without changing lexical TODO/sorry/open-question signals produces zero realised-discharge even though the work is substantive. This is a structural limitation of the hole-counting mechanism, not a pilot error."}]
+  :prediction-errors
+  [{:predicted 17.539 :realised 0.0 :error 17.539
+    :explanation "G-total (predicted-discharge) assumes the action advances a hole; the lexical scanner cannot see the advancement, so realised = 0"}]}}

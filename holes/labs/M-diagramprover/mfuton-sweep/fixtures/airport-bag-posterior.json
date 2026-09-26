@@ -1,0 +1,101 @@
+{
+  "example_id": "airport-bag-posterior",
+  "title": "Where Is My Bag? posterior inference",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's airport-bag Bayesian network. Whether the bag was on the plane and the elapsed unloading time jointly determine the probability that the bag has appeared on the carousel.",
+  "variables": [
+    {
+      "key": "bag-on-plane",
+      "name": "Bag on Plane",
+      "content": "Whether the bag made the flight connection; the source assigns prior probability one half.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "rows": [
+          {
+            "when": {},
+            "probability_true": {"numerator": 1, "denominator": 2}
+          }
+        ]
+      }
+    },
+    {
+      "key": "elapsed-time",
+      "name": "Elapsed Time",
+      "content": "Whole minutes elapsed since unloading began, observed from zero through ten.",
+      "value_domain": "categorical",
+      "domain_values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    },
+    {
+      "key": "bag-on-carousel",
+      "name": "Bag on Carousel",
+      "content": "Whether the bag has appeared on the carousel by the observed elapsed time.",
+      "value_domain": "boolean",
+      "probability_table": {
+        "kind": "finite",
+        "rows": [
+          {"when": {"bag-on-plane": false, "elapsed-time": 0}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 1}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 2}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 3}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 4}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 5}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 6}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 7}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 8}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 9}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": false, "elapsed-time": 10}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 0}, "probabilities": [{"value": false, "probability": {"numerator": 1}}, {"value": true, "probability": {"numerator": 0}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 1}, "probabilities": [{"value": false, "probability": {"numerator": 9, "denominator": 10}}, {"value": true, "probability": {"numerator": 1, "denominator": 10}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 2}, "probabilities": [{"value": false, "probability": {"numerator": 4, "denominator": 5}}, {"value": true, "probability": {"numerator": 1, "denominator": 5}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 3}, "probabilities": [{"value": false, "probability": {"numerator": 7, "denominator": 10}}, {"value": true, "probability": {"numerator": 3, "denominator": 10}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 4}, "probabilities": [{"value": false, "probability": {"numerator": 3, "denominator": 5}}, {"value": true, "probability": {"numerator": 2, "denominator": 5}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 5}, "probabilities": [{"value": false, "probability": {"numerator": 1, "denominator": 2}}, {"value": true, "probability": {"numerator": 1, "denominator": 2}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 6}, "probabilities": [{"value": false, "probability": {"numerator": 2, "denominator": 5}}, {"value": true, "probability": {"numerator": 3, "denominator": 5}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 7}, "probabilities": [{"value": false, "probability": {"numerator": 3, "denominator": 10}}, {"value": true, "probability": {"numerator": 7, "denominator": 10}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 8}, "probabilities": [{"value": false, "probability": {"numerator": 1, "denominator": 5}}, {"value": true, "probability": {"numerator": 4, "denominator": 5}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 9}, "probabilities": [{"value": false, "probability": {"numerator": 1, "denominator": 10}}, {"value": true, "probability": {"numerator": 9, "denominator": 10}}]},
+          {"when": {"bag-on-plane": true, "elapsed-time": 10}, "probabilities": [{"value": false, "probability": {"numerator": 0}}, {"value": true, "probability": {"numerator": 1}}]}
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "source": "bag-on-plane",
+      "target": "bag-on-carousel",
+      "because": "A bag can appear on the carousel only if it was carried on the plane."
+    },
+    {
+      "source": "elapsed-time",
+      "target": "bag-on-carousel",
+      "because": "Given that the bag was on the plane, its chance of having been unloaded increases with elapsed time."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:7133b97fa62f55fa",
+    "ta-book-of-why-2018:ae400781cddbceee",
+    "ta-book-of-why-2018:578ec516320ea160",
+    "ta-book-of-why-2018:e602515e0f613768",
+    "ta-book-of-why-2018:06b0bdfcd4812a14",
+    "ta-book-of-why-2018:7e00e77365e4fbed",
+    "ta-book-of-why-2018:a9581c1ead630d21",
+    "ta-book-of-why-2018:7096c44232b40e0f",
+    "ta-book-of-why-2018:aa1635cfa16983ad",
+    "ta-book-of-why-2018:946a785e92515162",
+    "ta-book-of-why-2018:aef679983f9e95b9",
+    "ta-book-of-why-2018:958906c6d5138a59",
+    "ta-book-of-why-2018:be10711367e71e79",
+    "ta-book-of-why-2018:6dad427465cc2014",
+    "ta-book-of-why-2018:d34363ebd838d51b",
+    "ta-book-of-why-2018:d4a29401b5de7854",
+    "ta-book-of-why-2018:38a1d9ee3316ce85",
+    "ta-book-of-why-2018:b158397f5edf4ecd",
+    "ta-book-of-why-2018:d2f370b52d6542ea"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0130",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0131",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0132",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0133"
+  ]
+}

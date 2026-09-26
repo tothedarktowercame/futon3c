@@ -1,0 +1,24 @@
+# apm-invariant-checker.service — NOT INSTALLED.
+# Installation is Joe's call: `systemctl --user enable --now apm-invariant-checker.timer`
+# after reviewing scripts/apm_invariant_checker.bb and this unit.
+#
+# The checker is strictly read-only (observes and reports only). OnTimerStart
+# runs it once; the timer (apm-invariant-checker.timer) schedules recurrence.
+[Unit]
+Description=APM invariant checker (read-only: evaluates documented invariants and reports)
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/joe/code/futon3c
+ExecStart=/usr/bin/bb /home/joe/code/futon3c/scripts/apm_invariant_checker.bb --check
+# Non-zero exit (1 = violation, 2 = unknown) is the alarm, not a restart signal:
+# this unit never restarts or repairs anything by design.
+SuccessExitStatus=0
+# Journald captures both the human summary (stderr) and the EDN report (stdout).
+StandardOutput=journal
+StandardError=journal
+# Read-only hardening: the checker needs no write access at all.
+NoNewPrivileges=true
+PrivateTmp=true
+ReadOnlyPaths=/home/joe/code/futon3c/data

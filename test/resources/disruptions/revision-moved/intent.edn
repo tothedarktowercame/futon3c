@@ -1,0 +1,1 @@
+{:job-id "job-revision-moved" :dispatch/id "dispatch-revision-moved" :dispatch/action :invoke :expected/postcondition {:job/state :terminal}}

@@ -1,5 +1,7 @@
 # M-typed-holes — worked example (IDENTIFY): M-first-flights, the fill *process*
 
+Status: complete
+
 *Second semi-formalisation (companion to `M-typed-holes-example-mission-head.md`).
 Where E-mission-head typed a mission **as** a typed-hole object, M-first-flights
 types the **fill operation itself** — the "cascade → sorry → wiring diagram"

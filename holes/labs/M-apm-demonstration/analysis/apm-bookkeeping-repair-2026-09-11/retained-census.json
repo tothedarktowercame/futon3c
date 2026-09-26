@@ -1,0 +1,1003 @@
+{
+  "observed-at" : "2026-09-11T15:00:54.576280430Z",
+  "scope" : "Retained checkpoints and queue parks; not all historical transient errors. Files read individually, not an atomic campaign snapshot.",
+  "range" : [ 200, 223 ],
+  "queue-sha256" : "5863ac940590617b85f62846f4ae0e2f7ee80b900b633b5430ca673282c3f919",
+  "active-frame" : {
+    "frame/id" : "f224",
+    "problem/id" : "m93J02"
+  },
+  "park-count" : 8,
+  "parks" : [ {
+    "frame/id" : "f200",
+    "problem/id" : "m01J06",
+    "state/type" : "fault-frame-park",
+    "error/code" : "solver-session-mismatch",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f202",
+    "problem/id" : "m02A03",
+    "state/type" : "fault-frame-park",
+    "error/code" : "solver-remediation-required",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f206",
+    "problem/id" : "m02A06",
+    "state/type" : "role-terminal-repair-frame-park",
+    "phase" : "student-attempt-2",
+    "error/code" : "live-job-terminal-repair-exhausted",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f208",
+    "problem/id" : "m02J02",
+    "state/type" : "fault-frame-park",
+    "error/code" : "solver-strategy-checkpoint-required",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f209",
+    "problem/id" : "m02J03",
+    "state/type" : "fault-frame-park",
+    "error/code" : "live-job-activation-failed",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f218",
+    "problem/id" : "m03J03",
+    "state/type" : "fault-frame-park",
+    "error/code" : "campaign-stepper-execution-failed",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f220",
+    "problem/id" : "m03J05",
+    "state/type" : "solver-human-intervention-frame-park",
+    "decision/status" : "decided"
+  }, {
+    "frame/id" : "f223",
+    "problem/id" : "m93J01",
+    "state/type" : "promotion-apparatus-frame-park",
+    "phase" : "promotion",
+    "error/code" : "promotion-apparatus-repair-exhausted",
+    "decision/status" : "awaiting-decision",
+    "promotion/state-path" : "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/scribe-reduce.edn"
+  } ],
+  "frames" : [ {
+    "frame/id" : "f200",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f200/live/preflight.edn",
+      "sha256" : "1f4edfe442e8645d4cf902f5392c2bfd975a5182747c293930d06b27eb041d6c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f200/live/solve.edn",
+      "sha256" : "fbd56a6c4c94710d07c5e4c08502d7ec23aeb8281586315d7cdf1c8ceec9ea7d",
+      "state/type" : "solver-rounds"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f200/live/workspace-leases.edn",
+      "sha256" : "3a752d7f6a9a0fef9e00dae12c6a4e408d731d3922e79237efd7bf2878eca48b"
+    } ]
+  }, {
+    "frame/id" : "f201",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/close-frame.edn",
+      "sha256" : "2067608031910d327e7dd842b3715d7e0fa31ea00878a483b2cb34b8df7a1063",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/guide-intervention-1-review.edn",
+      "sha256" : "de19f2ee23fab8ca629f0e9a7ca57adcec51b175e1c12307994627d48c5fabb8",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/guide-intervention-1.edn",
+      "sha256" : "82f44ff84b7ae96b97c59bbe0523427c11526c6905ef0ee02e75ef8a91361b81",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/guide-intervention-2-review.edn",
+      "sha256" : "b1c6c3584563d2aac436df6aa33274aeab0eb9445689c1e3b68b5cc514339f80",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/guide-intervention-2.edn",
+      "sha256" : "cff6eca32050e637e35d6caf2bfeb1249494deff23147b1ad8b237c9e7e6150f",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/memory-cascade-operation.edn",
+      "sha256" : "f1a9b49d055686a83cf37b7251ebbcfd9b0108338753077b41c07ed3d6d11684",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/preflight.edn",
+      "sha256" : "bbec5e60ef9dea33234f76facaa1f437a8f74632b4c75010012786f2939b2e44",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/promote-solver.edn",
+      "sha256" : "0ad54ac6d3221e48bd25d5ae2925af03a25552d92a241b5dc493b1862398d37d",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/scribe-reduce.edn",
+      "sha256" : "f105cb66f8fb6ab22a76d51d15005bcbb4d4dbc00846d0eb91d87f6483e59447",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/solve.edn",
+      "sha256" : "08e021cf7ed0aa21ba061e2014dfe9a2bea9d82338535a9ddea0321447c43b1f",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/student-attempt-1.edn",
+      "sha256" : "78dcea9cbd887880580ece3aa68c96e34bae6eb71e0606f5b750b98c154584d3",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/student-attempt-2.edn",
+      "sha256" : "bbc768ce9b6d11c468334d64253edf3b78bb029d17d956d7ad8528d0ca74890e",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/student-attempt-3.edn",
+      "sha256" : "2c192038a8daa5d2129204d1b680cad9c83bfca6af9a659385d5588aa7ab6e71",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/verify.edn",
+      "sha256" : "fdc7ba43936dedaa2c2e1dd2b72e582b3cc813f800d2a38b7348e607510803d6",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f201/live/workspace-leases.edn",
+      "sha256" : "8e5ab105ba6317d530f2e32a2db02e8e3b65633ba985ad7b949387fe01d1dfbd"
+    } ]
+  }, {
+    "frame/id" : "f202",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f202/live/preflight.edn",
+      "sha256" : "4c139743df10db07c16aa5494f84e150f0c9fba590708fc02093df5c19657620",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f202/live/solve.edn",
+      "sha256" : "b7140bc203155006eae0f3ad4296c9b53cf9ce05e0121d63e8ebc18d15a34e99",
+      "state/type" : "solver-remediation-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f202/live/workspace-leases.edn",
+      "sha256" : "ec03ca26a7277a6f95f04eeca01416975ec500224844c673a5b5d592f83d6889"
+    } ]
+  }, {
+    "frame/id" : "f203",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f203/live/preflight.edn",
+      "sha256" : "488bef7e4a3aca97850b8a2f638ec6a2140a562e96cef3762729c96ccdb0a3e2",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f203/live/solve.edn",
+      "sha256" : "21d8dfaa7c5c26eb90c4d35d2ad65ab6ebe5695cd25ce98fc2b967035634d197",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f203/live/workspace-leases.edn",
+      "sha256" : "1bbbeae166d6638f9cb40132384bc120c8f97478eecdc0cec2d71fcc039d38af"
+    } ]
+  }, {
+    "frame/id" : "f204",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/close-frame.edn",
+      "sha256" : "b0920ff749f27480bd92f730e2af18ddedcff0a593a7db30c04c233c7cf07e72",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/guide-intervention-1-review.edn",
+      "sha256" : "12b2b6076715bac611a497909a811353259f95e3513e25235ef8fbba5434de96",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/guide-intervention-1.edn",
+      "sha256" : "44f7d8b2b30dea48d68ea66a12d805e557551298d282fd37236e474612d5f05a",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/guide-intervention-2-review.edn",
+      "sha256" : "e0a0fad1ba2dd37d5bc2f9db5e6877af75d672b0b421955364c81c39be06b5d6",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/guide-intervention-2.edn",
+      "sha256" : "4691c3e38f7d3131ee1f230e46c9f5aa420dd9fe7c43a27c95db32b7a9bc1864",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/memory-cascade-operation.edn",
+      "sha256" : "b705b3bc8194c86452cf7fba8e365815cd0708c1e5966c13e4feeb7a31ff38dd",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/preflight.edn",
+      "sha256" : "abb17e33ac908a5278a5161278093fd0012ede40e7d8fca83e81e656b7986a8e",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/promote-solver.edn",
+      "sha256" : "7d3f793b9be71fb74c48fe0b715f5218d5c0c6deae87f5514ace286f6cadba43",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/scribe-reduce.edn",
+      "sha256" : "3781b4df886e969a52c0e14261c417db609c4b96dc3e22ef4641a7a6ecfcdd8f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/solve.edn",
+      "sha256" : "0da39ab85312a2dd8ff43e04a88da7a4952107e75e9fd947d9c29da6b3d04a48",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/student-attempt-1.edn",
+      "sha256" : "41e17473c0978620b1c2c4d2cb21dec54be6993597a3ce6e7bbb14556b4d0bef",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/student-attempt-2.edn",
+      "sha256" : "0ab5e813aa0f14288d6c76742b9cb46314587e4a7deb473170ac30271ec6e642",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/student-attempt-3.edn",
+      "sha256" : "4e3d3b6905440fda4ee1aea953c26c51ce40ffd51e33c109c8149ccbffcdc0c0",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/verify.edn",
+      "sha256" : "3b78543be267cbe07c6c6b72ca939dcd1224af2392344bef5c33b866f88e78fa",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f204/live/workspace-leases.edn",
+      "sha256" : "2ca2db0e43373a4f7dbe3a9234d694aaa6aa323fb10e42677af2ccb3f6e153ee"
+    } ]
+  }, {
+    "frame/id" : "f205",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f205/live/preflight.edn",
+      "sha256" : "0ac689e78bdd07f702a919fa6ca35d40410df4a9c3bec9bd462c163097d6e36a",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f205/live/solve.edn",
+      "sha256" : "62849425c11360d241127b07af2e8842fb965fb73dcfdbba004c90da48ddd242",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f205/live/workspace-leases.edn",
+      "sha256" : "7a848c8412dbd0debbc6185bbb80c56005976e953254d4e7d425a9476ef930fc"
+    } ]
+  }, {
+    "frame/id" : "f206",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/guide-intervention-1-review.edn",
+      "sha256" : "b841b943f69ebac3a4ae6b7fc1697567fcb66dc83c402b0b093ac9297bd33a4b",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/guide-intervention-1.edn",
+      "sha256" : "e959714ae6d4eac606078c145d8895d61c2f34644751a2af0e60f1dcc6ff16f9",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/memory-cascade-operation.edn",
+      "sha256" : "eb3267f3b70c055eda00707fd490a2c54ded2ef94aa416c05396b9b9abc149a2",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/preflight.edn",
+      "sha256" : "c185ab35f38db0b84d512ded2c1ce1d9441ff24dda53daacbf6208dc1a6f7597",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/promote-solver.edn",
+      "sha256" : "de78eb0f6d76952748eecd37c8c269f44a23243416db66fa1b85e6f827e2148f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/solve.edn",
+      "sha256" : "20b10e170fa55486304a013ceaa776fbca3fbeca74a96f01c94963aded21feb5",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/student-attempt-1.edn",
+      "sha256" : "764ae9caf08bdbc3f8a0b415cf8aa5fc3729e6d52c9a32dbe5d01ced527d4617",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/student-attempt-2.edn",
+      "sha256" : "30087868e3c631c1cc05f864e601e1eb71fd40788c8d08b9ab9e071fe6fa09c4",
+      "state/type" : "live-job-dispatched"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/verify.edn",
+      "sha256" : "94c365eef80ae95498290629d577441a22274570d5a4ed49f70f7e3bcf0bfdc5",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f206/live/workspace-leases.edn",
+      "sha256" : "66c293a44465102b1121aa759b31ee525763d45d3136127c40e2943ab918e7bb"
+    } ]
+  }, {
+    "frame/id" : "f207",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/close-frame.edn",
+      "sha256" : "4b6c72f247ebd0ecac55508066447ca29ca3fbc22d703d7ed3fe43c2eca97ccb",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/guide-intervention-1-review.edn",
+      "sha256" : "3b5ec1405c9dad3f05a9a3ef771d585129d87208316b79683c60a377bd050f6f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/guide-intervention-1.edn",
+      "sha256" : "e74e3ad84e3ebc973b616212347a6555896fc85bcb0a570812c0abe07fa21268",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/guide-intervention-2-review.edn",
+      "sha256" : "5dd53d4dc99a830bfbc85d78cf4296920f2313649f39b70d7e4d01815b89b3a5",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/guide-intervention-2.edn",
+      "sha256" : "c2fec7580178245f1ceb901fa2b340bcf5cdd183ee5caa935217533503280145",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/memory-cascade-operation.edn",
+      "sha256" : "2985cb07106e62ad4b3213097f97e07a19cb10866beb98411277bc269ade6031",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/preflight.edn",
+      "sha256" : "120e9ea89460061a728d060b4a85fc3527e865308d79cd9d07c02c4a19e81fd3",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/promote-solver.edn",
+      "sha256" : "8a60538feb0f81a66f984527b26505b06a75d52a5f440cf0bc844e9e7f32d254",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/scribe-reduce.edn",
+      "sha256" : "e6861652afb19de53e685a3fb6a0f15bb72a2e9f2ba7f82d62c32b3deefe4068",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/solve.edn",
+      "sha256" : "f849ab6eee1b61f1babe0deb774adec99b08cb87f3b04a8821dce842ae7c1380",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/student-attempt-1.edn",
+      "sha256" : "badd2cd90adf8b964111014016d679b30467ffdc2b853c3a45196e1537faed14",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/student-attempt-2.edn",
+      "sha256" : "2412e401204ac660029d6b4f4190701e51168f4ad15200c976563fe9de04bc2a",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/student-attempt-3.edn",
+      "sha256" : "10a0fb2e037a338e7196400ff53b49ef13e90d2fc3a2bc4f91e82f6a4b783726",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/verify.edn",
+      "sha256" : "0b42f7d2773df7455437f10c9229e417bafdd108fc300bf4c4c07e03da76fe9a",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f207/live/workspace-leases.edn",
+      "sha256" : "9447d4d878545fd54befc3a767260071b0dea03dd090ee8e66f3332b649ee71b"
+    } ]
+  }, {
+    "frame/id" : "f208",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f208/live/preflight.edn",
+      "sha256" : "2c62f2f03e2261a37cf59239e0ee31a3b2c39a49ddf54e9ac567040fbf2ab377",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f208/live/solve.edn",
+      "sha256" : "ce2be9c4097bcc2857b7a913dbb6469554f317fb4fea683fcc6cd7017856fa9b",
+      "state/type" : "solver-strategy-checkpoint-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f208/live/workspace-leases.edn",
+      "sha256" : "4adb9710ffccf9d728c36a99c036749c2aa332a0708dbe1a92b22cd41f5fdf49"
+    } ]
+  }, {
+    "frame/id" : "f209",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f209/live/preflight.edn",
+      "sha256" : "04fae6f43a72e36451970ffaab2cad32830c554bbbae6a19c3bfa6493c1ef501",
+      "state/type" : "live-job-dispatched"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f209/live/workspace-leases.edn",
+      "sha256" : "196913e59e65fc282514813af76aa2982730a74f3147aa9b6af93813c5a4fe08"
+    } ]
+  }, {
+    "frame/id" : "f210",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f210/live/preflight.edn",
+      "sha256" : "04864153214fd303f417926640a625ca6726b27425573120a587cf886986b0b8",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f210/live/solve.edn",
+      "sha256" : "237d96f1b7b8d629ace5da9e82c0b634a9acc50f1efb258615acc1d8b0f3d143",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f210/live/workspace-leases.edn",
+      "sha256" : "ce74cc097bb77a30deb8181c60da6e13094cf88726945bc1d056650f4ab08383"
+    } ]
+  }, {
+    "frame/id" : "f211",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/close-frame.edn",
+      "sha256" : "40573a924d724a5942bb603079a638eafb7e36b8d02026d8aab874b2e0977270",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/guide-intervention-1-review.edn",
+      "sha256" : "7e436ab54437503d82386249a8d80ba7014368b31681d4fa2848888d7cbdce26",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/guide-intervention-1.edn",
+      "sha256" : "4ba99adfc80cbb149d2c7edebaaf84a98ed1bcb0ab984a6a7a22fa534d654697",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/guide-intervention-2-review.edn",
+      "sha256" : "6ca50875b05b34b462ea6ec03400a733375197d075774078b4e5d002c74c9db4",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/guide-intervention-2.edn",
+      "sha256" : "679349a46b0faa5705859da78934c801476674f8c28595f5432ed914c7276a99",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/memory-cascade-operation.edn",
+      "sha256" : "a3955525becccdcc7306522ec653673d546dd3fd1c855ed32fbb18c3640a17ee",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/preflight.edn",
+      "sha256" : "32a70793be6f4e1feb3f929606f14fd9ca8d56f075f7daefa916e195cea5346f",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/promote-solver.edn",
+      "sha256" : "f4741226f569abe96624b50af2b5564758bc97a05a42ac2c47383e0b42758466",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/scribe-reduce.edn",
+      "sha256" : "411ddcb3de32434a2b283a286c5a09e46b00fca40d9bc4a0a7eafa1ac30863f5",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/solve.edn",
+      "sha256" : "60fc177f4b0f4b19252c128eac26a55f2bb7dda498a76f176af7d2f9fad84a6d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/student-attempt-1.edn",
+      "sha256" : "d7bd6d1c1ea3d7c9d033310565a8d4283eff2d0ade6301d77839de28e5e0f8dd",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/student-attempt-2.edn",
+      "sha256" : "06bc5918500eb055211a34be661d4d0726f705dcd43746d685a31ca417a275e5",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/student-attempt-3.edn",
+      "sha256" : "1c5c3560197316ced50045c1e76db4f3775fcd86e18b1bcfe4be5ee2963d092e",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/verify.edn",
+      "sha256" : "e00a8ad5d9230c1830e3a29bc5a5068f215674e2262868301064374de0f52f57",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f211/live/workspace-leases.edn",
+      "sha256" : "ec53cfcc3c02f887906853a797bda463466636904d195a6eb9ebb4fe5d68e70f"
+    } ]
+  }, {
+    "frame/id" : "f212",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f212/live/preflight.edn",
+      "sha256" : "c5a5449d2f581ca3777d49a2bd8955f629f532d770d0fd34274fc4597647c1a8",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f212/live/solve.edn",
+      "sha256" : "37592bfe5198c5225cd36d5418b4fdfbb87fb2b8bb3357be6428667315534c96",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f212/live/workspace-leases.edn",
+      "sha256" : "a41b30a033f54052797839affeab5dfe5cac84cca27ff0a815c419b024298da5"
+    } ]
+  }, {
+    "frame/id" : "f213",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f213/live/preflight.edn",
+      "sha256" : "3acd60e6a94d6e07dfec386b4045253b03f8fea749f4599c8c5b4b28c0405561",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f213/live/solve.edn",
+      "sha256" : "25e820e77581de596d17d1798d13ec90dec9c04486c24c204f874a0a2ab5c056",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f213/live/workspace-leases.edn",
+      "sha256" : "6b11ba8c581ccb6fcd979238fe88d85bbdb8e4132bfcbabcae35a7537e1d97e1"
+    } ]
+  }, {
+    "frame/id" : "f214",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/close-frame.edn",
+      "sha256" : "caeaeb3e3595535f69ab792a0212d8cedf4f8db1952a684c02357ef4843d6d91",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/guide-intervention-1-review.edn",
+      "sha256" : "02f5ac037f4bed307df1c18411c08657ce99d7ff2625ee972e6b8a5206582555",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/guide-intervention-1.edn",
+      "sha256" : "e85da81584ee722e6f843e901d841be8262c9f649465149b0da1c6c72a19ac3d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/guide-intervention-2-review.edn",
+      "sha256" : "aa7e42c74deac529ecca21159cd72f7799813f380cf48d610c126903d788097e",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/guide-intervention-2.edn",
+      "sha256" : "0b8d681c72fe6cc0b2d48bae6637e09c7a58397c900c67fb309ae0a1a048d3cf",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/memory-cascade-operation.edn",
+      "sha256" : "72bc9d78690dd501825e8469a5936c037a665d049905ee861e0afe977f6e393a",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/preflight.edn",
+      "sha256" : "4eae775b32a9a7d5a7f48bf565c3667211b05ce315a82142d969774f3b693d8e",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/promote-solver.edn",
+      "sha256" : "1a05e2e43305a7adf3908a22d4945e125cc201c532104bd455862f8ca76e2c36",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/scribe-reduce.edn",
+      "sha256" : "509c83d0d989e47fe37d453d5e954b9c32d472f64b06e5e04a4a442bdb80bf07",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/solve.edn",
+      "sha256" : "97a35e44288cb9de83dd33dfedcdc1b5b0ec682df323dbb10ccc21b6545f5b2c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/student-attempt-1.edn",
+      "sha256" : "6b91fa677050f69aa7ad2ea9d58fa12b29619bfd6f6e7691eb367be2d6f6dcac",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/student-attempt-2.edn",
+      "sha256" : "66d498e83b78ce2f7c2485b3ef94e836d3a2106873fac00062d503e12df25a76",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/student-attempt-3.edn",
+      "sha256" : "7196dfd9d2c8f9b9535598e29dcd01c0ea534bca8ba9d79be051ef526c32bf2d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/verify.edn",
+      "sha256" : "c211fb969df68a0a58b6915e0260eb9452137161cc4e81e5c9b39b6159b8459c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f214/live/workspace-leases.edn",
+      "sha256" : "0b5aeb26a65cc894c7e0ddc43ec3a6fcb12f78f68deaee0d4e9a5b646179a72f"
+    } ]
+  }, {
+    "frame/id" : "f215",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/close-frame.edn",
+      "sha256" : "776b945be1d81dd652474960821cae9e6d5b1a90c8c1af53b3b5267d0eee6881",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/guide-intervention-1-review.edn",
+      "sha256" : "e5dce7c4a77d079b8ce283904087e04688176edf046ecfdf4f70aeea2c5347f8",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/guide-intervention-1.edn",
+      "sha256" : "ea60c9ac5a750eb4a45a190ea01d2bf47572d8e6fbfeb564abd2d7b223b8c0b9",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/guide-intervention-2-review.edn",
+      "sha256" : "d5ff23370d2001184ec86fac99ee29a842af66be37ceee9580de0041258162b9",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/guide-intervention-2.edn",
+      "sha256" : "96f8c76f349722a09ef982d9764f78d19189854cb25c3a85b72e3ec985bcf2fc",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/memory-cascade-operation.edn",
+      "sha256" : "e1b827b1aebaaa8e25173446a39e4ff110178a0a18f8e767f28c9aae3f5f02ce",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/preflight.edn",
+      "sha256" : "a89bff710eb8f57edcb472dbf1cd3d3b996eb49e6d41d1dd8b3816a42ae16d35",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/promote-solver.edn",
+      "sha256" : "45f336fb658504c81625e0850441a6f264d7dfde86118f82bd73219d4be811bd",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/scribe-reduce.edn",
+      "sha256" : "bda907bdbe1b5e1dce1f49f6bff982498c01817198504f0c2b9ea44b000f8e82",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/solve.edn",
+      "sha256" : "004227a1bef345d9cd387e65e62ec81c1a7a68c592fca76612986a135cb1a9e2",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/student-attempt-1.edn",
+      "sha256" : "8974752bd4c7ceb7ea5a2ab9fa732d7c902144dbe73de1b10b84d0080fc962fe",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/student-attempt-2.edn",
+      "sha256" : "e26dfe3f4742329de92fa047ea24d4aacd239ec4bfd4b8705b569f5ac32b6076",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/student-attempt-3.edn",
+      "sha256" : "6cd3ff2f8b11f58ce4f64d5fdde2d89fdfe0a6a9d88f945fea2c8b16c996e1d9",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/verify.edn",
+      "sha256" : "71c3e55aac332d0416b47fa0f8f217caa1e3848cc914a588ec0e8caf7ee28956",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f215/live/workspace-leases.edn",
+      "sha256" : "6268ec4a0e3f32ad0f7fff8030fda5dc4429e07050d2282552d61c7c4ad9c2d0"
+    } ]
+  }, {
+    "frame/id" : "f216",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f216/live/preflight.edn",
+      "sha256" : "1746efbc83565e372ba5e99d53bec967738c85d7cc7627f04e8c7d7c4d0cc08d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f216/live/solve.edn",
+      "sha256" : "6ae4e548ebfe75848c30686f8df2848cb46c952875aabea1cd1709c077c75dfa",
+      "state/type" : "solver-defect-review-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f216/live/workspace-leases.edn",
+      "sha256" : "3fee6f95659b9cefeeea7a8a0a38cd90f1897675658b9bce6ebe31c21ae5396b"
+    } ]
+  }, {
+    "frame/id" : "f217",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/close-frame.edn",
+      "sha256" : "08fa78b4fdc8ccb068786244c509af04547b84a0bb300e48f29e7b298fa07495",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/guide-intervention-1-review.edn",
+      "sha256" : "d443c4781e639b55e06e029bd89ff642c5972d811715f4db8e4d8e4441ce9bd2",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/guide-intervention-1.edn",
+      "sha256" : "45ee3b554782584cc3c97296fb916303502a80a935064901e503a270b9e198f6",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/guide-intervention-2-review.edn",
+      "sha256" : "a8000cde8831c343b9af992ed1a1bdffcf25a154d496909bf3c8e01fddfbbc93",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/guide-intervention-2.edn",
+      "sha256" : "5bcb2c56a434d20dd206161d3dbd728d064332c53bf2541a73c22c3435feb727",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/memory-cascade-operation.edn",
+      "sha256" : "c1b6d923b00c5066612f9fe1fe93476b183627cecb1223b8f690dd144c8f5938",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/preflight.edn",
+      "sha256" : "5c7fda701fa381dd26f532e3fc3d1b84c509b875f6168c2b7d8b318ade488e97",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/promote-solver.edn",
+      "sha256" : "0cbca7925d749a600f181649ad80bdee78c95f5290597551e5adce3d6d549fb7",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/scribe-reduce.edn",
+      "sha256" : "463082efebf39a440f9ab476a9e83a2a0800ff06454e800b9d1ccbdba5bb3ffe",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/solve.edn",
+      "sha256" : "3400679254cefa4046ddbc41ab8072c57afffdd8997de746dd6bc6dbf69d3777",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/student-attempt-1.edn",
+      "sha256" : "43e4d29d1bac1e4222f456941cb844ceeb399f3772198da3639ce70285b759ce",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/student-attempt-2.edn",
+      "sha256" : "8b584101b473a9703df3309e4eec422eb2bcd9e6c652e7002f4684bd8fabbf82",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/student-attempt-3.edn",
+      "sha256" : "54eed93c8d07eefdc99a2bfecc6b1a8e88b172783f7d41f12403bb4cc8d44644",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/verify.edn",
+      "sha256" : "5359077c51048383d871bbcce93b7a1fb25f0076c0fa7aed4c593600c7b09b2d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f217/live/workspace-leases.edn",
+      "sha256" : "08363cb8f0d945c99e47d272c6298fdc6b3e942f9e9a00e6860b91c5d3f0bd56"
+    } ]
+  }, {
+    "frame/id" : "f218",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/close-frame.edn",
+      "sha256" : "91140d80c8f00502b94d050e4b225d43f8b2ce9fd6ca859f463fa19128e22373",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-1-review.edn",
+      "sha256" : "2c338773c68aab055f5abe62f9ccf3aa95a0cf2a35d719e719d6e8321a08f89f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-1.edn",
+      "sha256" : "b269f451e19af6be2124b3c155dbdd1e61b08acab6dcaaec96e4db9cf9ae2392",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-2-review.edn",
+      "sha256" : "b65fcba536e21839bad7f7f574ba75f5015f68085f71d8bc0bda72780e63f9d1",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-2.edn",
+      "sha256" : "21b10552f3539b28843c72defb661b6ac463350935ff563b982406ea0543a0b2",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/memory-cascade-operation.edn",
+      "sha256" : "76d09a329ba87bc6fdc0e57d8faa87a3759a65379e408ff53acad645f8737bc4",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/preflight.edn",
+      "sha256" : "173cfb4b3a0499136dcad9bb2fbd5403993500f58bd94e9f82075b04837ac659",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/promote-solver.edn",
+      "sha256" : "b5a4aced442636a076c76a335e2c2e35f2cfa3e49e028cfc8fa262a6ba169cc1",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/scribe-reduce.edn",
+      "sha256" : "1ded328a3b061470cd2186fd2e2561525c3e542ac468be01ff3444f49acde2fe",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/solve.edn",
+      "sha256" : "a47d71ad18410d7d8a3708812ae33385f769ac478377f25f7dfe919338cc3a5d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/student-attempt-1.edn",
+      "sha256" : "7b25cde4fe11aef6a083d0037b4671b6349550580f703bd985f184c37ef41e33",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/student-attempt-2.edn",
+      "sha256" : "633482211d5c708b95ed4f29b4268588cf733d4557f9e51cb74e0aef9f587877",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/student-attempt-3.edn",
+      "sha256" : "641d814928dcf25e8c9d0847d745577a99b00744179535fdd3cb96eeeb39a868",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/verify.edn",
+      "sha256" : "b17667e3cba96cdfb621690f628d23d92a9ba9ee33b3c6b06e37e1bef7cbd00a",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/workspace-leases.edn",
+      "sha256" : "a6ae106f01c7812d13d8545457e69fc983cedd893ed863cedcaa41a6df1f5570"
+    } ]
+  }, {
+    "frame/id" : "f219",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/close-frame.edn",
+      "sha256" : "c09d1e6689db1f5e7831e3d1760ecfea307f7ba970ff39393b3be4af0a6e6e77",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/guide-intervention-1-review.edn",
+      "sha256" : "455ac9fed5c556ecbab8c8f8b0ddb024dc196fe7408b9dc2210934913eaa9b34",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/guide-intervention-1.edn",
+      "sha256" : "beb5ccbb2285bcc55a2e39f55e3b02ed4bff125f77de46f099c1e758c7fedcf3",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/guide-intervention-2-review.edn",
+      "sha256" : "2bb8aad867abc0933b374375da51290286a87634367414c0c733f917459ac79b",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/guide-intervention-2.edn",
+      "sha256" : "b8b83434f4e7557abadfea7be1d5df8635bb328e84a3edcb2da84d9e81c2ddd9",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/memory-cascade-operation.edn",
+      "sha256" : "c782731b0de2325df23e7f22dc45ffab00e65dafce81e09e6284875ece22d29d",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/preflight.edn",
+      "sha256" : "8352f9dac274f8fbff2257c5eb2da6249900b1a504eef9703763ab42f0a59496",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/promote-solver.edn",
+      "sha256" : "55117104bdc478f05ba8c65fb464f4753d69f391ef72c4c28f5e946e554f322b",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/scribe-reduce.edn",
+      "sha256" : "20de7d13e5854f24a430a97092bdf3fc611c3328dd43e282882cfa3b967c58d7",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/solve.edn",
+      "sha256" : "2de43bd26b608c4842cf85a3418b6b32ff24a77a93bd883659cbf6ea8a3ff47c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/student-attempt-1.edn",
+      "sha256" : "c95404fc28954d9d9f5a003f247b8066bd05a95cd864d757d859703a8fd93203",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/student-attempt-2.edn",
+      "sha256" : "a16be266be06d5f6c7c2faf3674fc975ec132d8aa08af57433cd49d2dd3218e3",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/student-attempt-3.edn",
+      "sha256" : "3049ce432e687b2078fefce14a58e6e03d4ef6c622ced1863c9f9eeb7df6f76c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/verify.edn",
+      "sha256" : "fd7d95a9a20d17579b01860978545237027dd7e942a23fb77fffaa108c71e38c",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f219/live/workspace-leases.edn",
+      "sha256" : "0e0565cdc2cdb4d4b446a27ea45bea92aeff3967c95e3e96e360276f9c35bb92"
+    } ]
+  }, {
+    "frame/id" : "f220",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f220/live/preflight.edn",
+      "sha256" : "1ae0d002f5dcbc809c2c6d610a20539be83709d6a5855b03f19f721b70fc8a47",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f220/live/solve.edn",
+      "sha256" : "1dc5f7572ebfc00b9c0e9afff7938793e11a878ca2f20c9081caf6e96cfbc2c8",
+      "state/type" : "solver-human-intervention-required"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f220/live/workspace-leases.edn",
+      "sha256" : "5cf8d30d1ca3ad667356d99faaff38e2cde000973bcbcfa67c4fa0fce44d00ef"
+    } ]
+  }, {
+    "frame/id" : "f221",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/close-frame.edn",
+      "sha256" : "7ee9aa488ee025d5f06ec46012951cadebcf5b570d1b62a7e2d9651302d81874",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/guide-intervention-1-review.edn",
+      "sha256" : "33a039fe6f2835c4a248902930d859d11d90483ba7f671de8096076a3667741f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/guide-intervention-1.edn",
+      "sha256" : "0402279d19b742f3c459a438cc5e59b21a825de1992f4f612002eef9586514f1",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/guide-intervention-2-review.edn",
+      "sha256" : "d78bd10544a6597b90eae34ff958268ed62f0cd305297450b5e8ce25fb81ca15",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/guide-intervention-2.edn",
+      "sha256" : "54d055ebdd2cc0b6335525b9a228fb76b4fbc92857b6f0af6ca278f7a64b759d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/memory-cascade-operation.edn",
+      "sha256" : "5a316dbed774e54230cee6f24b311615682d0837bdbc076df269c3f1da0e0eb2",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/preflight.edn",
+      "sha256" : "849c31070edf4d6ab567869d45ec86496ca66e6e72da306b9535f928535ca59f",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/promote-solver.edn",
+      "sha256" : "fb6f338740deb5d2a30e69f3e66b007fd4f55d4c5e318124b09c50d4e9f52772",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/scribe-reduce.edn",
+      "sha256" : "00a84111c8ae63e4c287c1b28889aeecea8807d9d535786f9908cbbfeb7cd3d2",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/solve.edn",
+      "sha256" : "1c002cb128f3d02f2a030a5c91103fa5a772d1e040f8ff3c289fe374c402f3a7",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/student-attempt-1.edn",
+      "sha256" : "151b2830f684db3465b509aeb349c4474bdc79aa8a2eae6eef574ef432e96052",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/student-attempt-2.edn",
+      "sha256" : "7763677c2787314f6afb36cc5c715786f133159993f849c2ca5dbe2f27603390",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/student-attempt-3.edn",
+      "sha256" : "69551d6435babb1a13c0a1c8a036f4552ac2478292fdc9205fe2e54f7f7ee0e6",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/verify.edn",
+      "sha256" : "e5dc17183f77c8cb6890eff589c2d883626290fb021a042765e2760117989f91",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f221/live/workspace-leases.edn",
+      "sha256" : "079b7cdee38b85a992854d698dc2eb283698857ab8dfb4839144ae5f320b5d8e"
+    } ]
+  }, {
+    "frame/id" : "f222",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/close-frame.edn",
+      "sha256" : "9893bb67265e71c5e2fafaa7ecf0ce47ab8134bf9f9951c8ad09a5a09ec57ded",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/guide-intervention-1-review.edn",
+      "sha256" : "4a230d57441214d51270c77272f5e5a9019a24bd781c3789c0ca46cb077377ca",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/guide-intervention-1.edn",
+      "sha256" : "8368daea216747211f4d2cab4204e96490d85e6fa5dd78310cb0fa3a0d58afcf",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/guide-intervention-2-review.edn",
+      "sha256" : "51001b45e2c5f0d3d85917de0d520556db4888db546895490e933aa265234cda",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/guide-intervention-2.edn",
+      "sha256" : "521f8023e7e0cfc5c044de99cdde618f135ccf4a563949e989865be4d857aa44",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/memory-cascade-operation.edn",
+      "sha256" : "6cba38f2d5b35864555eddb8b435f1043dd0d2fb464efa486941b0a404d34fe9",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/preflight.edn",
+      "sha256" : "ade140e1749fa6bfe2c4130648622e07ce9bb5ed9bf591471df9ce65c43488a0",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/promote-solver.edn",
+      "sha256" : "9b2b0a12735ee0fb54609e5595fe9b4cab234d430eb8466b45185944b8e83ca7",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/scribe-reduce.edn",
+      "sha256" : "fdc074543230025ff1e5947b36ddcac171be5820250c8866b196794662bdef19",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/solve.edn",
+      "sha256" : "13d251e9d61225b395851615bb64ef1111c17ca298de3d29fab54768770dfe0b",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/student-attempt-1.edn",
+      "sha256" : "06f1d25132948537907e6c9ee95435021109159654a2d1ed95d303398989686d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/student-attempt-2.edn",
+      "sha256" : "121e50029ce1cb5e7e8b620124d91b6794f424405abd9cd694e72299c72c4f3f",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/student-attempt-3.edn",
+      "sha256" : "13cc859dba342f3f3726aa477260105bfc3fdb608ee4b4df7fbd317ed8cb01ad",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/verify.edn",
+      "sha256" : "cab67e976817fa7b095882970f88c686116aa97e44ee01c3476004172dc196ab",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f222/live/workspace-leases.edn",
+      "sha256" : "77c09cd0d1d563b322dbe731e274e89360c738e8229fb9d3c48db70ad129831e"
+    } ]
+  }, {
+    "frame/id" : "f223",
+    "retained-phases" : [ {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/guide-intervention-1-review.edn",
+      "sha256" : "3abc1d5d9ac6071a7bcb9c0e3383b948e12598d567a4f744e95adac36600c8cc",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/guide-intervention-1.edn",
+      "sha256" : "2ab434bb63f1e13448adfafe4a8737666941e89306c96b04132f19faf2c8e8d0",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/guide-intervention-2-review.edn",
+      "sha256" : "1c40bd0a6e03ac78a0508603935c07b94568bad30d9987cad5bd19e98ff9d1b4",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/guide-intervention-2.edn",
+      "sha256" : "4d778605b06668c8b58a878c5bc472bcde8cfd732bcb882775bd200d8b802555",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/memory-cascade-operation.edn",
+      "sha256" : "f83a9ce98449b19b50f5799f3b97946061b087b3d42cefc1391586d1c1e51ff8",
+      "state/type" : "memory-cascade-operation"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/preflight.edn",
+      "sha256" : "ef79bbe5a8a3b81680db1d73e185ba6032aa255181a78f36d8bd17083a79ea35",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/promote-solver.edn",
+      "sha256" : "a011b1adf7067375178159851eac23da7fc2cf92feb64d47993618a2805c3e1f",
+      "state/type" : "promotion-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/scribe-reduce.edn",
+      "review-verdicts" : {
+        "cannot-judge" : 5
+      },
+      "stage" : "awaiting-apparatus-repair",
+      "sha256" : "067ef4914bf23c272d37508874392c010d62925f5b821320fc08a8e983bc859f",
+      "repair/kind" : "promotion-pass",
+      "state/type" : "promotion",
+      "repair/attempts" : 1,
+      "predecessor-collection-present?" : false,
+      "error/code" : "promotion-pass-incomplete"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/solve.edn",
+      "sha256" : "d4f6a987f19523d7d1008db14992ce5729d205f8b9955cabd2ba51c19b26ae8d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/student-attempt-1.edn",
+      "sha256" : "2baf06ef30b15e550b7b51c25ea8ca57576d749378535771cc35d60b33afa418",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/student-attempt-2.edn",
+      "sha256" : "d6716aacc60c456c8f7f967ea59ae0c1e8ebec289fb9a132948e3169aa1efd28",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/student-attempt-3.edn",
+      "sha256" : "afe5c728d760b489870b7de20d476736d7bbd4ee30a9592da908557111dfa9ac",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/verify.edn",
+      "sha256" : "32876f38a2a2ce2545cfb047cb9002046bae5f64fe9b3c63ff12fb243397355d",
+      "state/type" : "live-job-certified"
+    }, {
+      "path" : "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f223/live/workspace-leases.edn",
+      "sha256" : "ab97046a3de2b2b5eab2fc3685914554036814912a3862cea93a65394de67799"
+    } ]
+  } ]
+}

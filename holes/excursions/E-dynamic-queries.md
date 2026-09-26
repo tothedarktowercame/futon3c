@@ -1,0 +1,442 @@
+# E-dynamic-queries — retrieval that changes its query operator
+
+**Date chartered:** 2026-07-23
+**Type:** E-prefix excursion; bounded dark companion to
+`M-typed-memories` and `M-shared-memory-control-build-test`.
+**Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
+RUNG 2 ONE-OUTCOME OPERATOR UPDATE IMPLEMENTED DARK OVER PHASE 6,
+CALIBRATION GATE NOT MET (2026-07-23). RUNG 4 IMPLEMENTED DARK +
+VERIFIED 2026-07-27 (Codex-4 `35f1fef`, owner review PASS; see §Rung 4
+verification) under M-memory-retrieval WS1.
+**Boundary:** this excursion may rank only inside the Phase 1–4 admissible
+dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
+mutate memory, alter shared receipts, or affect live mission ordering.
+
+## HEAD
+
+When the desired memory is not known until it is encountered, retrieval is not
+only propagation over a fixed graph. It is a coupled dynamics over candidate
+contents and the patterns used to retrieve them: evidence changes which typed
+relations should govern the next traversal.
+
+## Theoretical frame
+
+Use the bounded state
+
+\[
+s_t=(x_t,\theta_t,F_t,B_t),
+\]
+
+where:
+
+- \(x_t\) is activation over currently admissible memory or mission nodes;
+- \(\theta_t\) is activation over patterns and typed traversal operators;
+- \(F_t\) is the current facet resolution;
+- \(B_t\) is the remaining traversal budget.
+
+For relation-specific graph operators \(\Delta_r\), a pattern-conditioned
+operator has the form
+
+\[
+\Delta_{\theta_t}=\sum_r\theta_{t,r}\Delta_r.
+\]
+
+A fuller system would couple content and operator updates:
+
+\[
+x_{t+1}=\Phi(x_t,\Delta_{\theta_t},q),\qquad
+\theta_{t+1}=\Psi(\theta_t,x_{t+1},q).
+\]
+
+Rung 1 deliberately implements only the smallest executable projection of
+this idea: one deterministic propagation step from active patterns through
+typed, already-admitted control relations to candidate missions. It is not a
+general Laplacian engine and it does not learn \(\theta\).
+
+## Relationship to the accepted engineering plan
+
+Phase 4 of `M-shared-memory-control-build-test` is accepted dark. Its existing
+writer, endpoint recall, admissibility projection, bitemporal lifecycle,
+domain and independent-witness gates, full bodies, and use receipts remain
+authoritative.
+
+The sequencing is:
+
+1. freeze the Phase 4 projection as the theory layer's input contract;
+2. build Rung 1 now as a detached replay in parallel with Codex-4's Phase 5;
+3. checkpoint before Phase 5 is completed, carrying over trace fields only if
+   the replay is informative;
+4. build budgeted facet refinement after Phase 5 supplies cascades and holes;
+5. evaluate outcome-conditioned operator updates with Phase 6's independently
+   witnessed outcomes.
+
+The existing endpoint order is always retained as the control arm.
+
+## Rung 1 — fixed typed re-ranker
+
+### Construction
+
+`futon3c.peripheral.dynamic-queries/fixed-typed-ranking` consumes only the
+`:projection` returned by the Phase 4 dark adapter. It:
+
+1. records the projection's candidate order as `:control-ranking`;
+2. starts from explicit candidate activation \(x_t\);
+3. propagates explicit pattern activation \(\theta_t\) through a fixed
+   relation-weight table;
+4. counts each distinct `(pattern, relation)` path once, so repeated attached
+   memories do not masquerade as independent evidence;
+5. returns a deterministic `:typed-ranking` with auditable contribution rows.
+
+The demonstration weights are illustrative and preregistered in the demo
+script; they have no earned probabilistic or utility semantics.
+
+### Invariants
+
+- The typed and control rankings contain exactly the same candidate IDs.
+- Candidate activation for anything outside the admitted set is rejected.
+- Negative, infinite, unknown-relation, and malformed weights are rejected.
+- Challenged, cross-domain, self-asserted, proposed, retracted, and blocked
+  material cannot be reintroduced after Phase 4 filtering.
+- The result always reports `:live-ordering-changed? false`.
+
+### Demonstration
+
+Run:
+
+```bash
+clojure -M scripts/run_dynamic_queries_demo.clj
+```
+
+The demo reads the reviewed Phase 4 WM corpus, calls the ordinary dark adapter,
+then prints the fixed endpoint order beside the typed order and its
+per-relation contributions. The blocked liveness mission remains absent.
+
+### Rung 1 acceptance
+
+Rung 1 is structurally accepted when:
+
+1. the pure re-ranker preserves the admitted candidate set;
+2. its ranking and reasons are deterministic;
+3. a Phase 4 fixture replay shows a non-trivial, fully explained ordering;
+4. the ordinary endpoint ordering remains present as counterfactual control;
+5. relevant Clojure tests, clj-kondo, and parenthesis checks pass.
+
+This is an instrumentation and falsifiability gate, not yet a retrieval-quality
+claim. Held-out hit@k comparisons belong to the checkpoint dataset rather than
+being manufactured from the small reviewed Phase 4 fixture.
+
+### Verification, 2026-07-23
+
+- Focused Rung 1 plus Phase 4 regression suite: 8 tests, 46 assertions,
+  0 failures, 0 errors.
+- `clj-kondo`: 0 errors, 0 warnings.
+- `check-parens.el`: clean for the implementation, tests, and demo.
+- Executable fixture replay: candidate set preserved; blocked
+  `M-wm-tripwires` absent; typed order differs from the control with one
+  contribution trace per admitted `(pattern, relation)` path;
+  `:live-ordering-changed? false`.
+
+### Phase 5 checkpoint, 2026-07-23
+
+Independent Codex-4 review exercised Rung 1 against the completed Phase 5
+reason-bearing frontier rather than the earlier flat Phase 4 projection. The
+preregistered fixture target is `M-shared-memory-control-build-test` at \(k=1\).
+Fixed endpoint order scored hit@1 = 0; the typed replay scored hit@1 = 1 while
+preserving the exact three-candidate set. This is one exploratory target, not
+a performance estimate.
+
+The difference passed the instrumentation gate: every ranked candidate has a
+typed contribution; the trace reports 3 distinct `(pattern, relation)` paths
+over 3 patterns and 2 relation types, the four-step query budget, and fixed
+ordering as `:counterfactual-ranking`. These fields now appear under Phase 5
+`:retrieval-checkpoint`. The checkpoint has `:selected-mission nil` and
+`:live-ordering-changed? false`; it cannot feed a choice back into the
+frontier.
+
+Run the integrated demonstration with:
+
+```bash
+clojure -M scripts/run_phase5_strategic_cascade_demo.clj
+```
+
+## Later rungs
+
+### Rung 2 — outcome-conditioned operator update
+
+Update \(\theta_t\) once from an independently witnessed outcome, then rerank
+once. Gate on calibration, abstention, unsupported-answer rate, and recovery
+from a misleading seed as well as target rank.
+
+Phase 6 supplies the first dark outcome seam. It fits a beta-binomial
+useful-progress estimate from independently witnessed replay transitions and
+compares it with direct Phase 5 support, centrality ablations, and the current
+additive controller. The update is visible as a named outcome contribution;
+it does not overwrite the support operator or the Rung 3 information model.
+Unknown missions abstain, witnessed failures remain negative observations, and
+blocked missions never enter the admissible subgraph. The initial frozen
+sample is deliberately below its promotion threshold, so it validates the
+trace and evaluation contract but does not earn promotion of an operator
+update.
+
+#### One-outcome operator update
+
+`strategic-outcomes/outcome-conditioned-operator-update` implements the
+literal Rung 2 step:
+
+1. fit the Phase 6 beta-binomial model on the frozen training transitions;
+2. consume exactly one new independently witnessed transition;
+3. refit once and compute the affected mission's posterior-probability ratio;
+4. multiply only the \(\theta\) entries for admitted patterns supporting that
+   mission by this ratio;
+5. perform exactly one Rung 1 rerank, retaining the pre-update typed ranking
+   as the counterfactual.
+
+Thus, for affected pattern \(p\) supporting mission \(m\),
+
+\[
+\theta_{t+1}(p)
+\;=\;\theta_t(p)\,
+\frac{P_{t+1}(\mathrm{useful\ progress}\mid m)}
+     {P_t(\mathrm{useful\ progress}\mid m)}.
+\]
+
+This is a dark operator-update proposal. It does not consume Rung 3 entropy,
+does not update patterns outside the witnessed mission, cannot introduce a
+mission outside the Phase 4/5 admissible set, and abstains if the additional
+outcome still leaves the mission below the Phase 6 observation floor.
+The ratio transports an earned mission-outcome estimate into an operator
+activation; it does **not** make \(\theta\) a calibrated posterior over
+patterns. That stronger semantics would require a separately validated
+pattern-likelihood model.
+
+The frozen replay uses judgement 4's misleading R5 seed and the independently
+witnessed failure `phase6-test-a-2`. The failure changes the R5 multiplier
+from \(1\) to \(6/7\), moving the typed top result from
+`M-aif-policy-conditioned-eig` to the gold
+`M-shared-memory-control-build-test` without changing the candidate set.
+
+Run:
+
+```bash
+clojure -M scripts/run_dynamic_queries_rung2_demo.clj
+```
+
+Promotion remains false: the updated training count is 13 against the frozen
+minimum of 20, and Phase 6 itself reports `:advance? false`.
+
+#### Rung 2 verification, 2026-07-23
+
+- Integrated Rungs 1–3 / Phases 4–6 focused suite: 24 tests,
+  159 assertions, 0 failures, 0 errors.
+- `clj-kondo`: 0 errors, 0 warnings.
+- `check-parens.el`: clean for the implementation, tests, and demo.
+- The frozen Rung 2 replay parses as EDN and the executable demo completes.
+- Exactly one independently witnessed failure moves the affected mission
+  posterior from \(2/3\) to \(4/7\), hence the R5 operator multiplier is
+  \((4/7)/(2/3)=6/7\).
+- The update recovers the held-out gold at rank 1, reports no degradation or
+  unsupported top result, preserves the three-candidate set, consumes no
+  Rung 3 entropy, selects no mission, and leaves live ordering unchanged.
+- Self-asserted outcomes and outcomes for missions outside the admissible
+  projection are rejected. Thin evidence produces explicit abstention and no
+  operator change.
+
+### Rung 3 — budgeted facet refinement
+
+Choose the next facet or relation expansion by expected information gain under
+explicit depth and query budgets. Preserve path provenance and diversity, and
+ensure repeated supportive paths do not count as independent evidence.
+
+#### Construction
+
+Rung 3 reuses the Phase 5 control-pattern cascade as its facet hierarchy:
+`:shown` is the available facet set and `:semilattice/:descent` supplies
+coarse-to-fine edges. It does not create a second graph.
+
+`dynamic-queries/budgeted-facet-plan` accepts:
+
+- the Phase 5 cascade and transition warrants;
+- one explicit information model per shown pattern;
+- an integer cost budget.
+
+Each information model declares a prior entropy, query cost, and a finite
+outcome distribution with posterior entropies. The planner computes
+
+\[
+\operatorname{EIG}(p)
+=H_{\mathrm{prior}}(p)
+-\sum_o P(o\mid p)H_{\mathrm{posterior}}(p,o)
+\]
+
+and greedily chooses the currently eligible facet with greatest
+`EIG / cost`. A child is eligible only after all parents have been expanded
+and all parent edges have witnessed transition warrants. Missing warrants
+remain explicit refinement holes.
+
+`strategic-cascade/budgeted-facet-frontier` executes the selected prefix
+through the unchanged Phase 5 `outer-frontier`. It records:
+
+- selection score, cost, and remaining budget at every step;
+- parent paths and the full witnessed transition provenance;
+- observed, admitted, challenged, and blocking memory IDs;
+- pattern, transition, evidence-path, and challenge-path diversity;
+- unexpanded facets and their exact reason.
+
+Memory multiplicity never enters the EIG calculation. The result remains dark,
+has no selected mission, and cannot affect live ordering.
+
+#### Demonstration
+
+Run:
+
+```bash
+clojure -M scripts/run_dynamic_queries_rung3_demo.clj
+```
+
+The reviewed fixture spends three units following
+`R9 independent witness → R6 candidate action space → R10 liveness`.
+R10 wins the final refinement step on declared information gain, and its
+challenging and blocking episodes remain visible. R5 is left as an explicit
+budget hole. Removing the independently reviewed R6→R10 warrant makes that
+branch ineligible rather than silently traversable.
+
+The fixture entropies are declared exploratory inputs, not learned or
+calibrated probabilities. Rung 3 establishes the traversal contract and its
+falsifiability surface; earning an outcome model remains Rung 2 / Phase 6 work.
+
+#### Verification, 2026-07-23
+
+- Focused Phase 4 + Rung 1 + Phase 5 + Rung 3 suite: 18 tests,
+  105 assertions, 0 failures, 0 errors.
+- `clj-kondo`: 0 errors, 0 warnings.
+- `check-parens.el`: clean for changed implementation, tests, and demo.
+- Rung 3 fixture parses as EDN and the executable demo completes.
+- Replay result: 3 selected patterns, 2 witnessed refinement transitions,
+  7 distinct pattern→evidence paths, and 3 distinct challenge memories;
+  `M-wm-tripwires` remains excluded, R5 remains a budget hole,
+  `:selected-mission nil`, and `:live-ordering-changed? false`.
+- Wider memory regression: 56 tests / 464 assertions reached one pre-existing
+  assertion mismatch in `memory_backend_test` (`:at nil` now present in the
+  runtime item but absent from the expected map); all remaining tests passed.
+  Rung 3 does not touch that namespace or shape.
+
+### Rung 4 — k-step coupled propagation with exploration mass (CHARTERED 2026-07-24, dark)
+
+Chartered at Joe's direction 2026-07-24 after the post-hoc VERIFY
+(`V-typed-memory-dynamic-queries-20260724.md`) confirmed the mechanism chain
+composes on frozen replay. Rungs 1–3 realized the state vector
+\((x_t,\theta_t,F_t,B_t)\) with every dynamical dimension truncated to one
+step. Rung 4 is the first genuinely dynamical rung: iterate the coupled
+updates
+
+\[
+x_{t+1}=\Phi(x_t,\Delta_{\theta_t},q),\qquad
+\theta_{t+1}=\Psi(\theta_t,x_{t+1},q)
+\]
+
+for up to \(k\) steps under the existing budget \(B_t\), over frozen corpora
+only. This is the "wave" in the wave-function framing: activation propagating
+over the admitted subgraph while the propagation operator itself moves.
+
+**Boundary (unchanged from Rungs 1–3, restated as binding):** ranks only
+inside the Phase 1–4 admissible dark subgraph; candidate set preserved
+exactly; `:selected-mission nil`; `:live-ordering-changed? false`; frozen
+and synthetic corpora only — no live-store reads, keeping this rung fully
+independent of the live-integration packet in flight.
+
+**Construction requirements:**
+
+1. **Exploration-mass floor.** \(\theta\) retains a minimum mass
+   \(\epsilon > 0\) on every admitted relation type at every step. The floor
+   is an explicit, reported parameter — never an implicit default.
+2. **Per-step audit.** Every step reports its contribution rows (extending
+   Rung 1's discipline), the entropy of \(x_t\) and \(\theta_t\), path
+   diversity, and challenge-memory reachability. Termination is classified
+   explicitly: fixed point, cycle, or step-budget exhaustion. No silent
+   truncation.
+3. **Identity at k=1.** With one step and the floor inactive, Rung 4 must
+   reproduce Rung 1's ranking exactly (regression identity test).
+4. **Control arms retained.** Fixed endpoint order and the Rung 1 one-step
+   typed ranking are named counterfactuals in every trace.
+5. **θ semantics stay unearned.** Iterated \(\theta\) is a search heuristic,
+   not a posterior. Any θ-learning beyond the Rung 2 one-outcome ratio
+   remains gated on the Phase 6 calibration minimum (n ≥ 20) and a
+   separately validated pattern-likelihood model. Rung 4 changes the
+   *dynamics*, not the *epistemic standing*, of \(\theta\).
+6. **Determinism** under stable inputs, as for Rungs 1–3.
+
+**The confirmation-collapse battery (the rung's falsifiability core).** The
+principal epistemic risk below — endogenous confirmation — is precisely what
+iteration amplifies, so Rung 4's acceptance is built around demonstrating the
+failure mode and its guard:
+
+- synthetic corpora with a planted target and a decoy relation seeded with
+  early accidental corroboration;
+- **floor-off ablation must exhibit collapse** (θ concentrating on the decoy,
+  target hidden) — if the failure cannot be produced, the battery is not
+  probing anything;
+- **floor-on run must recover the planted target** within the step budget,
+  or report a reasoned non-recovery;
+- Rung 1 single-step ranking runs as the control arm on every battery case;
+- independently witnessed challenge memories must remain reachable at every
+  step of every run.
+
+**Acceptance:** executable demo over `phase4-wm-corpus.edn` plus the
+synthetic battery; the k=1 identity test; the collapse/recovery pair above;
+per-step traces deterministic and fully explained; clj-kondo and
+check-parens clean; focused tests green. Implementation belongs in a fresh
+namespace beside `dynamic_queries.clj` (no changes to Rung 1–3 code paths),
+so the packet in flight is untouched.
+
+**Explicitly out of scope:** live-store reads; any effect on live ordering;
+multi-coordinate θ-learning promotion; consuming Rung 3 entropies as outcome
+probabilities; any relaxation of the Phase 6 calibration gate.
+
+#### Rung 4 verification, 2026-07-27
+
+Implemented by Codex-4 (`35f1fef`, dispatched under M-memory-retrieval
+WS1, packet `holes/CODEX-HANDOFF-rung4-coupled-propagation.md`); owner
+review (claude-6), author ≠ reviewer, all gates re-run independently:
+
+- Diff surface: exactly the five packet `:out` files, additions only;
+  Rung 1–3 namespaces, tests, demos, fixtures untouched.
+- Focused suite re-run: 12 tests, 71 assertions, 0 failures, 0 errors
+  (`dynamic-queries` + `dynamic-queries-rung4`). `clj-kondo` 0/0;
+  `check-parens` OK — all re-run by the reviewer.
+- Demo re-run (`run_dynamic_queries_rung4_demo.clj`): output matches the
+  frozen `rung4-results.edn` exactly.
+- θ lives on a lower-bounded simplex (mass ≥ ε per admitted relation,
+  n·ε ≤ 1 validated); the floor is mandatory input — omission throws.
+- k=1 identity: with ε=0, k=1 reproduces Rung 1's ranking exactly
+  (regression test asserts against a live Rung 1 call).
+- Confirmation-collapse battery (preregistered in
+  `rung4-collapse-battery.edn`): floor-off ablation collapses to the
+  decoy (θ → `{repairs 1.0, requires 0.0}`, planted target hidden);
+  floor-on (ε=0.2) recovers the planted target at step 2 with
+  θ → `{repairs 0.2, requires 0.8}`. Independently witnessed challenge
+  memories reachable at every step of every run.
+- Both control arms rank the decoy first on the battery case — the
+  floor-on recovery is earned by the iterated dynamics, not inherited
+  from a control arm.
+- Deterministic replay asserted; termination classified explicitly
+  (fixed-point / cycle / budget-exhausted); `:selected-mission nil`,
+  `:live-ordering-changed? false`, candidate set preserved in every
+  result; `:theta-semantics :search-heuristic-not-posterior` and the
+  untouched Phase 6 gate (`:promoted? false`) stamped in the output.
+
+## Principal epistemic risk
+
+The main failure mode is endogenous confirmation: early accidental evidence
+concentrates the operator on relations that retrieve more corroboration,
+creating apparent certainty while hiding the target region. Later rungs must
+therefore preserve exploration mass, keep independently witnessed challenges
+reachable, expose entropy and path diversity, and test recovery from
+misleading initial activation.
+
+## Whistle agreement
+
+The 2026-07-23 discussion involved Codex-4 (Phase 4 owner), Zai-3
+(pattern-conditioned recall), and Codex-3 (mathematical/epistemic challenge).
+They agreed on the three-rung plan and the hard Phase 1–4 boundary above. A
+Claude mentor whistle was unavailable because that environment's subscription
+access was disabled.

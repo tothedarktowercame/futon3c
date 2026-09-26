@@ -1,0 +1,536 @@
+(ns futon3c.apm.memory-snapshot-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.memory-snapshot :as sut]
+            [futon3c.evidence.futon1b-backend :as f1b]
+            [futon3c.substrate.client :as substrate])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
+
+(def candidate
+  {:memory-id "e-solver-1" :depositor "solver"
+   :reviewer "scribe" :review-evidence-id "e-review-1"
+   :attachment-status :reviewed
+   :pattern-ids ["math-formalization/example"]
+   :name "solver memory" :hook "Use solverMemoryAnchor"
+   :body "exact solverMemoryAnchor"})
+
+(deftest candidates-are-ordered-by-promoted-frame-overlap-and-id
+  (let [candidates [{:memory-id "z-promoted"
+                     :provenance {:problem-id "p1"}
+                     :body "unrelatedIdentifier"}
+                    {:memory-id "a-inline" :body "sharedAlpha"}
+                    {:memory-id "b-fetched"}
+                    {:memory-id "c-failed"}]
+        fetched (atom [])
+        result (sut/order-candidates
+                candidates
+                {:problem-id "p1"
+                 :base-text "sharedAlpha sharedBeta otherIdentifier"
+                 :text-fn (fn [memory-id]
+                            (swap! fetched conj memory-id)
+                            (case memory-id
+                              "b-fetched" {:evidence/body
+                                           {:name "sharedAlpha"
+                                            :hook "sharedBeta"}}
+                              "c-failed" (throw (ex-info "store down" {}))))})]
+    (is (= ["z-promoted" "b-fetched" "a-inline" "c-failed"]
+           (mapv :memory-id (:ordered result))))
+    (is (= ["b-fetched" "c-failed"] @fetched))
+    (is (= {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+            :kind-stratification :observed-only
+            :kind-counts {:unknown 4}
+            :base-text-present? true
+            :scores {"a-inline" 1 "b-fetched" 2 "c-failed" 0
+                     "z-promoted" 0}
+            :promoted-this-frame 1
+            :textless-fetched 1
+            :fetch-failed ["c-failed"]}
+           (:ordering result)))))
+
+(deftest typed-supply-is-observable-without-changing-default-rank
+  (let [candidates [{:memory-id "reg" :memory-use/kind :regulative
+                     :body "sharedAlpha sharedBeta"}
+                    {:memory-id "legacy" :memory-use/kind :legacy-advice
+                     :body "sharedAlpha"}
+                    {:memory-id "sub" :memory-use/kind :substitutive
+                     :body "unrelatedIdentifier"}]
+        options {:problem-id "p1"
+                 :base-text "sharedAlpha sharedBeta unrelatedIdentifier"}
+        observed (sut/order-candidates candidates options)
+        stratified (sut/order-candidates
+                    candidates
+                    (assoc options :kind-stratification :substitutive-first))]
+    (is (= ["reg" "legacy" "sub"]
+           (mapv :memory-id (:ordered observed)))
+        "observability alone does not alter the established relevance order")
+    (is (= ["sub" "legacy" "reg"]
+           (mapv :memory-id (:ordered stratified))))
+    (is (= {:regulative 1 :substitutive 1 :unknown 1}
+           (get-in stratified [:ordering :kind-counts])))
+    (is (= :observed-only
+           (get-in observed [:ordering :kind-stratification])))
+    (is (= :substitutive-first
+           (get-in stratified [:ordering :kind-stratification])))
+    (is (= [:memory-kind :promoted-this-frame :identifier-overlap :memory-id]
+           (get-in stratified [:ordering :signal])))))
+
+(deftest typed-supply-preserves-stable-order-and-unknown-bucket
+  (let [candidates [{:memory-id "u1"}
+                    {:memory-id "r" :memory-use/kind :regulative}
+                    {:memory-id "u2" :memory-use/kind :unrecognized}
+                    {:memory-id "s1" :memory-use/kind :substitutive}
+                    {:memory-id "s2" :memory-use/kind :substitutive}]
+        supply (sut/stratify-candidates candidates)]
+    (is (= ["s1" "s2" "u1" "u2" "r"]
+           (mapv :memory-id (:ordered supply))))
+    (is (= ["u1" "u2"]
+           (mapv :memory-id (get-in supply [:buckets :unknown]))))
+    (is (= (mapv :memory-id candidates)
+           (->> (:buckets supply) vals (mapcat identity)
+                (sort-by #(get {"u1" 0 "r" 1 "u2" 2 "s1" 3 "s2" 4}
+                               (:memory-id %)))
+                (mapv :memory-id)))
+        "stratification changes neither membership nor counts")))
+
+(deftest missing-base-text-is-recorded-not-hidden
+  (let [result (sut/order-candidates
+                [{:memory-id "a" :body "sharedAlpha"}]
+                {:problem-id "p1" :base-text nil})]
+    (is (false? (get-in result [:ordering :base-text-present?])))
+    (is (= {"a" 0} (get-in result [:ordering :scores])))))
+
+(deftest atomic-snapshot-is-idempotent-and-student-access-is-exact
+  (let [dir (Files/createTempDirectory "apm-snapshot-test"
+                                       (make-array FileAttribute 0))
+        path (.resolve dir "eligible.edn")
+        args {:frame-id "f21" :problem-id "p1" :candidates [candidate]
+              :path path :evidence-visible? (constantly true)
+              :base-text "solverMemoryAnchor"
+              :base-file-blob "1111111111111111111111111111111111111111"}
+        first-result (sut/publish! args)
+        replay (sut/publish! args)
+        digest (get-in first-result [:snapshot :snapshot/digest])]
+    (is (:ok first-result))
+    (is (= 2 (get-in first-result [:snapshot :snapshot/version])))
+    (is (= [:promoted-this-frame :identifier-overlap :memory-id]
+           (get-in first-result [:snapshot :snapshot/ordering :signal])))
+    (is (= {:unknown 1}
+           (get-in first-result [:snapshot :snapshot/ordering :kind-counts])))
+    (is (= "1111111111111111111111111111111111111111"
+           (get-in first-result
+                   [:snapshot :snapshot/ordering :base-file-blob])))
+    (is (= {"e-solver-1" 1}
+           (get-in first-result [:snapshot :snapshot/ordering :scores])))
+    (is (false? (:idempotent? first-result)))
+    (is (:ok replay))
+    (is (:idempotent? replay))
+    (is (:ok (sut/verify-student-access
+              {:path path :expected digest :frame-id "f21" :problem-id "p1"
+               :accessible-memory-ids ["e-solver-1"]})))
+    (is (= :student-memory-access-invalid
+           (:error/code
+            (sut/verify-student-access
+             {:path path :expected digest :frame-id "f21" :problem-id "p1"
+              :accessible-memory-ids []}))))))
+
+(deftest admission-requires-independent-visible-review
+  (testing "self review is rejected before publication"
+    (is (= :memory-snapshot-candidate-invalid
+           (:error/code
+            (sut/publish! {:frame-id "f21" :problem-id "p1"
+                           :candidates [(assoc candidate :reviewer "solver")]
+                           :path "/tmp/not-written-self-review.edn"
+                           :evidence-visible? (constantly true)})))))
+  (testing "a report cannot substitute for fresh substrate visibility"
+    (is (= :memory-snapshot-review-not-visible
+           (:error/code
+            (sut/publish! {:frame-id "f21" :problem-id "p1"
+                           :candidates [candidate]
+                           :path "/tmp/not-written-invisible-review.edn"
+                           :evidence-visible? (constantly false)}))))))
+
+(deftest a-timeout-with-no-message-is-recorded-as-a-timeout
+  ;; The recorded outcome is what the retry ladder reads, what the transport
+  ;; certificate preserves, and what anyone diagnosing the frame afterwards is
+  ;; told happened. It was decided by matching /timeout/ against .getMessage
+  ;; alone -- which is nil for the ordinary TimeoutException, so a timeout was
+  ;; filed as :unavailable. f193's own certificate carries both outcomes across
+  ;; two attempts, and the pair is what the ladder is meant to tell apart.
+  (let [observe #'sut/observe-visibility
+        outcome (fn [t] (:transport/acquired-outcome
+                         (observe (fn [_] (throw t)) candidate)))]
+    (is (nil? (.getMessage (java.util.concurrent.TimeoutException.)))
+        "premise: the ordinary timeout carries no message")
+    (is (= :timeout (outcome (java.util.concurrent.TimeoutException.))))
+    (is (= :timeout (outcome (java.net.SocketTimeoutException.)))
+        "class name carries it when the message does not")
+    (is (= :timeout (outcome (ex-info "wrapped" {}
+                                      (java.util.concurrent.TimeoutException.))))
+        "a timeout behind one wrapper is still a timeout")
+    (is (= :timeout (outcome (RuntimeException. "read TIMEOUT after 5000ms")))
+        "an explicit message still classifies")))
+
+(deftest an-unreachable-substrate-is-not-recorded-as-a-timeout
+  ;; The other direction: the fix must not turn every failure into a timeout.
+  (let [observe #'sut/observe-visibility
+        outcome (fn [t] (:transport/acquired-outcome
+                         (observe (fn [_] (throw t)) candidate)))]
+    (is (= :unavailable (outcome (java.net.ConnectException.))))
+    (is (= :unavailable (outcome (RuntimeException. "connection refused"))))
+    (is (= :unavailable (outcome (java.io.IOException.)))))
+  (testing "an outcome declared in ex-data still wins over inference"
+    (let [observed ((var-get #'sut/observe-visibility)
+                    (fn [_] (throw (ex-info "x" {:transport/acquired-outcome
+                                                 :malformed})))
+                    candidate)]
+      (is (= :malformed (:transport/acquired-outcome observed))))))
+
+(deftest a-visible-candidate-is-still-a-success
+  ;; Silence direction: the classifier only speaks when the probe throws.
+  (let [observed ((var-get #'sut/observe-visibility) (constantly true) candidate)]
+    (is (= :success (:transport/acquired-outcome observed)))
+    (is (= :obtained (:transport/evidence observed)))
+    (is (true? (:visible? observed))))
+  (let [observed ((var-get #'sut/observe-visibility) (constantly false) candidate)]
+    (is (= :success (:transport/acquired-outcome observed))
+        "a record not yet visible is a healthy read, not a transport fault")
+    (is (false? (:visible? observed)))))
+
+(deftest publication-checks-independent-visibility-concurrently
+  (let [dir (Files/createTempDirectory "apm-parallel-visibility-test"
+                                       (make-array FileAttribute 0))
+        second-candidate (assoc candidate
+                                :memory-id "e-solver-2"
+                                :review-evidence-id "e-review-2")
+        entered (atom 0)
+        both-entered (promise)
+        visible? (fn [_]
+                   (when (= 2 (swap! entered inc))
+                     (deliver both-entered true))
+                   (true? (deref both-entered 1000 false)))
+        result (sut/publish!
+                {:frame-id "f21" :problem-id "p1"
+                 :candidates [candidate second-candidate]
+                 :path (.resolve dir "parallel.edn")
+                 :evidence-visible? visible?})]
+    (is (:ok result))
+    (is (= 2 @entered))
+    (is (= ["e-solver-1" "e-solver-2"]
+           (mapv :memory-id (get-in result [:snapshot :snapshot/memories]))))))
+
+(deftest unanimous-rejection-publishes-an-empty-certified-snapshot
+  (let [dir (Files/createTempDirectory "apm-empty-snapshot-test"
+                                       (make-array FileAttribute 0))
+        path (.resolve dir "eligible.edn")
+        result (sut/publish! {:frame-id "f22" :problem-id "p2"
+                              :candidates [] :path path
+                              :evidence-visible? (constantly true)})
+        digest (get-in result [:snapshot :snapshot/digest])]
+    (is (:ok result))
+    (is (= [] (get-in result [:snapshot :snapshot/memories])))
+    (is (:ok (sut/verify-student-access
+              {:path path :expected digest :frame-id "f22" :problem-id "p2"
+               :accessible-memory-ids []})))))
+
+(deftest fresh-visibility-check-joins-edge-memory-and-review-evidence
+  (let [edge {:hx/type :memory/assert
+              :hx/props {:state :current :attachment-status :reviewed
+                         :roles {:patterns ["math-formalization/example"]}
+                         :review {:evidence-id "e-review-1"}}}
+        entries {"e-solver-1" {:evidence/author "solver"}
+                 "e-review-1" {:evidence/author "scribe"
+                               :evidence/body
+                               {:review/reason "actionable exact API"
+                                :review/residual "Main.lean:12"}
+                               :evidence/subject
+                               {:ref/type :memory :ref/id "e-solver-1"}}}]
+    (is (sut/candidate-visible? candidate (constantly [edge]) entries))
+    (is (false? (sut/candidate-visible?
+                 (assoc candidate :reviewer "solver")
+                 (constantly [edge]) entries)))))
+
+(deftest default-visibility-check-bounds-substrate-edge-reads
+  (let [observed (atom nil)]
+    (with-redefs [substrate/memory-assertions-by-end
+                  (fn [memory-id options]
+                    (reset! observed [memory-id options])
+                    [{:hx/type :memory/assert :hx/props {:state :superseded}}])
+                  f1b/get-entry-bounded (fn [_ _ _] {})]
+      (is (not (sut/candidate-visible? candidate)))
+      (is (= ["e-solver-1"
+              {:timeout-ms 5000}]
+             @observed)))))
+
+(deftest cumulative-publication-drops-stale-priors-but-fails-closed-on-own
+  (let [dir (Files/createTempDirectory "apm-cumulative-snapshot-test"
+                                       (make-array FileAttribute 0))
+        visible-prior (assoc candidate :memory-id "prior-ok" :depositor "f28-guide"
+                             :provenance {:campaign-id "c1"
+                                          :frame-id "f28" :problem-id "p28"})
+        stale-prior (assoc candidate :memory-id "prior-stale" :depositor "f29-guide"
+                           :review-evidence-id "missing-review"
+                           :provenance {:campaign-id "c1"
+                                        :frame-id "f29" :problem-id "p29"})
+        own (assoc candidate :memory-id "own" :depositor "f31-guide"
+                   :provenance {:campaign-id "c2"
+                                :frame-id "f31" :problem-id "p31"})
+        visible? #(not= "missing-review" (:review-evidence-id %))
+        path (.resolve dir "union.edn")
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [visible-prior stale-prior]
+                 :own-candidates [own] :path path :lineage ["c1" "c2"]
+                 :evidence-visible? visible?})]
+    (is (:ok result))
+    (is (= ["own" "prior-ok"]
+           (mapv :memory-id (get-in result [:snapshot :snapshot/memories]))))
+    (is (= {"f28" 1 "f31" 1}
+           (get-in result [:snapshot :snapshot/provenance-summary])))
+    (is (= ["c1" "c2"] (get-in result [:snapshot :snapshot/lineage])))
+    (is (= [{:memory-id "prior-stale"
+             :provenance {:campaign-id "c1"
+                          :frame-id "f29" :problem-id "p29"}
+             :finding :snapshot-review-not-visible}]
+           (:prior-dropped result)))
+    (is (:ok (sut/verify-student-access
+              {:path path :expected (get-in result [:snapshot :snapshot/digest])
+               :frame-id "f31" :problem-id "p31"
+               :accessible-memory-ids ["prior-ok" "own"]})))
+    (is (= :memory-snapshot-review-not-visible
+           (:error/code
+            (sut/publish-cumulative!
+             {:frame-id "f31" :problem-id "p31"
+              :prior-candidates []
+              :own-candidates [(assoc own :review-evidence-id "missing-review")]
+              :path (.resolve dir "own-stale.edn")
+              :evidence-visible? visible?}))))))
+
+(deftest cumulative-publication-checks-each-retained-memory-once
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-once"
+                                       (make-array FileAttribute 0))
+        calls (atom {})
+        prior (assoc candidate :memory-id "prior-once" :depositor "f28-guide"
+                     :provenance {:campaign-id "c1"
+                                  :frame-id "f28" :problem-id "p28"})
+        own (assoc candidate :memory-id "own-once" :depositor "f31-guide"
+                   :provenance {:campaign-id "c2"
+                                :frame-id "f31" :problem-id "p31"})
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [prior] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1" "c2"]
+                 :evidence-visible?
+                 (fn [candidate]
+                   (swap! calls update (:memory-id candidate) (fnil inc 0))
+                   true)})]
+    (is (:ok result))
+    (is (= {"prior-once" 1 "own-once" 1} @calls))))
+
+(deftest cumulative-publication-starts-one-two-permit-visibility-wave
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-parallel"
+                                       (make-array FileAttribute 0))
+        release (promise)
+        started (atom #{})
+        candidates (mapv (fn [n]
+                           (assoc candidate
+                                  :memory-id (str "parallel-" n)
+                                  :depositor "f31-guide"
+                                  :provenance {:campaign-id "c2"
+                                               :frame-id "f31"
+                                               :problem-id "p31"}))
+                         (range 4))
+        run (future
+              (sut/publish-cumulative!
+               {:frame-id "f31" :problem-id "p31"
+                :prior-candidates [] :own-candidates candidates
+                :path (.resolve dir "union.edn") :lineage ["c2"]
+                :evidence-visible?
+                (fn [candidate]
+                  (swap! started conj (:memory-id candidate))
+                  @release
+                  true)}))]
+    (try
+      (is (= 2 (deref (future
+                        (loop []
+                          (if (= 2 (count @started)) 2
+                              (do (Thread/sleep 5) (recur)))))
+                      1000 :timed-out)))
+      (finally (deliver release true)))
+    (is (:ok @run))))
+
+(deftest cumulative-publication-classifies-visibility-read-failures
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-failure"
+                                       (make-array FileAttribute 0))
+        stale (assoc candidate :memory-id "prior-timeout" :depositor "f28-guide"
+                     :provenance {:campaign-id "c1"
+                                  :frame-id "f28" :problem-id "p28"})
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [stale] :own-candidates []
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible?
+                 (fn [_] (throw (ex-info "bounded timeout" {})))})]
+    (is (false? (:ok result)))
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))
+    (is (= 1 (:visibility/candidate-count result)))
+    (is (= :bounded-parallel (:visibility/execution result)))
+    (is (= 2 (:visibility/concurrency-bound result)))
+    (is (= 5000 (:visibility/per-read-bound-ms result)))
+    (is (= 4 (:visibility/reads-per-candidate-bound result)))
+    (is (= 20000 (:visibility/aggregate-bound-ms result)))))
+
+(deftest direct-publication-classifies-execution-timeout
+  (let [dir (Files/createTempDirectory "apm-direct-visible-failure"
+                                       (make-array FileAttribute 0))
+        result (sut/publish!
+                {:frame-id "f77" :problem-id "b95J04"
+                 :candidates [candidate]
+                 :path (.resolve dir "snapshot.edn")
+                 :evidence-visible?
+                 (fn [_]
+                   (throw
+                    (java.util.concurrent.ExecutionException.
+                     (java.net.http.HttpTimeoutException.
+                      "request timed out"))))})]
+    (is (false? (:ok result)))
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :timeout (:transport/classified-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))))
+
+(deftest large-visibility-set-respects-two-permit-substrate-capacity
+  (let [dir (Files/createTempDirectory "apm-visible-130"
+                                       (make-array FileAttribute 0))
+        active (atom 0)
+        peak (atom 0)
+        candidates (mapv (fn [n]
+                           (assoc candidate
+                                  :memory-id (str "f65-memory-" n)
+                                  :depositor "f65-guide"
+                                  :provenance {:campaign-id "jit-all-open-v2"
+                                               :frame-id "f65"
+                                               :problem-id "b01J04"}))
+                         (range 130))
+        result (sut/publish-cumulative!
+                {:frame-id "f65" :problem-id "b01J04"
+                 :prior-candidates [] :own-candidates candidates
+                 :path (.resolve dir "union.edn") :lineage ["f65"]
+                 :evidence-visible?
+                 (fn [_]
+                   (let [n (swap! active inc)]
+                     (try
+                       (swap! peak max n)
+                       (when (> n 2)
+                         (throw (ex-info "downstream permit queue overflow"
+                                         {:transport/acquired-outcome :timeout})))
+                       (Thread/sleep 2)
+                       true
+                       (finally (swap! active dec)))))})]
+    (is (:ok result) result)
+    (is (= 130 (:visibility/candidate-count result)))
+    (is (= 2 (:visibility/concurrency-bound result)))
+    (is (<= @peak 2))
+    (is (> @peak 1))
+    (is (= 1300000 (:visibility/aggregate-bound-ms result)))))
+
+(deftest own-visibility-exception-retains-acquired-outcome
+  (let [dir (Files/createTempDirectory "apm-own-visible-failure"
+                                       (make-array FileAttribute 0))
+        own (assoc candidate :depositor "f63-guide"
+                   :provenance {:campaign-id "c1"
+                                :frame-id "f63" :problem-id "p63"})
+        result (sut/publish-cumulative!
+                {:frame-id "f63" :problem-id "p63"
+                 :prior-candidates [] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible?
+                 (fn [_] (throw (ex-info "visibility timeout" {})))})]
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :post-publication-verification (:transport/operation result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :timeout (:transport/classified-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))))
+
+(deftest obtained-negative-visibility-remains-authoritative-absence
+  (let [dir (Files/createTempDirectory "apm-own-visible-negative"
+                                       (make-array FileAttribute 0))
+        own (assoc candidate :depositor "f63-guide"
+                   :provenance {:campaign-id "c1"
+                                :frame-id "f63" :problem-id "p63"})
+        result (sut/publish-cumulative!
+                {:frame-id "f63" :problem-id "p63"
+                 :prior-candidates [] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible? (constantly false)})]
+    (is (= :memory-snapshot-review-not-visible (:error/code result)))
+    (is (nil? (:error/component result)))
+    (is (nil? (:transport/evidence result)))))
+
+(deftest cumulative-dedup-preserves-earliest-depositor-origin
+  (let [dir (Files/createTempDirectory "apm-provenance-dedup"
+                                       (make-array FileAttribute 0))
+        origin {:campaign-id "c1" :frame-id "f28" :problem-id "p1"}
+        carrier {:campaign-id "c2" :frame-id "f46" :problem-id "p2"}
+        earliest (assoc candidate :depositor "f28-guide" :provenance origin)
+        republished (assoc candidate :depositor "f28-guide" :provenance carrier)
+        result (sut/publish-cumulative!
+                {:frame-id "f47" :problem-id "p3" :lineage ["c1" "c2"]
+                 :prior-candidates [earliest republished]
+                 :own-candidates [] :path (.resolve dir "snapshot.edn")
+                 :evidence-visible? (constantly true)})]
+    (is (:ok result) result)
+    (is (= origin
+           (get-in result [:snapshot :snapshot/memories 0 :provenance])))))
+
+(deftest visibility-failure-retains-bounded-request-correlation
+  (let [result (atom nil)
+        error (ex-info "wrapped" {:secret "do-not-log"}
+                       (ex-info "read timed out"
+                                {:url "http://store/api/alpha/hyperedges?end=m"
+                                 :trace-id "request-123" :timeout-ms 5000 :elapsed-ms 5001
+                                 :body "private response"}
+                                (java.util.concurrent.TimeoutException.)))
+        log (with-out-str
+              (reset! result (#'sut/observe-visibility (fn [_] (throw error)) candidate)))
+        read (:transport/read @result)]
+    (is (= :timeout (:transport/acquired-outcome @result)))
+    (is (= "request-123" (:trace-id read)))
+    (is (= 5001 (:elapsed-ms read)))
+    (is (= (:memory-id candidate) (:memory-id read)))
+    (is (re-find #"request-123" log))
+    (is (not (re-find #"do-not-log|private response" log)))))
+
+(deftest projected-visibility-keeps-independent-review-and-current-state-gates
+  (let [edge {:hx/type :memory/assert
+              :hx/props {:state :current :attachment-status :reviewed
+                         :roles {:patterns ["math-formalization/example"]}
+                         :review {:evidence-id "e-review-1"}}}
+        memory {:evidence/author "solver"}
+        review {:evidence/author "scribe"
+                :evidence/body {:review/reason "exact API" :review/residual "Main.lean:12"}
+                :evidence/subject {:ref/id "e-solver-1"}}
+        current (atom edge)
+        fetched (atom [])]
+    (with-redefs [substrate/memory-assertions-by-end (fn [_ _] [@current])
+                  f1b/get-entry-bounded (fn [_ id _]
+                                     (swap! fetched conj id)
+                                     (get {"e-solver-1" memory "e-review-1" review} id))]
+      (is (true? (sut/candidate-visible? candidate)))
+      (is (= ["e-solver-1" "e-review-1"] @fetched))
+      (doseq [bad [(assoc-in edge [:hx/props :state] :superseded)
+                   (assoc-in edge [:hx/props :attachment-status] :proposed)
+                   (assoc-in edge [:hx/props :roles :patterns] ["wrong"])
+                   (assoc-in edge [:hx/props :review :evidence-id] "other-review")]]
+        (reset! current bad)
+        (is (not (sut/candidate-visible? candidate)))))
+    (doseq [bad [(assoc review :evidence/author "solver")
+                 (assoc-in review [:evidence/body :review/reason] "")
+                 (assoc-in review [:evidence/body :review/residual] "")
+                 (assoc-in review [:evidence/subject :ref/id] "wrong")
+                 nil]]
+      (is (not (sut/candidate-visible? candidate (constantly [edge])
+                                      {"e-solver-1" memory "e-review-1" bad}))))))

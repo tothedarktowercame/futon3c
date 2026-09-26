@@ -1,0 +1,8 @@
+{:repo-root "/home/joe/code/futon3c"
+ :subject-id "test-registry/scoped-stability"
+ :command ["clojure" "-M:test" "-n" "futon3c.test-registry-stability-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/registry-scoped-stability-2026-09-19/execution"
+ :code-paths ["src/futon3c/test_registry.clj"]
+ :test-paths ["test/futon3c/test_registry_stability_test.clj"
+              "test/futon3c/test_registry_test.clj"]}

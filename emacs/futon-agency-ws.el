@@ -131,10 +131,14 @@ A handler error never kills the socket loop."
     (websocket-send-text futon-agency-ws--ws (json-encode payload))))
 
 (defun futon-agency-ws--on-open (_ws)
+  ;; Declare observer: broadcast-only, answers nothing.  The server bypasses
+  ;; S-presence for observers (we are intentionally NOT a registered agent) and
+  ;; joins us to the broadcast set without making us an invoke target.
   (futon-agency-ws--send-json
    `((type . "ready")
      (agent_id . ,futon-agency-ws-observer-id)
-     (session_id . ,futon-agency-ws--session-id))))
+     (session_id . ,futon-agency-ws--session-id)
+     (observer . t))))
 
 (defun futon-agency-ws--schedule-reconnect ()
   (when (and futon-agency-ws-reconnect
@@ -303,13 +307,19 @@ Single writer; never selects the window or steals point."
                  (status (or (alist-get 'status info) "?"))
                  (type (or (alist-get 'type info) "?"))
                  (activity (alist-get 'invoke-activity info))
+                 (prompt-preview (alist-get 'invoke-prompt-preview info))
                  (busy (member status '("invoking" "busy"))))
             (insert (propertize (format "  %-12s" aid)
                                 'face (if busy 'futon-agency-hud-busy-face
                                         'futon-agency-hud-idle-face))
                     (format " %-9s %-7s" status type)
                     (if activity (format " %s" activity) "")
-                    "\n")))
+                    "\n")
+            (when (and busy prompt-preview (not (string-empty-p prompt-preview)))
+              (insert (propertize
+                       (format "    %s\n"
+                               (truncate-string-to-width prompt-preview 100 nil nil t))
+                       'face 'shadow)))))
         (insert "\n" (propertize
                       (format "renders: %d (one writer, one socket)"
                               futon-agency-hud--render-count)

@@ -1,0 +1,12 @@
+# apm-invariant-checker.timer — NOT INSTALLED.
+# Installation is Joe's call: `systemctl --user enable --now apm-invariant-checker.timer`.
+[Unit]
+Description=Run the APM invariant checker every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

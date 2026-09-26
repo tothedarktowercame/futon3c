@@ -168,7 +168,14 @@
    (let [agents (:agents status)]
      {:sessions (registry-session-map status)
       :types (into {} (map (fn [[aid info]] [(str aid) (:type info)]) agents))
-      :registered (set (map (comp str key) agents))})))
+      ;; ADDRESSABLE names, not raw registry keys. MQ-7 asks "can this caller be
+      ;; belled back?", and get-agent is what actually decides — so the answer
+      ;; must come from the same rule the router uses. With area codes live, a
+      ;; caller signing its own global name (lon-claude-6) IS routable
+      ;; (transport/http auto-bellback-caller-registered? -> reg/get-agent), and
+      ;; a key-set check would call it unaddressable: a QA false alarm about
+      ;; working routing.
+      :registered (reg/addressable-names)})))
 
 (defn- normalize-registry-context [registry]
   (if (and (map? registry) (contains? registry :sessions))

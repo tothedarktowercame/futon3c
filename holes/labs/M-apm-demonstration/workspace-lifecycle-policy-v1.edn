@@ -1,0 +1,62 @@
+{:policy/id :apm-workspace-lifecycle-v1
+ :policy/principle
+ "Branches retain attributable history; worktrees are temporary execution
+  leases. Closing or stopping a frame must leave no unowned checkout in
+  ~/code."
+
+ :inventory/baseline
+ {:observed-at "2026-08-20"
+  :apm-lean-registered-worktrees 90
+  :apm-frame-directories 82
+  :futon3c-registered-worktrees 13
+  :futon3c-sibling-directories 7
+  :dirty-apm-worktrees
+  [{:path "/home/joe/code/apm-frames/frame-18-a97J07-solver"
+    :porcelain-entry-count 9}
+   {:path "/home/joe/code/apm-frames/f7-a98A01-student-afa29ce6-c82d-48a1-9347-f288af20934b"
+    :porcelain-entry-count 1}]
+  :interpretation
+  "This is an inventory, not a deletion manifest. Cleanliness alone does not
+   prove that a branch is preserved, merged, or no longer referenced."}
+
+ :lease/required-fields
+ #{:workspace/id :workspace/path :repository/path :branch :base-revision
+   :frame/id :role :created-at :retention/state}
+ :retention/states
+ #{:provisioned :active :terminal-awaiting-audit :retirable :retired
+   :quarantined}
+
+ :retirable/preconditions
+ #{:frame-terminal
+   :no-running-or-parked-job-references-workspace
+   :no-active-ledger-claim-references-workspace
+   :worktree-clean
+   :head-commit-recorded-in-terminal-receipt
+   :branch-ref-exists
+   :required-artifacts-content-addressed
+   :independent-retirement-audit-passed}
+
+ :retirement/effects
+ [{:order 1 :effect :git-worktree-remove-exact-registered-path}
+  {:order 2 :effect :git-worktree-prune-expired-metadata}
+  {:order 3 :effect :retain-branch-and-recorded-commit}
+  {:order 4 :effect :append-workspace-retired-receipt}
+  {:order 5 :effect :assert-path-absent-and-branch-resolvable}]
+
+ :safety
+ {:forbidden #{:force-remove-dirty-worktree
+               :infer-retirable-from-directory-name
+               :delete-branch-as-part-of-worktree-retirement
+               :recursive-delete-unregistered-path
+               :remove-workspace-referenced-by-active-or-parked-job}
+  :ambiguous-action :quarantine-and-report}
+
+ :countdown/rule
+ {:before-opening-next-frame
+  #{:previous-frame-workspaces-terminally-classified
+    :all-retirable-workspaces-retired
+    :all-quarantined-workspaces-reported}
+  :series-maximum-live-frame-workspaces
+  "Only the active frame plus explicitly recorded terminal-audit leases may
+   remain. Historical branches and receipts do not require historical
+   worktrees."}}

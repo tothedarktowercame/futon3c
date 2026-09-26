@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>AIF ↔ Cascade Loop — LIVE (the loop that closed, 2026-07-02)</title>
+<style>
+  /* paper ground, family style (aif-wiring-explainer / pipeline-pattern-cascade) */
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--line:#ddd6c8;--paper:#f7f5ef;
+        --live:#0a8a6f;--live-bg:#e6faf4;--hold:#b8860b;--hold-bg:#fff5d6;
+        --debt:#8a2bbd;--debt-bg:#f3e8fb;--bad:#c62828;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:14px/1.5 "Iowan Old Style",Georgia,serif}
+  header{padding:16px 26px;border-bottom:2px solid var(--line);background:#fff}
+  h1{margin:0 0 4px;font-size:20px;font-family:ui-sans-serif,system-ui}
+  .sub{color:var(--mut);font-size:12.5px;font-family:ui-sans-serif,system-ui}
+  .prov{color:var(--live);font-weight:700}
+  nav{font:12.5px/1.6 ui-sans-serif,system-ui;color:#555;margin-top:6px}
+  nav a{color:#0e7490;font-weight:600}
+  main{max-width:1180px;margin:0 auto;padding:18px 26px 70px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:0 0 18px}
+  .panel h2{margin:0 0 8px;font-size:15px;font-family:ui-sans-serif,system-ui}
+  .panel .note{color:var(--mut);font-size:12.5px;font-family:ui-sans-serif,system-ui;margin:0 0 10px}
+  svg{width:100%;height:auto;display:block}
+  .stn rect{rx:9;ry:9;fill:#fff;stroke:#9a9a9a;stroke-width:1.4}
+  .stn.live rect{fill:var(--live-bg);stroke:var(--live)}
+  .stn.hold rect{fill:var(--hold-bg);stroke:var(--hold)}
+  .stn.debt rect{fill:var(--debt-bg);stroke:var(--debt);stroke-dasharray:5 3}
+  .stn text{font:11px ui-sans-serif,system-ui}
+  .stn .t{font-weight:700;font-size:11.5px}
+  .stn .r{fill:#2456a6;font-weight:700;font-size:9px}
+  .stn .v{fill:#333;font-size:9.5px}
+  .hub circle{fill:#f1e8fb;stroke:#6d3aa8;stroke-width:2.2}
+  .hub text{font:10px ui-sans-serif,system-ui;text-anchor:middle}
+  .edge{fill:none;stroke:#9a9a9a;stroke-width:1.6;marker-end:url(#arr)}
+  .edge.ret{stroke:var(--live);stroke-width:2.4;marker-end:url(#arrg)}
+  .edge.risk{stroke:#6d3aa8;stroke-width:1.5;stroke-dasharray:4 3;marker-end:url(#arrp)}
+  .elab{font:9.5px ui-sans-serif,system-ui;fill:#8a8a8a}
+  table{border-collapse:collapse;width:100%;font:12.5px ui-sans-serif,system-ui}
+  td,th{border-bottom:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+  th{color:var(--mut);font-weight:600}
+  code{background:#ece8dd;padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;font:600 11px ui-sans-serif,system-ui;margin:2px 5px 2px 0}
+  .c-live{background:var(--live-bg);color:var(--live)} .c-hold{background:var(--hold-bg);color:#8a5a00}
+  .c-debt{background:var(--debt-bg);color:var(--debt)} .c-bad{background:#fbe0e2;color:var(--bad)}
+  .strip{display:flex;gap:8px;flex-wrap:wrap;font-family:ui-sans-serif,system-ui}
+  .strip .step{flex:1 1 200px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .strip .step strong{display:block;font-size:12px;margin-bottom:3px}
+  .strip .step span{color:var(--mut);font-size:11.5px;display:block}
+  .strip .arrow{align-self:center;color:#9a8f7a;font-weight:700}
+  /* the prior — basin grid, predecessor style */
+  .basin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;font-family:ui-sans-serif,system-ui}
+  .basin{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px}
+  .basin .dots{margin:0 0 7px;line-height:2}
+  .pdot{display:inline-block;min-width:26px;text-align:center;padding:2px 5px;border-radius:10px;
+        background:#2f3b52;color:#fff;font:700 9.5px ui-sans-serif,system-ui;margin:0 3px 3px 0;cursor:default}
+  .pdot.minor{background:#aab4c6}
+  .basin .bt{font-weight:700;font-size:12.5px}
+  .basin .bm{color:var(--mut);font-size:11.5px;margin:2px 0}
+  .basin .bh{font-size:11px;color:var(--debt)}
+  .comm{margin-top:12px;font:12.5px ui-sans-serif,system-ui}
+  .foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .foot .panel{margin:0}
+  #offline{display:none;color:var(--bad);padding:14px;border:1px dashed var(--bad);border-radius:8px;background:#fff}
+  .muted{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>AIF ↔ Cascade Loop — <span style="color:var(--live)">LIVE</span> <span class="muted" style="font-weight:400;font-size:14px">· the loop that closed (2026-07-02)</span></h1>
+  <div class="sub"><span class="prov">Every station's status below is READ from the running stack</span> —
+    <code>/api/alpha/war-machine</code> (γ, gate verdicts, last enactment, cascade ΔF) ·
+    <code>/api/alpha/cascade-real</code> · <code>/api/alpha/aif-stack/live</code>. Nothing is asserted that
+    the stack doesn't currently report. <span id="asof" class="muted"></span></div>
+  <nav><b style="color:#6d3aa8">Explainer series:</b>
+    <a href="../../../futon2/holes/aif-wiring-explainer.html">AIF · theory (R1–R19 on a brain) ↗</a> ·
+    <a href="../../../futon2/holes/ct-wiring-explainer.html">CT / DarkTower · semantics ↗</a> ·
+    <a href="pipeline-pattern-cascade.html">cascade · the by-hand control sketch (this page's parent) ↗</a> ·
+    <a href="pipeline-pattern-cascade-live.html">cascade · LIVE ↗</a></nav>
+</header>
+<main>
+  <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server.</div>
+
+  <section class="panel" id="loop-panel" style="display:none">
+    <h2>The closed loop, with the belly at its centre</h2>
+    <p class="note">Forward sweep clockwise from the magnet; the <b style="color:var(--live)">green return
+      leg</b> (τ_eff = τ/γ) is what makes it a LOOP rather than a pipeline. The purple hub is R19 — the
+      preference organ whose predictive risk re-ranks every candidate the gate sees. Dashed purple
+      satellites are the named debts/frontiers: hollow on purpose, each with an owner — the by-hand
+      sketch's "hollow regions" discipline, kept.</p>
+    <svg id="loopsvg" viewBox="0 0 1120 560" role="img" aria-label="The AIF cascade loop, live"></svg>
+  </section>
+
+  <section class="panel" id="prior-panel" style="display:none">
+    <h2>The prior — the semilattice the loop walks on, empirically</h2>
+    <p class="note" id="prior-note"></p>
+    <div class="basin-grid" id="basins"></div>
+    <div class="comm" id="commissures"></div>
+  </section>
+
+  <section class="panel" id="flight-panel" style="display:none">
+    <h2>The latest flight row</h2>
+    <p class="note">One scheduled tick = one flight (hourly cron + manual runs). The trace persists exactly
+      what you see here — <code>:act-gate-verdicts</code> · <code>:enactment</code> ·
+      <code>:realized-outcome</code> · per-action <code>:G-goal-outcome</code> — and
+      <code>p4ng/sequel-notebook.org</code>'s paper is a map-reduce over these rows.</p>
+    <div id="flight"></div>
+  </section>
+
+  <section class="panel" id="frontier-panel" style="display:none">
+    <h2>Downward growth — the frontier, empirically (more than a backlog)</h2>
+    <p class="note">The parent sketch's downward panels said: <i>"holes mark where the cascade needs an
+      adviser, not a static roadmap."</i> A backlog counts absences; this panel measures the
+      <b>adviser-pressure</b> on them — how much mined (have→want) energy actually points into each hole,
+      what the loop is silently carrying, and what the stack's own reading says to do next. Where pressure
+      is ~zero the hollow is REAL: the model must grow (R17), not just execute.</p>
+    <div id="frontier"></div>
+  </section>
+
+  <section class="panel" id="gamma-panel" style="display:none">
+    <h2>γ — confidence that is earned, not hand-set</h2>
+    <div id="gamma"></div>
+  </section>
+
+  <section class="panel" id="learn-panel" style="display:none">
+    <h2>How the loop learns (the induction strip)</h2>
+    <div class="strip" id="strip"></div>
+    <div style="margin-top:10px;font:12.5px ui-sans-serif,system-ui" id="knobs"></div>
+  </section>
+
+  <div class="foot">
+    <section class="panel">
+      <h2>Why this shape</h2>
+      <p class="note" style="margin:0">The parent sketch grew basins upward from <i>attested</i> nodes and
+      marked what was missing as hollow, not as promised. This page applies the same discipline to the
+      loop: stations are green only because the stack currently reports them working; the hollows carry
+      owners instead of apologies. The loop's claim — observe → infer → select → act → observe the
+      consequence → update — closed live on 2026-07-02 (first act-gate <code>:pass</code> via an escrowed
+      impl-#2 fold turn; first numeric realized outcome via the classical fold's executor twin; γ crossed
+      its 5-sample burn-in the same day). Contract: <code>futon2/docs/futon-aif-completeness.md</code> v0.22.</p>
+    </section>
+    <section class="panel">
+      <h2>Data sources &amp; lineage</h2>
+      <p class="note" style="margin:0"><code>r14-gamma</code> block (live trace read; retired-schema guard on),
+      <code>judgement.cascade-policies</code> (ΔF per served mission), <code>cascade-real</code> (the
+      O-dimension census), <code>aif-stack/live</code> (scheduler + reading). Enactor:
+      <code>futon2.aif.enact</code> in the scheduled runner — the serving JVM only <i>reads</i>.
+      Lineage: <a href="pipeline-pattern-cascade.html">pipeline-pattern-cascade.html</a> (by hand) →
+      this page (read from the stack). Where a value is missing the page shows “—”, never a guess.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  var BASE="http://localhost:7070";
+  function esc(s){return String(s==null?"":s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+  function el(id){return document.getElementById(id);}
+  function j(u){return fetch(BASE+u).then(function(r){return r.json();}).catch(function(){return null;});}
+  function num(x,d){return (typeof x==="number")?x.toFixed(d==null?3:d):"—";}
+  var SVGNS="http://www.w3.org/2000/svg";
+  function sv(t,a){var e=document.createElementNS(SVGNS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+
+  function stationData(wm,cas){
+    var g=(wm&&wm["r14-gamma"])||{};
+    var verdicts=g["act-gate-verdicts"]||[];
+    var en=g["last-enactment"]||null;
+    var ro=g["last-realized-outcome"]||null;
+    var cps=((wm||{}).judgement||{})["cascade-policies"]||[];
+    var passN=verdicts.filter(function(v){return v.verdict==="pass";}).length;
+    var bestF=cps.length?Math.max.apply(null,cps.map(function(c){return c["F-free-energy"]||-9;})):null;
+    var dims=(cas&&cas.dimensions)||{};
+    return {g:g,verdicts:verdicts,en:en,ro:ro,cps:cps,passN:passN,bestF:bestF,dims:dims,
+            live:!!g["live-wire?"],samples:g["policy-outcome-samples"]||0};
+  }
+
+  function renderLoop(d){
+    var svg=el("loopsvg");
+    var defs=sv("defs",{});
+    [["arr","#9a9a9a"],["arrg","#0a8a6f"],["arrp","#6d3aa8"]].forEach(function(m){
+      var mk=sv("marker",{id:m[0],markerWidth:9,markerHeight:9,refX:7,refY:3,orient:"auto",markerUnits:"strokeWidth"});
+      mk.appendChild(sv("path",{d:"M0,0 L7,3 L0,6 Z",fill:m[1]}));defs.appendChild(mk);});
+    svg.appendChild(defs);
+    var cx=470,cy=280,rx=380,ry=195;
+    // stations clockwise from left; status derived from live data
+    var S=[
+      {t:"Magnet ψ",r:"have→want · Q-C",v:"doc-derived (want=title, have=Status)",cls:"live",st:"✓ live"},
+      {t:"Cascade",r:"generative input · ΔF",v:(d.cps.length? d.cps.map(function(c){return esc(c.mission.replace(/^M-/,""))+" F="+num(c["F-free-energy"],2);}).join(" · "):"—"),cls:(d.bestF!=null&&d.bestF>0?"live":"hold"),st:(d.bestF!=null&&d.bestF>0?"✓ rich enough to pass":"◑ thin this tick")},
+      {t:"Fold → ΔG",r:"R16 · impl #1/#2",v:"rollout → classical → escrow ("+esc((d.verdicts[0]||{})["delta-G-source"]||"—")+" this tick)",cls:"live",st:"✓ live (three ΔG sources)"},
+      {t:"Act-gate",r:"ΔF>0 ∧ ΔG<0",v:d.verdicts.map(function(v){return esc(v.mission.replace(/^M-/,""))+": "+esc(v.verdict);}).join(" · ")||"—",cls:(d.passN>0?"live":"hold"),st:(d.passN>0?("✓ "+d.passN+" pass this tick"):"◑ no pass this tick (honest)")},
+      {t:"Enact",r:"executor · artifact-only",v:(d.en?esc(d.en.mission)+" · boxes "+d.en.boxes+" / holes "+d.en["policy-holes"]:"—"),cls:(d.live?"live":"hold"),st:(d.live?"✓ live-wired (WM-I4 firing stays operator)":"⏸ staged")},
+      {t:":realized-outcome",r:"R16→R14 contract",v:(d.ro?("expected "+num(d.ro["expected-G"],2)+" · realized "+num(d.ro["realized-G"],2)):"—"),cls:(d.ro?"live":"hold"),st:(d.ro?"✓ flowing (coverage vs coverage)":"— none yet this window")},
+      {t:"γ  (R14)",r:"precision over policies",v:"γ="+num(d.g.gamma,2)+" · "+d.samples+" samples · mean-perf "+num(d.g["mean-perf"],2),cls:(d.samples>0?"live":"hold"),st:(d.samples>=(d.g["burn-in-threshold"]||5)?"✓ burn-in met — EARNED":"◑ accruing")},
+      {t:"τ_eff = τ / γ",r:"the return leg",v:(d.g.gamma===1?"γ=1 ⇒ τ unchanged (earned neutral)":"selection sharpness modulated"),cls:"live",st:"✓ closes the ring"}
+    ];
+    var N=S.length;
+    var pos=S.map(function(_,i){var a=Math.PI+ (2*Math.PI*i/N); // start at left, clockwise
+      return [cx+rx*Math.cos(a), cy+ry*Math.sin(a)];});
+    // edges around the ring (last edge = the return leg, green)
+    for(var i=0;i<N;i++){
+      var a=pos[i], b=pos[(i+1)%N];
+      var mx=(a[0]+b[0])/2 + (cx-(a[0]+b[0])/2)*-0.18, my=(a[1]+b[1])/2 + (cy-(a[1]+b[1])/2)*-0.18;
+      var p=sv("path",{class:"edge"+(i===N-1?" ret":""),d:"M"+a[0]+","+a[1]+" Q"+mx+","+my+" "+b[0]+","+b[1]});
+      svg.appendChild(p);
+    }
+    // hub: the belly
+    var hub=sv("g",{class:"hub"});
+    hub.appendChild(sv("circle",{cx:cx,cy:cy,r:64}));
+    ["R19 · the belly 🧘","~455 live preferences","predictive risk re-ranks","per action (25 distinct","G-goal-outcome last tick)"].forEach(function(l,i){
+      var t=sv("text",{x:cx,y:cy-26+i*13});t.textContent=l;if(i===0)t.setAttribute("font-weight","700");hub.appendChild(t);});
+    svg.appendChild(hub);
+    // risk edge hub → act-gate + hub → cascade (purple dashed)
+    [3,1].forEach(function(i){
+      svg.appendChild(sv("path",{class:"edge risk",d:"M"+cx+","+(cy-64)+" Q"+((cx+pos[i][0])/2)+","+((cy+pos[i][1])/2-40)+" "+pos[i][0]+","+(pos[i][1]+24)}));});
+    var rl=sv("text",{class:"elab",x:cx,y:cy-74,"text-anchor":"middle"});rl.textContent="risk ← goals (WANT→G, flowing)";svg.appendChild(rl);
+    // stations
+    S.forEach(function(s,i){
+      var x=pos[i][0],y=pos[i][1],w=196,h=64;
+      var gn=sv("g",{class:"stn "+s.cls});
+      gn.appendChild(sv("rect",{x:x-w/2,y:y-h/2,width:w,height:h}));
+      var t1=sv("text",{x:x-w/2+9,y:y-h/2+15});t1.setAttribute("class","r");t1.textContent=s.r;gn.appendChild(t1);
+      var t2=sv("text",{x:x-w/2+9,y:y-h/2+29});t2.setAttribute("class","t");t2.textContent=s.t;gn.appendChild(t2);
+      var t3=sv("text",{x:x-w/2+9,y:y-h/2+43});t3.setAttribute("class","v");t3.textContent=(s.v.length>34?s.v.slice(0,33)+"…":s.v).replace(/&amp;/g,"&");gn.appendChild(t3);
+      var t4=sv("text",{x:x-w/2+9,y:y-h/2+57});t4.setAttribute("class","v");t4.textContent=s.st;gn.appendChild(t4);
+      var title=sv("title",{});title.textContent=s.t+" — "+s.v+" — "+s.st;gn.appendChild(title);
+      svg.appendChild(gn);
+    });
+    // hollow satellites (the named debts) — dashed, with owners
+    var H=[
+      {t:"executor reach",v:"~10 rules · owner: claude-3 pilot",x:150,y:60},
+      {t:"supply corpus",v:"E-wiring-diagram-corpus (escrow turns = pairs)",x:940,y:60},
+      {t:"impl #3 / GFN",v:"Upgrades shelf — fix reward before compute",x:940,y:505}
+    ];
+    H.forEach(function(hn){
+      var gn=sv("g",{class:"stn debt"});
+      gn.appendChild(sv("rect",{x:hn.x-95,y:hn.y-26,width:190,height:52}));
+      var t1=sv("text",{x:hn.x-86,y:hn.y-8});t1.setAttribute("class","t");t1.textContent="hollow · "+hn.t;gn.appendChild(t1);
+      var t2=sv("text",{x:hn.x-86,y:hn.y+8});t2.setAttribute("class","v");t2.textContent=hn.v;gn.appendChild(t2);
+      svg.appendChild(gn);
+    });
+    el("loop-panel").style.display="";
+  }
+
+  function renderFlight(d){
+    var rows=d.verdicts.map(function(v){
+      var chip=v.verdict==="pass"?"c-live":(v.verdict==="fail"?"c-bad":"c-hold");
+      return "<tr><td><code>"+esc(v.mission)+"</code></td><td><span class='chip "+chip+"'>"+esc(v.verdict)+"</span></td>"+
+        "<td>"+num(v["delta-F"],3)+"</td><td>"+num(v["delta-G"],3)+"</td><td>"+esc(v["delta-G-source"]||"—")+"</td></tr>";
+    }).join("");
+    var en=d.en, ro=d.ro;
+    el("flight").innerHTML=
+      "<table><tr><th>mission</th><th>verdict</th><th>ΔF</th><th>ΔG</th><th>ΔG source</th></tr>"+rows+"</table>"+
+      (en?("<p style='font:12.5px ui-sans-serif,system-ui;margin:10px 0 0'><b>Enacted:</b> <code>"+esc(en.mission)+"</code>"+
+        " via "+esc(en.source)+" (predicted-via "+esc(en["predicted-via"]||"—")+") — executor reproduced <b>"+en.boxes+
+        " boxes / "+en["policy-holes"]+" holes</b>"+
+        (ro?(" ⇒ <b>expected "+num(ro["expected-G"],2)+" vs realized "+num(ro["realized-G"],2)+"</b>"+
+          (typeof ro["realized-G"]==="number"?" — a real calibration sample for γ":" — realized nil ⇒ γ holds (honest no-op)")):"")+
+        ".</p>"):"<p class='note'>No enactment in the latest record.</p>");
+    el("flight-panel").style.display="";
+  }
+
+  function renderGamma(d){
+    var g=d.g, met=d.samples>=(g["burn-in-threshold"]||5);
+    el("gamma").innerHTML=
+      "<div style='font:13px ui-sans-serif,system-ui'>"+
+      "<span class='chip "+(met?"c-live":"c-hold")+"'>γ = "+num(g.gamma,3)+(met?" — EARNED (posterior)":" — accruing")+"</span>"+
+      "<span class='chip'>"+d.samples+" realized samples</span>"+
+      "<span class='chip'>mean-perf "+num(g["mean-perf"],3)+"</span>"+
+      "<span class='chip'>bounds ["+((g.bounds||[])+"").replace(",",", ")+"]</span>"+
+      "<span class='chip "+(d.live?"c-live":"c-hold")+"'>live-wire "+(d.live?"ON":"off")+"</span>"+
+      "<p class='note' style='margin:8px 0 0'>γ = 1.0 with samples is a different epistemic object than γ = 1.0 without:"+
+      " the first is <i>earned</i> (every enacted plan realized exactly as predicted so far), the second was the held prior."+
+      " What moves γ off 1.0 is outcome <b>variance</b> — the R14 closure criterion (contract v0.22):"+
+      " <code>γ ≠ 1.0 in a live trace record, traceable to a non-zero perf sample</code>. That workstream rides the mining"+
+      " pilot (executor reach ⇒ diverse realized-G). The two γ-integrity guards found+fixed 2026-07-02 — the retired-schema"+
+      " 0.5-pin and the rollout-scale expected leg — are both active.</p></div>";
+    el("gamma-panel").style.display="";
+  }
+
+  function renderStrip(d){
+    var steps=[
+      ["1. The gate passes","ΔF>0 (the cascade's Bayesian-Occam accept) ∧ ΔG<0 (a fold's construction descends EFE). Both legs live; abstain/fail are recorded verdicts, not silence."],
+      ["2. The executor reproduces","enactment is artifact-only: the deterministic engine rebuilds what it can of the predicted construction. realized-G = ITS coverage — never the prediction echoed back."],
+      ["3. γ folds the outcome","expected vs realized (coverage vs coverage — scale-pinned at the contract), tick-deduped, 5-sample burn-in. Perf > 0 ⇒ commit; < 0 ⇒ hedge."],
+      ["4. τ_eff re-weights selection","τ_eff = τ/γ sharpens or flattens the next softmax — the model's confidence shapes the very cascade flow that feeds it. The ring closes."]
+    ];
+    el("strip").innerHTML=steps.map(function(s,i){
+      return "<div class='step'><strong>"+esc(s[0])+"</strong><span>"+esc(s[1])+"</span></div>"+(i<steps.length-1?"<div class='arrow'>→</div>":"");
+    }).join("");
+    el("knobs").innerHTML="<b>The two growth knobs</b> (they set how OFTEN the ring turns, not whether it can): "+
+      "<span class='chip c-live'>cascade richness — the Q-C have→want ψ (more missions with ΔF>0)</span>"+
+      "<span class='chip c-debt'>executor reach — rule-table growth (more passes with numeric realized-G)</span>"+
+      "<span class='note' style='display:block;margin-top:6px'>Both are owned: ψ shipped 2026-07-02 (futon2 ecf2a37); reach rides claude-3's mining pilot → the proof-mine GPU runner (futon6/holes/proof-mine-runner-spec.md).</span>";
+    el("learn-panel").style.display="";
+  }
+
+  function initials(pid){
+    var tail=pid.split("/").pop();
+    return tail.split(/[-_]/).map(function(w){return (w[0]||"").toUpperCase();}).join("").slice(0,3);
+  }
+  function renderPrior(graph){
+    if(!graph||!graph.clusters||!graph.patterns){return;}
+    var edges=graph.patterns.edges||[];
+    var m2c={};(graph.clusters||[]).forEach(function(c){m2c[c.mission]=c.cluster;});
+    var holesBy={};(graph.holes||[]).forEach(function(h){var cl=m2c[h.target];if(cl)holesBy[cl]=(holesBy[cl]||0)+1;});
+    // per-cluster pattern tallies: applied edges weigh 1, candidates weigh their cosine
+    var basins={},missionsBy={},patSpread={};
+    edges.forEach(function(e){
+      var cl=m2c[e.mission];if(!cl)return;
+      basins[cl]=basins[cl]||{};missionsBy[cl]=missionsBy[cl]||{};
+      missionsBy[cl][e.mission]=true;
+      var w=(e.relation==="applied")?1.0:(e.cos||0.3)*0.5;
+      var b=basins[cl][e.pattern]=basins[cl][e.pattern]||{w:0,applied:0};
+      b.w+=w; if(e.relation==="applied")b.applied++;
+      (patSpread[e.pattern]=patSpread[e.pattern]||{}) [cl]=true;
+    });
+    var names=Object.keys(basins).sort(function(a,b){
+      return Object.keys(missionsBy[b]).length-Object.keys(missionsBy[a]).length;});
+    var nApplied=edges.filter(function(e){return e.relation==="applied";}).length;
+    var nMiss=Object.keys(edges.reduce(function(a,e){a[e.mission]=1;return a;},{})).length;
+    var nPat=Object.keys(patSpread).length;
+    el("prior-note").innerHTML="The parent sketch hand-drew mission basins with their cited patterns above. "+
+      "This is the same drawing READ from substrate-2's cascade-real graph: <b>"+names.length+" clusters · "+
+      nMiss+" missions · "+nPat+" patterns · "+edges.length+" mission→pattern links ("+nApplied+" applied · "+
+      (edges.length-nApplied)+" candidate)</b> — reconstructed from historical mining, honestly NOT PSR/PUR "+
+      "(the graph's own note). In AIF terms this IS the prior: the magnet condenses each fresh cascade from "+
+      "this accumulated human+agent structure, and every flight row below is a posterior step taken on it. "+
+      "<b>Solid dots</b> = applied citations · <span style='color:#aab4c6;font-weight:700'>faded</span> = "+
+      "embedding candidates · purple = holes carried by the basin (hollow, per the parent's discipline).";
+    el("basins").innerHTML=names.map(function(cl){
+      var pats=Object.keys(basins[cl]).map(function(p){return {p:p,w:basins[cl][p].w,a:basins[cl][p].applied};})
+        .sort(function(x,y){return y.w-x.w;}).slice(0,6);
+      var nm=Object.keys(missionsBy[cl]).length;
+      var ex=Object.keys(missionsBy[cl]).slice(0,3).map(function(m){return m.split("/").pop();}).join(", ");
+      return "<section class='basin'>"+
+        "<div class='dots'>"+pats.map(function(x){
+          return "<span class='pdot"+(x.a>0?"":" minor")+"' title='"+esc(x.p)+" · weight "+x.w.toFixed(1)+
+                 (x.a?" · "+x.a+" applied":" · candidate-only")+"'>"+esc(initials(x.p))+"</span>";}).join("")+"</div>"+
+        "<div class='bt'>"+esc(cl.split("/").pop())+"</div>"+
+        "<div class='bm'>"+nm+" missions · "+Object.keys(basins[cl]).length+" patterns in reach</div>"+
+        "<div class='bm'>e.g. "+esc(ex)+"</div>"+
+        (holesBy[cl]?"<div class='bh'>◌ "+holesBy[cl]+" holes carried</div>":"")+
+        "</section>";}).join("");
+    var comm=Object.keys(patSpread).map(function(p){return {p:p,n:Object.keys(patSpread[p]).length};})
+      .filter(function(x){return x.n>=4;}).sort(function(a,b){return b.n-a.n;}).slice(0,8);
+    el("commissures").innerHTML="<b>Commissures</b> — patterns spanning ≥4 basins (the OVERLAP that makes this a "+
+      "semilattice, not a tree — Alexander's point, now measurable): "+
+      comm.map(function(x){return "<span class='chip'>"+esc(x.p)+" · "+x.n+" basins</span>";}).join("");
+    el("prior-panel").style.display="";
+  }
+
+  function renderFrontier(graph,aif){
+    if(!graph){return;}
+    var holes=graph.holes||[],arrows=graph.arrows||[],held=graph.held||[];
+    var m2c={};(graph.clusters||[]).forEach(function(c){m2c[c.mission]=c.cluster;});
+    var kinds={};holes.forEach(function(h){kinds[h.kind]=(kinds[h.kind]||0)+1;});
+    var kindNames=Object.keys(kinds).sort(function(a,b){return kinds[b]-kinds[a];});
+    // adviser pressure: mined arrows whose WANT is a holed mission
+    var holedBy={};holes.forEach(function(h){holedBy[h.target]=(holedBy[h.target]||0)+1;});
+    var inbound={};arrows.forEach(function(a){
+      if(holedBy[a.want]){(inbound[a.want]=inbound[a.want]||[]).push(a["delta-g"]);}});
+    var nIn=Object.keys(inbound).reduce(function(s,k){return s+inbound[k].length;},0);
+    var tops=Object.keys(holedBy).map(function(m){return {m:m,n:holedBy[m],arr:(inbound[m]||[]).length,
+        best:(inbound[m]&&inbound[m].length)?Math.min.apply(null,inbound[m]):null};})
+      .sort(function(a,b){return b.n-a.n;}).slice(0,8);
+    var heldBy={};held.forEach(function(h){var cl=m2c[h.mission]||"(unclustered)";heldBy[cl]=(heldBy[cl]||0)+1;});
+    var heldTop=Object.keys(heldBy).sort(function(a,b){return heldBy[b]-heldBy[a];}).slice(0,5);
+    var reg={};held.forEach(function(h){reg[h.registry]=(reg[h.registry]||0)+1;});
+    var nm=((aif||{}).reading||{})["next-move"]||{};
+    el("frontier").innerHTML=
+      "<div style='font:13px ui-sans-serif,system-ui;margin-bottom:8px'>"+
+      "<span class='chip c-debt'>"+holes.length+" typed holes · "+kindNames.length+" kind"+(kindNames.length>1?"s":"")+
+        " ("+kindNames.map(function(k){return esc(k)+" ×"+kinds[k];}).join(", ")+")</span>"+
+      "<span class='chip "+(nIn>20?"c-live":"c-hold")+"'>adviser pressure: "+nIn+" of "+arrows.length+
+        " mined arrows point at ANY holed mission</span>"+
+      "<span class='chip'>"+held.length+" held items ("+Object.keys(reg).map(function(k){return esc(k)+" ×"+reg[k];}).join(", ")+")</span></div>"+
+      "<table><tr><th>most-holed mission</th><th>holes</th><th>inbound mined arrows</th><th>best ΔG</th><th>reading</th></tr>"+
+      tops.map(function(t){
+        var starved=t.arr===0;
+        return "<tr><td><code>"+esc(t.m.split("/").pop())+"</code> <span class='muted'>"+esc((m2c[t.m]||"").split("/").pop()||"")+"</span></td>"+
+        "<td>"+t.n+"</td><td>"+(starved?"<span class='chip c-debt'>0 — truly hollow</span>":t.arr)+"</td>"+
+        "<td>"+(t.best==null?"—":num(t.best,4))+"</td>"+
+        "<td class='muted'>"+(starved?"needs GROWTH (R17) — no mined move reaches it":"dischargeable — mined energy exists, ΔG "+(t.best>-0.01?"weak":"real"))+"</td></tr>";}).join("")+"</table>"+
+      "<p class='note' style='margin:10px 0 0'><b>The measured statement a backlog can't make:</b> "+
+      nIn+"/"+arrows.length+" mined arrows reach any holed mission"+
+      (nIn<arrows.length/5?" — the frontier is UNDER-ADVISED: most mined energy points elsewhere, and the holes need model growth (new patterns / new scans — R17, E-library-coverage), not scheduling":"")+
+      ". Held work concentrates in "+heldTop.map(function(k){return esc(k.split("/").pop())+" ("+heldBy[k]+")";}).join(", ")+
+      ".</p>"+
+      (nm.close?("<p style='font:12.5px ui-sans-serif,system-ui;margin:8px 0 0'><b>The stack's own reading of the next move:</b> close <code>"+
+        esc(nm.close)+"</code> — "+esc(nm.specifically||"")+
+        " <span class='muted'>("+esc(nm.rationale||"")+")</span></p>"):"");
+    el("frontier-panel").style.display="";
+  }
+
+  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/cascade-real"),j("/api/alpha/cascade-real/graph"),j("/api/alpha/aif-stack/live")])
+  .then(function(r){
+    var wm=r[0],cas=r[1],graph=r[2],aif=r[3];
+    if(!wm){el("offline").style.display="block";return;}
+    el("asof").textContent=" · as of "+new Date().toLocaleString();
+    var d=stationData(wm,cas);
+    renderLoop(d);
+    renderPrior(graph);
+    renderFlight(d);
+    renderFrontier(graph,aif);
+    renderGamma(d);
+    renderStrip(d);
+  });
+})();
+</script>
+</body>
+</html>

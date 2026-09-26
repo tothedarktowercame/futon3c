@@ -4,7 +4,8 @@
    The operator bulletin reads `data/wm/needs-you.edn` as a vector of items.
    The pilot loop rewrites the whole vector each guarded cycle; removing an
    item from the vector clears it from the bulletin."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.pprint :as pprint]
             [clojure.string :as str]
             [futon3c.wm.guardrails :as guardrails]))
@@ -56,7 +57,7 @@
   (or (get-in dT-entry [:action :repo])
       (when (string? path)
         (first (str/split path #"/")))
-      (when-let [target (action-target dT-entry)]
+      (let [target (action-target dT-entry)]
         (when (string? target)
           (first (str/split target #"/"))))))
 
@@ -137,6 +138,40 @@
              :run-id run-id}
       warrant (assoc :pattern-warrant warrant))))
 
+(defn proctor-finding->needs-you-item
+  "Adapt one human-classified APM proctor finding for the operator bulletin.
+
+  The proctor supplies `:finding/compromised?`; this function does not replace
+  the frozen human classification rubric. Every finding is surfaced."
+  [{:finding/keys [id cycle-id summary compromised?] :as finding}]
+  (when-not (and id cycle-id (string? summary) (not (str/blank? summary))
+                 (boolean? compromised?))
+    (throw (ex-info "malformed proctor finding" {:finding finding})))
+  {:id (str "apm-proctor-" (stable-token cycle-id) "-" (stable-token id))
+   :title (str "APM proctor: " summary)
+   :why summary
+   :unblock-action (if compromised?
+                     "Review the compromised cycle before using its result."
+                     "Review the proctor witness in the operator bulletin.")
+   ;; Pre-laning is deliberate: operator-lane's :acknowledged? input is not
+   ;; wired in production, so its classifier cannot currently produce :nag.
+   ;; Do not route this through classify-item until acknowledgement persistence
+   ;; exists; pre-laning is the working operator path, not a preference.
+   :lane (if compromised? :nag :brief)
+   :source :apm-proctor
+   :target cycle-id
+   :salience (if compromised? 1.0 0.0)
+   :repo "futon3c"
+   ;; A compromised cycle outranks EVERY routine item, mirroring the overflow
+   ;; advisory's Double/MAX_VALUE at the other end of the same scale. At -1.0 it
+   ;; lost to ten ordinary WM items at -5.0 and fell into the overflow, so the
+   ;; operator would have seen "10 more items" instead of the compromise. This
+   ;; is not priority inflation: when a cycle is compromised, every other item
+   ;; on the board concerns work whose results may now be invalid.
+   :g-total (if compromised? (- Double/MAX_VALUE) 0.0)
+   :emitted-at (now-iso)
+   :proctor/finding finding})
+
 (defn- dedupe-last-wins [items]
   (->> items
        (filter map?)
@@ -195,3 +230,26 @@
       :deduped-count (count (dedupe-last-wins items))
       :capped? (> (count (dedupe-last-wins items)) (long top-k))
       :items out})))
+
+(defn emit-proctor-finding!
+  "Add one proctor finding to the current needs-you vector without dropping
+  unrelated operator work. Last finding wins when its stable id repeats."
+  ([finding] (emit-proctor-finding! finding {}))
+  ([finding {:keys [path top-k]
+             :or {top-k default-top-k}}]
+   (let [path (or path *needs-you-path*)
+         file (io/file path)
+         ;; An unreadable board is NOT an empty board. Defaulting to [] here
+         ;; would rewrite the file with only this finding, silently deleting
+         ;; every unrelated operator item -- verified: a truncated file left
+         ;; exactly one surviving id. Losing one emission loudly beats losing
+         ;; the operator's whole board quietly; the proctor also reports direct.
+         current (if (.exists file)
+                   (try (vec (edn/read-string (slurp file)))
+                        (catch Throwable t
+                          (throw (ex-info "refusing to emit over an unreadable needs-you board"
+                                          {:path path :cause (.getMessage t)}))))
+                   [])]
+     (emit-needs-you! (conj (vec (filter map? current))
+                            (proctor-finding->needs-you-item finding))
+                      {:path path :top-k top-k}))))

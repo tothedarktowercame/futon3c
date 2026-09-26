@@ -1,0 +1,38 @@
+{
+  "example_id": "smoking-tar-cancer-frontdoor",
+  "title": "Smoking, tar, and cancer front-door model",
+  "topology_basis": "printed_diagram",
+  "content": "An unobserved Smoking Gene confounds Smoking and Cancer, while Tar is a shielded mediator carrying every directed effect of Smoking on Cancer. Tar therefore satisfies the front-door criterion.",
+  "variables": [
+    {"key": "g", "name": "Smoking Gene", "content": "The unobserved common cause of Smoking and Cancer.", "observed": false},
+    {"key": "s", "name": "Smoking", "content": "The treatment whose causal effect on Cancer is sought."},
+    {"key": "t", "name": "Tar", "content": "The shielded mediator between Smoking and Cancer."},
+    {"key": "c", "name": "Cancer", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "g", "target": "s", "because": "Figure 7.1 makes the Smoking Gene a cause of Smoking."},
+    {"source": "g", "target": "c", "because": "Figure 7.1 makes the Smoking Gene a cause of Cancer."},
+    {"source": "s", "target": "t", "because": "Smoking physically causes Tar deposits."},
+    {"source": "t", "target": "c", "because": "The example assumes Smoking causes Cancer only through Tar."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:99ca3d653632b5ea",
+    "ta-book-of-why-2018:e980f8ae9866551f",
+    "ta-book-of-why-2018:ec0960c559501344",
+    "ta-book-of-why-2018:78053f6904f28bdc",
+    "ta-book-of-why-2018:4c03a862b5f52512",
+    "ta-book-of-why-2018:003315092866effa",
+    "ta-book-of-why-2018:3ba71efde6047ea4",
+    "ta-book-of-why-2018:c8b4d52bc8a507d0",
+    "ta-book-of-why-2018:25c26ad4f99faec8",
+    "ta-book-of-why-2018:91abafa635a7ab27",
+    "ta-book-of-why-2018:a8db4ca6cba537a6",
+    "ta-book-of-why-2018:6cc611aff51ad365",
+    "ta-book-of-why-2018:ad5ae0dd7fbfcee1"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0237",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0238",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0248"
+  ]
+}

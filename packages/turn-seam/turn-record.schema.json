@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://futon.example/turn-seam/turn-record-1.json",
+  "title": "Operator turn record, version 1",
+  "description": "What one operator turn IS, independent of who produced it and who reads it. Derived from 159 records produced by the Emacs implementation and checked against all of them; not designed from one consumer's needs. A second implementation conforms to this rather than to the first implementation.",
+  "type": "object",
+  "required": ["version", "source_text", "offset_unit", "sentences", "unmatched",
+               "created_at", "agent_id", "session_id", "turn_id"],
+  "properties": {
+    "version": {"const": 1},
+
+    "source_text": {
+      "type": "string",
+      "description": "The text every offset in this record indexes. NOT necessarily what the operator typed: if the turn carried quoted material, source_text is the text with each quoted block replaced by the token QUOTE, and original_text holds what was typed. Both are kept because a turn has two readers who need different things -- an interpreter must not mistake quoted words for the operator's own, and a display must show what was on screen. Designing this field around either reader alone is the mistake this seam was built after."
+    },
+    "original_text": {
+      "type": "string",
+      "description": "What the operator actually typed, present when it differs from source_text."
+    },
+    "quotes": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "The elided blocks, in the order their QUOTE tokens appear in source_text."
+    },
+
+    "offset_unit": {
+      "const": "unicode-codepoints-zero-based-end-exclusive",
+      "description": "Stated rather than assumed. A UTF-16 client (JavaScript) and a codepoint client (Python, Emacs) disagree on any turn containing an emoji or CJK, and the disagreement is silent. Convert at your boundary; do not change this constant."
+    },
+
+    "sentences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "start", "end", "text", "status", "cues"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^s[0-9]+$"},
+          "start": {"type": "integer", "minimum": 0},
+          "end": {"type": "integer", "minimum": 1},
+          "text": {"type": "string",
+                   "description": "Must equal source_text[start:end]. This is the conformance test that matters: an implementation whose splitter disagrees will fail here rather than silently produce misaligned annotations."},
+          "status": {"enum": ["unresolved", "cue-only", "analyzed"]},
+          "cues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["start", "end", "label", "text", "method"],
+              "properties": {
+                "start": {"type": "integer"}, "end": {"type": "integer"},
+                "label": {"type": "string"},
+                "text": {"type": "string"},
+                "method": {"type": "string",
+                           "description": "How this cue was found, e.g. literal-phrase. Recorded so a later reader can tell a matched convention from a judgement."}
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "unmatched": {
+      "type": "array",
+      "description": "Sentences carrying no cue. Kept as an explicit list rather than inferred, so 'nothing matched' is distinguishable from 'nothing ran'."
+    },
+
+    "created_at": {"type": "string", "format": "date-time"},
+    "agent_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "turn_id": {"type": "string"},
+    "surface": {"type": "string",
+                "description": "Where the turn arrived from: typed, dictated, relayed. Absent in records written before the field existed."},
+
+    "analysis_status": {
+      "enum": ["requested", "analyzed", "refused", "failed"],
+      "description": "requested means dispatched and not yet answered. refused and failed are distinct from requested on purpose: a delegate that declined and a delegate that is busy left the same state until 2026-09-24, and 152 records accumulated with no reason attached to any of them."
+    },
+    "analysis_file": {"type": "string"},
+    "analysis_dispatch": {
+      "type": "object",
+      "description": "The job the dispatch created, so the outcome can be traced. A fire-and-forget caller that does not record this cannot tell a refusal from a busy seat.",
+      "properties": {"job_id": {"type": "string"}, "outcome": {"type": "object"}}
+    },
+    "tagging_failed": {"type": "boolean"}
+  }
+}

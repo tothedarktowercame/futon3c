@@ -11,6 +11,14 @@ source "${script_dir}/emacs-socket-lib.sh"
 # All role-specific knowledge is baked in. Override env vars only if
 # you know what you're doing.
 
+# --- JVM sizing (host-specific) ---
+# Left unset on purpose: the Makefile default (1536m/640m) is the 3.8G Linode's
+# ceiling, so it is safe anywhere, just small for a laptop with real RAM. Set
+# these to this machine's numbers — they live here, in this host's own file, so
+# raising them never conflicts with lucy's constraint on pull.
+# export FUTON3C_HEAP=3g
+# export FUTON3C_DIRECT=1g
+
 # --- Role & network ---
 # Force the role (not ${FUTON3C_ROLE:-laptop}): this launcher's whole job is the
 # laptop profile, and the `:-` default silently deferred to a stale FUTON3C_ROLE
@@ -45,6 +53,16 @@ export FUTON3C_KANGAROO_MONSTER_ALLOWLIST="${FUTON3C_KANGAROO_MONSTER_ALLOWLIST:
 # Validated by futon3c.agency.drainer-model-test. Activated 2026-06-10. Set "false"
 # to revert to the legacy invoke path (byte-for-byte). Takes effect on restart.
 export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
+# Pouch demultiplexer + unsolicited-turn routing (D6, E-unsolicited-pouch-turns).
+# One always-reading thread per pouch owns stdout for the process's life; feed-turn!
+# enqueues a waiter and gets ITS OWN turn's result, so drain-pending! is skipped
+# entirely on this path. A turn opening after a task_notification belongs to no
+# waiter and is routed to the REPL buffer marked "[AGENT-INITIATED - NOT A REPLY]"
+# instead of being discarded. WHY: on 2026-08-05 two claude-14 replies to Joe were
+# destroyed this way -- `[pouch] claude-14 drained 39 stale line(s) before turn`.
+# Enabled 2026-08-05 at Joe's request. Set "false" to revert to the legacy
+# synchronous read (byte-for-byte unchanged). Takes effect on restart.
+export FUTON3C_POUCH_DEMUX="${FUTON3C_POUCH_DEMUX:-true}"
 # Desktop Save Mode (M-agency-hardening W5): the registry roster is persisted to
 # disk continuously (always-on); this flag turns on RESTORE-on-boot, so a JVM
 # shutdown+restart brings the same agents back registered — and warm, since
@@ -57,6 +75,14 @@ export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
 # logic model TB-1..7 PASS. Activated 2026-06-11 for live ArSE-usage monitoring. Set
 # "false" to revert. Watch-item once live: holes/tickets/T-typed-bell-arse-write-async.md.
 export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Parked-on continuations (README-park.md, E-repl-continuations): agents park a
+# REPL turn on dispatched agency job-ids and are resumed in-buffer when the join
+# completes — the only reliable cross-turn wait on the emacs-repl surface (harness
+# background tasks don't survive pouch teardown). Engine is unit-tested (5 VERIFY
+# cases); flag-gated OFF upstream, defaulted ON here 2026-07-05 (Joe, via
+# claude-18 session). Boot runs rehydrate! + the 30s deadline sweeper. Set
+# "false" to revert.
+export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-true}"
 # Invoke-executor lanes: shared pool for agent invocations. Bumped 4 -> 8
 # (2026-06-12) now that drainer-v2 keeps bell turns off these lanes, so a Codex
 # swarm can run in parallel to Claude WIP. Takes effect on JVM restart.
@@ -70,8 +96,40 @@ export FUTON3C_INVOKE_LANES="${FUTON3C_INVOKE_LANES:-8}"
 export FUTON3C_REPL_THROUGH_QUEUE="${FUTON3C_REPL_THROUGH_QUEUE:-true}"
 export FUTON3C_AGENT_RESTORE="${FUTON3C_AGENT_RESTORE:-true}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
+
+# --- Federation uplink (CP-F, default OFF) ---
+# Uncomment to let this NAT'd box dial a hub over WebSocket instead of relying
+# on a reverse SSH tunnel. Shape is <site>=<ws-url>, where <site> is THIS
+# node's own site code (announced as :fed/site — the client's identity), NOT
+# the hub's. It must match FUTON3C_SITE below. The old default "lon=…" made
+# the laptop announce as the hub's own site: the hub then excluded its lon
+# agents from the return roster (laptop never saw them) and echoed the oxf
+# roster back (found 2026-07-18 while chasing the CPU-alert announce storm).
+export FUTON3C_FED_UPLINK="${FUTON3C_FED_UPLINK:-oxf=ws://172.236.28.208:7070/agency/ws}"
+# CP-F uplink token (client side): read before the final exec so the JVM
+# actually inherits it.  The file is untracked and must match the hub's token.
+if [[ -f "${script_dir}/../.fedtoken" ]]; then
+  export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-$(<"${script_dir}/../.fedtoken")}"
+fi
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
 export FUTON3C_LINODE_URL="${FUTON3C_LINODE_URL:-http://172.236.28.208:7070}"
+export FUTON3C_AGENCY_BASE="${FUTON3C_AGENCY_BASE:-http://127.0.0.1:${FUTON3C_PORT}}"
+# Exact-seat edit witnesses consumed by the opt-in standalone multi_watcher.
+# This only selects the immutable intake directory; see README-multi-watcher.md
+# for the matching single-consumer flags. It does not activate a second watcher.
+export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${script_dir}/../../storage/inbox-zero/witnesses}"
+export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-false}"
+export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${script_dir}/../../storage/inbox-zero/state.edn}"
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
+# Evidence read/emit split (2026-07-18): WM ticks EMIT to the public Linode
+# viewer, but READS must sense the local store — a laptop-wide
+# FUTON3C_EVIDENCE_BASE pointed reads at lucy's (different) store, so the WM
+# saw 0 recent entries from inside the serving JVM.  Reads now default to
+# 127.0.0.1:${FUTON3C_PORT} via configured-evidence-base; set
+# FUTON3C_EVIDENCE_BASE explicitly only to override reads on purpose.
+export FUTON2_WM_EMIT_BASE="${FUTON2_WM_EMIT_BASE:-${FUTON3C_LINODE_URL}}"
 
 # --- IRC: disabled on laptop (ngircd runs on Linode) ---
 export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
@@ -87,23 +145,70 @@ export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
+# Run codex-1 INLINE (direct local invoke-fn, route :local) instead of via a WS
+# bridge. By default (role=laptop) codex registers through a WS bridge to the
+# Linode hub (FUTON3C_LINODE_URL), so the laptop-resident codex worker depended
+# on a remote box: every hub restart zombied the bridge and codex-1 silently
+# dropped work. The worker is local and its work originates locally, so the
+# bridge buys nothing here (evidence replication is off for a local target
+# anyway) and only adds a failure mode. Disabling it registers codex-1 with a
+# direct local invoke-fn — no bridge to zombie, no remote dependency. This is
+# the configuration verified working 2026-06-16 (whistle round-trip). The
+# liveness-ping fix in dev.clj still hardens the bridge path for boxes that DO
+# use it. Trade-off: Linode-side agents can't reach codex-1 directly — that
+# needs the federation-proxy work in M-federated-agency-hardening.
+export FUTON3C_CODEX_WS_BRIDGE="${FUTON3C_CODEX_WS_BRIDGE:-false}"
+
 # --- Blackboard / HUD defaults ---
 export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
 export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 export FUTON3C_HUD_TERMINAL="${FUTON3C_HUD_TERMINAL:-alacritty}"
 
-# --- Futon1a/Futon4 compatibility ---
-export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+# --- futon1b switchover (E-futon1b-operational-switchover; laptop live 2026-07-12) ---
+# The stack runs futon1a-less: evidence and substrate HTTP both go to the
+# futon1b store JVM (systemd user unit futon1b-server.service, migration-store-21,
+# :7073 — the FULL corpus, data-first path; NOT the lucy :7074 switchover-store).
+# 127.0.0.1 is load-bearing (the store JVM binds IPv4-only; localhost can resolve
+# to ::1). Rollback: FUTON1A_PORT=7071 + unset the three below (boots futon1a).
+export FUTON1A_PORT="${FUTON1A_PORT:-0}"
+export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
+export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7073}"
+export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1A_URL:-http://127.0.0.1:7073}}"
+export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
+
+futon1b_ready=false
+if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  # Type=simple becomes active before XTDB has opened its store and bound the
+  # HTTP port. Wait for application readiness so systemd's Wants/After edge
+  # cannot race the evidence invariant at futon3c boot.
+  for _ in {1..60}; do
+    if curl -fsS --max-time 2 "${FUTON1B_URL}/health" >/dev/null 2>&1; then
+      futon1b_ready=true
+      break
+    fi
+    sleep 1
+  done
+fi
+
+if [[ "$futon1b_ready" == "true" ]]; then
+  echo "[dev] futon1b-server: ready (:7073, migration-store-21)"
+else
+  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — refusing an incoherent boot ██\033[0m" >&2
+  echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server\033[0m"
+  exit 1
+fi
+
+# --- Futon1a/Futon4 compatibility (static dir unused while futon1a disabled) ---
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
 if [[ -z "${FUTON1A_ALLOWED_PENHOLDERS:-}" ]]; then
   export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_COMPAT_PENHOLDER}"
 elif [[ ",${FUTON1A_ALLOWED_PENHOLDERS}," != *",${FUTON1A_COMPAT_PENHOLDER},"* ]]; then
   export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_ALLOWED_PENHOLDERS},${FUTON1A_COMPAT_PENHOLDER}"
 fi
-export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-${FUTON1A_URL}/api/alpha}"
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
-export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-true}"
+export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-false}"
 export FUTON3C_MULTI_WATCHER_INTERVAL_MS="${FUTON3C_MULTI_WATCHER_INTERVAL_MS:-5000}"
 export FUTON3C_MULTI_WATCHER_DEBOUNCE_MS="${FUTON3C_MULTI_WATCHER_DEBOUNCE_MS:-250}"
 export FUTON3C_MULTI_WATCHER_PIDFILE="${FUTON3C_MULTI_WATCHER_PIDFILE:-/tmp/multi-watcher.pid}"
@@ -122,8 +227,50 @@ export WEBARXANA_DEV_NO_AUTH="${WEBARXANA_DEV_NO_AUTH:-1}"
 
 # --- Federation: peer with Linode unless explicitly disabled ---
 if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
-  export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
+  # Use site=url form so the federation url→site mapping is populated at boot.
+  # This makes London's bare locals import as lon-* instead of colliding with
+  # laptop locals under the same bare names.
+  export FUTON3C_PEERS="lon=${FUTON3C_LINODE_URL}"
 fi
+
+# Roster-completeness (M-federated-agency-hardening): arm the continuous sync
+# daemon so the laptop continuously pulls the peer's roster instead of relying
+# on the one-shot sync-peers! at boot. Without this, agents that appear on the
+# peer AFTER the laptop boots (e.g. claude-6 on London) never propagate — the
+# laptop's roster is frozen at boot time. Default 60000 ms (1 min); set 0 to
+# revert to boot-only sync. Peer fetch failures skip that tick rather than
+# pruning proxies (AG-3/AG-4 liveness model from CP-B slice 2).
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-60000}"
+# Cap retry backoff when a peer is unreachable (default 5 min).
+export FUTON3C_FED_SYNC_MAX_BACKOFF_MS="${FUTON3C_FED_SYNC_MAX_BACKOFF_MS:-300000}"
+
+# Peer sites (CP-B slice 1 AG-2 guard): lon-* and chi-* ids are remote-homed.
+# Setting this arms the registration-seam refusal guard so the emacs repl-attach
+# path cannot mint local phantoms for agents that belong on London or Chicago
+# (the root cause of the original lon-claude-1 / chi-claude-1 phantom bug).
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon,chi}"
+
+# FUTON3C_SITE=oxf: the laptop's federation site code. This makes the
+# own-site-reflection guard in federation.clj work (prevents importing loop-back
+# proxies of our own agents relayed through peers). Safe to set on the laptop:
+# site-qualify is only called for FUTON3C_REGISTER_CLAUDE (false here), and
+# codex/zai agents register via their own paths that don't call site-qualify.
+# Existing agents are restored by their saved IDs on boot, not renamed.
+export FUTON3C_SITE="${FUTON3C_SITE:-oxf}"
+
+# Reverse tunnel + self-url (CP-C amendment 3): the laptop binds 127.0.0.1, so
+# remote boxes can't reach it directly. A persistent reverse SSH tunnel makes
+# the laptop's :7070 reachable from lucy as 127.0.0.1:17070, and
+# FUTON3C_SELF_URL points there so announce! can hand peers a valid origin-url.
+# Key-based SSH auth to lucy (-p 2222) is already configured. autossh is not
+# installed; ssh with ServerAliveInterval provides keepalive. The tunnel is
+# established in a background screen/tmux or via systemd — this env block just
+# exports the URL. Prefer the systemd unit (survives lucy reboots, which the
+# manual form does not — bit us 2026-07-13): see scripts/oxf-lucy-tunnel.service
+# for install steps. To start the tunnel manually instead:
+#   ssh -f -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+#     -R 17070:localhost:7070 -p 2222 joe@172.236.28.208
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://127.0.0.1:17070}"
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then

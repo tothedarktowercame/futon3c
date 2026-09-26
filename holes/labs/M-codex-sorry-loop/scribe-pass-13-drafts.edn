@@ -1,0 +1,151 @@
+[{:name "identify-an-L1-kernel-from-its-action-on-smooth-test-derivatives"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Identify an integrable kernel `g` from the identity `g ⋆ f' = f(x+h) - f(x-h)` for every smooth compactly supported test function."
+   :standard-results
+   ["fundamental theorem of calculus"
+    "differentiation of convolution"
+    "derivative-zero implies constancy"
+    "fundamental lemma of the calculus of variations / distributional uniqueness"]
+   :route
+   ["Let `χ` be the indicator of `[-h,h]` and set `k = g - χ`."
+    "Use the fundamental theorem of calculus to prove `χ ⋆ f' = f(x+h) - f(x-h)`, hence `k ⋆ f' = 0` for every smooth compactly supported `f`."
+    "Given an arbitrary test function `q`, reflect it by defining `f(x) = q(-x)`."
+    "Use convolution smoothing to obtain `(k ⋆ f)' = k ⋆ f' = 0`, then apply derivative-zero constancy."
+    "Prove the constant is zero: `k ⋆ f` is integrable, while a nonzero constant is not integrable over the infinite-volume space `ℝ`."
+    "Evaluate the zero convolution at the origin to obtain `∫ q x • k x = 0`."
+    "Apply `ae_eq_zero_of_integral_contDiff_smul_eq_zero` and unfold `k` and `χ` to conclude `g = χ` almost everywhere."]
+   :infinite-volume-step
+   {:role
+    "This converts derivative-zero constancy into vanishing, rather than merely identifying an unknown additive constant."
+    :api
+    ["integrable_const_iff"
+     "not_isFiniteMeasure_iff"
+     "Real.volume_univ"]}
+   :key-api
+   ["intervalIntegral.integral_deriv_of_contDiffOn_uIcc"
+    "HasCompactSupport.hasDerivAt_convolution_right"
+    "Integrable.integrable_convolution"
+    "is_const_of_deriv_eq_zero"
+    "ae_eq_zero_of_integral_contDiff_smul_eq_zero"]
+   :witness
+   {:declaration "convolution_identity_implies_indicator"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To identify an `L¹` convolution kernel from its action on test derivatives, subtract the candidate kernel, smooth by convolution, kill the resulting constant using infinite volume, and invoke distributional uniqueness."
+   :capture-kind :runner-proof-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A03"}
+   #:ref{:type :proof-pattern, :id "distributional-kernel-identification"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t008"]
+   :receipt-ids ["48e5fa15-7e47-49e6-b5c4-e37df132959a"]
+   :commits ["0b08172a664297d4ba779bb79f42a11ac51f3884"]
+   :problems ["a01A03-convolution-indicator"]
+   :artifacts
+   ["problems/a01A03/lean/Main.lean:convolution_identity_implies_indicator"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "distinguish-ContDiff-top-analytic-from-ContDiff-infinity-smooth"
+  :lane :arc-lane
+  :level :type-index-semantics
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :api "Mathlib `ContDiff` over the current `WithTop ℕ∞` smoothness index"}
+   :trap
+   "`ContDiff ℝ ⊤ f` does not mean infinitely differentiable. Here `⊤ = ω` requires real analyticity, strictly above the smooth index `∞`."
+   :consequence
+   "A quantifier over compactly supported `ContDiff ℝ ⊤` functions on `ℝ` is vacuous: the real-analytic identity theorem forces every such function to be identically zero."
+   :witnessed-failure
+   {:bad-hypothesis "`ContDiff ℝ ⊤ f ∧ HasCompactSupport f`"
+    :counterexample-shape
+    "`g = 0`, `h = 1`: the identity is tested only on `f = 0`, while the indicator conclusion is false."
+    :machine-checked-declarations
+    ["analytic_compactSupport_eq_zero"
+     "convolution_identity_counterexample"]}
+   :repair
+   {:intended-hypothesis "`ContDiff ℝ ∞ f ∧ HasCompactSupport f`"
+    :non-vacuity-check
+    "A `ContDiffBump` with value one at zero machine-checks that the repaired smooth test class is nonempty."
+    :subsequent-proof
+    "The corrected theorem was proved axiom-clean on the next run; the counterexample declarations were retained."}
+   :rule
+   "When writing a smooth test-function hypothesis, inspect the smoothness index rather than reading `⊤` informally as 'all derivatives'. Use `∞` for smooth and reserve `⊤`/`ω` for analytic."
+   :provenance
+   "Ground control introduced the `⊤` defect during a repair; the preceding runner committed the machine-checked refutation; ground control corrected it; the cited proof turn validates the corrected `∞` statement."
+   :capture-kind :machine-checked-counterexample-repair-and-next-run-proof}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A03"}
+   #:ref{:type :mathlib-api, :id "ContDiff-smoothness-index"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t008"]
+   :receipt-ids
+   ["c142b663-5f34-4bd4-8ea8-026e3f0c9c3b"
+    "48e5fa15-7e47-49e6-b5c4-e37df132959a"]
+   :commits
+   ["46cf809" "0b08172a664297d4ba779bb79f42a11ac51f3884"]
+   :problems ["a01A03-convolution-indicator"]
+   :artifacts
+   ["Mathlib/Analysis/Calculus/ContDiff/Defs.lean"
+    "problems/a01A03/lean/Main.lean:analytic_compactSupport_eq_zero"
+    "problems/a01A03/lean/Main.lean:convolution_identity_counterexample"
+    "problems/a01A03/lean/Main.lean:convolution_identity_implies_indicator"]}
+  :confidence :counterexample-repair-and-solved-proof-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "override-a-documented-proof-route-when-component-evidence-favors-another"
+  :lane :trajectory-lane
+  :level :route-selection
+  :status :draft
+  :body
+  {:headline-observation
+   "The source documentation proposed Fourier inversion, but component search found no comparably short direct Fourier route; the runner implemented a distributional uniqueness proof and updated the stale documentation."
+   :suggested-route
+   {:method :fourier-transform
+    :required-pieces
+    ["convolution theorem"
+     "Fourier derivative rule"
+     "the interval-indicator Fourier pair"
+     "injectivity on `L¹`"]
+    :evaluation
+    "Mathlib contained Fourier infrastructure, but the checked component search did not yield a short end-to-end route."}
+   :implemented-route
+   {:method :distributional-uniqueness
+    :components
+    ["interval FTC"
+     "convolution differentiation"
+     "derivative-zero constancy"
+     "integrability on infinite-volume `ℝ`"
+     "fundamental lemma for smooth tests"]
+    :result :axiom-clean}
+   :decision-rule
+   {:classification :inference
+    :proposal
+    "Treat a proof sketch in source documentation as a route hypothesis. After bounded component search, select the route with a supported end-to-end API chain and update the documentation when evidence overturns the sketch."}
+   :boundary
+   "This row shows that the distributional route was shorter in the checked Mathlib revision; it does not claim that Fourier methods are generally inferior."
+   :capture-kind :commit-confirmed-route-override-and-documentation-update}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A03"}
+   #:ref{:type :process-pattern, :id "evidence-based-route-override"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t008"]
+   :receipt-ids ["48e5fa15-7e47-49e6-b5c4-e37df132959a"]
+   :commits ["0b08172a664297d4ba779bb79f42a11ac51f3884"]
+   :problems ["a01A03-convolution-indicator"]
+   :artifacts
+   ["problems/a01A03/lean/Main.lean:module-documentation"
+    "problems/a01A03/lean/Main.lean:convolution_identity_implies_indicator"]}
+  :confidence :commit-and-receipt-confirmed-inference-marked
+  :review {:verdict :pending-owner-review}}]

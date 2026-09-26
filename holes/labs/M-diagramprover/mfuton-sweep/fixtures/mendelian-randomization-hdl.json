@@ -1,0 +1,28 @@
+{
+  "example_id": "mendelian-randomization-hdl",
+  "title": "Mendelian randomization for HDL and heart attack",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.12 uses HDL genotype as an instrument for HDL levels while Lifestyle confounds HDL levels and heart-attack risk.",
+  "variables": [
+    {"key": "gene", "name": "HDL Gene", "content": "A genetic variant assigned at conception and used as the instrument."},
+    {"key": "lifestyle", "name": "Lifestyle", "content": "Behavioral causes shared by HDL levels and heart-attack risk."},
+    {"key": "hdl", "name": "HDL Levels", "content": "The biological exposure whose causal effect is queried."},
+    {"key": "attack", "name": "Heart Attack", "content": "The health outcome."}
+  ],
+  "arrows": [
+    {"source": "gene", "target": "hdl", "because": "The selected genetic variant changes HDL levels."},
+    {"source": "lifestyle", "target": "hdl", "because": "Lifestyle affects HDL levels."},
+    {"source": "lifestyle", "target": "attack", "because": "Lifestyle also affects heart-attack risk."},
+    {"source": "hdl", "target": "attack", "because": "The diagram poses HDL levels as a possible cause of heart attack."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:587d37e1deaedd45",
+    "ta-book-of-why-2018:85964448defe9c9e",
+    "ta-book-of-why-2018:9898bd2cee788f97",
+    "ta-book-of-why-2018:d99f10737ab31e25",
+    "ta-book-of-why-2018:c30431d94da8bf04",
+    "ta-book-of-why-2018:30096e7822f417b7",
+    "ta-book-of-why-2018:04e0fd81018f5b56"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0268"]
+}

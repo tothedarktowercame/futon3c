@@ -1,0 +1,24 @@
+{
+  "example_id": "transport-boston-car-ownership",
+  "title": "Transportability from Boston: irrelevant car ownership",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 10.2(c) adds Car Ownership V, caused by Age Z, and selector S -> V. Because V affects neither treatment X nor outcome Y, the advertising effect transports directly from Boston to Arkansas.",
+  "variables": [
+    {"key": "x", "name": "Advertisement (X)", "content": "Exposure to the online advertisement."},
+    {"key": "y", "name": "Purchase Decision (Y)", "content": "Whether the consumer purchases the product."},
+    {"key": "z", "name": "Age (Z)", "content": "Age, a confounder of advertisement and purchase."},
+    {"key": "w", "name": "Click-through Rate (W)", "content": "The mediator between advertisement and purchase."},
+    {"key": "v", "name": "Car Ownership (V)", "content": "A population characteristic irrelevant to Advertisement X and Purchase Y."},
+    {"key": "s", "name": "Population Difference (S)", "content": "The difference-producing selector for Boston car ownership.", "selection": true}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "Age causes Advertisement exposure."},
+    {"source": "z", "target": "y", "because": "Age causes Purchase Decision."},
+    {"source": "x", "target": "w", "because": "Advertisement causes Click-through Rate."},
+    {"source": "w", "target": "y", "because": "Click-through Rate causes Purchase Decision."},
+    {"source": "z", "target": "v", "because": "Figure 10.2(c) draws Age as a cause of Car Ownership."},
+    {"source": "s", "target": "v", "because": "Figure 10.2(c) points selector S to Car Ownership V."}
+  ],
+  "source_atom_ids": ["ta-book-of-why-2018:09ae0d8b6d6811b6", "ta-book-of-why-2018:6220fad9ef1610b5", "ta-book-of-why-2018:e4d1cd2f403ad43d", "ta-book-of-why-2018:c999c5a9315892ef", "ta-book-of-why-2018:eab74ebd6ad5ebac", "ta-book-of-why-2018:324e56801575e33e", "ta-book-of-why-2018:5282d1e9a36caf29"],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0366", "ta-page:BOOK-OF-WHY-2018:pdf-0367"]
+}

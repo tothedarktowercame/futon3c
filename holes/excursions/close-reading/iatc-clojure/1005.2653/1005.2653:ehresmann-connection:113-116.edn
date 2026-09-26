@@ -1,0 +1,44 @@
+{:paper/id "1005.2653"
+ :passage/id "1005.2653:ehresmann-connection:113-116"
+ :source {:lines [113 116] :kind :expository-aside}
+ :nodes
+ [{:id :quantum-groupoid
+   :kind :claim
+   :text "K-hat=[h,1] is a quantum groupoid in the sense of [3]"
+   :source {:lines [113 113]}}
+  {:id :bimodule-herds
+   :kind :meta
+   :text "the construction has a connection with Brzezinski and Vercruysse, Bimodule herds"
+   :source {:lines [113 113]}}
+  {:id :h-algebroid
+   :kind :object
+   :text "the Kleisli functor h:A^op tensor A -> H, also called an algebroid"
+   :source {:lines [114 115]}}
+  {:id :ehresmann-connection
+   :kind :claim
+   :text "h may be related to the Ehresmann Groupoid"
+   :source {:lines [114 116]}}
+  {:id :more-general-A
+   :kind :claim
+   :text "the possible relation is considered even when A is not necessarily finite as a V-herd"
+   :source {:lines [116 116]}}]
+ :edges
+ [{:id :e-related-work
+   :kind :infer
+   :relation :expository-connection
+   :depends-on :quantum-groupoid
+   :meta [:bimodule-herds]
+   :source {:lines [113 113]}}
+  {:id :e-ehresmann
+   :kind :infer
+   :relation :may-be-related
+   :given :more-general-A
+   :premise :h-algebroid
+   :warrant {:kind :missing-warrant
+             :text "the text states a possible relation but gives no construction or comparison theorem"}
+   :conclusion :ehresmann-connection
+   :source {:lines [114 116]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-ehresmann
+   :wanted :comparison-between-kleisli-algebroid-and-ehresmann-groupoid}]}

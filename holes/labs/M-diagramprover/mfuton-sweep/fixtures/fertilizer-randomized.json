@@ -1,0 +1,36 @@
+{
+  "example_id": "fertilizer-randomized",
+  "title": "Fertilizer Model 3: randomized controlled trial",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 4.6 replaces all ordinary causes of fertilizer assignment with a random card. The card affects Yield only through Fertilizer, so observing Fertilizer is unconfounded in this model.",
+  "variables": [
+    {"key": "soil-fertility", "name": "Soil Fertility", "content": "A plot cause of yield."},
+    {"key": "texture", "name": "Texture", "content": "A plot cause of yield."},
+    {"key": "drainage", "name": "Drainage", "content": "A plot cause of yield."},
+    {"key": "microflora", "name": "Microflora", "content": "A plot cause of yield."},
+    {"key": "other", "name": "Other", "content": "Residual plot causes of yield."},
+    {"key": "random-card", "name": "Random Card", "content": "The randomized assignment device.", "value_domain": "categorical", "domain_values": [1, 2]},
+    {"key": "fertilizer", "name": "Fertilizer", "content": "The randomized fertilizer assignment.", "value_domain": "categorical", "domain_values": [1, 2]},
+    {"key": "yield", "name": "Yield", "content": "The crop-yield outcome."}
+  ],
+  "arrows": [
+    {"source": "soil-fertility", "target": "yield", "because": "Randomization does not alter this yield mechanism."},
+    {"source": "texture", "target": "yield", "because": "Randomization does not alter this yield mechanism."},
+    {"source": "drainage", "target": "yield", "because": "Randomization does not alter this yield mechanism."},
+    {"source": "microflora", "target": "yield", "because": "Randomization does not alter this yield mechanism."},
+    {"source": "other", "target": "yield", "because": "Randomization does not alter this yield mechanism."},
+    {"source": "random-card", "target": "fertilizer", "because": "The random card is the sole assignment mechanism."},
+    {"source": "fertilizer", "target": "yield", "because": "This is the proposed treatment effect."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:4b74a0f3d2c2c03c",
+    "ta-book-of-why-2018:912feaf927eaafe1",
+    "ta-book-of-why-2018:727b4da1952fd3d5",
+    "ta-book-of-why-2018:34e95e3713229b89",
+    "ta-book-of-why-2018:b313a9e50f4a562b",
+    "ta-book-of-why-2018:539282ec89ebda72",
+    "ta-book-of-why-2018:a5b776aba12fac6f",
+    "ta-book-of-why-2018:5b18fb0b4a2152c0"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0160", "ta-page:BOOK-OF-WHY-2018:pdf-0161"]
+}

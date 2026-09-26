@@ -1,0 +1,154 @@
+{:teardown-deadline 240,
+ :reg/known-departures
+ [{:id :analyst-tenure-n2,
+   :text
+   "The Analyst serves N = 2 frames (f15, f16); analyst-3 is in tenure 2 of 2 and THIS IS ITS LAST FRAME. Ruled 2026-08-18; N stays pinned at 2. analyst-3 served f15 (tenure 1); its succession must be planned at f16 close."}
+  {:id :problem-probed-before-the-frame,
+   :text
+   "NEW THIS FRAME, AND STRONGER THAN f15'S CLAIM OF THE SAME SHAPE. m97A06 was probed for soundness BEFORE registration, by codex-8 on branch probe/m97A06-soundness (commit 7b33f20a), in one dispatch. SEVEN axiom-clean witnesses in problems/m97A06/lean/Soundness.lean, all depending only on [propext, Classical.choice, Quot.sound], independently re-compiled by ground control with its own captured exit status: apm_m97a06_EL has BOTH an exhibited inhabitant (the zero path, every T) AND exhibited non-inhabitants (the constant pi/4 path fails EL at T = 1 AND T = 2, via a real sin(pi/2) computation - verified genuine, not weakened to triviality); the energy of the zero path is computed constant (1/4); Icc 0 T is compiled nonempty for 0 < T; and the Hessian integral is computed in closed form on a concrete bump (eta = t*(1-t) gives 11/30 at T = 1, arithmetic checked by hand). NO DEFECT WAS FOUND. HONEST CAVEAT, declared so the close is not over-credited: the probe did NOT establish two-sided witnesses for apm_m97a06_stationary, and did not test the iff in conjunct 1 for divergence, because both are blocked at differentiating the action's set integral - which is the same machinery conjunct 1's proof needs. Building it in the probe would have been doing the frame's work. The prior on this problem is therefore 'no defect found, EL-axis non-degeneracy compiled' - one notch below f15's fully-probed predecessor."}
+  {:id :vendor-rotation-declared,
+   :text
+   "FIRST VENDOR ROTATION IN THE SERIES. Guide and scribe seats are held by zai glm-5.3, student by zai glm-5.2, minted via per-seat cast; solver and proctor stay Codex (solver config unchanged: gpt-5.6-sol, reasoning max). The per-seat cast model beats ZAI_MODEL at invoke construction (zai_api.clj:1366), so no service restart was needed for the cast itself. MODEL ATTRIBUTION IS OBSERVED, NOT INFERRED: the mint's :casting block is computed from the cast and only proves the cast was parsed; attribution rests on :cost/model (harness at mint 235c6738; pin moved pre-open to 05460b5a), which records the model the z.ai response says served each turn, and which required a futon3c restart in the gap between the m97A06 probe and mint-seats. A frame run without :cost/model evidence must not be cited as a glm-5.3 measurement. NO ZAI-SPECIFIC GUIDE CARD EXISTS: the guide seat runs the role described by the guide card under a zai vendor; any capability gap found is a finding, not a protocol violation."}
+  {:id :read-path-state-declared,
+   :text
+   "UNCHANGED FROM f15 AND STILL LIVE. The lexical query is OR-joined rather than a conjunction. NOT on the path despite being merged: 6bfe5808 (document frequencies scoped to the memory population) runs only inside query-anchor-term-memory-df, which executes only under --anchor-source memory-df; the default is :problem-idf and this frame does not flip it. UNFIXED (D60): default-query-term-limit is 4 and the three-source round-robin truncates one slot before the distinctive terms, while text-keywords orders each source by PROBLEM-CORPUS IDF, which against a corpus of mathematics ranks prose words rarest. Expect the lexical route to underperform and the pattern cascade to carry most of the load. f15's student retrieved 0 of 495 available; the retrieval gap is the series' sharpest open finding and this frame replicates the attempt on an adjacent problem."}
+  {:id :append-retry-live,
+   :text
+   "RESTART-TIME WRITE BEHAVIOUR UNCHANGED SINCE f15. futon3c evidence appends RETRY on :store-unreachable with a 300s window instead of returning a SocialError immediately. Any comparison against frames 9-12 on write-loss grounds is not like-for-like."}
+  {:id :harness-moved-under-the-batch,
+   :text
+   "THE PIN HAS MOVED AGAIN, TO 05460b5a (drawbridge refresh guards merged after the mint at 235c6738). The restart at 2026-08-20T07:20Z brought the serving image onto this revision and ground control measured the tree at the same revision, so pin, image and tree agree for the first time in the series. The intervening commits include seat-identity and cost-attribution machinery this frame's measurement rests on: zai per-turn :cost/model, a zai final-report reserve fix (c3fe45e4), local Codex identity in zone defaults, zone nick match, enforced singular ownership of Codex sessions, and the drawbridge nREPL refresh guards. Ground control authored the m97A06 probe dispatch and NEITHER authored nor reviewed these harness commits. Declared so a seat-identity, duplicate-session or cost-attribution anomaly in this frame looks at the harness first, and because f15-to-f16 comparisons must account for the zai seat code being new under these seats."}
+  {:id :promotion-is-non-atomic,
+   :text
+   "KNOWN LIVE DEFECT, D62, declared so the frame does not lose work rediscovering it. promote-artifact posts the pattern attach and :proposed status BEFORE writing the review. A failure after the attach leaves the edge permanently unpromotable by that path, and the refusal receipt says only 'Tool execution failed' (D43), so a harmless pre-flight refusal and a destructive half-applied one read identically. PROMOTE ONE AT A TIME, WITH A GAP."}
+  {:id :dead-regime-pin,
+   :text
+   "STANDING SERIES DEFECT. (:problem :regime) is the string e7b9ec02599b36845c68ca053416787a23ac29a8 and it resolves in NO repository. It is copied verbatim into every registration in this series, so it has never anchored anything. Declared rather than silently corrected because every prior frame ran with it and a silent fix would make this frame incomparability. SEPARATELY: :lean-revision 4331becf resolves only in /home/joe/code/mathlib4, while the apm-lean anchor is :reg/environment-revision a92ffb6c, and m97A06's Main.lean is byte-identical at that pin (verified by ground control before this registration was written). Diff the frozen statement against a92ffb6c, or against the m97A06 Main.lean blob 1283750389a5d3c86d7801048971cccec9678087."}],
+ :reg/predictions
+ [{:id :problem-closed-on-artifact,
+   :text
+   "ARTIFACT AXIS. m97A06 reaches zero executable sorries, axiom-clean, with the frozen statement mechanically unchanged - or its residual is strictly reduced and localised into named per-clause pieces. The frozen file is 46 lines with exactly one executable sorry at the end; the statement is a conjunction of FOUR clauses about the pendulum action (first-variation stationarity iff EL; EL implies constant energy; the zero path is EL; second variation of the action at multiples of eta equals the Hessian integral). Settled by re-running the file: sorry count, #print axioms, diff of the frozen statement. The probe's witnesses are NOT proof material and are NOT in the solver's checkout; nothing in them bears on the conjuncts beyond non-degeneracy."}
+  {:id :problem-solved,
+   :text
+   "MATHEMATICS AXIS, AND IT IS THE ONE THAT COUNTS. The statement m97A06 closes is NON-VACUOUS: the probe compiled an EL inhabitant and EL non-inhabitants, so the objects quantified over are exhibited non-empty in concrete cases. This is the second sound problem in a row after four defective formalisations, and the second frame whose problem axis is a real mathematical claim rather than a coin flip. Adjudicate the two axes separately and never collapse them: a frame may confirm the artifact axis and refute this one, and that PAIR is the finding. The frame disposition (:closed / :defective / :partial) MUST travel with any report of either axis."}
+  {:id :memory-contributes-to-close,
+   :text
+   "THE MEASUREMENT, NOW WITH A LIVE PRIOR ATTEMPT. A memory surfaced by recall is attested USED by the solver or the student, per-id, in its own words, and contributes to the close of a SOUND problem. The prior remains ZERO attested instances on a sound problem: f15 was sound and closed, but its student retrieved 0 of 495 available memories, and the solver's cascade receipts - while they RAN for the first time - did not produce an attested per-id USED that moved mathematics. ADJUDICATE AGAINST THE ATTESTATION AND NOTHING ELSE. Surfaced-and-unused is a real outcome and must be reported as one. A plausible coincidence between a memory's content and the solver's method is NOT evidence. Do not infer use from resemblance. m97A06 is topically adjacent to f15's problem (pendulum ODE vs ODE flows), which is the sharpest test yet of whether promoted route memories can cross frames: if retrieval fails AGAIN on an adjacent problem, the retrieval gap is structural, not incidental."}
+  {:id :reviewed-attachment-gained,
+   :text
+   "SUPPORTING, NOT HEADLINE, AND QUALIFIED. The store gains at least ONE reviewed memory attachment, reachable as GUIDE-reviewed attach-then-review of a statusless patternless deposit (an independently reviewed attachment remains unreachable - the path needs a keyword :verdict the transport cannot express, D31). Note the trap: attach-then-review REFUSES an edge already carrying a status or patterns, so a well-authored :proposed-with-patterns deposit is unpromotable while a patternless one is promotable. The scribe is a zai glm-5.3 seat this frame: whether the GLM scribe can thread this needle is part of what the vendor rotation measures."}
+  {:id :offer-disposition-populated,
+   :text
+   ":memory-disposition-offer-ids is NON-EMPTY so runtime invariant F3 passes, as it did live for the first time in f15. The f15 caveat carries: the dispositions recorded only that offers EXISTED (:write-use takes no verdict), so a populated field is necessary and not sufficient - count only per-id attested dispositions as evidence of use."}
+  {:id :guidance-count-exact,
+   :text
+   "The recorded guidance count EQUALS the true number of guidance bells sent, and in particular is 0 if none were sent. The GUIDE IS A GLM-5.3 SEAT THIS FRAME: a guidance-count anomaly under a zai guide is a vendor-rotation finding first and a protocol defect second."}
+  {:id :glm-seats-complete-the-frame,
+   :text
+   "NEW THIS FRAME, AND IT IS WHAT THE ROTATION EXISTS TO MEASURE. The zai guide and scribe (glm-5.3) and student (glm-5.2) seats each complete their frame role without a seat failure requiring ground control to substitute a Claude seat: the guide conducts orientation, ignition and adjudication; the scribe deposits at least one memory that reaches review; the student runs its lane and produces attested per-id dispositions. Seat attribution for every completed role is OBSERVED in :cost/model and matches the cast. A seat failure is not a protocol violation - it is the measurement. What is NOT permitted is attributing work to glm-5.3 without :cost/model evidence."}
+  {:id :analyst-survives-two-frames,
+   :text
+   "analyst-3 completes duties A, B and F at this close. It is at TENURE 2 OF 2 and therefore OWES succession HERE: the handoff document, memory-surface pointer and W-entry fall due at THIS close, frame 16, its second and last. The f15 registration's copy of this text described the WRONG tenure (first, not last frame) and its successor prose was caught only by a fresh read - the generator's forbidden-token list was case-sensitive, so the lowercase stale tenure claim sailed through it. A prediction that cannot be satisfied or refuted by the frame it ships in is a defect in the prediction, not a result - report it as such if you meet one.\n"}
+  {:id :cascade-seeds-from-recall,
+   :text
+   "The memory cascade seeds offers from recall results, as it did live for the first time in f15. Replication on an adjacent problem: expect f15's promoted route memories to appear among the offers if promote-to-eligible wiring held; if they do not, the wiring claim does not replicate."}],
+ :pilot-units
+ [{:problem-id "m97A06",
+   :difficulty-stratum "family=m;one-executable-hole",
+   :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+   :locked-lemma-exposure []}],
+ :schema 1,
+ :stop-rules
+ [:budget-exceeded
+  :attempt-cap-reached
+  :axiom-unclean-close
+  :no-progress
+  :teardown-deadline-passed
+  :no-improvement-escalate],
+ :reg/guide-seat "f16-guide",
+ :reg/cascade-measurements
+ ["offers by route" "patterns per problem" "cascade truncation"],
+ :required-measurement-fields
+ ["statement defects at review"
+  "terminal disposition"
+  "residual executable sorries"
+  "attempts or closer hops"
+  "axiom cleanliness"
+  "memories promoted"
+  "review escape rate"
+  "promoted then surfaced then used"
+  "contract leaks"
+  "duplicate declarations"
+  "locked-lemma exposure"
+  "promotion coverage"
+  "unconsumed promotions"
+  "import-only edges"
+  "scribe lane coverage"
+  "arc-lane yield"
+  "rewrite rule offered and used"],
+ :reg/seat-exclusivity :enforced-at-register,
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf",
+ :reg/frame-id "f16",
+ :reg/memory-cascade-enabled? true,
+ :required-capabilities
+ [:frame-containment-witnessed
+  :created-frame-worked
+  :unique-disposition
+  :offer-use-disposition
+  :need-retrieval
+  :promotion-importable
+  :promotion-need-taggable
+  :measurement-populated],
+ :lean-registration "DarkTower.APMDemonstration.round1Registration",
+ :reg/student-runner-budget {:wall-clock-minutes 60},
+ :modules [:R :F :S :A :M :P :X],
+ :reg/solver-config {:model "gpt-5.6-sol", :reasoning-effort "max"},
+ :confirmation-units [],
+ :reg/harness-revision "05460b5a05789720121630e618821d2c81b45927",
+ :problem
+ {:problem-id "m97A06",
+  :difficulty-stratum "family=m;one-executable-hole",
+  :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+  :locked-lemma-exposure []},
+ :reg/guidance-regime #{:suggest :answer},
+ :reg/frame-1-disclaimer false,
+ :reg/analyst-tenure {:n 2, :frame-index 2, :frames ["f15" "f16"]},
+ :variation
+ {:kind :measured,
+  :endpoint
+  "frame-16: the series' first VENDOR ROTATION. Solver arm unchanged from f15 (gpt-5.6-sol, reasoning max) so the solver axis is like-for-like; guide and scribe move from Claude to zai glm-5.3 and the student to zai glm-5.2. The frame measures whether the GLM seats can hold conducting, scribing and independent-study roles end-to-end on a sound problem, with per-turn model attribution observed via :cost/model (harness at mint 235c6738; pin moved pre-open to 05460b5a) rather than inferred from the cast. It is also the second sound problem in a row, so the f15 finding - promotion works, retrieval is the gap - gets a replication attempt on a problem (m97A06, pendulum Euler-Lagrange) topically adjacent to f15's ODE-flow problem."},
+ :reg/memory-cascade-cap 100,
+ :lean-revision "4331becf6f0c8471537adcc264a8fde7e12c94c9",
+ :runtime-invariants [:F2 :F3 :F4 :F5 :F6 :F8 :F9],
+ :reg/role-cards
+ {:codex-solver "00552e4108b02e00139772963bc5e9fa8ff5b63e",
+  :zai-student "b1ee7de57a9d27993155fc8732a60a609889add4",
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd",
+  :scribe "02441d9df4b8a05355790a51f1e535bf9e9465d4",
+  :proctor "63a64a878ce06ccdc8ec78e5ee19526bc9cef211",
+  :analyst "ed340941f4747b20a540fec9ed56bd332579590c"},
+ :reg/solver-seat "f16-solver",
+ :reg/attempt-caps {:s-frontier 10, :s-student 3},
+ :kind :apm-demonstration-round1-registration,
+ :decision-rule
+ {:id :apm-round1-outcome,
+  :outcomes [:closed :tier-a :tier-b :defective]},
+ :reg/scribe-seat "f16-scribe",
+ :lean-source "DarkTower/APMDemonstrationPreregistration.lean",
+ :structural-invariants [:F1],
+ :reg/analyst-seat "analyst-3",
+ :reg/student-seat "f16-student",
+ :estimated-cost 1.0,
+ :arm-description
+ "fresh seats, analyst-3 (tenure 2 of 2 - LAST frame of its tenure), cascade on, write path repaired, read path OR-joined, PROBLEM PROBED BEFORE THE FRAME WITH TWO-SIDED WITNESSES (no defect found; stationarity-side non-degeneracy unprobed), VENDOR ROTATION: guide and scribe zai glm-5.3, student zai glm-5.2, solver unchanged gpt-5.6-sol/max",
+ :budget-cap 5.0,
+ :reg/predictions-analyst-note
+ "see :reg/predictions :analyst-survives-two-frames, rewritten for tenure 2 of 2 - f16 is analyst-3's LAST frame",
+ :reg/proctor-seat "f16-proctor",
+ :replication-stage :pilot,
+ :arms
+ [{:name "one problem, one-shot measurement",
+   :neutral? false,
+   :axes [],
+   :role :treatment}],
+ :claim :descriptive}

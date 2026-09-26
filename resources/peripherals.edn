@@ -156,7 +156,7 @@
   {:peripheral/id :mission-control
    :peripheral/tools #{:read :glob :grep :bash-readonly
                        :mc-inventory :mc-devmaps :mc-coverage
-                       :mc-mana :mc-review :mc-bulletin :mc-issue-holes
+                       :mc-mana :mc-review :mc-bulletin
                        :mc-focus :mc-focus-clear :mc-focus-show :mc-diff
                        :tickle-scan :tickle-page :tickle-cycle
                        :reflect-namespaces :reflect-ns :reflect-var

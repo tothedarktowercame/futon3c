@@ -1,0 +1,1136 @@
+(ns futon3c.apm.durable-coordinator-test
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.apm.durable-coordinator :as sut]
+            [futon3c.apm.live-preflight-runtime :as persistence]
+            [futon3c.apm.live-regulator :as regulator]
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
+
+(defn- temp-paths []
+  (let [root (Files/createTempDirectory "durable-coordinator-"
+                                        (make-array FileAttribute 0))]
+    {:registry (str (.resolve root "registry.edn"))
+     :state-a (str (.resolve root "a.edn"))
+     :state-b (str (.resolve root "b.edn"))}))
+
+(defn- clear-runner-registry! [registry entries]
+  (doseq [entry entries
+          :let [executor (if (map? entry) (:executor entry) entry)]
+          :when executor]
+    (.shutdownNow executor))
+  (reset! registry {}))
+
+(defn- clear-runners! []
+  (let [regulator-runners (var-get #'regulator/runners)
+        watchdog-runners (var-get #'watchdog/runners)]
+    (clear-runner-registry! regulator-runners (vals @regulator-runners))
+    (clear-runner-registry! watchdog-runners (vals @watchdog-runners))))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (let [clock (atom 0)]
+      (clear-runners!)
+      (try
+        (binding [sut/*watchdog-now-fn* #(swap! clock + 20)
+                  sut/*enabled-transition-now-fn* #(swap! clock + 20)]
+          (test-fn))
+        (finally (clear-runners!))))))
+
+(defn- await-until [pred]
+  (let [deadline (+ (sut/*watchdog-now-fn*) 200000)]
+    (loop []
+      (cond
+        (pred) true
+        (>= (sut/*watchdog-now-fn*) deadline) false
+        :else (do (Thread/yield) (recur))))))
+
+(defn- state-status [path]
+  (let [file (java.io.File. path)]
+    (when (.isFile file)
+      (some-> path slurp edn/read-string :regulator/status))))
+
+(defn- registered-entry [registry coordinator-id]
+  (get-in (sut/read-registry registry) [:entries coordinator-id]))
+
+(def operator-stop-cause
+  {:stop-cause/type :operator
+   :stop-cause/reason-code :test-requested})
+
+(deftest enabled-transitions-are-append-only-and-preserve-current-read-path
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:history"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})
+                  sut/start-registered! (fn [_ _] {:ok true :status :started})]
+      (is (:durably-disabled? (sut/stop! registry "c:history" operator-stop-cause)))
+      (is (:ok (sut/resume! registry "c:history")))
+      (is (:durably-disabled? (sut/stop! registry "c:history" operator-stop-cause)))
+      (let [entry (registered-entry registry "c:history")
+            history (:coordinator/enabled-history entry)]
+        (is (false? (:coordinator/enabled? entry)))
+        (is (= [[nil true] [true false] [false true] [true false]]
+               (mapv (juxt :enabled/previous :enabled/new) history)))
+        (is (= [:durable-coordinator/register!
+                :durable-coordinator/stop!
+                :durable-coordinator/resume!
+                :durable-coordinator/stop!]
+               (mapv :transition/actor history)))
+        (is (= [nil operator-stop-cause nil operator-stop-cause]
+               (mapv :stop/cause history)))
+        (is (every? string? (map :durable-state/digest history)))
+        (is (apply < (map :transition/timestamp-ms history)))))))
+
+(deftest malformed-stop-cause-does-not-veto-disable-and-legacy-remains-unknown
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:legacy"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (is (:durably-disabled? (sut/stop! registry "c:legacy" nil)))
+    (is (false? (get-in (sut/read-registry registry)
+                        [:entries "c:legacy" :coordinator/enabled?])))
+    (is (= {:stop-cause/type :unknown
+            :stop-cause/finding {:rejected-value nil}}
+           (-> (registered-entry registry "c:legacy")
+               :coordinator/enabled-history last :stop/cause)))
+    (let [entry (registered-entry registry "c:legacy")
+          legacy-transition
+          (-> (last (:coordinator/enabled-history entry))
+              (assoc :enabled/previous true
+                     :enabled/new false
+                     :transition/actor :durable-coordinator/stop!
+                     :transition/reason :stop-requested)
+              (dissoc :stop/cause :transition/digest))
+          legacy-transition
+          (assoc legacy-transition :transition/digest
+                 (sut/enabled-transition-digest legacy-transition))
+          legacy-entry
+          (-> entry
+              (assoc :coordinator/enabled? false
+                     :coordinator/lifecycle :draining
+                     :coordinator/enabled-history [legacy-transition])
+              (dissoc :coordinator/entry-digest))
+          legacy-entry (assoc legacy-entry :coordinator/entry-digest
+                              (sut/entry-digest legacy-entry))
+          legacy-registry (assoc-in (sut/read-registry registry)
+                                    [:entries "c:legacy"] legacy-entry)]
+      (is (:ok (persistence/atomic-persist!
+                (java.nio.file.Path/of registry (make-array String 0))
+                legacy-registry)))
+      (let [read-transition (-> (sut/read-registry registry)
+                                (get-in [:entries "c:legacy"
+                                         :coordinator/enabled-history])
+                                first)]
+        (is (nil? (:stop/cause read-transition)))
+        (is (= {:stop-cause/type :unknown}
+               (sut/transition-stop-cause read-transition)))))))
+
+(deftest mundane-regulator-failure-does-not-disable-coordinator
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:frame-fault"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (let [decision
+          (watchdog/check!
+           {:watch-state nil
+            :observation
+            {:cursor {} :supervisor/status nil
+             :regulator {:regulator/status :failed
+                         :regulator/last-result
+                         {:ok false :error/code :mundane-frame-failure}}}
+            :now-ms 1000 :registry-path registry
+            :coordinator-id "c:frame-fault"
+            :stop-fn (fn [path id cause] (sut/stop! path id cause))
+            :persist-fn (fn [_] {:ok true})})]
+      (is (= :watching (:status decision)))
+      (is (true? (get-in (sut/read-registry registry)
+                         [:entries "c:frame-fault"
+                          :coordinator/enabled?]))))))
+
+(deftest non-edn-stop-evidence-is-projected-and-registry-remains-readable
+  (doseq [[coordinator-id cause]
+          [["c:function-cause" identity]
+           ["c:throwable-reason"
+            {:stop-cause/type :fault
+             :stop-cause/fault-class :integrity
+             :stop-cause/reason-code :regulator-failed
+             :stop-cause/reason {:exception (Exception. "boom")}}]]]
+    (let [{:keys [registry state-a]} (temp-paths)]
+      (is (:ok (sut/register! {:registry-path registry
+                               :coordinator-id coordinator-id
+                               :adapter :test/none :config {}
+                               :state-path state-a :period-ms 10})))
+      (is (:durably-disabled? (sut/stop! registry coordinator-id cause)))
+      (let [reread (sut/read-registry registry)
+            entry (get-in reread [:entries coordinator-id])
+            recorded (-> entry :coordinator/enabled-history last :stop/cause)]
+        (is (map? reread))
+        (is (false? (:coordinator/enabled? entry)))
+        (is (sut/valid-stop-cause? recorded))
+        (is (re-find #"#(?:object|error)"
+                     (pr-str recorded)))))))
+
+(deftest failed-history-write-blocks-enabled-transition-and-successor
+  (let [{:keys [registry state-a]} (temp-paths)
+        stopped (atom 0)
+        started (atom 0)]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:blocked"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (let [before (sut/read-registry registry)]
+      (with-redefs [persistence/atomic-persist!
+                    (fn [& _] {:ok false :error/code :test/archive-failed})
+                    regulator/cancel-scheduler! (fn [_] (swap! stopped inc)
+                                      {:ok true :status :stopped})
+                    sut/start-registered! (fn [& _] (swap! started inc)
+                                            {:ok true :status :started})]
+        (is (= :test/archive-failed
+               (:error/code (sut/stop! registry "c:blocked" operator-stop-cause))))
+        (is (= before (sut/read-registry registry)))
+        (is (zero? @stopped))
+        (is (= :test/archive-failed
+               (:error/code (sut/resume! registry "c:blocked"))))
+        (is (= before (sut/read-registry registry)))
+        (is (zero? @started))))))
+
+(deftest status-reports-the-durable-tick-claim-and-reconciliation
+  (let [{:keys [registry state-a]} (temp-paths)
+        claim {:state/type :live-regulator-tick-claim
+               :regulator/id "c:status" :tick/epoch 3 :tick/ordinal 9
+               :tick/id "c:status:3:9" :tick/claimed-at "claimed"}]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:status"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str (assoc (regulator/initial-state "c:status")
+                                     :regulator/tick-claim claim
+                                     :regulator/reconciliation :required))
+                       "\n"))
+    (let [observed (sut/status registry "c:status")]
+      (is (= claim (:tick-claim observed)))
+      (is (= :required (:reconciliation/status observed)))
+      (is (= claim (get-in observed
+                           [:durable-state :regulator/tick-claim]))))))
+
+(deftest coordinator-start-arms-independent-watchdog
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom [])
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:watch"
+                             :adapter :test/watchdog :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (swap! armed conj request)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:watch"))))
+        (is (= ["semantic-progress:c:watch"]
+               (mapv :watchdog-id @armed)))
+        (is (fn? (:watch-fn (first @armed))))))))
+
+(deftest armed-watchdog-is-fenced-to-its-registry-generation
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        checks (atom 0)
+        disarmed (atom [])
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-fence
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:fenced"
+                             :adapter :test/watchdog-fence :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [id]
+                                       (swap! disarmed conj id)
+                                       (reset! running? false)
+                                       {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    watchdog/check! (fn [_]
+                                      (swap! checks inc)
+                                      {:ok true :status :watching})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:fenced"))))
+        (is (= :watching (:status ((:watch-fn @armed)))))
+        (is (= 1 @checks))
+        (is (:ok (#'sut/set-enabled! registry "c:fenced" false
+                                            :test :test-generation-change)))
+        ;; A disabled row is never coming back through start-entry!, so the
+        ;; observer disarms itself rather than spinning against it forever.
+        (is (= :stopped-not-enabled (:status ((:watch-fn @armed)))))
+        (is (= ["semantic-progress:c:fenced"] @disarmed))
+        (is (= 1 @checks))))))
+
+(deftest muted-watchdog-rearms-itself-without-a-tick
+  ;; ensure-watchdog! is reachable only from start-entry! and :tick-state-fn.
+  ;; A coordinator parked on an expired intent never ticks, so on 2026-09-10
+  ;; jit-all-open-v3's observer stayed bound to a superseded digest for 348
+  ;; minutes, persisting nothing, while the deadline it existed to enforce
+  ;; passed unobserved. The observer's own scheduler is the one thing still
+  ;; running, so it drives the repair.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        arms (atom 0)
+        checks (atom 0)
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-remute
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:muted"
+                             :adapter :test/watchdog-remute :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    watchdog/check! (fn [_]
+                                      (swap! checks inc)
+                                      {:ok true :status :watching})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:muted"))))
+        (is (= 1 @arms))
+        (let [muted (:watch-fn @armed)]
+          (is (= :watching (:status (muted))))
+          (is (= 1 @checks))
+          ;; Still enabled, but re-registered under a newer digest -- exactly
+          ;; what resume!'s set-enabled! does while an observer is alive.
+          (is (:ok (#'sut/set-enabled! registry "c:muted" true
+                                       :test :test-generation-change)))
+          (let [repair (muted)]
+            (is (= :rearmed (:status repair)))
+            (is (:ok repair)))
+          ;; It re-armed rather than observing, and the replacement is bound
+          ;; to the current generation.
+          (is (= 2 @arms))
+          (is (= 1 @checks))
+          (is (not= muted (:watch-fn @armed)))
+          (is (= :watching (:status ((:watch-fn @armed)))))
+          (is (= 2 @checks)))))))
+
+(deftest durable-stop-disarms-watchdog
+  (let [{:keys [registry state-a]} (temp-paths)
+        stopped (atom [])]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:watch"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-stop-fn*
+              (fn [id]
+                (swap! stopped conj id)
+                {:ok true :status :stopped})]
+      (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
+        (let [result (sut/stop! registry "c:watch" operator-stop-cause)]
+          (is (:durably-disabled? result))
+          (is (= ["semantic-progress:c:watch"] @stopped)))))))
+
+(deftest missing-watchdog-is-rearmed-before-coordinator-proceeds
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom 0)
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/unwatched
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:bare"
+                             :adapter :test/unwatched :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [_]
+                (swap! armed inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (let [result (sut/start-registered! registry "c:bare")]
+          (is (:ok result))
+          (is @running?)
+          (is (= 1 @armed))
+          (is (true? (get-in (sut/read-registry registry)
+                             [:entries "c:bare" :coordinator/enabled?]))))))))
+
+(deftest failed-watchdog-rearm-durably-halts-with-arming-finding
+  (let [{:keys [registry state-a]} (temp-paths)
+        coordinator-starts (atom 0)]
+    (sut/register-adapter!
+     :test/rearm-fails
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:failed-arm"
+                             :adapter :test/rearm-fails :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [_] {:ok false :error/code :test-watchdog-arm-failed
+                       :finding {:exception (Exception. "arm failed")}})
+              sut/*watchdog-running-fn* (constantly false)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :not-running})]
+      (with-redefs [regulator/start! (fn [_]
+                                      (swap! coordinator-starts inc)
+                                      {:ok true :status :started})
+                    regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
+        (let [result (sut/start-registered! registry "c:failed-arm")]
+          (is (= :durable-coordinator-watchdog-repair-failed
+                 (:error/code result)))
+          (is (= :test-watchdog-arm-failed
+                 (get-in result [:finding :watchdog/repair
+                                 :finding :arming :error/code])))
+          (is (zero? @coordinator-starts))
+          (let [reread (sut/read-registry registry)
+                entry (get-in reread [:entries "c:failed-arm"])
+                cause (-> entry :coordinator/enabled-history last :stop/cause)]
+            (is (map? reread))
+            (is (false? (:coordinator/enabled? entry)))
+            (is (= :integrity (:stop-cause/fault-class cause)))
+            (is (string? (get-in cause [:stop-cause/reason :finding :arming
+                                        :finding :exception
+                                        :evidence/printed])))))))))
+
+(deftest live-watchdog-is-not-rearmed
+  (let [{:keys [registry state-a]} (temp-paths)
+        arms (atom 0)]
+    (sut/register-adapter!
+     :test/already-watched
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:watched"
+                             :adapter :test/already-watched :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn* (fn [_]
+                                       (swap! arms inc)
+                                       {:ok true :status :started})
+              sut/*watchdog-running-fn* (constantly true)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (is (:ok (sut/start-registered! registry "c:watched")))
+        (is (zero? @arms))))))
+
+(deftest tick-rearms-a-watchdog-that-died-after-start
+  (let [{:keys [registry state-a]} (temp-paths)
+        start-request (atom nil)
+        running? (atom true)
+        arms (atom 0)]
+    (sut/register-adapter!
+     :test/tick-rearm
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:tick-rearm"
+                             :adapter :test/tick-rearm :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [_]
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [request]
+                                      (reset! start-request request)
+                                      {:ok true :status :started})]
+        (is (:ok (sut/start-registered! registry "c:tick-rearm")))
+        (is (zero? @arms))
+        (reset! running? false)
+        (is (= :idle
+               (:status ((:tick-state-fn @start-request)
+                         (regulator/initial-state "c:tick-rearm")))))
+        (is @running?)
+        (is (= 1 @arms))))))
+
+(deftest tick-rearm-follows-the-registry-not-the-start-snapshot
+  ;; start-entry! captures ENTRY once, and set-enabled! rewrites the digest
+  ;; under a running coordinator on every resume. Once the observer re-arms
+  ;; itself onto the current digest, a tick that compares the rearm journal
+  ;; against that stale snapshot disagrees on every tick -- 500ms apart in
+  ;; production -- and burns the 3-per-60s rearm budget, whereupon the
+  ;; exhausted budget halts a coordinator whose watchdog is correctly armed.
+  ;; That halt took under 40 seconds on 2026-09-10.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        arms (atom 0)
+        running? (atom false)
+        start-request (atom nil)]
+    (sut/register-adapter!
+     :test/tick-digest
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:tick-digest"
+                             :adapter :test/tick-digest :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [request]
+                                       (reset! start-request request)
+                                       {:ok true :status :started})
+                    watchdog/check! (fn [_] {:ok true :status :watching})]
+        (is (:ok (sut/start-registered! registry "c:tick-digest")))
+        (is (= 1 @arms))
+        (let [tick (:tick-state-fn @start-request)
+              state (regulator/initial-state "c:tick-digest")]
+          (is (= :idle (:status (tick state))))
+          (is (= 1 @arms))
+          ;; The digest moves under the running coordinator, and the muted
+          ;; observer repairs itself onto it.
+          (is (:ok (#'sut/set-enabled! registry "c:tick-digest" true
+                                       :test :test-generation-change)))
+          (is (= :rearmed (:status ((:watch-fn @armed)))))
+          (is (= 2 @arms))
+          ;; The tick agrees with the journal, so it neither re-arms nor
+          ;; spends the budget it would need for a real repair.
+          (dotimes [_ 10]
+            (is (= :idle (:status (tick state)))))
+          (is (= 2 @arms)))))))
+
+(deftest repeated-watchdog-deaths-hit-durable-rearm-bound
+  (let [{:keys [registry state-a]} (temp-paths)
+        arms (atom 0)
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/repeated-death
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:dies"
+                             :adapter :test/repeated-death :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-now-fn* (constantly 1000)
+              sut/*watchdog-start-fn*
+              (fn [_]
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_]
+                                      (reset! running? false)
+                                      {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
+        (let [entry (registered-entry registry "c:dies")]
+          (dotimes [_ sut/watchdog-rearm-limit]
+            (is (:ok (sut/start-entry! registry entry)))
+            (reset! running? false))
+          (let [result (sut/start-entry! registry entry)]
+            (is (= :durable-coordinator-watchdog-repair-failed
+                   (:error/code result)))
+            (is (= :durable-coordinator-watchdog-rearm-limit-exceeded
+                   (get-in result [:finding :watchdog/repair :error/code])))
+            (is (= sut/watchdog-rearm-limit @arms))))))))
+
+(deftest recovery-rearms-watchdog-and-disabled-entry-does-not-arm
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        armed (atom [])
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/rearm
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (doseq [[id state] [["c:enabled" state-a] ["c:disabled" state-b]]]
+      (is (:ok (sut/register! {:registry-path registry :coordinator-id id
+                               :adapter :test/rearm :config {}
+                               :state-path state :period-ms 10}))))
+    (is (:durably-disabled? (sut/stop! registry "c:disabled" operator-stop-cause)))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (swap! armed conj (:watchdog-id request))
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :not-running})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (is (:ok (sut/recover-all! registry)))
+        (is (:ok (sut/recover-all! registry)))
+        (is (= ["semantic-progress:c:enabled"] @armed))))))
+
+(deftest activation-intent-is-persisted-before-reconcile
+  (let [{:keys [registry state-a]} (temp-paths)
+        observations (atom [])]
+    (sut/register-adapter!
+     :test/two-phase
+     (fn [_]
+       {:decide-fn (fn [_]
+                     (swap! observations conj [:decide (Files/exists
+                                                        (java.nio.file.Path/of state-a (make-array String 0))
+                                                        (make-array java.nio.file.LinkOption 0))])
+                     {:ok true :coordinator/action :activate
+                      :coordinator/intent
+                      {:job-id "job-fixed"
+                       :dispatch/id "dispatch-fixed"
+                       :dispatch/action :invoke
+                       :expected/postcondition {:job/state :terminal}}})
+        :reconcile-fn (fn [intent state]
+                        (swap! observations conj
+                               [:reconcile intent (:coordinator/pending-intent state)])
+                        {:ok true :status :frame-complete
+                         :coordinator/clear-intent? true})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:a"
+                             :adapter :test/two-phase :config {}
+                             :state-path state-a :period-ms 10})))
+    (try
+      (is (:ok (sut/start-registered! registry "c:a")))
+      (is (await-until #(= :complete (state-status state-a))))
+      (let [[_ reconcile] @observations]
+        (is (= "job-fixed" (get-in reconcile [1 :job-id])))
+        (is (= (reconcile 1) (reconcile 2))))
+      (finally (sut/cancel-scheduler! "c:a")))))
+
+(deftest restart-reconciles-persisted-intent-with-same-job-id
+  (let [{:keys [registry state-a]} (temp-paths)
+        reconciled (atom [])]
+    (sut/register-adapter!
+     :test/restart
+     (fn [_]
+       {:decide-fn (fn [_] {:ok true :status :awaiting-job})
+        :reconcile-fn (fn [intent _]
+                        (swap! reconciled conj (:job-id intent))
+                        {:ok true :status :frame-complete
+                         :coordinator/clear-intent? true})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:restart"
+                             :adapter :test/restart :config {}
+                             :state-path state-a :period-ms 10})))
+    (let [pre-state {:state/type :live-regulator
+                     :regulator/id "c:restart"
+                     :regulator/status :running
+                     :regulator/ticks 0}
+          intent (sut/make-intent
+                  "c:restart" pre-state
+                  {:job-id "job-stable" :dispatch/id "dispatch-stable"
+                   :dispatch/action :invoke
+                   :expected/postcondition {:job/state :terminal}})]
+      (spit state-a (str (pr-str (assoc pre-state
+                                        :regulator/ticks 1
+                                        :coordinator/pending-intent intent
+                                        :coordinator/pending-pre-state-digest
+                                        (:pre-state/digest intent)))
+                         "\n")))
+    (try
+      (is (:ok (sut/start-registered! registry "c:restart")))
+      (is (await-until #(contains? #{:complete :failed}
+                                    (state-status state-a))))
+      (is (= :complete (state-status state-a)) (slurp state-a))
+      (is (= ["job-stable"] @reconciled))
+      (finally (sut/cancel-scheduler! "c:restart")))))
+
+(deftest typed-intent-integrity-kills-field-mutations
+  (let [pre-state {:state/type :live-regulator
+                   :regulator/id "c:bound"
+                   :regulator/status :running
+                   :regulator/ticks 4}
+        intent (sut/make-intent
+                "c:bound" pre-state
+                {:job-id "job-4" :dispatch/id "dispatch-4"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})
+        persisted (assoc pre-state
+                         :regulator/ticks 5
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))
+        redigest #(assoc % :intent/digest (sut/intent-digest %))]
+    (is (sut/valid-intent? "c:bound" persisted intent))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (assoc intent :job-id "job-injected"))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (assoc intent :coordinator/id
+                                                  "c:other")))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (assoc intent :pre-state/digest
+                                                  "wrong-state")))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (dissoc intent :dispatch/id)))))
+    (is (false? (sut/valid-intent?
+                 "c:bound" persisted
+                 (assoc intent :expected/postcondition {:job/state :queued}))))))
+
+(deftest invalid-persisted-intent-never-reaches-reconcile
+  (let [{:keys [registry state-a]} (temp-paths)
+        reconcile-calls (atom 0)
+        pre-state {:state/type :live-regulator :regulator/id "c:reject"
+                   :regulator/status :running :regulator/ticks 0}
+        intent (sut/make-intent
+                "c:reject" pre-state
+                {:job-id "job-original" :dispatch/id "dispatch-original"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})]
+    (sut/register-adapter!
+     :test/reject-tamper
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :awaiting-job})
+              :reconcile-fn (fn [_ _]
+                              (swap! reconcile-calls inc)
+                              {:ok true :status :frame-complete})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:reject"
+                             :adapter :test/reject-tamper :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a
+          (str (pr-str (assoc pre-state
+                              :regulator/ticks 1
+                              :coordinator/pending-intent
+                              (assoc intent :job-id "job-injected")
+                              :coordinator/pending-pre-state-digest
+                              (:pre-state/digest intent)))
+               "\n"))
+    (try
+      (is (:ok (sut/start-registered! registry "c:reject")))
+      (is (await-until #(= :failed (state-status state-a))))
+      (is (zero? @reconcile-calls))
+      (is (= [:intent-digest]
+             (get-in (edn/read-string (slurp state-a))
+                     [:regulator/last-result :findings])))
+      (finally (sut/cancel-scheduler! "c:reject")))))
+
+(deftest pending-intent-survives-multiple-polls-and-runner-restart
+  (let [{:keys [registry state-a]} (temp-paths)
+        reconciled (atom [])]
+    (sut/register-adapter!
+     :test/multi-poll
+     (fn [_]
+       {:decide-fn
+        (fn [_]
+          {:ok true :coordinator/action :activate
+           :coordinator/intent
+           {:job-id "job-multi" :dispatch/id "dispatch-multi"
+            :dispatch/action :invoke
+            :expected/postcondition {:job/state :terminal}}})
+        :reconcile-fn
+        (fn [intent _]
+          (let [poll (count (swap! reconciled conj
+                                   (select-keys intent [:job-id :dispatch/id])))]
+            (if (< poll 3)
+              {:ok true :status :awaiting-job}
+              {:ok true :status :frame-complete
+               :coordinator/clear-intent? true})))}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:multi"
+                             :adapter :test/multi-poll :config {}
+                             :state-path state-a :period-ms 1})))
+    (try
+      (is (:ok (sut/start-registered! registry "c:multi")))
+      (is (await-until
+           #(let [file (java.io.File. state-a)
+                  state (when (.isFile file)
+                          (edn/read-string (slurp file)))]
+              (and (= 1 (count @reconciled))
+                   (>= (:regulator/ticks state 0) 2)))))
+      (is (= :stopped (:status (sut/cancel-scheduler! "c:multi"))))
+      (let [stopped (edn/read-string (slurp state-a))]
+        (is (= "job-multi"
+               (get-in stopped [:coordinator/pending-intent :job-id])))
+        (is (>= (:regulator/ticks stopped) 2)))
+      (is (:ok (sut/start-registered! registry "c:multi")))
+      (is (await-until #(= :complete (state-status state-a))))
+      (is (= 3 (count @reconciled)))
+      (is (apply = @reconciled))
+      (is (= {:job-id "job-multi" :dispatch/id "dispatch-multi"}
+             (first @reconciled)))
+      (finally (sut/cancel-scheduler! "c:multi")))))
+
+(deftest pending-intent-rejects-rewound-tick
+  (let [pre-state {:state/type :live-regulator :regulator/id "c:rewind"
+                   :regulator/status :running :regulator/ticks 7}
+        intent (sut/make-intent
+                "c:rewind" pre-state
+                {:job-id "job-7" :dispatch/id "dispatch-7"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})
+        rewound (assoc pre-state
+                       :coordinator/pending-intent intent
+                       :coordinator/pending-pre-state-digest
+                       (:pre-state/digest intent))]
+    (is (false? (sut/valid-intent? "c:rewind" rewound intent)))
+    (is (= [:pre-state-version-relationship]
+           (sut/intent-findings "c:rewind" rewound intent)))))
+
+(deftest expired-intent-is-archived-before-clear-and-queue-advances
+  (let [{:keys [registry state-a]} (temp-paths)
+        pre-state {:state/type :live-regulator :regulator/id "c:expired"
+                   :regulator/status :running :regulator/ticks 4}
+        intent (sut/make-intent
+                "c:expired" pre-state
+                {:job-id "job-expired" :dispatch/id "dispatch-expired"
+                 :dispatch/action :jit-problem-queue/tick
+                 :dispatch/parameters {:deadline-ms 1000}
+                 :expected/postcondition {:status/one-of [:advanced]}})
+        persisted (assoc pre-state
+                         :regulator/ticks 5
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))
+        writes (atom [])
+        persist! persistence/atomic-persist!]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:expired"
+                             :adapter :test/expired :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str persisted) "\n"))
+    (let [result
+          (binding [sut/*intent-recovery-now-fn*
+                    #(+ 1000 watchdog/external-deadline-grace-ms 1)]
+            (with-redefs [persistence/atomic-persist!
+                          (fn [path value]
+                            (swap! writes conj value)
+                            (persist! path value))]
+              (sut/supersede-expired-intent! registry "c:expired")))
+          archived (first @writes)
+          cleared (second @writes)
+          adapter {:decide-fn
+                   (fn [_]
+                     {:ok true :coordinator/action :activate
+                      :coordinator/intent
+                      {:job-id "job-successor"
+                       :dispatch/id "dispatch-successor"
+                       :dispatch/action :jit-problem-queue/tick
+                       :dispatch/parameters {:deadline-ms 999999}
+                       :expected/postcondition
+                       {:status/one-of [:advanced]}}})
+                   :reconcile-fn (fn [_ _] {:ok true :status :advanced})}
+          advanced (#'sut/coordinator-tick "c:expired" adapter cleared)]
+      (is (:ok result))
+      (is (= :expired-intent-superseded (:status result)))
+      (is (= intent (:coordinator/pending-intent archived)))
+      (is (= :expired
+             (get-in archived [:coordinator/superseded-intents 0
+                               :disposition])))
+      (is (nil? (:coordinator/pending-intent cleared)))
+      (is (= :expired
+             (get-in cleared [:coordinator/last-superseded-intent
+                              :disposition])))
+      (is (= :intent-persisted (:status advanced)))
+      (is (= "job-successor"
+             (get-in advanced [:regulator/state-updates
+                               :coordinator/pending-intent :job-id])))
+      (is (= :no-pending-intent
+             (:status (sut/supersede-expired-intent!
+                       registry "c:expired")))))))
+
+(deftest live-intent-cannot-be-superseded
+  (let [{:keys [registry state-a]} (temp-paths)
+        pre-state {:state/type :live-regulator :regulator/id "c:live"
+                   :regulator/status :running :regulator/ticks 8}
+        intent (sut/make-intent
+                "c:live" pre-state
+                {:job-id "job-live" :dispatch/id "dispatch-live"
+                 :dispatch/action :jit-problem-queue/tick
+                 :dispatch/parameters {:deadline-ms 10000}
+                 :expected/postcondition {:status/one-of [:advanced]}})
+        persisted (assoc pre-state
+                         :regulator/ticks 9
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:live"
+                             :adapter :test/live :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str persisted) "\n"))
+    (let [result (binding [sut/*intent-recovery-now-fn* (constantly 10001)]
+                   (sut/supersede-expired-intent! registry "c:live"))
+          unchanged (edn/read-string (slurp state-a))]
+      (is (false? (:ok result)))
+      (is (= :durable-coordinator-intent-not-expired (:error/code result)))
+      (is (= intent (:coordinator/pending-intent unchanged)))
+      (is (empty? (:coordinator/superseded-intents unchanged))))))
+
+(deftest typed-registry-recovers-two-coordinators-without-directory-discovery
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        ticks (atom {})
+        both-ticked (promise)]
+    (sut/register-adapter!
+     :test/concurrent
+     (fn [{:keys [name]}]
+       {:decide-fn (fn [_]
+                     (let [observed (swap! ticks update name (fnil inc 0))]
+                       (when (and (pos? (get observed :a 0))
+                                  (pos? (get observed :b 0)))
+                         (deliver both-ticked :both-ticked)))
+                     {:ok true :status :awaiting-job})
+        :reconcile-fn (fn [_ _] {:ok true :status :awaiting-job})}))
+    (doseq [[id name state] [["c:a" :a state-a] ["c:b" :b state-b]]]
+      (is (:ok (sut/register! {:registry-path registry :coordinator-id id
+                               :adapter :test/concurrent :config {:name name}
+                               :state-path state :period-ms 10}))))
+    (try
+      (let [result (sut/recover-all! registry)]
+        (is (:ok result))
+        (is (= #{"c:a" "c:b"} (set (keys (:results result))))))
+      (is (= :both-ticked (deref both-ticked 1000 :timeout)))
+      (is (and (pos? (get @ticks :a 0))
+               (pos? (get @ticks :b 0))))
+      (finally (sut/cancel-scheduler! "c:a")
+               (sut/cancel-scheduler! "c:b")))))
+
+(deftest conflicting-or-tampered-registration-fails-closed
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        registration {:registry-path registry :coordinator-id "c:a"
+                      :adapter :test/none :config {} :state-path state-a
+                      :period-ms 10}]
+    (is (:ok (sut/register! registration)))
+    (is (= :durable-coordinator-registration-conflict
+           (:error/code (sut/register! (assoc registration :state-path state-b)))))
+    (let [contents (slurp registry)]
+      (spit registry (.replace contents state-a state-b)))
+    (is (= :durable-coordinator-registry-invalid
+           (:error/code (sut/recover-all! registry))))))
+
+(deftest one-problem-has-one-bounded-retrying-coordinator
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        base {:registry-path registry :coordinator-id "c:problem"
+              :problem-id "m94A03" :retry-max 2
+              :adapter :test/none :config {} :state-path state-a
+              :period-ms 10}]
+    (is (:ok (sut/register! base)))
+    (is (= :durable-coordinator-problem-already-registered
+           (:error/code
+            (sut/register! (assoc base :coordinator-id "c:problem-retry-v2"
+                                  :state-path state-b)))))
+    (is (= 1 (get-in (sut/retry! registry "c:problem")
+                     [:entry :retry/count])))
+    (is (= 2 (get-in (sut/retry! registry "c:problem")
+                     [:entry :retry/count])))
+    (is (= :durable-coordinator-retry-exhausted
+           (:error/code (sut/retry! registry "c:problem"))))
+    (is (= 1 (count (:entries (sut/read-registry registry)))))))
+
+(deftest durable-stop-prevents-startup-recovery
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (sut/register-adapter!
+     :test/stoppable
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :awaiting-job})
+              :reconcile-fn (fn [_ _] {:ok true :status :awaiting-job})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:stop"
+                             :adapter :test/stoppable :config {}
+                             :state-path state-a :period-ms 10})))
+    (try
+      (let [started (sut/start-registered! registry "c:stop")]
+        (is (:ok started))
+      (is (await-until #(some? (sut/status "c:stop"))))
+        (let [first-stop (sut/stop! registry "c:stop" operator-stop-cause)]
+          (is (:durably-disabled? first-stop))
+          (when (= :draining (:status first-stop))
+            (is (string? (get-in first-stop [:in-flight-tick :tick/id])))
+            (is (not= :timeout
+                      (deref (:first-tick started) 2000 :timeout)))
+            (is (= :stopped
+                   (:status (sut/stop! registry "c:stop" operator-stop-cause))))))
+      (is (= :disabled
+             (get-in (sut/recover-all! registry) [:results "c:stop" :status])))
+      (is (false? (get-in (sut/status registry "c:stop")
+                            [:registration :coordinator/enabled?]))))
+      (finally (sut/cancel-scheduler! "c:stop")))))
+
+(deftest durable-stop-preserves-active-frame-and-prevents-new-work
+  (let [{:keys [registry state-a]} (temp-paths)
+        decisions (atom 0)
+        active-frame {:frame/id "f58" :problem/id "a99J12"
+                      :phase :student-attempt-1}]
+    (sut/register-adapter!
+     :test/stopped-active-frame
+     (fn [_]
+       {:decide-fn (fn [_]
+                     (swap! decisions inc)
+                     {:ok true :status :must-not-run})
+        :reconcile-fn (fn [_ _]
+                        (throw (ex-info "must not reconcile" {})))}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:stopped-active-frame"
+                             :adapter :test/stopped-active-frame :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a
+          (str (pr-str (assoc (regulator/initial-state
+                               "c:stopped-active-frame")
+                              :active/frame active-frame))
+               "\n"))
+    (with-redefs [regulator/cancel-scheduler!
+                  (fn [_] {:ok true :status :stopped})]
+      (let [stopped (sut/stop! registry "c:stopped-active-frame" operator-stop-cause)
+            durable (edn/read-string (slurp state-a))
+            recovered (sut/recover-all! registry)]
+        (is (= :stopped (:status stopped)))
+        (is (false? (get-in (sut/read-registry registry)
+                            [:entries "c:stopped-active-frame"
+                             :coordinator/enabled?])))
+        (is (= active-frame (:active/frame durable)))
+        (is (= :stopped (:regulator/status durable)))
+        (is (= :disabled
+               (get-in recovered [:results "c:stopped-active-frame" :status])))
+        (is (zero? @decisions)
+            "neither durable stop nor recovery may mint new work")))))
+
+(deftest stop-exposes-draining-claim-before-durable-quiescence
+  (let [{:keys [registry state-a]} (temp-paths)
+        coordinator-id "c:drain-observer"
+        tick-entered (promise)
+        release-tick (promise)]
+    (sut/register-adapter!
+     :test/drain-observer
+     (fn [_]
+       {:decide-fn (fn [_]
+                     (deliver tick-entered true)
+                     @release-tick
+                     {:ok true :status :awaiting-job})
+        :reconcile-fn (fn [_ _] {:ok true :status :awaiting-job})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id coordinator-id
+                             :adapter :test/drain-observer :config {}
+                             :state-path state-a :period-ms 1000})))
+    (try
+      (let [started (sut/start-registered! registry coordinator-id)]
+        (is (= true (deref tick-entered 2000 :timeout)))
+        (let [stop-result (future (sut/stop! registry coordinator-id operator-stop-cause))
+              observer (future
+                         (loop []
+                           (let [registration
+                                 (get-in (sut/read-registry registry)
+                                         [:entries coordinator-id])]
+                             (if (= :draining
+                                    (:coordinator/lifecycle registration))
+                               (edn/read-string (slurp state-a))
+                               (do (Thread/yield) (recur))))))
+              observed (deref observer 2000 :timeout)
+              draining (deref stop-result 2000 :timeout)]
+          (is (map? observed))
+          (is (= :live-regulator-tick-claim
+                 (get-in observed [:regulator/tick-claim :state/type])))
+          (is (not= :stopped (:regulator/status observed)))
+          (is (nil? (:regulator/quiescence-witness observed)))
+          (is (= :draining (:status draining)))
+          (is (= (get-in observed [:regulator/tick-claim :tick/id])
+                 (get-in draining [:in-flight-tick :tick/id])))
+          (is (= (get-in draining [:in-flight-tick :tick/id])
+                 (get-in (sut/recover-all! registry)
+                         [:results coordinator-id :in-flight-tick :tick/id])))
+          (deliver release-tick true)
+          (is (not= :timeout (deref (:first-tick started) 2000 :timeout)))
+          (let [stopped (sut/stop! registry coordinator-id operator-stop-cause)
+                durable (edn/read-string (slurp state-a))]
+            (is (= :stopped (:status stopped)))
+            (is (= :stopped (:regulator/status durable)))
+            (is (nil? (:regulator/tick-claim durable)))
+            (is (= :durable-quiescence-witness
+                   (get-in durable
+                           [:regulator/quiescence-witness :state/type])))
+            (is (nil? (get-in durable
+                              [:regulator/quiescence-witness :tick-claim])))
+            (is (= :disabled
+                   (get-in (sut/recover-all! registry)
+                           [:results coordinator-id :status]))))))
+      (finally
+        (deliver release-tick true)
+        (sut/cancel-scheduler! coordinator-id)))))
+
+(deftest unexpected-postcondition-fails-before-state-advance
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (sut/register-adapter!
+     :test/postcondition
+     (fn [_]
+       {:decide-fn
+        (fn [_] {:ok true :coordinator/action :activate
+                 :coordinator/intent
+                 {:job-id "job-post" :dispatch/id "dispatch-post"
+                  :dispatch/action :invoke :dispatch/parameters {}
+                  :expected/postcondition {:ruling/one-of [:closed]}}})
+        :reconcile-fn
+        (fn [_ _] {:ok true :status :done
+                   :coordinator/clear-intent? true
+                   :lane/result {:ruling :partial-banked}
+                   :regulator/state-updates {:forbidden/advance true}})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:postcondition"
+                             :adapter :test/postcondition :config {}
+                             :state-path state-a :period-ms 10})))
+    (try
+      (is (:ok (sut/start-registered! registry "c:postcondition")))
+      (is (await-until #(= :failed (state-status state-a))))
+      (let [state (edn/read-string (slurp state-a))]
+        (is (= :durable-coordinator-postcondition-violated
+               (get-in state [:regulator/last-result :error/code])))
+        (is (nil? (:forbidden/advance state)))
+        (is (some? (:coordinator/pending-intent state))))
+      (finally (sut/cancel-scheduler! "c:postcondition")))))
+
+(deftest watchdog-rearms-when-its-authority-is-superseded
+  ;; 2026-09-07: jit-all-open-v3's coordinator ticked normally while
+  ;; /apm/status reported "watchdog silent 11m -- loop supervisor gone". The
+  ;; observer was alive; it had simply outlived its authority.
+  ;;
+  ;; arm-watchdog!'s watch-fn captures the entry digest and compares it against
+  ;; the live registry on every observation, returning :superseded -- and
+  ;; persisting NOTHING -- once they differ. resume! calls set-enabled!, which
+  ;; changes the digest, so a second resume! left the first one's watchdog
+  ;; running under a dead digest while ensure-watchdog! returned
+  ;; :already-running on liveness alone and never replaced it.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom [])
+        stopped (atom [])
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-supersede
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:supersede"
+                             :adapter :test/watchdog-supersede :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn* (fn [request]
+                                        (swap! armed conj (:watchdog-id request))
+                                        (reset! running? true)
+                                        {:ok true :status :started})
+              sut/*watchdog-stop-fn* (fn [id]
+                                       (swap! stopped conj id)
+                                       (reset! running? false)
+                                       {:ok true})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (let [entry (registered-entry registry "c:supersede")]
+          (testing "first start arms the observer under the current digest"
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (= ["semantic-progress:c:supersede"] @armed))
+            (is (empty? @stopped)))
+          (testing "a live observer on the CURRENT digest is left alone"
+            (reset! armed []) (reset! stopped [])
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (empty? @armed) "must not churn a healthy observer")
+            (is (empty? @stopped)))
+          (testing "a live observer on a SUPERSEDED digest is stopped and replaced"
+            ;; The entry stays valid and current -- entries are content-
+            ;; validated, so forging a digest on one only makes it invalid.
+            ;; What goes stale in the real failure is the digest the RUNNING
+            ;; observer was armed under, which set-enabled! moves out from
+            ;; under it.
+            (reset! armed []) (reset! stopped [])
+            (persistence/atomic-persist!
+             (#'sut/watchdog-rearm-state-path entry)
+             {:state/type :durable-coordinator-watchdog-rearms
+              :coordinator/id "c:supersede"
+              :watchdog/armed-entry-digest "a-digest-from-an-earlier-generation"
+              :watchdog/rearm-attempts-ms []})
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (= ["semantic-progress:c:supersede"] @stopped)
+                "the stale observer must be stopped, not left running")
+            (is (= ["semantic-progress:c:supersede"] @armed)
+                "and a fresh one armed under the current digest")))))))

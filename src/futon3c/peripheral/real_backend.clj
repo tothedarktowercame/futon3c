@@ -20,8 +20,11 @@
             [futon.notions :as notions]
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
+            [futon2.aif.memory-contract :as memory-contract]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-recall :as memory-recall]
+            [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.tools :as tools]
             [futon3c.reflection.core :as reflection])
   (:import [java.io File]
@@ -35,12 +38,31 @@
 ;; =============================================================================
 
 (defn- resolve-path
-  "Resolve a path relative to cwd. Absolute paths pass through."
+  "Resolve a path relative to cwd. Absolute paths pass through.
+   nil path throws a clear error (io/file nil silently returns nil and the
+   NPE surfaces far away — found live 2026-07-04, a nil :path tool arg)."
   ^File [cwd path]
+  (when (nil? path)
+    (throw (ex-info "path argument required (got nil) — check the tool's argument names" {})))
   (let [f (io/file path)]
     (if (.isAbsolute f)
       f
       (io/file cwd path))))
+
+(defn- tool-error
+  "Surface a caught exception WITH its ex-data details.
+   `gate-shapes/validate!` throws \"Invalid evidence shape\" carrying
+   {:details (me/humanize ...)} -- a field-level explanation of exactly what was
+   wrong. Catching with only (.getMessage e) discards it, leaving the calling
+   agent an opaque string it cannot act on. Observed live 2026-08-04: zai-2 got
+   \"psr-select failed: Invalid evidence shape\" twice and deferred the recording,
+   with the naming detail one accessor away. Same defect class as the
+   2026-08-03 memory_record incident (fixed in 3d86cf1d)."
+  [label e]
+  (let [details (:details (ex-data e))]
+    (cond-> {:ok false :error (str label " failed: " (.getMessage e))}
+      (some? details) (assoc :details details))))
+
 
 (defn- tool-read
   "Read file contents. Args: [file-path] or [file-path {:offset N :limit N}]."
@@ -77,9 +99,22 @@
             (swap! results conj (.getPath ^File f))))))
     {:ok true :result @results}))
 
+(def ^:private grep-skip-dirs
+  "Directory names never descended into by tool-grep (unless explicitly the
+   search base). Found live 2026-07-04: a whole-workspace search slurped a
+   279 MB CUDA .so from .venv and RocksDB .sst store files for ~50 minutes,
+   wedging the agent's turn drainer."
+  #{"node_modules" "storage" "target" "out" "dist" ".venv"})
+
+(def ^:private grep-max-file-bytes (* 2 1024 1024))
+(def ^:private grep-time-budget-ms 30000)
+
 (defn- tool-grep
   "Search file contents by regex. Args: [pattern] or [pattern path] or [pattern path opts].
-   opts: {:case-insensitive bool, :max-matches N}."
+   opts: {:case-insensitive bool, :max-matches N}.
+   Bounded: prunes dot/vendor/store directories, skips files > 2 MB, and
+   stops at a 30 s budget — truncation is reported as a sentinel match, not
+   silently."
   [cwd args]
   (let [pattern-str (first args)
         search-path (or (second args) (str cwd))
@@ -90,21 +125,39 @@
         re (java.util.regex.Pattern/compile pattern-str flags)
         max-matches (or (:max-matches opts) 500)
         base (resolve-path cwd search-path)
+        deadline (+ (System/currentTimeMillis) grep-time-budget-ms)
+        skip-dir? (fn [^File d]
+                    (let [n (.getName d)]
+                      (or (str/starts-with? n ".")
+                          (contains? grep-skip-dirs n))))
         results (atom [])
-        done? (atom false)]
+        done? (atom false)
+        timed-out? (atom false)
+        over? (fn []
+                (or @done?
+                    (.isInterrupted (Thread/currentThread))
+                    (when (> (System/currentTimeMillis) deadline)
+                      (reset! timed-out? true)
+                      true)))]
     (when (.exists base)
       (let [files (if (.isFile base)
                     [base]
-                    (->> (file-seq base)
+                    (->> (tree-seq
+                          (fn [^File f]
+                            (and (.isDirectory f)
+                                 (or (= f base) (not (skip-dir? f)))))
+                          (fn [^File f] (seq (.listFiles f)))
+                          base)
                          (filter #(.isFile ^File %))
-                         (remove #(str/starts-with? (.getName ^File %) "."))))]
+                         (remove #(str/starts-with? (.getName ^File %) "."))
+                         (remove #(> (.length ^File %) grep-max-file-bytes))))]
         (doseq [^File f files
-                :while (not @done?)]
+                :while (not (over?))]
           (try
             (let [content (slurp f)
                   lines (str/split-lines content)]
               (doseq [[idx line] (map-indexed vector lines)
-                      :while (not @done?)]
+                      :while (not (over?))]
                 (when (.find (.matcher re line))
                   (swap! results conj {:file (.getPath f)
                                        :line (inc idx)
@@ -112,7 +165,14 @@
                   (when (>= (count @results) max-matches)
                     (reset! done? true)))))
             (catch Exception _)))))
-    {:ok true :result @results}))
+    {:ok true
+     :result (if @timed-out?
+               (conj @results
+                     {:file "[search-truncated]" :line 0
+                      :content (str "search stopped at the " (/ grep-time-budget-ms 1000)
+                                    "s budget — results may be incomplete; "
+                                    "narrow the path or pattern")})
+               @results)}))
 
 (defn- tool-edit
   "Edit file contents (find/replace). Args: [file-path old-string new-string]."
@@ -172,8 +232,18 @@
             err @err-future]
         {:exit exit :out out :err err})
       (do
+        ;; Kill the WHOLE process tree, descendants first. destroyForcibly
+        ;; on the bash child alone orphans grandchildren — found live
+        ;; 2026-07-04: timed-out `clojure -M:node` runs left full XTDB/Arrow
+        ;; JVMs running invisibly (default heap = 1/4 RAM each), building
+        ;; the memory pressure implicated in both serving-JVM deaths.
+        (doseq [h (iterator-seq (.iterator (.descendants (.toHandle proc))))]
+          (try (.destroyForcibly ^java.lang.ProcessHandle h)
+               (catch Throwable _)))
         (.destroyForcibly proc)
-        {:exit -1 :out "" :err (str "Command timed out after " timeout-ms "ms")}))))
+        {:exit -1 :out ""
+         :err (str "Command timed out after " timeout-ms "ms"
+                   " (process tree killed; pass {\"timeout_ms\": N} for long runs)")}))))
 
 (defn- tool-bash
   "Execute a bash command. Args: [command] or [command {:timeout-ms N}].
@@ -189,21 +259,87 @@
           {:ok true :result result}
           {:ok true :result result})))))
 
+(defn- blank-quoted
+  "Blank the contents of balanced quoted runs, preserving length, so that the
+   readonly guard matches command structure and not string literals. An
+   unterminated quote is left as-is: hiding a real mutation behind a stray
+   quote would be worse than a false positive."
+  [^String s]
+  (let [n (.length s)
+        sb (StringBuilder. s)]
+    (loop [i 0]
+      (if (>= i n)
+        (.toString sb)
+        (let [c (.charAt sb i)]
+          (if (or (= c \') (= c \"))
+            (let [close (.indexOf s (str c) (inc i))]
+              (if (neg? close)
+                (.toString sb)                      ; unterminated — stop, keep raw
+                (do (doseq [j (range (inc i) close)]
+                      (.setCharAt sb j \space))
+                    (recur (inc close)))))
+            (recur (inc i))))))))
+
+(def ^:private readonly-mutators
+  "[label regex] pairs for commands that change state. Matched at the head of a
+   command segment (start of string, or after ; & | ( ` or a newline), against
+   the quote-blanked command."
+  (let [head "(?:^|[;&|(`\\n])\\s*(?:\\w+=\\S+\\s+)*"]
+    [["rm"       (re-pattern (str head "(?:sudo\\s+)?(?:git\\s+)?rm\\s"))]
+     ["mv"       (re-pattern (str head "(?:sudo\\s+)?(?:git\\s+)?mv\\s"))]
+     ["cp"       (re-pattern (str head "(?:sudo\\s+)?cp\\s"))]
+     ["dd"       (re-pattern (str head "(?:sudo\\s+)?dd\\s"))]
+     ["chmod"    (re-pattern (str head "(?:sudo\\s+)?chmod\\s"))]
+     ["chown"    (re-pattern (str head "(?:sudo\\s+)?chown\\s"))]
+     ["kill"     (re-pattern (str head "(?:sudo\\s+)?(?:kill|pkill|killall)\\s"))]
+     ["truncate" (re-pattern (str head "(?:sudo\\s+)?(?:truncate|shred|mkfs\\S*)\\s"))]
+     ["tee"      (re-pattern (str head "(?:sudo\\s+)?tee\\s"))]
+     ["sed -i"   (re-pattern (str head "(?:sudo\\s+)?sed\\s+(?:-\\S+\\s+)*-i"))]
+     ;; xargs/find -exec launder a mutation past the segment-head check.
+     ["xargs rm" #"xargs\s+(?:-\S+\s+)*(?:rm|mv|chmod|chown|truncate)\b"]
+     ["find -exec" #"-(?:exec|execdir|delete)\b"]]))
+
+(def ^:private readonly-redirect-targets
+  "Redirect targets that write nothing. Everything else is a write."
+  #{"/dev/null" "/dev/stdout" "/dev/stderr" "/dev/tty"})
+
+(defn- redirect-writes
+  "Redirect targets in a quote-blanked command that name something other than
+   the null/tty sinks or another file descriptor (`2>&1`). `2>/dev/null` is a
+   read-only idiom and must stay allowed — treating it as destructive is what
+   made this guard reject ordinary greps (2026-09-16)."
+  [blanked]
+  (->> (re-seq #"(?:^|[\s;&|()])\d*>>?\s*([^\s;&|()<>]+)" blanked)
+       (map second)
+       (remove #(str/starts-with? % "&"))
+       (remove readonly-redirect-targets)
+       seq))
+
+(defn readonly-rejection
+  "Why :bash-readonly refuses `command`, or nil if it may run. Public so the
+   guard can be exercised directly by tests and by callers deciding whether to
+   route a command to a writable peripheral."
+  [command]
+  (let [blanked (blank-quoted (str command))]
+    (or (some (fn [[label re]]
+                (when (re-find re blanked)
+                  (str "`" label "` mutates state")))
+              readonly-mutators)
+        (when-let [targets (redirect-writes blanked)]
+          (str "writes to " (str/join ", " targets))))))
+
 (defn- tool-bash-readonly
-  "Execute a read-only bash command. Rejects obviously destructive commands.
+  "Execute a read-only bash command. Rejects commands that mutate state.
    Args: [command] or [command {:timeout-ms N}]."
   [cwd default-timeout args]
-  (let [command (str (first args))
-        destructive-patterns [#"(?:^|\s|;|&&|\|\|)\s*rm\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*mv\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*cp\s.*>\s"
-                              #">\s*/"
-                              #"(?:^|\s|;|&&|\|\|)\s*dd\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*chmod\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*chown\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*kill\s"]]
-    (if (some #(re-find % command) destructive-patterns)
-      {:ok false :error "Command rejected: appears destructive (readonly peripheral)"}
+  (let [command (str (first args))]
+    (if-let [reason (readonly-rejection command)]
+      {:ok false
+       :error (str "Command rejected by the readonly peripheral: " reason ". "
+                   "This peripheral runs reads only; `2>/dev/null`, `2>&1` and "
+                   "pipes are fine. Rewrite the command without the mutating "
+                   "part, or report that the work needs a writable peripheral. "
+                   "Do not retry variants of the same command.")}
       (tool-bash cwd default-timeout args))))
 
 ;; =============================================================================
@@ -271,11 +407,11 @@
 (defn- tool-reflect-ns
   "Public vars in a namespace. Args: [ns-sym-or-string]."
   [args]
-  (let [ns-sym (symbol (str (first args)))]
-    (let [result (reflection/reflect-ns ns-sym)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [ns-sym (symbol (str (first args)))
+        result (reflection/reflect-ns ns-sym)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 (defn- tool-reflect-var
   "Full metadata for a var. Args: [ns-sym var-sym] or [\"ns/var\"]."
@@ -299,20 +435,20 @@
 (defn- tool-reflect-deps
   "Namespace dependency graph. Args: [ns-sym-or-string]."
   [args]
-  (let [ns-sym (symbol (str (first args)))]
-    (let [result (reflection/reflect-deps ns-sym)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [ns-sym (symbol (str (first args)))
+        result (reflection/reflect-deps ns-sym)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 (defn- tool-reflect-java-class
   "Reflect on a Java class. Args: [class-name-string]."
   [args]
-  (let [class-name (str (first args))]
-    (let [result (reflection/reflect-java-class class-name)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [class-name (str (first args))
+        result (reflection/reflect-java-class class-name)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 ;; =============================================================================
 ;; Discipline tools (futon3a + futon3b adapters)
@@ -322,6 +458,10 @@
 
 (defn- gen-id [prefix]
   (str prefix "-" (UUID/randomUUID)))
+
+(defn- monotonic-elapsed-ms
+  [started-ns]
+  (/ (double (- (System/nanoTime) started-ns)) 1000000.0))
 
 (defn- parse-int
   [x default]
@@ -386,6 +526,15 @@
       :pass
       :fail)))
 
+(defn- normalize-prediction-error
+  [prediction-error]
+  (cond
+    (map? prediction-error) prediction-error
+    (and (string? prediction-error)
+         (not (str/blank? prediction-error)))
+    {:description prediction-error}
+    :else nil))
+
 (defn- persist-proof-path!
   "Persist a proof-path to EDN and, when an evidence-store is available,
    also append a synthetic evidence entry so the proof-path is queryable
@@ -399,26 +548,41 @@
                 :proof-path/file (:file persisted)}]
     ;; Bridge: append synthetic evidence entry to the evidence landscape
     (when evidence-store
-      (let [entry {:evidence/id (str "e-pp-" (:path/id proof-path))
-                   :evidence/subject {:ref/type :proof-path
-                                      :ref/id (:path/id proof-path)}
-                   :evidence/type :coordination
-                   :evidence/claim-type :observation
-                   :evidence/author "gate-pipeline"
-                   :evidence/at (str (Instant/now))
-                   :evidence/body {:event :proof-path-persisted
-                                   :path/id (:path/id proof-path)
-                                   :path/file (:file persisted)
-                                   :gate-events (mapv :gate/id events)}
-                   :evidence/tags [:proof-path :gate-traversal]}]
-        (let [append-result (boundary/append! evidence-store entry)]
-          (when (and (map? append-result) (contains? append-result :error/code))
-            (println "[WARN] proof-path evidence append failed:" (:error/message append-result))))))
+      ;; Punctuator identity (M-custom-harness §13.5c): the bridged body
+      ;; strips gate records to ids, which made agents unable to recognize
+      ;; their own PARs in the shared record. Carry the session-ref and the
+      ;; discipline kind explicitly.
+      (let [session-ref (or (get-in evidence [:par :par/session-ref])
+                            (get-in evidence [:psr :psr/session-ref]))
+            kind (cond
+                   (:par evidence) :par
+                   (:pur evidence) :pur
+                   (:psr evidence) :psr
+                   :else :proof-path)
+            entry (cond-> {:evidence/id (str "e-pp-" (:path/id proof-path))
+                           :evidence/subject {:ref/type :proof-path
+                                              :ref/id (:path/id proof-path)}
+                           :evidence/type :coordination
+                           :evidence/claim-type :observation
+                           :evidence/author "gate-pipeline"
+                           :evidence/at (str (Instant/now))
+                           :evidence/body (cond-> {:event :proof-path-persisted
+                                                   :path/id (:path/id proof-path)
+                                                   :path/file (:file persisted)
+                                                   :gate-events (mapv :gate/id events)
+                                                   :discipline-kind kind}
+                                            session-ref (assoc :session-ref session-ref))
+                           :evidence/tags [:proof-path :gate-traversal]}
+                    session-ref (assoc :evidence/session-id session-ref))
+            append-result (boundary/append! evidence-store entry)]
+        (when (and (map? append-result) (contains? append-result :error/code))
+          (println "[WARN] proof-path evidence append failed:" (:error/message append-result)))))
     result))
 
 (defn- tool-psr-search
   [cwd config args]
-  (let [query (some-> (first args) str str/trim)
+  (let [started (System/nanoTime)
+        query (some-> (first args) str str/trim)
         opts (if (map? (second args)) (second args) {})
         top-k (parse-int (:top-k opts) 5)
         include-details? (true? (:include-details opts))
@@ -432,7 +596,9 @@
 
       :else
       (try
-        (let [tokens (tokenize-query query)
+        (let [trace-id (gen-id "memory-query")
+              local-start (System/nanoTime)
+              tokens (tokenize-query query)
               index (notions/load-pattern-index idx-path)
               candidate->result
               (fn [entry]
@@ -447,26 +613,156 @@
                            :source :futon3a/notions-index}
                     include-details?
                     (assoc :details (notions/get-pattern-details pid)))))
-              candidates (->> index
-                              (map candidate->result)
-                              (filter #(pos? (:score %)))
-                              (sort-by :score >)
-                              (take top-k)
-                              vec)]
+              scored-by-id
+              (into {} (map (fn [entry]
+                              [(:id entry) (candidate->result entry)]))
+                    index)
+              lexical-candidates
+              (->> (vals scored-by-id)
+                   (filter #(pos? (:score %))))
+              local-index-ms (monotonic-elapsed-ms local-start)
+              proposal-fn
+              (or (:memory-proposal-fn config)
+                  memory-recall/propose-patterns-by-query)
+              proposal
+              (if-let [domain (:memory-domain config)]
+                (try
+                  (proposal-fn
+                   {:domain domain}
+                   query
+                   (cond-> {:limit (or (:memory-proposal-limit config) 10)
+                            :trace-id trace-id}
+                     (:memory-recall-batch-fn config)
+                     (assoc :recall-batch-fn
+                            (:memory-recall-batch-fn config))))
+                  (catch Throwable t
+                    {:ok false
+                     :candidates []
+                     :error {:error/code :memory-proposal-unavailable
+                             :error/message (or (.getMessage t)
+                                                "Memory proposal lane failed")}}))
+                {:ok false :candidates []})
+              proposed-by-id
+              (into {}
+                    (keep
+                     (fn [{:keys [pattern-id memory-support source]}]
+                       (when-let [base (get scored-by-id pattern-id)]
+                         [pattern-id
+                          (assoc base
+                                 :memory-proposal-source source
+                                 :memory-proposal-support memory-support)])))
+                    (:candidates proposal))
+              candidates
+              (->> (concat lexical-candidates (vals proposed-by-id))
+                   (reduce
+                    (fn [by-id candidate]
+                      (update by-id (:pattern-id candidate)
+                              #(merge % candidate)))
+                    {})
+                   vals
+                   (sort-by (juxt #(count (:memory-proposal-support %))
+                                  :score)
+                            #(compare %2 %1))
+                   (take top-k)
+                   vec)
+              recall-batch-fn
+              (or (:memory-recall-batch-fn config)
+                  memory-recall/recall-by-endpoints)
+              enrichment
+              (if-let [domain (:memory-domain config)]
+                (if (seq candidates)
+                  (recall-batch-fn
+                   {:domain domain
+                    :evidence-store (:evidence-store config)}
+                   (mapv :pattern-id candidates)
+                   {:limit (or (:memory-recall-limit config) 3)
+                    :trace-id trace-id})
+                  {:ok true :trace-id trace-id :recalls []
+                   :elapsed-ms 0.0})
+                {:ok false :trace-id trace-id
+                 :recalls
+                 (mapv
+                  (fn [{:keys [pattern-id]}]
+                    {:ok false
+                     :endpoint pattern-id
+                     :memories []
+                     :error
+                     {:error/code :memory-domain-not-configured
+                      :error/message
+                      "Pattern recall requires an explicit memory domain"}})
+                  candidates)})
+              recall-by-pattern
+              (into {} (map (juxt :endpoint identity))
+                    (:recalls enrichment))
+              candidates
+              (mapv (fn [candidate]
+                      (let [pattern-id (:pattern-id candidate)
+                            recall (get recall-by-pattern pattern-id
+                                        {:ok false
+                                         :endpoint pattern-id
+                                         :memories []
+                                         :error
+                                         {:error/code :batch-result-missing
+                                          :error/message
+                                          "Batch recall omitted requested pattern"}})
+                            hooks
+                            (mapv (fn [memory]
+                                    {:memory-id (:memory/id memory)
+                                     :hook (:memory/hook memory)
+                                     :role (if (or (= :challenged
+                                                     (:memory/state memory))
+                                                   (= :challenged
+                                                      (:memory/witness-status memory)))
+                                             :challenging
+                                             :supporting)
+                                     :state (:memory/state memory)
+                                     :witness-status
+                                     (:memory/witness-status memory)
+                                     :volatile? (:memory/volatile? memory)})
+                                  (:memories recall))]
+                        (cond-> (assoc candidate
+                                       :memory-hooks hooks
+                                       :memory-recall
+                                       (dissoc recall :memories))
+                          (empty? hooks)
+                          (assoc :memory-hole
+                                 {:kind (if (:ok recall)
+                                          :no-reviewed-attachment
+                                          :recall-unavailable)
+                                  :pattern-id pattern-id
+                                  :error (:error recall)}))))
+                    candidates)]
           {:ok true
            :result {:query query
+                    :trace-id trace-id
                     :top-k top-k
+                    :timing
+                    {:local-index-ms local-index-ms
+                     :proposal-ms
+                     (get-in proposal [:timing :proposal-total-ms])
+                     :candidate-enrichment-ms (:elapsed-ms enrichment)
+                     :total-ms (monotonic-elapsed-ms started)}
+                    :candidate-construction
+                    {:lexical-index :futon3a/notions-index
+                     :reviewed-memory-proposal
+                     (dissoc proposal :candidates)}
+                    :memory-enrichment
+                    (select-keys enrichment
+                                 [:ok :trace-id :endpoints :limit :fetch-limit
+                                  :substrate :elapsed-ms :error])
                     :candidates candidates}})
         (catch Exception e
-          {:ok false :error (str "psr-search failed: " (.getMessage e))})))))
+          (tool-error "psr-search" e))))))
 
 (defn- tool-psr-select
-  [discipline-state args]
+  [discipline-state config args]
   (let [pattern-id (normalize-pattern-id (first args))
         opts (if (map? (second args)) (second args) {})
         task-id (or (:task-id opts) (gen-id "task"))
         rationale (or (:rationale opts)
-                      (some-> (nth args 2 nil) str))]
+                      (some-> (nth args 2 nil) str))
+        recall-fn (or (:memory-recall-fn config)
+                      memory-recall/recall-by-endpoint)]
     (cond
       (str/blank? pattern-id)
       {:ok false :error "psr-select requires a pattern-id"}
@@ -482,17 +778,128 @@
                    :psr/pattern-ref pattern-id
                    :psr/candidates (vec (or (:candidates opts) []))
                    :psr/rationale rationale}
-              _ (gate-shapes/validate! gate-shapes/PSR psr)]
+              _ (gate-shapes/validate! gate-shapes/PSR psr)
+              recall
+              (if-let [domain (:memory-domain config)]
+                (recall-fn
+                 {:domain domain
+                  :evidence-store (:evidence-store config)}
+                 pattern-id
+                 {:limit (or (:memory-recall-limit config) 3)
+                  :include-bodies? true})
+                {:ok false
+                 :endpoint pattern-id
+                 :memories []
+                 :error {:error/code :memory-domain-not-configured
+                         :error/message
+                         "Pattern recall requires an explicit memory domain"}})
+              memories (vec (:memories recall))
+              surfaced-ids (mapv :memory/id memories)
+              inclusion-reasons
+              (into {}
+                    (map (fn [memory]
+                           [(:memory/id memory)
+                            (str "reviewed attachment to selected pattern "
+                                 pattern-id)])
+                         memories))]
           (swap! discipline-state assoc-in [:psr/by-pattern pattern-id] psr)
+          (swap! discipline-state assoc-in
+                 [:memory/by-psr (:psr/id psr)]
+                 {:pattern-id pattern-id
+                  :domain (:memory-domain config)
+                  :surfaced-at (now-str)
+                  :surfaced-memory-ids surfaced-ids
+                  :memory-use-kinds
+                  (into {}
+                        (keep (fn [memory]
+                                (when-let [kind (:memory-use/kind memory)]
+                                  [(:memory/id memory) kind])))
+                        memories)
+                  :inclusion-reasons inclusion-reasons
+                  :recall-audit (dissoc recall :memories)})
           {:ok true
            :result {:pattern-id pattern-id
                     :psr psr
-                    :selected? true}})
+                    :selected? true
+                    :attached-memories memories
+                    :memory-recall (dissoc recall :memories)
+                    :memory-hole
+                    (when (empty? memories)
+                      {:kind (if (:ok recall)
+                               :no-reviewed-attachment
+                               :recall-unavailable)
+                       :pattern-id pattern-id
+                       :error (:error recall)})}})
         (catch Exception e
-          {:ok false :error (str "psr-select failed: " (.getMessage e))})))))
+          (tool-error "psr-select" e))))))
+
+(defn- normalize-memory-rejections
+  [xs]
+  (reduce
+   (fn [acc item]
+     (let [memory-id (or (:memory-id item) (:memory_id item))
+           reason (:reason item)]
+       (if (and (string? memory-id) (not (str/blank? memory-id))
+                (string? reason) (not (str/blank? reason)))
+         (assoc acc memory-id reason)
+         (throw (ex-info "memory rejections require memory_id and reason"
+                         {:rejection item})))))
+   {}
+   (or xs [])))
+
+(defn- verify-independent-outcome
+  [evidence-store agent-id outcome-id]
+  (when outcome-id
+    (let [entry (estore/get-entry* evidence-store outcome-id)]
+      (cond
+        (nil? entry)
+        (throw (ex-info "independent outcome evidence was not found"
+                        {:outcome-id outcome-id}))
+
+        (= (str agent-id) (:evidence/author entry))
+        (throw (ex-info "memory user cannot witness its own outcome"
+                        {:outcome-id outcome-id :author agent-id}))
+
+        (not= :independently-witnessed
+              (get-in entry [:evidence/body
+                             :memory-outcome/witness-status]))
+        (throw (ex-info "outcome evidence is not independently witnessed"
+                        {:outcome-id outcome-id}))
+
+        :else entry))))
+
+(defn- persist-memory-use!
+  [evidence-store config pattern-id receipt]
+  (let [entry
+        {:evidence/subject {:ref/type :pattern :ref/id pattern-id}
+         :evidence/type :pattern-outcome
+         :evidence/claim-type :observation
+         :evidence/author (str (:agent-id config))
+         :evidence/session-id ((:session-id-fn config))
+         :evidence/body {:event :memory-use
+                         :memory-use receipt}
+         :evidence/tags [:memory :memory-use]}
+        persisted (boundary/append! evidence-store entry)]
+    (when-not (:ok persisted)
+      (throw (ex-info "memory-use receipt persistence failed"
+                      {:receipt persisted})))
+    persisted))
+
+(defn- pur-request-key
+  [pattern-id psr-ref outcome opts]
+  {:pattern-id pattern-id
+   :psr-ref psr-ref
+   :outcome outcome
+   :outcome-id (:outcome-id opts)
+   :criteria-eval (:criteria-eval opts)
+   :prediction-error (normalize-prediction-error
+                      (:prediction-error opts))
+   :memory-ids (vec (or (:memory-ids opts) []))
+   :memory-rejections
+   (normalize-memory-rejections (:memory-rejections opts))})
 
 (defn- tool-pur-update
-  [discipline-state evidence-store args]
+  [discipline-state evidence-store config args]
   (let [pattern-id (normalize-pattern-id (first args))
         second-arg (second args)
         third-arg (nth args 2 nil)
@@ -501,15 +908,32 @@
                (map? third-arg) third-arg
                :else {})
         status (if (map? second-arg) (:status second-arg) second-arg)
-        outcome (or (:outcome opts) (normalize-pur-outcome status))
+        outcome (normalize-pur-outcome (or (:outcome opts) status))
         psr (get-in @discipline-state [:psr/by-pattern pattern-id])
-        psr-ref (or (:psr/id psr) (:psr-ref opts))]
+        psr-ref (or (:psr/id psr) (:psr-ref opts))
+        memory-context (get-in @discipline-state [:memory/by-psr psr-ref])
+        request-key-result
+        (try
+          {:key (pur-request-key pattern-id psr-ref outcome opts)}
+          (catch Exception e
+            {:error (.getMessage e)}))
+        request-key (:key request-key-result)
+        prior (some #(when (= request-key (:request-key %)) %)
+                    (get @discipline-state :pur/history))]
     (cond
       (str/blank? pattern-id)
       {:ok false :error "pur-update requires a pattern-id"}
 
       (str/blank? psr-ref)
       {:ok false :error "pur-update requires prior psr-select (missing psr-ref)"}
+
+      (:error request-key-result)
+      {:ok false
+       :error (str "pur-update failed: " (:error request-key-result))}
+
+      prior
+      {:ok true
+       :result (assoc (:result prior) :idempotent-replay? true)}
 
       :else
       (try
@@ -520,25 +944,68 @@
                            :pur/psr-ref psr-ref
                            :pur/outcome outcome
                            :pur/criteria-eval criteria-eval}
-                    (contains? opts :prediction-error)
-                    (assoc :pur/prediction-error (:prediction-error opts)))
+                    (some? (normalize-prediction-error
+                            (:prediction-error opts)))
+                    (assoc :pur/prediction-error
+                           (normalize-prediction-error
+                            (:prediction-error opts))))
               _ (gate-shapes/validate! gate-shapes/PUR pur)
               events (cond-> []
                        psr (conj {:gate/id :g3 :gate/record psr :gate/at (now-str)})
                        true (conj {:gate/id :g1 :gate/record pur :gate/at (now-str)}))
+              memory-receipt
+              (when (:memory-domain config)
+                (let [surfaced (vec (or (:surfaced-memory-ids memory-context)
+                                        []))
+                      used (vec (or (:memory-ids opts) []))
+                      rejection-reasons
+                      (normalize-memory-rejections (:memory-rejections opts))
+                      outcome-id (:outcome-id opts)
+                      recorded-at (now-str)]
+                  (verify-independent-outcome
+                   evidence-store (:agent-id config) outcome-id)
+                  (memory-contract/use-receipt
+                   {:decision-id psr-ref
+                    :session-id ((:session-id-fn config))
+                    :domain (:memory-domain config)
+                    :surfaced-memory-ids surfaced
+                    :used-memory-ids used
+                    :rejected-memory-ids (vec (keys rejection-reasons))
+                    :inclusion-reasons
+                    (or (:inclusion-reasons memory-context) {})
+                    :memory-use-kinds
+                    (or (:memory-use-kinds memory-context) {})
+                    :rejection-reasons rejection-reasons
+                    :pattern-id pattern-id
+                    :outcome-id outcome-id
+                    :surfaced-at (:surfaced-at memory-context)
+                    :recorded-at recorded-at})))
               persisted (persist-proof-path! events {:pattern-id pattern-id
                                                      :psr psr
                                                      :pur pur}
-                                                   evidence-store)]
+                                                   evidence-store)
+              memory-use
+              (when memory-receipt
+                (let [persisted-receipt
+                      (persist-memory-use! evidence-store config
+                                           pattern-id memory-receipt)]
+                  {:receipt memory-receipt
+                   :evidence-id (:evidence/id persisted-receipt)}))
+              result {:pattern-id pattern-id
+                      :outcome outcome
+                      :pur pur
+                      :proof persisted
+                      :memory-use memory-use}]
           (swap! discipline-state update :pur/history
-                 (fnil conj []) {:pattern-id pattern-id :pur pur :proof persisted})
-          {:ok true
-           :result {:pattern-id pattern-id
-                    :outcome outcome
-                    :pur pur
-                    :proof persisted}})
+                 (fnil conj []) {:pattern-id pattern-id
+                                 :request-key request-key
+                                 :pur pur
+                                 :proof persisted
+                                 :memory-use memory-use
+                                 :result result})
+          {:ok true :result result})
         (catch Exception e
-          {:ok false :error (str "pur-update failed: " (.getMessage e))})))))
+          (tool-error "pur-update" e))))))
 
 (defn- tool-pur-mark-pivot
   [discipline-state evidence-store args]
@@ -569,7 +1036,7 @@
                   :psr gap-psr
                   :proof persisted}})
       (catch Exception e
-        {:ok false :error (str "pur-mark-pivot failed: " (.getMessage e))}))))
+        (tool-error "pur-mark-pivot" e)))))
 
 (defn- tool-par-punctuate
   [discipline-state evidence-store args]
@@ -598,7 +1065,7 @@
          :result {:par par
                   :proof persisted}})
       (catch Exception e
-        {:ok false :error (str "par-punctuate failed: " (.getMessage e))}))))
+        (tool-error "par-punctuate" e)))))
 
 ;; =============================================================================
 ;; RealBackend
@@ -640,10 +1107,22 @@
 
         ;; Discipline-domain tools
         :psr-search     (tool-psr-search cwd config args)
-        :psr-select     (tool-psr-select discipline-state args)
-        :pur-update     (tool-pur-update discipline-state evidence-store args)
+        :psr-select     (tool-psr-select discipline-state config args)
+        :pur-update     (tool-pur-update discipline-state evidence-store config args)
         :pur-mark-pivot (tool-pur-mark-pivot discipline-state evidence-store args)
         :par-punctuate  (tool-par-punctuate discipline-state evidence-store args)
+        :memory-record  (let [[first-arg second-arg] args
+                              [ctx payload]
+                              (if (some? second-arg)
+                                [first-arg second-arg]
+                                [{:agent-id (:agent-id config)
+                                  :session-id (when-let [f (:session-id-fn config)]
+                                                (f))
+                                  :domain (:memory-domain config)}
+                                 first-arg])]
+                          (memory-write/record-memory!
+                           (assoc (or ctx {}) :evidence-store evidence-store)
+                           payload))
 
         ;; Unknown
         {:ok false :error (str "Unknown tool: " tool-id)}))))
@@ -656,6 +1135,11 @@
      :timeout-ms     — default command timeout (default: 30000)
      :evidence-store — atom for :musn-log tool (optional)
      :notions-index-path — futon3a patterns index path for :psr-search (optional)
+     :memory-domain — explicit shared-memory domain; enables PSR recall
+     :memory-recall-limit — per-pattern bound (default 3)
+     :memory-recall-fn — injectable recall function for tests
+     :memory-recall-batch-fn — injectable bounded search recall for tests
+     :agent-id / :session-id-fn — controller-stamped receipt identity
      :discipline-state — atom for PSR/PUR/PAR continuity (optional)"
   ([]
    (make-real-backend {}))

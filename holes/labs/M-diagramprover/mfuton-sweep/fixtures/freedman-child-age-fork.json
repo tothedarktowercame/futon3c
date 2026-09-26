@@ -1,0 +1,45 @@
+{
+  "example_id": "freedman-child-age-fork",
+  "title": "Shoe Size, Age of Child, and Reading Ability",
+  "topology_basis": "explicit_textual_edge_list",
+  "content": "David Freedman's example states the causal graph Shoe Size <- Age of Child -> Reading Ability. Age explains the observed association; changing shoe size does not change reading ability. The source then discusses conditioning on age.",
+  "variables": [
+    {
+      "key": "age-of-child",
+      "name": "Age of Child",
+      "content": "Age of Child is the common source variable in the printed example."
+    },
+    {
+      "key": "shoe-size",
+      "name": "Shoe Size",
+      "content": "Shoe Size is one effect variable in the printed example."
+    },
+    {
+      "key": "reading-ability",
+      "name": "Reading Ability",
+      "content": "Reading Ability is one effect variable in the printed example."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "age-of-child",
+      "target": "shoe-size",
+      "because": "The source explicitly writes Shoe Size <- Age of Child."
+    },
+    {
+      "source": "age-of-child",
+      "target": "reading-ability",
+      "because": "The source explicitly writes Age of Child -> Reading Ability."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:245160c591bdb654",
+    "ta-book-of-why-2018:ad492d67c1845362",
+    "ta-book-of-why-2018:40f014a68699b625",
+    "ta-book-of-why-2018:50c4f75e7ce2c187"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0126",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0127"
+  ]
+}

@@ -1,0 +1,52 @@
+{:contract/id :apm-codex-only-frame-cycle-v1
+ :contract/principle
+ "Every Codex dispatch ends in a durable ruling. Verified proofs and reusable
+  partial libraries are landed and rechecked after merge; false statements
+  retain their exact witnesses; blocked work retains its exact seam."
+ :phase-order [:preflight :solve :verify :bank :close-frame]
+ :phases
+ {:preflight
+  {:kind :preflight :role :proctor :receipt/type :frame-preflight
+   :requires #{} :produces #{:preflight-receipt}}
+  :solve
+  {:kind :solve :role :solver :receipt/type :frame-solve
+   :requires #{:preflight-receipt}
+   :produces #{:solve-receipt :solver-output}}
+  :verify
+  {:kind :verify :role :proctor :receipt/type :frame-verify
+   :requires #{:solve-receipt :solver-output}
+   :produces #{:verify-receipt}}
+  :bank
+  {:kind :bank :role :proctor :receipt/type :frame-bank
+   :requires #{:verify-receipt}
+   :produces #{:bank-receipt :ruling}}
+  :close-frame
+  {:kind :close-frame :role :guide :receipt/type :frame-close
+   :requires #{:preflight-receipt :solve-receipt :verify-receipt
+               :bank-receipt :ruling}
+   :produces #{:frame-close-receipt :frame-trace}}}
+ :receipt/schemas
+ {:frame-preflight
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/result}}
+  :frame-solve
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/final-head :receipt/lean}}
+  :frame-verify
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/solve-receipt-id}}
+  :frame-bank
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/verify-receipt-id
+               :receipt/ruling :receipt/lane-transition}}
+  :frame-close
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/input-receipt-ids :receipt/trace-id :receipt/result}}}
+ :global-invariants
+ #{:receipt-content-addressed :receipt-frame-and-problem-match
+   :verify-gates-are-not-reimplemented-by-bank
+   :every-dispatch-has-exactly-one-ruling
+   :landed-artifacts-rechecked-after-merge
+   :status-counted-by-elaboration
+   :defective-ruling-has-witness-and-statement-sha
+   :close-consumes-bank-ruling}}

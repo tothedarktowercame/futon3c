@@ -1,0 +1,43 @@
+{
+  "observed-at": "2026-09-11T16:50:45.270902+00:00",
+  "read-only-probes": [
+    {
+      "frame": "f224",
+      "source-kind": "input-attempt-receipt",
+      "requested-id": "ebf2d3c20f127a1012e102e0001c44232837a7a332f47d49ca2a3b56a338db75",
+      "http-status": 404,
+      "diagnostic": "{\"ok\":false,\"error\":\"invoke-job-not-found\",\"job-id\":\"ebf2d3c20f127a1012e102e0001c44232837a7a332f47d49ca2a3b56a338db75\"}"
+    },
+    {
+      "frame": "f224",
+      "source-kind": "guide-ticket-job",
+      "requested-id": "apm-role-96dc21d03a15812886f5cb0bc5a276a136322782c22b7f840d94dc2bd440c347",
+      "http-status": 200,
+      "returned-job-id": "apm-role-96dc21d03a15812886f5cb0bc5a276a136322782c22b7f840d94dc2bd440c347",
+      "agent-id": "f224-guide",
+      "state": "cancelled",
+      "event-count": 12,
+      "started-at": "2026-09-11T15:35:38.764688801Z",
+      "finished-at": "2026-09-11T15:36:32.035739683Z"
+    },
+    {
+      "frame": "f225",
+      "source-kind": "input-attempt-receipt",
+      "requested-id": "a13c68effa57febbc7b6b5ce9cf4df9be9454a4c4c3bccaa696056cba036fb81",
+      "http-status": 404,
+      "diagnostic": "{\"ok\":false,\"error\":\"invoke-job-not-found\",\"job-id\":\"a13c68effa57febbc7b6b5ce9cf4df9be9454a4c4c3bccaa696056cba036fb81\"}"
+    },
+    {
+      "frame": "f225",
+      "source-kind": "guide-ticket-job",
+      "requested-id": "apm-role-fb8d1a7b56ad088169ed22c765017539dfe8a4b0fc6c80a75ae691e9d95d3d04",
+      "http-status": 200,
+      "returned-job-id": "apm-role-fb8d1a7b56ad088169ed22c765017539dfe8a4b0fc6c80a75ae691e9d95d3d04",
+      "agent-id": "f225-guide",
+      "state": "cancelled",
+      "event-count": 48,
+      "started-at": "2026-09-11T16:34:18.907613090Z",
+      "finished-at": "2026-09-11T16:36:51.364856260Z"
+    }
+  ]
+}

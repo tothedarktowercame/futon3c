@@ -1,0 +1,2226 @@
+(ns futon3c.agents.zai-api
+  "Small Z.AI API-backed coding harness.
+
+   Z.AI supplies the model and OpenAI-style tool calls; this namespace supplies
+   the local agent loop and delegates real work to futon3c.peripheral.real-backend."
+  (:require [cheshire.core :as json]
+            [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
+            [clojure.string :as str]
+            [futon3c.agency.invoke-activity :as invoke-activity]
+            [futon3c.agency.invoke-controls :as invoke-controls]
+            [futon3c.agents.memory-provisioning :as memory-provisioning]
+            [futon3c.agents.zaif-controller :as zaif]
+            [futon3c.agents.zaif-inputs :as zaif-inputs]
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.peripheral.pull-receipts :as pull-receipts]
+            [futon3c.peripheral.real-backend :as real-backend]
+            [futon3c.peripheral.tools :as tools])
+  (:import [java.awt Image]
+           [java.awt.image BufferedImage]
+           [java.io ByteArrayOutputStream]
+           [java.net URI]
+           [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
+            HttpResponse$BodyHandlers]
+           [java.time Duration]
+           [java.util Base64 UUID]
+           [javax.imageio ImageIO]))
+
+(def ^:private default-base-url
+  "https://api.z.ai/api/coding/paas/v4")
+
+(def ^:private default-model "glm-5.3")
+
+(def default-request-timeout-ms
+  "Maximum duration of one Z.AI HTTP request. This is not a logical turn bound."
+  (* 5 60 1000))
+
+(def default-turn-timeout-ms
+  "Default wall-clock envelope for one agentic Z.AI turn."
+  (* 60 60 1000))
+
+(defn- getenv [k]
+  (some-> (System/getenv k) str/trim not-empty))
+
+(defn- read-key-file [path]
+  (try
+    (let [f (io/file (str/replace-first path #"^~" (System/getProperty "user.home")))]
+      (when (.exists f)
+        (some-> f slurp str/trim not-empty)))
+    (catch Throwable _ nil)))
+
+(defn resolve-api-key
+  []
+  (or (getenv "ZAI_API_KEY")
+      (read-key-file "~/.zaikey")
+      (read-key-file "~/.zai-key")))
+
+(defn- chat-url [base-url]
+  (str (str/replace (or base-url default-base-url) #"/+$" "")
+       "/chat/completions"))
+
+(defn- json-schema
+  [props required]
+  {:type "object"
+   :properties props
+   :required required
+   :additionalProperties false})
+
+(def ^:private tool-specs
+  [{:name "read_file"
+    :description "Read a local file relative to the agent cwd unless an absolute path is supplied."
+    :parameters (json-schema
+                 {:path {:type "string"}
+                  :offset {:type "integer" :description "Optional zero-based line offset."}
+                  :limit {:type "integer" :description "Optional maximum number of lines."}}
+                 ["path"])}
+   {:name "list_files"
+    :description "List files matching a glob pattern. Prefer this before broad shell commands."
+    :parameters (json-schema
+                 {:pattern {:type "string" :description "Glob, for example **/*.clj."}
+                  :base_dir {:type "string" :description "Optional base directory."}}
+                 ["pattern"])}
+   {:name "search"
+    :description "Search files with a regular expression."
+    :parameters (json-schema
+                 {:pattern {:type "string"}
+                  :path {:type "string" :description "File or directory to search; defaults to cwd."}
+                  :case_insensitive {:type "boolean"}
+                  :max_matches {:type "integer"}}
+                 ["pattern"])}
+   {:name "edit_file"
+    :description "Replace the first exact occurrence of old_string in a file."
+    :parameters (json-schema
+                 {:path {:type "string"}
+                  :old_string {:type "string"}
+                  :new_string {:type "string"}}
+                 ["path" "old_string" "new_string"])}
+   {:name "write_file"
+    :description "Write a complete file. Use only when creating a file or intentionally replacing all content."
+    :parameters (json-schema
+                 {:path {:type "string"}
+                  :content {:type "string"}}
+                 ["path" "content"])}
+   {:name "run_shell"
+    :description "Run a shell command in cwd. Use for tests, builds, git diff, or focused inspection."
+    :parameters (json-schema
+                 {:command {:type "string"}
+                  :timeout_ms {:type "integer"}}
+                 ["command"])}
+   {:name "run_readonly"
+    :description "Run a read-only shell command in cwd. Commands that mutate state (rm, mv, sed -i, redirects to a file) are rejected; 2>/dev/null, 2>&1 and pipes are fine."
+    :parameters (json-schema
+                 {:command {:type "string"}
+                  :timeout_ms {:type "integer"}}
+                 ["command"])}
+   {:name "view_image"
+    :description "Look at a local image file — a screenshot, a rendered page, a diagram. Use it after capturing a screenshot (Playwright, scrot, import) to see what is actually on screen instead of inferring it from the DOM or from what you expected to happen. PNG, JPEG, GIF, WebP and BMP; SVG is not an image input, read it with read_file and reason about the XML."
+    :parameters (json-schema
+                 {:path {:type "string" :description "Path to the image, relative to the agent cwd unless absolute."}}
+                 ["path"])}
+   {:name "reflect_namespaces"
+    :description "List loaded Clojure namespaces in the JVM."
+    :parameters (json-schema
+                 {:pattern {:type "string"}}
+                 [])}
+   {:name "reflect_ns"
+    :description "Reflect public vars in a loaded Clojure namespace."
+    :parameters (json-schema
+                 {:namespace {:type "string"}}
+                 ["namespace"])}
+   {:name "reflect_var"
+    :description "Reflect one Clojure var, either as ns/var or namespace plus var."
+    :parameters (json-schema
+                 {:name {:type "string"}
+                  :namespace {:type "string"}
+                  :var {:type "string"}}
+                 [])}
+   {:name "reflect_deps"
+    :description "Return the dependency graph for a loaded Clojure namespace."
+    :parameters (json-schema
+                 {:namespace {:type "string"}}
+                 ["namespace"])}
+   {:name "reflect_java_class"
+    :description "Reflect a Java class visible to the JVM."
+    :parameters (json-schema
+                 {:class {:type "string"}}
+                 ["class"])}
+   {:name "irc_recent"
+    :description "Read recent IRC messages from the local Futon IRC bridge log."
+    :parameters (json-schema
+                 {:limit {:type "integer"}}
+                 [])}
+   {:name "irc_send"
+    :description "Send one message to IRC. Use channel #futon unless the user names another channel."
+    :parameters (json-schema
+                 {:channel {:type "string"}
+                  :from {:type "string"}
+                  :text {:type "string"}}
+                 ["text"])}
+   {:name "boot_context"
+    :description "Report this agent's current situation: identity, session, cwd, clock target, git branch and dirty files, AGENTS.md presence. Snapshot at call time."
+    :parameters (json-schema {} [])}
+   {:name "repo_contract"
+    :description "Read the repo's AGENTS.md contract verbatim, with path, size, and mtime."
+    :parameters (json-schema
+                 {:repo {:type "string" :description "Optional directory; defaults to the agent cwd."}}
+                 [])}
+   {:name "psr_search"
+    :description "Search the futon pattern library for patterns relevant to a task. Returns scored candidates plus bounded hooks for reviewed attached memories; cite the ids you rely on."
+    :parameters (json-schema
+                 {:query {:type "string"}
+                  :top_k {:type "integer"}
+                  :include_details {:type "boolean"}}
+                 ["query"])}
+   {:name "psr_select"
+    :description "Record a Pattern Selection Record (PSR) before applying a library pattern. Returns full bodies of reviewed memories attached to the selected pattern."
+    :parameters (json-schema
+                 {:pattern_id {:type "string"}
+                  :rationale {:type "string"}
+                  :task_id {:type "string"}
+                  :candidates {:type "array" :items {:type "string"}}}
+                 ["pattern_id"])}
+   {:name "pur_update"
+    :description "Record a Pattern Use Record (PUR) after applying a selected pattern. Cite used memory ids, explain deliberate rejections, and optionally attach a separately recorded independent outcome id."
+    :parameters (json-schema
+                 {:pattern_id {:type "string"}
+                  :outcome {:type "string" :description "success | partial | failure"}
+                  :prediction_error {:type "string"}
+                  :memory_ids {:type "array" :items {:type "string"}
+                               :description "Ids returned by psr_select that materially informed the work."}
+                  :memory_rejections
+                  {:type "array"
+                   :items {:type "object"
+                           :properties
+                           {:memory_id {:type "string"}
+                            :reason {:type "string"}}
+                           :required ["memory_id" "reason"]}
+                   :description "Surfaced memories deliberately rejected as irrelevant or misleading."}
+                  :outcome_id
+                  {:type "string"
+                   :description "Existing separately recorded independently witnessed outcome evidence id."}}
+                 ["pattern_id" "outcome"])}
+   {:name "par_punctuate"
+    :description "Punctuate the session with a PAR: what worked, what didn't, prediction errors, suggestions. Lands as a proof path in the evidence store."
+    :parameters (json-schema
+                 {:what_worked {:type "string"}
+                  :what_didnt {:type "string"}
+                  :prediction_errors {:type "array" :items {:type "object"}
+                                      :description "Structured entries, e.g. {\"expected\": ..., \"actual\": ...} or {\"description\": ...}. The PAR shape requires maps, not strings."}
+                  :suggestions {:type "array" :items {:type "string"}}}
+                 ["what_worked"])}
+   {:name "memory_record"
+    :description (str "Record one deliberate assert memory as evidence plus a typed hyperedge. "
+                      "Required fields: name (non-blank), body (content), "
+                      "subjects [{ref/type, ref/id}] (at least one). "
+                      "Kind rule: derived-from-a-failure-with-a-why → feedback; documented "
+                      "contract/scope fact → reference. Identity is server-stamped.")
+    :parameters (json-schema
+                 {:name {:type "string" :description "Kebab-case identity hint."}
+                  :hook {:type "string" :description "One-line retrieval hook, at most 80 characters."}
+                  :kind {:type "string" :enum ["feedback" "reference" "project" "user"]}
+                  :body {:type "string" :description "Self-contained memory fact."}
+                  :why {:type "string"}
+                  :how_to_apply {:type "string" :description "Retrieval predicate or application condition."}
+                  :tags {:type "array" :maxItems 8
+                         :items {:type "string" :minLength 1}
+                         :description "Optional searchable caller tags; system memory tags remain first."}
+                  :subjects {:type "array"
+                             :minItems 1
+                             :description (str "REQUIRED. At least one; first is the primary "
+                                               "subject. Example: "
+                                               "[{\"ref/type\": \"problem\", \"ref/id\": \"a96J05\"}]. "
+                                               "For a lemma or commit use "
+                                               "{\"ref/type\": \"git-commit\", \"ref/id\": \"<sha>\"}.")
+                             :items {:type "object"
+                                     :properties {:ref/type
+                                                  {:type "string"
+                                                   :description "What kind of thing the memory is about."
+                                                   :enum ["problem" "pattern" "mission" "component"
+                                                          "gate" "session" "agent" "thread" "evidence"
+                                                          "proof-path" "task" "portfolio" "arse-thread"
+                                                          "library" "language" "tool" "service" "script"
+                                                          "memory" "decision" "git-commit"]}
+                                                  :ref/id
+                                                  {:type "string"
+                                                   :description (str "Stable identifier of that thing. Must RESOLVE LATER: "
+                                                                     "use a concrete value, never a moving reference. "
+                                                                     "For git-commit give the full sha, not HEAD or a "
+                                                                     "branch name -- HEAD names a different commit "
+                                                                     "tomorrow, so the subject becomes unresolvable. "
+                                                                     "For problem give the problem id, e.g. a96J05.")}}
+                                     :required ["ref/type" "ref/id"]
+                                     :additionalProperties false}}
+                  :distills {:type "array" :items {:type "string"}
+                             :description "Evidence ids or @current-round."}
+                  :facets {:type "array" :items {:type "string"}}
+                  :volatile {:type "boolean" :description "True when valid-until-changed."}}
+                 ["name" "hook" "kind" "body" "subjects"])}
+   {:name "memory_search"
+    :description (str "Search the evidence store by filters (type, claim-type, "
+                      "author, since, tags). A lone problem-id tag also matches that "
+                      "subject id; prefer subject {ref/type: problem, ref/id: ID} "
+                      "when scoping by problem. Returns the memory envelope "
+                      "{:frame :query :items}. Read-only.")
+    :parameters (json-schema
+                 {:subject {:type "object" :description "ArtifactRef {:ref/type :ref/id} to scope the search to one subject."}
+                  :type {:type "string"
+                         :description (str "EvidenceType. Note this is NOT the same vocabulary as "
+                                           "claim_type -- 'observation' is a ClaimType, not an "
+                                           "EvidenceType. A value outside this list matches nothing "
+                                           "and returns an empty result WITHOUT an error.")
+                         :enum ["coordination" "gate-traversal" "pattern-selection"
+                                "pattern-outcome" "reflection" "forum-post"
+                                "mode-transition" "presence-event" "correction"
+                                "conjecture" "arse-qa" "memory"]}
+                  :claim_type {:type "string"
+                               :description (str "ClaimType. A value outside this list matches "
+                                                 "nothing and returns an empty result WITHOUT an "
+                                                 "error.")
+                               :enum ["goal" "step" "evidence" "conclusion" "question"
+                                      "observation" "tension" "correction" "conjecture"
+                                      "assert" "challenge" "agree" "define" "retract"
+                                      "suggest" "request" "query"]}
+                  :author {:type "string"}
+                  :since {:type "string" :description "ISO-8601 timestamp lower bound (inclusive)."}
+                  :tags {:type "array" :items {:type "string"} :description "Tag keywords to filter by."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}
+                  :include_ephemeral {:type "boolean"}}
+                 [])}
+   {:name "memory_read"
+    :description (str "Open the tin by id: fetch ONE evidence entry with its FULL BODY. "
+                      "Use this second hop after memory_search or evidence_graph "
+                      "returns an envelope containing an evidence id.")
+    :parameters (json-schema
+                 {:evidence_id {:type "string"
+                                :description "Evidence entry id, for example e-..."}}
+                 ["evidence_id"])}
+   {:name "tool_history"
+    :description "Read the clock-store session state for this agent: current clock target, edit activity, last auto-clock witness. Returns the memory envelope. Read-only."
+    :parameters (json-schema {} [])}
+   {:name "evidence_graph"
+    :description "Project evidence into graphs. Modes: thread (needs subject-ref), reply-chain (needs evidence-id), forks (needs evidence-id), neighborhood (needs end-id). Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:mode {:type "string"
+                         :description "Default thread."
+                         :enum ["thread" "reply-chain" "forks" "neighborhood"]}
+                  :subject_ref {:type "object" :description "{:ref/type :ref/id} ArtifactRef for thread mode."}
+                  :evidence_id {:type "string" :description "EvidenceEntry id for reply-chain/forks modes."}
+                  :end_id {:type "string" :description "Endpoint id (string or UUID) for neighborhood mode."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}
+   {:name "pattern_memory"
+    :description "Query the evidence store for pattern-family tags (PSR/PUR/PAR/proof-path). Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:tags {:type "array" :items {:type "string"} :description "Override default tags [:psr :pur :par :proof-path]."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}
+   {:name "recent_coordination"
+    :description "Read recent coordination activity: invoke jobs (bells/whistles) and mesh edges. Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:limit {:type "integer" :description "Max items (default 20, max 100)."}
+                  :scope {:type "string" :description "jobs | edges | both. Default both."}}
+                 [])}
+   {:name "mission_context"
+    :description "Compose mission orientation: mission markdown (status banner + last checkpoint), obligations, and related evidence. Defaults to the clocked mission. Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:target {:type "string" :description "Optional mission id, e.g. M-custom-harness. Defaults to the clocked mission."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}])
+
+(def ^:private memory-family-tool-names
+  "The memory write/read tools plus the two orientation tools; removable per
+   :memory-mode for the M-custom-harness §8.4 comparison conditions."
+  #{"memory_record" "memory_search" "memory_read" "tool_history" "evidence_graph" "pattern_memory"
+    "recent_coordination" "mission_context"})
+
+(def ^:private orientation-tool-names
+  #{"boot_context" "repo_contract"})
+
+(def ^:private vision-tool-names
+  "Offered only by a provider that accepts image input. Z.AI's GLM seats have
+   never been sent one, so their tool list must stay byte-identical."
+  #{"view_image"})
+
+(defn- specs-for-mode
+  "Tool specs for a §8.4 condition. :full (default) — everything;
+   :files — no memory family (orientation + files remain: condition b);
+   :none — no memory family, no orientation tools (condition a).
+   VISION? adds the vision family; it defaults off so a provider that cannot
+   take an image is never offered a tool it would fail."
+  ([memory-mode] (specs-for-mode memory-mode false))
+  ([memory-mode vision?]
+   (cond->> (case (or memory-mode :full)
+              :none (remove #(or (memory-family-tool-names (:name %))
+                                 (orientation-tool-names (:name %)))
+                            tool-specs)
+              :files (remove #(memory-family-tool-names (:name %)) tool-specs)
+              tool-specs)
+     (not vision?) (remove #(vision-tool-names (:name %))))))
+
+(defn- openai-tools
+  ([] (openai-tools :full false))
+  ([memory-mode] (openai-tools memory-mode false))
+  ([memory-mode vision?]
+   (mapv (fn [{:keys [name description parameters]}]
+           {:type "function"
+            :function {:name name
+                       :description description
+                       :parameters parameters}})
+         (specs-for-mode memory-mode vision?))))
+
+(defn- parse-arguments [s]
+  (cond
+    (map? s) s
+    (str/blank? (str s)) {}
+    :else (try
+            (json/parse-string (str s) true)
+            (catch Throwable _
+              ;; Malformed arguments are almost always the model's tool-call
+              ;; JSON truncated at max_tokens. Mapping this to {} made it look
+              ;; like the model omitted its arguments, and the generic error
+              ;; sent it into an identical-retry loop (zai-10's write_file
+              ;; "I keep forgetting to pass arguments", 2026-07-04). Surface a
+              ;; sentinel so execute-tool can report what actually happened.
+              (let [raw (str s)]
+                {:__unparseable_arguments
+                 (str (count raw) " chars of invalid JSON"
+                      (when (>= (count raw) 40)
+                        (str ", ends: …" (subs raw (- (count raw) 40)))))})))))
+
+(defn- result-string [x]
+  (let [s (if (string? x) x (json/generate-string x))]
+    (if (> (count s) 12000)
+      (str (subs s 0 12000) "\n...[truncated " (- (count s) 12000) " chars]")
+      s)))
+
+(defn- detect-stuck!
+  "stuck-means-signal, mechanical (mistakes-ledger §11): track consecutive
+   identical (tool, args, result) triples in !state {:s sig :n count}.
+   At 3 repeats inject a change-approach warning into the tool result; at
+   5+ inject a stop-and-bell-your-reviewer instruction. Returns the
+   (possibly annotated) executed map unchanged otherwise."
+  [!state tc executed]
+  (let [sig [(get-in tc [:function :name])
+             (str (get-in tc [:function :arguments]))
+             (str (get-in executed [:message :content]))]
+        {:keys [n]} (swap! !state
+                           (fn [{:keys [s n]}]
+                             (if (= s sig)
+                               {:s s :n (inc (long (or n 0)))}
+                               {:s sig :n 1})))]
+    (if (>= (long n) 3)
+      (update-in executed [:message :content] str
+                 "\n[STUCK-DETECTOR] identical call + identical result, x" n
+                 " (process-coherence/stuck-means-signal). "
+                 (if (>= (long n) 5)
+                   (str "STOP repeating NOW. State what you were trying and "
+                        "what stayed unchanged, then bell your reviewer for "
+                        "help (run_shell: python3 /home/joe/code/futon3c/"
+                        "scripts/agency_send.py --from <your-id> --to "
+                        "<reviewer> --kind bell). Do not issue this call again.")
+                   "Change approach: different arguments, different tool, or chunk the operation."))
+      executed)))
+
+(defn- tool-call-detail [tool-call args]
+  {:id (:id tool-call)
+   :name (get-in tool-call [:function :name])
+   :input args})
+
+(declare emit-bug-records!)
+
+(defn- current-mission-id
+  [agent-id session-id]
+  (try
+    (when-let [current-clock (requiring-resolve
+                              'futon3c.agency.clock-store/current-clock)]
+      (:mission-id (current-clock agent-id session-id)))
+    (catch Throwable _ nil)))
+
+(def ^:private image-mime-types
+  {"png" "image/png" "jpg" "image/jpeg" "jpeg" "image/jpeg" "gif" "image/gif"
+   "webp" "image/webp" "bmp" "image/bmp" "heic" "image/heic" "heif" "image/heif"})
+
+(def max-image-dimensions
+  "Moonshot's recommendation: past 4K a larger image only costs more time to
+   process, it does not improve understanding. So downscale rather than refuse."
+  [4096 2160])
+
+(def default-max-image-bytes
+  "Cap on one encoded image. Not the vendor's limit (100MB per request body) —
+   a limit on what is reasonable to spend context on for a single look."
+  (* 8 1024 1024))
+
+(def default-retained-images
+  "How many images stay inline in the conversation. Every earlier one is
+   replaced by its caption. A screenshot loop that kept them all would resend
+   every megabyte of every screenshot on every subsequent round."
+  2)
+
+(defn- scale-to-fit
+  [^BufferedImage img max-w max-h]
+  (let [w (.getWidth img)
+        h (.getHeight img)
+        ratio (min (/ (double max-w) w) (/ (double max-h) h))
+        w* (max 1 (int (Math/floor (* w ratio))))
+        h* (max 1 (int (Math/floor (* h ratio))))
+        out (BufferedImage. w* h* BufferedImage/TYPE_INT_RGB)
+        g (.createGraphics out)]
+    (try
+      (.drawImage g (.getScaledInstance img w* h* Image/SCALE_SMOOTH) 0 0 nil)
+      (finally (.dispose g)))
+    out))
+
+(defn- png-bytes [^BufferedImage img]
+  (let [out (ByteArrayOutputStream.)]
+    (ImageIO/write img "png" out)
+    (.toByteArray out)))
+
+(defn- read-image-part
+  "Read PATH as image content parts for one tool result.
+
+   Returns {:ok true :content-parts [image text]} or {:ok false :error msg}.
+   The trailing text part is the caption: it names the file and size, and it is
+   what survives when the image is later elided, so the conversation keeps a
+   record that the look happened.
+
+   Formats the decoder cannot open (WebP, HEIC) pass through byte-for-byte with
+   no dimension check rather than failing — the model accepts them, we simply
+   cannot measure or downscale them here."
+  [cwd path max-bytes]
+  (let [f (io/file (if (str/starts-with? (str path) "/")
+                     (str path)
+                     (str (io/file cwd (str path)))))
+        ext (some-> (re-find #"\.([A-Za-z0-9]+)$" (.getName f)) second str/lower-case)
+        mime (get image-mime-types ext)]
+    (cond
+      (str/blank? (str path)) {:ok false :error "view_image needs a path"}
+      (not (.exists f)) {:ok false :error (str "no such file: " (.getPath f))}
+      (= "svg" ext)
+      {:ok false
+       :error (str "SVG is not an image input for this model. Read " (.getPath f)
+                   " with read_file and reason about the XML source instead.")}
+      (nil? mime)
+      {:ok false
+       :error (str "not a supported image type: ." (or ext "(none)")
+                   ". Supported: " (str/join ", " (sort (distinct (keys image-mime-types)))))}
+      :else
+      (try
+        (let [raw (java.nio.file.Files/readAllBytes (.toPath f))
+              decoded (try (ImageIO/read f) (catch Throwable _ nil))
+              [max-w max-h] max-image-dimensions
+              oversized? (and decoded (or (> (.getWidth decoded) max-w)
+                                          (> (.getHeight decoded) max-h)))
+              bytes* (if oversized? (png-bytes (scale-to-fit decoded max-w max-h)) raw)
+              mime* (if oversized? "image/png" mime)
+              dims (when decoded
+                     (if oversized?
+                       (let [s (scale-to-fit decoded max-w max-h)]
+                         [(.getWidth s) (.getHeight s)])
+                       [(.getWidth decoded) (.getHeight decoded)]))]
+          (if (> (count bytes*) max-bytes)
+            {:ok false
+             :error (str (.getPath f) " encodes to " (quot (count bytes*) 1024)
+                         "KB, over the " (quot max-bytes 1024)
+                         "KB per-image limit. Crop it or screenshot a smaller"
+                         " region, then call view_image again.")}
+            {:ok true
+             :content-parts
+             [{:type "image_url"
+               :image_url {:url (str "data:" mime* ";base64,"
+                                     (.encodeToString (Base64/getEncoder) bytes*))}}
+              {:type "text"
+               :text (str "viewed " (.getPath f)
+                          (when dims (str " (" (first dims) "x" (second dims) ")"))
+                          " " (quot (count bytes*) 1024) "KB"
+                          (when oversized? " — downscaled to fit 4096x2160"))}]}))
+        (catch Throwable t
+          {:ok false :error (str "could not read " (.getPath f) ": " (.getMessage t))})))))
+
+(defn- image-part? [p]
+  (and (map? p) (= "image_url" (or (:type p) (get p "type")))))
+
+(defn- elide-stale-images
+  "Keep the RETAIN most recent images inline; drop earlier ones, leaving their
+   caption text behind so the record of the look survives."
+  [messages retain]
+  (let [budget (volatile! retain)]
+    (->> (reverse messages)
+         (mapv (fn [m]
+                 (let [content (:content m)]
+                   (if-not (and (sequential? content) (some image-part? content))
+                     m
+                     (if (pos? @budget)
+                       (do (vswap! budget dec) m)
+                       (assoc m :content
+                              (mapv (fn [p]
+                                      (if (image-part? p)
+                                        p
+                                        (update p :text str " — image elided from context; call view_image again to look at it now")))
+                                    (remove image-part? content))))))))
+         reverse
+         vec)))
+
+(defn- execute-tool
+  [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
+                   evidence-store dispatch-id turn-id round profile session-id-fallback]
+            :as ctx}
+   tool-call]
+  (let [name (get-in tool-call [:function :name])
+        args (parse-arguments (get-in tool-call [:function :arguments]))
+        fail (fn [msg] {:ok false :error msg})
+        memory-ctx {:agent-id agent-id
+                    :session-id (some-> session-id-atom deref)
+                    :dispatch-id dispatch-id
+                    :turn-id turn-id
+                    :cwd cwd
+                    :evidence-store evidence-store}
+        result
+        (cond
+          (:__unparseable_arguments args)
+          (fail (str "TOOL-CALL ARGUMENTS CORRUPTED IN TRANSIT — you did NOT "
+                     "omit them. Received " (:__unparseable_arguments args)
+                     ". This usually means your arguments JSON was cut off at "
+                     "the output-token limit. Do NOT retry the identical call: "
+                     "send a SMALLER call — write_file with a short first chunk "
+                     "of the content, then edit_file to append the rest piece "
+                     "by piece."))
+
+          ;; Empty arguments on a tool that requires them is the same transport
+          ;; artifact (truncation before/at the arguments block), not the model
+          ;; "forgetting" — the generic missing-path error sent zai-10 into an
+          ;; identical-retry loop (2026-07-04).
+          (and (empty? args)
+               (contains? #{"read_file" "list_files" "search" "edit_file"
+                            "write_file" "run_shell" "run_readonly"
+                            "reflect_ns" "reflect_var" "reflect_deps"
+                            "reflect_java_class" "psr_search" "psr_select"
+                            "pur_update" "memory_record" "memory_read" "irc_send"}
+                          name))
+          (fail (str "TOOL-CALL ARGUMENTS ARRIVED EMPTY at the harness for "
+                     name " — a transport/truncation artifact, not you "
+                     "forgetting them. Do NOT retry the identical call. If you "
+                     "were writing a long file, the arguments likely exceeded "
+                     "the output-token limit: write_file a short first chunk, "
+                     "then edit_file to append the rest piece by piece."))
+
+          :else
+          (case name
+          "read_file"
+          (tools/execute-tool backend :read
+                              [(:path args)
+                               (cond-> {}
+                                 (:offset args) (assoc :offset (:offset args))
+                                 (:limit args) (assoc :limit (:limit args)))])
+
+          "list_files"
+          (tools/execute-tool backend :glob
+                              (cond-> [(:pattern args)]
+                                (:base_dir args) (conj (:base_dir args))))
+
+          "search"
+          (tools/execute-tool backend :grep
+                              [(:pattern args)
+                               (or (:path args) ".")
+                               (cond-> {}
+                                 (:case_insensitive args) (assoc :case-insensitive true)
+                                 (:max_matches args) (assoc :max-matches (:max_matches args)))])
+
+          "edit_file"
+          (tools/execute-tool backend :edit
+                              [(:path args) (:old_string args) (:new_string args)])
+
+          "write_file"
+          (tools/execute-tool backend :write
+                              [(:path args) (:content args)])
+
+          "run_shell"
+          (tools/execute-tool backend :bash
+                              [(:command args)
+                               (cond-> {}
+                                 (:timeout_ms args) (assoc :timeout-ms (:timeout_ms args)))])
+
+          "run_readonly"
+          (tools/execute-tool backend :bash-readonly
+                              [(:command args)
+                               (cond-> {}
+                                 (:timeout_ms args) (assoc :timeout-ms (:timeout_ms args)))])
+
+          "view_image"
+          (read-image-part cwd (:path args)
+                           (or (:max-image-bytes ctx) default-max-image-bytes))
+
+          "reflect_namespaces"
+          (tools/execute-tool backend :reflect-namespaces
+                              (cond-> []
+                                (:pattern args) (conj (:pattern args))))
+
+          "reflect_ns"
+          (tools/execute-tool backend :reflect-ns [(:namespace args)])
+
+          "reflect_var"
+          (tools/execute-tool backend :reflect-var
+                              (if (:name args)
+                                [(:name args)]
+                                [(:namespace args) (:var args)]))
+
+          "reflect_deps"
+          (tools/execute-tool backend :reflect-deps [(:namespace args)])
+
+          "reflect_java_class"
+          (tools/execute-tool backend :reflect-java-class [(:class args)])
+
+          "irc_recent"
+          (if irc-recent-fn
+            (try {:ok true :result (irc-recent-fn (or (:limit args) 30))}
+                 (catch Throwable t (fail (.getMessage t))))
+            (fail "IRC recent-message reader is not configured"))
+
+          "boot_context"
+          (memory-backend/boot-context {:agent-id agent-id
+                                        :session-id (some-> session-id-atom deref)
+                                        :cwd cwd})
+
+          "repo_contract"
+          (memory-backend/repo-contract {:cwd cwd} {:repo (:repo args)})
+
+          "memory_search"
+          (memory-backend/memory-search
+           memory-ctx
+           (cond-> {}
+             (:subject args) (assoc :subject (:subject args))
+             (:type args) (assoc :type (:type args))
+             (:claim_type args) (assoc :claim-type (:claim_type args))
+             (:author args) (assoc :author (:author args))
+             (:since args) (assoc :since (:since args))
+             (seq (:tags args)) (assoc :tags (vec (:tags args)))
+             (:limit args) (assoc :limit (:limit args))
+             (:include_ephemeral args) (assoc :include-ephemeral? true)))
+
+          "memory_read"
+          (memory-backend/memory-read
+           memory-ctx {:evidence-id (:evidence_id args)})
+
+          "tool_history"
+          (memory-backend/tool-history
+           {:agent-id agent-id :session-id (some-> session-id-atom deref)}
+           nil)
+
+          "evidence_graph"
+          (memory-backend/evidence-graph
+           memory-ctx
+           (cond-> {}
+             (:mode args) (assoc :mode (:mode args))
+             (:subject_ref args) (assoc :subject-ref (:subject_ref args))
+             (:evidence_id args) (assoc :evidence-id (:evidence_id args))
+             (:end_id args) (assoc :end-id (:end_id args))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "mission_context"
+          (memory-backend/mission-context
+           {:agent-id agent-id
+            :session-id (some-> session-id-atom deref)
+            :cwd cwd}
+           (cond-> {}
+             (:target args) (assoc :target (:target args))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "pattern_memory"
+          (memory-backend/pattern-memory
+           memory-ctx
+           (cond-> {}
+             (seq (:tags args)) (assoc :tags (vec (:tags args)))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "recent_coordination"
+          (memory-backend/recent-coordination
+           {:agent-id agent-id :cwd cwd}
+           (cond-> {}
+             (:limit args) (assoc :limit (:limit args))
+             (:scope args) (assoc :scope (:scope args))))
+
+          "psr_search"
+          (tools/execute-tool backend :psr-search
+                              [(:query args)
+                               (cond-> {}
+                                 (:top_k args) (assoc :top-k (:top_k args))
+                                 (:include_details args) (assoc :include-details true))])
+
+          "psr_select"
+          (tools/execute-tool backend :psr-select
+                              [(:pattern_id args)
+                               (cond-> {}
+                                 (:rationale args) (assoc :rationale (:rationale args))
+                                 (:task_id args) (assoc :task-id (:task_id args))
+                                 (seq (:candidates args)) (assoc :candidates (vec (:candidates args))))])
+
+          "memory_record"
+          (let [session-id (or (some-> session-id-atom deref) session-id-fallback)
+                payload (cond-> args
+                          (:how_to_apply args)
+                          (assoc :how-to-apply (:how_to_apply args))
+                          (contains? args :volatile)
+                          (assoc :volatile? (:volatile args)))]
+            (tools/execute-tool
+             backend :memory-record
+             [{:agent-id agent-id
+               :session-id session-id
+               :turn-id turn-id
+               :round round
+               :mission-id (current-mission-id agent-id session-id)
+               :domain (or (:memory-domain ctx) :zaif-work)
+               :evidence-store evidence-store}
+              (dissoc payload :how_to_apply :volatile)]))
+
+          "pur_update"
+          (tools/execute-tool backend :pur-update
+                              [(:pattern_id args)
+                               (cond-> {:outcome (:outcome args)}
+                                 (:prediction_error args)
+                                 (assoc :prediction-error (:prediction_error args))
+                                 (seq (:memory_ids args))
+                                 (assoc :memory-ids (vec (:memory_ids args)))
+                                 (seq (:memory_rejections args))
+                                 (assoc :memory-rejections
+                                        (vec (:memory_rejections args)))
+                                 (:outcome_id args)
+                                 (assoc :outcome-id (:outcome_id args)))])
+
+          "par_punctuate"
+          (let [par-result (tools/execute-tool backend :par-punctuate
+                              [(cond-> {:session-ref (some-> session-id-atom deref)}
+                                 (:what_worked args) (assoc :what-worked (:what_worked args))
+                                 (:what_didnt args) (assoc :what-didnt (:what_didnt args))
+                                 ;; PAR shape wants [:vector map?] — coerce stray strings.
+                                 (seq (:prediction_errors args))
+                                 (assoc :prediction-errors
+                                        (mapv #(if (map? %) % {:description (str %)})
+                                              (:prediction_errors args)))
+                                 (seq (:suggestions args)) (assoc :suggestions (vec (:suggestions args))))])]
+            ;; ZU-4: session-end sweep — emit :bug/* records for tool failures.
+            (emit-bug-records! {:agent-id agent-id
+                                :sid (some-> session-id-atom deref str)
+                                :turn-id turn-id
+                                :profile profile
+                                :evidence-store evidence-store})
+            par-result)
+
+          "irc_send"
+          (if irc-send-fn
+            (try
+              (let [channel (or (:channel args) "#futon")
+                    from (or (:from args) agent-id "zai")
+                    text (:text args)]
+                (irc-send-fn channel from text)
+                {:ok true :result {:channel channel :from from :text text}})
+              (catch Throwable t (fail (.getMessage t))))
+            (fail "IRC sender is not configured"))
+
+          (fail (str "Unknown tool: " name))))
+        _pull-receipt
+        (when (contains? pull-receipts/pull-tool-names name)
+          (try
+            (let [receipt (pull-receipts/record-pull-offer!
+                           {:evidence-store evidence-store
+                            :agent-id agent-id
+                            :session-id (or (some-> session-id-atom deref)
+                                            session-id-fallback)
+                            :dispatch-id dispatch-id
+                            :turn-id turn-id
+                            :round round}
+                           name args result)]
+              (when-not (:ok receipt)
+                (binding [*out* *err*]
+                  (println (str "[pull-receipt] write refused: "
+                                (pr-str (dissoc receipt :entry)))))))
+            (catch Throwable t
+              ;; Recording is observational. A receipt failure is loud but
+              ;; cannot rewrite the search result seen by the runner.
+              (binding [*out* *err*]
+                (println (str "[pull-receipt] write failed: " (.getMessage t)))))))
+        _pull-use-receipts
+        (when (contains? pull-receipts/pull-use-tool-names name)
+          (try
+            (pull-receipts/record-pull-uses!
+             {:evidence-store evidence-store
+              :agent-id agent-id
+              :session-id (or (some-> session-id-atom deref)
+                              session-id-fallback)
+              :dispatch-id dispatch-id
+              :turn-id turn-id
+              :round round}
+             name result)
+            (catch Throwable t
+              (binding [*out* *err*]
+                (println (str "[pull-use-receipt] write failed: "
+                              (.getMessage t)))))))]
+
+    {:detail (tool-call-detail tool-call args)
+     :message {:role "tool"
+               :tool_call_id (:id tool-call)
+               :name name
+               ;; A vision tool returns an array of content parts. Kimi accepts
+               ;; image parts in a tool-role message (verified live 2026-09-23),
+               ;; so a screenshot arrives as the result of the tool that took
+               ;; it — no synthetic user turn in the middle of the loop.
+               :content (or (and (map? result) (:content-parts result))
+                            (result-string result))}
+     :result result
+     :error? (and (map? result) (false? (:ok result)))}))
+
+(defn- assistant-text [message]
+  (let [content (:content message)
+        reasoning (:reasoning_content message)]
+    (cond
+      (and (string? content) (not (str/blank? content))) content
+      (and (string? reasoning) (not (str/blank? reasoning))) reasoning
+      :else "")))
+
+(def default-sampling
+  "The sampling block Z.AI wants. A provider sharing this harness supplies its
+   own :sampling map; a key whose value is nil omits that field from the request
+   body entirely, which is how a provider that REFUSES a field (Kimi rejects any
+   explicit temperature) gets a valid request rather than a 400."
+  {:temperature 0.2
+   :thinking {:type "disabled"}
+   :reasoning-effort "none"})
+
+(defn- chat!
+  [client {:keys [api-key base-url model max-tokens timeout-ms memory-mode
+                  sampling env-prefix vision? no-tools?]} messages]
+  (let [{:keys [temperature thinking reasoning-effort]} (or sampling default-sampling)
+        env-prefix (or env-prefix "ZAI")
+        thinking-env (getenv (str env-prefix "_THINKING_TYPE"))
+        effort-env (getenv (str env-prefix "_REASONING_EFFORT"))
+        body (json/generate-string
+              (cond-> {:model (or model default-model)
+                       :messages messages
+                       ;; 8192: 4096 truncated large tool-call arguments in
+                       ;; transit (zai-10's write_file loop, claude-18's
+                       ;; diagnosis 2026-07-04) — big file writes need headroom.
+                       :max_tokens (or max-tokens 8192)}
+                ;; A summary call sends plain text and must answer in text.
+                (not no-tools?) (assoc :tools (openai-tools memory-mode vision?)
+                                       :tool_choice "auto")
+                (some? temperature) (assoc :temperature temperature)
+                (some? thinking) (assoc :thinking thinking)
+                (some? reasoning-effort) (assoc :reasoning_effort reasoning-effort)
+                thinking-env (assoc-in [:thinking :type] thinking-env)
+                effort-env (assoc :reasoning_effort effort-env)))
+        req (-> (HttpRequest/newBuilder (URI/create (chat-url base-url)))
+                (.timeout (Duration/ofMillis
+                           (long (or timeout-ms default-request-timeout-ms))))
+                (.header "Content-Type" "application/json")
+                (.header "Authorization" (str "Bearer " api-key))
+                (.POST (HttpRequest$BodyPublishers/ofString body))
+                .build)
+        resp (.send client req (HttpResponse$BodyHandlers/ofString))
+        status (.statusCode resp)
+        raw (.body resp)
+        parsed (try (json/parse-string raw true)
+                    (catch Throwable t
+                      {:error {:message (str "Could not parse response: " (.getMessage t))
+                               :raw raw}}))]
+    (if (<= 200 status 299)
+      parsed
+      {:error {:message (str "HTTP " status)
+               :body parsed}})))
+
+(defn- sink! [agent-id event]
+  (when (find-ns 'futon3c.agency.registry)
+    (when-let [get-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)]
+      (when-let [sink (get-sink (str agent-id))]
+        (try (sink event) (catch Throwable _))))))
+
+(defn- report-activity!
+  "Publish a live activity string for an in-turn agent.
+
+  2026-09-12: zai seats driven straight from the operator's REPL minted no
+  invoke job and never reported activity, so voxterm's in-turn test (live job
+  OR activity within 120s — the roster status is deliberately ignored there
+  as intent-not-liveness) could never see them working: zai-7 ran a whole
+  turn showing 'not executing'. The codex adapter reports per event; this is
+  the same contract for the zai loop. Stamps invoke-activity-at, which is
+  the actual liveness signal."
+  [agent-id activity-str]
+  (when-not (str/blank? activity-str)
+    (when (find-ns 'futon3c.agency.registry)
+      (when-let [update! (ns-resolve 'futon3c.agency.registry
+                                     'update-invoke-activity!)]
+        (try (@update! (str agent-id) activity-str) (catch Throwable _))))))
+
+
+(defn- normalized-usage
+  "Translate a successful z.ai completion's usage block into the vendor-neutral
+  per-turn cost schema. Optional detail counters are omitted when absent."
+  [resp]
+  (when-let [usage (:usage resp)]
+    ;; Every field is guarded, including the three the SDK declares required.
+    ;; A proxy or a partial error response does not honour a pydantic
+    ;; annotation, and a cost key present-but-nil is the :ids failure shape:
+    ;; a map of the right form that reads as data and is not. Omit, never nil —
+    ;; and emit no record at all when no counter survived, rather than a bare
+    ;; {:cost/source :zai} that would count as a turn with zero tokens.
+    (let [counters (cond-> {}
+                     (some? (:prompt_tokens usage))
+                     (assoc :cost/input-tokens (:prompt_tokens usage))
+                     (some? (:completion_tokens usage))
+                     (assoc :cost/output-tokens (:completion_tokens usage))
+                     (some? (:total_tokens usage))
+                     (assoc :cost/total-tokens (:total_tokens usage))
+                     (some? (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (assoc :cost/cached-input-tokens
+                            (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (some? (get-in usage [:completion_tokens_details :reasoning_tokens]))
+                     (assoc :cost/reasoning-tokens
+                            (get-in usage [:completion_tokens_details :reasoning_tokens])))]
+      (when (seq counters)
+        ;; :cost/model is the model the SERVER says served this turn, read off
+        ;; the response, not the model we asked for. A frame that re-casts a
+        ;; seat onto a different model has no other post-hoc evidence of which
+        ;; one actually ran: the mint's :casting block is derived from the cast
+        ;; and so reports the request, which cannot detect a failure anywhere
+        ;; between minting and the API call.
+        (cond-> (assoc counters :cost/source :zai)
+          (some? (:model resp)) (assoc :cost/model (:model resp)))))))
+
+;; --- U1: transcript persistence (M-zaif-harness) --------------------------
+;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
+;; gone on JVM restart — which left an agent's claims about its own past
+;; tool calls unadjudicable (first live zaif demo, 2026-07-11). Persist each
+;; tool ROUND as a typed evidence entry instead: what the agent did becomes
+;; part of the record (R9 — narration is not evidence). These are semantic
+;; act records (tool + args + result digest), never raw transport envelopes
+;; (policy: transport/http.clj emit-invoke-evidence!). Volume is bounded by
+;; the round budget (~1-25 entries per turn); large tool RESULTS are stored
+;; as digest + preview only. The store is resolved dynamically so a
+;; namespace reload picks this up in already-registered invoke closures,
+;; and so a swapped backend (futon3c.dev/!evidence-store) is honoured.
+
+(def ^:private transcript-text-cap 4096)
+(def ^:private transcript-args-cap 2048)
+(def ^:private transcript-preview-cap 240)
+
+(defn- transcript-truncate [s cap]
+  (let [s (str s)]
+    (if (> (count s) cap)
+      (str (subs s 0 cap) "…[+" (- (count s) cap) " chars]")
+      s)))
+
+(defn- transcript-digest
+  "Digest a tool result for the record: enough to adjudicate against
+   (identity + size + head), without storing bulk content twice."
+  [content]
+  (let [s (str content)
+        md (java.security.MessageDigest/getInstance "SHA-256")
+        hex (apply str (map #(format "%02x" %) (take 8 (.digest md (.getBytes s "UTF-8")))))]
+    {:sha256-16 hex
+     :chars (count s)
+     :preview (transcript-truncate s transcript-preview-cap)}))
+
+(defn- refusal-diagnostic
+  "Keep structured refusal facts outside the display-grade result preview.
+   Success records remain digest-only; this is deliberately error-path-only."
+  [result]
+  (let [error-map (when (map? (:error result)) (:error result))
+        context (:error/context error-map)
+        receipt (:receipt context)
+        violation (or (:invariant/violation result)
+                      (:invariant/violation error-map)
+                      (:invariant/violation context)
+                      (:invariant/violation receipt))
+        fields (or (:fields context)
+                   (get-in receipt [:error/context :fields]))
+        code (or (:error/code result)
+                 (:error/code error-map)
+                 (:error/code receipt))
+        message (or (:error/message result)
+                    (:error/message error-map)
+                    (:error/message receipt)
+                    (when (string? (:error result)) (:error result)))]
+    (cond-> {}
+      code (assoc :error/code code)
+      message (assoc :error/message message)
+      fields (assoc :fields fields)
+      violation
+      (assoc :invariant/violation
+             (select-keys violation
+                          [:invariant :kind :reason :idempotent?])))))
+
+(defonce ^:private !transcript-persistence-status
+  (atom {:ok-count 0 :failure-count 0 :last-error nil :last-evidence-id nil}))
+
+(defn transcript-persistence-status
+  "Return loss-accounting counters for ZAI/ZAIF transcript writes."
+  []
+  @!transcript-persistence-status)
+
+(defn- persist-transcript-entry!
+  "Synchronously append ENTRY and fail the turn if durable evidence is lost."
+  [evidence-store entry]
+  (let [evidence-id (:evidence/id entry)]
+    (try
+      (when-not evidence-store
+        (throw (ex-info "ZAI transcript evidence store is unavailable"
+                        {:evidence-id evidence-id})))
+      (let [receipt (boundary/append! evidence-store entry)]
+        (when-not (:ok receipt)
+          (throw (ex-info "ZAI transcript persistence was rejected"
+                          {:evidence-id evidence-id :receipt receipt})))
+        (swap! !transcript-persistence-status
+               (fn [status]
+                 (-> status
+                     (update :ok-count (fnil inc 0))
+                     (assoc :last-error nil :last-evidence-id evidence-id))))
+        receipt)
+      (catch Throwable t
+        (swap! !transcript-persistence-status
+               (fn [status]
+                 (-> status
+                     (update :failure-count (fnil inc 0))
+                     (assoc :last-error (.getMessage t)
+                            :last-evidence-id evidence-id))))
+        (binding [*out* *err*]
+          (println (str "[zai-transcript] FATAL " evidence-id ": " (.getMessage t)))
+          (flush))
+        (throw t)))))
+
+(defn- persist-transcript-safely!
+  "Turn-safe transcript persistence. The loss is already counted in
+   !transcript-persistence-status and logged FATAL by persist-transcript-entry!;
+   here it is additionally surfaced to follow-mode and then swallowed —
+   instrumentation must not kill a live turn (2026-07-22: store outages
+   aborted operator turns through this path, losing the turn AND the
+   transcript; the ledger + visible line preserve loss-accounting instead)."
+  [agent-id evidence-store entry]
+  (try
+    (persist-transcript-entry! evidence-store entry)
+    (catch Throwable t
+      (try
+        (sink! agent-id {:type "text"
+                         :text (str "[zai ✗ transcript not persisted: "
+                                    (.getMessage t) "]")})
+        (catch Throwable _ nil))
+      nil)))
+
+(defn- transcript-entry
+  [{:keys [agent-id sid turn-id profile event body]}]
+  {:evidence/id (str "e-" (UUID/randomUUID))
+   :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+   :evidence/type :coordination
+   :evidence/claim-type :step
+   :evidence/author (str agent-id)
+   :evidence/session-id (str sid)
+   :evidence/at (str (java.time.Instant/now))
+   :evidence/tags [:transcript event profile]
+   :evidence/body (merge {:event event
+                          :turn-id (str turn-id)
+                          :profile profile}
+                         body)})
+
+(defn- persist-turn-start!
+  "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
+  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition]}]
+  (persist-transcript-safely!
+   agent-id evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :turn-start
+     :body {:prompt (str prompt)
+            :requisition requisition
+            :prompt-chars (count (str prompt))
+            ;; Explicit join: Agency dispatch id -> this generated turn id.
+            :dispatch-id (str dispatch-id)
+            :turn-id (str turn-id)}})))
+
+;; (?U): mission ids may be non-ASCII, e.g. M-象-2000.
+(def ^:private work-target-re #"(?U)^[MET]-[^\W_][\w.-]*$")
+
+(def ^:private requisition-line-re
+  ;; "Requisition: M-foo — purpose". The separator may be an em or en dash,
+  ;; "--" or "-"; anything after it is the purpose.
+  #"(?m)^[ \t>]*Requisition:[ \t]*(\S+)[ \t]*(?:—|–|--|-)?[ \t]*(.*?)[ \t]*$")
+
+(def continuation-callers
+  "Callers whose jobs continue the seat's current work rather than start new
+   work: the reply to a bell the seat sent, and a park it set. They carry no
+   requisition of their own and inherit the seat's target."
+  #{"auto-bellback" "parked-resume"})
+
+(defn- canonical-holes-dirs
+  "holes/ directories of the canonical futon checkouts under ROOT. Worktree
+   copies (futon3c-foo, futon2-fix-10d-baseline, ...) are excluded: a target
+   that exists only in a worktree is not work the seat can be pointed at."
+  [root]
+  (->> (.listFiles (io/file root))
+       (filter #(re-matches #"futon\d+[a-z]?" (.getName ^java.io.File %)))
+       (map #(io/file % "holes"))
+       (filter #(.isDirectory ^java.io.File %))))
+
+(defn resolve-work-target
+  "Return the path of the M-/E-/T- doc named TARGET, or nil. Exact name only:
+   holes/<TARGET>.md or holes/<kind>/<TARGET>.md in a canonical futon repo."
+  ([target] (resolve-work-target target "/home/joe/code"))
+  ([target root]
+   (when (and (string? target) (re-matches work-target-re target))
+     (some (fn [holes]
+             (some (fn [sub]
+                     (let [f (io/file holes sub (str target ".md"))]
+                       (when (.isFile f) (.getPath f))))
+                   ["" "missions" "excursions" "tickets"]))
+           (canonical-holes-dirs root)))))
+
+(defn parse-requisition
+  "Read the caller's requisition from PROMPT: a line
+   `Requisition: <M-*|E-*|T-*> — <purpose>`.
+
+   Returns nil when there is no such line, {:target :purpose} for one target
+   (repeated lines naming the same target are fine: a forwarded bell may
+   quote one), or {:error :ambiguous :targets [...]} when lines disagree."
+  [prompt]
+  (let [lines (re-seq requisition-line-re (str prompt))
+        targets (distinct (map second lines))]
+    (cond
+      (empty? lines) nil
+      (next targets) {:error :ambiguous :targets (vec targets)}
+      :else {:target (first targets)
+             :purpose (some #(not-empty (nth % 2)) lines)})))
+
+(defn- clock-work-target
+  "The target a caller's clock names: its ticket, else its excursion, else its
+   mission."
+  [clock]
+  (some #(some-> (get clock %) str str/trim not-empty)
+        [:ticket-id :excursion-id :mission-id]))
+
+(defn- caller-clock
+  "The registered CALLER's clock as it stands now, else INHERITED's. The
+   inherited clock is the caller's decision when the job was created, which
+   can be minutes stale by the time a queued job starts (claude-8,
+   2026-09-24: a reminder quoted a clock already replaced)."
+  [caller inherited]
+  (or (when-let [agent (some-> caller not-empty
+                               ((requiring-resolve 'futon3c.agency.registry/get-agent)))]
+        ((requiring-resolve 'futon3c.agency.clock-store/current-clock)
+         (get-in agent [:agent/id :id/value]) (:agent/session-id agent)))
+      (:clock inherited)))
+
+(def requisition-format
+  "Requisition: <M-*|E-*|T-*> — <one-line purpose>")
+
+(defn- missing-requisition-message
+  [caller-target]
+  (str "You can't use a Kimi seat without a requisition. Put one line in the "
+       "call: `" requisition-format "`"
+       (if caller-target
+         (str " — your clock says " caller-target "; if that is what this is: "
+              "`Requisition: " caller-target " — <purpose>`.")
+         ". You are not clocked in: clock in on what you are working on.")
+       " The seat keeps its conversation per target and compacts it when the "
+       "target changes."))
+
+(defn- requisition-error-message
+  [agent-id requisition target]
+  (case (:reason requisition)
+    :requisition-required (missing-requisition-message target)
+    :requisition-ambiguous
+    (str "Requisition lines name different targets "
+         (pr-str (:targets requisition)) "; name one.")
+    :requisition-purpose-required
+    (str "Requisition for " (:target requisition) " has no purpose. Use `"
+         requisition-format "`.")
+    :requisition-unresolved
+    (str "No holes/**/" (:target requisition) ".md in a canonical futon repo; "
+         "requisition an existing mission, excursion or ticket.")
+    (str agent-id " refused the requisition: " (pr-str requisition))))
+
+(defn enqueue-caller-followup!
+  "Retired 2026-09-25. Kimi seats used to queue followups to their caller: a
+   clock reminder when a requisition named another target, and a copy of every
+   refusal. Joe: notifications along the way waste time, energy and usage; a
+   refusal already comes back as the job's error. Kept as a no-op only because
+   seat invoke closures built before this change still call it through its
+   var; delete at the next restart."
+  [_caller _dedupe-tag _prompt _metadata]
+  nil)
+
+(defn requisition-decision
+  "Admit or refuse a job on a requisition-gated seat. Continuations without a
+   requisition inherit the seat's target. Returns {:action :admit|:refuse
+   :reason kw :target :purpose}."
+  [{:keys [requisition continuation? resolve-fn]
+    :or {resolve-fn resolve-work-target}}]
+  (cond
+    (and continuation? (nil? requisition))
+    {:action :admit :reason :continuation}
+
+    (nil? requisition)
+    {:action :refuse :reason :requisition-required}
+
+    (:error requisition)
+    {:action :refuse :reason :requisition-ambiguous :targets (:targets requisition)}
+
+    (not (re-matches work-target-re (:target requisition)))
+    {:action :refuse :reason :requisition-unresolved :target (:target requisition)}
+
+    (str/blank? (:purpose requisition))
+    {:action :refuse :reason :requisition-purpose-required :target (:target requisition)}
+
+    (not (resolve-fn (:target requisition)))
+    {:action :refuse :reason :requisition-unresolved :target (:target requisition)}
+
+    :else
+    {:action :admit :reason :requisitioned
+     :target (:target requisition) :purpose (:purpose requisition)}))
+
+(defn context-carry-decision
+  "Decide what an admitted job on a requisition-gated seat runs on.
+
+   Every tool round re-sends the whole conversation, so a seat that keeps one
+   session across unrelated dispatches pays for all of them on every request
+   (kimi-4, 2026-09-24: its 15:44 job opened at 335k tokens of earlier work
+   and was refused by Kimi's 5-hour limit; see
+   holes/labs/kimi-5h-limit-2026-09-24.md). Joe's rule (2026-09-24): each
+   call requisitions its mission, excursion or ticket, and when the target
+   changes the conversation is cleared. CAP-TOKENS also clears a same-target
+   conversation past it (a placeholder until same-target compaction exists).
+
+   Returns {:action :keep|:compact :reason kw}."
+  [{:keys [cap-tokens]} {:keys [job-target carried-tokens context-target]}]
+  (cond
+    (nil? carried-tokens)
+    {:action :keep :reason :fresh}
+
+    (and job-target (not= job-target context-target))
+    {:action :compact :reason :target-change}
+
+    (and cap-tokens (>= carried-tokens cap-tokens))
+    {:action :compact :reason :over-cap}
+
+    :else
+    {:action :keep :reason :same-target}))
+
+(defn- estimate-context-tokens
+  "Rough token count of MESSAGES (4 chars per token), used when no provider
+   usage has been seen since the conversation last changed shape."
+  [messages]
+  (quot (reduce + 0 (map (comp count pr-str) messages)) 4))
+
+(def ^:private micro-compact-chars
+  "Tool results longer than this are cut to head and tail before a summary
+   call (Kimi Code's \"micro compaction\"). Carried context is mostly file
+   reads and command output; the summary needs their gist, not their bytes."
+  2000)
+
+(def ^:private summary-input-chars
+  "Ceiling on the rendered transcript sent for summary; the oldest part is
+   dropped past it."
+  1200000)
+
+(defn- micro-compact [text]
+  (let [text (str text)
+        n (count text)]
+    (if (<= n micro-compact-chars)
+      text
+      (str (subs text 0 (quot micro-compact-chars 2))
+           "\n[... " (- n micro-compact-chars) " chars elided ...]\n"
+           (subs text (- n (quot micro-compact-chars 2)))))))
+
+(defn- render-message [{:keys [role content tool_calls name]}]
+  (let [text (if (string? content)
+               content
+               (str/join "\n" (keep #(when (= "text" (:type %)) (:text %)) content)))]
+    (case role
+      "tool" (str "[tool result" (when name (str " " name)) "]\n" (micro-compact text))
+      "assistant" (str "[assistant]\n" text
+                       (apply str
+                              (for [tc tool_calls]
+                                (str "\n[tool call " (get-in tc [:function :name]) "] "
+                                     (micro-compact (get-in tc [:function :arguments]))))))
+      (str "[" role "]\n" text))))
+
+(defn render-transcript
+  "Plain-text rendering of MESSAGES (system message excluded) for a summary
+   call, tool results micro-compacted."
+  [messages]
+  (let [text (str/join "\n\n" (map render-message messages))
+        n (count text)]
+    (if (<= n summary-input-chars)
+      text
+      (str "[... earliest " (- n summary-input-chars) " chars dropped ...]\n"
+           (subs text (- n summary-input-chars))))))
+
+(defn summary-instruction
+  [{:keys [agent-id context-target job-target reason]}]
+  (str "You are compacting the working conversation of " agent-id
+       ", an agent in Joe's Futon Agency, so it can continue without the full "
+       "history. The conversation below was about "
+       (or context-target "no named target") ". "
+       (if (= :target-change reason)
+         (str "The next job is about a different target (" job-target "): keep "
+              "what could matter to it, and record briefly what was done.")
+         "The next job continues the same target: keep everything needed to carry on.")
+       "\n\nWrite a summary it can work from:\n"
+       "- the task(s) and where each stands;\n"
+       "- decisions made and why;\n"
+       "- files read or changed (paths), commits, ids, numbers that matter;\n"
+       "- results of commands or checks that matter;\n"
+       "- open questions, the to-do list and the next step.\n"
+       "Be specific and terse. No preamble. At most about 1500 words."))
+
+(defn- summarize-conversation!
+  "One model call that summarizes MESSAGES (system message excluded).
+   Returns {:summary text :usage map} or {:error msg}."
+  [client opts api-key messages ctx]
+  (try
+    (let [resp (chat! client
+                      (assoc opts :api-key api-key :no-tools? true :max-tokens 4096)
+                      [{:role "system" :content (summary-instruction ctx)}
+                       {:role "user"
+                        :content (str "Conversation to summarize:\n\n"
+                                      (render-transcript messages))}])
+          text (some-> (get-in resp [:choices 0 :message :content]) str str/trim)]
+      (cond
+        (:error resp) {:error (result-string (:error resp))}
+        (str/blank? text) {:error "empty summary"}
+        :else {:summary text :usage (normalized-usage resp)}))
+    (catch Throwable t
+      {:error (.getMessage t)})))
+
+(defn- persist-context-compaction!
+  [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
+           carried-tokens context-target job-target purpose summary-result]}]
+  (persist-transcript-safely!
+   agent-id evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :context-compaction
+     :body {:reason (:reason decision)
+            :carried-tokens carried-tokens
+            :context-target context-target
+            :job-target job-target
+            :purpose purpose
+            :method (if (:summary summary-result) :summary :clear)
+            :summary-chars (some-> (:summary summary-result) count)
+            :summary-usage (:usage summary-result)
+            :summary-error (:error summary-result)
+            :dispatch-id (str dispatch-id)}})))
+
+(defn- persist-round!
+  "Append one durable, turn-addressable round record.
+CALLS contains maps of tool name, arguments, and result digest."
+  [{:keys [evidence-store agent-id sid turn-id profile round text calls final? usage]}]
+  (persist-transcript-safely!
+   agent-id evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :turn-round
+     :body (merge {:round round
+                   :final (boolean final?)
+                   :text (transcript-truncate text transcript-text-cap)
+                   :calls (vec calls)}
+                  usage)})))
+
+(defn- sha256-8 [s]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
+    (apply str (map #(format "%02x" %) (take 8 (.digest md (.getBytes s "UTF-8")))))))
+
+(defn- emit-bug-records!
+  "ZU-4 CI-in-the-loop: sweep the session's transcript for tool-call failures
+   and emit each as a typed :bug/* event into the evidence store. Called from
+   the par_punctuate path (session-end sweep). Failures are deduplicated by
+   (tool, args-sha) with a count. Writes use the same fail-closed boundary as
+   the transcript they summarize."
+  [{:keys [agent-id sid turn-id profile evidence-store]}]
+  (let [results (estore/query* evidence-store {:query/author (str agent-id)
+                                                :query/session-id (str sid)
+                                                :query/tags [:transcript]
+                                                :query/limit 100})
+        entries (if (map? results) (:items results) results)
+        failed-calls (for [e entries
+                           :let [calls (get-in e [:evidence/body :calls])]
+                           call calls
+                           :when (:error? call)]
+                       call)
+        grouped (reduce
+                 (fn [m call]
+                   (let [k [(:tool call) (sha256-8 (:args call))]]
+                     (update m k
+                             (fn [v]
+                               (-> (or v call)
+                                   (assoc :count (inc (long (:count v 0)))))))))
+                 {} failed-calls)]
+    (doseq [[[_tool _sha] bug] grouped]
+      (persist-transcript-safely!
+       agent-id evidence-store
+       {:evidence/id (str "bug-" (UUID/randomUUID))
+        :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+        :evidence/type :coordination
+        :evidence/claim-type :step
+        :evidence/author (str agent-id)
+        :evidence/session-id (str sid)
+        :evidence/at (str (java.time.Instant/now))
+        :evidence/tags [:bug :tool-failure profile]
+        :evidence/body {:event :bug
+                        :turn-id (some-> turn-id str)
+                        :profile profile
+                        :tool (:tool bug)
+                        :args-sha (sha256-8 (:args bug))
+                        :error (:error-text bug "unknown")
+                        :count (:count bug 1)
+                        :session-id (str sid)}}))))
+(defn- transcript-calls
+  "Zip tool-call details with their executed results into the persisted
+   call records: full tool name + (truncated) args, digest of the result.
+   ZU-4: failed calls carry :error? true and the verbatim error text."
+  [details executed]
+  (mapv (fn [detail ex]
+          (let [error? (:error? ex)
+                result-map (:result ex)
+                refusal (when error? (refusal-diagnostic result-map))]
+            (cond-> {:tool (:name detail)
+                     :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
+                     :result (transcript-digest (get-in ex [:message :content]))}
+              error? (assoc :error? true
+                            :error-text (transcript-truncate
+                                         (str (or (:error result-map) "unknown error"))
+                                         transcript-preview-cap))
+              (seq refusal) (assoc :refusal refusal))))
+        details executed))
+
+;; ---------------------------------------------------------------------------
+;; Turn commits: which commits this seat's own `git commit` calls made
+;; ---------------------------------------------------------------------------
+;; The Emacs REPLs record turn-commits by diffing every repo's HEAD across the
+;; turn, which also picks up commits other seats made meanwhile. Here the seat's
+;; own shell calls say which commits are its: a printed `[branch sha] subject`
+;; line, or, for a quiet commit, the message the command passed, looked up in
+;; the repo it ran in. A commit that cannot be resolved is kept with :sha nil.
+
+(def ^:private commit-line-re #"\[[\w./-]+(?: \([^)\]]*\))? ([0-9a-f]{7,40})\] ([^\n]+)")
+
+(defn- commit-repo-dir
+  "The repo a shell COMMAND committed in: `git -C DIR`, else the last `cd DIR`
+   before the commit, else CWD."
+  [command cwd]
+  (let [before (first (str/split command #"git\s+(?:-C\s+\S+\s+)?commit\b" 2))]
+    (or (second (re-find #"git\s+-C\s+['\"]?([^\s'\";&|]+)['\"]?\s+commit" command))
+        (some-> (re-seq #"\bcd\s+['\"]?([^\s'\";&|]+)" before) last second)
+        cwd)))
+
+(defn- commit-message-line
+  "First line of the message a `git commit` COMMAND passes: a heredoc for
+   -F -, else the first -m argument."
+  [command]
+  (let [line (fn [s] (some-> s str/split-lines first str/trim not-empty))]
+    (or (when (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[^\n]*-F\s*-" command)
+          (some-> (re-find #"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n([\s\S]*?)\n\1\b" command) (nth 2) line))
+        (some-> (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[\s\S]*?-m\s*\"((?:[^\"\\]|\\.)*)\"" command)
+                second (str/replace #"\\(.)" "$1") line)
+        (some-> (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[\s\S]*?-m\s*'([^']*)'" command) second line))))
+
+(defn round-commits
+  "Commits made by the git commit calls among one round's DETAILS/EXECUTED.
+   GIT-FN is (fn [dir args]) -> stdout string or nil. Returns maps of
+   :repo :sha :subject :committed-at :match (:sha-printed | :subject | :unresolved)."
+  [details executed cwd git-fn]
+  (vec
+   (for [[detail ex] (map vector details executed)
+         :let [command (str (get-in detail [:input :command]))]
+         :when (and (#{"run_shell"} (:name detail))
+                    (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b" command)
+                    (not (:error? ex)))
+         :let [dir (commit-repo-dir command cwd)
+               output (str (get-in ex [:message :content]))
+               printed (re-seq commit-line-re output)
+               lookup (fn [rev]
+                        (when-let [out (some-> (git-fn dir ["log" "-1" "--format=%H%x1f%cI%x1f%s" rev])
+                                               str/trim not-empty)]
+                          (let [[sha at subject] (str/split out #"\x1f" 3)]
+                            {:sha sha :committed-at at :subject subject})))
+               msg (commit-message-line command)
+               recent (when (and (empty? printed) msg)
+                        (some->> (git-fn dir ["log" "-10" "--format=%H%x1f%cI%x1f%s"])
+                                 str/split-lines
+                                 (map #(str/split % #"\x1f" 3))
+                                 (filter #(= msg (nth % 2 nil)))
+                                 first))]
+         c (cond
+             (seq printed)
+             (for [[_ short subject] printed]
+               (merge {:repo dir :sha nil :subject (str/trim subject) :match :unresolved}
+                      (some-> (lookup short) (assoc :match :sha-printed))))
+             recent
+             [{:repo dir :sha (nth recent 0) :committed-at (nth recent 1)
+               :subject (nth recent 2) :match :subject}]
+             :else
+             [{:repo dir :sha nil :subject msg :match :unresolved}])]
+     c)))
+
+(defn- shell-git
+  [dir args]
+  (try
+    (let [{:keys [exit out]} (apply shell/sh "git" "-C" (str dir) args)]
+      (when (zero? exit) out))
+    (catch Throwable _ nil)))
+
+(defn- persist-round-commits!
+  "Record the commits a round's git commit calls made, beside its turn-round."
+  [{:keys [evidence-store agent-id sid turn-id profile round cwd details executed]}]
+  (let [commits (try (round-commits details executed cwd shell-git)
+                     (catch Throwable _ []))]
+    (when (seq commits)
+      (persist-transcript-safely!
+       agent-id evidence-store
+       (transcript-entry
+        {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+         :event :turn-commits
+         :body {:round round :commits commits}})))))
+
+(def ^:private tool-round-budget
+  ;; 24 rounds: the original 8 demonstrably binds - the first real handoff
+  ;; (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on spec/source
+  ;; reads and was cut off before writing anything.
+  24)
+
+(def ^:private default-auto-continue-max 8)
+(def ^:private final-report-reserve-ms (* 5 60 1000))
+
+(defn- report-reserve-for
+  "Final-report reserve for an envelope of CALL-TIMEOUT-MS.
+
+   The flat 5-minute reserve (e63951e8, 2026-08-17) was sized for the frame
+   student's pinned 60-minute runner budget, where reserving the last 5 minutes
+   for a report costs 8% of the envelope. Before request and turn bounds were
+   separated, the interactive lane inherited the 300000 ms HTTP-request
+   default as its complete turn envelope; the SAME reserve was then the WHOLE
+   envelope and every such turn reported itself out of budget on round one.
+
+   Cap the reserve at a quarter of the envelope so it can never consume the
+   work it exists to have something to report on. A 60-minute student still
+   reserves the full 5 minutes (5 < 15); a 5-minute lane reserves 75s."
+  [call-timeout-ms]
+  (if (and (integer? call-timeout-ms) (pos? call-timeout-ms))
+    (max 1 (min final-report-reserve-ms (quot call-timeout-ms 4)))
+    final-report-reserve-ms))
+
+(defn- budget-auto-continue-max
+  "Scale the interior tool-round allowance with a cycle runner wall-clock pin.
+   The historical 30-minute envelope used eight continuations; keep that
+   ratio so max-tool-rounds does not bind before a longer outer envelope."
+  [wall-clock-minutes]
+  (when (and (integer? wall-clock-minutes) (pos? wall-clock-minutes))
+    (max default-auto-continue-max
+         (long (Math/ceil (* default-auto-continue-max
+                             (/ wall-clock-minutes 30.0)))))))
+
+(defn- parse-nonnegative-int
+  [x fallback]
+  (try
+    (let [n (cond
+              (number? x) (long x)
+              (some? x) (Long/parseLong (str/trim (str x)))
+              :else fallback)]
+      (max 0 n))
+    (catch Throwable _
+      fallback)))
+
+(defn- configured-auto-continue-max
+  [x]
+  (parse-nonnegative-int
+   (or x (getenv "FUTON3C_ZAI_AUTO_CONTINUE_MAX"))
+   default-auto-continue-max))
+
+(defn- auto-continue-message
+  [n cap]
+  (if (= n cap)
+    (str "[harness auto-continue " n "/" cap
+         ": FINAL REPORT RESERVE. Stop starting new work and make no more tool "
+         "calls. Report the committed artifacts, validation, and any precise "
+         "remaining obstruction now.]")
+    (str "[harness auto-continue " n "/" cap
+         ": round budget exhausted mid-task. Continue working toward the task set "
+         "at the start of this turn. When the task is actually complete, reply "
+         "with a final summary and make no tool calls.]")))
+
+(defn- max-tool-rounds-result
+  [sid final-text]
+  {:result (if (str/blank? final-text)
+             "[z.ai stopped after maximum tool rounds]"
+             (str final-text "\n[z.ai stopped after maximum tool rounds]"))
+   :session-id sid
+   :error "max-tool-rounds"})
+
+(defn- resolve-profile
+  [profile]
+  (zaif/env-profile (or profile (getenv "FUTON3C_ZAI_PROFILE"))))
+
+(defn- default-zaif-inputs
+  [{:keys [mission mission-source gamma gamma-source observations task-belief c-belief]}]
+  {:task-belief (or task-belief
+                    {:absence :d8/task-belief-actand-source-absent})
+   :c-belief (or c-belief {})
+   :gamma (or gamma {})
+   :gamma-source (or gamma-source
+                     (if mission :default-table-miss :default-no-mission))
+   :mission mission
+   :mission-source (or mission-source
+                       (if mission :ctx/mission :d10/unclocked))
+   :observations (or observations {})})
+
+(defn- zaif-pairing-key
+  "Build a deterministic pairing key for Z3a dual-constant entries.
+   Shared across both entries from the same round so the scorer can
+   mechanically pair them by querying for the key."
+  [turn-id round]
+  (str turn-id ":r" (or round 0)))
+
+(defn- maybe-zaif-decision!
+  "Compute and persist ZAIF arm decisions for this round.
+
+   When hydrated inputs are available, records BOTH Z3a constants'
+   decisions (shipped 0.65 + sweep 0.15) from the same inputs, mechanically
+   paired via :pairing-key. Returns the shipped (primary) decision. The
+   _decision binding in run-tool-rounds! stays unused — NO actuation.
+
+   Any hydration error degrades to the empty-map default (never hurts a
+   turn); persistence errors propagate (the loss-accounting contract)."
+  [{:keys [profile zaif-inputs-fn agent-id sid evidence-store] :as ctx}]
+  (when (= :zaif (resolve-profile profile))
+    (let [inputs (try
+                   (if zaif-inputs-fn
+                     (zaif-inputs-fn ctx)
+                     ;; D-1 hydrator is the default: real beliefs from the B1
+                     ;; γ artifact + context text. Without it every live
+                     ;; decide() sees empty maps and degenerates to :act.
+                     (zaif-inputs/hydrate-inputs ctx))
+                   (catch Throwable _
+                     (default-zaif-inputs ctx)))
+          pairing-key (zaif-pairing-key (:turn-id ctx) (:round ctx))
+          dual-results (zaif/dual-decide inputs)]
+      ;; Shadow instrumentation must never kill a live turn: a persistence
+      ;; rejection (e.g. a store brown-out) is counted in persistence-status
+      ;; by persist-decision! and surfaced in follow-mode, then swallowed.
+      ;; The scorer only counts complete pairs, so a partial round drops out
+      ;; of the cohort and shows up in the failure ledger — visible loss,
+      ;; not a dead turn (incident 2026-07-22: futon1b memory-pressure
+      ;; brown-out aborted an operator turn through this path).
+      (try
+        (doseq [{:keys [label operator-attention-cost decision]} dual-results]
+          (zaif/persist-decision! {:agent-id agent-id
+                                   :sid sid
+                                   :turn-id (:turn-id ctx)
+                                   :round (:round ctx)
+                                   :evidence-store evidence-store
+                                   :decision decision
+                                   :inputs inputs
+                                   :constant operator-attention-cost
+                                   :constant-label label
+                                   :pairing-key pairing-key}))
+        (catch Throwable t
+          (try
+            (sink! agent-id {:type "text"
+                             :text (str "[zaif ✗ decision not persisted: "
+                                        (.getMessage t) "]")})
+            (catch Throwable _ nil))))
+      ;; Return the shipped (primary) decision for any callers that read it.
+      (:decision (first dual-results)))))
+
+(defn- interrupted-result
+  [sid final-text]
+  (assoc (max-tool-rounds-result sid final-text)
+         :error "interrupted"))
+
+(defn run-tool-rounds!
+  "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
+   update already-registered invoke closures."
+  [{:keys [client opts api-key !messages backend tool-opts agent-id sid
+           !repeats !interrupted auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
+  (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
+    (loop [remaining tool-round-budget
+           final-text ""
+           auto-continues 0
+           mid-work? false
+           round-n 1
+           report-reserved? false]
+      (let [remaining-ms (when deadline-ms
+                           (- deadline-ms (System/currentTimeMillis)))]
+        (cond
+          (and !interrupted @!interrupted)
+          (interrupted-result sid final-text)
+
+          (and remaining-ms (<= remaining-ms 0))
+          (assoc (max-tool-rounds-result sid final-text)
+                 :error "wall-clock-budget")
+
+          (and remaining-ms
+               (<= remaining-ms (or report-reserve-ms final-report-reserve-ms))
+               (not report-reserved?))
+          (do
+            (swap! !messages conj
+                   {:role "user"
+                    :content (auto-continue-message auto-continue-max
+                                                    auto-continue-max)})
+            ;; One model round is reserved for a report. If it insists on a
+            ;; tool call, the next zero-round branch stops the turn rather
+            ;; than letting work consume the reporting reserve.
+            (recur 1 final-text auto-continues false round-n true))
+
+          (zero? remaining)
+        (if (and mid-work? (< auto-continues auto-continue-max))
+          (let [n (inc auto-continues)
+                text (auto-continue-message n auto-continue-max)]
+            (swap! !messages conj {:role "user" :content text})
+            (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
+            (recur tool-round-budget final-text n false round-n report-reserved?))
+          (max-tool-rounds-result sid final-text))
+
+          :else
+        (let [_decision (maybe-zaif-decision!
+                          (assoc ctx
+                                 :round round-n
+                                 :context (some->> @!messages
+                                                   (filter #(= (:role %) "user"))
+                                                   last
+                                                   :content)))
+              _ (report-activity! agent-id "awaiting model response")
+              resp (chat! client
+                          (cond-> (assoc opts :api-key api-key)
+                            remaining-ms
+                            (assoc :timeout-ms
+                                   (max 1 (min (long (or (:timeout-ms opts)
+                                                        remaining-ms))
+                                               remaining-ms))))
+                          @!messages)
+              err (:error resp)]
+          (if err
+            {:result nil
+             :session-id sid
+             :error (result-string err)}
+            (let [usage (normalized-usage resp)
+                  _ (when usage
+                      (sink! agent-id (assoc usage :type "usage")))
+                  _ (when-let [!context-tokens (:!context-tokens ctx)]
+                      (when-let [in (:cost/input-tokens usage)]
+                        (reset! !context-tokens
+                                (+ in (or (:cost/output-tokens usage) 0)))))
+                  message (get-in resp [:choices 0 :message])
+                  text (assistant-text message)
+                  tool-calls (seq (:tool_calls message))]
+              (swap! !messages conj message)
+              (when-not (str/blank? text)
+                (sink! agent-id {:type "text" :text text}))
+              (if tool-calls
+                ;; Voxterm liveness: report the tool batch BEFORE executing it
+                ;; (2026-09-12) — see report-activity!. The details carry the
+                ;; salient argument (path/command), the same describer the
+                ;; codex adapter uses.
+                (do (report-activity!
+                     agent-id
+                     (invoke-activity/tool-details->activity
+                      (mapv (fn [tc]
+                              (tool-call-detail tc (parse-arguments
+                                                     (get-in tc [:function :arguments]))))
+                            tool-calls)))
+                ;; A tool exception must NEVER kill the turn: feed the error
+                ;; back as the tool result so the model can correct (found live
+                ;; 2026-07-04: a nil :path arg NPE'd through resolve-path and
+                ;; destroyed a 37-event turn mid-flight).
+                (let [executed (mapv (fn [tc]
+                                       (detect-stuck!
+                                        !repeats tc
+                                        (try (execute-tool backend
+                                                           (assoc tool-opts
+                                                                  :dispatch-id (:dispatch-id ctx)
+                                                                  :turn-id (:turn-id ctx)
+                                                                  :round round-n
+                                                                  :profile (:profile ctx)
+                                                                  ;; the live session id; tool-opts'
+                                                                  ;; session-id-atom is nil on this
+                                                                  ;; path (found live 2026-07-22:
+                                                                  ;; nil killed every memory_record)
+                                                                  :session-id-fallback sid)
+                                                           tc)
+                                             (catch Throwable t
+                                               (let [d (tool-call-detail
+                                                        tc
+                                                        (parse-arguments
+                                                         (get-in tc [:function :arguments])))]
+                                                 {:detail d
+                                                  :error? true
+                                                  :result {:ok false :error (.getMessage t)}
+                                                  :message {:role "tool"
+                                                            :tool_call_id (:id tc)
+                                                            :name (get-in tc [:function :name])
+                                                            :content (str "TOOL ERROR (turn continues): "
+                                                                          (.getName (class t)) ": "
+                                                                          (or (.getMessage t) "no message")
+                                                                          " - check argument names/values and retry")}})))))
+                                     tool-calls)
+                      details (mapv :detail executed)
+                      results (mapv (fn [{:keys [detail message]}]
+                                      {:tool_use_id (:id detail)
+                                       :content (:content message)})
+                                    executed)]
+                  (sink! agent-id {:type "tool_use"
+                                   :tools (mapv :name details)
+                                   :tool_details details})
+                  (sink! agent-id {:type "tool_result"
+                                   :results results})
+                  ;; ZU-4: surface tool errors verbatim in follow-mode display
+                  (doseq [{:keys [detail error? result]} executed
+                          :when error?]
+                    (sink! agent-id {:type "text"
+                                     :text (str "[" (:name detail) " \u2717 "
+                                                (transcript-truncate
+                                                 (str (or (:error result) "unknown error"))
+                                                 transcript-preview-cap)
+                                                "]")}))
+                  (persist-round! {:evidence-store (:evidence-store ctx)
+                                   :agent-id agent-id :sid sid
+                                   :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                   :round round-n
+                                   :text text
+                                   :calls (transcript-calls details executed)
+                                   :usage usage})
+                  (persist-round-commits! {:evidence-store (:evidence-store ctx)
+                                           :agent-id agent-id :sid sid
+                                           :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                           :round round-n :cwd (:cwd tool-opts)
+                                           :details details :executed executed})
+                  (swap! !messages into (mapv :message executed))
+              (swap! !messages elide-stale-images
+                     (or (:retained-images opts) default-retained-images))
+                  (recur (dec remaining) (str final-text text) auto-continues true
+                         (inc round-n) report-reserved?)))
+                (do
+                  (persist-round! {:evidence-store (:evidence-store ctx)
+                                   :agent-id agent-id :sid sid
+                                   :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                   :round round-n
+                                   :text (if (str/blank? text) final-text text)
+                                   :calls [] :final? true :usage usage})
+                  {:result (if (str/blank? text) final-text text)
+                   :session-id sid}))))))))))
+
+(defn make-invoke-fn
+  "Return an Agency invoke-fn backed by Z.AI tool calling."
+  [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
+           api-key api-key-fn api-key-hint base-url model timeout-ms request-timeout-ms
+           turn-timeout-ms max-tokens temperature sampling session-id-prefix env-prefix
+           vision? max-image-bytes retained-images
+           irc-send-fn irc-recent-fn
+           memory-mode memory-domain auto-continue-max profile zaif-inputs-fn
+           context-policy]
+    :or {agent-id "zai" memory-mode :full}}]
+  (when-not evidence-store
+    (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
+                    {:agent-id agent-id})))
+  (let [memory-domain* (or memory-domain
+                           (memory-provisioning/domain-for agent-id)
+                           :zaif-work)
+        client (HttpClient/newHttpClient)
+        ;; A provider sharing this harness resolves its OWN key. Falling back to
+        ;; resolve-api-key here would hand a Kimi seat the Z.AI key and bill the
+        ;; wrong subscription while looking like it worked.
+        resolve-key (or api-key-fn resolve-api-key)
+        key-hint (or api-key-hint
+                     "Z.AI API key missing; set ZAI_API_KEY or create ~/.zaikey or ~/.zai-key")
+        sid-prefix (or session-id-prefix "zai-")
+        key (or api-key (resolve-key))
+        cwd* (or cwd (System/getProperty "user.dir"))
+        sid0 (or initial-session-id
+                 (when (and session-file (.exists (io/file session-file)))
+                   (some-> session-file slurp str/trim not-empty))
+                 (str sid-prefix (UUID/randomUUID)))
+        !session-id (or session-id-atom (atom sid0))
+        ;; This is deliberately distinct from !session-id. The registry reset
+        ;; hook clears !session-id before the next invoke; retaining the last
+        ;; inhabited id lets that invoke prove rotation and discard the old
+        ;; conversation instead of silently falling back to sid0.
+        !last-session-id (atom sid0)
+        ;; Work-target gate (context-carry-decision); inert without a
+        ;; :context-policy. Tokens come from the last round's provider usage;
+        ;; the target is the one named by the job that built the conversation.
+        !context-tokens (atom nil)
+        !context-target (atom nil)
+        backend (real-backend/make-real-backend
+                 {:cwd cwd*
+                  :timeout-ms 30000
+                  :evidence-store evidence-store
+                  :memory-domain memory-domain*
+                  :memory-recall-limit 3
+                  :agent-id agent-id
+                  :session-id-fn #(some-> @!session-id str)})
+        !messages (atom [{:role "system"
+                          :content (str "You are " agent-id ", an agentic coding assistant running inside Joe's Futon Agency. "
+                                        "Use tools to inspect files, edit files, run commands, inspect the JVM, and talk on IRC when asked. "
+                                        "Do not claim to have inspected or changed anything unless you used tools or the user supplied the content. "
+                                        "Prefer small, focused tool calls and summarize concrete results. "
+                                        "Your boot context (appended below at first use) is a snapshot from session start; refresh with boot_context when you need current state. "
+                                        "Tool results that quote the record — pattern candidates, PSR/PUR/PAR proofs — are recorded, not necessarily current: when you rely on one, cite its id. "
+                                        "For live state (what is running, what is dirty, who is active) use live tools, never remembered results. "
+                                        "Never present a single remembered entry as a standing operator preference; standing preferences arrive explicitly tagged. "
+                                        "When you adopt a library pattern for non-trivial work, record it: psr_search then psr_select before applying, pur_update after, and par_punctuate when a work session ends. "
+                                        "When you learn something durable and reusable — an approach failed for a stateable reason, a replacement worked, a tool or API behaves contrary to expectation — record it with memory_record at the moment of the realization, not at session end. "
+                                        "To message another agent in the Agency, send a bell via run_shell: "
+                                        "python3 /home/joe/code/futon3c/scripts/agency_send.py --from " agent-id " --to <agent> --kind bell "
+                                        "with the message on stdin (a quoted heredoc is safest). Always pass --from " agent-id " so the reply can route back to you. "
+                                        "When you finish work another agent belled you about, bell them back with a summary — do not rely on the automatic completion bell alone. "
+                                        "Send required bells IMMEDIATELY when the checkpoint is reached — the bell is part of the checkpoint, not an epilogue. "
+                                        "Never end a turn with a bell announced but unsent: your turn ends when you stop calling tools, so stated intent does not execute. "
+                                        "'Announced' is not 'sent'. "
+                                        "Symmetrically: instructions that arrive in the reply/auto-bellback "
+                                        "to YOUR OWN bell are operative dispatches — act on them in that turn; "
+                                        "never park 'holding for a bell' that the reply already was. "
+                                        "Self-marking (M-points-de-fuite): when you genuinely reverse course — "
+                                        "an approach abandoned, a wrong assumption caught — put ✘ in your narration "
+                                        "at the point of reversal; long form (✘ :ref <target> \"why\") when the "
+                                        "referent matters. When you mint an idea worth exploring later but out of "
+                                        "scope now, mark it 💡. These glyphs are parsed from your narration into "
+                                        "the evidence record. Mark real events only, at most a few per turn: an "
+                                        "unmarked correction is better than a marked non-correction, and marks "
+                                        "emitted to look thorough poison the record.")}])
+        !booted (atom false)
+        request-timeout-ms (or request-timeout-ms timeout-ms
+                               default-request-timeout-ms)
+        turn-timeout-ms (or turn-timeout-ms default-turn-timeout-ms)
+        opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
+              :model (or model (getenv "ZAI_MODEL") default-model)
+              :max-tokens max-tokens
+              :sampling (cond-> (merge default-sampling sampling)
+                          (some? temperature) (assoc :temperature temperature))
+              :env-prefix env-prefix
+              :vision? (boolean vision?)
+              :retained-images (or retained-images default-retained-images)
+              :timeout-ms request-timeout-ms
+              :memory-mode memory-mode}
+        profile* (resolve-profile profile)
+        tool-opts {:irc-send-fn irc-send-fn
+                   :irc-recent-fn irc-recent-fn
+                   :max-image-bytes (or max-image-bytes default-max-image-bytes)
+                   :agent-id agent-id
+                   :cwd cwd*
+                   :evidence-store evidence-store
+                   :memory-domain memory-domain*
+                   :session-id-atom !session-id}]
+    (fn invoke
+      ([prompt incoming-session-id]
+       (invoke prompt incoming-session-id {}))
+      ([prompt incoming-session-id invoke-context]
+       (let [key* (or key (resolve-key))
+            sid (or incoming-session-id @!session-id
+                    (str sid-prefix (UUID/randomUUID)))
+            turn-id (str sid-prefix "turn-" (UUID/randomUUID))
+            ;; Agency supplies its job id through the three-arity invoke seam.
+            ;; Direct calls have no Agency job, so their generated turn id is
+            ;; the dispatch id and the turn-start record binds them explicitly.
+            dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
+            dispatch-mission (some-> (:mission-id invoke-context)
+                                     str str/trim not-empty)
+            clocked-mission (or dispatch-mission
+                                (current-mission-id agent-id sid))
+            mission-source (cond
+                             dispatch-mission :dispatch/mission-id
+                             clocked-mission :clock-store/current-clock
+                             :else :d10/unclocked)
+            ;; Requisition gate: the caller names its target in the call.
+            continuation? (contains? continuation-callers
+                                     (some-> (:caller invoke-context) str))
+            admission (when context-policy
+                        (requisition-decision
+                         {:requisition (parse-requisition prompt)
+                          :continuation? continuation?}))
+            refusal (when (= :refuse (:action admission)) admission)
+            job-target (:target admission)
+            purpose (:purpose admission)
+            caller-target (clock-work-target
+                           (caller-clock (some-> (:caller invoke-context) str)
+                                         (:inherited-clock invoke-context)))
+            runner-budget (:student-runner-budget invoke-context)
+            call-timeout-ms
+            (or (:timeout-ms invoke-context)
+                (when-let [minutes (:wall-clock-minutes runner-budget)]
+                  (when (and (integer? minutes) (pos? minutes))
+                    (* minutes 60 1000)))
+                turn-timeout-ms)
+            deadline-ms (when (and (integer? call-timeout-ms)
+                                   (pos? call-timeout-ms))
+                          (+ (System/currentTimeMillis) call-timeout-ms))
+            wall-clock-minutes
+            (or (:wall-clock-minutes runner-budget)
+                (when-let [invoke-timeout-ms (:timeout-ms invoke-context)]
+                  (when (and (integer? invoke-timeout-ms)
+                             (pos? invoke-timeout-ms))
+                    (long (Math/ceil (/ invoke-timeout-ms 60000.0))))))
+            turn-auto-continue-max
+            (or (budget-auto-continue-max wall-clock-minutes)
+                auto-continue-max)
+            ;; stuck-means-signal detector (mistakes-ledger §11): consecutive
+            ;; identical tool calls with identical results get a warning
+            ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
+            ;; turn — repetition across turns is the reviewer's watch.
+            !repeats (atom {:s nil :n 0})
+            ;; Operator interrupt (2026-09-19, zai-14): the REPL's C-c C-c
+            ;; POSTs interrupt-invoke; before this flag existed that endpoint
+            ;; had no control for zai lanes, so an interrupted turn kept
+            ;; running headless while the registry stayed :invoking and new
+            ;; turns queued forever. The flag is checked every tool round.
+            !interrupted (atom false)
+            interrupt-token (str sid-prefix "invoke-" (UUID/randomUUID))]
+        (cond
+          (not key*)
+          {:result nil
+           :session-id sid
+           :error key-hint}
+
+          refusal
+          (let [message (requisition-error-message agent-id refusal caller-target)]
+            {:result nil
+             :session-id sid
+             :error (str agent-id ": " message)})
+
+          :else
+          (do
+        ;; Session rotation (reg/reset-session!): a fresh session must not
+        ;; inherit the old conversation, and the unbounded !messages vector
+        ;; otherwise exceeds the model context after ~100 jobs (mining
+        ;; slice-2, 2026-08-12: 186 consecutive 1261 "Prompt exceeds max
+        ;; length" — the registry reset rotated the id but this closure
+        ;; kept the whole history). Truncate to the system message.
+        (let [prev-sid @!last-session-id]
+          (when (and prev-sid sid (not= prev-sid sid))
+            (swap! !messages #(vec (take 1 %)))
+            (reset! !context-tokens nil)))
+        (reset! !session-id sid)
+        (reset! !last-session-id sid)
+        (when session-file (spit session-file sid))
+        (when (compare-and-set! !booted false true)
+          ;; §8.4 condition gating: :none skips the boot packet (condition
+          ;; a); :files and :full get it (conditions b, c). Rehydration is
+          ;; ledger memory, so :full only.
+          (when-not (= :none memory-mode)
+            (try
+              (let [packet (memory-backend/boot-packet-string
+                            {:agent-id agent-id :session-id sid :cwd cwd*})]
+                (when-not (str/blank? packet)
+                  (swap! !messages update-in [0 :content] str "\n\n" packet)))
+              (catch Throwable _)))
+          ;; D-7: if this session id has prior turns in the ledger (resumed
+          ;; identity, e.g. post-crash), inject the condensed record.
+          (when (= :full memory-mode)
+            (try
+              (let [rehydration (memory-backend/rehydration-string
+                                 {:agent-id agent-id :session-id sid :limit 10})]
+                (when-not (str/blank? rehydration)
+                  (swap! !messages update-in [0 :content] str "\n\n" rehydration)))
+              (catch Throwable _))))
+        (let [carried (when (> (count @!messages) 1)
+                        (or @!context-tokens
+                            (estimate-context-tokens (rest @!messages))))
+              context-target @!context-target
+              decision (when context-policy
+                         (context-carry-decision
+                          context-policy
+                          {:job-target job-target
+                           :carried-tokens carried
+                           :context-target context-target}))
+              compact? (= :compact (:action decision))
+              ;; Summary compaction (Joe, 2026-09-24), as Kimi Code's /compact
+              ;; does client-side: one call to the same model, then continue
+              ;; from the summary. A failed summary falls back to a clear.
+              summary-result (when compact?
+                               (report-activity! agent-id "compacting context")
+                               (summarize-conversation!
+                                client opts key* (rest @!messages)
+                                {:agent-id agent-id :reason (:reason decision)
+                                 :context-target context-target
+                                 :job-target job-target}))
+              prompt* (if compact?
+                        (str "[Context: this seat's earlier conversation ("
+                             carried " tokens, "
+                             (or context-target "no target") ") was "
+                             (if (:summary summary-result)
+                               "compacted"
+                               (str "cleared (summary failed: "
+                                    (:error summary-result) ")"))
+                             " before this job (" (name (:reason decision)) "). "
+                             "For detail, read files, mission_orientation or "
+                             "tool_history.]\n\n"
+                             (when-let [summary (:summary summary-result)]
+                               (str "[Summary of the earlier conversation]\n"
+                                    summary "\n[End of summary]\n\n"))
+                             prompt)
+                        prompt)]
+          (when compact?
+            (when-let [usage (:usage summary-result)]
+              (sink! agent-id (assoc usage :type "usage")))
+            (swap! !messages #(vec (take 1 %)))
+            (reset! !context-tokens nil)
+            (persist-context-compaction!
+             {:evidence-store evidence-store :agent-id agent-id :sid sid
+              :turn-id turn-id :profile profile* :dispatch-id dispatch-id
+              :decision decision :carried-tokens carried
+              :context-target context-target :job-target job-target
+              :purpose purpose :summary-result summary-result})
+            (sink! agent-id {:type "text"
+                             :text (str "[context "
+                                        (if (:summary summary-result)
+                                          "compacted to a summary"
+                                          "cleared")
+                                        ": " (name (:reason decision)) ", "
+                                        carried " tokens]")}))
+          ;; A continuation keeps the seat's target; a requisition's target
+          ;; now owns the conversation.
+          (when job-target
+            (reset! !context-target job-target))
+          (persist-turn-start! {:evidence-store evidence-store
+                                :agent-id agent-id
+                                :sid sid
+                                :dispatch-id dispatch-id
+                                :turn-id turn-id
+                                :profile profile*
+                                :prompt prompt*
+                                :requisition (when admission
+                                               (select-keys admission
+                                                            [:reason :target :purpose]))})
+          (swap! !messages conj {:role "user" :content (str prompt*)}))
+        (invoke-controls/register!
+         agent-id interrupt-token
+         {:interrupt!
+          (fn []
+            (reset! !interrupted true)
+            (try
+              (report-activity! agent-id "interrupt requested")
+              (catch Throwable _ nil))
+            {:ok true
+             :agent-id (str agent-id)
+             :action :interrupt-issued
+             :message "zai invoke interrupted; turn stops at the next round boundary"
+             :interrupted? true})})
+        (try
+          (run-tool-rounds! {:client client
+                             :opts opts
+                             :api-key key*
+                             :!messages !messages
+                             :!context-tokens !context-tokens
+                             :backend backend
+                             :tool-opts tool-opts
+                             :agent-id agent-id
+                             :sid sid
+                             :dispatch-id dispatch-id
+                             :mission clocked-mission
+                             :mission-source mission-source
+                             :turn-id turn-id
+                             :deadline-ms deadline-ms
+                             :report-reserve-ms (report-reserve-for call-timeout-ms)
+                             :evidence-store evidence-store
+                             :!repeats !repeats
+                             :!interrupted !interrupted
+                             :profile profile*
+                             :zaif-inputs-fn zaif-inputs-fn
+                             :auto-continue-max turn-auto-continue-max})
+          (finally
+            (invoke-controls/deregister! agent-id interrupt-token))))))))))
