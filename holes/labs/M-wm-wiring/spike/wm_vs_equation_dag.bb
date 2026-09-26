@@ -39,8 +39,19 @@
 (def row-boxes (fn [r] (set (map :box/id (filter #(= r (:row %)) boxes)))))
 (def writers (reduce (fn [acc b] (reduce (fn [a f] (assoc a f (:box/id b))) acc (:writes b))) {} boxes))
 (def readers (reduce (fn [acc b] (reduce (fn [a f] (update a f (fnil conj #{}) (:box/id b))) acc (:reads b))) {} boxes))
+;; a :passes entry (WM-PROVER-PASSES-I, 553d7edf) hands a value positionally from the
+;; box whose var its :from :returns-of names (else the declaring box) to its :callee-box;
+;; the join credits it as a field between those two boxes (as claude-10 asked at 3a8d3f26).
+(def box-by-var (into {} (for [b boxes :let [v (get-in b [:site :var])] :when v] [v (:box/id b)])))
+(def passes-edges (vec (for [b boxes p (:passes b)
+                             :let [fn-name (some-> (get-in p [:from :returns-of]) (str/replace #".*/" ""))
+                                   src (or (and fn-name (box-by-var fn-name)) (:box/id b))
+                                   dst (get-in p [:to :callee-box])]
+                             :when (and src dst)]
+                         [(:value p) src dst])))
 (defn fields-between [from-boxes to-boxes]
-  (for [[f w] writers :when (from-boxes w) r (readers f) :when (to-boxes r)] [f w r]))
+  (concat (for [[f w] writers :when (from-boxes w) r (readers f) :when (to-boxes r)] [f w r])
+          (for [[f w r] passes-edges :when (and (from-boxes w) (to-boxes r))] [f w r])))
 (defn edge-status [ba bb] (let [fs (fields-between ba bb)] [(cond (seq fs) :declared (and (seq ba) (seq bb)) :boxed-no-field :else :unboxed) (vec fs)]))
 (def edge-report
   (for [[[a b] syms] (sort-by (comp str key) theory)
