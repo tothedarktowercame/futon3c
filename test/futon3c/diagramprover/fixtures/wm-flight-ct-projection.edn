@@ -22,10 +22,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R3-I: :r3-aggregate-driver writes [:driver {:record :r3d-driver}], :morning-brief-fold writes [:belief {:record :morning-brief-fold}], both read by :r7-fold-call (judge); new :r3-apply-belief-events (no field); 36/23/86/171 -> 37/23/88/174; inputs gain :world/morning-brief-fold and :world/r3-apply-belief-events and lose :world/r7-fold-call (judge now reads declared fields); :r3a-prediction-error, :r7-weighted-error and :r3-aggregate-driver leave the dead components (the error reaches judge's box and its test through the driver), :r3-apply-belief-events joins them; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R1-I: :trace-record writes [:mu-post {:record :trace}], read by :r7-fold-call; new :r1-belief-carry; :passes values :carried-mu-post, :loop-belief, :channel-prediction from :r7-fold-call to :r1-belief-carry, :r3-apply-belief-events, :r3a-channel-prediction-error; 37/23/88/174 -> 37/23/90/178; inputs gain :world/trace-record and lose :world/r3-apply-belief-events; :r1-belief-carry joins the dead components; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-8 in the same commit as the map it describes (H-T-CALLER-I: :r1-outer-cascade built (select; writes :target-selection), new :loop-plan and :flight-plan boxes with :passes; futon2 pin 5d8105f2; counts 37/23/90/178 -> 37/24/92/189).
+;; re-pinned at 24b27e1a from 9567d6bb on 2026-09-26
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha {:absent :same-commit-as-the-map},
+ :map-sha "24b27e1a",
  :futon5-sha "aeeee96",
- :counts {:inputs 37, :outputs 24, :components 92, :edges 189},
+ :counts {:inputs 37, :outputs 25, :components 92, :edges 190},
  :validate
  {:all-valid false,
   :checks
@@ -38,7 +39,6 @@
      :r3-store-locator-questions
      :click-start
      :r3-apply-belief-events
-     :flight-run
      :r9-finding-cause-read
      :c8-entry
      :r2-store-constraints-read
@@ -86,7 +86,8 @@
    {:valid true, :check :type-safety, :type-errors []}
    {:valid false,
     :check :spec-coverage,
-    :unspecified-outputs [:out/measured-a]}
+    :unspecified-outputs
+    [:out/measured-a :out/observation.enactment-entry]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
