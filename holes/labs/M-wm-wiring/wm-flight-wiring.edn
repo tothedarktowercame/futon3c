@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "06261af8" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "c95c6453" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -476,7 +476,10 @@
  ;; source vars (persist-run-record!, enact-fn, resolve-target);
  ;; record-summary's own :candidate/:kind/:status/:outcome; record-click's
  ;; :outcome; handle-wm-click-start's :error/:message/:status/:trigger.
- ;; 119 -> 145 (2 to-do, 143 standing). :kind :to-do is the
+ ;; 119 -> 145 (2 to-do, 143 standing). RUNNER-DRIFT-I (futon2 c95c6453):
+ ;; no box for runner-source-drift or loaded-displacement (none existed);
+ ;; the new :displacement key of record-summary/record-click is declared
+ ;; by no box, so re-pinning moves no finding. 145 unchanged. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
