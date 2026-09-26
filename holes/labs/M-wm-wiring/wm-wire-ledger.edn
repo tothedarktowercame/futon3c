@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "6b084cb8",
-  :map "3597ba36"},
+  :rev "0d7042e8",
+  :map "e930fd49"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 110, :wires 112},
+ {:verified 0, :witnessed-hermetically 2, :unverified 114, :wires 116},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -18,6 +18,15 @@
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
    :status :unverified}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
+   :status :unverified}
+  {:wire [:construction-construct :r4-order-use :construction-receipt],
+   :status :unverified}
+  {:wire [:construction-construct :r9-decision :construction-receipt],
+   :status :unverified}
+  {:wire
+   [:construction-construct
+    :selection-candidate-derivations
+    :construction-receipt],
    :status :unverified}
   {:wire [:dispatch :clock-in :mission-id], :status :unverified}
   {:wire [:eligibility :r1-outer-cascade :eligible],
@@ -133,6 +142,8 @@
   {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
   {:wire [:r5-flight-call :r5-grain-gate :grain], :status :unverified}
   {:wire [:r5-flight-call :r5-test :grain], :status :unverified}
+  {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
+   :status :unverified}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
    :status :unverified}
   {:wire [:r6-sourced-rates :r6-test :measurement],
