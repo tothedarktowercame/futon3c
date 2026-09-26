@@ -136,12 +136,18 @@
     (is (= :no-decision (:absent (:reader o))))
     (is (not (w/received? o)))))
 
-(deftest a-cascade-id-unlike-the-action-id-fails-the-wire
-  ;; the reader then receives the action's :id, not the law's :candidate
+(deftest a-cascade-id-unlike-the-action-id-still-crosses-the-wire
+  ;; Until futon2 f69f103d (WM-CHOSEN-CANDIDATE-I) the reader received the
+  ;; action's :id, not the law's :candidate, and this deftest asserted that
+  ;; defect (the two ids coincide on every live record, :C1/:C1, which is
+  ;; why no flight saw it). The fix carries the law's :candidate beside the
+  ;; action's :id; the wire now holds when they differ, and the action id no
+  ;; longer stands in for the candidate.
   (let [o (observe [(ranked :cas/b :act/other :p/b 1.0 1) (ranked :cas/a :cas/a :p/a 3.0 2)])]
     (is (= :cas/b (:writer o)))
-    (is (= :act/other (:reader o)))
-    (is (not (w/received? o)))))
+    (is (= :cas/b (:reader o)))
+    (is (not= :act/other (:reader o)))
+    (is (w/received? o))))
 
 (deftest the-live-records-carry-no-enactment
   (let [[run fl] live-records-read]
