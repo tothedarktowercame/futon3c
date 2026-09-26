@@ -197,7 +197,9 @@
                   (= c \^) (let [[_ j] (form (inc i))
                                  [node j'] (form j)]
                              [(when node (assoc node :meta true)) j'])
-                  (#{\' \` \@} c) (form (inc i))
+                  (#{\' \`} c) (let [[node j] (form (inc i))]
+                                  [(when node (assoc node :quoted? true)) j])
+                  (= c \@) (form (inc i))
                   (= c \~) (form (if (= c2 \@) (+ i 2) (inc i)))
                   (= c \#)
                   (cond (= c2 \{) (coll i :set \} 2)
@@ -230,9 +232,9 @@
   or nil. Found by `parse-forms`, a paren-aware text scan; no code is read
   or evaluated."
   [^String text var-name]
-  (some (fn [{:keys [kind children start end]}]
+  (some (fn [{:keys [kind children start end quoted?]}]
           (let [named (second children)]
-            (when (and (= :list kind) (= :token (:kind named))
+            (when (and (not quoted?) (= :list kind) (= :token (:kind named))
                        (= (str var-name) (:text named)))
               {:start start :end end :text (subs text start end)})))
         (:forms (parse-forms text))))
@@ -256,14 +258,6 @@
   (let [h (first (:children node))]
     (when (= :token (:kind h)) (:text h))))
 
-(defn- keys-vector?
-  "PARENT (a vector) is the value of :keys (or :ns/keys for a field in ns) in
-  GRAND, a destructuring map."
-  [grand gidx field]
-  (and (= :map (:kind grand)) (odd? gidx)
-       (let [k (:text (nth (:children grand) (dec gidx)))]
-         (= k (if-let [ns (namespace field)] (str ":" ns "/keys") ":keys")))))
-
 (defn- thread-first-step?
   "NODE (a list) is a step of a thread-first form: position 2 onward of ->
   or some->, or a step position (3, 5, …; the tests are not threaded) of
@@ -280,8 +274,8 @@
 (defn- classify-keyword
   "WRITE: map-literal key, key argument of assoc/update, a key in the path of
   assoc-in/update-in. READ: argument of get, a key in the path of get-in, a
-  keyword in function position (also as a step of ->, ->>, some->, some->>),
-  an entry of a destructuring :keys vector. Inside a thread-first step
+  keyword in function position (also as a step of ->, ->>, some->, some->>).
+  Binding reads are classified separately by `binding-reads`. Inside a thread-first step
   (`thread-first-step?`: ->, some->, cond->) the same calls with the
   threaded argument omitted: (assoc :k v …) and (update :k f) write :k,
   (assoc-in [:k …] v) and (update-in [:k …] f) write the path's keys,
@@ -289,7 +283,7 @@
   (select-keys m [:k …]), or of the step (select-keys [:k …]), is a READ.
   Still :unclassified (a stated limit): the key of (dissoc m :k),
   (contains? m :k) and the keys of (rename-keys m {…}). Else :unclassified."
-  [parent idx grand gidx great ggidx field]
+  [parent idx grand gidx great ggidx _field]
   (let [h (head-text parent)
         step? (thread-first-step? grand gidx)]
     (case (:kind parent)
@@ -308,7 +302,6 @@
                       (and (= 2 gidx) (#{"assoc-in" "update-in"} gh)) :writes
                       (and gstep? (= 1 gidx) (#{"get-in" "select-keys"} gh)) :reads
                       (and gstep? (= 1 gidx) (#{"assoc-in" "update-in"} gh)) :writes
-                      (keys-vector? grand gidx field) :reads
                       :else :unclassified))
       :map (if (even? idx) :writes :unclassified)
       :unclassified)))
@@ -506,6 +499,89 @@
                           (contains? (get (:owners cfg) (:start parent) #{}) r)))]
        r))))
 
+(defn- quoted-form? [node]
+  (or (:quoted? node)
+      (and (= :list (:kind node))
+           (#{"quote" "clojure.core/quote"} (head-text node)))))
+
+(defn- binding-reads
+  "Positions reading FIELD in actual binding patterns, with their record
+  attribution. Data maps with a :keys entry are not bindings. Supports
+  defn/defn-/fn/defmethod parameters and let/loop/conditional/comprehension
+  bindings, including nested patterns. Unknown macro binding forms remain
+  unclassified. A map's :as or its direct binding initializer may name a
+  declared record alias; a nested pattern does not inherit its parent's
+  record. Bare destructured parameters need positional evidence for scope.
+  Quotation (including syntax quotation) is conservatively not evaluated."
+  [forms field candidates cfg]
+  (let [found (volatile! {})
+        fstr (str field)
+        records (fn [names]
+                  (set (filter (fn [r]
+                                 (some (conj (get (:aliases cfg) r #{}) (name r)) names))
+                               candidates)))]
+    (letfn [(pattern [node init]
+              (when-not (quoted-form? node)
+                (case (:kind node)
+                  :vector (doseq [child (:children node)] (pattern child nil))
+                  :map
+                  (let [pairs (partition 2 (:children node))
+                        as-name (some (fn [[k v]] (when (= ":as" (token-text k)) (token-text v))) pairs)
+                        attr (records (remove nil? [as-name (when-not (quoted-form? init)
+                                                             (token-text init))]))]
+                    (doseq [[binding selector] pairs
+                            :let [k (token-text binding)]]
+                      (cond
+                        (and k (or (= ":keys" k)
+                                   (re-matches #":[^:/]+/keys" k)))
+                        (doseq [sy (:children selector)
+                                :let [s (token-text sy)]
+                                :when (and s (not (quoted-form? sy)))
+                                :let [s (str/replace s #"^:" "")
+                                      key-text (if (= ":keys" k)
+                                                 (str ":" s)
+                                                 (str (subs k 0 (- (count k) 4))
+                                                      (last (str/split s #"/"))))]
+                                :when (= fstr key-text)]
+                          (vswap! found assoc (:start sy) attr))
+                        (and k (str/starts-with? k ":")) nil
+                        :else
+                        (do (when (= fstr (token-text selector))
+                              (vswap! found assoc (:start selector) attr))
+                            (pattern binding nil)))))
+                  nil)))
+            (bindings [v comprehension?]
+              (when (= :vector (:kind v))
+                (doseq [[pat init] (partition 2 (:children v))]
+                  (cond
+                    (and comprehension? (= ":let" (token-text pat))) (bindings init false)
+                    (and comprehension? (#{":when" ":while"} (token-text pat))) nil
+                    :else (pattern pat init)))))
+            (parameters [args]
+              (let [args (if (= :map (:kind (first args))) (rest args) args)]
+                (if (= :vector (:kind (first args)))
+                  (pattern (first args) nil)
+                  (doseq [arity args :when (and (= :list (:kind arity))
+                                               (not (quoted-form? arity))
+                                               (= :vector (:kind (first (:children arity)))))]
+                    (pattern (first (:children arity)) nil)))))
+            (visit [node]
+              (when-not (quoted-form? node)
+                (let [kids (:children node)
+                      h (when (= :list (:kind node)) (head-text node))]
+                  (cond
+                    (#{"defn" "defn-" "clojure.core/defn" "clojure.core/defn-"} h)
+                    (parameters (drop 2 kids))
+                    (#{"fn" "fn*" "clojure.core/fn"} h)
+                    (parameters (if (= :token (:kind (second kids))) (drop 2 kids) (rest kids)))
+                    (= "defmethod" h) (parameters (drop 3 kids))
+                    (#{"let" "let*" "loop" "loop*" "if-let" "when-let" "if-some" "when-some"} h)
+                    (bindings (second kids) false)
+                    (#{"for" "doseq"} h) (bindings (second kids) true))
+                  (doseq [child kids] (visit child)))))]
+      (doseq [form forms] (visit form)))
+    @found))
+
 (defn- field-usage*
   "`field-usage`, optionally restricted by :only-record r (count only the
   occurrences that name record r) or :not-records rs (count only those that
@@ -513,7 +589,6 @@
   `site-cfg`."
   [^String text field {:keys [only-record not-records cfg]}]
   (let [fstr (str field)
-        fname (name field)
         text-matches (count (re-seq (re-pattern
                                      (str (java.util.regex.Pattern/quote fstr) "(?![\\w-])"))
                                     text))
@@ -522,21 +597,26 @@
         forms (:forms (parse-forms text))
         cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms cfg)))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
+        binding-uses (binding-reads forms field (cands) cfg)
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
                                  :else true))]
     (letfn [(visit [node parent idx grand gidx great ggidx]
-              (if (= :token (:kind node))
+              (cond
+                (quoted-form? node) nil
+                (= :token (:kind node))
                 (cond
+                  (contains? binding-uses (:start node))
+                  (do (when (= fstr (:text node)) (vswap! token-hits inc))
+                      (when (counts? (get binding-uses (:start node)))
+                        (vswap! uses conj :reads)))
                   (= fstr (:text node))
                   (do (vswap! token-hits inc)
                       (when (counts? (when parent (attributed-records parent idx grand gidx (cands) cfg)))
                         (vswap! uses conj (if parent
                                             (classify-keyword parent idx grand gidx great ggidx field)
-                                            :unclassified))))
-                  (and (= fname (:text node)) parent (= :vector (:kind parent))
-                       (keys-vector? grand gidx field))
-                  (when (counts? #{}) (vswap! uses conj :reads)))
+                                            :unclassified)))))
+                :else
                 (doseq [[i child] (map-indexed vector (:children node))]
                   (visit child node i parent idx grand gidx))))]
       (doseq [form forms]
@@ -575,7 +655,8 @@
 (defn- vertex-occurs? [text vertex scopes cfg]
   (if (or (vertex-record vertex) (seq (scopes (vertex-field vertex))))
     (pos? (reduce + (vals (vertex-usage text vertex scopes cfg))))
-    (field-occurs? text vertex)))
+    (or (field-occurs? text vertex)
+        (pos? (:reads (field-usage text vertex))))))
 
 (defn- site-scope
   "{:text …} for SITE: the whole file, or with :var only that top-level form;
@@ -627,10 +708,12 @@
 
 (defn- walk-nodes
   "Every [node ancestors] in NODE's subtree (NODE included), ancestors being the
-  chain from BASE-CHAIN down to the node's parent."
+  chain from BASE-CHAIN down to the node's parent. Quoted data is not a call
+  or a use of a parameter."
   [node base-chain]
-  (cons [node base-chain]
-        (mapcat #(walk-nodes % (conj base-chain node)) (:children node))))
+  (when-not (quoted-form? node)
+    (cons [node base-chain]
+          (mapcat #(walk-nodes % (conj base-chain node)) (:children node)))))
 
 (defn- contains-node? [outer inner]
   (and (<= (:start outer) (:start inner)) (<= (:end inner) (:end outer))))
@@ -641,7 +724,7 @@
   "The forms in return position of NODE, any kind (a call, a symbol, a literal);
   a `recur` is no return."
   [node]
-  (if-not (#{:list :fn} (:kind node))
+  (if (or (quoted-form? node) (not (#{:list :fn} (:kind node))))
     [node]
     (let [kids (:children node) h (head-text node) n (count kids)
           at (fn [is] (mapcat return-leaves (keep #(nth kids % nil) is)))]
@@ -743,6 +826,7 @@
   (let [{:keys [aliases call visited]} ctx
         fail (fn [why] {:ok? false :real? false :self? false :why why})]
     (cond
+      (quoted-form? node) (fail :quoted-data)
       (< 8 depth) (fail :provenance-too-deep)
       (and (#{:list} (:kind node)) (= call (head-text node)) (not (:returns-of spec)))
       {:ok? true :real? false :self? true}

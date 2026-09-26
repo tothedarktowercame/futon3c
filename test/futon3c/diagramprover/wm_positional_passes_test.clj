@@ -45,6 +45,23 @@
 
 (def callee-2 "(defn h [a carried] (if (seq carried) (get carried :k) a))")
 
+(deftest quotation-cannot-establish-a-positional-handoff
+  (let [p (pass {:keyed-read [:mu-post :trace]} "h" 1)
+        callee "(defn h [carried] (count carried))"]
+    (is (accepted? "(defn judge [trace] (h (:mu-post trace)))" callee p))
+    (doseq [caller ["(defn judge [trace] '(h (:mu-post trace)))"
+                    "(defn judge [trace] (quote (h (:mu-post trace))))"
+                    "(defn judge [trace] `(h (:mu-post trace)))"]]
+      (is (= :call-not-found (refused caller callee p))))
+    (doseq [caller ["(defn judge [trace] (h '(:mu-post trace)))"
+                    "(defn judge [trace] (h (quote (:mu-post trace))))"
+                    "(defn judge [trace] (let [x '(:mu-post trace)] (h x)))"]]
+      (is (= :quoted-data (refused caller callee p))))
+    (doseq [callee ["(defn h [carried] 'carried)"
+                    "(defn h [carried] (quote carried))"]]
+      (is (= :param-unused
+             (refused "(defn judge [trace] (h (:mu-post trace)))" callee p))))))
+
 (deftest keyed-read-as-the-argument-expression
   (testing "E2-c: the argument IS (:mu-post prev), prev an alias of :trace"
     (is (accepted? "(defn judge [prev fresh] (h fresh (:mu-post prev)))" callee-2
