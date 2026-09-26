@@ -254,7 +254,10 @@
   (`thread-first-step?`: ->, some->, cond->) the same calls with the
   threaded argument omitted: (assoc :k v …) and (update :k f) write :k,
   (assoc-in [:k …] v) and (update-in [:k …] f) write the path's keys,
-  (get :k) and (get-in [:k …]) read them. Else :unclassified."
+  (get :k) and (get-in [:k …]) read them. An entry of the key vector of
+  (select-keys m [:k …]), or of the step (select-keys [:k …]), is a READ.
+  Still :unclassified (a stated limit): the key of (dissoc m :k),
+  (contains? m :k) and the keys of (rename-keys m {…}). Else :unclassified."
   [parent idx grand gidx great ggidx field]
   (let [h (head-text parent)
         step? (thread-first-step? grand gidx)]
@@ -270,9 +273,9 @@
                         :else :unclassified)
       :vector (let [gh (when (#{:list :fn} (:kind grand)) (head-text grand))
                     gstep? (thread-first-step? great ggidx)]
-                (cond (and (= 2 gidx) (= "get-in" gh)) :reads
+                (cond (and (= 2 gidx) (#{"get-in" "select-keys"} gh)) :reads
                       (and (= 2 gidx) (#{"assoc-in" "update-in"} gh)) :writes
-                      (and gstep? (= 1 gidx) (= "get-in" gh)) :reads
+                      (and gstep? (= 1 gidx) (#{"get-in" "select-keys"} gh)) :reads
                       (and gstep? (= 1 gidx) (#{"assoc-in" "update-in"} gh)) :writes
                       (keys-vector? grand gidx field) :reads
                       :else :unclassified))

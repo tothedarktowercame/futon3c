@@ -438,3 +438,29 @@
       ;; before I3 (the map's :usage): {2 0 2} and {0 0 2}; the docstring mentions stay unclassified
       (is (= [{:reads 2 :writes 1 :unclassified 1} {:reads 0 :writes 1 :unclassified 1}]
              (map :usage (wiring/usage (str root) spec)))))))
+
+;; ---------------------------------------------------------------------------
+;; select-keys reads (PROVER-READS-I). flight.clj:231 at futon2 HEAD reads
+;; :status :detail with select-keys; before this they were :unclassified.
+
+(deftest select-keys-vector-entries-are-reads
+  (let [t "(select-keys abstention [:kind :missing :declines :status :detail])"]
+    (is (= {:reads 1 :writes 0 :unclassified 0} (wiring/field-usage t :detail)))
+    (is (= {:reads 1 :writes 0 :unclassified 0} (wiring/field-usage t :kind)))
+    (is (= 5 (reduce + (map #(:reads (wiring/field-usage t %))
+                            [:kind :missing :declines :status :detail])))
+        "every entry of the key vector is a read"))
+  (is (= {:reads 1 :writes 0 :unclassified 0}
+         (wiring/field-usage "(-> m (select-keys [:detail]))" :detail))
+      "thread-first step form")
+  (testing "controls: not every vector entry is a read"
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(dissoc m :detail)" :detail)))
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(contains? m :detail)" :detail)))
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(f m [:detail])" :detail))
+        "a vector argument of any other call")
+    (is (= {:reads 0 :writes 0 :unclassified 1}
+           (wiring/field-usage "(select-keys [:detail] ks)" :detail))
+        "a vector in select-keys' map position is not its key vector")))
