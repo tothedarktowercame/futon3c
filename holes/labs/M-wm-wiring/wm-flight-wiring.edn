@@ -225,7 +225,20 @@
   ;; declared-sources path, a later hop
   {:box/id :construction-assemble-one :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one"}
-   :reads [:interpretations :universes [:wants {:record :sources}]]}
+   ;; WM-HANDOFF-H9+H11-I, writer (WM-PROVER-NESTED-LITERAL-I, futon3c
+   ;; 1a2cd5ac): the returned {:target ... :cascade-problem (assoc
+   ;; base-problem ...)} is the record :result; base-problem is reached by
+   ;; name through the assoc, and its nested :cascade-spec {:want (set want)
+   ;; ...} literal is the record :cascade-spec, whose :want the kernel reads.
+   ;; base-problem is the record :cascade-problem only when a box scopes a
+   ;; field to it, and the nested :cascade-spec is attributed only through
+   ;; it, so base-problem's own :want is declared too: its reader,
+   ;; cascade-lane, takes it by {:keys [... want ...]} problem, which the
+   ;; scope does not attribute (standing below; the 5 -> 6 reason on
+   ;; :r6-cascade-lane)
+   :returns-record :result
+   :reads [:interpretations :universes [:wants {:record :sources}]]
+   :writes [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]]}
   {:box/id :construction-construct :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
    ;; WM-HANDOFF-H6-I: writes each constructed candidate's
@@ -361,7 +374,9 @@
    ;; :keys, a read the prover's occurrence check does not see)
    ;; WM-HANDOFF-H6-I: reads each constructed candidate's
    ;; :construction-receipt (destructured) and re-emits it on the pair
-   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt] :writes [:kind :target-class]}
+      ;; WM-HANDOFF-H9+H11-I: (get-in p [:cascade-problem :want]), the
+   ;; problem's want as the joint decision reads it
+   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -906,6 +921,13 @@
  ;; next prover limits. The 45 other-record :target occurrences do not
  ;; appear (unscoped :target is declared by no box). Eight added: the two
  ;; to-dos and six other keys at ask-fn. 273 -> 281 (4 to-do, 277
+ ;; standing). Then the writer of the cascade spec's :want
+ ;; (WM-PROVER-NESTED-LITERAL-I, futon3c 1a2cd5ac): :construction-assemble-one
+ ;; :returns-record :result, writes [:want {:record :cascade-spec}] (the
+ ;; nested literal the kernel reads) and [:want {:record :cascade-problem}]
+ ;; (base-problem's own, through which the nested one is attributed; read
+ ;; by :r9-decision, (get-in p [:cascade-problem :want])). The
+ ;; [:want :cascade-spec] to-do is deleted. 281 -> 280 (3 to-do, 277
  ;; standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -3546,11 +3568,4 @@
   :kind :to-do,
   :note
   "WM-HANDOFF-H9+H11-I: the flight's :target, read at nine sites, has no attributable writer yet: resolve-target returns the {:target ...} literals inside the first argument of a trailing cond->, which :returns-record (futon3c 16260b56) does not treat as return position; declaring the write gives :declaration-without-occurrence (checked). Deleted when the prover counts the value a trailing cond->/-> threads as returned and :flight-entry declares the write"}
-
- {:finding :read-never-written,
-  :field [:want :cascade-spec],
-  :readers [:r4-kernel],
-  :rows [],
-  :kind :to-do,
-  :note
-  "WM-HANDOFF-H9+H11-I: the cascade spec's :want, read by rank-cascade-actions ((:want spec-in)), has no attributable writer yet: assemble-one builds :cascade-spec {:want (set want) ...} in the let-bound base-problem literal and returns it by name ((assoc base-problem :precedences ...) under :cascade-problem), which :returns-record does not attribute. Deleted when the prover follows a let-bound literal returned by name and :construction-assemble-one declares the write"}]}
+]}
