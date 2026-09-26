@@ -1,0 +1,245 @@
+;; WM-SUPERSET-D (claude-11, 2026-09-26): per registry edge not declared at
+;; var grain, what would make it declared. Hand-read (discovery), not
+;; generated; WM-SUPERSET-D.md is the same content with its evidence prose.
+;; Revisions read: map futon3c 47513216 (through git), registry futon2
+;; 1b3ba281, code futon2 e7f8b931, join `bb spike/wm_vs_equation_dag.bb
+;; 47513216` (declared 4 / boxed-no-field 10 / unboxed 23 at var grain).
+;;
+;; :class
+;;   :wire         same keyword on the same record, writer site -> reader site
+;;   :scoped-wire  same keyword on successive records (a scoped port, {:record r})
+;;   :hop-chain    different keys, or positional hand-offs, with carriers between
+;;                 (:positional? true when at least one hop passes no keyword,
+;;                 which the textual prover cannot attribute)
+;;   :no-path      the code does not carry the edge from the registry's
+;;                 :code sites; :conformance names the registry class
+;;                 (:not-realised / :path-dependent) or :to-record when the
+;;                 registry's :holes should gain it
+;; Prover forms (futon3c.diagramprover.wiring): :literal-key (map-literal key,
+;; returned or nested), :keyword-call ((:k m)), :destructure ({:keys [k]}),
+;; :assoc ((assoc m :k v) incl. thread steps), :get ((get m :k)),
+;; :keyword-arg (a keyword passed as an argument, e.g. (f m :k): NOT
+;; classified by the prover; a declared field read that way is a
+;; :declared-read-not-found under {:heuristic? true}).
+{:map-rev "47513216" :registry-rev "1b3ba281" :futon2-rev "e7f8b931"
+ :join {:declared 4 :boxed-no-field 10 :unboxed 23 :theory-edges 37}
+ :counts {:wire 2 :scoped-wire 2 :hop-chain 12 :hop-chain-positional 7 :no-path 17 :total 33}
+ ;; of the 16 with a data path, 9 are declarable with keyword fields as the
+ ;; code stands (2 wires, 2 scoped wires, 5 keyed hop chains; [:R3a :R3] only
+ ;; as a composition through R7); 7 pass a positional hop the textual prover
+ ;; cannot attribute, so they need a prover rule or a keyed carrier first
+ :declarable-now 9 :needs-prover-or-carrier 7
+
+ :edges
+ [;; ---------------- wires ----------------
+  {:edge [:R3a :R7] :symbols [:eps] :class :wire :node :R7
+   :source {:site "futon2/src/futon2/aif/free_energy.clj" :var "compute-prediction-error" :key :error
+            :form :literal-key :evidence "{:status :present :error <observed - predicted-mean>} (docstring :11-13; channel-prediction-error wraps it)"}
+   :consumer {:site "futon2/src/futon2/aif/precision.clj" :var "weighted-error" :key :error
+              :form :keyword-call :evidence "(:error error-map 0.0); update-precision-state reads it as (error-field-status error-map :error), a :keyword-arg"}
+   :carrier "judge passes the triple map through raw-errors (local) into both precision fns: same record"
+   :boxes {:exist [] :missing [:r3a-prediction-error :r7-weighted-error]}
+   :map-edit [{:box :r3a-prediction-error :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "compute-prediction-error"} :writes [:error]}
+              {:box :r7-weighted-error :site {:file "futon2/src/futon2/aif/precision.clj" :var "weighted-error"} :reads [:error] :writes [:precision :weighted-error]}]
+   :note ":error is a generic key: expect a :standing finding if another site on the map reads it"}
+  {:edge [:R7 :R3] :symbols [:Pi] :class :wire :node :R3
+   :source {:site "futon2/src/futon2/aif/precision.clj" :var "weighted-error" :key :weighted-error
+            :form :assoc :evidence "returns error-map with :precision and :weighted-error (= :error x :precision)"}
+   :consumer {:site "futon2/src/futon2/aif/belief.clj" :var "r3d-aggregate-driver" :key :weighted-error
+              :form :keyword-call :evidence "(* (:sign %) (:weighted-error %)); (:weighted-error (first contributing))"}
+   :carrier "judge's weighted-errors map, channel -> the same record"
+   :boxes {:exist [] :missing [:r7-weighted-error :r3-aggregate-driver]}
+   :map-edit [{:box :r3-aggregate-driver :site {:file "futon2/src/futon2/aif/belief.clj" :var "r3d-aggregate-driver"} :reads [:weighted-error] :writes [:driver]}]}
+
+  ;; ---------------- scoped wires ----------------
+  {:edge [:R14 :R6] :symbols [:tau] :class :scoped-wire :node :R6
+   :source {:site "futon2/src/futon2/aif/precision_carry.clj" :var "advance" :key :beta :form :literal-key
+            :evidence "beta-state from precision-carry/advance, read as (:beta beta-state) in cascade-decision-admitted"
+            :registry-correction "R14's :code names only consumers (selection-posterior, select-action-cascades); the producer precision_carry/advance is unnamed"}
+   :consumer {:site "futon2/src/futon2/aif/cascade_selection.clj" :var "selection-posterior" :key :beta :form :destructure
+              :evidence "Args: {:beta beta :candidates [...]}"}
+   :hops [{:record :beta-state :writer "precision_carry/advance" :reader "war_machine/cascade-decision-admitted" :form :keyword-call}
+          {:record :selection-opts :writer "war_machine/cascade-decision-admitted" :reader "policy/select-action-cascades" :form [:literal-key :destructure]}
+          {:record :posterior-args :writer "policy/select-action-cascades" :reader "cascade_selection/selection-posterior" :form [:literal-key :destructure]}]
+   :boxes {:exist [:r9-decision :r9-selection-law] :missing [:r14-beta-state :r6-selection-posterior]}
+   :map-edit [{:box :r14-beta-state :site {:file "futon2/src/futon2/aif/precision_carry.clj" :var "advance"} :writes [[:beta {:record :beta-state}]]}
+              {:box :r9-decision :reads+ [[:beta {:record :beta-state}]] :writes+ [[:beta {:record :selection-opts}]]}
+              {:box :r9-selection-law :reads+ [[:beta {:record :selection-opts}]] :writes+ [[:beta {:record :posterior-args}]]}
+              {:box :r6-selection-posterior :site {:file "futon2/src/futon2/aif/cascade_selection.clj" :var "selection-posterior"} :reads [[:beta {:record :posterior-args}]]}]}
+  {:edge [:R13 :R4] :symbols [:T] :class :scoped-wire :node :R4
+   :source {:site "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one" :key :horizon-steps :form :literal-key
+            :evidence "problems carry [:cascade-problem :horizon-steps]; war_machine/cascade-family-parameters reads (get-in % [:cascade-problem :horizon-steps])"
+            :registry-correction "R13's :code (rollout-horizon, default-horizon-steps, war_machine 6283-6285) names the defaults, not where T is put on the problem; confirm the origin in cascade_problems before the packet"}
+   :consumer {:site "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions" :key :horizon-steps :form :destructure
+              :evidence "rank-actions opts {:horizon-steps T} (war_machine cascade-decision-admitted); R4's push-forward takes the depth positionally below it"}
+   :hops [{:record :cascade-problem :writer "cascade_problems/assemble-one" :reader "war_machine/cascade-family-parameters" :form :get}
+          {:record :family-params :writer "war_machine/cascade-family-parameters" :reader "war_machine/cascade-decision-admitted" :form :literal-key}
+          {:record :rank-opts :writer "war_machine/cascade-decision-admitted" :reader "efe/rank-actions -> rank-cascade-actions" :form :literal-key}]
+   :boxes {:exist [:construction-assemble-one :r9-decision :r4-kernel] :missing [:r13-family-params]}
+   :map-edit [{:box :construction-assemble-one :writes+ [[:horizon-steps {:record :cascade-problem}]]}
+              {:box :r13-family-params :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-family-parameters"} :reads [[:horizon-steps {:record :cascade-problem}]] :writes [[:horizon-steps {:record :family-params}]]}
+              {:box :r9-decision :writes+ [[:horizon-steps {:record :rank-opts}]]}
+              {:box :r4-kernel :reads+ [[:horizon-steps {:record :rank-opts}]]}]
+   :note "the consumer box is R5's var (rank-cascade-actions) at var grain; R4's site (push-forward) takes T positionally inside it"}
+
+  ;; ---------------- hop chains ----------------
+  {:edge [:R3a :R3] :symbols [:eps] :class :hop-chain :node :R3 :positional? false
+   :hops [{:key :error :writer "free_energy/compute-prediction-error" :reader "precision/weighted-error"}
+          {:key :weighted-error :writer "precision/weighted-error" :reader "belief/r3d-aggregate-driver"}]
+   :carrier "eps reaches R3 only through R7's weighting (the rows [R3a R7] and [R7 R3]); belief-update imports both"
+   :boxes {:exist [] :missing [:r3a-prediction-error :r7-weighted-error :r3-aggregate-driver]}
+   :map-edit [] :note "declared by the two wires above; the join counts it once R3a and R3 boxes carry fields through R7's box, i.e. as a composition. If the join needs a direct field, it cannot be one: eps is not read at R3 unweighted"}
+  {:edge [:R1 :R3] :symbols [:mu] :class :hop-chain :node :R3 :positional? true
+   :hops [{:positional "belief/reconcile-belief-carry returns mu_t -> judge local wm-belief-pre"}
+          {:key :belief :record :morning-brief-fold :writer "war_machine/apply-morning-brief-events" :reader "war_machine/judge" :form :keyword-call}
+          {:positional "judge loop binding `belief` -> war_machine/apply-arena-belief-events (arg 1)"}]
+   :boxes {:exist [:r7-fold-call] :missing [:r1-belief-carry :r3-apply-belief-events :morning-brief-fold]}
+   :map-edit [{:box :morning-brief-fold :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-morning-brief-events"} :writes [[:belief {:record :morning-brief-fold}]]}
+              {:box :r7-fold-call :reads+ [[:belief {:record :morning-brief-fold}]]}]
+   :prover-limit "the first and last hops pass mu as a positional argument inside judge; no keyword marks mu at reconcile-belief-carry's return or at apply-arena-belief-events' parameter"}
+  {:edge [:R3 :R1] :symbols [:s-next] :class :hop-chain :node :R1 :positional? true
+   :hops [{:positional "apply-arena-belief-events returns belief' -> judge loop"}
+          {:key :belief :record :judge-output :writer "war_machine/judge" :reader "trace/trace-record" :form :keyword-call}
+          {:key :mu-post :record :trace :writer "trace/trace-record" :reader "war_machine/judge (next tick)" :form [:literal-key :keyword-call]}
+          {:positional "(:mu-post prev-trace-record) -> belief/reconcile-belief-carry (arg 2)"}]
+   :boxes {:exist [:r7-fold-call] :missing [:trace-record :r1-belief-carry :r3-apply-belief-events]}
+   :map-edit [{:box :trace-record :site {:file "futon2/src/futon2/aif/trace.clj" :var "trace-record"} :reads [[:belief {:record :judge-output}]] :writes [[:mu-post {:record :trace}]]}
+              {:box :r7-fold-call :writes+ [[:belief {:record :judge-output}]] :reads+ [[:mu-post {:record :trace}]]}]
+   :note "judge is box r7-fold-call, so the scoped wire :mu-post runs trace-record -> r7-fold-call; the R1 site itself (reconcile-belief-carry) receives it positionally. confirm trace-record is the defn at trace.clj:436-450"}
+  {:edge [:R1 :R3a] :symbols [:mu] :class :hop-chain :node :R3a :positional? true
+   :hops [{:positional "judge loop `belief` -> belief/predict-observation (arg 1)"}
+          {:positional "predictions (local) -> (get predictions ch) -> free_energy/channel-prediction-error (arg 3)"}]
+   :boxes {:exist [] :missing [:r1-belief-carry :r3a-predict-observation :r3a-prediction-error]}
+   :map-edit [] :prover-limit "no keyword on either hop; needs a positional-argument rule in the prover, or a keyed carrier in the code"}
+  {:edge [:R2 :R3a] :symbols [:o] :class :hop-chain :node :R3a :positional? true
+   :source {:site "futon2/src/futon2/aif/observation.clj" :var "observe"
+            :registry-correction "the tick's o is futon2.aif.observation/observe (judge: observation (obs/observe scan-data), route-tagged :R2); R2's :code names only the flight's token observation (observation_checks, flight_runner)"}
+   :hops [{:positional "judge local `observation` -> fe/channel-prediction-error (arg 1)"}]
+   :boxes {:exist [] :missing [:r2-tick-observe :r3a-prediction-error]}
+   :map-edit [{:box :r2-tick-observe :site {:file "futon2/src/futon2/aif/observation.clj" :var "observe"} :writes []}]
+   :prover-limit "positional"}
+  {:edge [:R7 :R4] :symbols [:rates] :class :hop-chain :node :R4 :positional? true
+   :hops [{:key :rates :writer "observation_rates/sourced-rates" :reader "war_machine/cascade-lane" :form :literal-key}
+          {:key :adjudication-rates :writer "war_machine/cascade-lane" :reader "efe/rank-cascade-actions" :note "on the map today (r6-cascade-lane -> r4-kernel)"}
+          {:positional "rank-cascade-actions -> cascade_model_manifest/token-likelihood (rates arg), which reads (:false-neg r) (:false-pos r) per token"}]
+   :boxes {:exist [:r6-sourced-rates :r6-cascade-lane :r4-kernel] :missing [:r4-token-likelihood]}
+   :map-edit [{:box :r6-sourced-rates :writes+ [:rates]} {:box :r6-cascade-lane :reads+ [:rates]}
+              {:box :r4-token-likelihood :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "token-likelihood"} :reads [:false-neg :false-pos]}]
+   :note ":false-neg/:false-pos are written per token inside sourced-rates (select-keys r [:false-neg :false-pos]); a field :false-neg from r6-sourced-rates to r4-token-likelihood would be a wire if the record passes unchanged -- check the lane's :adjudication-rates is that map"}
+  {:edge [:R4 :R5] :symbols [:Q-o-pi :A] :class :hop-chain :node :R5 :positional? true
+   :hops [{:positional "cascade_model_manifest/horizon-g-sparse-cert -> push-forward/evaluate-state (R4, the live Q(o|pi); forward_model/predict-multi-horizon is R4's :code but not on the cascade path) -> q -> outcome-risk / step-ambiguity (R5), positional within the namespace"}]
+   :boxes {:exist [:r4-kernel :r4-coapply] :missing [:r4-evaluate-state :r5-outcome-risk :r5-step-ambiguity]}
+   :map-edit [] :prover-limit "positional; the registry's R4 :code (forward_model.clj) is the non-cascade path -- registry correction: name evaluate-state / push-forward as :forward-model's live site"}
+  {:edge [:R2 :R7] :symbols [:o :ref-label] :class :hop-chain :node :R7 :positional? false
+   :hops [{:key :measurement :writer "observation_rates/sourced-rates" :note "counts per token (:counts / :measurement), from recorded check verdicts against reference labels (check_error_rates, the estimator)"}]
+   :boxes {:exist [:c8-registry-get :c8-entry :r6-sourced-rates] :missing [:r7-check-error-rates]}
+   :map-edit [] :to-confirm "that sourced-rates' counts come from the C8 registry entries (c8-*), i.e. the R2 source is observation_checks; not traced here"
+   :note ":likelihood-precision's o (the beta_zeta update) has :code nil: that half is :no-path/:not-realised; :ref-label is exogenous with no :code"}
+  {:edge [:R16 :R2] :symbols [:u :world] :class :hop-chain :node :R2 :positional? true
+   :hops [{:key :enacted-steps :writer "policy/select-action-cascades (r9-selection-law)" :reader "flight_runner/enact-fn (r0-enact-step)" :note "on the map"}
+          {:positional "enact-fn calls observe-publication-fn with the enactment (org layer: r0-enact-step -> r10-observe-publication)"}
+          {:key :publication-observed :writer "r10-observe-publication" :note "on the map"}]
+   :boxes {:exist [:r9-selection-law :r0-enact-step :r10-observe-publication] :missing []}
+   :map-edit [] :note "world is exogenous (no :code): it enters as the published store the observation reads"
+   :prover-limit "the enactment passes positionally from enact-fn into observe-publication-fn"}
+  {:edge [:R19 :R5] :symbols [:C :U-t] :class :hop-chain :node :R5 :positional? false
+   :hops [{:key :want-span :writer "r2-served-by-reading" :note "on the map"}
+          {:key :wants :record :flight :writer "flight/click-wants" :reader "flight/judge-opts"}
+          {:key :want :record :cascade-spec :writer "war_machine/cascade-decision-admitted (joint-want)" :reader "efe/rank-cascade-actions -> active_horizon_g :c-fn-pointwise" :note "the map's scoped read of the cascade spec's :want (40aae919), no writer yet"}]
+   :boxes {:exist [:r2-served-by-reading :flight-click-wants :flight-judge-opts :tick-flight-assembly :r9-decision :r4-kernel] :missing []}
+   :map-edit [{:box :r9-decision :writes+ [[:want {:record :cascade-spec}]]}]
+   :note "U-t: its consumer target_field/with-pair-overlap has no production caller (an island in wm-org-layer.edn) -> that half is :no-path, :to-record as :not-realised"}
+  {:edge [:R2 :R4] :symbols [:interp] :class :hop-chain :node :R4 :positional? false
+   :source {:registry-correction ":interp is exogenous at R2 with no :code; in code the interpreted patterns come from the ask step and construction (want_interpretation, interpretation_construction/construct)"}
+   :hops [{:key :precedence :writer "interpretation_construction/construct (construction-construct)" :reader "efe/order-use (r4-order-use)"}
+          {:positional "order-use -> cascade_model_manifest/co-apply-kernel over the patterns' :consumes/:produces"}]
+   :boxes {:exist [:construction-construct :r4-order-use :r4-coapply] :missing []}
+   :map-edit [{:box :construction-construct :writes+ [:precedence]} {:box :r4-order-use :reads+ [:precedence]}]}
+  {:edge [:R2 :R6] :symbols [:interp] :class :hop-chain :node :R6 :positional? false
+   :source {:registry-correction "as [:R2 :R4]"}
+   :hops [{:key :precedence :writer "interpretation_construction/construct" :reader "construction/containment-order (r4-constructor)"}]
+   :boxes {:exist [:construction-construct :r4-constructor] :missing []}
+   :map-edit [{:box :r4-constructor :reads+ [:precedence]}]
+   :to-confirm "the key containment-order reads the candidate's patterns under (:precedence / :units)"}
+
+  ;; ---------------- no path ----------------
+  {:edge [:R1 :R17] :symbols [:mu] :class :no-path :conformance :not-realised :node :R17 :note "registry :holes"}
+  {:edge [:R2 :R17] :symbols [:o] :class :no-path :conformance :not-realised :node :R17 :note "registry :holes"}
+  {:edge [:R6 :R16] :symbols [:pi :Q-pi] :class :no-path :conformance :path-dependent :node :R16 :note "registry :holes"}
+  {:edge [:R8 :R6] :symbols [:F-pi] :class :no-path :conformance :to-record :node :R6
+   :evidence "policy-prefix-evidence/production-ranked dissocs :f and stamps every candidate :f-prefix {:status :not-supplied :reason :no-admitted-policy-prefix}; the registry's R8 sites (f-pi-dark-readback, f-pi-posterior-opts, f-pi-vector) have no caller at e7f8b931. Row is :realised-flag-gated; the edge should be under :holes as :not-realised"}
+  {:edge [:R2 :R8] :symbols [:o] :class :no-path :conformance :to-record :node :R8 :evidence "F_pi not computed on the live path (see [:R8 :R6])"}
+  {:edge [:R4 :R8] :symbols [:A] :class :no-path :conformance :to-record :node :R8 :evidence "as [:R2 :R8]"}
+  {:edge [:R6 :R8] :symbols [:pi] :class :no-path :conformance :to-record :node :R8 :evidence "as [:R2 :R8]"}
+  {:edge [:R8 :R3] :symbols [:F-pi] :class :no-path :conformance :to-record :node :R3 :evidence ":state-belief-update has :code nil, and F_pi is not live"}
+  {:edge [:R2 :R3] :symbols [:o] :class :no-path :conformance :to-record :node :R3 :evidence ":state-belief-update has :code nil (Lean-only equation); the tick's R3 update imports eps, not o"}
+  {:edge [:R4 :R3] :symbols [:A :B] :class :no-path :conformance :to-record :node :R3 :evidence ":state-belief-update has :code nil"}
+  {:edge [:R4 :R3a] :symbols [:A :B] :class :no-path :conformance :to-record :node :R3a :evidence ":state-prediction-error has :code nil"}
+  {:edge [:R4 :R7] :symbols [:A] :class :no-path :conformance :to-record :node :R7 :evidence ":likelihood-precision has :code nil; likelihood_precision/tempered-rates (named under :token-likelihood) is the candidate site -- a registry pointer, then re-read"}
+  {:edge [:R2 :R1] :symbols [:o] :class :no-path :conformance :to-record :node :R1
+   :evidence "R1's site belief/reconcile-belief-carry takes (fresh, mu-post) only; o reaches mu through R3's update (carried by [:R3 :R1]). The row's :formal restates s-next; registry correction: :enters-through {:o :s-next}"}
+  {:edge [:R16 :R1] :symbols [:u] :class :no-path :conformance :to-record :node :R1 :evidence "as [:R2 :R1]: no action enters the entity-belief carry or its update in the tick"}
+  {:edge [:R4 :R1] :symbols [:A :B] :class :no-path :conformance :to-record :node :R1 :evidence "as [:R2 :R1]; A and B are exogenous with no :code"}
+  {:edge [:R1 :R4] :symbols [:mu] :class :no-path :conformance :to-record :node :R4
+   :evidence "the live R4/R5 path reads :cascade-belief joint-q0 (rank-actions opts), the TOKEN belief from token-belief-carry, not R1's entity belief (belief.clj). Registry correction: R1 names two beliefs' sites or splits; then this is a keyed wire on :cascade-belief"}
+  {:edge [:R4 :R2] :symbols [:A :B] :class :no-path :conformance :to-record :node :R2
+   :evidence "the flight's observation reads the world (the store, the checks); it is not computed from the model's A, B. The row's :formal is the generative process, which the code does not simulate: record it as by design"}]
+
+ ;; packet order: one packet per R-node, in the pipeline order; an edge is
+ ;; declared in the later of its two endpoints' packets (each packet creates
+ ;; the boxes at its own node's sites). Registry corrections come first.
+ :nodes
+ [{:node :R2 :order 1 :new-boxes [:r2-tick-observe] :declares [[:R16 :R2]]}
+  {:node :R3a :order 2 :new-boxes [:r3a-prediction-error :r3a-predict-observation] :declares [[:R2 :R3a]]}
+  {:node :R7 :order 3 :new-boxes [:r7-weighted-error :r7-check-error-rates] :declares [[:R3a :R7] [:R2 :R7]]}
+  {:node :R3 :order 4 :new-boxes [:r3-aggregate-driver :r3-apply-belief-events :morning-brief-fold] :declares [[:R3a :R3] [:R7 :R3]]}
+  {:node :R1 :order 5 :new-boxes [:r1-belief-carry :trace-record] :declares [[:R1 :R3] [:R3 :R1] [:R1 :R3a]]}
+  {:node :R13 :order 6 :new-boxes [:r13-family-params] :declares []}
+  {:node :R4 :order 7 :new-boxes [:r4-token-likelihood :r4-evaluate-state] :declares [[:R13 :R4] [:R7 :R4] [:R2 :R4]]}
+  {:node :R5 :order 8 :new-boxes [:r5-outcome-risk :r5-step-ambiguity] :declares [[:R4 :R5] [:R19 :R5]]}
+  {:node :R14 :order 9 :new-boxes [:r14-beta-state] :declares []}
+  {:node :R6 :order 10 :new-boxes [:r6-selection-posterior] :declares [[:R14 :R6] [:R2 :R6]]}]
+ :declared-after-packets {:with-data-path 16 :keyed 9 :positional 7}
+ :declared-now 4
+ :remaining-no-path 17
+
+ :registry-no-site []
+ :registry-corrections
+ [{:row :observe :add-code "futon2/src/futon2/aif/observation.clj observe (the tick's o)"}
+  {:row :temperature :add-code "futon2/src/futon2/aif/precision_carry.clj advance (tau's producer)"}
+  {:row :depth :check-code "where :horizon-steps is put on the cascade problem"}
+  {:row :belief-state :add-code "token-belief-carry (the :cascade-belief the cascade path reads), or split the row"}
+  {:row :forward-model :add-code "cascade_model_manifest push-forward/evaluate-state (the live Q(o|pi))"}
+  {:row :likelihood-precision :add-code "likelihood_precision.clj tempered-rates"}
+  {:exogenous :interp :add-code "want_interpretation / interpretation_construction construct"}
+  {:exogenous [:A :B] :add-code "A: cascade_model_manifest token-likelihood + the class observation model; B: co-apply-kernel"}
+  {:holes-add :not-realised :edges [[:R8 :R6] [:R2 :R8] [:R4 :R8] [:R6 :R8] [:R8 :R3] [:R2 :R3] [:R4 :R3] [:R4 :R3a] [:R4 :R7]]}
+  {:row :belief-state :enters-through {:o :s-next :u :s-next :A :s-next :B :s-next}}
+  {:row :target-grain-g :note "consumer with-pair-overlap has no production caller: [:R19 :R5]'s U-t half is not realised"}]
+
+ ;; registry :code (file, var) pairs with no box on the map at 47513216,
+ ;; extracted mechanically from the :code strings (a parenthesised name
+ ;; after a file); a few are keys or prose, not vars (e.g. efe.clj
+ ;; horizon-steps)
+ :code-sites-without-box
+ [[:R1 "belief.clj" "initial-belief-state"] [:R1 "belief.clj" "most-likely-status"] [:R1 "belief.clj" "reconcile-belief-carry"]
+  [:R1 "belief.clj" "status-set"] [:R1 "belief.clj" "uniform-prior"]
+  [:R13 "efe.clj" "horizon-steps"] [:R13 "forward_model.clj" "default-horizon-steps"] [:R13 "rollout.clj" "rollout-horizon"]
+  [:R14 "cascade_selection.clj" "selection-posterior"]
+  [:R16 "cascade_selection.clj" "bayes-choice"] [:R16 "cascade_selection.clj" "law-receipt"] [:R16 "cascade_selection.clj" "selection-posterior"]
+  [:R17 "cascade_prior.clj" "habit-masses"] [:R17 "enactment_habit.clj" "policy-key-for"]
+  [:R2 "flight_runner.clj" "observe-fn"] [:R2 "observation_checks.clj" "observe"]
+  [:R3 "belief.clj" "r3d-aggregate-driver"] [:R3 "belief.clj" "update-belief-batch"] [:R3 "war_machine.clj" "apply-arena-belief-events"]
+  [:R3a "free_energy.clj" "channel-prediction-error"] [:R3a "free_energy.clj" "compute-prediction-error"]
+  [:R4 "cascade_model_manifest.clj" "evaluate-co-apply"] [:R4 "cascade_model_manifest.clj" "evaluate-state"]
+  [:R4 "cascade_model_manifest.clj" "observation-distribution"] [:R4 "cascade_model_manifest.clj" "token-likelihood"]
+  [:R4 "forward_model.clj" "default-horizon-steps"] [:R4 "forward_model.clj" "predict"] [:R4 "forward_model.clj" "predict-multi-horizon"]
+  [:R4 "likelihood_precision.clj" "tempered-rates"]
+  [:R5 "cascade_model_manifest.clj" "horizon-g"] [:R5 "cascade_model_manifest.clj" "horizon-g-sparse"] [:R5 "cascade_model_manifest.clj" "horizon-g-sparse-cert"]
+  [:R6 "cascade_selection.clj" "bayes-choice"] [:R6 "cascade_selection.clj" "law-receipt"] [:R6 "cascade_selection.clj" "selection-posterior"]
+  [:R6 "policy.clj" "selection-scores"] [:R6 "policy.clj" "softmax-weights"]
+  [:R7 "observation_rates.clj" "measured-cell"] [:R7 "observation_rates.clj" "rates-by-class"]
+  [:R7 "precision.clj" "update-precision-state"] [:R7 "precision.clj" "weighted-error"]
+  [:R8 "policy.clj" "selection-scores"] [:R8 "policy.clj" "softmax-weights"]
+  [:R8 "policy_free_energy.clj" "f-pi-for-candidate"] [:R8 "policy_free_energy.clj" "f-pi-vector"]
+  [:R8 "war_machine.clj" "f-pi-dark-readback"] [:R8 "war_machine.clj" "f-pi-posterior-opts"] [:R8 "war_machine.clj" "f-pi-posterior-preconditions!"]]}
