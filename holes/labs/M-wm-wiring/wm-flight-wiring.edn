@@ -461,6 +461,37 @@
    ;; step 14: the co-application kernel, reached positionally from the
    ;; rollout (evaluate-state dispatches order-use's :kernel-step to it)
    :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "co-apply-kernel"}}
+  ;; WM-NODE-R4-I (WM-SUPERSET-D section 7; R4's registry :code names the
+  ;; cascade path's evaluate-state/push-forward, RC7): the forward model
+  ;; Q(o|pi) on the cascade path. evaluate-state returns the per-state
+  ;; evaluation, (cond-> {:kernel kernel} record? (assoc ...)) or the
+  ;; refusal literal {:kernel refusal ...}; its :kernel is scoped to that
+  ;; record (:evaluation) and read by push-forward as (:kernel evaluation).
+  ;; push-forward returns (cond-> {:belief outgoing} ...), the pushed-forward
+  ;; belief, but no reader of its :belief is attributable: rollout*
+  ;; destructures it as {q' :belief evaluation :evaluation} (a {sym :key}
+  ;; binding, the prover case recorded at R13), the 1-arity reads
+  ;; (:belief (push-forward ...)) off a call, and conditioned_trajectory/
+  ;; predictive-steps reads (:belief evaluated) off the return of push-forward
+  ;; passed IN as a function value (E6, R4 -> R5: a form the prover lacks,
+  ;; :via-param); so the write is not declared. R1 -> R4 (mu) is a hole by
+  ;; design: the cascade rollout starts from the model's q0 ((:cascade-belief
+  ;; state), the token belief), not from R1's entity belief; no field exists
+  ;; (W4). The cascade lane's R4 step, (step :R4
+  ;; "futon2.aif.forward-model/predict-multi-horizon" ...), lives inside
+  ;; cascade-lane's own var (:r6-cascade-lane), so it has no box of its own.
+  ;; R4 -> R8 (A): m/token-likelihood is called only on the F_pi path
+  ;; (cascade_free_energy/candidate-free-energy), which is not live: boxed,
+  ;; nothing declared
+  {:box/id :r4-evaluate-state :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "evaluate-state"}
+   :returns-record :evaluation
+   :writes [[:kernel {:record :evaluation}]]}
+  {:box/id :r4-push-forward :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "push-forward"}
+   :reads [[:kernel {:record :evaluation}]]}
+  {:box/id :r4-token-likelihood :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "token-likelihood"}}
   {:box/id :r4-kernel :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
    ;; WM-HANDOFF-H9+H11-I: reads the cascade spec's want, (:want spec-in)
@@ -1276,7 +1307,12 @@
  ;; decision's {T :horizon-steps} destructuring (not attributed, checked)
  ;; and the kernel's T (recorded on :r6-cascade-lane). Eleven standing
  ;; added (other records' keys at the new sites). 319 -> 330 (7 to-do,
- ;; 323 standing).
+ ;; 323 standing). WM-NODE-R4-I: new :r4-evaluate-state (:returns-record
+ ;; :evaluation, writes [:kernel {:record :evaluation}]), read by the new
+ ;; :r4-push-forward; new :r4-token-likelihood (F_pi site, no field).
+ ;; push-forward's :belief has no attributable reader ({sym :key}
+ ;; destructuring, a call receiver, a function value). Six standing added.
+ ;; 330 -> 336 (7 to-do, 329 standing).
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -4370,4 +4406,69 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R13-I: :wants at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}]}
+  "WM-NODE-R13-I: :wants at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+ {:finding :occurrence-without-declaration,
+  :field :descent,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "push-forward"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :descent at push-forward is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "token-likelihood"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :kind at token-likelihood is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "evaluate-state"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :status at evaluate-state is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "push-forward"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :status at push-forward is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "token-likelihood"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :status at token-likelihood is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :units,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "push-forward"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R4-I: :units at push-forward is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
