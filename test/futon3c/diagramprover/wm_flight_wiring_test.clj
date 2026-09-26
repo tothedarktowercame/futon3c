@@ -130,6 +130,9 @@
   #{"futon2/scripts/futon2/wm/extract_outcomes.clj"
     "futon2/scripts/wm_scheduled_run.clj"
     "futon2/src/futon2/aif/enactment_habit.clj"
+    ;; WM-HABIT-FOLD-CALL-I: the tick's reader of the flights' receipts,
+    ;; written after that closure was registered
+    "futon2/src/futon2/aif/enactment_fold_source.clj"
     "futon2/src/futon2/aif/flight_driver.clj"
     "futon2/src/futon2/aif/grain_gate.clj"
     "futon2/src/futon2/aif/served_by_reading.clj"
