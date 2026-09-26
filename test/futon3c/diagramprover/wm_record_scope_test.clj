@@ -132,3 +132,96 @@
     (is (contains? ids (keyword "out" "wants@sources")) "written, read by no box: an output port wants@sources")
     (is (= #{"wants@click" "wants@sources"}
            (set (keep #(when (:field %) (:name %)) (concat (get-in p [:ports :input]) (get-in p [:ports :output]))))))))
+
+;; ---------------------------------------------------------------------------
+;; WM-PROVER-RECEIVER-FORMS-I: a keyword call on a receiver, and a returned map literal.
+
+(defn- usage-of
+  "The :usage of BOX's declared entry in the (single-box) spec over FILES."
+  [files b role]
+  (with-root files
+    (fn [root]
+      (:usage (first (filter #(= role (:role %))
+                             (wiring/usage root {:spec/id :t :boxes [b]})))))))
+
+(defn- reader [file & [extra]]
+  (merge {:box/id :reader :box/kind :component :reads [[:target {:record :flight}]] :writes []
+          :site {:file file}}
+         extra))
+
+(deftest a-keyword-call-on-the-record-is-attributed
+  (testing "(:target flight): the receiver is the record's name"
+    (is (= {:reads 1 :writes 0 :unclassified 0}
+           (usage-of {"a.clj" "(defn read-fn [flight] (:target flight))"} (reader "a.clj") :reads))))
+  (testing "(:target f): attributed only when the site declares f an alias of :flight"
+    (let [src "(defn run! [f] (:target f))"]
+      (is (= {:reads 0 :writes 0 :unclassified 0} (usage-of {"a.clj" src} (reader "a.clj") :reads))
+          "no alias: only the record's own name counts")
+      (is (= {:reads 1 :writes 0 :unclassified 0}
+             (usage-of {"a.clj" src} (reader "a.clj" {:record-aliases {:flight ["f" "fl"]}}) :reads))
+          "with the alias it counts")))
+  (testing "(:target issued): a different receiver is another record's key, never attributed"
+    (is (= {:reads 0 :writes 0 :unclassified 0}
+           (usage-of {"a.clj" "(defn g [issued] (:target issued))"}
+                     (reader "a.clj" {:record-aliases {:flight ["f" "fl"]}}) :reads))))
+  (testing "an alias declared on another box at the same site applies to the site's text"
+    (with-root {"a.clj" "(defn run! [fl] (:target fl))"}
+      (fn [root]
+        (let [spec {:spec/id :t
+                    :boxes [(reader "a.clj")
+                            {:box/id :other :box/kind :component :reads [] :writes []
+                             :site {:file "a.clj"} :record-aliases {:flight ["fl"]}}]}
+              u (first (filter #(= :reader (:box/id %)) (wiring/usage root spec)))]
+          (is (= 1 (:reads (:usage u)))))))))
+
+(defn- writer [file & [extra]]
+  (merge {:box/id :resolve :box/kind :component :reads [] :writes [[:target {:record :flight}]]
+          :site {:file file}}
+         extra))
+
+(def resolve-src
+  (str "(defn resolve-target [chosen mission]\n"
+       "  (if chosen\n"
+       "    {:target chosen :why :given}\n"
+       "    {:target (default-for mission) :why :default}))"))
+
+(deftest a-returned-map-literal-is-a-write-of-the-declared-record
+  (testing "both branches of a trailing if are writes of the record"
+    (is (= {:reads 0 :writes 2 :unclassified 0}
+           (usage-of {"a.clj" resolve-src} (writer "a.clj" {:returns-record :flight}) :writes))))
+  (testing "without :returns-record nothing is attributed"
+    (is (= {:reads 0 :writes 0 :unclassified 0}
+           (usage-of {"a.clj" resolve-src} (writer "a.clj") :writes))))
+  (testing "a map literal bound in a let and not returned is not attributed"
+    (is (= {:reads 0 :writes 0 :unclassified 0}
+           (usage-of {"a.clj" "(defn f [x] (let [m {:target x}] (count m)))"}
+                     (writer "a.clj" {:returns-record :flight}) :writes))))
+  (testing "a trailing let returning a map, and cond and case results, are in return position"
+    (is (= 1 (:writes (usage-of {"a.clj" "(defn f [x] (let [y (inc x)] {:target y}))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes))))
+    (is (= 2 (:writes (usage-of {"a.clj" "(defn f [x] (cond (pos? x) {:target x} :else {:target 0}))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes))))
+    (is (= 3 (:writes (usage-of {"a.clj" "(defn f [x] (case x 1 {:target 1} 2 {:target 2} {:target 0}))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes)))))
+  (testing "a map literal that is an argument, or in a non-final body form, is not returned"
+    (is (= 0 (:writes (usage-of {"a.clj" "(defn f [x] (log! {:target x}) (count x))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes))))
+    (is (= 0 (:writes (usage-of {"a.clj" "(defn f [x] (assoc x :k {:target 1}))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes)))))
+  (testing "a multi-arity defn: each arity's last form"
+    (is (= 2 (:writes (usage-of {"a.clj" "(defn f ([] {:target 0}) ([x] {:target x}))"}
+                                (writer "a.clj" {:returns-record :flight}) :writes))))))
+
+(deftest the-unscoped-field-keeps-what-the-two-forms-do-not-take
+  (testing "the same key elsewhere at the site stays the unscoped field's"
+    (with-root {"a.clj" (str resolve-src "\n(defn g [issued] (:target issued))")}
+      (fn [root]
+        (let [spec {:spec/id :t
+                    :boxes [(writer "a.clj" {:returns-record :flight})
+                            {:box/id :other :box/kind :component :reads [:target] :writes []
+                             :site {:file "a.clj"}}]}
+              u (fn [id role] (:usage (first (filter #(and (= id (:box/id %)) (= role (:role %)))
+                                                    (wiring/usage root spec)))))]
+          (is (= 2 (:writes (u :resolve :writes))) "the scope's two returned-map writes")
+          (is (= {:reads 1 :writes 0 :unclassified 0} (u :other :reads))
+              "the unscoped :target keeps (:target issued) and loses the two attributed map keys"))))))

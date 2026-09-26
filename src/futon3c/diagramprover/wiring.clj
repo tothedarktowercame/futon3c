@@ -318,17 +318,83 @@
 
 (defn- token-text [node] (when (= :token (:kind node)) (:text node)))
 
+;; ---------------------------------------------------------------------------
+;; Return position. A box that declares :returns-record r says its site's
+;; function returns a map literal of record r; the keys of a map literal in
+;; return position are then writes of r. Heuristic, like `classify-keyword`:
+;; the return positions of a defn are the last form of each body (each arity),
+;; and, recursively, the branches of a trailing if/if-not/if-let/if-some, the
+;; results of cond and case, and the last form of a trailing when/when-not/
+;; when-let/when-some/do/let. A map literal bound in a let, passed as an
+;; argument or nested in another form is not in return position.
+
+(declare return-maps)
+
+(defn- return-maps
+  "The :map nodes in return position of NODE."
+  [node]
+  (when node
+    (case (:kind node)
+      :map [node]
+      (:list :fn)
+      (let [kids (:children node) h (head-text node) n (count kids)
+            branch #(mapcat return-maps (keep (fn [i] (nth kids i nil)) %))]
+        (case h
+          ("if" "if-not" "if-let" "if-some") (branch [2 3])
+          ("when" "when-not" "when-let" "when-some" "do" "let" "let*")
+          (when (< 1 n) (return-maps (peek kids)))
+          "cond" (mapcat return-maps (map second (partition 2 (rest kids))))
+          "case" (let [args (drop 2 kids)]
+                   (concat (mapcat return-maps (map second (partition 2 args)))
+                           (when (odd? (count args)) (return-maps (last args)))))
+          nil))
+      nil)))
+
+(defn- defn-return-maps
+  "The :map nodes in return position of the top-level defn/defn- FORM."
+  [form]
+  (when (and (#{:list} (:kind form)) (#{"defn" "defn-"} (head-text form)))
+    (let [kids (drop 2 (:children form))
+          arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)]
+      (if (seq arities)
+        (mapcat #(return-maps (peek (:children %))) arities)
+        (let [after-params (rest (drop-while #(not= :vector (:kind %)) kids))]
+          (when (seq after-params) (return-maps (last after-params))))))))
+
+(defn- returned-map-starts
+  "Start offsets of the map literals in return position of every top-level
+  defn in FORMS."
+  [forms]
+  (set (map :start (mapcat defn-return-maps forms))))
+
+(defn- site-cfg
+  "What a site's boxes say about naming a record in its text: :aliases
+  {record #{receiver-symbol ...}} from :record-aliases {:flight [\"f\" \"fl\"]},
+  and :returns #{record ...} from :returns-record. Read from every box that
+  shares the site, because the aliases are names in that site's text."
+  [boxes]
+  {:aliases (reduce (fn [m b]
+                      (reduce (fn [m [r names]] (update m r (fnil into #{}) names))
+                              m (:record-aliases b)))
+                    {} boxes)
+   :returns (set (keep :returns-record boxes))})
+
 (defn- attributed-records
   "Of CANDIDATES (record keywords), those the occurrence of a field key names.
-  Two forms name a record, and only these:
+  Four forms name a record, and only these:
    * the key sits in the path of get-in/assoc-in/update-in whose FIRST element
      is the record's key: (get-in st [:sources :wants t]);
    * the receiver symbol is the record's name: (get-in sources [:wants t]),
-     (get sources :wants), (assoc sources :wants v), (update sources :wants f).
+     (get sources :wants), (assoc sources :wants v), (update sources :wants f);
+   * a keyword call on such a receiver: (:target flight), where the receiver is
+     the record's name or one of the site's declared :record-aliases;
+   * the key of a map literal in return position of a site whose box declares
+     :returns-record r (see `return-maps`).
   Textual and heuristic like `classify-keyword`; a receiver threaded through
   -> is not seen (the path form still is). PARENT/IDX/GRAND/GIDX are the
-  occurrence's enclosing node, its index there, and that node's parent."
-  [parent idx grand gidx candidates]
+  occurrence's enclosing node, its index there, and that node's parent; CFG is
+  {:aliases :returns :returned-starts} (see `site-cfg`)."
+  [parent idx grand gidx candidates cfg]
   (let [gh (when (and grand (#{:list :fn} (:kind grand))) (head-text grand))
         ph (when (and parent (#{:list :fn} (:kind parent))) (head-text parent))]
     (set
@@ -337,14 +403,21 @@
            :when (or (and (= :vector (:kind parent)) (path-fns gh)
                           (or (and (pos? idx) (= rkey (token-text (first (:children parent)))))
                               (and (= 2 gidx) (= rname (token-text (nth (:children grand) 1 nil))))))
-                     (and (key-fns ph) (= 2 idx) (= rname (token-text (nth (:children parent) 1 nil)))))]
+                     (and (key-fns ph) (= 2 idx) (= rname (token-text (nth (:children parent) 1 nil))))
+                     (and ph (zero? idx)
+                          (contains? (conj (get (:aliases cfg) r #{}) rname)
+                                     (token-text (nth (:children parent) 1 nil))))
+                     (and (= :map (:kind parent)) (even? idx)
+                          (contains? (:returns cfg) r)
+                          (contains? (:returned-starts cfg) (:start parent))))]
        r))))
 
 (defn- field-usage*
   "`field-usage`, optionally restricted by :only-record r (count only the
   occurrences that name record r) or :not-records rs (count only those that
-  name none of rs). With neither, exactly `field-usage`."
-  [^String text field {:keys [only-record not-records]}]
+  name none of rs). With neither, exactly `field-usage`. :cfg is the site's
+  `site-cfg`."
+  [^String text field {:keys [only-record not-records cfg]}]
   (let [fstr (str field)
         fname (name field)
         text-matches (count (re-seq (re-pattern
@@ -352,6 +425,8 @@
                                     text))
         uses (volatile! [])
         token-hits (volatile! 0)
+        forms (:forms (parse-forms text))
+        cfg (assoc cfg :returned-starts (when (seq (:returns cfg)) (returned-map-starts forms)))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
@@ -361,7 +436,7 @@
                 (cond
                   (= fstr (:text node))
                   (do (vswap! token-hits inc)
-                      (when (counts? (when parent (attributed-records parent idx grand gidx (cands))))
+                      (when (counts? (when parent (attributed-records parent idx grand gidx (cands) cfg)))
                         (vswap! uses conj (if parent
                                             (classify-keyword parent idx grand gidx great ggidx field)
                                             :unclassified))))
@@ -370,7 +445,7 @@
                   (when (counts? #{}) (vswap! uses conj :reads)))
                 (doseq [[i child] (map-indexed vector (:children node))]
                   (visit child node i parent idx grand gidx))))]
-      (doseq [form (:forms (parse-forms text))]
+      (doseq [form forms]
         (visit form nil nil nil nil nil nil)))
     (let [f (frequencies @uses)]
       {:reads (get f :reads 0)
@@ -395,16 +470,17 @@
   occurrences that name r (`attributed-records`). An unscoped field that some
   vertex of the map scopes to records SCOPES counts only the occurrences that
   name none of them, so a field whose scoped writer lives at another site
-  keeps its own occurrences. Any other field: `field-usage`, unchanged."
-  [text vertex scopes]
+  keeps its own occurrences. Any other field: `field-usage`, unchanged. CFG
+  is the site's `site-cfg`."
+  [text vertex scopes cfg]
   (let [f (vertex-field vertex)]
-    (cond (vertex-record vertex) (field-usage* text f {:only-record (vertex-record vertex)})
-          (seq (scopes f)) (field-usage* text f {:not-records (scopes f)})
+    (cond (vertex-record vertex) (field-usage* text f {:only-record (vertex-record vertex) :cfg cfg})
+          (seq (scopes f)) (field-usage* text f {:not-records (scopes f) :cfg cfg})
           :else (field-usage text f))))
 
-(defn- vertex-occurs? [text vertex scopes]
+(defn- vertex-occurs? [text vertex scopes cfg]
   (if (or (vertex-record vertex) (seq (scopes (vertex-field vertex))))
-    (pos? (reduce + (vals (vertex-usage text vertex scopes))))
+    (pos? (reduce + (vals (vertex-usage text vertex scopes cfg))))
     (field-occurs? text vertex)))
 
 (defn- site-scope
@@ -452,6 +528,7 @@
          field-universe (set (fields-in boxes))
          scopes (scopes-of field-universe)
          boxes-by-site (group-by :site (filter :site boxes))
+         cfg-of (into {} (map (fn [[site bs]] [site (site-cfg bs)])) boxes-by-site)
          ;; An unreadable or malformed site is a FINDING, not an exception: the
          ;; checker's own boundary must not escape unstructured (the ToolBackend
          ;; lesson from the peripheral session, applied to the verifier itself).
@@ -473,7 +550,7 @@
                [role fields] [[:reads (entries box :reads)]
                               [:writes (entries box :writes)]]
                field fields
-               :when (not (vertex-occurs? text field scopes))]
+               :when (not (vertex-occurs? text field scopes (cfg-of site)))]
            {:finding :declaration-without-occurrence
             :box/id (:box/id box)
             :field field
@@ -486,7 +563,7 @@
                :when text
                field field-universe
                :when (and (not (contains? declared-here field))
-                          (vertex-occurs? text field scopes))]
+                          (vertex-occurs? text field scopes (cfg-of site)))]
            {:finding :occurrence-without-declaration
             :field field
             :site site
@@ -500,8 +577,8 @@
                  [role fields] [[:reads (entries box :reads)]
                                 [:writes (entries box :writes)]]
                  field fields
-                 :when (vertex-occurs? text field scopes)
-                 :let [u (vertex-usage text field scopes)]
+                 :when (vertex-occurs? text field scopes (cfg-of site))
+                 :let [u (vertex-usage text field scopes (cfg-of site))]
                  :when (zero? (get u role))]
              {:finding (if (= :writes role) :declared-write-not-found :declared-read-not-found)
               :box/id (:box/id box)
@@ -518,7 +595,9 @@
   "Per declared (box, role, field) at a readable site, the `field-usage`
   counts {:reads n :writes m :unclassified k}, marked :heuristic true."
   [repo-root {:keys [boxes]}]
-  (let [scopes (scopes-of (fields-in (or boxes [])))]
+  (let [scopes (scopes-of (fields-in (or boxes [])))
+        cfg-of (into {} (map (fn [[site bs]] [site (site-cfg bs)]))
+                     (group-by :site (filter :site (or boxes []))))]
     (vec
      (for [box (or boxes [])
            :let [site (:site box)
@@ -528,7 +607,7 @@
                           [:writes (entries box :writes)]]
            field fields]
        {:box/id (:box/id box) :site site :role role :field field
-        :usage (vertex-usage text field scopes) :heuristic true}))))
+        :usage (vertex-usage text field scopes (cfg-of site)) :heuristic true}))))
 
 (defn- normal-path [root path]
   (let [f (java.io.File. (str path))
