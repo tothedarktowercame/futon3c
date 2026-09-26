@@ -39,7 +39,7 @@
    ["5 Construction, order" [:tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-kernel :r4-coapply] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane] [:r6-test]]
    ["7a Selection, decision, registry"
-    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-decision :r9-class-model :c8-registry-get :c8-entry :c8-latest]
+    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-decision :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
     [:r9-test :r9-relation-test]]
    ["7b Selection: refusals, failure record"
     [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]

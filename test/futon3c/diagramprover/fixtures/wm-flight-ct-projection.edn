@@ -11,10 +11,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H3-I: :flight-click-wants writes :wants/:universe, read by :flight-judge-opts, :click-start and :tick-flight-assembly; 34/23/69/139 -> 35/23/72/145; the three new boxes join the dead components (no test box reads :wants or :universe); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H4-I: :ask-merge-published writes :interpretations, read by :construction-assemble-one and :construction-construct; 35/23/72/145 -> 36/23/75/148; :ask-merge-published reads no declared field, so it joins the inputs; the three new boxes join the dead components (no test box reads :interpretations); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H5-I: :tick-flight-assembly writes :universes, read by :construction-assemble-one; 36/23/75/148 -> 36/23/75/149, one edge; no box added; dead components unchanged; :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H6-I: :construction-construct writes :construction-receipt, read by :r4-order-use, :r9-decision and the new :selection-candidate-derivations; :r6-cascade-lane writes :adjudication-rates, read by :r4-kernel; 36/23/75/149 -> 35/23/76/152; :world/r4-kernel leaves the inputs (the kernel now reads a declared field); :construction-construct, :ask-merge-published and :r6-cascade-lane leave the dead components (they reach :r4-test through the kernel's :order-use), :selection-candidate-derivations joins them; :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 36, :outputs 23, :components 75, :edges 149},
+ :counts {:inputs 35, :outputs 23, :components 76, :edges 152},
  :validate
  {:all-valid false,
   :checks
@@ -36,7 +37,6 @@
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
-     :construction-construct
      :r11-warrants
      :r3-store-locator-declines
      :r3-store-constraints-read
@@ -49,19 +49,18 @@
      :r2-store-locator-declines
      :r9-judge-refusal-abstention
      :r3-prompt
+     :selection-candidate-derivations
      :r3-store-locators
      :tick-flight-assembly
      :r4-order-use
      :r9-finding-store
      :construction-assemble-one
      :r2-verifier
-     :ask-merge-published
      :flight-cast
      :r2-store-locators
      :c8-registry-get
      :r2-store-locator-questions
      :r9-abstention-carrier
-     :r6-cascade-lane
      :r5-grain-gate
      :gate-refuse
      :flight-click-wants

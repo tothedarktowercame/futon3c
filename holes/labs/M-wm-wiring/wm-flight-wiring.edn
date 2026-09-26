@@ -203,7 +203,21 @@
    :reads [:interpretations :universes]}
   {:box/id :construction-construct :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
-   :reads [:interpretations]}
+   ;; WM-HANDOFF-H6-I: writes each constructed candidate's
+   ;; :construction-receipt (the one writer in code; constructed-from-
+   ;; interpretations adds :unknown-read-as-not-established to it and
+   ;; cascade-decision-admitted re-emits it, carriers). Read by order-use
+   ;; (the receipt's :order), cascade-decision-admitted, and
+   ;; candidate_derivations/entry (the P0 entry's :construction).
+   ;; select-action-cascades does not read it
+   :reads [:interpretations] :writes [:construction-receipt]}
+  {:box/id :selection-candidate-derivations :row 9 :box/kind :component
+   ;; one candidate's P0 entry, merged from (:construction-receipt
+   ;; candidate); derivations calls it for the selection certificate's
+   ;; candidates, in the joint decision (war_machine, candidate-derivations/
+   ;; derivations)
+   :site {:file "futon2/src/futon2/aif/candidate_derivations.clj" :var "entry"}
+   :reads [:construction-receipt]}
   {:box/id :r2-test :row 2 :box/kind :test
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"}
    :reads [:want-span :text-sha256]}
@@ -226,14 +240,18 @@
   {:box/id :r4-order-use :row 4 :box/kind :component
    ;; reads the receipt's :order; called by rank-cascade-actions
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "order-use"}
-   :reads [:precedence-violations :descent :units]}
+   ;; WM-HANDOFF-H6-I: (get-in action [:construction-receipt :order])
+   :reads [:precedence-violations :descent :units :construction-receipt]}
   {:box/id :r4-coapply :row 4 :box/kind :component
    ;; step 14: the co-application kernel, reached positionally from the
    ;; rollout (evaluate-state dispatches order-use's :kernel-step to it)
    :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "co-apply-kernel"}}
   {:box/id :r4-kernel :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
-   :writes [:order-use]}
+   ;; WM-HANDOFF-H6-I (the rates island): reads the sourced rates the
+   ;; cascade lane passes it as :adjudication-rates (the scorer that
+   ;; consumes A; it runs at the lane's R5, after the rates are sourced)
+   :reads [:adjudication-rates] :writes [:order-use]}
   {:box/id :r4-test :row 4 :box/kind :test
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"}
    :reads [:order-use]}
@@ -300,7 +318,9 @@
    ;; WM-HABIT-FOLD-CALL-I: reads judge's :enactment-fold and passes it
    ;; into select-action-cascades' options (which destructures it with
    ;; :keys, a read the prover's occurrence check does not see)
-   :reads [:per-policy-argmax :class :enactment-fold] :writes [:kind :target-class]}
+   ;; WM-HANDOFF-H6-I: reads each constructed candidate's
+   ;; :construction-receipt (destructured) and re-emits it on the pair
+   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt] :writes [:kind :target-class]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -482,7 +502,13 @@
    :writes [:measurement]}
   {:box/id :r6-cascade-lane :row 6 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-lane"}
-   :reads [:measurement]}
+   ;; WM-HANDOFF-H6-I (the rates island): at R5 the lane passes
+   ;; sourced-rates' :rates to efe/rank-actions as :adjudication-rates (one
+   ;; writer in code), which rank-cascade-actions reads; :measurement rides
+   ;; out only inside :rates-provenance, a composite the prover does not
+   ;; open (rank-cascade-actions copies it to each certificate,
+   ;; policy/selection-certificate keeps it under :scoring)
+   :reads [:measurement] :writes [:adjudication-rates]}
   {:box/id :r6-test :row 6 :box/kind :test
    :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"}
    :reads [:measurement]}
@@ -769,7 +795,19 @@
  ;; H8's :wants not declared (the same two earlier writers, and a second
  ;; declared writer of :wants). One standing added: :universes at judge
  ;; (the declared sources' target list). 263 -> 264 (3 to-do, 261
- ;; standing). :kind :to-do is the
+ ;; standing). WM-HANDOFF-H6-I (futon2 pin unchanged): the construction
+ ;; receipt into selection. :construction-construct writes
+ ;; :construction-receipt (one writer in code); read by :r4-order-use (the
+ ;; receipt's :order, lane 5), :r9-decision (cascade-decision-admitted,
+ ;; lane 7a) and :selection-candidate-derivations (candidate_derivations/
+ ;; entry, lane 7a, new). :r9-selection-law does not read it. The rates
+ ;; island: :r6-cascade-lane writes :adjudication-rates (sourced-rates'
+ ;; :rates, the one writer in code), :r4-kernel (rank-cascade-actions)
+ ;; reads it; the wire runs from lane 6 back to lane 5, where the kernel is
+ ;; placed by its row though it runs at the lane's R5, after the rates.
+ ;; :measurement leaves the lane only inside :rates-provenance. Six standing
+ ;; added: the P0 entry's own keys (three), assemble-one's refusal field
+ ;; and carrier, two tests. 264 -> 270 (3 to-do, 267 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3241,4 +3279,66 @@
   :rows [5],
   :kind :standing,
   :note
-  "WM-HANDOFF-H5-I: judge reads (keys (:universes cascade-sources)) to list the targets that have a declared source, before the flight's input is merged; a read of the declared sources' key, not of flight-assembly-input's write, reported now because :universes became declared (the prover has no per-record scope)"}]}
+  "WM-HANDOFF-H5-I: judge reads (keys (:universes cascade-sources)) to list the targets that have a declared source, before the flight's input is merged; a read of the declared sources' key, not of flight-assembly-input's write, reported now because :universes became declared (the prover has no per-record scope)"}
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj",
+   :var "assemble-one"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: assemble-one names :construction-receipt as the field of its :no-constructed-candidate refusal and select-keys it onto the problem's :constructed-candidates (a carrier of construct's write, not a second writer)"}
+
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: a test builds candidates carrying :construction-receipt (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site
+  {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: a test builds candidates carrying :construction-receipt (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/candidate_derivations.clj",
+   :var "entry"},
+  :declared-by [],
+  :rows [9],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: :kind at candidate_derivations/entry is the P0 entry's own key (a construction :kind, a source's :status, the entry's :locators), another record's, reported now because the box was added for :construction-receipt; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :locators,
+  :site
+  {:file "futon2/src/futon2/aif/candidate_derivations.clj",
+   :var "entry"},
+  :declared-by [],
+  :rows [9],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: :locators at candidate_derivations/entry is the P0 entry's own key (a construction :kind, a source's :status, the entry's :locators), another record's, reported now because the box was added for :construction-receipt; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/candidate_derivations.clj",
+   :var "entry"},
+  :declared-by [],
+  :rows [9],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H6-I: :status at candidate_derivations/entry is the P0 entry's own key (a construction :kind, a source's :status, the entry's :locators), another record's, reported now because the box was added for :construction-receipt; the prover has no per-record scope"}]}
