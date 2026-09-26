@@ -33,10 +33,12 @@
 ;; Re-pinned by claude-11 at map 6ff4d956 (F1c-I: :r9-decision reads [:policy-prefixes {:record :token-belief-input}], the new :r9-f-prefix-supply (production-ranked) writes [:f-prefix {:record :ranked-entry}], read by the new :r8-selection-candidate; 42/27/102/210 -> 43/26/104/213; :out/policy-prefixes.token-belief-input leaves the outputs (the field is now read), :world/r9-f-prefix-supply joins the inputs (it takes the prefixes as an argument, not a declared field); both new boxes join the dead components (no test box reads :f-prefix); :i4 unchanged).
 ;; re-pinned at dae83dc1 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-11 at map dae83dc1 (flight/conditioning-step's reads: :flight-conditioning-step reads [:rates {:record :measured-a}], [:measurement {:record :measured-a}], :measured-a and :interpretations; 43/26/104/213 -> 44/24/105/215; :in/measurement.measured-a joins the inputs (read, written by no box: the F1b-join-I defect, a to-do on the map); :out/measured-a and :out/rates.measured-a leave the unspecified outputs (now read); :flight-conditioning-step, :r9-measured-a-version and :r2-store-locators join the dead components (their flow used to end at the measured-A output ports and now ends at the step, which no test box reads); :i4 unchanged).
+;; re-pinned at ffe2c596 from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-11 at map ffe2c596 (F1a-2c: :r9-measured-a-version writes [:measurement {:record :measured-a}], read by :flight-conditioning-step; 44/24/105/215 -> 43/24/105/215; :in/measurement.measured-a leaves the inputs (the field now has its writer); dead components unchanged; :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "dae83dc1",
+ :map-sha "ffe2c596",
  :futon5-sha "aeeee96",
- :counts {:inputs 44, :outputs 24, :components 105, :edges 215},
+ :counts {:inputs 43, :outputs 24, :components 105, :edges 215},
  :validate
  {:all-valid false,
   :checks
