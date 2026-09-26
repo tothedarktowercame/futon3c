@@ -4,10 +4,7 @@
   :map "06d451d6"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1,
-  :witnessed-hermetically 39,
-  :unverified 100,
-  :wires 140},
+ {:verified 1, :witnessed-hermetically 51, :unverified 88, :wires 140},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -108,7 +105,10 @@
    :status :unverified}
   {:wire [:flight-run :flight-driver-summary :readings],
    :status :unverified}
-  {:wire [:gate-refuse :gate-refusal-read :error], :status :unverified}
+  {:wire [:gate-refuse :gate-refusal-read :error],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test/the-gates-error-reaches-gate-refusal}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
    :status :witnessed-hermetically,
    :test
@@ -150,21 +150,21 @@
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-chosen-target-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :draw-seed],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-wire-is-unverified-because-the-writer-is-not-built}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-wire-is-unverified-because-the-writer-is-not-built}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-draw-seed-reaches-the-loop-test}
   {:wire [:r1-outer-cascade :r1-test :draw-seed],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-wire-is-unverified-because-neither-end-exists}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-draw-seed-reaches-the-r1-test}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :unverified,
    :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-wire-is-unverified-because-the-reader-is-not-built}
+   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-wire-is-unverified-because-the-reader-reads-no-next-step}
   {:wire
    [:r10-observe-publication :r0-enact-step :publication-observed],
    :status :unverified}
@@ -338,7 +338,7 @@
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
    :status :unverified,
    :registered-test-failed
-   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-wire-is-unverified-because-the-reader-is-not-built}
+   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-wire-is-unverified-because-the-reader-reads-no-pair-overlap}
   {:wire [:r8-overlap :r8-test :pair-overlap],
    :status :witnessed-hermetically,
    :test
@@ -348,11 +348,17 @@
   {:wire [:r9-classify-target :r9-relation-test :class],
    :status :unverified}
   {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test/the-close-cause-reaches-the-components-test}
   {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/the-close-cause-reaches-finding-failure-cause}
   {:wire [:r9-close-cause :r9-finding-store :failure-cause],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
   {:wire [:r9-decision :flight-record-click :kind],
    :status :unverified}
   {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
@@ -367,16 +373,26 @@
   {:wire [:r9-embedding-neighbour :r9-relation-test :derived-via],
    :status :unverified}
   {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test/the-sorry-cells-judge-refusal-reaches-the-abstention-carrier}
   {:wire [:r9-judge-refusal :r9-judge-refusal-test :judge-refusal],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test/the-judge-refusal-reaches-the-components-test}
   {:wire
    [:r9-judge-refusal-abstention :r9-failure-classifier :outcome],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/the-abstentions-outcome-reaches-the-failure-classifier}
   {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test/the-phase-kind-reaches-the-components-test}
   {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/the-phase-kind-reaches-the-failure-classifier}
   {:wire [:r9-selection-law :r0-enact-step :candidate],
    :status :witnessed-hermetically,
    :test

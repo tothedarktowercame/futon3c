@@ -94,7 +94,17 @@
             [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test]
             [futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test]
             [futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test]
-            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]))
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]
+            [futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test]
+            [futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test]
+            [futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test]
+            [futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test]))
 
 (def wire-test-nses
   '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
@@ -150,7 +160,17 @@
     futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test
     futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test
     futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test
-    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test])
+    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test
+    futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test
+    futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test
+    futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test
+    futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test
+    futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test])
 
 (def adjacency-rev "84cd6426")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
