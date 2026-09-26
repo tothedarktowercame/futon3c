@@ -27,10 +27,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R4-I: :r4-evaluate-state writes [:kernel {:record :evaluation}], read by the new :r4-push-forward; new :r4-token-likelihood; 39/25/96/195 -> 41/25/99/198; the three new boxes join the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 2b10ccc1 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R5-I, on F1b-join-I's 2b10ccc1: :r6-sourced-rates writes [:rates {:record :sourced-rates}], read by :r6-cascade-lane; new :r5-g-sparse-cert; 41/26/99/201 -> 42/26/100/203; :r5-g-sparse-cert joins the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
+;; re-pinned at 233af9f7 from 9567d6bb on 2026-09-26
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha {:absent :same-commit-as-the-map},
+ :map-sha "233af9f7",
  :futon5-sha "aeeee96",
- :counts {:inputs 42, :outputs 26, :components 100, :edges 203},
+ :counts {:inputs 42, :outputs 26, :components 101, :edges 205},
  :validate
  {:all-valid false,
   :checks
@@ -42,6 +43,7 @@
      :r3a-channel-prediction-error
      :r3-store-locator-questions
      :click-start
+     :flight-steps-source
      :r3-apply-belief-events
      :construction-assemble
      :r9-finding-cause-read
@@ -100,7 +102,7 @@
     :unspecified-outputs
     [:out/measured-a
      :out/observation.enactment-entry
-     :out/step.enactment-entry]}
+     :out/policy-prefixes.token-belief-input]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
