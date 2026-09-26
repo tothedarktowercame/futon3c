@@ -11,7 +11,7 @@
 # dispatched or flown again. The file says which, on the first line after the
 # H1 (the target field's reader matches it there; do not vary the format):
 #   **Requisition:** in-progress — dispatched <ISO-8601 UTC> to <seat> as <job-id>
-#   **Requisition:** completed — <ISO-8601 UTC>, job <job-id>, state <done|failed>
+#   **Requisition:** completed — <ISO-8601 UTC>, job <job-id>, state <done|failed|cancelled>
 #
 # usage: kimi-task.sh --from <caller> --to <kimi-N> --purpose "<one line>" [--cascade <c.clj>] <packet.md> [more.md ...]
 # Mints futon2/holes/excursions/E-kimi-task-N.md (next N) with the purpose,
@@ -70,7 +70,7 @@ print(j.get("state") or "", j.get("finished-at") or "")') \
     || { echo "refusal:job-unreadable — GET /api/alpha/invoke/jobs/$JOBID failed; nothing changed" >&2; exit 1; }
   STATE=${READ%% *}; AT=${READ#* }
   case "$STATE" in
-    done|failed) ;;
+    done|failed|cancelled) ;;
     *) echo "refusal:job-not-finished — $JOBID is '$STATE'; nothing changed" >&2; exit 1;;
   esac
   AT=$(date -u -d "$AT" +%Y-%m-%dT%H:%M:%SZ)
