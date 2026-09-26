@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "1e1546f6" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "8c396c3a" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -182,11 +182,20 @@
    :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"}
    :reads [:class :derived-via]}
   {:box/id :r9-judge-refusal-read :row 9 :box/kind :component
-   ;; WM-MAP-REPLAY-I: defect G's reader at HEAD, the runner reading the
-   ;; judge's :kind (before 321d82c8 the reader was explicit-failure-kind,
-   ;; reading :failure-kind/:outcome: the replay test's pre-fix variant)
+   ;; WM-MAP-REPLAY-I, defect G: the translator the fix put between the
+   ;; judge's :kind and the classifier's :outcome. judge-refusal reads :kind;
+   ;; judge-refusal-abstention (below) writes :outcome; explicit-failure-kind
+   ;; reads it. Before 321d82c8 neither translator var existed and the
+   ;; judge's :kind met no reader (the replay test pins that at cdc492ec)
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal"}
    :reads [:kind]}
+  {:box/id :r9-judge-refusal-abstention :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal-abstention"}
+   :writes [:outcome]}
+  {:box/id :r9-failure-classifier :row 9 :box/kind :component
+   ;; the runner's classifier of a failed attempt, unchanged by the fix
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "explicit-failure-kind"}
+   :reads [:failure-kind :outcome]}
   {:box/id :r9-class-model :row 9 :box/kind :component
    ;; the class observation model reads :target-class (destructured) and
    ;; hands it on in the model map to observation_model/class-of-state,
@@ -358,7 +367,17 @@
  ;; it), the relation test reads :class and :derived-via, the judge-refusal
  ;; test reads :kind, so the relation components reach a registered test;
  ;; those two test occurrences are now declared, 58 -> 56 (2 to-do, 54
- ;; standing). :kind :to-do is the
+ ;; standing).
+ ;; G amended (claude-8, 02:35Z; re-pinned at futon2 8c396c3a): the fix is
+ ;; a translator between the judge's :kind and the classifier's :outcome.
+ ;; :r9-judge-refusal-read (judge-refusal) reads :kind,
+ ;; :r9-judge-refusal-abstention (judge-refusal-abstention, extracted at
+ ;; 8c396c3a) writes :outcome, :r9-failure-classifier
+ ;; (explicit-failure-kind, unchanged) reads :failure-kind/:outcome. Eleven
+ ;; standing findings added: :outcome/:failure-kind generic at other sites
+ ;; (8), judge-refusal-abstention's :judge-refusal ex-data key and
+ ;; docstring :kind (2), :failure-kind read-never-written (its writers are
+ ;; the runner's own throws, unboxed); 56 -> 67 (2 to-do, 65 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -366,6 +385,13 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :read-never-written,
+   :field :failure-kind,
+   :readers [:r9-failure-classifier],
+   :rows [9],
+   :kind :standing,
+   :note
+   "the classifier's :failure-kind is written by the runner's own typed throws (ex-info sites inside run-opportunity-core! and run-opportunity!), not boxed; defect G is the :kind/:outcome pair (wm-flight-replay-test). The fifth flight's gate refusal (decision_gate refuse!, {:error :reason}) writes neither key: a separate packet"}
+  {:finding :read-never-written,
    :field :min-cosine,
    :readers [:r9-embedding-neighbour],
    :rows [9],
@@ -571,6 +597,35 @@
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/test/futon2/aif/judge_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "persist-run-record!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :judge-refusal,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "judge-refusal-abstention"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "judge-refusal-abstention: :judge-refusal is the refusal carried on in the thrown ex-data to close! (a different record from the sorry cell's key), and :kind occurs only in its docstring"}
+  {:finding :occurrence-without-declaration,
    :field :kind,
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
    :declared-by [],
@@ -724,6 +779,16 @@
    "generic key (WM-MAP-REPLAY-I): declared for defect G (:kind, the judge's refusal) and defect I (:class, the relation class); here it is another record's own :kind/:class, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
   {:finding :occurrence-without-declaration,
    :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "judge-refusal-abstention"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "judge-refusal-abstention: :judge-refusal is the refusal carried on in the thrown ex-data to close! (a different record from the sorry cell's key), and :kind occurs only in its docstring"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
    :declared-by [],
    :rows [],
@@ -800,6 +865,61 @@
    :kind :standing,
    :note
    "with-eligibility's docstring names :next-step (textual scan counts docstrings); the function neither reads nor writes it"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site {:file "futon2/test/futon2/aif/flight_ask_library_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "persist-run-record!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/scripts/futon2/wm/extract_outcomes.clj",
+    :var "verify-proposed-link"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/src/futon2/aif/served_by_reading.clj",
+    :var "proposal"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
   {:finding :occurrence-without-declaration,
    :field :precedence-violations,
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
