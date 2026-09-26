@@ -31,10 +31,12 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (correcting 0b0a69b7, which reverted F1a-2b's :r9-measured-a-version box: the box and its finding restored on 233af9f7's map; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 6ff4d956 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-11 at map 6ff4d956 (F1c-I: :r9-decision reads [:policy-prefixes {:record :token-belief-input}], the new :r9-f-prefix-supply (production-ranked) writes [:f-prefix {:record :ranked-entry}], read by the new :r8-selection-candidate; 42/27/102/210 -> 43/26/104/213; :out/policy-prefixes.token-belief-input leaves the outputs (the field is now read), :world/r9-f-prefix-supply joins the inputs (it takes the prefixes as an argument, not a declared field); both new boxes join the dead components (no test box reads :f-prefix); :i4 unchanged).
+;; re-pinned at dae83dc1 from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-11 at map dae83dc1 (flight/conditioning-step's reads: :flight-conditioning-step reads [:rates {:record :measured-a}], [:measurement {:record :measured-a}], :measured-a and :interpretations; 43/26/104/213 -> 44/24/105/215; :in/measurement.measured-a joins the inputs (read, written by no box: the F1b-join-I defect, a to-do on the map); :out/measured-a and :out/rates.measured-a leave the unspecified outputs (now read); :flight-conditioning-step, :r9-measured-a-version and :r2-store-locators join the dead components (their flow used to end at the measured-A output ports and now ends at the step, which no test box reads); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "6ff4d956",
+ :map-sha "dae83dc1",
  :futon5-sha "aeeee96",
- :counts {:inputs 43, :outputs 26, :components 104, :edges 213},
+ :counts {:inputs 44, :outputs 24, :components 105, :edges 215},
  :validate
  {:all-valid false,
   :checks
@@ -44,7 +46,9 @@
     :dead-components
     [:r9-judge-refusal-read
      :r3a-channel-prediction-error
+     :r9-measured-a-version
      :r3-store-locator-questions
+     :flight-conditioning-step
      :click-start
      :flight-steps-source
      :r3-apply-belief-events
@@ -89,6 +93,7 @@
      :r9-f-prefix-supply
      :r1-belief-carry
      :flight-cast
+     :r2-store-locators
      :flight-plan
      :c8-registry-get
      :r2-store-locator-questions
@@ -103,10 +108,7 @@
    {:valid true, :check :type-safety, :type-errors []}
    {:valid false,
     :check :spec-coverage,
-    :unspecified-outputs
-    [:out/measured-a
-     :out/observation.enactment-entry
-     :out/rates.measured-a]}
+    :unspecified-outputs [:out/observation.enactment-entry]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
