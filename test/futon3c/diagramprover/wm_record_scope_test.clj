@@ -128,8 +128,10 @@
                    (box :reader [[:wants {:record :click}]] [])]}
         p (ct/project m)
         ids (set (map :id (concat (get-in p [:ports :input]) (get-in p [:ports :output]))))]
-    (is (contains? ids (keyword "in" "wants@click")) "read by the map, written by no box: an input port wants@click")
-    (is (contains? ids (keyword "out" "wants@sources")) "written, read by no box: an output port wants@sources")
+    ;; ids are field.record (futon3c 9567d6bb: `@` is not a keyword
+    ;; constituent the EDN reader accepts); the port's :name keeps field@record
+    (is (contains? ids :in/wants.click) "read by the map, written by no box: an input port wants@click")
+    (is (contains? ids :out/wants.sources) "written, read by no box: an output port wants@sources")
     (is (= #{"wants@click" "wants@sources"}
            (set (keep #(when (:field %) (:name %)) (concat (get-in p [:ports :input]) (get-in p [:ports :output]))))))))
 
