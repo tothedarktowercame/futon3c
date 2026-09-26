@@ -41,6 +41,12 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test]
+            [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test]
+            [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test]
+            [futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test]
+            [futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test]
             [futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test]
             [futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test]
             [futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test]
@@ -159,7 +165,13 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test
+  '[futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
+    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test
+    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test
+    futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test
+    futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test
+    futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test
+    futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test
     futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test
     futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test
     futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test
@@ -315,6 +327,7 @@
                        (cond-> {:wire wire :status (if ok? (:kind r) :unverified)}
                          (and ok? (= :verified (:kind r))) (assoc :record (:record r))
                          ok? (assoc :test (:test r))
+                         (:note r) (assoc :note (:note r))
                          (and r (not ok?)) (assoc :registered-test-failed (:test r)))))]
     {:adjacency {:path adjacency-path :rev adjacency-rev :map (:map adj)}
      :definition 'futon3c.diagramprover.wm-wire-ledger-test
