@@ -41,6 +41,10 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test]
+            [futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test]
+            [futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test]
+            [futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test]
             [futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test]
             [futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test]
             [futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test]
@@ -172,6 +176,11 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test
+    futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test
+    futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test
+    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test
+    
    futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test
    futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test
