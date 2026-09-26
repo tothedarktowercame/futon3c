@@ -35,8 +35,8 @@
   [["1 Loop entry, target field" [:loop-entry :r1-target-field :eligibility :r8-overlap :r1-outer-cascade :flight-entry] [:r1-test :r8-test :loop-test]]
    ["2 Dispatch, clock-in" [:dispatch :clock-in] []]
    ["3 Read step (C)" [:r2-flight-read :r2-served-by-reading :r2-verifier :r2-store-criteria :r2-store-coverage :r2-store-locators :r2-store-locator-questions :r2-store-locator-declines :r2-store-constraints-read] [:r2-test]]
-   ["4 Ask step (interpretation)" [:r3-flight-ask :r3-prompt :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
-   ["5 Construction, order" [:r4-constructor :r4-order-use :r4-kernel :r4-coapply] [:r4-test :r4-coapply-test]]
+   ["4 Ask step (interpretation)" [:r3-flight-ask :r3-prompt :flight-click-wants :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
+   ["5 Construction, order" [:tick-flight-assembly :r4-constructor :r4-order-use :r4-kernel :r4-coapply] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane] [:r6-test]]
    ["7a Selection, decision, registry"
     [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-decision :r9-class-model :c8-registry-get :c8-entry :c8-latest]
@@ -46,7 +46,7 @@
     [:gate-refusal-test :r9-judge-refusal-test :phase-kind-test :failure-cause-record-test]]
    ["8 Grain gate, enactment, W_c" [:r5-flight-call :r5-grain-gate :r0-enact-step :wc-checker] [:r5-test :r0-test]]
    ["9 Habit (E), publish" [:r7-flight-call :r7-increment :r7-fold :r7-fold-source :r7-fold-call :r7-selection :r10-observe-publication] [:r7-call-test :r7-test :habit-fold-call-test :r10-test]]
-   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :flight-run :flight-driver-summary :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
+   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :flight-run :flight-driver-summary :flight-judge-opts :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
 
 (let [placed (mapcat (fn [[_ c t]] (concat c t)) lanes)
       dup (->> placed frequencies (filter #(> (val %) 1)) keys)

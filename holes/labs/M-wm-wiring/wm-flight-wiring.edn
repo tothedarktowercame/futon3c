@@ -127,6 +127,31 @@
   {:box/id :r3-store-constraints-read :row 3 :box/kind :component
    :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-constraints"}
    :reads [:constraints-read]}
+  ;; WM-HANDOFF-H3-I (WM-HANDOFFS-D H3): the wants carry C, the read
+  ;; criteria, from the flight into the tick. flight/click-wants (a defn)
+  ;; builds {:wants :source :locators :universe} from the want source's
+  ;; read-backs and the carried wants; flight/judge-opts puts :wants
+  ;; :locators :universe under the click's :flight (a carrier: it reads them
+  ;; and re-emits the same keys, so it is declared a reader and its writes
+  ;; stand); http-click-fn posts (:flight judge-opts) as :flight-edn; in the
+  ;; tick, judge hands (:flight judge-opts) to war_machine
+  ;; flight-assembly-input, which reads them and writes them into the
+  ;; assembly's :sources (:wants/:locators/:universes of the target), which
+  ;; cascade_problems/assemble-one reads for the problem's :want (that next
+  ;; hop, the sources map, has other writers and is not declared here). ONE
+  ;; WRITER: click-wants for :wants and :universe. :locators is NOT declared
+  ;; on these boxes: the key's one writer is the store entry's
+  ;; (:r2-store-locators, H2), and the prover has no per-record scope, so
+  ;; the wants' :locators is an undeclared kind of this carrier
+  {:box/id :flight-click-wants :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "click-wants"}
+   :writes [:wants :universe]}
+  {:box/id :flight-judge-opts :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "judge-opts"}
+   :reads [:wants :universe]}
+  {:box/id :tick-flight-assembly :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
+   :reads [:wants :universe]}
   {:box/id :r2-test :row 2 :box/kind :test
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"}
    :reads [:want-span :text-sha256]}
@@ -334,7 +359,9 @@
    :writes [:author :reviewer :repair-reviewer]}
   {:box/id :click-start :box/kind :component
    :site {:file "futon3c/src/futon3c/transport/http.clj" :var "handle-wm-click-start"}
-   :reads [:author :reviewer :repair-reviewer]}
+   ;; WM-HANDOFF-H3-I: it also reads the posted flight's :wants (the
+   ;; :flight-edn check that :wants is a vector) on its way into the tick
+   :reads [:author :reviewer :repair-reviewer :wants]}
   {:box/id :flight-cast-test :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_cast_test.clj"}
    :reads [:cast]}
@@ -656,7 +683,19 @@
  ;; scan the defmulti form). Seventeen standing added: the publish
  ;; functions' receipts' :kind/:status (nine), the coverage entry's own
  ;; :criteria, read-fn's names for the reading kinds (three), and :locators
- ;; at four other sites. 218 -> 235 (2 to-do, 233 standing). :kind :to-do is the
+ ;; at four other sites. 218 -> 235 (2 to-do, 233 standing). WM-HANDOFF-H3-I
+ ;; (futon2 pin unchanged): the wants carry C from the flight into the
+ ;; tick. :flight-click-wants (click-wants, lane 4) writes :wants and
+ ;; :universe; :flight-judge-opts (judge-opts, lane 10) reads and re-emits
+ ;; them under the click's :flight; :click-start (the HTTP endpoint) reads
+ ;; the posted :wants; :tick-flight-assembly (war_machine
+ ;; flight-assembly-input, lane 5) reads both and writes them into the
+ ;; assembly's :sources, which cascade_problems/assemble-one reads (not
+ ;; declared: the sources map has other writers). The wants' :locators is
+ ;; undeclared (its key's one writer is H2's store entry). Thirteen standing
+ ;; added: :locators on the three boxes, :wants in run!/record-click,
+ ;; :universe at five other records' sites, three tests. 235 -> 248 (2
+ ;; to-do, 246 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -2839,4 +2878,131 @@
    :rows [],
    :kind :standing,
    :note
-   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}]}
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "flight-assembly-input"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: the wants' :locators, carried beside :wants and :universe; undeclared because the key's one writer is the store entry's (:r2-store-locators, H2) and the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "click-wants"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: the wants' :locators, carried beside :wants and :universe; undeclared because the key's one writer is the store entry's (:r2-store-locators, H2) and the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "judge-opts"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: the wants' :locators, carried beside :wants and :universe; undeclared because the key's one writer is the store entry's (:r2-store-locators, H2) and the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-decision-admitted"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: another record's :universe (a cascade problem's or a scoring input's own key), reported now because :universe became declared for the wants; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-lane"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: another record's :universe (a cascade problem's or a scoring input's own key), reported now because :universe became declared for the wants; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "class-observation-model"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: another record's :universe (a cascade problem's or a scoring input's own key), reported now because :universe became declared for the wants; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site
+   {:file "futon2/src/futon2/aif/efe.clj", :var "rank-cascade-actions"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: another record's :universe (a cascade problem's or a scoring input's own key), reported now because :universe became declared for the wants; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site
+   {:file "futon2/src/futon2/aif/target_field.clj",
+    :var "with-pair-overlap"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: another record's :universe (a cascade problem's or a scoring input's own key), reported now because :universe became declared for the wants; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: a test builds records carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wants,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "record-click"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: the flight loop keeps the click's :wants on its click entry (record-click) and passes click-wants' result on (run!); the same wants, not a second writer (one writer, click-wants)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wants,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: the flight loop keeps the click's :wants on its click entry (record-click) and passes click-wants' result on (run!); the same wants, not a second writer (one writer, click-wants)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wants,
+   :site {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: a test builds records carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wants,
+   :site {:file "futon2/test/futon2/aif/flight_click_close_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H3-I: a test builds records carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}]}
