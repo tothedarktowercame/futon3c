@@ -22,7 +22,7 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "5e1e0588e4a3e395567d0025bb92d24a533f5a05f7721bea74b9af6e301171c1")
+(def map-sha256 "7c93830d98d8f318519b73cbd59eca59e9b049ef2ded49bfe20d00ad987b3dd7")
 (def repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
@@ -142,7 +142,8 @@
 (def expected-outside-closure
   ;; built component sites not in the load closure of test-registry-307b8969
   ;; (mission-reading-c8-test, futon2 d5320918)
-  #{"futon2/scripts/futon2/wm/extract_outcomes.clj"
+  #{"futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"
+    "futon2/scripts/futon2/wm/extract_outcomes.clj"
     "futon2/scripts/wm_scheduled_run.clj"
     "futon2/src/futon2/aif/enactment_habit.clj"
     ;; WM-HABIT-FOLD-CALL-I: the tick's reader of the flights' receipts,

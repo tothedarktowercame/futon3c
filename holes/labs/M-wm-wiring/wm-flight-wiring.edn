@@ -23,9 +23,8 @@
 ;; at their site: conformance is textual (it counts comments) and direction is
 ;; checked only under {:heuristic? true}.
 ;;
-;; Components outside futon2 are siteless (exempt from conformance, still in
-;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
-;; proof2a_check.clj, warranted separately, test-registry-1757d974).
+;; WIRE-23-C1: the W_c checker has its executable bb file as its site;
+;; its printed verdict has no :wc-verdict key (standing attribution finding).
 {:spec/id :wm-flight-wiring
  :repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
@@ -605,7 +604,13 @@
   {:box/id :r0-enact-step :row 0 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
    ;; WM-HANDOFF-H9+H11-I: base-step {:target (:target flight) ...}
-   :reads [:candidate :enacted-steps :publication-observed [:target {:record :flight}]] :writes [:attempts :grain-gate]}
+   :reads [:candidate [:precedence {:record :chosen}] :publication-observed [:target {:record :flight}]] :writes [:attempts :grain-gate]}
+  ;; WIRE-23-C1: the runner writes the selected action's precedence into
+  ;; the chosen summary; enact-fn reads (:precedence chosen), not enacted-steps.
+  {:box/id :run-chosen-summary :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "chosen-summary"}
+   :returns-record :chosen
+   :writes [[:precedence {:record :chosen}]]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
    :reads [:attempts :grain-gate :publication-observed]}
@@ -621,7 +626,10 @@
    :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"}
    :reads [:grain-gate :grain :attempts]}
   {:box/id :wc-checker :box/kind :component
-   ;; futon3c bb script, siteless here
+   :site {:file "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"}
+   :attribution-findings
+   [{:kind :standing :field :wc-verdict
+     :note "WIRE-23-C1: --wc --edn prints the check-c verdict vector positionally. The script never writes a literal :wc-verdict key; the caller names the output. Keep the intended write and its conformance finding; executable wire evidence observes the script output."}]
    :reads [:attempts :grain-gate :candidate] :writes [:wc-verdict]}
   {:box/id :r7-increment :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_habit.clj" :var "increment"}
@@ -733,7 +741,9 @@
    :returns-record :measured-a
    ;; reads each problem's :locators and sourced-rates' :status, :rates and
    ;; :measurement (the digest is taken only when some token is measured)
-   :reads [:locators :status :rates :measurement]
+   :record-aliases {:sourced-rates ["s"]}
+   :reads [:locators [:status {:record :sourced-rates}]
+           [:rates {:record :sourced-rates}] [:measurement {:record :sourced-rates}]]
    ;; F1a-2c (futon2 e92ae532): the record also carries the per-token
    ;; :measurement, read by :flight-conditioning-step
    :writes [[:rates {:record :measured-a}] [:measurement {:record :measured-a}]]}
@@ -977,7 +987,8 @@
    ;; read by cascade-lane as (:rates sourced), which it passes to
    ;; efe/rank-actions as :adjudication-rates (declared at R6/R7)
    :returns-record :sourced-rates
-   :writes [:measurement [:rates {:record :sourced-rates}]]}
+   :writes [:measurement [:status {:record :sourced-rates}]
+            [:rates {:record :sourced-rates}] [:measurement {:record :sourced-rates}]]}
   {:box/id :r6-cascade-lane :row 6 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-lane"}
    ;; WM-HANDOFF-H6-I (the rates island): at R5 the lane passes
@@ -1479,6 +1490,10 @@
  ;; site and so no conformance finding; the test asserts their intended sites
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
+ ;; WIRE-23-C1: 352 -> 375 findings (24 new standing findings).
+ ;; The sole removed finding was the false enacted-steps read on r0-enact-step;
+ ;; replaced by chosen-summary -> enact-fn precedence@chosen. Removal confirmed
+ ;; by claude-8, invoke-1790466592483-25102-a5e1d7c6. All other findings retained.
  :expected-findings
  [{:finding :occurrence-without-declaration,
    :field :outcome,
@@ -1610,16 +1625,6 @@
    :kind :standing,
    :note
    "persist-clock! writes the lineage edge with string prop keys into futon1b; no keyword names it at the site"}
-  {:finding :declaration-without-occurrence,
-   :box/id :r0-enact-step,
-   :field :enacted-steps,
-   :role :reads,
-   :site
-   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
-   :rows [0],
-   :kind :to-do,
-   :note
-   "enact-fn enacts the candidate's steps from the first; starting at the decision's recorded enacted step is not wired yet"}
   {:finding :declaration-without-occurrence,
    :box/id :r2-served-by-reading,
    :field :owner-text,
@@ -4781,4 +4786,226 @@
  :kind :standing,
  :note
  "WM-R6-MAP-I: with-pair-overlap reads universe from entry alias e. read-universe's producer returns through try, unsupported by the prover; step only copies via select-keys. No scoped universe or universe-source writer is declared. Refused readings supply universe-source refusal but no universe; that absence is not a wire."}
+ {:finding :declaration-without-occurrence,
+  :box/id :wc-checker,
+  :field :wc-verdict,
+  :role :writes,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The bb CLI emits its verdict positionally, not under :wc-verdict; grain-gate is checked through lookup forms the heuristic does not classify as reads. The executable site is declared and these textual limits stay standing."}
+ {:role :reads,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :box/id :wc-checker,
+  :field :grain-gate,
+  :heuristic true,
+  :note
+  "WIRE-23-C1: The bb CLI emits its verdict positionally, not under :wc-verdict; grain-gate is checked through lookup forms the heuristic does not classify as reads. The executable site is declared and these textual limits stay standing.",
+  :usage {:reads 0, :writes 0, :unclassified 4},
+  :kind :standing,
+  :finding :declared-read-not-found}
+ {:role :reads,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :box/id :r6-cascade-lane,
+  :field :measurement,
+  :heuristic true,
+  :note
+  "WIRE-23-C1: Measurement is now attributed to the returned sourced-rates record. The legacy unscoped rates-lane declaration remains for its existing wire evidence; the scoped equivalent is a follow-up map correction.",
+  :usage {:reads 0, :writes 1, :unclassified 1},
+  :kind :standing,
+  :finding :declared-read-not-found}
+ {:role :writes,
+  :site
+  {:file "futon2/src/futon2/aif/observation_rates.clj",
+   :var "sourced-rates"},
+  :box/id :r6-sourced-rates,
+  :field :measurement,
+  :heuristic true,
+  :note
+  "WIRE-23-C1: Measurement is now attributed to the returned sourced-rates record. The legacy unscoped rates-lane declaration remains for its existing wire evidence; the scoped equivalent is a follow-up map correction.",
+  :usage {:reads 1, :writes 0, :unclassified 2},
+  :kind :standing,
+  :finding :declared-write-not-found}
+ {:finding :occurrence-without-declaration,
+  :field :author,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :candidate,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "chosen-summary"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the runner's chosen-summary site exposes this additional payload occurrence; only its returned precedence is declared in this packet."}
+ {:finding :occurrence-without-declaration,
+  :field :chosen,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "chosen-summary"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the runner's chosen-summary site exposes this additional payload occurrence; only its returned precedence is declared in this packet."}
+ {:finding :occurrence-without-declaration,
+  :field :detail,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :grain,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "chosen-summary"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the runner's chosen-summary site exposes this additional payload occurrence; only its returned precedence is declared in this packet."}
+ {:finding :occurrence-without-declaration,
+  :field :measurement,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "measured-a-version"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The scoped s reads are declared; this remaining unscoped occurrence is a separate output/doc occurrence, not a read from flight-click or the kernel."}
+ {:finding :occurrence-without-declaration,
+  :field :rates,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "measured-a-version"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The scoped s reads are declared; this remaining unscoped occurrence is a separate output/doc occurrence, not a read from flight-click or the kernel."}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file
+   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the formerly siteless checker exposes this additional source occurrence; no new wire is asserted for it."}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "measured-a-version"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The scoped s reads are declared; this remaining unscoped occurrence is a separate output/doc occurrence, not a read from flight-click or the kernel."}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "chosen-summary"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Declaring the runner's chosen-summary site exposes this additional payload occurrence; only its returned precedence is declared in this packet."}
+ {:finding :occurrence-without-declaration,
+  :field [:measurement :sourced-rates],
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The sourced alias attributes this occurrence to the sourced-rates record; its existing unscoped declaration has not been broadened in this packet."}
+ {:finding :occurrence-without-declaration,
+  :field [:precedence :chosen],
+  :site {:file "futon2/test/futon2/aif/flight_click_close_test.clj"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Introducing the chosen-record precedence vertex exposes this additional occurrence at an existing site; it does not declare an additional handoff."}
+ {:finding :occurrence-without-declaration,
+  :field [:precedence :chosen],
+  :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Introducing the chosen-record precedence vertex exposes this additional occurrence at an existing site; it does not declare an additional handoff."}
+ {:finding :occurrence-without-declaration,
+  :field [:precedence :chosen],
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: Introducing the chosen-record precedence vertex exposes this additional occurrence at an existing site; it does not declare an additional handoff."}
+ {:finding :occurrence-without-declaration,
+  :field [:status :sourced-rates],
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :declared-by [],
+  :kind :standing,
+  :note
+  "WIRE-23-C1: The sourced alias attributes this occurrence to the sourced-rates record; its existing unscoped declaration has not been broadened in this packet."}
 ]}
