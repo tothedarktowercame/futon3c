@@ -1,0 +1,14 @@
+{
+ "click-id": null,
+ "outcome": "service-failed",
+ "error": "Serving runner source drifts from the canonical checkout",
+ "failure-kind": "stale-runner-source",
+ "failure-stage": "runner-source",
+ "runner/loaded-sha256": "a6325ca5e171ab5d0c1aa991c55ef1f7fd7c95d06e133cafa287964431ab44c2",
+ "runner/canonical-sha256": "ed7686ba6b8983c47d88120dae98efce515fc2de7e172243dc033f2412d86f5b",
+ "stale": {
+  "futon2.aif.full-loop-runner": "stale"
+ },
+ "captured-at": "2026-09-26T01:49:50.144705389Z",
+ "cause": "futon2 8c396c3a committed 02:34:17Z to full_loop_runner.clj (claude-10, WM-MAP-REPLAY-I) while the flight was in the air; runner reloaded 02:36:25Z"
+}
