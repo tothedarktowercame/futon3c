@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "5c6acc21" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "bc66c6b1" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -92,7 +92,7 @@
    ;; F1a-1-I (futon2 d04711eb, 6165ec8b): the observation that followed an
    ;; enacted step, on its :enactments entry (flight/step-observation). Its
    ;; reader is F1b's step admission, not built: a to-do finding until then.
-   :reads [:needs [:target {:record :flight}] :chosen :increment] :writes [:readings :needs [:observation {:record :enactment-entry}] [:step {:record :enactment-entry}]]}
+   :reads [:needs [:target {:record :flight}]] :writes [:readings :needs [:observation {:record :enactment-entry}]]}
   {:box/id :flight-ask-fn :box/kind :component
    ;; WM-HANDOFF-H9+H11-I: the ask step's (:target flight)
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "ask-fn"}
@@ -605,6 +605,19 @@
    ;; problem's :locators, target-qualified), or the typed absence; write
    ;; only, the scoring is untouched; the reader comes with F1b
    :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class :measured-a]}
+  ;; F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): measured-a-version
+  ;; returns the :measured-a record :r9-decision writes, now carrying the
+  ;; rates VALUE beside :rates-sha. The literal is in measured-a-version's
+  ;; return position, so the scoped field is declared here, not on
+  ;; :r9-decision (whose var only assocs the returned record). Reader: F1b's
+  ;; join (F1c-D).
+  {:box/id :r9-measured-a-version :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "measured-a-version"}
+   :returns-record :measured-a
+   ;; reads each problem's :locators and sourced-rates' :status, :rates and
+   ;; :measurement (the digest is taken only when some token is measured)
+   :reads [:locators :status :rates :measurement]
+   :writes [[:rates {:record :measured-a}]]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -1321,17 +1334,17 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :written-never-read,
-   :field [:step :enactment-entry],
-   :writers [:flight-run],
-   :kind :to-do,
-   :note
-   "F1b-join-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 5c6acc21): run! binds the conditioning step (SPEC-F s1's six fields, exact-update's q, -ln P(o)) on the enactment entry. Its reader is F1b-admit-I (the tick's admission into :observation-updates), not built; this entry goes when that reader is declared"}
-  {:finding :written-never-read,
    :field [:observation :enactment-entry],
    :writers [:flight-run],
    :kind :to-do,
    :note
    "F1a-1-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 d04711eb/6165ec8b): run! writes the observation that followed an enacted step on its :enactments entry. Its reader is F1b's step admission, not built; this entry goes when that reader is declared"}
+  {:finding :written-never-read,
+   :field [:rates :measured-a],
+   :writers [:r9-measured-a-version],
+   :kind :standing,
+   :note
+   "F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): the measured-A record carries the rates value beside its digest, so F's conditioning step can be recomputed from the run record. At HEAD it is always the typed absence on the production path: no production caller of cascade-lane passes :observation-labels. The reader comes with F1b-join-I; this entry goes when that reader is declared"}
   {:finding :written-never-read,
    :field :measured-a,
    :writers [:r9-decision],
