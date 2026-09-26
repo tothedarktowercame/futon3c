@@ -20,10 +20,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R2-R3a-I, E4 with :passes: :r2-judge-observation writes :tick-observation, :r3a-channel-prediction-error reads it; 35/23/81/166 -> 36/23/83/168; :world/r2-judge-observation joins the inputs; both boxes join the dead components (no test box reads :tick-observation); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R7-I: :r3a-prediction-error writes [:error {:record :prediction-error}], read by the new :r7-weighted-error, which writes :weighted-error, read by the new :r3-aggregate-driver; :r4-kernel writes :rates, read by the new :fpi-policy-free-energy (F_pi, not live); 36/23/83/168 -> 36/23/86/171; the three new boxes join the dead components (no test box reads their fields); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R3-I: :r3-aggregate-driver writes [:driver {:record :r3d-driver}], :morning-brief-fold writes [:belief {:record :morning-brief-fold}], both read by :r7-fold-call (judge); new :r3-apply-belief-events (no field); 36/23/86/171 -> 37/23/88/174; inputs gain :world/morning-brief-fold and :world/r3-apply-belief-events and lose :world/r7-fold-call (judge now reads declared fields); :r3a-prediction-error, :r7-weighted-error and :r3-aggregate-driver leave the dead components (the error reaches judge's box and its test through the driver), :r3-apply-belief-events joins them; :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R1-I: :trace-record writes [:mu-post {:record :trace}], read by :r7-fold-call; new :r1-belief-carry; :passes values :carried-mu-post, :loop-belief, :channel-prediction from :r7-fold-call to :r1-belief-carry, :r3-apply-belief-events, :r3a-channel-prediction-error; 37/23/88/174 -> 37/23/90/178; inputs gain :world/trace-record and lose :world/r3-apply-belief-events; :r1-belief-carry joins the dead components; :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 37, :outputs 23, :components 88, :edges 174},
+ :counts {:inputs 37, :outputs 23, :components 90, :edges 178},
  :validate
  {:all-valid false,
   :checks
@@ -68,6 +69,7 @@
      :r4-order-use
      :r9-finding-store
      :r2-verifier
+     :r1-belief-carry
      :flight-cast
      :r2-store-locators
      :c8-registry-get

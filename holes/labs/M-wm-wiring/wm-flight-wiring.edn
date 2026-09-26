@@ -171,9 +171,13 @@
                   :callee-box :r3a-channel-prediction-error}}]}
   {:box/id :r3a-channel-prediction-error :box/kind :component
    :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "channel-prediction-error"}
-   :reads [:tick-observation]}
+   ;; WM-NODE-R1-I: E3's second callee (prediction, arg 3)
+   :reads [:tick-observation :channel-prediction]}
   {:box/id :r3a-predict-observation :box/kind :component
-   :site {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation"}}
+   :site {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation"}
+   ;; WM-NODE-R1-I: E3's first callee (belief, arg 1); not declared, see
+   ;; :r7-fold-call
+   }
   {:box/id :r3a-prediction-error :box/kind :component
    ;; returns the prediction-error record, (merge stamp {:status :present
    ;; ... :error err :precision ... :weighted-error ...}) in each branch of
@@ -236,7 +240,26 @@
   ;; r1-belief-carry (WM-SUPERSET-D section 5), which does not exist yet;
   ;; E1's sits on R1's box too
   {:box/id :r3-apply-belief-events :box/kind :component
-   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-arena-belief-events"}}
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-arena-belief-events"}
+   ;; WM-NODE-R1-I: E1's callee (belief-state, arg 1)
+   :reads [:loop-belief]}
+  ;; WM-NODE-R1-I (WM-SUPERSET-D section 5): R1's carry and the trace.
+  ;; r1-belief-carry (belief/reconcile-belief-carry, R1's registry var)
+  ;; takes [fresh-bootstrap carried-mu-post], plain parameters, and returns a
+  ;; map keyed by entity id (read under a variable key): E2's callee, no
+  ;; keyed field. trace-record (trace.clj) returns the v1 trace literal
+  ;; (under a trailing cond->) with :mu-post (:belief judge-output), read by
+  ;; the next tick's judge as (:mu-post prev-trace-record). Its own read of
+  ;; judge's output :belief is not declared: judge's returned literal would
+  ;; need :returns-record on the judge site, which would attribute every key
+  ;; of judge's return to that record for every judge box
+  {:box/id :r1-belief-carry :box/kind :component
+   :site {:file "futon2/src/futon2/aif/belief.clj" :var "reconcile-belief-carry"}
+   :reads [:carried-mu-post]}
+  {:box/id :trace-record :box/kind :component
+   :site {:file "futon2/src/futon2/aif/trace.clj" :var "trace-record"}
+   :returns-record :trace
+   :writes [[:mu-post {:record :trace}]]}
   {:box/id :morning-brief-fold :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-morning-brief-events"}
    :returns-record :morning-brief-fold
@@ -509,9 +532,42 @@
    ;; driver-record), alias driver-record) and the morning-brief fold's
    ;; :belief ((:belief morning-brief-fold), the receiver named for the
    ;; record)
-   :record-aliases {:r3d-driver ["driver-record"]}
-   :reads [[:driver {:record :r3d-driver}] [:belief {:record :morning-brief-fold}]]
-   :writes [:enactment-fold]}
+   :record-aliases {:r3d-driver ["driver-record"] :trace ["prev-trace-record"]}
+   ;; WM-NODE-R1-I: judge reads the previous trace's :mu-post ((:mu-post
+   ;; prev-trace-record), alias prev-trace-record) and hands three values
+   ;; on positionally (WM-PROVER-POSITIONAL-D E1-E3), each checked by :passes:
+   ;; E2 (R3 -> R1): (:mu-post prev-trace-record) as arg 2 of
+   ;; belief/reconcile-belief-carry, the carried posterior (:carried-mu-post);
+   ;; E1 (R1 -> R3): the inner loop's belief as arg 1 of
+   ;; apply-arena-belief-events (:loop-belief). The loop local is
+   ;; self-recurrent (recur belief'); its init, and so its provenance, is
+   ;; wm-belief-after-brief = (:belief morning-brief-fold), a keyed read of
+   ;; the fold that carries reconcile-belief-carry's result through
+   ;; apply-morning-brief-events;
+   ;; E3 (R1 -> R3a): the same loop belief as arg 1 of
+   ;; belief/predict-observation (NOT declared: the :passes entry with the
+   ;; same :from as E1's is refused, :passes-failed :not-the-keyed-read,
+   ;; although E1's is accepted and a wrong key refuses E1 (both checked);
+   ;; the call at :7024 is in the loop body's first let, the one at :7114
+   ;; in a later let under an if: a prover case for claude-2, recorded
+   ;; here), and (get predictions ch), an element of
+   ;; predict-observation's return, as arg 3 of fe/channel-prediction-error
+   ;; (:channel-prediction), the Clojure counterpart of
+   ;; sensoryPredictionError, at whole-value grain; the prediction's
+   ;; :mean/:variance are read through a helper as a keyword argument
+   ;; ((prediction-member prediction :mean)), which no rule attributes
+   :reads [[:driver {:record :r3d-driver}] [:belief {:record :morning-brief-fold}]
+           [:mu-post {:record :trace}]]
+   :writes [:enactment-fold :carried-mu-post :loop-belief :channel-prediction]
+   :passes [{:value :carried-mu-post
+             :from {:keyed-read [:mu-post :trace]}
+             :to {:call "belief/reconcile-belief-carry" :arg 2 :callee-box :r1-belief-carry}}
+            {:value :loop-belief
+             :from {:keyed-read [:belief :morning-brief-fold]}
+             :to {:call "apply-arena-belief-events" :arg 1 :callee-box :r3-apply-belief-events}}
+            {:value :channel-prediction
+             :from {:element-of {:returns-of "belief/predict-observation"}}
+             :to {:call "fe/channel-prediction-error" :arg 3 :callee-box :r3a-channel-prediction-error}}]}
   {:box/id :habit-fold-call-test :row 7 :box/kind :test
    :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"}
    :reads [:enactment-fold]}
@@ -1105,7 +1161,16 @@
  ;; join; E1/E2 wait for R1's boxes. No finding added (both scoped wires
  ;; attributed at both ends; a wrong alias and a missing :returns-record
  ;; each give :declaration-without-occurrence, checked). 294 unchanged (2
- ;; to-do, 292 standing). :kind :to-do is the
+ ;; to-do, 292 standing). WM-NODE-R1-I (WM-SUPERSET-D section 5,
+ ;; WM-PROVER-POSITIONAL-D E1-E3): new :r1-belief-carry and :trace-record
+ ;; (:returns-record :trace, writes [:mu-post {:record :trace}], read by
+ ;; judge, alias prev-trace-record); three :passes on :r7-fold-call: E2
+ ;; (:mu-post into reconcile-belief-carry arg 2), E1 (the loop belief, init
+ ;; (:belief morning-brief-fold), into apply-arena-belief-events arg 1), E3's
+ ;; second hop (an element of predict-observation's return into
+ ;; channel-prediction-error arg 3); E3's first hop refused by the prover
+ ;; (recorded). One standing added. 294 -> 295 (2 to-do, 293 standing).
+ ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3884,4 +3949,12 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R7-I: compute-prediction-error's own :weighted-error, the likelihood-derived per-call value in the prediction-error record, which R7's weighted-error replaces (keeping it as :per-call-precision's partner); attributed to the :prediction-error record, where no box declares it"}]}
+  "WM-NODE-R7-I: compute-prediction-error's own :weighted-error, the likelihood-derived per-call value in the prediction-error record, which R7's weighted-error replaces (keeping it as :per-call-precision's partner); attributed to the :prediction-error record, where no box declares it"}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site {:file "futon2/src/futon2/aif/trace.clj", :var "trace-record"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R1-I: trace-record's :status is another record's key (the tagged observation's, the decision's), reported because the box was added for :mu-post"}]}
