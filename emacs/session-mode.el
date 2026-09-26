@@ -857,7 +857,9 @@ Use the real inserted span, including any agent-chat text transformations."
 Also annotate the latest sent operator turn.  Drafts use local cues only;
 sent turns can request agent interpretation through `session-turn-analysis'.
 Kept separate from full session markup so typing never triggers retrieval."
-  :lighter " Tags"
+  ;; A red 象 says this buffer's operator turns are on the record: captured
+  ;; and sent for interpretation.  No 象 means off the record.
+  :lighter (:propertize " 象" face (:foreground "red" :weight bold))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c s i") #'session-mode-describe-turn-intent)
             map)
@@ -883,8 +885,11 @@ Kept separate from full session markup so typing never triggers retrieval."
 
 ;;;###autoload
 (define-minor-mode global-session-mode-turn-tags-mode
-  "Enable local turn tags in current and future initialized agent-chat buffers."
-  :global t :group 'session-mode
+  "Enable local turn tags in current and future initialized agent-chat buffers.
+On by default (Joe, 2026-09-26): every operator turn is captured and
+interpreted.  Turn it off, or `session-mode-turn-tags-mode' in one buffer,
+to talk off the record."
+  :global t :group 'session-mode :init-value t
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (session-mode--tag-input-start)
