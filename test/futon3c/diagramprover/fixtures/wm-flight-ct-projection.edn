@@ -9,10 +9,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H1-I: :flight-run (flight/run!) writes :readings/:needs, :flight-driver-summary (run-flight!) reads them; 28/23/55/124 -> 28/23/57/127; both join the dead components (the driver summary is a return value no test box reads); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H2-I: the interpretation store as the read -> ask carrier, six publish boxes and six read-back boxes in futon2.aif.mission-reading; 28/23/57/127 -> 34/23/69/139; all twelve join the dead components (no test box reads a store key); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H3-I: :flight-click-wants writes :wants/:universe, read by :flight-judge-opts, :click-start and :tick-flight-assembly; 34/23/69/139 -> 35/23/72/145; the three new boxes join the dead components (no test box reads :wants or :universe); :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H4-I: :ask-merge-published writes :interpretations, read by :construction-assemble-one and :construction-construct; 35/23/72/145 -> 36/23/75/148; :ask-merge-published reads no declared field, so it joins the inputs; the three new boxes join the dead components (no test box reads :interpretations); :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 35, :outputs 23, :components 72, :edges 145},
+ :counts {:inputs 36, :outputs 23, :components 75, :edges 148},
  :validate
  {:all-valid false,
   :checks
@@ -34,6 +35,7 @@
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
+     :construction-construct
      :r11-warrants
      :r3-store-locator-declines
      :r3-store-constraints-read
@@ -50,7 +52,9 @@
      :tick-flight-assembly
      :r4-order-use
      :r9-finding-store
+     :construction-assemble-one
      :r2-verifier
+     :ask-merge-published
      :flight-cast
      :r2-store-locators
      :c8-registry-get

@@ -152,6 +152,34 @@
   {:box/id :tick-flight-assembly :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
    :reads [:wants :universe]}
+  ;; WM-HANDOFF-H4-I (WM-HANDOFFS-D H4): the ask's answers reach
+  ;; construction as the sources' :interpretations. publish! writes a
+  ;; validated answer into the store under :patterns/:receipts (no
+  ;; :interpretations key); want_interpretation/merge-published reads the
+  ;; store back and writes the target's :interpretations into the sources,
+  ;; called by the tick (war_machine assemble-cascade-problems-with-published)
+  ;; and by the flight's view (flight_runner/target-view); in construction,
+  ;; cascade_problems/assemble-one reads (get-in sources [:interpretations
+  ;; target]) for the problem, and constructed-from-interpretations hands the
+  ;; patterns and receipts to interpretation_construction/construct, which
+  ;; reads :interpretations (destructured). ONE WRITER: merge-published. The
+  ;; other textual write, validate-response's assoc-in (want_interpretation
+  ;; :272), is a trial sources map validate-response builds and assembles
+  ;; itself (cp/assemble) to check the answer constructs; it never leaves the
+  ;; function, so the field does not split. target-view is not boxed: its
+  ;; form holds no :interpretations (it calls merge-published). enact-fn's
+  ;; :interpretations is its opts' function over the store's :patterns
+  ;; (flight_driver), not the sources' key, so :r0-enact-step does not
+  ;; declare it (standing below)
+  {:box/id :ask-merge-published :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/want_interpretation.clj" :var "merge-published"}
+   :writes [:interpretations]}
+  {:box/id :construction-assemble-one :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one"}
+   :reads [:interpretations]}
+  {:box/id :construction-construct :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
+   :reads [:interpretations]}
   {:box/id :r2-test :row 2 :box/kind :test
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"}
    :reads [:want-span :text-sha256]}
@@ -695,7 +723,20 @@
  ;; undeclared (its key's one writer is H2's store entry). Thirteen standing
  ;; added: :locators on the three boxes, :wants in run!/record-click,
  ;; :universe at five other records' sites, three tests. 235 -> 248 (2
- ;; to-do, 246 standing). :kind :to-do is the
+ ;; to-do, 246 standing). WM-HANDOFF-H4-I (futon2 pin unchanged): the
+ ;; ask's answers as the sources' :interpretations. One writer,
+ ;; :ask-merge-published (want_interpretation/merge-published, lane 4: the
+ ;; store read back into the sources, called by the tick's
+ ;; assemble-cascade-problems-with-published and the flight's target-view);
+ ;; readers :construction-assemble-one (cascade_problems/assemble-one) and
+ ;; :construction-construct (interpretation_construction/construct), lane 5.
+ ;; publish! writes :patterns, not :interpretations; validate-response's
+ ;; write is a trial it assembles itself, so the field does not split.
+ ;; Fifteen added: :wants at assemble-one (to-do, H8), :locators there
+ ;; (standing, H3's reason), other records' keys at the two new sites (six),
+ ;; :interpretations at enact-fn/run-flight! (the store's :patterns under an
+ ;; option key), at cascade-lane/cascade-decision-admitted (the problem's own
+ ;; key) and in four tests. 248 -> 263 (3 to-do, 260 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3005,4 +3046,158 @@
    :rows [],
    :kind :standing,
    :note
-   "WM-HANDOFF-H3-I: a test builds records carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}]}
+   "WM-HANDOFF-H3-I: a test builds records carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-decision-admitted"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: cascade-decision-admitted reads the cascade problem's own :interpretations (the key assemble-one puts on the problem it builds), another record's key, reported now because :interpretations became declared; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: cascade-lane reads the cascade problem's own :interpretations (the key assemble-one puts on the problem it builds), another record's key, reported now because :interpretations became declared; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+  :declared-by [],
+  :rows [0],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: run-flight! builds enact-fn's :interpretations option as (fn [fl] (:patterns (wi/read-published store (:target fl)))), a read of the store's :patterns under an option key, not a write of the sources' :interpretations"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+  :declared-by [],
+  :rows [0],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: enact-fn's :interpretations is its opts' function (flight -> {pattern interpretation}) over the store's :patterns, read by flight_driver's (wi/read-published store target); not the sources' :interpretations merge-published writes, so no box here declares it"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: a test builds records or options carrying :interpretations (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: a test builds records or options carrying :interpretations (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: a test builds records or options carrying :interpretations (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: a test builds records or options carrying :interpretations (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/interpretation_construction.clj",
+   :var "construct"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: :kind at construct is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :locators,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj",
+   :var "assemble-one"},
+  :declared-by [],
+  :rows [8],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: assemble-one reads the sources' :locators of the target; undeclared for the same reason as H3's carriers (the key's one writer is :r2-store-locators and the prover has no per-record scope); H8 revisits it"}
+
+ {:finding :occurrence-without-declaration,
+  :field :needs,
+  :site
+  {:file "futon2/src/futon2/aif/interpretation_construction.clj",
+   :var "construct"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: :needs at construct is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj",
+   :var "assemble-one"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: :status at assemble-one is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/interpretation_construction.clj",
+   :var "construct"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: :status at construct is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :universe,
+  :site
+  {:file "futon2/src/futon2/aif/interpretation_construction.clj",
+   :var "construct"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H4-I: :universe at construct is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+
+ {:finding :occurrence-without-declaration,
+  :field :wants,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj",
+   :var "assemble-one"},
+  :declared-by [],
+  :rows [8],
+  :kind :to-do,
+  :note
+  "WM-HANDOFF-H4-I: assemble-one reads the sources' :wants (get-in sources [:wants target]), which flight-assembly-input writes into the assembly (H3); boxing assemble-one for :interpretations reports it now. H8 (the assembly's :sources into assemble-one) declares or annotates it"}]}
