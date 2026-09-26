@@ -375,6 +375,108 @@ anyway?", HEAD) is answered conditionally by this plan: this is branch (c)
 yes-but-with-discipline, because Joe has now named a real downstream consumer (the EFE field
 page) with explicit acceptance criteria.
 
+### Checkpoint 2026-09-26 — Tornhill at file grain, joined to the agent chat
+
+Joe (2026-09-26): the Tornhill work "doesn't seem to have been sorted out very well yet", and
+the third sweep ("your agent chat as a crime scene") should be built together with the classic
+version. Diagnosis: the work so far measured a layer above Tornhill's unit. The store route
+(futon1b churn/complexity types) is still empty, and the EFE ring reaches code only through
+mission→code `touches` edges, which cover 28 of 348 carpet missions. Tornhill's own analyses —
+hotspots, coupling, age, knowledge map over files — had not been run at all. They need only git.
+
+**What was done**
+
+- `futon0/analysis/audits/tornhill.py` (collect + check): per repository, over the last 90
+  days of HEAD history (no merges, as code-maat), for code files only:
+  hotspots (revisions × indentation complexity), complexity trend for each repo's top 10
+  (sampled at the commits that touched the file), cross-module change coupling (code-maat
+  defaults: ≥5 shared, ≥30%, commits of >30 files skipped), code age, and the model named in
+  `Co-Authored-By`. 16 repositories, 3,717 code files, about 20 s.
+- `futon0/analysis/audits/tornhill_chat.py` (collect + check): joins each commit to its session
+  through futon6 `data/session-commit-index.json`, and each session to its transcript. Per
+  file: the seats that changed it, Joe's turns in those sessions (census rule; raw, and shared
+  out across the code files each session touched), compacted sessions, and pilot stance labels.
+  Also coupling at session grain, compared with commit grain on the same commits.
+- `futon0/analysis/audits/test_tornhill.py`: 13 tests on a synthetic repo and transcripts,
+  including the bad cases each check exists for (tampered report fails `check`; side-branch
+  commit counted; merge not counted; a row written after `as_of` not counted).
+- `marimo-zone/notebooks/tornhill-crime-scene-20260926.py`: hotspot scatter and table,
+  coupling tables (commit grain; session grain never in one commit), knowledge-map bars by
+  agent kind, hotspot × operator-attention scatter, seat table, coverage and check results. A
+  button re-runs all four steps.
+- Outputs: JSON in `~/.local/share/futon-audits/tornhill/` (session ids and seat names, no turn
+  text; kept out of the repos per `[[run-data-is-data]]`); the two `.check.txt` files are
+  committed beside the scripts.
+
+**Design decisions** (settled while building; recorded here in place of a separate PSR)
+
+- Pattern: `library/code-coherence/subsumption-claim-discipline.flexiarg` — every number has a
+  `check` that re-reads the source by a different path; a repo that cannot be read is listed
+  as missing, never zero (as `commit_timeseries.py`).
+- Complexity is indentation, with the unit per language (2 for Lisp/JS, 4 for Python/Rust/sh).
+- A file created inside the window gets no trend ratio: its first sample is its birth, so the
+  ratio would restate its size. It is reported as "new: N→M lines".
+- Quarto `*_files/` bundles and build output are not code (futon7a's top "hotspots" were
+  bundled Vega/KaTeX).
+- One commit claimed by two sessions (24 cases): the session that printed the sha beats a
+  subject+time match; then the earlier session. The ambiguous commits are listed in the output.
+- Sessions without an Agency envelope are labelled `claude:unrouted` / `codex:unrouted`. The
+  sampled ones are build-loop invocations ("ROW TO DO THIS INVOCATION …") and codex exec jobs,
+  with no operator. Joe typing into an interactive CLI session has no envelope either; those
+  rows are counted separately as direct CLI turns.
+- Transcript reads stop at an `as_of` time fixed at the start of the run; live seats keep
+  writing while it runs.
+
+**Findings (as of 2026-09-26)**
+
+- Hotspots: `futon3c/src/futon3c/transport/http.clj` (189 revisions, 9,130 lines, grew ×1.74
+  in complexity over the window) and `futon2/src/futon2/aif/full_loop_runner.clj` (236
+  revisions, created in the window, now 5,492 lines) are far ahead; then `war_machine.clj`
+  (futon2) and the `futon3c/apm/live_*` family.
+- Trailers leave most authorship blank: 8,804 of 12,915 file revisions carry no
+  `Co-Authored-By`. The session join names the seat: `full_loop_runner.clj` was changed by 28
+  seats in 3½ weeks, the busiest (codex-10) making 17% of the changes; `http.clj` and
+  `war_machine.clj` by 23 each.
+- Coupling: 73 cross-module pairs at commit grain, led by `war_machine.clj` ↔ `aif/trace.clj`
+  (futon2, 38 commits) and the futon1b graph/server/test triangle. At session grain, 38 of 97
+  cross-module pairs never share a commit — mostly the futon3c APM cluster
+  (`live_job_driver`, `countdown_control`, `queued_frame_adapter`, `problem_queue_supervisor`),
+  which agents change together and commit separately.
+- Operator attention: 1,203 of 1,945 attributed files drew any of Joe's turns. Highest
+  apportioned: `apm/workspace_lifecycle.clj` (3 sessions), then `war_machine.clj`,
+  `aif/trace.clj`, `transport/http.clj`, `full_loop_runner.clj` — the code hotspots again.
+- Revisions and line churn agree only moderately as rankings (Spearman 0.4–0.7 per repo);
+  agent commits are small and frequent. The notebook shows both.
+
+**Checks**
+
+- `tornhill-2026-09-26.check.txt`: PASS (43 hotspot files re-read with
+  `git log --full-history`). The first run failed on futon6 `scripts/linode_stepper.py`: path
+  simplification drops side-branch commit 304beb6, which really changed the file. The check
+  now uses `--full-history`.
+- `tornhill-chat-2026-09-26.check.txt`: PASS (census recount per session; commit found in its
+  transcript; file lists by `git show`). Earlier failures and their causes: a merge commit
+  listed by `git show` (merges excluded, as in the classic half); a commit attributed twice
+  (rule above); a turn that arrived during the run (`as_of`).
+- Tests: 13 tests, 0 failures.
+
+**Limits**
+
+- The session index covers 2026-09-01 → 2026-09-25, so the chat side sees 3½ weeks of the
+  90-day window. 2,086 index rows have no repo (commits on branches that no longer exist).
+- Kimi and Zai sessions have no local transcripts: seat and operator counts are absent, not 0.
+- Stance: 100 pilot-labelled replies from three seats. Counts are shown and not turned into
+  rates.
+
+**Next**
+
+- Rebuild the EFE ring on this file-level data, so the mission view is a lens over real
+  hotspots.
+- The chained-claim sweep over agent final turns joined to Joe's next-turn stance (third
+  sweep, "Candidate next step"). The join to sessions now exists for it.
+- The futon1b churn/complexity types (plan layer 1): this pipeline reads git directly, so the
+  store route is optional. Joe to say whether futon1b should hold these metrics.
+
 ---
 
 ## Appendix A. Cross-references
