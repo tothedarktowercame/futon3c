@@ -551,7 +551,16 @@
    ;; writer in code), which rank-cascade-actions reads; :measurement rides
    ;; out only inside :rates-provenance, a composite the prover does not
    ;; open (rank-cascade-actions copies it to each certificate,
-   ;; policy/selection-certificate keeps it under :scoring)
+   ;; policy/selection-certificate keeps it under :scoring).
+   ;; WHY 5 -> 6 (construction -> rates) HAS NO FIELD WITH ITS READER HERE
+   ;; (WM-HANDOFF-H9+H11-I): construction hands this lane the cascade
+   ;; problem as cascade-lane's argument, destructured ([problem] ... {:keys
+   ;; [facts want interpretations ... cascade-spec]} problem); the problem's
+   ;; writer, assemble-one, returns it by name ((assoc base-problem
+   ;; :precedences ...) under :cascade-problem), the same prover limit as the
+   ;; cascade spec's :want. Once the prover follows a let-bound literal
+   ;; returned by name, the problem's keys ([... {:record :problem}]) cross
+   ;; 5 -> 6 with this box as their reader
    :reads [:measurement] :writes [:adjudication-rates]}
   {:box/id :r6-test :row 6 :box/kind :test
    :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"}
