@@ -477,6 +477,55 @@ hotspots, coupling, age, knowledge map over files — had not been run at all. T
 - The futon1b churn/complexity types (plan layer 1): this pipeline reads git directly, so the
   store route is optional. Joe to say whether futon1b should hold these metrics.
 
+**Review of `tornhill.py` / `tornhill_chat.py` (claude-12, 2026-09-26; handoff packet R)**
+
+Reviewed at futon0 fa0546b against the report `tornhill-2026-09-26.json` (generated
+00:48:42Z). No warrant exists, and the tests were not rerun. The handoff records
+"13 tests, 0 failures".
+
+Spot-checks, made by a route different from the script's:
+- `futon0 scripts/futon-sync.clj`: complexity recomputed with awk from `git show <head>:`
+  gives total 4968.5 and loc 888, the same as the report.
+- The top futon3c coupling pair, `emacs/session-mode.el` ↔ `test/session-mode-test.el`:
+  10 revisions each and 10 shared commits by `git log --full-history`. No shared commit
+  touches more than 7 files, so no sweep is in it. Report: shared 10, degree 100.
+
+Verdict: the counts can be used, for the EFE ring (packet 1b) among others. Tests and
+behaviour have the following gaps:
+
+1. **`tornhill_chat.collect` has no test.** The tests cover `read_claude` (uuid dedup
+   across `.pre-compact` snapshots, `as_of`, the census rule) and `attribution_rank` on
+   its own. The per-file join, the ambiguous-commit path in `resolve_commits`,
+   `operator_share` apportioning, and session-grain coupling (`SESSION_MAX_FILES`) are
+   all untested. The rank tests cannot catch a slip in the `prev`/`c` comparison inside
+   `resolve_commits`, which is where a double-attributed commit would come from. This
+   is the gap to close first.
+2. **Check (1) of `tornhill_chat check` re-runs the collector's own rule.** It is a
+   second copy of the same loop, not a second reading. It catches a counting slip. It
+   cannot catch a wrong rule, for example a new kind of harness text in Joe's name. (I
+   looked for clock-reminder turns, "You requisitioned …", passing the rule: 0 found.)
+3. **Complexity is read from the working tree, and revisions from HEAD.**
+   `analyse_repo` reads `Path(repo) / f`. A file with uncommitted edits gets HEAD's
+   revisions and the working copy's complexity. The trend samples use `git show
+   <sha>:`. Reading `git show HEAD:<path>` for the current value too would make the
+   report reproducible from its recorded `head`.
+4. **`trend_ratio` starts after the first change in the window, not at the window's
+   start.** `series[0]` is the file as it stood after its first in-window commit. For a
+   file that predates the window, growth made by that first commit is left out, so the
+   ratio understates growth. The fixture pins this behaviour ("1 indent at the first
+   touch"): `old.clj` was 0 indents before the window, so a ratio from the window's
+   start would be undefined. The docstring's "plus HEAD" is not implemented.
+5. **The sweep threshold counts code files only.** `MAX_CHANGESET` is compared with the
+   number of the commit's files that are code files changed in the window. code-maat
+   counts the whole change set. A commit with 20 code files and 60 data files counts
+   toward coupling here. The fixture's sweep is all code, so the tests do not decide
+   between the two readings.
+6. Complexity units are pinned for `.clj` and `.py` only. A wrong `INDENT_UNIT` entry for
+   `.el`, `.js` or `.lean` would pass.
+
+None of these changes a number in the 2026-09-26 check files. Items 1 and 3 are one small
+packet each, when wanted.
+
 ---
 
 ## Appendix A. Cross-references
