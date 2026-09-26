@@ -36,10 +36,11 @@
 ;; re-pinned at ffe2c596 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-11 at map ffe2c596 (F1a-2c: :r9-measured-a-version writes [:measurement {:record :measured-a}], read by :flight-conditioning-step; 44/24/105/215 -> 43/24/105/215; :in/measurement.measured-a leaves the inputs (the field now has its writer); dead components unchanged; :i4 unchanged).
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R14-I, on F1a-2c's ffe2c596: [:beta {:record :cascade-problem}] from :construction-assemble-one to :r13-family-parameters; new :r14-precision-carry and :r14-selection-posterior, dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
+;; re-pinned at 54f7e7cd from 9567d6bb on 2026-09-26
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha {:absent :same-commit-as-the-map},
+ :map-sha "54f7e7cd",
  :futon5-sha "aeeee96",
- :counts {:inputs 45, :outputs 24, :components 107, :edges 218},
+ :counts {:inputs 44, :outputs 26, :components 107, :edges 222},
  :validate
  {:all-valid false,
   :checks
@@ -70,7 +71,6 @@
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
-     :r14-precision-carry
      :r11-warrants
      :r3a-predict-observation
      :r3-store-locator-declines
@@ -113,7 +113,10 @@
    {:valid true, :check :type-safety, :type-errors []}
    {:valid false,
     :check :spec-coverage,
-    :unspecified-outputs [:out/observation.enactment-entry]}
+    :unspecified-outputs
+    [:out/gamma.precision
+     :out/observation.enactment-entry
+     :out/tau.precision]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
@@ -3050,6 +3053,26 @@
       :delta],
      :to :enactment-records}
     {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [[:beta :precision] :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [[:beta :precision] :enacted-steps :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r14-precision-carry :r9-selection-law :r7-increment :r7-fold],
+     :via [[:beta :precision] :candidate :delta],
+     :to :enactment-records}
+    {:path
      [:r4-kernel
       :r9-selection-law
       :r0-enact-step
@@ -5063,6 +5086,180 @@
       :dispatch
       :clock-in],
      :via [:next-step :target-selection :positional :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:beta :precision]
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
      :to :clock-lineage}
     {:path
      [:r2-verifier
@@ -9544,6 +9741,26 @@
       :controller-score
       :candidate
       :delta],
+     :to :enactment-records}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [[:beta :precision] :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r14-precision-carry
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [[:beta :precision] :enacted-steps :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r14-precision-carry :r9-selection-law :r7-increment :r7-fold],
+     :via [[:beta :precision] :candidate :delta],
      :to :enactment-records}
     {:path
      [:r2-verifier
