@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 1,
-  :witnessed-hermetically 15,
-  :unverified 124,
+  :witnessed-hermetically 25,
+  :unverified 114,
   :wires 140},
  :wires
  [{:wire
@@ -43,7 +43,9 @@
    :status :unverified}
   {:wire [:dispatch :clock-in :mission-id], :status :unverified}
   {:wire [:eligibility :r1-outer-cascade :eligible],
-   :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-wire-is-unverified-because-the-reader-is-not-built}
   {:wire [:flight-cast :click-start :author], :status :unverified}
   {:wire [:flight-cast :click-start :repair-reviewer],
    :status :unverified}
@@ -75,7 +77,9 @@
   {:wire [:flight-entry :flight-run [:target {:record :flight}]],
    :status :unverified}
   {:wire [:flight-entry :loop-test :target-source],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test/the-placement-reaches-the-loop-test}
   {:wire [:flight-entry :r0-enact-step [:target {:record :flight}]],
    :status :unverified}
   {:wire
@@ -103,30 +107,62 @@
   {:wire [:flight-run :flight-driver-summary :readings],
    :status :unverified}
   {:wire [:gate-refuse :gate-refusal-read :error], :status :unverified}
-  {:wire [:loop-entry :r1-outer-cascade :trigger], :status :unverified}
+  {:wire [:loop-entry :r1-outer-cascade :trigger],
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test/the-wire-is-unverified-because-the-reader-is-not-built}
   {:wire
    [:morning-brief-fold
     :r7-fold-call
     [:belief {:record :morning-brief-fold}]],
    :status :unverified}
-  {:wire [:r0-enact-step :r0-test :attempts], :status :unverified}
-  {:wire [:r0-enact-step :r0-test :grain-gate], :status :unverified}
-  {:wire [:r0-enact-step :r5-test :attempts], :status :unverified}
-  {:wire [:r0-enact-step :r5-test :grain-gate], :status :unverified}
+  {:wire [:r0-enact-step :r0-test :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-test-attempts-test/the-attempts-reach-the-row-0-test}
+  {:wire [:r0-enact-step :r0-test :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/the-gate-refusal-reaches-the-row-0-test}
+  {:wire [:r0-enact-step :r5-test :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-r5-test-attempts-test/the-attempts-reach-the-grain-gate-test}
+  {:wire [:r0-enact-step :r5-test :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test/the-gate-pass-reaches-the-grain-gate-test}
   {:wire [:r0-enact-step :r7-flight-call :attempts],
    :status :unverified}
   {:wire [:r0-enact-step :r7-increment :attempts], :status :unverified}
-  {:wire [:r0-enact-step :wc-checker :attempts], :status :unverified}
-  {:wire [:r0-enact-step :wc-checker :grain-gate], :status :unverified}
+  {:wire [:r0-enact-step :wc-checker :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-wc-attempts-test/the-attempts-reach-the-wc-checker}
+  {:wire [:r0-enact-step :wc-checker :grain-gate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/the-gate-pass-reaches-the-wc-checker}
   {:wire [:r1-outer-cascade :flight-entry :chosen-target],
-   :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-wire-is-unverified-because-the-writer-is-not-built}
   {:wire [:r1-outer-cascade :flight-entry :draw-seed],
-   :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-wire-is-unverified-because-the-writer-is-not-built}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
-   :status :unverified}
-  {:wire [:r1-outer-cascade :r1-test :draw-seed], :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-wire-is-unverified-because-the-writer-is-not-built}
+  {:wire [:r1-outer-cascade :r1-test :draw-seed],
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-wire-is-unverified-because-neither-end-exists}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
-   :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-wire-is-unverified-because-the-reader-is-not-built}
   {:wire
    [:r10-observe-publication :r0-enact-step :publication-observed],
    :status :unverified}
@@ -216,8 +252,14 @@
   {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
    :status :unverified}
-  {:wire [:r5-flight-call :r5-grain-gate :grain], :status :unverified}
-  {:wire [:r5-flight-call :r5-test :grain], :status :unverified}
+  {:wire [:r5-flight-call :r5-grain-gate :grain],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r5-gate-grain-test/the-candidates-grain-reaches-the-gate}
+  {:wire [:r5-flight-call :r5-test :grain],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r5-test-grain-test/the-candidates-grain-reaches-the-grain-gate-test}
   {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
    :status :unverified}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
@@ -274,8 +316,13 @@
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
    :status :unverified}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
-   :status :unverified}
-  {:wire [:r8-overlap :r8-test :pair-overlap], :status :unverified}
+   :status :unverified,
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-wire-is-unverified-because-the-reader-is-not-built}
+  {:wire [:r8-overlap :r8-test :pair-overlap],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test/the-pair-overlap-reaches-the-r8-test}
   {:wire [:r9-classify-target :r9-decision :class],
    :status :unverified}
   {:wire [:r9-classify-target :r9-relation-test :class],

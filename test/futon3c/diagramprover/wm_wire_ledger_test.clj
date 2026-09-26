@@ -56,7 +56,25 @@
             [futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test]
             [futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test]
             [futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test]
-            [futon3c.diagramprover.wm-wire-r7-selection-e-source-test]))
+            [futon3c.diagramprover.wm-wire-r7-selection-e-source-test]
+            [futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test]
+            [futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test]
+            [futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test]
+            [futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test]
+            [futon3c.diagramprover.wm-wire-r0-test-attempts-test]
+            [futon3c.diagramprover.wm-wire-r0-test-grain-gate-test]
+            [futon3c.diagramprover.wm-wire-r0-r5-test-attempts-test]
+            [futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test]
+            [futon3c.diagramprover.wm-wire-r0-wc-attempts-test]
+            [futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test]
+            [futon3c.diagramprover.wm-wire-r5-gate-grain-test]
+            [futon3c.diagramprover.wm-wire-r5-test-grain-test]))
 
 (def wire-test-nses
   '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
@@ -74,7 +92,25 @@
     futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test
     futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test
     futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test
-    futon3c.diagramprover.wm-wire-r7-selection-e-source-test])
+    futon3c.diagramprover.wm-wire-r7-selection-e-source-test
+    futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test
+    futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test
+    futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test
+    futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test
+    futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test
+    futon3c.diagramprover.wm-wire-r0-test-attempts-test
+    futon3c.diagramprover.wm-wire-r0-test-grain-gate-test
+    futon3c.diagramprover.wm-wire-r0-r5-test-attempts-test
+    futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test
+    futon3c.diagramprover.wm-wire-r0-wc-attempts-test
+    futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test
+    futon3c.diagramprover.wm-wire-r5-gate-grain-test
+    futon3c.diagramprover.wm-wire-r5-test-grain-test])
 
 (def adjacency-rev "84cd6426")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
