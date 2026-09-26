@@ -1,7 +1,7 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='1320' height='1340' viewBox='0 0 1320 1340' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <rect width='1320' height='1340' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 40aae919; 100 boxes, 118 wires in 94 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 2d1a1b19; 100 boxes, 120 wires in 96 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>r1-target-field</text>
@@ -292,6 +292,7 @@
 <rect x='1005' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → wc-checker: candidate</title></rect>
 <rect x='334' y='333' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-served-by-reading → r2-verifier: text-sha256 want-span</title></rect>
 <rect x='499' y='377' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r3-store-locators: locators</title></rect>
+<rect x='719' y='575' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r9-decision: want@cascade-problem</title></rect>
 <rect x='1225' y='1224' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
 <rect x='1049' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r7-increment: candidate</title></rect>
 <rect x='994' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate enacted-steps</title></rect>
@@ -316,6 +317,7 @@
 <rect x='994' y='1114' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r0-enact-step: publication-observed</title></rect>
 <rect x='257' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r1-outer-cascade → r1-test: draw-seed</title></rect>
 <rect x='235' y='234' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r8-overlap → r1-outer-cascade: pair-overlap</title></rect>
+<rect x='664' y='575' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r4-kernel: want@cascade-spec</title></rect>
 <rect x='411' y='333' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r2-served-by-reading → r2-test: text-sha256 want-span</title></rect>
 <rect x='279' y='256' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-entry → loop-test: target-source</title></rect>
 <rect x='840' y='729' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-judge-refusal-read: kind</title></rect>
