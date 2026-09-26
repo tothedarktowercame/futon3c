@@ -9,9 +9,9 @@
 </defs>
 <rect width='3165' height='1661' fill='white'/>
 <text x='24' y='36' font-size='24' font-weight='700' fill='#173b39'>The flight loop as the wiring map declares it</text>
-<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (adb335c1, futon3c HEAD 341118e6) by spike/wm_wiring_svg.bb; not hand edited. 78 boxes, 55 fields.</text>
+<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (b9d18dfe, futon3c HEAD b9d18dfe) by spike/wm_wiring_svg.bb; not hand edited. 80 boxes, 57 fields.</text>
 <text x='24' y='74' font-size='12' fill='#52605f'>Each panel is one step of the flight, in order. A box is a source var the map pins, listing what it writes (w) and reads (r). A field kept inside a step is an arrow inside its panel.</text>
-<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 197 findings (2 to-do). 9 fields cross steps; 4 of 11 steps are entered or left by none.</text>
+<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 218 findings (2 to-do). 9 fields cross steps; 4 of 11 steps are entered or left by none.</text>
 <rect x='181' y='138' width='244' height='1152' rx='10' fill='#f7fafa' stroke='#d9e2e1'/>
 <text x='193' y='158' font-size='12.5' font-weight='700' fill='#274d4a'>1 Loop entry, target field</text>
 <text x='193' y='171' font-size='9' fill='#3a4a48'>exemplar trace steps 1, 2, 3, 15</text>
@@ -88,10 +88,18 @@
 <circle cx='1767' cy='357' r='2.2' fill='#2f5f5c'/>
 <path d='M1767,357 V435 H1784' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:per-policy-argmax: :r9-selection-law writes, :r9-decision reads (same step)</title></path>
 <text x='1770.0' y='396.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1770.0 396.0)'>per-policy-argmax</text><text x='1770.0' y='396.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1770.0 396.0)'>per-policy-argmax</text>
+<line x1='2915' y1='573' x2='2921' y2='573' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='2921' cy='573' r='2.2' fill='#2f5f5c'/>
+<path d='M2921,573 V651 H2914' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:needs: :flight-run writes, :flight-driver-summary reads (same step)</title></path>
+<text x='2924.0' y='612.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2924.0 612.0)'>needs</text><text x='2924.0' y='612.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2924.0 612.0)'>needs</text>
 <line x1='215' y1='357' x2='197' y2='357' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='197' cy='357' r='2.2' fill='#2f5f5c'/>
 <path d='M197,357 V507 H214' fill='none' stroke='#d48700' stroke-width='1.2' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:eligible: :eligibility writes, :r1-outer-cascade reads (same step)</title></path>
 <text x='200.0' y='432.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 200.0 432.0)'>eligible</text><text x='200.0' y='432.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 200.0 432.0)'>eligible</text>
+<line x1='2915' y1='573' x2='2925' y2='573' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='2925' cy='573' r='2.2' fill='#2f5f5c'/>
+<path d='M2925,573 V651 H2914' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:readings: :flight-run writes, :flight-driver-summary reads (same step)</title></path>
+<text x='2928.0' y='612.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2928.0 612.0)'>readings</text><text x='2928.0' y='612.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2928.0 612.0)'>readings</text>
 <line x1='2635' y1='213' x2='2609' y2='213' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='2609' cy='213' r='2.2' fill='#2f5f5c'/>
 <path d='M2609,213 V435 H2634' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:increment: :r7-flight-call writes, :r7-fold-source reads (same step)</title></path>
@@ -350,6 +358,21 @@ reads: text-sha256</title><rect x='740' y='182' width='196' height='62' rx='6' f
 <text x='748' y='197' font-size='10.5' font-weight='600' fill='#1d3a38'>read-fn</text>
 <text x='748' y='209' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
 <text x='748' y='223' font-size='7' fill='#6a6a64'>r: text-sha256</text>
+</g>
+<g><title>:flight-run
+writes: readings needs
+reads: needs</title><rect x='2915' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='2923' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>run!</text>
+<text x='2923' y='569' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
+<text x='2923' y='583' font-size='7' fill='#2f5f5c'>w: readings needs</text>
+<text x='2923' y='595' font-size='7' fill='#6a6a64'>r: needs</text>
+</g>
+<g><title>:flight-driver-summary
+writes: —
+reads: readings needs</title><rect x='2915' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='2923' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>run-flight!</text>
+<text x='2923' y='641' font-size='7.5' fill='#5e6b6a'>flight_driver.clj</text>
+<text x='2923' y='655' font-size='7' fill='#6a6a64'>r: readings needs</text>
 </g>
 <g><title>:r2-test
 writes: —
@@ -696,10 +719,10 @@ reads: author reviewer repair-reviewer</title><rect x='2915' y='182' width='196'
 </g>
 <g><title>:flight-cast-test
 writes: —
-reads: cast</title><rect x='2915' y='634' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='2923' y='649' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-cast-test</text>
-<text x='2923' y='661' font-size='7.5' fill='#5e6b6a'>flight_cast_test.clj</text>
-<text x='2923' y='675' font-size='7' fill='#6a6a64'>r: cast</text>
+reads: cast</title><rect x='2915' y='778' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='2923' y='793' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-cast-test</text>
+<text x='2923' y='805' font-size='7.5' fill='#5e6b6a'>flight_cast_test.clj</text>
+<text x='2923' y='819' font-size='7' fill='#6a6a64'>r: cast</text>
 </g>
 <g><title>:flight-record-summary
 writes: chosen failure
@@ -710,17 +733,17 @@ reads: —</title><rect x='2915' y='398' width='196' height='62' rx='6' fill='#f
 </g>
 <g><title>:click-reason-test
 writes: —
-reads: failure</title><rect x='2915' y='778' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='2923' y='793' font-size='10.5' font-weight='600' fill='#1d3a38'>click-reason-test</text>
-<text x='2923' y='805' font-size='7.5' fill='#5e6b6a'>click_reason_test.clj</text>
-<text x='2923' y='819' font-size='7' fill='#6a6a64'>r: failure</text>
+reads: failure</title><rect x='2915' y='922' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='2923' y='937' font-size='10.5' font-weight='600' fill='#1d3a38'>click-reason-test</text>
+<text x='2923' y='949' font-size='7.5' fill='#5e6b6a'>click_reason_test.clj</text>
+<text x='2923' y='963' font-size='7' fill='#6a6a64'>r: failure</text>
 </g>
 <g><title>:flight-click-close-test
 writes: —
-reads: chosen</title><rect x='2915' y='706' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='2923' y='721' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-click-close-test</text>
-<text x='2923' y='733' font-size='7.5' fill='#5e6b6a'>flight_click_close_test.clj</text>
-<text x='2923' y='747' font-size='7' fill='#6a6a64'>r: chosen</text>
+reads: chosen</title><rect x='2915' y='850' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='2923' y='865' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-click-close-test</text>
+<text x='2923' y='877' font-size='7.5' fill='#5e6b6a'>flight_click_close_test.clj</text>
+<text x='2923' y='891' font-size='7' fill='#6a6a64'>r: chosen</text>
 </g>
 <g><title>:c8-registry-get
 writes: message timeout-ms
@@ -871,17 +894,17 @@ reads: target-source draw-seed</title><rect x='215' y='778' width='196' height='
 </g>
 <g><title>:r11-warrants
 writes: —
-reads: —</title><rect x='2915' y='542' width='196' height='62' rx='6' fill='#ececea' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='2923' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>r11-warrants</text>
-<text x='2923' y='569' font-size='7.5' fill='#5e6b6a'>warrants (siteless)</text>
+reads: —</title><rect x='2915' y='686' width='196' height='62' rx='6' fill='#ececea' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='2923' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>r11-warrants</text>
+<text x='2923' y='713' font-size='7.5' fill='#5e6b6a'>warrants (siteless)</text>
 </g>
 <text x='24' y='1495' font-size='12' font-weight='700' fill='#274d4a'>Legend</text>
-<text x='24' y='1513' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (54)</text>
+<text x='24' y='1513' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (56)</text>
 <text x='24' y='1527' font-size='10.5' fill='#3a4a48'>dashed amber box: declared, not built, drawn at its intended site (1)</text>
 <text x='24' y='1541' font-size='10.5' fill='#3a4a48'>dotted box: the step's registered test, a declared reader; it lists its reads and draws no arrows (23)</text>
 <text x='24' y='1555' font-size='10.5' fill='#3a4a48'>grey box: siteless component, exempt from conformance (3)</text>
 <line x1='700' y1='1509' x2='740' y2='1509' stroke='#2f5f5c' stroke-width='1.6' />
-<text x='748' y='1513' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (44 reader arrows; 9 fields cross steps, 37 stay inside one)</text>
+<text x='748' y='1513' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (46 reader arrows; 9 fields cross steps, 39 stay inside one)</text>
 <line x1='700' y1='1523' x2='740' y2='1523' stroke='#d48700' stroke-width='1.6' stroke-dasharray='5,3'/>
 <text x='748' y='1527' font-size='10.5' fill='#3a4a48'>dashed amber: declared on a box not yet built (6)</text>
 <line x1='700' y1='1537' x2='740' y2='1537' stroke='#7b3fa0' stroke-width='1.6' />
@@ -889,7 +912,7 @@ reads: —</title><rect x='2915' y='542' width='196' height='62' rx='6' fill='#e
 <line x1='700' y1='1551' x2='740' y2='1551' stroke='#9a9a94' stroke-width='1.6' stroke-dasharray='3,2'/>
 <text x='748' y='1555' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (3); green stub: the owner's text, exogenous (1)</text>
 <text x='24' y='1579' font-size='10.5' fill='#3a4a48'>Numbered rings: the exemplar trace the map records for M-autoclock-in, in order (loop-entry &gt; r1-outer-cascade &gt; flight-entry &gt; dispatch &gt; clock-in &gt; r2-served-by-reading &gt; r2-verifier &gt; r6-cascade-lane &gt; r9-selection-law &gt; r0-enact-step &gt; r7-flight-call &gt; wc-checker &gt; r7-increment &gt; r7-fold &gt; r1-outer-cascade). Boxes on it have a heavier border.</text>
-<text x='24' y='1595' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (195) are generic keys the prover cannot scope per box.</text>
+<text x='24' y='1595' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (216) are generic keys the prover cannot scope per box.</text>
 <text x='24' y='1627' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>
 <text x='24' y='1611' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>
 </svg>
