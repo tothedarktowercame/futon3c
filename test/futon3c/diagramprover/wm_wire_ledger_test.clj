@@ -41,6 +41,12 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test]
+            [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test]
+            [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test]
+            [futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test]
+            [futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test]
             [futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test]
             [futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test]
             [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test]
@@ -138,7 +144,13 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test
+  '[futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test
+    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test
+    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test
+    futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test
+    futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test
+    futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test
     futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test
     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test
     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test
