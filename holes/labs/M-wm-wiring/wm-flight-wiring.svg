@@ -1,0 +1,512 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='2008' height='1224' viewBox='0 0 2008 1224' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
+<title>The flight loop as wm-flight-wiring.edn declares it</title>
+<defs><marker id='a-wired' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#2f5f5c'/></marker><marker id='a-declared' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#d48700'/></marker><marker id='a-back' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#7b3fa0'/></marker><marker id='a-unwritten' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#9a9a94'/></marker><marker id='a-constraint' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#11865b'/></marker></defs>
+<rect width='2008' height='1224' fill='white'/>
+<text x='24' y='34' font-size='19' font-weight='700' fill='#173b39'>The flight loop as the wiring map declares it</text>
+<text x='24' y='52' font-size='11' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (1d97dee9, futon3c HEAD 56b932e2) by spike/wm_wiring_svg.bb; not hand edited.</text>
+<text x='24' y='66' font-size='11' fill='#52605f'>A box is a source var the map pins; an arrow is a field with exactly one writer, drawn to each reader; lanes follow the flight's order.</text>
+<text x='24' y='80' font-size='11' fill='#52605f'>The registered test wm-flight-wiring-test checks each site against the pinned source (futon2 c95c6453, futon3c 58f1a8cb) and expects 145 findings (2 to-do).</text>
+<rect x='24' y='96' width='176' height='970' rx='8' fill='#f7fafa'/>
+<text x='112' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Loop entry, target field</text>
+<rect x='222' y='96' width='176' height='970' rx='8' fill='#eef4f4'/>
+<text x='310' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Dispatch, clock-in</text>
+<rect x='420' y='96' width='176' height='970' rx='8' fill='#f7fafa'/>
+<text x='508' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Read step (C)</text>
+<rect x='618' y='96' width='176' height='970' rx='8' fill='#eef4f4'/>
+<text x='706' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Ask step (interpretation)</text>
+<rect x='816' y='96' width='176' height='970' rx='8' fill='#f7fafa'/>
+<text x='904' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Construction, order</text>
+<rect x='1014' y='96' width='176' height='970' rx='8' fill='#eef4f4'/>
+<text x='1102' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Rates (A)</text>
+<rect x='1212' y='96' width='176' height='970' rx='8' fill='#f7fafa'/>
+<text x='1300' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Selection, gate, refusals</text>
+<rect x='1410' y='96' width='176' height='970' rx='8' fill='#eef4f4'/>
+<text x='1498' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Grain gate, enactment, W_c</text>
+<rect x='1608' y='96' width='176' height='970' rx='8' fill='#f7fafa'/>
+<text x='1696' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Habit (E), publish</text>
+<rect x='1806' y='96' width='176' height='970' rx='8' fill='#eef4f4'/>
+<text x='1894' y='115' text-anchor='middle' font-size='11.5' font-weight='700' fill='#274d4a'>Click, flight record</text>
+<path d='M192,145 C252,145 92,337 32,337' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:trigger: :loop-entry writes, :r1-outer-cascade reads</title></path>
+<text x='238' y='241' font-size='7' fill='none' stroke='white' stroke-width='2.5'>trigger</text><text x='238' y='241' font-size='7' fill='#d48700'>trigger</text>
+<path d='M192,193 C252,193 92,337 32,337' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:next-step: :r1-target-field writes, :r1-outer-cascade reads</title></path>
+<text x='238' y='265' font-size='7' fill='none' stroke='white' stroke-width='2.5'>next-step</text><text x='238' y='265' font-size='7' fill='#d48700'>next-step</text>
+<path d='M192,241 C252,241 92,337 32,337' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:eligible: :eligibility writes, :r1-outer-cascade reads</title></path>
+<text x='238' y='289' font-size='7' fill='none' stroke='white' stroke-width='2.5'>eligible</text><text x='238' y='289' font-size='7' fill='#d48700'>eligible</text>
+<path d='M192,289 C252,289 92,337 32,337' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:pair-overlap: :r8-overlap writes, :r1-outer-cascade reads</title></path>
+<text x='238' y='313' font-size='7' fill='none' stroke='white' stroke-width='2.5'>pair-overlap</text><text x='238' y='313' font-size='7' fill='#d48700'>pair-overlap</text>
+<path d='M1616,241 C1546,241 262,337 192,337' fill='none' stroke='#7b3fa0' stroke-width='1.3'  marker-end='url(#a-back)'><title>:enactment-records: :r7-fold writes, :r1-outer-cascade reads</title></path>
+<text x='733' y='298' font-size='7' fill='none' stroke='white' stroke-width='2.5'>enactment-records</text><text x='733' y='298' font-size='7' fill='#7b3fa0'>enactment-records</text>
+<path d='M1616,337 C1546,337 262,337 192,337' fill='none' stroke='#7b3fa0' stroke-width='1.3'  marker-end='url(#a-back)'><title>:publication-observed: :r10-observe-publication writes, :r1-outer-cascade reads</title></path>
+<text x='733' y='334' font-size='7' fill='none' stroke='white' stroke-width='2.5'>publication-observed</text><text x='733' y='334' font-size='7' fill='#7b3fa0'>publication-observed</text>
+<path d='M230,193 C160,193 262,337 192,337' fill='none' stroke='#7b3fa0' stroke-width='1.3'  marker-end='url(#a-back)'><title>:clock-lineage: :clock-in writes, :r1-outer-cascade reads</title></path>
+<text x='206' y='279' font-size='7' fill='none' stroke='white' stroke-width='2.5'>clock-lineage</text><text x='206' y='279' font-size='7' fill='#7b3fa0'>clock-lineage</text>
+<path d='M192,337 C252,337 92,449 32,449' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:draw-seed: :r1-outer-cascade writes, :r1-test reads</title></path>
+<text x='238' y='393' font-size='7' fill='none' stroke='white' stroke-width='2.5'>draw-seed</text><text x='238' y='393' font-size='7' fill='#d48700'>draw-seed</text>
+<line x1='382' y1='183' x2='426' y2='183' stroke='#11865b' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-constraint)'><title>:owner-text: read by :r2-served-by-reading, written by no box (the owner's text, a constraint)</title></line>
+<text x='380' y='185' text-anchor='end' font-size='7' fill='none' stroke='white' stroke-width='2.5'>owner-text</text><text x='380' y='185' text-anchor='end' font-size='7' fill='#11865b'>owner-text</text>
+<path d='M588,193 C648,193 488,241 428,241' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:want-span: :r2-served-by-reading writes, :r2-verifier reads</title></path>
+<text x='634' y='217' font-size='7' fill='none' stroke='white' stroke-width='2.5'>want-span</text><text x='634' y='217' font-size='7' fill='#2f5f5c'>want-span</text>
+<path d='M588,193 C648,193 488,241 428,241' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:text-sha256: :r2-served-by-reading writes, :r2-verifier reads</title></path>
+<text x='634' y='217' font-size='7' fill='none' stroke='white' stroke-width='2.5'>text-sha256</text><text x='634' y='217' font-size='7' fill='#2f5f5c'>text-sha256</text>
+<path d='M588,193 C648,193 488,145 428,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:text-sha256: :r2-served-by-reading writes, :r2-flight-read reads</title></path>
+<text x='634' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>text-sha256</text><text x='634' y='169' font-size='7' fill='#2f5f5c'>text-sha256</text>
+<path d='M588,193 C648,193 488,305 428,305' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:want-span: :r2-served-by-reading writes, :r2-test reads</title></path>
+<text x='634' y='249' font-size='7' fill='none' stroke='white' stroke-width='2.5'>want-span</text><text x='634' y='249' font-size='7' fill='#2f5f5c'>want-span</text>
+<path d='M588,193 C648,193 488,305 428,305' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:text-sha256: :r2-served-by-reading writes, :r2-test reads</title></path>
+<text x='634' y='249' font-size='7' fill='none' stroke='white' stroke-width='2.5'>text-sha256</text><text x='634' y='249' font-size='7' fill='#2f5f5c'>text-sha256</text>
+<path d='M786,145 C846,145 686,193 626,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:library-root: :r3-flight-ask writes, :r3-prompt reads</title></path>
+<text x='832' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>library-root</text><text x='832' y='169' font-size='7' fill='#2f5f5c'>library-root</text>
+<path d='M786,145 C846,145 686,257 626,257' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:library-root: :r3-flight-ask writes, :r3-test reads</title></path>
+<text x='832' y='201' font-size='7' fill='none' stroke='white' stroke-width='2.5'>library-root</text><text x='832' y='201' font-size='7' fill='#2f5f5c'>library-root</text>
+<path d='M984,145 C1044,145 884,193 824,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:precedence-violations: :r4-constructor writes, :r4-order-use reads</title></path>
+<text x='1030' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>precedence-violations</text><text x='1030' y='169' font-size='7' fill='#2f5f5c'>precedence-violations</text>
+<path d='M984,145 C1044,145 884,193 824,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:descent: :r4-constructor writes, :r4-order-use reads</title></path>
+<text x='1030' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>descent</text><text x='1030' y='169' font-size='7' fill='#2f5f5c'>descent</text>
+<path d='M984,145 C1044,145 884,193 824,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:units: :r4-constructor writes, :r4-order-use reads</title></path>
+<text x='1030' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>units</text><text x='1030' y='169' font-size='7' fill='#2f5f5c'>units</text>
+<path d='M984,241 C1044,241 884,353 824,353' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:order-use: :r4-kernel writes, :r4-test reads</title></path>
+<text x='1030' y='297' font-size='7' fill='none' stroke='white' stroke-width='2.5'>order-use</text><text x='1030' y='297' font-size='7' fill='#2f5f5c'>order-use</text>
+<path d='M984,241 C1044,241 884,401 824,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:order-use: :r4-kernel writes, :r4-coapply-test reads</title></path>
+<text x='1030' y='321' font-size='7' fill='none' stroke='white' stroke-width='2.5'>order-use</text><text x='1030' y='321' font-size='7' fill='#2f5f5c'>order-use</text>
+<path d='M984,145 C1044,145 884,401 824,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:descent: :r4-constructor writes, :r4-coapply-test reads</title></path>
+<text x='1030' y='273' font-size='7' fill='none' stroke='white' stroke-width='2.5'>descent</text><text x='1030' y='273' font-size='7' fill='#2f5f5c'>descent</text>
+<path d='M984,145 C1044,145 884,401 824,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:units: :r4-constructor writes, :r4-coapply-test reads</title></path>
+<text x='1030' y='273' font-size='7' fill='none' stroke='white' stroke-width='2.5'>units</text><text x='1030' y='273' font-size='7' fill='#2f5f5c'>units</text>
+<path d='M1380,241 C1450,241 1348,241 1418,241' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:candidate: :r9-selection-law writes, :r0-enact-step reads</title></path>
+<text x='1404' y='238' font-size='7' fill='none' stroke='white' stroke-width='2.5'>candidate</text><text x='1404' y='238' font-size='7' fill='#2f5f5c'>candidate</text>
+<path d='M1380,241 C1450,241 1348,241 1418,241' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:enacted-steps: :r9-selection-law writes, :r0-enact-step reads</title></path>
+<text x='1404' y='238' font-size='7' fill='none' stroke='white' stroke-width='2.5'>enacted-steps</text><text x='1404' y='238' font-size='7' fill='#2f5f5c'>enacted-steps</text>
+<path d='M1616,337 C1546,337 1648,241 1578,241' fill='none' stroke='#7b3fa0' stroke-width='1.3'  marker-end='url(#a-back)'><title>:publication-observed: :r10-observe-publication writes, :r0-enact-step reads</title></path>
+<text x='1592' y='274' font-size='7' fill='none' stroke='white' stroke-width='2.5'>publication-observed</text><text x='1592' y='274' font-size='7' fill='#7b3fa0'>publication-observed</text>
+<path d='M1578,241 C1638,241 1478,401 1418,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:attempts: :r0-enact-step writes, :r0-test reads</title></path>
+<text x='1624' y='321' font-size='7' fill='none' stroke='white' stroke-width='2.5'>attempts</text><text x='1624' y='321' font-size='7' fill='#2f5f5c'>attempts</text>
+<path d='M1578,241 C1638,241 1478,401 1418,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:grain-gate: :r0-enact-step writes, :r0-test reads</title></path>
+<text x='1624' y='321' font-size='7' fill='none' stroke='white' stroke-width='2.5'>grain-gate</text><text x='1624' y='321' font-size='7' fill='#2f5f5c'>grain-gate</text>
+<path d='M1616,337 C1546,337 1648,401 1578,401' fill='none' stroke='#7b3fa0' stroke-width='1.3'  marker-end='url(#a-back)'><title>:publication-observed: :r10-observe-publication writes, :r0-test reads</title></path>
+<text x='1592' y='374' font-size='7' fill='none' stroke='white' stroke-width='2.5'>publication-observed</text><text x='1592' y='374' font-size='7' fill='#7b3fa0'>publication-observed</text>
+<path d='M1578,145 C1638,145 1478,193 1418,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:grain: :r5-flight-call writes, :r5-grain-gate reads</title></path>
+<text x='1624' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>grain</text><text x='1624' y='169' font-size='7' fill='#2f5f5c'>grain</text>
+<path d='M1578,241 C1638,241 1478,353 1418,353' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:grain-gate: :r0-enact-step writes, :r5-test reads</title></path>
+<text x='1624' y='297' font-size='7' fill='none' stroke='white' stroke-width='2.5'>grain-gate</text><text x='1624' y='297' font-size='7' fill='#2f5f5c'>grain-gate</text>
+<path d='M1578,145 C1638,145 1478,353 1418,353' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:grain: :r5-flight-call writes, :r5-test reads</title></path>
+<text x='1624' y='249' font-size='7' fill='none' stroke='white' stroke-width='2.5'>grain</text><text x='1624' y='249' font-size='7' fill='#2f5f5c'>grain</text>
+<path d='M1578,241 C1638,241 1478,353 1418,353' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:attempts: :r0-enact-step writes, :r5-test reads</title></path>
+<text x='1624' y='297' font-size='7' fill='none' stroke='white' stroke-width='2.5'>attempts</text><text x='1624' y='297' font-size='7' fill='#2f5f5c'>attempts</text>
+<path d='M1578,241 C1638,241 1478,289 1418,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:attempts: :r0-enact-step writes, :wc-checker reads</title></path>
+<text x='1624' y='265' font-size='7' fill='none' stroke='white' stroke-width='2.5'>attempts</text><text x='1624' y='265' font-size='7' fill='#2f5f5c'>attempts</text>
+<path d='M1578,241 C1638,241 1478,289 1418,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:grain-gate: :r0-enact-step writes, :wc-checker reads</title></path>
+<text x='1624' y='265' font-size='7' fill='none' stroke='white' stroke-width='2.5'>grain-gate</text><text x='1624' y='265' font-size='7' fill='#2f5f5c'>grain-gate</text>
+<path d='M1380,241 C1450,241 1348,289 1418,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:candidate: :r9-selection-law writes, :wc-checker reads</title></path>
+<text x='1404' y='268' font-size='7' fill='none' stroke='white' stroke-width='2.5'>candidate</text><text x='1404' y='268' font-size='7' fill='#2f5f5c'>candidate</text>
+<path d='M1578,241 C1648,241 1546,193 1616,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:attempts: :r0-enact-step writes, :r7-increment reads</title></path>
+<text x='1602' y='208' font-size='7' fill='none' stroke='white' stroke-width='2.5'>attempts</text><text x='1602' y='208' font-size='7' fill='#2f5f5c'>attempts</text>
+<path d='M1380,241 C1450,241 1546,193 1616,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:candidate: :r9-selection-law writes, :r7-increment reads</title></path>
+<text x='1526' y='208' font-size='7' fill='none' stroke='white' stroke-width='2.5'>candidate</text><text x='1526' y='208' font-size='7' fill='#2f5f5c'>candidate</text>
+<path d='M1578,289 C1648,289 1546,193 1616,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:wc-verdict: :wc-checker writes, :r7-increment reads</title></path>
+<text x='1602' y='226' font-size='7' fill='none' stroke='white' stroke-width='2.5'>wc-verdict</text><text x='1602' y='226' font-size='7' fill='#2f5f5c'>wc-verdict</text>
+<path d='M1578,241 C1648,241 1546,145 1616,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:attempts: :r0-enact-step writes, :r7-flight-call reads</title></path>
+<text x='1602' y='178' font-size='7' fill='none' stroke='white' stroke-width='2.5'>attempts</text><text x='1602' y='178' font-size='7' fill='#2f5f5c'>attempts</text>
+<path d='M1776,145 C1836,145 1676,401 1616,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:wc: :r7-flight-call writes, :r7-call-test reads</title></path>
+<text x='1822' y='273' font-size='7' fill='none' stroke='white' stroke-width='2.5'>wc</text><text x='1822' y='273' font-size='7' fill='#2f5f5c'>wc</text>
+<path d='M1776,193 C1836,193 1676,401 1616,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:delta: :r7-increment writes, :r7-call-test reads</title></path>
+<text x='1822' y='297' font-size='7' fill='none' stroke='white' stroke-width='2.5'>delta</text><text x='1822' y='297' font-size='7' fill='#2f5f5c'>delta</text>
+<path d='M1776,193 C1836,193 1676,401 1616,401' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:wc-failures: :r7-increment writes, :r7-call-test reads</title></path>
+<text x='1822' y='297' font-size='7' fill='none' stroke='white' stroke-width='2.5'>wc-failures</text><text x='1822' y='297' font-size='7' fill='#2f5f5c'>wc-failures</text>
+<path d='M1776,193 C1836,193 1676,241 1616,241' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:delta: :r7-increment writes, :r7-fold reads</title></path>
+<text x='1822' y='217' font-size='7' fill='none' stroke='white' stroke-width='2.5'>delta</text><text x='1822' y='217' font-size='7' fill='#2f5f5c'>delta</text>
+<path d='M1776,241 C1836,241 1676,289 1616,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:enactment-records: :r7-fold writes, :r7-selection reads</title></path>
+<text x='1822' y='265' font-size='7' fill='none' stroke='white' stroke-width='2.5'>enactment-records</text><text x='1822' y='265' font-size='7' fill='#2f5f5c'>enactment-records</text>
+<path d='M1776,289 C1836,289 1676,449 1616,449' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:e-source: :r7-selection writes, :r7-test reads</title></path>
+<text x='1822' y='369' font-size='7' fill='none' stroke='white' stroke-width='2.5'>e-source</text><text x='1822' y='369' font-size='7' fill='#2f5f5c'>e-source</text>
+<path d='M1776,193 C1836,193 1676,449 1616,449' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:delta: :r7-increment writes, :r7-test reads</title></path>
+<text x='1822' y='321' font-size='7' fill='none' stroke='white' stroke-width='2.5'>delta</text><text x='1822' y='321' font-size='7' fill='#2f5f5c'>delta</text>
+<path d='M1578,289 C1648,289 1546,449 1616,449' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:wc-verdict: :wc-checker writes, :r7-test reads</title></path>
+<text x='1602' y='385' font-size='7' fill='none' stroke='white' stroke-width='2.5'>wc-verdict</text><text x='1602' y='385' font-size='7' fill='#2f5f5c'>wc-verdict</text>
+<path d='M1380,241 C1440,241 1280,289 1220,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:per-policy-argmax: :r9-selection-law writes, :r9-decision reads</title></path>
+<text x='1426' y='265' font-size='7' fill='none' stroke='white' stroke-width='2.5'>per-policy-argmax</text><text x='1426' y='265' font-size='7' fill='#2f5f5c'>per-policy-argmax</text>
+<path d='M1380,145 C1440,145 1280,289 1220,289' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:class: :r9-classify-target writes, :r9-decision reads</title></path>
+<text x='1426' y='217' font-size='7' fill='none' stroke='white' stroke-width='2.5'>class</text><text x='1426' y='217' font-size='7' fill='#2f5f5c'>class</text>
+<path d='M1380,241 C1440,241 1280,881 1220,881' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:candidate: :r9-selection-law writes, :r9-test reads</title></path>
+<text x='1426' y='561' font-size='7' fill='none' stroke='white' stroke-width='2.5'>candidate</text><text x='1426' y='561' font-size='7' fill='#2f5f5c'>candidate</text>
+<path d='M1380,241 C1440,241 1280,881 1220,881' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:per-policy-argmax: :r9-selection-law writes, :r9-test reads</title></path>
+<text x='1426' y='561' font-size='7' fill='none' stroke='white' stroke-width='2.5'>per-policy-argmax</text><text x='1426' y='561' font-size='7' fill='#2f5f5c'>per-policy-argmax</text>
+<path d='M1380,241 C1440,241 1280,881 1220,881' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:enacted-steps: :r9-selection-law writes, :r9-test reads</title></path>
+<text x='1426' y='561' font-size='7' fill='none' stroke='white' stroke-width='2.5'>enacted-steps</text><text x='1426' y='561' font-size='7' fill='#2f5f5c'>enacted-steps</text>
+<path d='M1380,481 C1440,481 1280,625 1220,625' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:judge-refusal: :r9-judge-refusal writes, :r9-abstention-carrier reads</title></path>
+<text x='1426' y='553' font-size='7' fill='none' stroke='white' stroke-width='2.5'>judge-refusal</text><text x='1426' y='553' font-size='7' fill='#2f5f5c'>judge-refusal</text>
+<path d='M1380,481 C1440,481 1280,1025 1220,1025' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:judge-refusal: :r9-judge-refusal writes, :r9-judge-refusal-test reads</title></path>
+<text x='1426' y='753' font-size='7' fill='none' stroke='white' stroke-width='2.5'>judge-refusal</text><text x='1426' y='753' font-size='7' fill='#2f5f5c'>judge-refusal</text>
+<path d='M1380,289 C1440,289 1280,1025 1220,1025' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:kind: :r9-decision writes, :r9-judge-refusal-test reads</title></path>
+<text x='1426' y='657' font-size='7' fill='none' stroke='white' stroke-width='2.5'>kind</text><text x='1426' y='657' font-size='7' fill='#2f5f5c'>kind</text>
+<line x1='1174' y1='135' x2='1218' y2='135' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:relations: read by :r9-classify-target, written by no box</title></line>
+<text x='1172' y='137' text-anchor='end' font-size='7' fill='none' stroke='white' stroke-width='2.5'>relations</text><text x='1172' y='137' text-anchor='end' font-size='7' fill='#7a7a74'>relations</text>
+<path d='M1380,193 C1440,193 1280,145 1220,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:derived-via: :r9-embedding-neighbour writes, :r9-classify-target reads</title></path>
+<text x='1426' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>derived-via</text><text x='1426' y='169' font-size='7' fill='#2f5f5c'>derived-via</text>
+<line x1='1174' y1='183' x2='1218' y2='183' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:source-pins: read by :r9-embedding-neighbour, written by no box</title></line>
+<text x='1172' y='185' text-anchor='end' font-size='7' fill='none' stroke='white' stroke-width='2.5'>source-pins</text><text x='1172' y='185' text-anchor='end' font-size='7' fill='#7a7a74'>source-pins</text>
+<line x1='1174' y1='192' x2='1218' y2='192' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:min-cosine: read by :r9-embedding-neighbour, written by no box</title></line>
+<text x='1172' y='194' text-anchor='end' font-size='7' fill='none' stroke='white' stroke-width='2.5'>min-cosine</text><text x='1172' y='194' text-anchor='end' font-size='7' fill='#7a7a74'>min-cosine</text>
+<path d='M1380,145 C1440,145 1280,929 1220,929' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:class: :r9-classify-target writes, :r9-relation-test reads</title></path>
+<text x='1426' y='537' font-size='7' fill='none' stroke='white' stroke-width='2.5'>class</text><text x='1426' y='537' font-size='7' fill='#2f5f5c'>class</text>
+<path d='M1380,193 C1440,193 1280,929 1220,929' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:derived-via: :r9-embedding-neighbour writes, :r9-relation-test reads</title></path>
+<text x='1426' y='561' font-size='7' fill='none' stroke='white' stroke-width='2.5'>derived-via</text><text x='1426' y='561' font-size='7' fill='#2f5f5c'>derived-via</text>
+<path d='M1380,289 C1440,289 1280,529 1220,529' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:kind: :r9-decision writes, :r9-judge-refusal-read reads</title></path>
+<text x='1426' y='409' font-size='7' fill='none' stroke='white' stroke-width='2.5'>kind</text><text x='1426' y='409' font-size='7' fill='#2f5f5c'>kind</text>
+<line x1='1174' y1='663' x2='1218' y2='663' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:failure-kind: read by :r9-failure-classifier, written by no box</title></line>
+<text x='1172' y='665' text-anchor='end' font-size='7' fill='none' stroke='white' stroke-width='2.5'>failure-kind</text><text x='1172' y='665' text-anchor='end' font-size='7' fill='#7a7a74'>failure-kind</text>
+<path d='M1380,577 C1440,577 1280,673 1220,673' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:outcome: :r9-judge-refusal-abstention writes, :r9-failure-classifier reads</title></path>
+<text x='1426' y='625' font-size='7' fill='none' stroke='white' stroke-width='2.5'>outcome</text><text x='1426' y='625' font-size='7' fill='#2f5f5c'>outcome</text>
+<path d='M1380,289 C1450,289 1744,337 1814,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:kind: :r9-decision writes, :flight-record-click reads</title></path>
+<text x='1649' y='316' font-size='7' fill='none' stroke='white' stroke-width='2.5'>kind</text><text x='1649' y='316' font-size='7' fill='#2f5f5c'>kind</text>
+<path d='M1974,241 C2034,241 1874,337 1814,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:status: :flight-click writes, :flight-record-click reads</title></path>
+<text x='2020' y='289' font-size='7' fill='none' stroke='white' stroke-width='2.5'>status</text><text x='2020' y='289' font-size='7' fill='#2f5f5c'>status</text>
+<path d='M1974,241 C2034,241 1874,337 1814,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:detail: :flight-click writes, :flight-record-click reads</title></path>
+<text x='2020' y='289' font-size='7' fill='none' stroke='white' stroke-width='2.5'>detail</text><text x='2020' y='289' font-size='7' fill='#2f5f5c'>detail</text>
+<path d='M1974,289 C2034,289 1874,337 1814,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:chosen: :flight-record-summary writes, :flight-record-click reads</title></path>
+<text x='2020' y='313' font-size='7' fill='none' stroke='white' stroke-width='2.5'>chosen</text><text x='2020' y='313' font-size='7' fill='#2f5f5c'>chosen</text>
+<path d='M1974,241 C2034,241 1874,337 1814,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:cast: :flight-click writes, :flight-record-click reads</title></path>
+<text x='2020' y='289' font-size='7' fill='none' stroke='white' stroke-width='2.5'>cast</text><text x='2020' y='289' font-size='7' fill='#2f5f5c'>cast</text>
+<path d='M1974,193 C2034,193 1874,145 1814,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:author: :flight-cast writes, :click-start reads</title></path>
+<text x='2020' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>author</text><text x='2020' y='169' font-size='7' fill='#2f5f5c'>author</text>
+<path d='M1974,193 C2034,193 1874,145 1814,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:reviewer: :flight-cast writes, :click-start reads</title></path>
+<text x='2020' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>reviewer</text><text x='2020' y='169' font-size='7' fill='#2f5f5c'>reviewer</text>
+<path d='M1974,193 C2034,193 1874,145 1814,145' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:repair-reviewer: :flight-cast writes, :click-start reads</title></path>
+<text x='2020' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>repair-reviewer</text><text x='2020' y='169' font-size='7' fill='#2f5f5c'>repair-reviewer</text>
+<path d='M1974,241 C2034,241 1874,449 1814,449' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:cast: :flight-click writes, :flight-cast-test reads</title></path>
+<text x='2020' y='345' font-size='7' fill='none' stroke='white' stroke-width='2.5'>cast</text><text x='2020' y='345' font-size='7' fill='#2f5f5c'>cast</text>
+<path d='M1974,289 C2034,289 1874,497 1814,497' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:chosen: :flight-record-summary writes, :flight-click-close-test reads</title></path>
+<text x='2020' y='393' font-size='7' fill='none' stroke='white' stroke-width='2.5'>chosen</text><text x='2020' y='393' font-size='7' fill='#2f5f5c'>chosen</text>
+<path d='M1380,721 C1440,721 1280,769 1220,769' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-entry reads</title></path>
+<text x='1426' y='745' font-size='7' fill='none' stroke='white' stroke-width='2.5'>message</text><text x='1426' y='745' font-size='7' fill='#2f5f5c'>message</text>
+<path d='M1380,721 C1440,721 1280,769 1220,769' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-entry reads</title></path>
+<text x='1426' y='745' font-size='7' fill='none' stroke='white' stroke-width='2.5'>timeout-ms</text><text x='1426' y='745' font-size='7' fill='#2f5f5c'>timeout-ms</text>
+<path d='M1380,721 C1440,721 1280,817 1220,817' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-latest reads</title></path>
+<text x='1426' y='769' font-size='7' fill='none' stroke='white' stroke-width='2.5'>message</text><text x='1426' y='769' font-size='7' fill='#2f5f5c'>message</text>
+<path d='M1380,721 C1440,721 1280,817 1220,817' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-latest reads</title></path>
+<text x='1426' y='769' font-size='7' fill='none' stroke='white' stroke-width='2.5'>timeout-ms</text><text x='1426' y='769' font-size='7' fill='#2f5f5c'>timeout-ms</text>
+<path d='M1380,385 C1440,385 1280,433 1220,433' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:error: :gate-refuse writes, :gate-refusal-read reads</title></path>
+<text x='1426' y='409' font-size='7' fill='none' stroke='white' stroke-width='2.5'>error</text><text x='1426' y='409' font-size='7' fill='#2f5f5c'>error</text>
+<path d='M1380,289 C1440,289 1280,977 1220,977' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:kind: :r9-decision writes, :gate-refusal-test reads</title></path>
+<text x='1426' y='633' font-size='7' fill='none' stroke='white' stroke-width='2.5'>kind</text><text x='1426' y='633' font-size='7' fill='#2f5f5c'>kind</text>
+<path d='M1380,289 C1440,289 1280,337 1220,337' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:target-class: :r9-decision writes, :r9-class-model reads</title></path>
+<text x='1426' y='313' font-size='7' fill='none' stroke='white' stroke-width='2.5'>target-class</text><text x='1426' y='313' font-size='7' fill='#2f5f5c'>target-class</text>
+<path d='M1182,145 C1242,145 1082,193 1022,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:measurement: :r6-sourced-rates writes, :r6-cascade-lane reads</title></path>
+<text x='1228' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>measurement</text><text x='1228' y='169' font-size='7' fill='#2f5f5c'>measurement</text>
+<path d='M1182,145 C1242,145 1082,257 1022,257' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:measurement: :r6-sourced-rates writes, :r6-test reads</title></path>
+<text x='1228' y='201' font-size='7' fill='none' stroke='white' stroke-width='2.5'>measurement</text><text x='1228' y='201' font-size='7' fill='#2f5f5c'>measurement</text>
+<path d='M192,289 C252,289 92,497 32,497' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:pair-overlap: :r8-overlap writes, :r8-test reads</title></path>
+<text x='238' y='393' font-size='7' fill='none' stroke='white' stroke-width='2.5'>pair-overlap</text><text x='238' y='393' font-size='7' fill='#2f5f5c'>pair-overlap</text>
+<path d='M1776,337 C1836,337 1676,497 1616,497' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:publication-observed: :r10-observe-publication writes, :r10-test reads</title></path>
+<text x='1822' y='417' font-size='7' fill='none' stroke='white' stroke-width='2.5'>publication-observed</text><text x='1822' y='417' font-size='7' fill='#2f5f5c'>publication-observed</text>
+<path d='M192,337 C252,337 92,385 32,385' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:chosen-target: :r1-outer-cascade writes, :flight-entry reads</title></path>
+<text x='238' y='361' font-size='7' fill='none' stroke='white' stroke-width='2.5'>chosen-target</text><text x='238' y='361' font-size='7' fill='#d48700'>chosen-target</text>
+<path d='M192,337 C252,337 92,385 32,385' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:draw-seed: :r1-outer-cascade writes, :flight-entry reads</title></path>
+<text x='238' y='361' font-size='7' fill='none' stroke='white' stroke-width='2.5'>draw-seed</text><text x='238' y='361' font-size='7' fill='#d48700'>draw-seed</text>
+<path d='M390,145 C450,145 290,193 230,193' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:mission-id: :dispatch writes, :clock-in reads</title></path>
+<text x='436' y='169' font-size='7' fill='none' stroke='white' stroke-width='2.5'>mission-id</text><text x='436' y='169' font-size='7' fill='#2f5f5c'>mission-id</text>
+<path d='M192,385 C252,385 92,545 32,545' fill='none' stroke='#2f5f5c' stroke-width='1.3'  marker-end='url(#a-wired)'><title>:target-source: :flight-entry writes, :loop-test reads</title></path>
+<text x='238' y='465' font-size='7' fill='none' stroke='white' stroke-width='2.5'>target-source</text><text x='238' y='465' font-size='7' fill='#2f5f5c'>target-source</text>
+<path d='M192,337 C252,337 92,545 32,545' fill='none' stroke='#d48700' stroke-width='1.3' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:draw-seed: :r1-outer-cascade writes, :loop-test reads</title></path>
+<text x='238' y='441' font-size='7' fill='none' stroke='white' stroke-width='2.5'>draw-seed</text><text x='238' y='441' font-size='7' fill='#d48700'>draw-seed</text>
+<g><title>:r1-target-field writes next-step</title><rect x='32' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='39' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>step</text>
+<text x='39' y='203' font-size='7.5' fill='#5e6b6a'>target_field.clj</text>
+</g>
+<g><title>:r1-outer-cascade (not built: intended site) writes chosen-target draw-seed</title><rect x='32' y='318' width='160' height='38' rx='5' fill='#fff6e5' stroke='#d48700' stroke-width='2.2' stroke-dasharray='6,3'/>
+<text x='39' y='333' font-size='9.5' font-weight='600' fill='#1d3a38'>outer_cascade.clj</text>
+<text x='39' y='347' font-size='7.5' fill='#5e6b6a'>outer_cascade.clj</text>
+<circle cx='31' cy='317' r='8' fill='#173b39'/><text x='31' y='320' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>2,15</text>
+</g>
+<g><title>:r1-test</title><rect x='32' y='430' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='39' y='445' font-size='9.5' font-weight='600' fill='#1d3a38'>r1-test</text>
+<text x='39' y='459' font-size='7.5' fill='#5e6b6a'>outer_cascade_test.clj</text>
+</g>
+<g><title>:r2-served-by-reading writes want-span text-sha256</title><rect x='428' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='435' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>proposal</text>
+<text x='435' y='203' font-size='7.5' fill='#5e6b6a'>served_by_reading.clj</text>
+<circle cx='427' cy='173' r='8' fill='#173b39'/><text x='427' y='176' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>6</text>
+</g>
+<g><title>:r2-verifier</title><rect x='428' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='435' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>verify-proposed-link</text>
+<text x='435' y='251' font-size='7.5' fill='#5e6b6a'>extract_outcomes.clj</text>
+<circle cx='427' cy='221' r='8' fill='#173b39'/><text x='427' y='224' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>7</text>
+</g>
+<g><title>:r2-flight-read</title><rect x='428' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='435' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>read-fn</text>
+<text x='435' y='155' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:r2-test</title><rect x='428' y='286' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='435' y='301' font-size='9.5' font-weight='600' fill='#1d3a38'>r2-test</text>
+<text x='435' y='315' font-size='7.5' fill='#5e6b6a'>served_by_reading_test.clj</text>
+</g>
+<g><title>:r3-flight-ask writes library-root</title><rect x='626' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='633' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>agency-answer-fn</text>
+<text x='633' y='155' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:r3-prompt</title><rect x='626' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='633' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>prompt</text>
+<text x='633' y='203' font-size='7.5' fill='#5e6b6a'>want_interpretation.clj</text>
+</g>
+<g><title>:r3-test</title><rect x='626' y='238' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='633' y='253' font-size='9.5' font-weight='600' fill='#1d3a38'>r3-test</text>
+<text x='633' y='267' font-size='7.5' fill='#5e6b6a'>flight_ask_library_test.clj</text>
+</g>
+<g><title>:r4-constructor writes precedence-violations descent units</title><rect x='824' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='831' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>containment-order</text>
+<text x='831' y='155' font-size='7.5' fill='#5e6b6a'>construction.clj</text>
+</g>
+<g><title>:r4-order-use</title><rect x='824' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='831' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>order-use</text>
+<text x='831' y='203' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
+</g>
+<g><title>:r4-coapply</title><rect x='824' y='270' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='831' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>co-apply-kernel</text>
+<text x='831' y='299' font-size='7.5' fill='#5e6b6a'>cascade_model_manifest.clj</text>
+</g>
+<g><title>:r4-kernel writes order-use</title><rect x='824' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='831' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>rank-cascade-actions</text>
+<text x='831' y='251' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
+</g>
+<g><title>:r4-test</title><rect x='824' y='334' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='831' y='349' font-size='9.5' font-weight='600' fill='#1d3a38'>r4-test</text>
+<text x='831' y='363' font-size='7.5' fill='#5e6b6a'>order_kernel_test.clj</text>
+</g>
+<g><title>:r4-coapply-test</title><rect x='824' y='382' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='831' y='397' font-size='9.5' font-weight='600' fill='#1d3a38'>r4-coapply-test</text>
+<text x='831' y='411' font-size='7.5' fill='#5e6b6a'>coapply_kernel_test.clj</text>
+</g>
+<g><title>:r0-enact-step writes attempts grain-gate</title><rect x='1418' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1425' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>enact-fn</text>
+<text x='1425' y='251' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+<circle cx='1417' cy='221' r='8' fill='#173b39'/><text x='1417' y='224' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>10</text>
+</g>
+<g><title>:r0-test</title><rect x='1418' y='382' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1425' y='397' font-size='9.5' font-weight='600' fill='#1d3a38'>r0-test</text>
+<text x='1425' y='411' font-size='7.5' fill='#5e6b6a'>flight_enact_test.clj</text>
+</g>
+<g><title>:r5-grain-gate</title><rect x='1418' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1425' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>grain-gate</text>
+<text x='1425' y='203' font-size='7.5' fill='#5e6b6a'>grain_gate.clj</text>
+</g>
+<g><title>:r5-flight-call writes grain</title><rect x='1418' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1425' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>enact-fn</text>
+<text x='1425' y='155' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:r5-test</title><rect x='1418' y='334' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1425' y='349' font-size='9.5' font-weight='600' fill='#1d3a38'>r5-test</text>
+<text x='1425' y='363' font-size='7.5' fill='#5e6b6a'>flight_grain_gate_test.clj</text>
+</g>
+<g><title>:wc-checker writes wc-verdict</title><rect x='1418' y='270' width='160' height='38' rx='5' fill='#ececea' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1425' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>wc-checker</text>
+<text x='1425' y='299' font-size='7.5' fill='#5e6b6a'>futon3c proof2a_check.clj (siteless)</text>
+<circle cx='1417' cy='269' r='8' fill='#173b39'/><text x='1417' y='272' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>12</text>
+</g>
+<g><title>:r7-increment writes delta wc-failures</title><rect x='1616' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1623' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>increment</text>
+<text x='1623' y='203' font-size='7.5' fill='#5e6b6a'>enactment_habit.clj</text>
+<circle cx='1615' cy='173' r='8' fill='#173b39'/><text x='1615' y='176' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>13</text>
+</g>
+<g><title>:r7-flight-call writes wc</title><rect x='1616' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1623' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>wc-verdict-fn</text>
+<text x='1623' y='155' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+<circle cx='1615' cy='125' r='8' fill='#173b39'/><text x='1615' y='128' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>11</text>
+</g>
+<g><title>:r7-call-test</title><rect x='1616' y='382' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1623' y='397' font-size='9.5' font-weight='600' fill='#1d3a38'>r7-call-test</text>
+<text x='1623' y='411' font-size='7.5' fill='#5e6b6a'>flight_wc_call_test.clj</text>
+</g>
+<g><title>:r7-fold writes enactment-records</title><rect x='1616' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1623' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>fold</text>
+<text x='1623' y='251' font-size='7.5' fill='#5e6b6a'>enactment_habit.clj</text>
+<circle cx='1615' cy='221' r='8' fill='#173b39'/><text x='1615' y='224' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>14</text>
+</g>
+<g><title>:r7-selection writes e-source</title><rect x='1616' y='270' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1623' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>select-action-cascades</text>
+<text x='1623' y='299' font-size='7.5' fill='#5e6b6a'>policy.clj</text>
+</g>
+<g><title>:r7-test</title><rect x='1616' y='430' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1623' y='445' font-size='9.5' font-weight='600' fill='#1d3a38'>r7-test</text>
+<text x='1623' y='459' font-size='7.5' fill='#5e6b6a'>selection_reads_fold_test.clj</text>
+</g>
+<g><title>:r9-selection-law writes per-policy-argmax candidate enacted-steps</title><rect x='1220' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1227' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>select-action-cascades</text>
+<text x='1227' y='251' font-size='7.5' fill='#5e6b6a'>policy.clj</text>
+<circle cx='1219' cy='221' r='8' fill='#173b39'/><text x='1219' y='224' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>9</text>
+</g>
+<g><title>:r9-decision writes kind target-class</title><rect x='1220' y='270' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>cascade-decision-admitted</text>
+<text x='1227' y='299' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
+</g>
+<g><title>:r9-test</title><rect x='1220' y='862' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1227' y='877' font-size='9.5' font-weight='600' fill='#1d3a38'>r9-test</text>
+<text x='1227' y='891' font-size='7.5' fill='#5e6b6a'>selection_law_candidate_test.clj</text>
+</g>
+<g><title>:r9-judge-refusal writes judge-refusal</title><rect x='1220' y='462' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='477' font-size='9.5' font-weight='600' fill='#1d3a38'>judge-refusal-sorry</text>
+<text x='1227' y='491' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:r9-abstention-carrier</title><rect x='1220' y='606' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='621' font-size='9.5' font-weight='600' fill='#1d3a38'>persist-run-record!</text>
+<text x='1227' y='635' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:r9-judge-refusal-test</title><rect x='1220' y='1006' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1227' y='1021' font-size='9.5' font-weight='600' fill='#1d3a38'>r9-judge-refusal-test</text>
+<text x='1227' y='1035' font-size='7.5' fill='#5e6b6a'>judge_refusal_abstention_test.clj</text>
+</g>
+<g><title>:r9-classify-target writes class</title><rect x='1220' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>classify-target</text>
+<text x='1227' y='155' font-size='7.5' fill='#5e6b6a'>focus_receipt.clj</text>
+</g>
+<g><title>:r9-embedding-neighbour writes derived-via</title><rect x='1220' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>embedding-neighbour</text>
+<text x='1227' y='203' font-size='7.5' fill='#5e6b6a'>focus_receipt.clj</text>
+</g>
+<g><title>:r9-relation-test</title><rect x='1220' y='910' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1227' y='925' font-size='9.5' font-weight='600' fill='#1d3a38'>r9-relation-test</text>
+<text x='1227' y='939' font-size='7.5' fill='#5e6b6a'>relation_derivation_test.clj</text>
+</g>
+<g><title>:r9-judge-refusal-read</title><rect x='1220' y='510' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='525' font-size='9.5' font-weight='600' fill='#1d3a38'>judge-refusal</text>
+<text x='1227' y='539' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:r9-judge-refusal-abstention writes outcome</title><rect x='1220' y='558' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='573' font-size='9.5' font-weight='600' fill='#1d3a38'>judge-refusal-abstention</text>
+<text x='1227' y='587' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:r9-failure-classifier</title><rect x='1220' y='654' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='669' font-size='9.5' font-weight='600' fill='#1d3a38'>explicit-failure-kind</text>
+<text x='1227' y='683' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:flight-click writes status detail cast</title><rect x='1814' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>http-click-fn</text>
+<text x='1821' y='251' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:flight-record-click</title><rect x='1814' y='318' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='333' font-size='9.5' font-weight='600' fill='#1d3a38'>record-click</text>
+<text x='1821' y='347' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
+</g>
+<g><title>:flight-cast writes author reviewer repair-reviewer</title><rect x='1814' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>click-cast</text>
+<text x='1821' y='203' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:click-start</title><rect x='1814' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>handle-wm-click-start</text>
+<text x='1821' y='155' font-size='7.5' fill='#5e6b6a'>futon3c: transport/http.clj</text>
+</g>
+<g><title>:flight-cast-test</title><rect x='1814' y='430' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1821' y='445' font-size='9.5' font-weight='600' fill='#1d3a38'>flight-cast-test</text>
+<text x='1821' y='459' font-size='7.5' fill='#5e6b6a'>flight_cast_test.clj</text>
+</g>
+<g><title>:flight-record-summary writes chosen</title><rect x='1814' y='270' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>record-summary</text>
+<text x='1821' y='299' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:flight-click-close-test</title><rect x='1814' y='478' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1821' y='493' font-size='9.5' font-weight='600' fill='#1d3a38'>flight-click-close-test</text>
+<text x='1821' y='507' font-size='7.5' fill='#5e6b6a'>flight_click_close_test.clj</text>
+</g>
+<g><title>:c8-registry-get writes message timeout-ms</title><rect x='1220' y='702' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='717' font-size='9.5' font-weight='600' fill='#1d3a38'>registry-get</text>
+<text x='1227' y='731' font-size='7.5' fill='#5e6b6a'>observation_checks.clj</text>
+</g>
+<g><title>:c8-entry</title><rect x='1220' y='750' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='765' font-size='9.5' font-weight='600' fill='#1d3a38'>fetch-registry-entry</text>
+<text x='1227' y='779' font-size='7.5' fill='#5e6b6a'>observation_checks.clj</text>
+</g>
+<g><title>:c8-latest</title><rect x='1220' y='798' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='813' font-size='9.5' font-weight='600' fill='#1d3a38'>fetch-latest-for</text>
+<text x='1227' y='827' font-size='7.5' fill='#5e6b6a'>observation_checks.clj</text>
+</g>
+<g><title>:gate-refuse writes error</title><rect x='1220' y='366' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='381' font-size='9.5' font-weight='600' fill='#1d3a38'>refuse!</text>
+<text x='1227' y='395' font-size='7.5' fill='#5e6b6a'>decision_gate.clj</text>
+</g>
+<g><title>:gate-refusal-read</title><rect x='1220' y='414' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='429' font-size='9.5' font-weight='600' fill='#1d3a38'>gate-refusal</text>
+<text x='1227' y='443' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+</g>
+<g><title>:gate-refusal-test</title><rect x='1220' y='958' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1227' y='973' font-size='9.5' font-weight='600' fill='#1d3a38'>gate-refusal-test</text>
+<text x='1227' y='987' font-size='7.5' fill='#5e6b6a'>gate_refusal_abstention_test.clj</text>
+</g>
+<g><title>:r9-class-model</title><rect x='1220' y='318' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1227' y='333' font-size='9.5' font-weight='600' fill='#1d3a38'>class-observation-model</text>
+<text x='1227' y='347' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
+</g>
+<g><title>:r6-sourced-rates writes measurement</title><rect x='1022' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1029' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>sourced-rates</text>
+<text x='1029' y='155' font-size='7.5' fill='#5e6b6a'>observation_rates.clj</text>
+</g>
+<g><title>:r6-cascade-lane</title><rect x='1022' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='1029' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>cascade-lane</text>
+<text x='1029' y='203' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
+<circle cx='1021' cy='173' r='8' fill='#173b39'/><text x='1021' y='176' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>8</text>
+</g>
+<g><title>:r6-test</title><rect x='1022' y='238' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1029' y='253' font-size='9.5' font-weight='600' fill='#1d3a38'>r6-test</text>
+<text x='1029' y='267' font-size='7.5' fill='#5e6b6a'>click_measurement_test.clj</text>
+</g>
+<g><title>:r8-overlap writes pair-overlap</title><rect x='32' y='270' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='39' y='285' font-size='9.5' font-weight='600' fill='#1d3a38'>with-pair-overlap</text>
+<text x='39' y='299' font-size='7.5' fill='#5e6b6a'>target_field.clj</text>
+</g>
+<g><title>:r8-test</title><rect x='32' y='478' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='39' y='493' font-size='9.5' font-weight='600' fill='#1d3a38'>r8-test</text>
+<text x='39' y='507' font-size='7.5' fill='#5e6b6a'>target_field_overlap_test.clj</text>
+</g>
+<g><title>:r10-observe-publication writes publication-observed</title><rect x='1616' y='318' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1623' y='333' font-size='9.5' font-weight='600' fill='#1d3a38'>observe-publication-fn</text>
+<text x='1623' y='347' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+</g>
+<g><title>:r10-test</title><rect x='1616' y='478' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1623' y='493' font-size='9.5' font-weight='600' fill='#1d3a38'>r10-test</text>
+<text x='1623' y='507' font-size='7.5' fill='#5e6b6a'>publication_observed_test.clj</text>
+</g>
+<g><title>:loop-entry writes trigger</title><rect x='32' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='39' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>-main</text>
+<text x='39' y='155' font-size='7.5' fill='#5e6b6a'>wm_scheduled_run.clj</text>
+<circle cx='31' cy='125' r='8' fill='#173b39'/><text x='31' y='128' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>1</text>
+</g>
+<g><title>:eligibility writes eligible</title><rect x='32' y='222' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='39' y='237' font-size='9.5' font-weight='600' fill='#1d3a38'>with-eligibility</text>
+<text x='39' y='251' font-size='7.5' fill='#5e6b6a'>target_field.clj</text>
+</g>
+<g><title>:flight-entry writes target-source</title><rect x='32' y='366' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='39' y='381' font-size='9.5' font-weight='600' fill='#1d3a38'>resolve-target</text>
+<text x='39' y='395' font-size='7.5' fill='#5e6b6a'>flight_driver.clj</text>
+<circle cx='31' cy='365' r='8' fill='#173b39'/><text x='31' y='368' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>3</text>
+</g>
+<g><title>:dispatch writes mission-id</title><rect x='230' y='126' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='237' y='141' font-size='9.5' font-weight='600' fill='#1d3a38'>dispatch!</text>
+<text x='237' y='155' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
+<circle cx='229' cy='125' r='8' fill='#173b39'/><text x='229' y='128' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>4</text>
+</g>
+<g><title>:clock-in writes clock-lineage</title><rect x='230' y='174' width='160' height='38' rx='5' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.2' />
+<text x='237' y='189' font-size='9.5' font-weight='600' fill='#1d3a38'>persist-clock!</text>
+<text x='237' y='203' font-size='7.5' fill='#5e6b6a'>futon3c: agency/clock_lineage.clj</text>
+<circle cx='229' cy='173' r='8' fill='#173b39'/><text x='229' y='176' text-anchor='middle' font-size='7.5' font-weight='700' fill='white'>5</text>
+</g>
+<g><title>:loop-test</title><rect x='32' y='526' width='160' height='38' rx='5' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='39' y='541' font-size='9.5' font-weight='600' fill='#1d3a38'>loop-test</text>
+<text x='39' y='555' font-size='7.5' fill='#5e6b6a'>loop_closure_test.clj</text>
+</g>
+<g><title>:r11-warrants</title><rect x='1814' y='366' width='160' height='38' rx='5' fill='#ececea' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1821' y='381' font-size='9.5' font-weight='600' fill='#1d3a38'>r11-warrants</text>
+<text x='1821' y='395' font-size='7.5' fill='#5e6b6a'>warrants (siteless)</text>
+</g>
+<text x='24' y='1094' font-size='11' font-weight='700' fill='#274d4a'>Legend</text>
+<text x='24' y='1110' font-size='9.5' fill='#3a4a48'>solid box: built component at its pinned var (48)</text>
+<text x='24' y='1123' font-size='9.5' fill='#3a4a48'>dashed amber box: declared, not built, drawn at its intended site (1)</text>
+<text x='24' y='1136' font-size='9.5' fill='#3a4a48'>dotted box: the row's registered test, a declared reader (19)</text>
+<text x='24' y='1149' font-size='9.5' fill='#3a4a48'>grey box: siteless component, exempt from conformance (3)</text>
+<line x1='560' y1='1107' x2='600' y2='1107' stroke='#2f5f5c' stroke-width='1.4' />
+<text x='608' y='1110' font-size='9.5' fill='#3a4a48'>arrow: a field, from its one writer to a reader, both built (73)</text>
+<line x1='560' y1='1120' x2='600' y2='1120' stroke='#d48700' stroke-width='1.4' stroke-dasharray='5,3'/>
+<text x='608' y='1123' font-size='9.5' fill='#3a4a48'>dashed arrow: declared on a box not yet built (8)</text>
+<line x1='560' y1='1133' x2='600' y2='1133' stroke='#7b3fa0' stroke-width='1.4' />
+<text x='608' y='1136' font-size='9.5' fill='#3a4a48'>purple arrow: runs against the flight's order, the loop closing (5)</text>
+<line x1='560' y1='1146' x2='600' y2='1146' stroke='#9a9a94' stroke-width='1.4' stroke-dasharray='3,2'/>
+<text x='608' y='1149' font-size='9.5' fill='#3a4a48'>grey stub: a field read that no box writes (4); green stub: the owner's text, exogenous (1)</text>
+<text x='24' y='1170' font-size='9.5' fill='#3a4a48'>Numbered rings: the exemplar trace the map records for M-autoclock-in, in order (loop-entry &gt; r1-outer-cascade &gt; flight-entry &gt; dispatch &gt; clock-in &gt; r2-served-by-reading &gt; r2-verifier &gt; r6-cascade-lane &gt; r9-selection-law &gt; r0-enact-step &gt; r7-flight-call &gt; wc-checker &gt; r7-increment &gt; r7-fold &gt; r1-outer-cascade). Boxes on it have a heavier border.</text>
+<text x='24' y='1186' font-size='9.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (143) are generic keys the prover cannot scope per box.</text>
+</svg>
