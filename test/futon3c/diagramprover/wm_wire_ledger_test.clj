@@ -233,9 +233,9 @@
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
 
-(def adjacency-rev "424a431d")
+(def adjacency-rev "7c4351b5")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "1713b872")
+(def map-rev "9d962400")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
