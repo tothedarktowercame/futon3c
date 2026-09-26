@@ -29,7 +29,14 @@
   sites, so no per-pin pair can show it. It shows the other way: the pinned
   declarations (registry-get writes :message/:timeout-ms, the two C8 readers
   read them through select-keys) replayed at 367be490^ are not borne out by
-  that source (registry-get absent, the readers without the keys)."
+  that source (registry-get absent, the readers without the keys).
+
+  J1 (the eighth flight, flight-ada87008): the registry read threw
+  {:kind :substrate-unreachable}; the selection catch rethrew it untouched
+  and the classifier, reading :failure-kind/:outcome, closed it
+  :untyped-failure. At 89fefb3a the classifier's :failure-kind has no
+  writer in the variant (only judge-refusal-abstention's :outcome); at the
+  pin phase-kind-failure (a41f4c31) writes it."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-flight-wiring-test :as map-test]))
 
@@ -72,6 +79,20 @@
                         {:box/id :d-latest :box/kind :component
                          :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "fetch-latest-for"}
                          :reads [:message :timeout-ms]}]}}})
+
+;; J1's variant, appended to replays below
+(def j1-abstention
+  {:box/id :j1-abstention :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal-abstention"}
+   :writes [:outcome]})
+
+(def j1-phase-kind
+  {:box/id :j1-phase-kind :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "phase-kind-failure"}
+   :writes [:failure-kind]})
+
+(def j1 {:pre-fix {:sha "89fefb3a" :boxes [j1-abstention classifier-box]}
+         :pinned {:boxes [j1-abstention j1-phase-kind classifier-box]}})
 
 (defn- run [futon2-sha boxes]
   (let [s {:repos {"futon2" futon2-sha "futon3c" (get map-test/repos "futon3c")} :boxes boxes}
@@ -138,3 +159,19 @@
   (let [findings (run (get map-test/repos "futon2") (get-in replays [:D :pinned :boxes]))]
     (is (empty? (pair findings)))
     (is (empty? (conformance-misses findings)) "the readers read :message/:timeout-ms through select-keys")))
+
+(deftest j1-is-a-finding-before-its-fix
+  (let [{:keys [sha boxes]} (:pre-fix j1)
+        findings (run sha boxes)]
+    (is (= #{[:read-never-written :failure-kind]} (pair findings))
+        "the classifier reads :failure-kind and nothing in the selection catch writes it")
+    (is (empty? (conformance-misses findings)) "each declaration is borne out by 89fefb3a's source")))
+
+(deftest j1-is-not-a-finding-at-the-pin
+  (let [findings (run (get map-test/repos "futon2") (get-in j1 [:pinned :boxes]))]
+    (is (empty? (pair findings)) "phase-kind-failure writes :failure-kind, the classifier reads it")
+    (is (empty? (conformance-misses findings)) "phase-kind-failure's :failure-kind write is borne out by the pinned source")))
+
+(deftest the-pinned-writer-did-not-exist-before-the-fix
+  (is (some #(= :var-not-found (:finding %))
+            (run (get-in j1 [:pre-fix :sha]) (get-in j1 [:pinned :boxes])))))
