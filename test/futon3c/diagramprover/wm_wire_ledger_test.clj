@@ -41,6 +41,12 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test]
+            [futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test]
             [futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test]
@@ -165,7 +171,14 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
+  '[
+   futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test
+   futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test
+   futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test
     futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test
