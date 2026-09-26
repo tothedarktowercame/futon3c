@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "02e6ab07" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "663caa7b" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -125,8 +125,10 @@
    ;; to increment unchanged (step 11)
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "wc-verdict-fn"}
    ;; the verdict reaches increment positionally; the flight records it under
-   ;; :wc; the attempts' patterns give the policy key
-   :reads [:attempts] :writes [:wc]}
+   ;; :wc; the attempts' patterns give the policy key. WM-HABIT-FOLD-CALL-I:
+   ;; its :increment receipt, on the flight record, is the flight side of
+   ;; the hand-off to the tick's fold (:r7-fold-source)
+   :reads [:attempts] :writes [:wc :increment]}
   {:box/id :r7-call-test :row 7 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"}
    :reads [:wc :delta :wc-failures]}
@@ -147,7 +149,25 @@
    ;; WM-MAP-REPLAY-I: the joint decision's typed refusal (ex-info with
    ;; :kind, defect G's writer); the relation class read at :6587 and the
    ;; :target-class it hands the class model (defect I's hop)
-   :reads [:per-policy-argmax :class] :writes [:kind :target-class]}
+   ;; WM-HABIT-FOLD-CALL-I: reads judge's :enactment-fold and passes it
+   ;; into select-action-cascades' options (which destructures it with
+   ;; :keys, a read the prover's occurrence check does not see)
+   :reads [:per-policy-argmax :class :enactment-fold] :writes [:kind :target-class]}
+  ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
+  ;; flight/tick boundary. The flight writes :increment onto its record
+  ;; (:r7-flight-call); the tick reads the receipts back from the flight
+  ;; records (enactment-fold-source/increment-receipts), folds them
+  ;; (enactment-habit/fold, :r7-fold's var, called by fold-from-flights) and
+  ;; judge hands the fold on as :enactment-fold
+  {:box/id :r7-fold-source :row 7 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/enactment_fold_source.clj" :var "increment-receipts"}
+   :reads [:increment]}
+  {:box/id :r7-fold-call :row 7 :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge"}
+   :writes [:enactment-fold]}
+  {:box/id :habit-fold-call-test :row 7 :box/kind :test
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"}
+   :reads [:enactment-fold]}
   {:box/id :r9-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"}
    :reads [:candidate :per-policy-argmax :enacted-steps]}
@@ -537,7 +557,16 @@
  ;; 178 standing). WM-PHASE-SWALLOW-I (futon2 02e6ab07): the
  ;; preference refresh's outcome, :refresh on the :preference-refresh phase
  ;; event and the run record; neither the phase events nor :refresh is on
- ;; the map, so no box is added. :kind :to-do is the
+ ;; the map, so no box is added. WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the
+ ;; hand-off of E across the flight/tick boundary. :r7-flight-call
+ ;; (wc-verdict-fn) now also writes :increment, read back from the flight
+ ;; records by :r7-fold-source (enactment-fold-source/increment-receipts);
+ ;; :r7-fold-call (judge) writes :enactment-fold, read by :r9-decision
+ ;; (cascade-decision-admitted), which passes it into select-action-cascades'
+ ;; options; test box :habit-fold-call-test. New fields, so no finding is
+ ;; deleted. Seventeen standing added, all occurrences (the test files,
+ ;; judge's own records, select-action-cascades' :keys read the check does
+ ;; not see). 180 -> 197 (2 to-do, 195 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -2171,4 +2200,167 @@
    :rows [10],
    :kind :standing,
    :note
-   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}]}
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :attempts,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :delta,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :e-source,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :enactment-fold,
+   :site
+   {:file "futon2/src/futon2/aif/policy.clj",
+    :var "select-action-cascades"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: selection reads its options' :enactment-fold by :keys destructuring, which the occurrence check does not see; the keyword occurs as the :e-source label and in a comment. The declared reader of the hand-off is :r9-decision's (:enactment-fold opts), which puts it into these options"}
+
+  {:finding :occurrence-without-declaration,
+   :field :enactment-fold,
+   :site
+   {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: a test builds fixture records or options carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :enactment-fold,
+   :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: a test builds fixture records or options carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: judge is boxed as the writer of :enactment-fold; it is the tick's whole judgement (about 400 lines) and carries this key in its own records, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :increment,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: another record's :increment key in the runner's attempt, reported now because :increment became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :increment,
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: a test builds fixture records or options carrying the key (a write position in the test, not a second writer); reported now because the field became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :increment,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: judge is boxed as the writer of :enactment-fold; it is the tick's whole judgement (about 400 lines) and carries this key in its own records, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: judge is boxed as the writer of :enactment-fold; it is the tick's whole judgement (about 400 lines) and carries this key in its own records, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/src/futon2/aif/enactment_fold_source.clj",
+    :var "increment-receipts"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the unreadable file's parse message, on the read's provenance, not the C8 flow"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: judge is boxed as the writer of :enactment-fold; it is the tick's whole judgement (about 400 lines) and carries this key in its own records, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wc,
+   :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}]}
