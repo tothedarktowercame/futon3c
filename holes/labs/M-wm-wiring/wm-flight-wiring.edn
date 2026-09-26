@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "8c396c3a" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "5e35f7df" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -227,6 +227,17 @@
   {:box/id :gate-refuse :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/decision_gate.clj" :var "refuse!"}
    :writes [:error]}
+  ;; WM-GATE-REFUSAL-I (futon2 6dd779ca, 5e35f7df): the translator for the
+  ;; gate's refusal, beside G's. gate-refusal reads :error (and the
+  ;; :reason/:detail beside it, undeclared as above); G's
+  ;; judge-refusal-abstention (:r9-judge-refusal-abstention) writes :outcome
+  ;; for both refusals, one authority, which :r9-failure-classifier reads
+  {:box/id :gate-refusal-read :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "gate-refusal"}
+   :reads [:error]}
+  {:box/id :gate-refusal-test :row 9 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"}
+   :reads [:kind]}
   {:box/id :r9-class-model :row 9 :box/kind :component
    ;; the class observation model reads :target-class (destructured) and
    ;; hands it on in the model map to observation_model/class-of-state,
@@ -419,27 +430,28 @@
  ;; added: :status (28 sites), :detail, :message generic elsewhere, and keys
  ;; the new boxes' own vars carry for other records (including the click
  ;; server's :error, not declared lest it hide the gate's). 67 -> 111 (3
- ;; to-do, 108 standing). :kind :to-do is the
+ ;; to-do, 108 standing). WM-GATE-REFUSAL-I (futon2 5e35f7df): the gate's
+ ;; translator, :gate-refusal-read (gate-refusal) reads :error, and G's
+ ;; :r9-judge-refusal-abstention writes :outcome for both refusals (one
+ ;; authority), which :r9-failure-classifier reads; test box
+ ;; :gate-refusal-test. The to-do written-never-read :error is deleted.
+ ;; Nine standing added: four occurrences in gate-refusal (:kind/:detail
+ ;; the refusal built and the detail kept, docstring :failure-kind/:outcome)
+ ;; and five in the test box's file (:detail :error :failure-kind :outcome
+ ;; :status). 111 -> 119 (2 to-do, 117 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :written-never-read,
-   :field :error,
-   :writers [:gate-refuse],
-   :rows [9],
-   :kind :to-do,
-   :note
-   "the fifth flight's live defect (flight-7f89646a): decision_gate refuse! types the refusal {:error :inadmissible-decision :reason ..}, the runner's classifier (explicit-failure-kind) reads only :failure-kind/:outcome, so the tick closed :untyped-failure at :selection. Retired by WM-GATE-REFUSAL-I"}
-  {:finding :read-never-written,
+ [{:finding :read-never-written,
    :field :failure-kind,
    :readers [:r9-failure-classifier],
    :rows [9],
    :kind :standing,
    :note
-   "the classifier's :failure-kind is written by the runner's own typed throws (ex-info sites inside run-opportunity-core! and run-opportunity!), not boxed; defect G is the :kind/:outcome pair (wm-flight-replay-test). The fifth flight's gate refusal (decision_gate refuse!, {:error :reason}) writes neither key: a separate packet"}
+   "the classifier's :failure-kind is written by the runner's own typed throws (ex-info sites inside run-opportunity-core! and run-opportunity!), not boxed; defect G is the :kind/:outcome pair (wm-flight-replay-test). The gate's refusal (decision_gate refuse!, {:error :reason}) writes neither key; since WM-GATE-REFUSAL-I it reaches :outcome through gate-refusal and judge-refusal-abstention"}
   {:finding :read-never-written,
    :field :min-cosine,
    :readers [:r9-embedding-neighbour],
@@ -668,6 +680,15 @@
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :detail,
+   :site
+   {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
    :declared-by [],
    :rows [],
@@ -714,6 +735,16 @@
    "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
   {:finding :occurrence-without-declaration,
    :field :detail,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "gate-refusal"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
    :declared-by [],
    :rows [],
@@ -732,6 +763,15 @@
   {:finding :occurrence-without-declaration,
    :field :error,
    :site
+   {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
    {:file "futon2/src/futon2/aif/flight_runner.clj",
     :var "http-click-fn"},
    :declared-by [],
@@ -739,6 +779,15 @@
    :kind :standing,
    :note
    "the click server's response :error, kept by http-click-fn's select-keys; declaring it a read would join the gate's :error to a different record and hide the fifth flight's defect"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :failure-kind,
    :site
@@ -758,6 +807,16 @@
    :kind :standing,
    :note
    "generic key (WM-MAP-REPLAY-I): declared for defect G (the classifier's :outcome/:failure-kind); here it is another record's own :outcome/:failure-kind, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "gate-refusal"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-GATE-REFUSAL-I, the gate's translator: :kind/:detail in gate-refusal are the refusal it builds (the judge refusal's shape) and the gate's detail it keeps, undeclared as at :gate-refuse; :failure-kind/:outcome occur only in its docstring"}
   {:finding :occurrence-without-declaration,
    :field :judge-refusal,
    :site
@@ -942,6 +1001,16 @@
    "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
   {:finding :occurrence-without-declaration,
    :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "gate-refusal"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-GATE-REFUSAL-I, the gate's translator: :kind/:detail in gate-refusal are the refusal it builds (the judge refusal's shape) and the gate's detail it keeps, undeclared as at :gate-refuse; :failure-kind/:outcome occur only in its docstring"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
    :declared-by [],
    :rows [],
@@ -1040,6 +1109,15 @@
    "with-eligibility's docstring names :next-step (textual scan counts docstrings); the function neither reads nor writes it"}
   {:finding :occurrence-without-declaration,
    :field :outcome,
+   :site
+   {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
    :declared-by [],
    :rows [],
@@ -1086,6 +1164,16 @@
   {:finding :occurrence-without-declaration,
    :field :outcome,
    :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "gate-refusal"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-GATE-REFUSAL-I, the gate's translator: :kind/:detail in gate-refusal are the refusal it builds (the judge refusal's shape) and the gate's detail it keeps, undeclared as at :gate-refuse; :failure-kind/:outcome occur only in its docstring"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
    {:file "futon2/src/futon2/aif/served_by_reading.clj",
     :var "proposal"},
    :declared-by [],
@@ -1112,6 +1200,15 @@
   {:finding :occurrence-without-declaration,
    :field :source-pins,
    :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
    :declared-by [],
    :rows [],
    :kind :standing,
