@@ -41,6 +41,15 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test]
             [futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test]
             [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test]
             [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test]
@@ -144,7 +153,16 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test
+  '[futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test
+    futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test
     futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test
     futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test
     futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test
