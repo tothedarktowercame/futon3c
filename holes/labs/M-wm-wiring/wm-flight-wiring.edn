@@ -642,6 +642,22 @@
   ;; :not-supplied with the admission's reason; a prefix failing the re-check
   ;; is refused as data); selection-candidate reads it into the −F term,
   ;; beside G (the ranked entry's :controller-score)
+  ;; F1b-join-I (futon2 c37926bc): the flight's conditioning step reads the
+  ;; decision's measured-A rates VALUE ((:rates ma), ma = the run record's
+  ;; [:decision :measured-a]) to recompute the step's likelihood; on the
+  ;; production path it is the typed absence until labels are admitted
+  ;; (F1a-2b, futon2 bc66c6b1). Deletes F1a-2b's standing [:rates
+  ;; :measured-a] entry and F1a-2-I's standing :measured-a entry (the step
+  ;; reads (get-in run-record [:decision :measured-a])). It also reads B's
+  ;; content, the problems' :interpretations. It reads (:measurement ma),
+  ;; which NO box writes: measured-a-version's record carries no
+  ;; :measurement, so every step would be :no-measurement-provenance once
+  ;; labels are admitted (the step test hand-builds the key). The port
+  ;; in/measurement.measured-a is that defect, visible, until it is fixed.
+  {:box/id :flight-conditioning-step :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "conditioning-step"}
+   :record-aliases {:measured-a ["ma"]}
+   :reads [[:rates {:record :measured-a}] [:measurement {:record :measured-a}] :measured-a :interpretations]}
   {:box/id :r9-f-prefix-supply :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy_prefix_evidence.clj" :var "production-ranked"}
    :writes [[:f-prefix {:record :ranked-entry}]]}
@@ -1398,7 +1414,43 @@
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :occurrence-without-declaration,
+ [{:finding :read-never-written,
+   :field [:measurement :measured-a],
+   :readers [:flight-conditioning-step],
+   :kind :to-do,
+   :note
+   "F1b-join-I defect (claude-11, found 2026-09-26 declaring the step's reads): flight/conditioning-step requires (:measurement ma) and refuses :no-measurement-provenance without it, but measured-a-version's record carries no :measurement (it computes the per-token measurement and drops it). The step test hand-builds the key, so it tested its stub. Goes when the producer writes [:measurement {:record :measured-a}] (or the step stops needing it)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/flight.clj",
+    :var "conditioning-step"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): the observation's, the measured-A record's and the step's own status, not the declared flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :increment,
+   :site
+   {:file "futon2/src/futon2/aif/flight.clj",
+    :var "conditioning-step"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "docstring only: the step's :policy-key comes from the enactment's :increment receipt, passed in by run! (declared on :flight-run)"}
+  {:finding :occurrence-without-declaration,
+   :field :rates,
+   :site
+   {:file "futon2/src/futon2/aif/flight.clj",
+    :var "conditioning-step"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "the step's own record of the rates it used (:measured-a {:rates rates-v ...} on the step), a write into the step, not a second writer of the decision's measured-A :rates"}
+  {:finding :occurrence-without-declaration,
    :field :status,
    :site
    {:file "futon2/src/futon2/aif/policy.clj",
@@ -1444,18 +1496,6 @@
    :kind :to-do,
    :note
    "F1a-1-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 d04711eb/6165ec8b): run! writes the observation that followed an enacted step on its :enactments entry. Its reader is F1b's step admission, not built; this entry goes when that reader is declared"}
-  {:finding :written-never-read,
-   :field [:rates :measured-a],
-   :writers [:r9-measured-a-version],
-   :kind :standing,
-   :note
-   "F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): the measured-A record carries the rates value beside its digest, so F's conditioning step can be recomputed from the run record. At HEAD it is always the typed absence on the production path: no production caller of cascade-lane passes :observation-labels. The reader comes with F1b-join-I; this entry goes when that reader is declared"}
-  {:finding :written-never-read,
-   :field :measured-a,
-   :writers [:r9-decision],
-   :kind :standing,
-   :note
-   "F1a-2-I (PROOF-2a-PLAN ⟨2⟩2d F1): the tick's admitted decision writes the measured-A version (sourced-rates over each problem's :locators, target-qualified, digested; the typed absence when nothing measured is sourced). Write only; the reader comes with F1b"}
   {:finding :read-never-written,
    :field :min-cosine,
    :readers [:r9-embedding-neighbour],
