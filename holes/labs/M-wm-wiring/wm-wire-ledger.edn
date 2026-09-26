@@ -4,7 +4,7 @@
   :map "08482abe"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 73, :unverified 85, :wires 163},
+ {:verified 5, :witnessed-hermetically 83, :unverified 75, :wires 163},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -168,7 +168,10 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test/the-gates-error-reaches-gate-refusal}
-  {:wire [:loop-entry :loop-plan :trigger], :status :unverified}
+  {:wire [:loop-entry :loop-plan :trigger],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test/the-writers-value-reaches-the-reader}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
    :status :witnessed-hermetically,
    :test
@@ -214,31 +217,49 @@
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :target-selection],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :chosen-target],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :draw-seed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :target-selection],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :chosen-target],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :draw-seed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :target-selection],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-draw-seed-reaches-the-loop-test}
   {:wire [:r1-outer-cascade :r1-test :chosen-target],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :r1-test :draw-seed],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-draw-seed-reaches-the-r1-test}
   {:wire [:r1-outer-cascade :r1-test :target-selection],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :unverified,
    :registered-test-failed

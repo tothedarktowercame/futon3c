@@ -41,6 +41,16 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test]
+            [futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test]
             [futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test]
             [futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test]
             [futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test]
@@ -108,15 +118,6 @@
             [futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test]
             [futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test]
             [futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test]
-            [futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test]
-            [futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test]
-            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test]
-            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test]
-            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test]
-            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test]
-            [futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test]
-            [futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test]
-            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]
             [futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test]
             [futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test]
             [futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test]
@@ -132,7 +133,17 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
+  '[futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test
+    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test
+    futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
     futon3c.diagramprover.wm-wire-r2-test-text-sha256-test
     futon3c.diagramprover.wm-wire-r2-test-want-span-test
     futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test
