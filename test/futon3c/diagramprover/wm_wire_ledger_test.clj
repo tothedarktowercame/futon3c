@@ -41,6 +41,14 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test]
             [futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test]
             [futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test]
             [futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test]
@@ -181,6 +189,14 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test
+    futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test
+    futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test
     futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test
     futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test
     futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test
