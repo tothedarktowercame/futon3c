@@ -151,7 +151,9 @@
    :reads [:wants :universe]}
   {:box/id :tick-flight-assembly :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
-   :reads [:wants :universe]}
+   ;; WM-HANDOFF-H5-I: writes the target's :universes (the flight's
+   ;; :universe merged over the declared sources'), read by assemble-one
+   :reads [:wants :universe] :writes [:universes]}
   ;; WM-HANDOFF-H4-I (WM-HANDOFFS-D H4): the ask's answers reach
   ;; construction as the sources' :interpretations. publish! writes a
   ;; validated answer into the store under :patterns/:receipts (no
@@ -162,11 +164,17 @@
   ;; cascade_problems/assemble-one reads (get-in sources [:interpretations
   ;; target]) for the problem, and constructed-from-interpretations hands the
   ;; patterns and receipts to interpretation_construction/construct, which
-  ;; reads :interpretations (destructured). ONE WRITER: merge-published. The
-  ;; other textual write, validate-response's assoc-in (want_interpretation
-  ;; :272), is a trial sources map validate-response builds and assembles
-  ;; itself (cp/assemble) to check the answer constructs; it never leaves the
-  ;; function, so the field does not split. target-view is not boxed: its
+  ;; reads :interpretations (destructured). ONE DECLARED WRITER:
+  ;; merge-published, of the two textual writes in want_interpretation.clj.
+  ;; The other, validate-response's assoc-in (:272), is a trial sources map
+  ;; validate-response builds and assembles itself (cp/assemble) to check
+  ;; the answer constructs; it never leaves the function, so the field does
+  ;; not split there. Corrected at H5: two more writers of the sources'
+  ;; :interpretations run earlier in the same judge, unboxed:
+  ;; cascade_sources/load-declared (a declaration's patterns) and
+  ;; mission_hole_wants/merge-into-sources (a mission hole's); merge-published
+  ;; merges the store over them (a hand-written declaration wins on a
+  ;; pattern id). The map models the ask's path, not the only writer. target-view is not boxed: its
   ;; form holds no :interpretations (it calls merge-published). enact-fn's
   ;; :interpretations is its opts' function over the store's :patterns
   ;; (flight_driver), not the sources' key, so :r0-enact-step does not
@@ -174,9 +182,25 @@
   {:box/id :ask-merge-published :row 3 :box/kind :component
    :site {:file "futon2/src/futon2/aif/want_interpretation.clj" :var "merge-published"}
    :writes [:interpretations]}
+  ;; WM-HANDOFF-H5-I (WM-HANDOFFS-D H5): the target's observed universe
+  ;; into construction. flight-assembly-input (:tick-flight-assembly) merges
+  ;; the flight's :universe into (get-in sources [:universes target]);
+  ;; assemble-one reads it as the problem's :facts and hands it to
+  ;; constructed-from-interpretations (positionally, as universe), which
+  ;; gives construct its :observation. construct does not read :universes.
+  ;; ONE DECLARED WRITER, flight-assembly-input, on the flight's path; two
+  ;; more writers of the sources' :universes run earlier in the same judge,
+  ;; unboxed: cascade_sources/load-declared and
+  ;; mission_hole_wants/merge-into-sources. flight-assembly-input's merge is
+  ;; the last, so for the flight's target a token the flight located wins
+  ;; and a declared token it did not locate survives. H8's :wants is NOT
+  ;; declared here (to-do stands): the sources' :wants has the same two
+  ;; earlier writers, and :wants already has a declared writer
+  ;; (:flight-click-wants), so declaring flight-assembly-input's write would
+  ;; be a second declared writer of the key
   {:box/id :construction-assemble-one :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one"}
-   :reads [:interpretations]}
+   :reads [:interpretations :universes]}
   {:box/id :construction-construct :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
    :reads [:interpretations]}
@@ -736,7 +760,16 @@
  ;; (standing, H3's reason), other records' keys at the two new sites (six),
  ;; :interpretations at enact-fn/run-flight! (the store's :patterns under an
  ;; option key), at cascade-lane/cascade-decision-admitted (the problem's own
- ;; key) and in four tests. 248 -> 263 (3 to-do, 260 standing). :kind :to-do is the
+ ;; key) and in four tests. 248 -> 263 (3 to-do, 260 standing). WM-HANDOFF-H5-I
+ ;; (futon2 pin unchanged): the target's :universes into construction.
+ ;; :tick-flight-assembly (flight-assembly-input, lane 5) writes it, the one
+ ;; declared writer on the flight's path (cascade_sources/load-declared and
+ ;; mission_hole_wants/merge-into-sources write it earlier in judge,
+ ;; unboxed); :construction-assemble-one reads it. construct does not.
+ ;; H8's :wants not declared (the same two earlier writers, and a second
+ ;; declared writer of :wants). One standing added: :universes at judge
+ ;; (the declared sources' target list). 263 -> 264 (3 to-do, 261
+ ;; standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3200,4 +3233,12 @@
   :rows [8],
   :kind :to-do,
   :note
-  "WM-HANDOFF-H4-I: assemble-one reads the sources' :wants (get-in sources [:wants target]), which flight-assembly-input writes into the assembly (H3); boxing assemble-one for :interpretations reports it now. H8 (the assembly's :sources into assemble-one) declares or annotates it"}]}
+  "WM-HANDOFF-H4-I: assemble-one reads the sources' :wants (get-in sources [:wants target]), which flight-assembly-input writes into the assembly (H3); boxing assemble-one for :interpretations reports it now. H8 (the assembly's :sources into assemble-one) declares or annotates it"}
+ {:finding :occurrence-without-declaration,
+  :field :universes,
+  :site {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
+  :declared-by [],
+  :rows [5],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H5-I: judge reads (keys (:universes cascade-sources)) to list the targets that have a declared source, before the flight's input is merged; a read of the declared sources' key, not of flight-assembly-input's write, reported now because :universes became declared (the prover has no per-record scope)"}]}
