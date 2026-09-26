@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "ac06a830" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "87dfe212" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -233,7 +233,7 @@
    :writes [:status :detail :cast]}
   {:box/id :flight-record-click :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "record-click"}
-   :reads [:kind :status :detail :chosen :cast]}
+   :reads [:kind :status :detail :chosen :cast :failure]}
   ;; WM-CAST-I 1 (futon2 8386955e, 06261af8): the tick's cast in the click. click-cast
   ;; builds the cast http-click-fn puts on the POST body (and returns as
   ;; :cast, read by record-click above); the click endpoint reads the three
@@ -254,7 +254,15 @@
   ;; check refuses it; the prover has no per-field scope)
   {:box/id :flight-record-summary :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "record-summary"}
-   :writes [:chosen]}
+   ;; WM-CLICK-REASON-I (futon2 87dfe212): :failure, why the click closed,
+   ;; read from the run record's :failure. That one is written by the
+   ;; runner (full_loop_runner run-record-failure, into
+   ;; persist-run-record!), not declared: the same key name, and the prover
+   ;; has no per-record scope, so it would be a second writer here
+   :writes [:chosen :failure]}
+  {:box/id :click-reason-test :row 10 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/click_reason_test.clj"}
+   :reads [:failure]}
   {:box/id :flight-click-close-test :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_click_close_test.clj"}
    :reads [:chosen]}
@@ -518,7 +526,15 @@
  ;; field, so no finding is deleted. Twenty standing added: fourteen
  ;; occurrences in run-opportunity-core!, :failure-kind in
  ;; record-system-failure!, five in the test file. 151 -> 171 (2 to-do,
- ;; 169 standing). :kind :to-do is the
+ ;; 169 standing). WM-CLICK-REASON-I (futon2 87dfe212):
+ ;; :flight-record-summary (record-summary) writes :failure, the click's
+ ;; reason, and :flight-record-click (record-click) reads it; test box
+ ;; :click-reason-test. The run record's :failure (persist-run-record!),
+ ;; which record-summary reads, is not declared (the same key name). A new
+ ;; field, so no finding is deleted. Nine standing added: :failure in
+ ;; persist-run-record! and run-opportunity-core!, :error/:failure-kind in
+ ;; record-summary's docstring, five in the test file. 171 -> 180 (2 to-do,
+ ;; 178 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -2067,4 +2083,89 @@
    :rows [9],
    :kind :standing,
    :note
-   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}]}
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :failure,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "persist-run-record!"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the run record's :failure (run-record-failure), which record-summary reads; not declared, the same key name as the click entry's, and the prover has no per-record scope, so it would be a second writer beside :flight-record-summary"}
+  {:finding :occurrence-without-declaration,
+   :field :failure,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the morning brief item's own :failure {:kind :stage :error ...} (existing before this packet), another record; reported now because :failure is a declared field"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "record-summary"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: record-summary's docstring names the close map's :error; its :failure carries the run record's :error under that key, not the generic :error flow"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "record-summary"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: record-summary's docstring names the close map's :failure-kind, the source of :failure's :kind; the var neither reads nor writes it"}
+  {:finding :occurrence-without-declaration,
+   :field :class,
+   :site
+   {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
+   {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/test/futon2/aif/click_reason_test.clj"},
+   :declared-by [],
+   :rows [10],
+   :kind :standing,
+   :note
+   "WM-CLICK-REASON-I: the test builds run records and closes carrying the key (a write position in the test, not a second writer of the field)"}]}

@@ -4,10 +4,11 @@
 ;; Re-pinned by claude-10 at map e2494308 (WM-GATE-REFUSAL-I: :gate-refusal-read reads the gate's :error, G's :r9-judge-refusal-abstention writes :outcome for both; 24/17/45/102 -> 24/17/46/103; :out/error is no longer an unspecified output (the :error is read), :gate-refusal-test takes its place among the outputs; :gate-refuse and :gate-refusal-read join the dead components (their flow ends at the classifier, which no test box reads); :i4 unchanged).
 ;; Re-pinned by claude-10 at map 696b482b (WM-CAST-I: :flight-cast, :click-start, :flight-record-summary and the two test boxes; 24/17/46/103 -> 26/19/49/112; inputs gain :world/flight-cast and :world/flight-record-summary, outputs gain :test/flight-cast-test and :test/flight-click-close-test; :flight-click leaves the dead components (its :cast reaches :flight-cast-test), :flight-cast and :click-start join them (the endpoint's reads end in the runner's opts, which no test box reads); :i4 unchanged).
 ;; Re-pinned by claude-10 at map 7d73f8cb (WM-PHASE-KIND-I, map 0329d403, missed then: the fixture was checked before that map was committed; and WM-CAUSE-ON-RECORD-I: :r9-phase-kind, :phase-kind-test, :r9-close-cause, :r9-finding-store, :r9-finding-cause-read and :failure-cause-record-test; 26/19/49/112 -> 27/21/53/118; :r9-finding-store and :r9-finding-cause-read join the dead components (the stored finding and the reader's return value reach no test box); :i4 unchanged).
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-CLICK-REASON-I: :flight-record-summary writes :failure, :flight-record-click reads it, test box :click-reason-test; 27/21/53/118 -> 27/22/53/120; :test/click-reason-test joins the outputs; dead components unchanged; :i4 unchanged). :map-sha cannot name its own commit, so it is typed absent: the map is the one in this commit.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "7d73f8cb",
+ :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 27, :outputs 21, :components 53, :edges 118},
+ :counts {:inputs 27, :outputs 22, :components 53, :edges 120},
  :validate
  {:all-valid false,
   :checks
