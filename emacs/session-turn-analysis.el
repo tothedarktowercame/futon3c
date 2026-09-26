@@ -299,7 +299,7 @@ An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
           (cons clean t))
       (cons text nil))))
 
-(defcustom session-mode-analysis-agent "kimi-1"
+(defcustom session-mode-analysis-agent "象"
   "Agent id that interprets operator turns, or nil for the receiving agent.
 One delegate across every lane (Joe, 2026-09-23): turn tagging is a
 structure with exactly one producer, and eight seats producing it in
@@ -309,9 +309,24 @@ With nil the structural analysis request rides on the prompt of whichever
 agent Joe is talking to, so the interpretation costs that agent part of its
 turn. Set to an agent id -- \"kimi-2\" -- and the request is dispatched to
 that seat instead as a work bell, leaving the conversation uninterrupted.
-The record is written either way; only who fills it changes."
+The record is written either way; only who fills it changes.
+Default 象 (Joe, 2026-09-26): a Kimi seat reserved for this job, named so
+that no agent mistakes it for a kimi-N available for ordinary dispatch --
+/agents/auto only reclaims ids of the form kimi-N."
   :type '(choice (const :tag "The receiving agent" nil) string)
   :group 'session-mode)
+
+(defcustom session-mode-analysis-reset-every 20
+  "Clear the analysis seat's conversation after this many dispatches.
+Each brief carries the whole instruction, so a fresh conversation is fully
+reseeded by the next dispatch; without the reset the seat's context fills
+one operator turn at a time (Joe, 2026-09-26).  The reset waits for the
+seat to be idle, so it may land a dispatch or two late.  nil never resets."
+  :type '(choice (const :tag "Never" nil) integer)
+  :group 'session-mode)
+
+(defvar session-mode--analysis-dispatch-count 0
+  "Dispatches to the analysis seat since its conversation was last cleared.")
 
 (defcustom session-mode-analysis-sender "agency_send.py"
   "Path to futon3c's agency_send.py, used when delegating the analysis."
@@ -355,6 +370,11 @@ answer is \"still running\" and nothing is written."
   (expand-file-name "../scripts/turn_dispatch_reap.py"
                     (file-name-directory (or load-file-name buffer-file-name)))
   "Asks what became of a dispatched analysis, beside the analysis tool.")
+
+(defconst session-mode--seat-resetter
+  (expand-file-name "../scripts/reset_seat_if_idle.py"
+                    (file-name-directory (or load-file-name buffer-file-name)))
+  "Clears the analysis seat's conversation when it is idle.")
 
 (defun session-mode--record-dispatch-job (path job-id)
   "Note on the record at PATH that its dispatch created JOB-ID."
@@ -514,6 +534,10 @@ state -- never silently complete."
                ;; from a seat that was merely busy. Record the job the bell
                ;; created, then look at what became of it.
                (let ((out (with-current-buffer (process-buffer proc) (buffer-string))))
+                 (if (string-match-p "^reset$" out)
+                     (setq session-mode--analysis-dispatch-count 1)
+                   (setq session-mode--analysis-dispatch-count
+                         (1+ session-mode--analysis-dispatch-count)))
                  (when (string-match "\"job-id\"[ \t]*:[ \t]*\"\\([^\"]+\\)\"" out)
                    (let ((jid (match-string 1 out)))
                      (session-mode--record-dispatch-job path jid)
@@ -522,7 +546,14 @@ state -- never silently complete."
              (when (buffer-live-p (process-buffer proc))
                (kill-buffer (process-buffer proc)))))
          :command (list "sh" "-c"
-                        (format "printf %%s %s | python3 %s --to %s --from %s --kind bell --type request --mode work"
+                        (format "%sprintf %%s %s | python3 %s --to %s --from %s --kind bell --type request --mode work"
+                                (if (and session-mode-analysis-reset-every
+                                         (>= session-mode--analysis-dispatch-count
+                                             session-mode-analysis-reset-every))
+                                    (format "python3 %s %s; "
+                                            (shell-quote-argument session-mode--seat-resetter)
+                                            (shell-quote-argument agent))
+                                  "")
                                 (shell-quote-argument brief)
                                 (shell-quote-argument session-mode-analysis-sender)
                                 (shell-quote-argument agent)
