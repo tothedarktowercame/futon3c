@@ -1,10 +1,11 @@
 ;; Re-pinned by claude-10 at map e7d11222 (WM-MAP-REPLAY-I: defects G and I declared; 19/16/35/81 -> 19/16/37/88; coverage: :r9-classify-target, :r9-embedding-neighbour and :r9-decision now reach a registered test; :r9-judge-refusal-read and :r9-class-model dead (their output is a return value: judge-refusal's to judge-refusal-sorry, the class model's map to observation_model); :i4 unchanged).
 ;; Re-pinned by claude-10 at map 6d12635e (G amended: :r9-judge-refusal-abstention writes :outcome, :r9-failure-classifier reads :failure-kind/:outcome; 19/16/37/88 -> 21/16/39/91; coverage: both new components dead (the classifier's output is its return value; the abstention's :outcome reaches only the classifier); :i4 unchanged).
 ;; Re-pinned by claude-10 at map c3e0ac23 (WM-MAP-REPLAY-I2: defects A and D and the gate's :error box; 21/16/39/91 -> 24/17/45/102; coverage: the five A/D components dead (no test box reads their fields; their consumers are the flight record and the C8 refusal, return values), :gate-refuse reaches the :error output port; :i4 unchanged).
+;; Re-pinned by claude-10 at map e2494308 (WM-GATE-REFUSAL-I: :gate-refusal-read reads the gate's :error, G's :r9-judge-refusal-abstention writes :outcome for both; 24/17/45/102 -> 24/17/46/103; :out/error is no longer an unspecified output (the :error is read), :gate-refusal-test takes its place among the outputs; :gate-refuse and :gate-refusal-read join the dead components (their flow ends at the classifier, which no test box reads); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "c3e0ac23",
+ :map-sha "e2494308",
  :futon5-sha "aeeee96",
- :counts {:inputs 24, :outputs 17, :components 45, :edges 102},
+ :counts {:inputs 24, :outputs 17, :components 46, :edges 103},
  :validate
  {:all-valid false,
   :checks
@@ -29,12 +30,12 @@
      :c8-registry-get
      :r9-abstention-carrier
      :r6-cascade-lane
-     :r5-grain-gate]}
+     :r5-grain-gate
+     :gate-refuse
+     :gate-refusal-read]}
    {:valid true, :check :no-orphan-inputs, :orphan-inputs []}
    {:valid true, :check :type-safety, :type-errors []}
-   {:valid false,
-    :check :spec-coverage,
-    :unspecified-outputs [:out/error]}
+   {:valid true, :check :spec-coverage, :unspecified-outputs []}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
