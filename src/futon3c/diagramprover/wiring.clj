@@ -325,59 +325,119 @@
 ;; the return positions of a defn are the last form of each body (each arity),
 ;; and, recursively, the branches of a trailing if/if-not/if-let/if-some, the
 ;; results of cond and case, and the last form of a trailing when/when-not/
-;; when-let/when-some/do/let. A map literal bound in a let, passed as an
-;; argument or nested in another form is not in return position.
+;; when-let/when-some/do/let. A map literal passed as an argument, or in a
+;; non-final body form, is not in return position.
+;;
+;; A let that binds a name to a map literal makes that literal reachable: a
+;; return position that is the name, or (assoc|merge|update name ...), or a
+;; -> / cond-> threaded from it, is the literal (`literal-of`). Return
+;; positions are [literal env] pairs, env being the let-bound literals in scope.
+;;
+;; Nested: inside an attributed literal, a value at key :r that is a map literal
+;; (or resolves to a let-bound one by `literal-of`) is attributed to record r
+;; when some box at the site scopes a field to r (:scoped in `site-cfg`), and
+;; only to r; a nested literal under a key no box scopes is not attributed.
 
 (declare return-maps)
 
-(defn- return-maps
-  "The :map nodes in return position of NODE."
-  [node]
+(defn- literal-of
+  "The map literal NODE stands for under ENV: itself, the let-bound literal it
+  names, or the one named as the first argument of assoc/merge/update/->/cond->."
+  [node env]
   (when node
     (case (:kind node)
-      :map [node]
+      :map node
+      :token (get env (:text node))
+      :list (when (#{"assoc" "merge" "update" "->" "cond->"} (head-text node))
+              (literal-of (nth (:children node) 1 nil) env))
+      nil)))
+
+(defn- bind-literals
+  "ENV extended by the name/init pairs of a let binding vector: a name whose
+  init is (or names) a map literal is bound to it; any other rebinding of a
+  name removes it."
+  [env bindings]
+  (if (= :vector (:kind bindings))
+    (reduce (fn [env [sym init]]
+              (if (and sym (= :token (:kind sym)))
+                (if-let [l (literal-of init env)] (assoc env (:text sym) l) (dissoc env (:text sym)))
+                env))
+            env (partition 2 (:children bindings)))
+    env))
+
+(defn- return-maps
+  "The [literal env] pairs in return position of NODE."
+  [node env]
+  (when node
+    (case (:kind node)
+      (:map :token) (when-let [l (literal-of node env)] [[l env]])
       (:list :fn)
       (let [kids (:children node) h (head-text node) n (count kids)
-            branch #(mapcat return-maps (keep (fn [i] (nth kids i nil)) %))]
+            branch #(mapcat (fn [x] (return-maps x env)) (keep (fn [i] (nth kids i nil)) %))]
         (case h
           ("if" "if-not" "if-let" "if-some") (branch [2 3])
-          ("when" "when-not" "when-let" "when-some" "do" "let" "let*")
-          (when (< 1 n) (return-maps (peek kids)))
-          "cond" (mapcat return-maps (map second (partition 2 (rest kids))))
+          ("when" "when-not" "when-let" "when-some" "do") (when (< 1 n) (return-maps (peek kids) env))
+          ("let" "let*") (when (< 2 n) (return-maps (peek kids) (bind-literals env (nth kids 1))))
+          "cond" (mapcat #(return-maps % env) (map second (partition 2 (rest kids))))
           "case" (let [args (drop 2 kids)]
-                   (concat (mapcat return-maps (map second (partition 2 args)))
-                           (when (odd? (count args)) (return-maps (last args)))))
+                   (concat (mapcat #(return-maps % env) (map second (partition 2 args)))
+                           (when (odd? (count args)) (return-maps (last args) env))))
+          ("assoc" "merge" "update" "->" "cond->") (when-let [l (literal-of node env)] [[l env]])
           nil))
       nil)))
 
 (defn- defn-return-maps
-  "The :map nodes in return position of the top-level defn/defn- FORM."
+  "The [literal env] pairs in return position of the top-level defn/defn- FORM."
   [form]
   (when (and (#{:list} (:kind form)) (#{"defn" "defn-"} (head-text form)))
     (let [kids (drop 2 (:children form))
           arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)]
       (if (seq arities)
-        (mapcat #(return-maps (peek (:children %))) arities)
+        (mapcat #(return-maps (peek (:children %)) {}) arities)
         (let [after-params (rest (drop-while #(not= :vector (:kind %)) kids))]
-          (when (seq after-params) (return-maps (last after-params))))))))
+          (when (seq after-params) (return-maps (last after-params) {})))))))
 
-(defn- returned-map-starts
-  "Start offsets of the map literals in return position of every top-level
-  defn in FORMS."
-  [forms]
-  (set (map :start (mapcat defn-return-maps forms))))
+(defn- key->record [k]
+  (when (and (= :token (:kind k)) (str/starts-with? (str (:text k)) ":"))
+    (keyword (subs (:text k) 1))))
+
+(defn- expand-owners
+  "ACC (start -> #{records}) with LITERAL owned by OWNERS, and, recursively, the
+  literals under its keys that name a scoped record (each owned by that record
+  alone)."
+  [acc literal env owners scoped]
+  (let [acc (update acc (:start literal) (fnil into #{}) owners)]
+    (reduce (fn [acc [k v]]
+              (let [r (key->record k)
+                    l (when (and r (scoped r)) (literal-of v env))]
+                (if (and l (not (contains? (get acc (:start l) #{}) r)))
+                  (expand-owners acc l env #{r} scoped)
+                  acc)))
+            acc (partition 2 (:children literal)))))
+
+(defn- owner-map
+  "start offset -> #{records} for every map literal whose keys count as writes
+  of a record: the literals in return position (owned by the site's
+  :returns-record records) and the scoped literals nested under them."
+  [forms {:keys [returns scoped]}]
+  (reduce (fn [acc form]
+            (reduce (fn [acc [l env]] (expand-owners acc l env returns (or scoped #{})))
+                    acc (defn-return-maps form)))
+          {} forms))
 
 (defn- site-cfg
   "What a site's boxes say about naming a record in its text: :aliases
   {record #{receiver-symbol ...}} from :record-aliases {:flight [\"f\" \"fl\"]},
-  and :returns #{record ...} from :returns-record. Read from every box that
+  :returns #{record ...} from :returns-record, and :scoped #{record ...} (the
+  records some box at the site scopes a field to). Read from every box that
   shares the site, because the aliases are names in that site's text."
   [boxes]
   {:aliases (reduce (fn [m b]
                       (reduce (fn [m [r names]] (update m r (fnil into #{}) names))
                               m (:record-aliases b)))
                     {} boxes)
-   :returns (set (keep :returns-record boxes))})
+   :returns (set (keep :returns-record boxes))
+   :scoped (set (keep vertex-record (mapcat #(concat (entries % :reads) (entries % :writes)) boxes)))})
 
 (defn- attributed-records
   "Of CANDIDATES (record keywords), those the occurrence of a field key names.
@@ -389,11 +449,12 @@
    * a keyword call on such a receiver: (:target flight), where the receiver is
      the record's name or one of the site's declared :record-aliases;
    * the key of a map literal in return position of a site whose box declares
-     :returns-record r (see `return-maps`).
+     :returns-record r (see `return-maps`), or a scoped literal nested under
+     it or under a let-bound literal it returns (see `owner-map`).
   Textual and heuristic like `classify-keyword`; a receiver threaded through
   -> is not seen (the path form still is). PARENT/IDX/GRAND/GIDX are the
   occurrence's enclosing node, its index there, and that node's parent; CFG is
-  {:aliases :returns :returned-starts} (see `site-cfg`)."
+  {:aliases :returns :scoped :owners} (see `site-cfg`, `owner-map`)."
   [parent idx grand gidx candidates cfg]
   (let [gh (when (and grand (#{:list :fn} (:kind grand))) (head-text grand))
         ph (when (and parent (#{:list :fn} (:kind parent))) (head-text parent))]
@@ -408,8 +469,7 @@
                           (contains? (conj (get (:aliases cfg) r #{}) rname)
                                      (token-text (nth (:children parent) 1 nil))))
                      (and (= :map (:kind parent)) (even? idx)
-                          (contains? (:returns cfg) r)
-                          (contains? (:returned-starts cfg) (:start parent))))]
+                          (contains? (get (:owners cfg) (:start parent) #{}) r)))]
        r))))
 
 (defn- field-usage*
@@ -426,7 +486,7 @@
         uses (volatile! [])
         token-hits (volatile! 0)
         forms (:forms (parse-forms text))
-        cfg (assoc cfg :returned-starts (when (seq (:returns cfg)) (returned-map-starts forms)))
+        cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms cfg)))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)

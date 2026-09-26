@@ -225,3 +225,84 @@
           (is (= 2 (:writes (u :resolve :writes))) "the scope's two returned-map writes")
           (is (= {:reads 1 :writes 0 :unclassified 0} (u :other :reads))
               "the unscoped :target keeps (:target issued) and loses the two attributed map keys"))))))
+
+;; ---------------------------------------------------------------------------
+;; WM-PROVER-NESTED-LITERAL-I: a let-bound literal returned by name, and a
+;; nested literal under a record key.
+
+(defn- writes-by-vertex
+  "{vertex :writes-count} for the :writes entries of the boxes over FILES."
+  [files boxes]
+  (with-root files
+    (fn [root]
+      (into {} (for [u (wiring/usage root {:spec/id :t :boxes boxes}) :when (= :writes (:role u))]
+                 [[(:box/id u) (:field u)] (:writes (:usage u))])))))
+
+(defn- wbox [id writes & [extra]]
+  (merge {:box/id id :box/kind :component :reads [] :writes writes :site {:file "a.clj"}} extra))
+
+(deftest a-let-bound-literal-returned-by-name-is-in-return-position
+  (let [w (fn [src] (get (writes-by-vertex {"a.clj" src}
+                                           [(wbox :w [[:target {:record :flight}]] {:returns-record :flight})])
+                         [:w [:target :flight]]))]
+    (testing "the name itself, and each of assoc / merge / update / -> / cond-> threaded from it"
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] m))")))
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (assoc m :k 1)))")))
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (merge m {:z 1})))")))
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (update m :k inc)))")))
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (-> m (assoc :k 1) (dissoc :z))))")))
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (cond-> m x (assoc :k 1))))"))))
+    (testing "through nested lets and a cond branch"
+      (is (= 1 (w "(defn f [x] (let [m {:target x}] (let [n (count x)] (if n m nil))))"))))
+    (testing "a let-bound literal whose name is not returned is not attributed"
+      (is (= 0 (w "(defn f [x] (let [m {:target x}] (count m)))")))
+      (is (= 0 (w "(defn f [x] (let [m {:target x} n {:k 1}] n))")) "another name is returned")
+      (is (= 0 (w "(defn f [x] (let [m {:target x} m (inc 1)] m))")) "the name is rebound to a non-literal"))))
+
+(def assemble-one-src
+  (str "(defn assemble-one [sources target]\n"
+       "  (let [want (get-in sources [:wants target])\n"
+       "        base-problem {:facts 1\n"
+       "                      :want (vec want)\n"
+       "                      :cascade-spec {:want (set want) :lam 2}\n"
+       "                      :other {:want 9}}]\n"
+       "    (cond (nil? want) {:refused true}\n"
+       "          :else {:target target\n"
+       "                 :cascade-problem (assoc base-problem :precedences [])})))"))
+
+(deftest the-assemble-one-shape-attributes-the-nested-want-to-cascade-spec
+  (let [boxes [(wbox :w [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]
+                         [:want {:record :result}]]
+                     {:returns-record :result})]
+        u (writes-by-vertex {"a.clj" assemble-one-src} boxes)]
+    (is (= 1 (get u [:w [:want :cascade-spec]])) "the :want inside :cascade-spec {...}")
+    (is (= 1 (get u [:w [:want :cascade-problem]]))
+        "base-problem's own :want, reached as the value of :cascade-problem (assoc base-problem ...)")
+    (is (= 0 (get u [:w [:want :result]])) "the returned literal has no :want key of its own")))
+
+(deftest a-nested-literal-goes-to-its-key-record-and-only-that-one
+  (let [both [(wbox :w [[:want {:record :cascade-spec}] [:want {:record :flight}]]
+                    {:returns-record :flight})]]
+    (testing "the nested :want is the inner record's, not the outer one's"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] {:outer 1 :cascade-spec {:want x}})"} both)]
+        (is (= 1 (get u [:w [:want :cascade-spec]])))
+        (is (= 0 (get u [:w [:want :flight]])))))
+    (testing "the outer literal's own :want is the outer record's alone"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] {:want x :cascade-spec {:want x}})"} both)]
+        (is (= 1 (get u [:w [:want :cascade-spec]])))
+        (is (= 1 (get u [:w [:want :flight]])))))
+    (testing "a nested literal under a key no box scopes is not attributed"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] {:other {:want x}})"}
+                                [(wbox :w [[:want {:record :flight}]] {:returns-record :flight})])]
+        (is (= 0 (get u [:w [:want :flight]])))))
+    (testing "a nested literal outside any attributed literal is not attributed"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] (log! {:cascade-spec {:want x}}) (count x))"} both)]
+        (is (= 0 (get u [:w [:want :cascade-spec]])))))
+    (testing "without :returns-record nothing is attributed"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] {:cascade-spec {:want x}})"}
+                                [(wbox :w [[:want {:record :cascade-spec}]])])]
+        (is (= 0 (get u [:w [:want :cascade-spec]])))))
+    (testing "a literal that could reach itself terminates"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [x] (let [m {:cascade-spec {:want x}}] (let [m {:cascade-spec m}] m)))"}
+                                [(wbox :w [[:want {:record :cascade-spec}]] {:returns-record :flight})])]
+        (is (number? (get u [:w [:want :cascade-spec]])))))))
