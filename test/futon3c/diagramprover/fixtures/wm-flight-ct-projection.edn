@@ -11,21 +11,26 @@
 ;; Re-pinned by claude-10 at map 8f2c3f50 (step 12: observe-publication-fn built and the declared writer of :publication-observed; edges 68->69; :i4 unchanged).
 ;; Re-pinned by claude-10 at map ccf883aa (step 14: :r4-coapply added, :descent/:units declared; edges 69->75; coverage: :r4-coapply dead (positional only), :r4-constructor now reaches an output; :i4 unchanged).
 ;; Re-pinned by claude-10 at map 50a68ccf (WM-CLICK-REFUSAL-I: :r9-judge-refusal, :r9-abstention-carrier and their test box; 15/14/31/75 -> 16/15/33/78; coverage: :r9-abstention-carrier dead (reads only, feeds the run record's typed carrier); :i4 unchanged).
+;; Re-pinned by claude-10 at map 69d111a8 (WM-RELATION-I: :r9-classify-target, :r9-embedding-neighbour and their test box; 16/15/33/78 -> 19/16/35/81; coverage: both new components dead (their output is the class, read positionally by the war machine); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "50a68ccf",
+ :map-sha "69d111a8",
  :futon5-sha "aeeee96",
- :counts {:inputs 16, :outputs 15, :components 33, :edges 78},
+ :counts {:inputs 19, :outputs 16, :components 35, :edges 81},
  :validate
  {:all-valid false,
   :checks
-  [{:valid true, :check :completeness, :unreachable-outputs []}
+  [{:valid false,
+    :check :completeness,
+    :unreachable-outputs [:test/r9-relation-test]}
    {:valid false,
     :check :coverage,
     :dead-components
     [:r2-flight-read
+     :r9-embedding-neighbour
      :r4-coapply
      :r11-warrants
      :r9-decision
+     :r9-classify-target
      :r3-prompt
      :r4-order-use
      :r2-verifier
