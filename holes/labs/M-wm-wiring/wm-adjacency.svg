@@ -1,7 +1,7 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='1298' height='1318' viewBox='0 0 1298 1318' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <rect width='1298' height='1318' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c dd0c145f; 98 boxes, 111 wires in 88 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 3597ba36; 98 boxes, 112 wires in 89 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>r1-target-field</text>
@@ -269,6 +269,7 @@
 <rect x='1093' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-flight-call → r7-call-test: wc</title></rect>
 <rect x='664' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
 <rect x='1137' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
+<rect x='554' y='553' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>tick-flight-assembly → construction-assemble-one: universes</title></rect>
 <rect x='620' y='608' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
 <rect x='1027' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-increment: attempts</title></rect>
 <rect x='1236' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
@@ -330,5 +331,5 @@
 <rect x='884' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
 <rect x='235' y='1048' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
 <rect x='917' y='817' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
-<text x='16' y='1306' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): 6 Rates (A). Weakly connected components among non-test boxes: 23 (sizes 26, 5, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1).</text>
+<text x='16' y='1306' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): 6 Rates (A). Weakly connected components among non-test boxes: 22 (sizes 26, 8, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1).</text>
 </svg>
