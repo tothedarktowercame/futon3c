@@ -387,7 +387,8 @@ def summarise(name, record, analysis):
 
 def write_session_log(a, written):
     """A log for one agent's turns that appends without a reload."""
-    mine = [(n, r, x) for n, r, x in written if r.get("agent_id") == a.agent]
+    mine = [(n, r, x) for n, r, x in written
+            if a.agent == "all" or r.get("agent_id") == a.agent]
     mine.sort(key=lambda w: w[1].get("created_at", ""), reverse=True)
     rows = [summarise(n, r, x) for n, r, x in mine]
 
@@ -434,7 +435,8 @@ def main():
     ap.add_argument("--records-dir", default=DEFAULT_RECORDS)
     ap.add_argument("--agent", metavar="AGENT_ID",
                     help="also write a live session log for this agent: "
-                         "session-<agent>.html plus the manifest it polls")
+                         "session-<agent>.html plus the manifest it polls; "
+                         "'all' covers every agent's turns")
     ap.add_argument("--poll", type=int, default=10, metavar="SECONDS",
                     help="how often the session log asks for the manifest")
     a = ap.parse_args()
@@ -446,7 +448,10 @@ def main():
         if a.agent:
             # The latest N of THIS agent's turns: counted across all agents,
             # one busy agent's turns push another's out of its own feed.
-            every = [p for p in every if agent_of(p) == a.agent]
+            # "all" is every buffer: capture is on in all of them by default
+            # since 2026-09-26, so one feed covers the operator's whole day.
+            if a.agent != "all":
+                every = [p for p in every if agent_of(p) == a.agent]
         paths += sorted(every, key=os.path.getmtime)[-a.latest:]
     if not paths:
         sys.exit("turn_margin_html: no records (pass paths or --latest N)")
