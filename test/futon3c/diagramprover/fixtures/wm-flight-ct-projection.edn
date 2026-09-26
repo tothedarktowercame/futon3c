@@ -3,10 +3,11 @@
 ;; Re-pinned by claude-10 at map c3e0ac23 (WM-MAP-REPLAY-I2: defects A and D and the gate's :error box; 21/16/39/91 -> 24/17/45/102; coverage: the five A/D components dead (no test box reads their fields; their consumers are the flight record and the C8 refusal, return values), :gate-refuse reaches the :error output port; :i4 unchanged).
 ;; Re-pinned by claude-10 at map e2494308 (WM-GATE-REFUSAL-I: :gate-refusal-read reads the gate's :error, G's :r9-judge-refusal-abstention writes :outcome for both; 24/17/45/102 -> 24/17/46/103; :out/error is no longer an unspecified output (the :error is read), :gate-refusal-test takes its place among the outputs; :gate-refuse and :gate-refusal-read join the dead components (their flow ends at the classifier, which no test box reads); :i4 unchanged).
 ;; Re-pinned by claude-10 at map 696b482b (WM-CAST-I: :flight-cast, :click-start, :flight-record-summary and the two test boxes; 24/17/46/103 -> 26/19/49/112; inputs gain :world/flight-cast and :world/flight-record-summary, outputs gain :test/flight-cast-test and :test/flight-click-close-test; :flight-click leaves the dead components (its :cast reaches :flight-cast-test), :flight-cast and :click-start join them (the endpoint's reads end in the runner's opts, which no test box reads); :i4 unchanged).
+;; Re-pinned by claude-10 at map 7d73f8cb (WM-PHASE-KIND-I, map 0329d403, missed then: the fixture was checked before that map was committed; and WM-CAUSE-ON-RECORD-I: :r9-phase-kind, :phase-kind-test, :r9-close-cause, :r9-finding-store, :r9-finding-cause-read and :failure-cause-record-test; 26/19/49/112 -> 27/21/53/118; :r9-finding-store and :r9-finding-cause-read join the dead components (the stored finding and the reader's return value reach no test box); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "696b482b",
+ :map-sha "7d73f8cb",
  :futon5-sha "aeeee96",
- :counts {:inputs 26, :outputs 19, :components 49, :edges 112},
+ :counts {:inputs 27, :outputs 21, :components 53, :edges 118},
  :validate
  {:all-valid false,
   :checks
@@ -16,6 +17,7 @@
     :dead-components
     [:r9-judge-refusal-read
      :click-start
+     :r9-finding-cause-read
      :c8-entry
      :r2-flight-read
      :r4-coapply
@@ -27,6 +29,7 @@
      :r9-judge-refusal-abstention
      :r3-prompt
      :r4-order-use
+     :r9-finding-store
      :r2-verifier
      :flight-cast
      :c8-registry-get
