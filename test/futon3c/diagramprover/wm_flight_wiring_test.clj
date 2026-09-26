@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "02c4f4ccbb535d41fa428655d7b53c47976b10b29302b6b586f598bcf030aaa5")
-(def repos {"futon2" "5c6acc21" "futon3c" "58f1a8cb"})
+(def map-sha256 "2265d560657c0bbf8cde27627e562510a05f5769ede6e32e344b6232a25191fe")
+(def repos {"futon2" "82816ccc" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")

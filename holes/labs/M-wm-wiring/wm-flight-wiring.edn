@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "5c6acc21" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "82816ccc" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -628,7 +628,10 @@
    ;; emitted decision — the measured-A version (sourced-rates over each
    ;; problem's :locators, target-qualified), or the typed absence; write
    ;; only, the scoring is untouched; the reader comes with F1b
-   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class :measured-a]}
+   ;; F1b-admit-I (futon2 82816ccc): reads judge's :conditioning-steps and
+   ;; records each candidate's admitted prefix on the token-belief input
+   ;; ((assoc token-belief-input :policy-prefixes ...)), after scoring
+   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -638,6 +641,13 @@
   {:box/id :r7-fold-source :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_fold_source.clj" :var "increment-receipts"}
    :reads [:increment]}
+  ;; F1b-admit-I (futon2 82816ccc): the tick reads the flights' conditioning
+  ;; steps back from the same flight records ((:step enactment-entry)); judge
+  ;; hands them on as :conditioning-steps; admission is per candidate in
+  ;; policy-prefix-admission, recorded by :r9-decision
+  {:box/id :flight-steps-source :box/kind :component
+   :site {:file "futon2/src/futon2/aif/enactment_fold_source.clj" :var "conditioning-steps"}
+   :reads [[:step {:record :enactment-entry}]]}
   {:box/id :r7-fold-call :row 7 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge"}
    ;; WM-NODE-R3-I: judge reads the R3 driver record's :driver ((:driver
@@ -670,7 +680,7 @@
    ;; ((prediction-member prediction :mean)), which no rule attributes
    :reads [[:driver {:record :r3d-driver}] [:belief {:record :morning-brief-fold}]
            [:mu-post {:record :trace}] [:horizon-steps {:record :depth-anticipation}]]
-   :writes [:enactment-fold :carried-mu-post :loop-belief :channel-prediction]
+   :writes [:enactment-fold :carried-mu-post :loop-belief :channel-prediction :conditioning-steps]
    :passes [{:value :carried-mu-post
              :from {:keyed-read [:mu-post :trace]}
              :to {:call "belief/reconcile-belief-carry" :arg 2 :callee-box :r1-belief-carry}}
@@ -1359,11 +1369,21 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :written-never-read,
-   :field [:step :enactment-entry],
-   :writers [:flight-run],
+   :field [:policy-prefixes :token-belief-input],
+   :writers [:r9-decision],
    :kind :to-do,
    :note
-   "F1b-join-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 5c6acc21): run! binds the conditioning step (SPEC-F s1's six fields, exact-update's q, -ln P(o)) on the enactment entry. Its reader is F1b-admit-I (the tick's admission into :observation-updates), not built; this entry goes when that reader is declared"}
+   "F1b-admit-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 82816ccc): the tick records each candidate's admitted observed prefix on the token-belief input. Its reader is F1c-I (production-ranked consuming it), not built; this entry goes when that reader is declared"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/src/futon2/aif/enactment_fold_source.clj",
+    :var "conditioning-steps"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "F1b-admit-I: in the flight-steps reader's own var, the unreadable record's diagnostic (:reason :unparseable :message), as increment-receipts beside it carries; not the declared flow"}
   {:finding :written-never-read,
    :field [:observation :enactment-entry],
    :writers [:flight-run],
