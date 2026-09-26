@@ -83,7 +83,7 @@
     :sha256
     "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa",
     :why
-    "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); construction metadata wrongly says :hand-admitted. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input.",
+    "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); historical construction metadata predates the nested-receipt fix. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input.",
     :writer-path
     [:decision
      :selection-certificate
@@ -100,7 +100,7 @@
    :test
    futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/the-observed-handoff,
    :note
-   "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry. Separate existing defect: :construction merges a nonexistent outer receipt and says :hand-admitted."}
+   "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry."}
   {:wire [:dispatch :clock-in :mission-id],
    :status :witnessed-hermetically,
    :test
