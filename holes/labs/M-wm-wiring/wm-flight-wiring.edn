@@ -215,7 +215,32 @@
    :writes [:weighted-error]}
   {:box/id :r3-aggregate-driver :box/kind :component
    :site {:file "futon2/src/futon2/aif/belief.clj" :var "r3d-aggregate-driver"}
-   :reads [:weighted-error]}
+   ;; WM-NODE-R3-I (WM-SUPERSET-D section 4): returns the typed driver
+   ;; record, (assoc base :status :present :driver ...) in its cond
+   ;; branches; :driver scoped to that record (:r3d-driver), read by judge
+   :returns-record :r3d-driver
+   :reads [:weighted-error] :writes [[:driver {:record :r3d-driver}]]}
+  ;; WM-NODE-R3-I: R3's update and the morning-brief fold.
+  ;; r3-apply-belief-events (war_machine/apply-arena-belief-events) forwards
+  ;; belief-state and events positionally to belief/update-belief-batch; no
+  ;; keyed field at either end (the belief's entity ids are read under a
+  ;; variable key), so none is declared. morning-brief-fold
+  ;; (war_machine/apply-morning-brief-events) returns {:belief ... :applied
+  ;; ... :held ... :consumed-ids ...}; its :belief (scoped to the fold) is
+  ;; read by judge as (:belief morning-brief-fold), E1's keyed hop b.
+  ;; R3a -> R3 (eps) is a composition through R7 (:error into
+  ;; weighted-error, :weighted-error into the driver); the join credits no
+  ;; composition, so it stays on the record as such. E1 (R1 -> R3) and E2
+  ;; (R3 -> R1) are R1's packet: E2's :passes, (:mu-post prev-trace-record)
+  ;; into belief/reconcile-belief-carry arg 2, needs its callee box
+  ;; r1-belief-carry (WM-SUPERSET-D section 5), which does not exist yet;
+  ;; E1's sits on R1's box too
+  {:box/id :r3-apply-belief-events :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-arena-belief-events"}}
+  {:box/id :morning-brief-fold :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "apply-morning-brief-events"}
+   :returns-record :morning-brief-fold
+   :writes [[:belief {:record :morning-brief-fold}]]}
   ;; WM-HANDOFF-H3-I (WM-HANDOFFS-D H3): the wants carry C, the read
   ;; criteria, from the flight into the tick. flight/click-wants (a defn)
   ;; builds {:wants :source :locators :universe} from the want source's
@@ -480,6 +505,12 @@
    :reads [:increment]}
   {:box/id :r7-fold-call :row 7 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge"}
+   ;; WM-NODE-R3-I: judge reads the R3 driver record's :driver ((:driver
+   ;; driver-record), alias driver-record) and the morning-brief fold's
+   ;; :belief ((:belief morning-brief-fold), the receiver named for the
+   ;; record)
+   :record-aliases {:r3d-driver ["driver-record"]}
+   :reads [[:driver {:record :r3d-driver}] [:belief {:record :morning-brief-fold}]]
    :writes [:enactment-fold]}
   {:box/id :habit-fold-call-test :row 7 :box/kind :test
    :site {:file "futon2/test/futon2/report/habit_fold_call_test.clj"}
@@ -1065,7 +1096,16 @@
  ;; :fpi-policy-free-energy ({:keys [... rates]}); the two positional
  ;; hops after it have no :passes provenance. Ten standing added, all
  ;; other records' keys at the new sites or keys newly declared. 284 -> 294
- ;; (2 to-do, 292 standing). :kind :to-do is the
+ ;; (2 to-do, 292 standing). WM-NODE-R3-I (WM-SUPERSET-D section 4):
+ ;; :r3-aggregate-driver :returns-record :r3d-driver writes [:driver
+ ;; {:record :r3d-driver}], read by judge (:r7-fold-call, alias
+ ;; driver-record); new :r3-apply-belief-events (no keyed field) and
+ ;; :morning-brief-fold (writes [:belief {:record :morning-brief-fold}],
+ ;; read by judge). R3a -> R3 is a composition through R7, uncredited by the
+ ;; join; E1/E2 wait for R1's boxes. No finding added (both scoped wires
+ ;; attributed at both ends; a wrong alias and a missing :returns-record
+ ;; each give :declaration-without-occurrence, checked). 294 unchanged (2
+ ;; to-do, 292 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
