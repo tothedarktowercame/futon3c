@@ -1,7 +1,7 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='1650' height='1670' viewBox='0 0 1650 1670' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
-<rect width='1650' height='1670' fill='white'/>
+<svg xmlns='http://www.w3.org/2000/svg' width='1661' height='1681' viewBox='0 0 1661 1681' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
+<rect width='1661' height='1681' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 54f7e7cd; 130 boxes, 173 wires in 138 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 775aaa6d; 131 boxes, 173 wires in 137 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-plan</text>
@@ -236,86 +236,87 @@
 <text x='1463' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1463 196)'>habit-fold-call-test</text>
 <text x='186' y='1484' font-size='6.5' text-anchor='end' fill='#8a8a84'>r10-test</text>
 <text x='1474' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1474 196)'>r10-test</text>
-<text x='186' y='1495' font-size='6.5' text-anchor='end' fill='#1d3a38'>click-start</text>
-<text x='1485' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1485 196)'>click-start</text>
-<text x='186' y='1506' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-cast</text>
-<text x='1496' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1496 196)'>flight-cast</text>
-<text x='186' y='1517' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-click</text>
-<text x='1507' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1507 196)'>flight-click</text>
-<text x='186' y='1528' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-conditioning-step</text>
-<text x='1518' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1518 196)'>flight-conditioning-step</text>
-<text x='186' y='1539' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-summary</text>
-<text x='1529' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1529 196)'>flight-record-summary</text>
-<text x='186' y='1550' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-click</text>
-<text x='1540' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1540 196)'>flight-record-click</text>
-<text x='186' y='1561' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-run</text>
-<text x='1551' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1551 196)'>flight-run</text>
-<text x='186' y='1572' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-driver-summary</text>
-<text x='1562' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1562 196)'>flight-driver-summary</text>
-<text x='186' y='1583' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-judge-opts</text>
-<text x='1573' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1573 196)'>flight-judge-opts</text>
-<text x='186' y='1594' font-size='6.5' text-anchor='end' fill='#1d3a38'>r11-warrants</text>
-<text x='1584' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1584 196)'>r11-warrants</text>
-<text x='186' y='1605' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-cast-test</text>
-<text x='1595' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1595 196)'>flight-cast-test</text>
-<text x='186' y='1616' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-click-close-test</text>
-<text x='1606' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1606 196)'>flight-click-close-test</text>
-<text x='186' y='1627' font-size='6.5' text-anchor='end' fill='#8a8a84'>click-reason-test</text>
-<text x='1617' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1617 196)'>click-reason-test</text>
+<text x='186' y='1495' font-size='6.5' text-anchor='end' fill='#1d3a38'>run-chosen-summary</text>
+<text x='1485' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1485 196)'>run-chosen-summary</text>
+<text x='186' y='1506' font-size='6.5' text-anchor='end' fill='#1d3a38'>click-start</text>
+<text x='1496' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1496 196)'>click-start</text>
+<text x='186' y='1517' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-cast</text>
+<text x='1507' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1507 196)'>flight-cast</text>
+<text x='186' y='1528' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-click</text>
+<text x='1518' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1518 196)'>flight-click</text>
+<text x='186' y='1539' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-conditioning-step</text>
+<text x='1529' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1529 196)'>flight-conditioning-step</text>
+<text x='186' y='1550' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-summary</text>
+<text x='1540' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1540 196)'>flight-record-summary</text>
+<text x='186' y='1561' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-click</text>
+<text x='1551' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1551 196)'>flight-record-click</text>
+<text x='186' y='1572' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-run</text>
+<text x='1562' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1562 196)'>flight-run</text>
+<text x='186' y='1583' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-driver-summary</text>
+<text x='1573' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1573 196)'>flight-driver-summary</text>
+<text x='186' y='1594' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-judge-opts</text>
+<text x='1584' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1584 196)'>flight-judge-opts</text>
+<text x='186' y='1605' font-size='6.5' text-anchor='end' fill='#1d3a38'>r11-warrants</text>
+<text x='1595' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1595 196)'>r11-warrants</text>
+<text x='186' y='1616' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-cast-test</text>
+<text x='1606' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1606 196)'>flight-cast-test</text>
+<text x='186' y='1627' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-click-close-test</text>
+<text x='1617' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1617 196)'>flight-click-close-test</text>
+<text x='186' y='1638' font-size='6.5' text-anchor='end' fill='#8a8a84'>click-reason-test</text>
+<text x='1628' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1628 196)'>click-reason-test</text>
 <rect x='190' y='200' width='121' height='121' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='190' y1='200' x2='190' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='200' x2='1620' y2='200' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='200' x2='190' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='200' x2='1631' y2='200' stroke='#7f9391' stroke-width='0.8'/>
 <text x='192' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 192 70)'>1 Loop entry, target field</text>
 <rect x='311' y='321' width='22' height='22' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='311' y1='200' x2='311' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='321' x2='1620' y2='321' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='311' y1='200' x2='311' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='321' x2='1631' y2='321' stroke='#7f9391' stroke-width='0.8'/>
 <text x='313' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 313 70)'>2 Dispatch, clock-in</text>
 <rect x='333' y='343' width='110' height='110' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='333' y1='200' x2='333' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='343' x2='1620' y2='343' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='333' y1='200' x2='333' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='343' x2='1631' y2='343' stroke='#7f9391' stroke-width='0.8'/>
 <text x='335' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 335 70)'>3 Read step (C)</text>
 <rect x='443' y='453' width='132' height='132' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='443' y1='200' x2='443' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='453' x2='1620' y2='453' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='443' y1='200' x2='443' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='453' x2='1631' y2='453' stroke='#7f9391' stroke-width='0.8'/>
 <text x='445' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 445 70)'>4 Ask step (interpretation)</text>
 <rect x='575' y='585' width='275' height='275' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='575' y1='200' x2='575' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='585' x2='1620' y2='585' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='575' y1='200' x2='575' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='585' x2='1631' y2='585' stroke='#7f9391' stroke-width='0.8'/>
 <text x='577' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 577 70)'>5 Construction, order</text>
 <rect x='850' y='860' width='66' height='66' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='850' y1='200' x2='850' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='860' x2='1620' y2='860' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='850' y1='200' x2='850' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='860' x2='1631' y2='860' stroke='#7f9391' stroke-width='0.8'/>
 <text x='852' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 852 70)'>6 Rates (A)</text>
 <rect x='916' y='926' width='198' height='198' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='916' y1='200' x2='916' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='926' x2='1620' y2='926' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='916' y1='200' x2='916' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='926' x2='1631' y2='926' stroke='#7f9391' stroke-width='0.8'/>
 <text x='918' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 918 70)'>7a Selection, decision, regist</text>
 <rect x='1114' y='1124' width='176' height='176' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='1114' y1='200' x2='1114' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='1124' x2='1620' y2='1124' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='1114' y1='200' x2='1114' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1124' x2='1631' y2='1124' stroke='#7f9391' stroke-width='0.8'/>
 <text x='1116' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1116 70)'>7b Selection: refusals, failur</text>
 <rect x='1290' y='1300' width='66' height='66' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='1290' y1='200' x2='1290' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='1300' x2='1620' y2='1300' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='1290' y1='200' x2='1290' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1300' x2='1631' y2='1300' stroke='#7f9391' stroke-width='0.8'/>
 <text x='1292' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1292 70)'>8 Grain gate, enactment, W_c</text>
 <rect x='1356' y='1366' width='121' height='121' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='1356' y1='200' x2='1356' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='1366' x2='1620' y2='1366' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='1356' y1='200' x2='1356' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1366' x2='1631' y2='1366' stroke='#7f9391' stroke-width='0.8'/>
 <text x='1358' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1358 70)'>9 Habit (E), publish</text>
-<rect x='1477' y='1487' width='143' height='143' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='1477' y1='200' x2='1477' y2='1630' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='1487' x2='1620' y2='1487' stroke='#7f9391' stroke-width='0.8'/>
+<rect x='1477' y='1487' width='154' height='154' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='1477' y1='200' x2='1477' y2='1641' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1487' x2='1631' y2='1487' stroke='#7f9391' stroke-width='0.8'/>
 <text x='1479' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1479 70)'>10 Click, flight record</text>
 <rect x='730' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → tick-flight-assembly: target@flight</title></rect>
 <rect x='961' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-kernel → r8-selection-candidate: controller-score</title></rect>
-<rect x='1533' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-record-click: kind</title></rect>
+<rect x='1544' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-record-click: kind</title></rect>
 <rect x='1313' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → r0-enact-step: target@flight</title></rect>
-<rect x='1566' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-judge-opts: target@flight</title></rect>
+<rect x='1577' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-judge-opts: target@flight</title></rect>
 <rect x='961' y='960' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-f-prefix-supply → r8-selection-candidate: f-prefix@ranked-entry</title></rect>
-<rect x='1533' y='1510' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click → flight-record-click: cast detail status</title></rect>
+<rect x='1544' y='1521' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click → flight-record-click: cast detail status</title></rect>
 <rect x='290' y='256' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r8-overlap → r8-test: pair-overlap</title></rect>
 <rect x='917' y='938' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-embedding-neighbour → r9-classify-target: derived-via</title></rect>
-<rect x='994' y='1510' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>flight-click → r9-measured-a-version: status</title></rect>
 <rect x='609' y='1411' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r3a-channel-prediction-error: channel-prediction</title></rect>
 <rect x='1412' y='1389' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-fold → r7-selection: enactment-records</title></rect>
 <rect x='1368' y='1334' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>wc-checker → r7-increment: wc-verdict</title></rect>
@@ -330,9 +331,9 @@
 <rect x='1434' y='1378' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-call-test: delta wc-failures</title></rect>
 <rect x='730' y='487' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → tick-flight-assembly: universe wants</title></rect>
 <rect x='774' y='773' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-constructor → r4-order-use: descent precedence-violations units</title></rect>
-<rect x='1511' y='498' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → flight-conditioning-step: interpretations</title></rect>
+<rect x='1522' y='498' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → flight-conditioning-step: interpretations</title></rect>
 <rect x='1203' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal-abstention → r9-failure-classifier: outcome</title></rect>
-<rect x='1544' y='1532' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-run: chosen</title></rect>
+<rect x='1555' y='1543' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-run: chosen</title></rect>
 <rect x='1071' y='1070' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-entry: message timeout-ms</title></rect>
 <rect x='774' y='762' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-construct → r4-order-use: construction-receipt</title></rect>
 <rect x='741' y='498' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → construction-assemble-one: interpretations</title></rect>
@@ -341,21 +342,22 @@
 <rect x='1038' y='762' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-construct → selection-candidate-derivations: construction-receipt</title></rect>
 <rect x='1247' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → gate-refusal-test: kind</title></rect>
 <rect x='1423' y='1191' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>run-record-publication → r10-observe-publication: publication</title></rect>
-<rect x='1610' y='1532' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → click-reason-test: failure</title></rect>
+<rect x='1621' y='1543' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → click-reason-test: failure</title></rect>
 <rect x='334' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → r2-flight-read: target@flight</title></rect>
 <rect x='1093' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-selection-law → r9-test: candidate enacted-steps per-policy-argmax</title></rect>
 <rect x='1434' y='1367' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-flight-call → r7-call-test: wc</title></rect>
 <rect x='906' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
 <rect x='1214' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → r9-close-cause: target@flight</title></rect>
-<rect x='1544' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-run: target@flight</title></rect>
-<rect x='1478' y='487' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
-<rect x='1500' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-click: target@flight</title></rect>
+<rect x='1555' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-run: target@flight</title></rect>
+<rect x='1489' y='487' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
+<rect x='1511' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-click: target@flight</title></rect>
 <rect x='741' y='740' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>tick-flight-assembly → construction-assemble-one: universes wants@sources</title></rect>
 <rect x='829' y='883' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
 <rect x='1368' y='1323' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-increment: attempts</title></rect>
-<rect x='1588' y='1510' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
-<rect x='1511' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-measured-a-version → flight-conditioning-step: measurement@measured-a rates@measured-a</title></rect>
+<rect x='1599' y='1521' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
+<rect x='1522' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-measured-a-version → flight-conditioning-step: measurement@measured-a rates@measured-a</title></rect>
 <rect x='257' y='234' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-target-field → r1-outer-cascade: next-step</title></rect>
+<rect x='1313' y='1488' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>run-chosen-summary → r0-enact-step: precedence@chosen</title></rect>
 <rect x='1126' y='1125' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>gate-refuse → gate-refusal-read: error</title></rect>
 <rect x='939' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r14-precision-carry → r9-selection-law: beta@precision</title></rect>
 <rect x='554' y='432' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-constraints-read → r3-store-constraints-read: constraints-read</title></rect>
@@ -373,15 +375,15 @@
 <rect x='1324' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → wc-checker: candidate</title></rect>
 <rect x='653' y='1411' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r3-apply-belief-events: loop-belief</title></rect>
 <rect x='356' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-served-by-reading → r2-verifier: text-sha256 want-span</title></rect>
-<rect x='972' y='1554' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>flight-run → flight-steps-source: step@enactment-entry</title></rect>
+<rect x='972' y='1565' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>flight-run → flight-steps-source: step@enactment-entry</title></rect>
 <rect x='1027' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r14-precision-carry → r14-selection-posterior: beta@precision</title></rect>
 <rect x='521' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r3-store-locators: locators</title></rect>
 <rect x='1401' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>morning-brief-fold → r7-fold-call: belief@morning-brief-fold</title></rect>
 <rect x='983' y='751' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r9-decision: want@cascade-problem</title></rect>
 <rect x='719' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r13-sources-horizon → construction-assemble: horizon-steps@sources</title></rect>
-<rect x='1555' y='1554' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
+<rect x='1566' y='1565' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
 <rect x='1368' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r7-increment: candidate</title></rect>
-<rect x='1313' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate enacted-steps</title></rect>
+<rect x='1313' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate</title></rect>
 <rect x='873' y='872' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-cascade-lane → r4-kernel: adjudication-rates</title></rect>
 <rect x='257' y='333' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>clock-in → r1-outer-cascade: clock-lineage</title></rect>
 <rect x='1335' y='1301' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r5-flight-call → r5-test: grain</title></rect>
@@ -393,12 +395,12 @@
 <rect x='1170' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal → r9-abstention-carrier: judge-refusal</title></rect>
 <rect x='862' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r6-cascade-lane: measurement rates@sourced-rates</title></rect>
 <rect x='1390' y='1367' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → r7-fold-source: increment</title></rect>
-<rect x='1478' y='1499' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-cast → click-start: author repair-reviewer reviewer</title></rect>
+<rect x='1489' y='1510' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-cast → click-start: author repair-reviewer reviewer</title></rect>
 <rect x='202' y='201' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>loop-entry → loop-plan: trigger</title></rect>
 <rect x='609' y='597' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-judge-observation → r3a-channel-prediction-error: tick-observation</title></rect>
 <rect x='807' y='806' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-evaluate-state → r4-push-forward: kernel@evaluation</title></rect>
 <rect x='1082' y='1070' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-latest: message timeout-ms</title></rect>
-<rect x='1599' y='1532' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → flight-click-close-test: chosen</title></rect>
+<rect x='1610' y='1543' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → flight-click-close-test: chosen</title></rect>
 <rect x='543' y='421' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-declines → r3-store-locator-declines: locator-declines</title></rect>
 <rect x='840' y='883' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r4-kernel → r4-coapply-test: order-use</title></rect>
 <rect x='983' y='1411' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r9-decision: conditioning-steps enactment-fold</title></rect>
@@ -411,8 +413,8 @@
 <rect x='873' y='751' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r4-kernel: want@cascade-spec</title></rect>
 <rect x='433' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r2-served-by-reading → r2-test: text-sha256 want-span</title></rect>
 <rect x='301' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-entry → loop-test: target-source</title></rect>
-<rect x='1544' y='1367' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → flight-run: increment</title></rect>
-<rect x='994' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r9-measured-a-version: measurement</title></rect>
+<rect x='1555' y='1367' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → flight-run: increment</title></rect>
+<rect x='994' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r9-measured-a-version: measurement@sourced-rates rates@sourced-rates status@sourced-rates</title></rect>
 <rect x='1148' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-judge-refusal-read: kind</title></rect>
 <rect x='257' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>eligibility → r1-outer-cascade: eligible</title></rect>
 <rect x='202' y='267' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-outer-cascade → loop-plan: chosen-target draw-seed target-selection</title></rect>
@@ -428,21 +430,20 @@
 <rect x='983' y='762' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-construct → r9-decision: construction-receipt</title></rect>
 <rect x='455' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → flight-ask-fn: target@flight</title></rect>
 <rect x='1335' y='1323' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r0-enact-step → r5-test: attempts grain-gate</title></rect>
-<rect x='994' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-kernel → r9-measured-a-version: rates</title></rect>
 <rect x='1401' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r13-policy-depth-anticipation → r7-fold-call: horizon-steps@depth-anticipation</title></rect>
 <rect x='1104' y='927' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-classify-target → r9-relation-test: class</title></rect>
-<rect x='1533' y='1532' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-record-click: chosen failure</title></rect>
+<rect x='1544' y='1543' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-record-click: chosen failure</title></rect>
 <rect x='994' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r9-measured-a-version: locators</title></rect>
 <rect x='752' y='498' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → construction-construct: interpretations</title></rect>
 <rect x='1357' y='1323' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-flight-call: attempts</title></rect>
 <rect x='1456' y='1411' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-fold-call → habit-fold-call-test: enactment-fold</title></rect>
 <rect x='532' y='410' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-questions → r3-store-locator-questions: locator-questions</title></rect>
-<rect x='1511' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-conditioning-step: measured-a</title></rect>
+<rect x='1522' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-conditioning-step: measured-a</title></rect>
 <rect x='1049' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-class-model: target-class</title></rect>
 <rect x='675' y='1411' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r1-belief-carry: carried-mu-post</title></rect>
-<rect x='1566' y='487' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → flight-judge-opts: universe wants</title></rect>
+<rect x='1577' y='487' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → flight-judge-opts: universe wants</title></rect>
 <rect x='1225' y='1224' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
 <rect x='257' y='1389' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
 <rect x='1258' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
-<text x='16' y='1658' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 20 (sizes 73, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1).</text>
+<text x='16' y='1669' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 20 (sizes 74, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1).</text>
 </svg>
