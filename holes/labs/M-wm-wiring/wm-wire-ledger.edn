@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "84cd6426",
-  :map "06d451d6"},
+  :rev "dd3c0fea",
+  :map "90fc57c7"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 73, :unverified 62, :wires 140},
+ {:verified 5, :witnessed-hermetically 73, :unverified 75, :wires 153},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -29,6 +29,11 @@
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r13-family-parameters
+    [:horizon-steps {:record :cascade-problem}]],
    :status :unverified}
   {:wire
    [:construction-assemble-one
@@ -154,6 +159,7 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test/the-gates-error-reaches-gate-refusal}
+  {:wire [:loop-entry :loop-plan :trigger], :status :unverified}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
    :status :witnessed-hermetically,
    :test
@@ -198,14 +204,32 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
+  {:wire [:r1-outer-cascade :flight-entry :target-selection],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-plan :target-selection],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-plan :target-selection],
+   :status :unverified}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-draw-seed-reaches-the-loop-test}
+  {:wire [:r1-outer-cascade :r1-test :chosen-target],
+   :status :unverified}
   {:wire [:r1-outer-cascade :r1-test :draw-seed],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-draw-seed-reaches-the-r1-test}
+  {:wire [:r1-outer-cascade :r1-test :target-selection],
+   :status :unverified}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :unverified,
    :registered-test-failed
@@ -222,6 +246,16 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r10-publication-observed-test/the-observation-reaches-the-enactment-record}
+  {:wire
+   [:r13-policy-depth-anticipation
+    :r7-fold-call
+    [:horizon-steps {:record :depth-anticipation}]],
+   :status :unverified}
+  {:wire
+   [:r13-sources-horizon
+    :construction-assemble
+    [:horizon-steps {:record :sources}]],
+   :status :unverified}
   {:wire
    [:r2-judge-observation
     :r3a-channel-prediction-error
