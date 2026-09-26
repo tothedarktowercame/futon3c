@@ -23,10 +23,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R1-I: :trace-record writes [:mu-post {:record :trace}], read by :r7-fold-call; new :r1-belief-carry; :passes values :carried-mu-post, :loop-belief, :channel-prediction from :r7-fold-call to :r1-belief-carry, :r3-apply-belief-events, :r3a-channel-prediction-error; 37/23/88/174 -> 37/23/90/178; inputs gain :world/trace-record and lose :world/r3-apply-belief-events; :r1-belief-carry joins the dead components; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-8 in the same commit as the map it describes (H-T-CALLER-I: :r1-outer-cascade built (select; writes :target-selection), new :loop-plan and :flight-plan boxes with :passes; futon2 pin 5d8105f2; counts 37/23/90/178 -> 37/24/92/189).
 ;; re-pinned at 24b27e1a from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-10 at map 1d2a9f94 (WM-NODE-R13-I; the map itself was committed by inbox-zero's promotion of claude-10's working tree, 1d2a9f94, before this fixture and the map test's sha, which follow here): :r13-sources-horizon writes [:horizon-steps {:record :sources}], read by the new :construction-assemble; :construction-assemble-one writes [:horizon-steps {:record :cascade-problem}], read by the new :r13-family-parameters; the new :r13-policy-depth-anticipation writes [:horizon-steps {:record :depth-anticipation}], read by :r7-fold-call; 37/25/92/190 -> 39/25/96/195; :construction-assemble, :r13-family-parameters and :r13-sources-horizon join the dead components; :i4 unchanged.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "24b27e1a",
+ :map-sha "1d2a9f94",
  :futon5-sha "aeeee96",
- :counts {:inputs 37, :outputs 25, :components 92, :edges 190},
+ :counts {:inputs 39, :outputs 25, :components 96, :edges 195},
  :validate
  {:all-valid false,
   :checks
@@ -39,6 +40,7 @@
      :r3-store-locator-questions
      :click-start
      :r3-apply-belief-events
+     :construction-assemble
      :r9-finding-cause-read
      :c8-entry
      :r2-store-constraints-read
@@ -48,6 +50,7 @@
      :r9-failure-classifier
      :r2-tick-observe
      :loop-plan
+     :r13-family-parameters
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
@@ -58,6 +61,7 @@
      :fpi-policy-free-energy
      :r3-store-coverage
      :r2-store-coverage
+     :r13-sources-horizon
      :r9-class-model
      :flight-ask-fn
      :r7-fold-source
