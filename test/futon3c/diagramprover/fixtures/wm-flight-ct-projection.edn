@@ -21,10 +21,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R7-I: :r3a-prediction-error writes [:error {:record :prediction-error}], read by the new :r7-weighted-error, which writes :weighted-error, read by the new :r3-aggregate-driver; :r4-kernel writes :rates, read by the new :fpi-policy-free-energy (F_pi, not live); 36/23/83/168 -> 36/23/86/171; the three new boxes join the dead components (no test box reads their fields); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R3-I: :r3-aggregate-driver writes [:driver {:record :r3d-driver}], :morning-brief-fold writes [:belief {:record :morning-brief-fold}], both read by :r7-fold-call (judge); new :r3-apply-belief-events (no field); 36/23/86/171 -> 37/23/88/174; inputs gain :world/morning-brief-fold and :world/r3-apply-belief-events and lose :world/r7-fold-call (judge now reads declared fields); :r3a-prediction-error, :r7-weighted-error and :r3-aggregate-driver leave the dead components (the error reaches judge's box and its test through the driver), :r3-apply-belief-events joins them; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R1-I: :trace-record writes [:mu-post {:record :trace}], read by :r7-fold-call; new :r1-belief-carry; :passes values :carried-mu-post, :loop-belief, :channel-prediction from :r7-fold-call to :r1-belief-carry, :r3-apply-belief-events, :r3a-channel-prediction-error; 37/23/88/174 -> 37/23/90/178; inputs gain :world/trace-record and lose :world/r3-apply-belief-events; :r1-belief-carry joins the dead components; :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-8 in the same commit as the map it describes (H-T-CALLER-I: :r1-outer-cascade built (select; writes :target-selection), new :loop-plan and :flight-plan boxes with :passes; futon2 pin 5d8105f2; counts 37/23/90/178 -> 37/24/92/189).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 37, :outputs 23, :components 90, :edges 178},
+ :counts {:inputs 37, :outputs 24, :components 92, :edges 189},
  :validate
  {:all-valid false,
   :checks
@@ -46,6 +47,7 @@
      :r2-store-criteria
      :r9-failure-classifier
      :r2-tick-observe
+     :loop-plan
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
@@ -72,6 +74,7 @@
      :r1-belief-carry
      :flight-cast
      :r2-store-locators
+     :flight-plan
      :c8-registry-get
      :r2-store-locator-questions
      :r9-abstention-carrier
@@ -81,7 +84,9 @@
      :gate-refusal-read]}
    {:valid true, :check :no-orphan-inputs, :orphan-inputs []}
    {:valid true, :check :type-safety, :type-errors []}
-   {:valid true, :check :spec-coverage, :unspecified-outputs []}
+   {:valid false,
+    :check :spec-coverage,
+    :unspecified-outputs [:out/measured-a]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
@@ -191,6 +196,20 @@
      [:clock-in
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -223,6 +242,28 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -267,6 +308,28 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -332,6 +395,28 @@
       :r7-fold],
      :via
      [:clock-lineage
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -371,6 +456,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -396,6 +503,26 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -436,6 +563,26 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -516,6 +663,22 @@
       :clock-in
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -551,6 +714,30 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -599,6 +786,30 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -670,6 +881,30 @@
      :via
      [:mission-id
       :clock-lineage
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -712,6 +947,30 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -740,6 +999,28 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -784,6 +1065,28 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -814,6 +1117,16 @@
      [:eligibility
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -846,6 +1159,28 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -890,6 +1225,28 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -955,6 +1312,28 @@
       :r7-fold],
      :via
      [:eligible
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -994,6 +1373,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -1019,6 +1420,26 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -1059,6 +1480,26 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -1403,6 +1844,16 @@
      [:loop-entry
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -1435,6 +1886,28 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -1479,6 +1952,28 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -1544,6 +2039,28 @@
       :r7-fold],
      :via
      [:trigger
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -1583,6 +2100,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -1608,6 +2147,26 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -1648,6 +2207,26 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -1677,6 +2256,14 @@
     {:path
      [:r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -1706,6 +2293,26 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -1746,6 +2353,26 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -1805,6 +2432,26 @@
       :r7-increment
       :r7-fold],
      :via
+     [:target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
      [:chosen-target
       [:target :flight]
       [:wants :sources]
@@ -1841,6 +2488,26 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -1863,6 +2530,24 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -1899,6 +2584,24 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -1929,6 +2632,16 @@
      [:r1-target-field
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -1961,6 +2674,28 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -2005,6 +2740,28 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -2070,6 +2827,28 @@
       :r7-fold],
      :via
      [:next-step
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -2109,6 +2888,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -2134,6 +2935,26 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -2174,6 +2995,26 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -2263,6 +3104,20 @@
      [:r8-overlap
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -2295,6 +3150,28 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -2339,6 +3216,28 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -2404,6 +3303,28 @@
       :r7-fold],
      :via
      [:pair-overlap
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -2443,6 +3364,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -2468,6 +3411,26 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -2508,6 +3471,26 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -2718,6 +3701,54 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:interpretations
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:ask-merge-published
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:interpretations
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:ask-merge-published
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -2758,6 +3789,28 @@
       :mission-id],
      :to :clock-lineage}
     {:path
+     [:ask-merge-published
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:interpretations
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
      [:construction-assemble-one
       :r4-kernel
       :r9-selection-law
@@ -2849,6 +3902,50 @@
      [:construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -2882,6 +3979,26 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -2905,6 +4022,14 @@
      :via [:eligible :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via [:eligible :target-selection :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:flight-click-wants
       :tick-flight-assembly
       :construction-assemble-one
@@ -3326,6 +4451,214 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -3509,6 +4842,102 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universe
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:flight-click-wants
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:wants
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -3524,6 +4953,10 @@
      :via [:trigger :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:loop-entry :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:trigger :target-selection :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r0-enact-step
       :r7-increment
       :r7-fold
@@ -3555,11 +4988,30 @@
       :positional
       :mission-id],
      :to :clock-lineage}
+    {:path
+     [:r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
     {:path [:r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:chosen-target :positional :mission-id],
      :to :clock-lineage}
     {:path [:r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:draw-seed :positional :mission-id],
+     :to :clock-lineage}
+    {:path [:r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:target-selection :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r1-target-field
@@ -3578,6 +5030,14 @@
      :via [:next-step :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via [:next-step :target-selection :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r2-verifier
       :r6-cascade-lane
       :r4-kernel
@@ -3678,6 +5138,54 @@
       :r6-cascade-lane
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -3720,6 +5228,28 @@
     {:path
      [:r2-verifier
       :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
       :r9-selection-law
       :r0-enact-step
       :r7-increment
@@ -3809,6 +5339,50 @@
      [:r2-verifier
       :r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -3842,6 +5416,26 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -3928,6 +5522,46 @@
     {:path
      [:r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -3958,6 +5592,24 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -4053,6 +5705,50 @@
      [:r6-cascade-lane
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -4091,6 +5787,26 @@
      :to :clock-lineage}
     {:path
      [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
       :r9-selection-law
       :r0-enact-step
       :r7-increment
@@ -4172,6 +5888,46 @@
     {:path
      [:r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -4202,6 +5958,24 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -4212,6 +5986,11 @@
     {:path
      [:r7-fold :r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:enactment-records :draw-seed :positional :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r7-fold :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via
+     [:enactment-records :target-selection :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r7-increment
@@ -4238,6 +6017,20 @@
      [:delta :enactment-records :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r8-overlap :r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:pair-overlap :chosen-target :positional :mission-id],
      :to :clock-lineage}
@@ -4246,6 +6039,10 @@
      :via [:pair-overlap :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:r8-overlap :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:pair-overlap :target-selection :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r9-selection-law
       :r0-enact-step
       :r7-increment
@@ -4319,6 +6116,42 @@
      :to :clock-lineage}
     {:path
      [:r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -4350,6 +6183,22 @@
       :mission-id],
      :to :clock-lineage}
     {:path
+     [:r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
      [:tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -4546,6 +6395,102 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -4626,6 +6571,50 @@
       :delta
       :enactment-records
       :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [[:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :target-selection
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -4703,6 +6692,20 @@
      [:clock-in
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -4735,6 +6738,28 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -4779,6 +6804,28 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -4844,6 +6891,28 @@
       :r7-fold],
      :via
      [:clock-lineage
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -4883,6 +6952,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -4908,6 +6999,26 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -4948,6 +7059,26 @@
      :via
      [:clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -5028,6 +7159,22 @@
       :clock-in
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -5063,6 +7210,30 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -5111,6 +7282,30 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -5182,6 +7377,30 @@
      :via
      [:mission-id
       :clock-lineage
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -5224,6 +7443,30 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -5252,6 +7495,28 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -5296,6 +7561,28 @@
      [:mission-id
       :clock-lineage
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:dispatch
+      :clock-in
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:mission-id
+      :clock-lineage
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -5326,6 +7613,16 @@
      [:eligibility
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -5358,6 +7655,28 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -5402,6 +7721,28 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -5467,6 +7808,28 @@
       :r7-fold],
      :via
      [:eligible
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -5506,6 +7869,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -5531,6 +7916,26 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -5571,6 +7976,26 @@
      :via
      [:eligible
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:eligible
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -5915,6 +8340,16 @@
      [:loop-entry
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -5947,6 +8382,28 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -5991,6 +8448,28 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6056,6 +8535,28 @@
       :r7-fold],
      :via
      [:trigger
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -6095,6 +8596,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -6120,6 +8643,26 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6160,6 +8703,26 @@
      :via
      [:trigger
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:loop-entry
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:trigger
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6189,6 +8752,14 @@
     {:path
      [:r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -6218,6 +8789,26 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6258,6 +8849,26 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6317,6 +8928,26 @@
       :r7-increment
       :r7-fold],
      :via
+     [:target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
      [:chosen-target
       [:target :flight]
       [:wants :sources]
@@ -6353,6 +8984,26 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -6375,6 +9026,24 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6411,6 +9080,24 @@
       :r7-fold],
      :via
      [:draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6441,6 +9128,16 @@
      [:r1-target-field
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step :target-selection [:target :flight] :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -6473,6 +9170,28 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6517,6 +9236,28 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6582,6 +9323,28 @@
       :r7-fold],
      :via
      [:next-step
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -6621,6 +9384,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -6646,6 +9431,26 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6686,6 +9491,26 @@
      :via
      [:next-step
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:next-step
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -6866,6 +9691,20 @@
      [:r8-overlap
       :r1-outer-cascade
       :flight-entry
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
+      [:target :flight]
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
       :tick-flight-assembly
       :construction-assemble-one
       :r4-kernel
@@ -6898,6 +9737,28 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -6942,6 +9803,28 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
@@ -7007,6 +9890,28 @@
       :r7-fold],
      :via
      [:pair-overlap
+      :target-selection
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
       :chosen-target
       [:target :flight]
       [:wants :sources]
@@ -7046,6 +9951,28 @@
       :construction-assemble-one
       :r4-kernel
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via
@@ -7071,6 +9998,26 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      :universes
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       :universes
       [:want :cascade-spec]
@@ -7111,6 +10058,26 @@
      :via
      [:pair-overlap
       :draw-seed
+      [:target :flight]
+      [:wants :sources]
+      [:want :cascade-spec]
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r8-overlap
+      :r1-outer-cascade
+      :flight-entry
+      :tick-flight-assembly
+      :construction-assemble-one
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:pair-overlap
+      :target-selection
       [:target :flight]
       [:wants :sources]
       [:want :cascade-spec]
