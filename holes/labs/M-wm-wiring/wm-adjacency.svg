@@ -1,7 +1,7 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='1650' height='1670' viewBox='0 0 1650 1670' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <rect width='1650' height='1670' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 1713b872; 130 boxes, 170 wires in 135 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 9d962400; 130 boxes, 170 wires in 135 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-plan</text>
