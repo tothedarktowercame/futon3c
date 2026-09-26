@@ -10,9 +10,14 @@
 
 (defn typed-absence?
   "An absence typed on the record: {:absent ...}, or the older
-  {:status :absent ...} shape some records still carry."
+  {:status :absent ...} shape some records still carry. Inspect entries so
+  string-keyed sorted maps never compare their keys with a keyword probe."
   [v]
-  (and (map? v) (or (contains? v :absent) (= :absent (:status v)))))
+  (and (map? v)
+       (boolean (some (fn [[k value]]
+                        (or (= :absent k)
+                            (and (= :status k) (= :absent value))))
+                      v))))
 
 (defn received?
   "The first layer: the reader's value is present, is not a typed absence,
