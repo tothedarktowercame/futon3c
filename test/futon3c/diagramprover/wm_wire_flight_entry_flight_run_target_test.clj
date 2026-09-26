@@ -4,11 +4,11 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-target-support :as support]))
 
-(defn check [] (support/live-check :flight-run))
+(defn check [] (support/observe :flight-run identity))
 (def wire {:wire [:flight-entry :flight-run [:target {:record :flight}]]
-           :kind :verified
+           :kind :witnessed-hermetically
            :test `the-target-reaches-the-reader :check check
-           :record support/run-pin})
+           :live-records-read support/live-records-read})
 
 (deftest the-target-reaches-the-reader
   (is (w/received? (check)))

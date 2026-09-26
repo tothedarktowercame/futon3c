@@ -41,6 +41,12 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test]
+            [futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test]
+            [futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test]
             [futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test]
             [futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test]
             [futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test]
@@ -153,7 +159,13 @@
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test
+  '[futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test
+    futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test
+    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test
+    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test
+    futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test
+    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test
     futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test
     futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test
     futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test
