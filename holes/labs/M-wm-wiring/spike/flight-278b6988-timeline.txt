@@ -1,0 +1,12 @@
+# Seventh flight of M-autoclock-in (flight-278b6988), UTC, from the monitor, the driver and the run record; flown by claude-8 from /home/joe/code/futon2-flight5 (futon2 1e1546f6), seat claude-5, no --dispatch-seat
+2026-09-26T02:36:40Z driver  --run started
+02:37:15Z click   wm-click-2b0762d3 phase starting (no asks this flight: both requests reused by content id, one rejected earlier as :owner-constraint-violated, one published)
+02:37:40Z click   phase opportunity
+02:38:05Z click   phase substrate-preflight
+02:38:30Z click   phase preference-refresh
+02:39:46Z click   phase stop-line-memory
+02:40:11Z click   phase selection
+02:41:27Z futon2  commit 0b93b157 by the tick: repair ticket T-repair-occ-2aee52c7 published under holes/tickets (Verify or restore agent unavailable; Parent M-autoclock-in)
+02:41:40Z tick    route RUNNER -> FULL_LOOP_CLOSE via :agent-unavailable; run record: :decision :chosen {:target M-autoclock-in :candidate :C1 :precedence [8 patterns] :construction-kind :machine-constructed}, :selection-event :cascade-selected, :abstention {:status :not-abstained}, classification :derived-via {:kind :embedding-neighbour :neighbour M-aif4iad :cosine 0.3777}; close at :agent-readiness "Selected an action, but no cast was given for it" (:failure-detail {:absent :no-cast-given}), participants author/reviewer {:status :absent}
+02:41:51Z click   running? False last agent-unavailable (monitor)
+2026-09-26T02:41:54Z driver  process ended EXIT 0; flight record :status :no-progress, :enactment {:absent :no-dispatch-configured}, click entry carries neither the selection nor the close kind
