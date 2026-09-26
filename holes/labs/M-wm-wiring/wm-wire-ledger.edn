@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 7,
-  :witnessed-hermetically 135,
-  :unverified 31,
+  :witnessed-hermetically 139,
+  :unverified 27,
   :wires 173},
  :wires
  [{:wire
@@ -715,7 +715,12 @@
      :target "M-autoclock-in"},
     :why
     "Same click, :universe-not-admitted at both ends; neither has [:decision :kind]. Two records do not meet the one-record VERIFIED definition."}}
-  {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
+  {:wire [:r9-decision :gate-refusal-test :kind],
+   :status :unverified,
+   :note
+   "gate_refusal_abstention_test/run installs judge-fn throwing a supplied exception. Gate reason/failure-data is hand-built or replayed, not produced by the decision writer.",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/the-named-test-does-not-drive-this-writer}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
    :record
@@ -726,9 +731,17 @@
    :test
    futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/the-target-class-reaches-the-class-model}
   {:wire [:r9-decision :r9-judge-refusal-read :kind],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test/the-real-reader-handoff,
+   :note
+   "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind."}
   {:wire [:r9-decision :r9-judge-refusal-test :kind],
-   :status :unverified}
+   :status :unverified,
+   :note
+   "judge_refusal_abstention_test/run installs judge-fn throwing a supplied exception. The tests build ex-info or replay fixture failure-data, not cascade-decision-admitted output.",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/the-named-test-does-not-drive-this-writer}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
    :status :verified,
    :record
@@ -789,9 +802,17 @@
    :test
    futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
   {:wire [:r9-selection-law :r0-enact-step :enacted-steps],
-   :status :unverified}
+   :status :unverified,
+   :note
+   "enact-fn reads chosen :precedence, not selection-law :enacted-steps. Tampering enacted-steps does not change dispatched patterns; missing positional handoff is a map finding.",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test/the-real-reader-handoff}
   {:wire [:r9-selection-law :r7-increment :candidate],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/the-real-reader-handoff,
+   :note
+   "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed."}
   {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
    :status :witnessed-hermetically,
    :test
@@ -809,7 +830,11 @@
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/the-real-reader-handoff,
+   :note
+   "Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
   {:wire
    [:run-record-publication
     :r10-observe-publication
@@ -832,5 +857,15 @@
    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value,
    :note
    "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
-  {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}
-  {:wire [:wc-checker :r7-test :wc-verdict], :status :unverified}]}
+  {:wire [:wc-checker :r7-increment :wc-verdict],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/the-real-reader-handoff,
+   :note
+   "Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
+  {:wire [:wc-checker :r7-test :wc-verdict],
+   :status :unverified,
+   :note
+   "selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker.",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test/the-named-test-does-not-drive-this-writer}]}
