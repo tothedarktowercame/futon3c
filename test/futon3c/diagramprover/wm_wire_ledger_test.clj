@@ -41,6 +41,14 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test]
+            [futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test]
+            [futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test]
+            [futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test]
+            [futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test]
             [futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test]
             [futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test]
             [futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test]
@@ -189,6 +197,14 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test
+    futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test
+    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test
+    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test
+    futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test
+    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test
+    futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test
+    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test
     futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test
     futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test
     futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test
