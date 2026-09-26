@@ -613,15 +613,15 @@
    ;; production is this function's returned map ({:target chosen-target
    ;; ...} / {:target target ...}), which flight/start merges into the flight
    ;; (start's form holds no :target; flight/choose-target also returns
-   ;; {:target ...} but has no production caller; both unboxed). NOT
-   ;; declared: the literals sit inside the first argument of a trailing
-   ;; cond-> (the (cond ...) the cond-> threads), which :returns-record's
-   ;; return position (last form, if/cond/case branches, trailing
-   ;; let/when/do) does not reach. That is the next prover limit: the value
-   ;; a trailing cond->/-> threads is in return position. Declared without
-   ;; it, the scoped write would be reported not found
+   ;; {:target ...} but has no production caller; both unboxed). Declared
+   ;; with :returns-record :flight since the prover counts the value a
+   ;; trailing cond-> threads as returned (WM-PROVER-THREADED-RETURN-I,
+   ;; futon3c 29df1244): the (cond ...) branches' {:target ...} literals
+   ;; (corrected from the H9+H11 comment, which recorded this as the next
+   ;; prover limit)
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "resolve-target"}
-   :reads [:chosen-target :draw-seed] :writes [:target-source]}
+   :returns-record :flight
+   :reads [:chosen-target :draw-seed] :writes [:target-source [:target {:record :flight}]]}
   {:box/id :dispatch :box/kind :component
    ;; run-flight! dispatches the seat through the runner, naming the target
    ;; as the mission (positional from the flight entry).
@@ -926,7 +926,11 @@
  ;; (base-problem's own, through which the nested one is attributed; read
  ;; by :r9-decision, (get-in p [:cascade-problem :want])). The
  ;; [:want :cascade-spec] to-do is deleted. 281 -> 280 (3 to-do, 277
- ;; standing). :kind :to-do is the
+ ;; standing). WM-HANDOFF-H11-WRITER-I: the flight's :target writer,
+ ;; :flight-entry :returns-record :flight writing [:target {:record
+ ;; :flight}] (futon3c 29df1244, the threaded first argument of cond-> in
+ ;; return position); the [:target :flight] to-do is deleted. 280 -> 279
+ ;; (2 to-do, 277 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3550,20 +3554,4 @@
   :note
   "WM-HANDOFF-H9+H11-I: :wants at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
 
- {:finding :read-never-written,
-  :field [:target :flight],
-  :readers
-  [:flight-ask-fn
-   :flight-click
-   :flight-judge-opts
-   :flight-run
-   :r0-enact-step
-   :r10-observe-publication
-   :r2-flight-read
-   :r9-close-cause
-   :tick-flight-assembly],
-  :rows [],
-  :kind :to-do,
-  :note
-  "WM-HANDOFF-H9+H11-I: the flight's :target, read at nine sites, has no attributable writer yet: resolve-target returns the {:target ...} literals inside the first argument of a trailing cond->, which :returns-record (futon3c 16260b56) does not treat as return position; declaring the write gives :declaration-without-occurrence (checked). Deleted when the prover counts the value a trailing cond->/-> threads as returned and :flight-entry declares the write"}
 ]}
