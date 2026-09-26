@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "cf9684c4" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "63246b57" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -74,17 +74,24 @@
   ;; ---- row 4, Clause D: the kernel reads :order when the precedence is a linear extension.
   {:box/id :r4-constructor :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/construction.clj" :var "containment-order"}
-   :writes [:precedence-violations]}
+   :writes [:precedence-violations :descent :units]}
   {:box/id :r4-order-use :row 4 :box/kind :component
    ;; reads the receipt's :order; called by rank-cascade-actions
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "order-use"}
-   :reads [:precedence-violations]}
+   :reads [:precedence-violations :descent :units]}
+  {:box/id :r4-coapply :row 4 :box/kind :component
+   ;; step 14: the co-application kernel, reached positionally from the
+   ;; rollout (evaluate-state dispatches order-use's :kernel-step to it)
+   :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "co-apply-kernel"}}
   {:box/id :r4-kernel :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
    :writes [:order-use]}
   {:box/id :r4-test :row 4 :box/kind :test
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"}
    :reads [:order-use]}
+  {:box/id :r4-coapply-test :row 4 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/coapply_kernel_test.clj"}
+   :reads [:order-use :descent :units]}
 
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
@@ -266,7 +273,13 @@
  ;; so the value's path runs through an observation box; one box left
  ;; unbuilt, the outer cascade. WM-DRIVER-I at futon2 cf9684c4: run-flight!
  ;; passes the wired steps (enact-fn, wc-fn, the library root, the cascades);
- ;; no box's declaration moves, findings unchanged. :kind :to-do is the
+ ;; no box's declaration moves, findings unchanged.
+ ;; Step 14 (WM-COAPPLY-I) at futon2 63246b57: the co-application kernel,
+ ;; box :r4-coapply at cascade_model_manifest/co-apply-kernel (positional
+ ;; from the rollout); :r4-constructor declares its :descent and :units
+ ;; writes, :r4-order-use reads them, the step-14 test box reads them; two
+ ;; standing findings added (order-kernel-test's :dup case hand-writes a
+ ;; receipt order), 19 -> 21 (2 to-do, 19 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -390,6 +403,14 @@
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
+   :field :descent,
+   :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
+   :declared-by [],
+   :rows [4],
+   :kind :standing,
+   :note
+   "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
    :field :e-source,
    :site
    {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
@@ -418,6 +439,14 @@
    "with-eligibility's docstring names :next-step (textual scan counts docstrings); the function neither reads nor writes it"}
   {:finding :occurrence-without-declaration,
    :field :precedence-violations,
+   :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
+   :declared-by [],
+   :rows [4],
+   :kind :standing,
+   :note
+   "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :units,
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
    :declared-by [],
    :rows [4],

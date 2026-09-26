@@ -66,7 +66,10 @@
      :warrant "test-registry-a8b2735c"}
     {:test "futon2.aif.interpretation-construction-test" :status :in-place
      :assertion "nf-4 and nb-4: all-finite constructor output and a finite baseline byte-identical to fixtures from 3bbf5059 and 082dfe5e"
-     :warrant "test-registry-21b3bb44"}]}
+     :warrant "test-registry-21b3bb44"}
+    {:test "futon2.aif.coapply-kernel-test" :status :in-place
+     :assertion "step 14 (futon2 63246b57): the G change on non-chain containment is the co-application kernel (coApplyKernel, mathlib4 69c2432f2b): on the Lean ConflictFixture the co-application row {#{:a :b} 16/25 #{:a} 4/25 #{:b} 4/25 #{} 1/25} with the conflict flag differs from the list row {#{:a} 4/5 #{} 1/5}; on a chain the two kernels are equal at every state and the chain's G is unchanged to the bit; through the ranking a non-chain reads {:order :co-application} and its G moves, the chain keeps {:order :chain} and its G; order-kernel-test keeps every list-scored G equal to the f8e766a5 fixture (test-registry-d22d0f99)"
+     :warrant "test-registry-55db1ef9"}]}
 
   {:row 5 :component "grain gate called before the grain attempt"
    :disposition :adapt
