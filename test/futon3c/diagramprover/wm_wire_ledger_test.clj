@@ -77,6 +77,11 @@
             [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test]
             [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test]
             [futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test]
             [futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test]
@@ -237,6 +242,11 @@
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test
    futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test
     futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test
