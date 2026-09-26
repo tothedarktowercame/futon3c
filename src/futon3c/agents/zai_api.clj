@@ -1135,7 +1135,8 @@
             :dispatch-id (str dispatch-id)
             :turn-id (str turn-id)}})))
 
-(def ^:private work-target-re #"^[MET]-[A-Za-z0-9][A-Za-z0-9._-]*$")
+;; (?U): mission ids may be non-ASCII, e.g. M-象-2000.
+(def ^:private work-target-re #"(?U)^[MET]-[^\W_][\w.-]*$")
 
 (def ^:private requisition-line-re
   ;; "Requisition: M-foo — purpose". The separator may be an em or en dash,

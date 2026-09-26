@@ -182,7 +182,7 @@ if a.requisition:
     req = a.requisition.strip()
     parts = req.split(None, 1)
     purpose = re.sub(r"^(—|–|--|-)\s*", "", parts[1]).strip() if len(parts) > 1 else ""
-    if not (re.fullmatch(r"[MET]-[A-Za-z0-9][A-Za-z0-9._-]*", parts[0]) and purpose):
+    if not (re.fullmatch(r"[MET]-[^\W_][\w.-]*", parts[0]) and purpose):
         sys.exit('--requisition must look like "M-foo — purpose" (M-*, E-* or T-*)')
     prompt = "Requisition: " + req + "\n\n" + prompt
 
