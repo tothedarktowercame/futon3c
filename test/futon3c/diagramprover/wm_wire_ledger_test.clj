@@ -52,6 +52,15 @@
             [futon3c.diagramprover.wm-wire-r2-verifier-want-span-test]
             [futon3c.diagramprover.wm-wire-r7-fold-selection-test]
             [futon3c.diagramprover.wm-wire-r9-candidate-enact-test]
+            [futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test]
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]
             [futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test]
             [futon3c.diagramprover.wm-wire-r9-classify-target-relation-test-class-test]
             [futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test]
@@ -117,6 +126,15 @@
     futon3c.diagramprover.wm-wire-r2-verifier-want-span-test
     futon3c.diagramprover.wm-wire-r7-fold-selection-test
     futon3c.diagramprover.wm-wire-r9-candidate-enact-test
+    futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test
+    futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test
+    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test
     futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test
     futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test
     futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test

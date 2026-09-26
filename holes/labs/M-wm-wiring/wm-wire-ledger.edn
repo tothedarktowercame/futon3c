@@ -4,7 +4,7 @@
   :map "06d451d6"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 51, :unverified 88, :wires 140},
+ {:verified 4, :witnessed-hermetically 61, :unverified 75, :wires 140},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -12,11 +12,22 @@
   {:wire
    [:ask-merge-published :construction-construct :interpretations],
    :status :unverified}
-  {:wire [:c8-registry-get :c8-entry :message], :status :unverified}
-  {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
-  {:wire [:c8-registry-get :c8-latest :message], :status :unverified}
+  {:wire [:c8-registry-get :c8-entry :message],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/the-exception-message-reaches-the-entry-refusal}
+  {:wire [:c8-registry-get :c8-entry :timeout-ms],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/the-timeout-reaches-the-entry-refusal}
+  {:wire [:c8-registry-get :c8-latest :message],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/the-exception-message-reaches-the-latest-refusal}
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
    :status :unverified}
   {:wire
@@ -344,9 +355,18 @@
    :test
    futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test/the-pair-overlap-reaches-the-r8-test}
   {:wire [:r9-classify-target :r9-decision :class],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test/the-relation-class-reaches-the-decision}
   {:wire [:r9-classify-target :r9-relation-test :class],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-classify-target-relation-test-class-test/the-class-reaches-the-relation-test}
   {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
    :status :witnessed-hermetically,
    :test
@@ -363,15 +383,31 @@
    :status :unverified}
   {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
   {:wire [:r9-decision :r9-class-model :target-class],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/the-target-class-reaches-the-class-model}
   {:wire [:r9-decision :r9-judge-refusal-read :kind],
    :status :unverified}
   {:wire [:r9-decision :r9-judge-refusal-test :kind],
    :status :unverified}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r9-embedding-neighbour-classify-target-derived-via-test/the-embedding-receipt-reaches-classify-target}
   {:wire [:r9-embedding-neighbour :r9-relation-test :derived-via],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-embedding-neighbour-relation-test-derived-via-test/the-embedding-receipt-reaches-the-relation-test}
   {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
    :status :witnessed-hermetically,
    :test
@@ -402,12 +438,21 @@
   {:wire [:r9-selection-law :r7-increment :candidate],
    :status :unverified}
   {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
-   :status :unverified}
-  {:wire [:r9-selection-law :r9-test :candidate], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/the-posterior-mode-reaches-the-decision}
+  {:wire [:r9-selection-law :r9-test :candidate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-candidate-reaches-the-selection-test}
   {:wire [:r9-selection-law :r9-test :enacted-steps],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-enacted-steps-reach-the-selection-test}
   {:wire [:r9-selection-law :r9-test :per-policy-argmax],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
    :status :unverified}
   {:wire
