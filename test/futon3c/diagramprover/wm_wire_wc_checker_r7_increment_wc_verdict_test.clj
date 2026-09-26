@@ -5,9 +5,9 @@
 (def positive (delay (support/observe :verdict :none)))
 (defn check [] @positive)
 (def wire {:wire [:wc-checker :r7-increment :wc-verdict]
-           :kind :witnessed-hermetically :test `the-real-reader-handoff :check check
+           :kind :unverified :test `the-real-reader-handoff :check check
            :live-records-read support/live-records-read
-           :note "Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."})
+           :note "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."})
 (deftest the-real-reader-handoff
   (is (seq (support/census)))
   (let [o (check)] (is (w/received? o))

@@ -6,7 +6,7 @@
 (def wire {:wire [:wc-checker :r7-test :wc-verdict]
            :kind :unverified :test `the-named-test-does-not-drive-this-writer :check check
            :live-records-read support/live-records-read
-           :note "selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker."})
+           :note "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker."})
 (deftest the-named-test-does-not-drive-this-writer
   (let [text (slurp "../futon2/test/futon2/aif/selection_reads_fold_test.clj")]
     (is (.contains text "join-unverifiable-verdicts-count-zero"))

@@ -11,7 +11,7 @@
             [futon3c.diagramprover.wm-wire-measured-support :as measured]
             [futon3c.diagramprover.wm-wire-r9-support :as r9]))
 (def live-records-read
-  (mapv #(assoc % :why "No same-record selection output beside a successful dispatch, checker verdict or increment. Flight enactments are absences; tick candidate/certificate fields do not supply these reader products.") target/live-records-read))
+  (mapv #(assoc % :why "Flight records carry candidate but no attempts, enacted-steps, wc-verdict, grain-gate or judge-refusal. Tick candidate and enacted-steps fields have no same-record dispatch, checker or increment product. No live reader end for wires 1, 2 or 4.") target/live-records-read))
 (defn census []
   (mapv (fn [p] (let [r (target/pinned p)]
                  {:path (:path p) :enactments (get-in r [:flight :enactments])
