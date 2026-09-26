@@ -31,11 +31,7 @@
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
- :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation
-               ;; WM-RELATION-I: the facets file's rows and the pinned
-               ;; embedding (its pins and declared floor), read from outside
-               ;; the map
-               :relations :constraint :source-pins :constraint :min-cosine :constraint}
+ :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
   {:box/id :r1-target-field :row 1 :box/kind :component
@@ -321,7 +317,9 @@
  ;; (focus_receipt/classify-target) reads the facets file's :relations,
  ;; :r9-embedding-neighbour reads its embedding :source-pins and
  ;; :min-cosine, :r9-relation-test builds them as fixtures. Six standing
- ;; findings added (three exogenous reads, three test fixture writes),
+ ;; findings added (three exogenous reads, three test fixture writes; the
+ ;; reads carry no :field-roles entry: :constraint would project them as
+ ;; preferences in I4, which they are not),
  ;; 21 -> 27 (2 to-do, 25 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
