@@ -408,11 +408,11 @@
   {:box/id :r13-family-parameters :box/kind :component
    ;; returns {:horizon-steps (first Ts) :beta ...}, which
    ;; cascade-decision-admitted takes as {T :horizon-steps beta :beta} (a
-   ;; map-destructuring binding). That read is NOT attributed by the prover:
-   ;; declared as [:horizon-steps {:record :family-params}] on :r9-decision
-   ;; it is :declaration-without-occurrence even with the right key
-   ;; (checked), so neither end is declared; a prover case for claude-2
-   ;; with JOIN-GRAIN-D (a {sym :key} destructuring binding as a read)
+   ;; map-destructuring binding). WM-PROVER-BINDINGS-I recognises the read,
+   ;; but not its record from the return of a function call. The binding
+   ;; has no :as receiver or named initializer alias for :family-params;
+   ;; the scoped hop still needs return/parameter attribution. Neither
+   ;; end is declared merely because the key is now seen.
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-family-parameters"}
    ;; WM-NODE-R14-I: and the family's beta, (get-in % [:cascade-problem
    ;; :beta]), one value for the family (else :incommensurable-family)
@@ -431,11 +431,11 @@
   ;; beta-state) into the map-literal argument {:beta ... :beta-state ...} of
   ;; policy/select-action-cascades, which calls
   ;; cascade-selection/selection-posterior with {:beta beta :candidates
-  ;; ...}; selection-posterior destructures [{:keys [beta candidates]}] (not
-  ;; a :passes target, and a :keys read is not seen by the occurrence check;
-  ;; the only :beta text at that site is its docstring, so an unscoped
-  ;; declaration would pass on a comment: not made). R14 -> R6 (tau) is
-  ;; therefore recorded, not declared. Positivity: selection-posterior
+  ;; ...}; selection-posterior destructures [{:keys [beta candidates]}].
+  ;; WM-PROVER-BINDINGS-I now sees that read, but this unnamed parameter
+  ;; does not establish its record. :passes still requires a plain parameter;
+  ;; the typed map-parameter handoff remains to be implemented. R14 -> R6
+  ;; (tau) therefore remains recorded, not declared. Positivity: selection-posterior
   ;; refuses a non-positive beta (:invalid-temperature), the variational arm
   ;; (MachineTemperature, variationalOkIsPositive); the spread and gain-only
   ;; arms' positivity rests on the caller's tauMin, a <2>3b item not done here
@@ -553,12 +553,10 @@
   ;; as {:keys [g steps conditioning]}), and rank-cascade-actions destructures
   ;; {:keys [g certificate]} and writes it as each ranked action's
   ;; :controller-score (R5 -> R6, declared at R6). :g is NOT declared: both
-  ;; reads are {:keys [g ...]} destructurings, and the occurrence check
-  ;; matches the keyword :g in the site's text, which a :keys vector (the
-  ;; symbol g) does not contain; declared unscoped, rank-cascade-actions'
-  ;; read is :declaration-without-occurrence (checked). A prover case for
-  ;; claude-2: a :keys entry as an occurrence of its field (the heuristic's
-  ;; field-usage already counts it as a read; the default check does not).
+  ;; reads are {:keys [g ...]} destructurings. WM-PROVER-BINDINGS-I now
+  ;; recognises these occurrences and reads, but their scoped return-to-local
+  ;; attribution remains to be declared and checked. This packet adds no
+  ;; G wire just by recognising the binding.
   ;; horizon-g-sparse* (the cert's own source of g) is not boxed. R4 -> R5 (A, Q(o|pi))
   ;; is E6's function value (push-forward passed into predictive-steps), a
   ;; :via-param form the prover lacks, recorded at :r4-push-forward. R19 ->
@@ -650,7 +648,8 @@
    ;; :target-class it hands the class model (defect I's hop)
    ;; WM-HABIT-FOLD-CALL-I: reads judge's :enactment-fold and passes it
    ;; into select-action-cascades' options (which destructures it with
-   ;; :keys, a read the prover's occurrence check does not see)
+   ;; :keys, now recognised by WM-PROVER-BINDINGS-I; the options hop is
+   ;; still not declared by this box)
    ;; WM-HANDOFF-H6-I: reads each constructed candidate's
    ;; :construction-receipt (destructured) and re-emits it on the pair
       ;; WM-HANDOFF-H9+H11-I: (get-in p [:cascade-problem :want]), the
@@ -942,9 +941,9 @@
    ;; the class observation model reads :target-class (destructured) and
    ;; hands it on in the model map to observation_model/class-of-state,
    ;; where :class-unknown-no-scalar-g is raised (:216). That last hop is
-   ;; not declared: observation_model reads target-class only by :keys
-   ;; destructuring, which the prover's occurrence check does not see
-   ;; (WM-MAP-REPLAY-D list ii)
+   ;; not declared (WM-MAP-REPLAY-D list ii). Its :keys binding is now
+   ;; recognised by WM-PROVER-BINDINGS-I; the hop still needs its own
+   ;; declaration and wire evidence.
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "class-observation-model"}
    :reads [:target-class]}
 
@@ -1446,6 +1445,11 @@
  ;; (advance's record returns through (seal (merge base ...)); the
  ;; posterior destructures its argument). Three standing added. 345 -> 348
  ;; (8 to-do, 340 standing).
+ ;; WM-PROVER-BINDINGS-I (887fe169): binding-context and quotation checks
+ ;; now recognise :keys and renamed selectors, with scope only from :as or
+ ;; a named initializer alias. One new finding (the repair finding's outcome),
+ ;; no removals: 348 -> 349 (8 to-do, 341 standing). No declarations changed.
+ ;; Earlier packet notes about unseen :keys describe the former checker.
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -1454,6 +1458,14 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site {:file "futon2/src/futon2/aif/repair_obligation.clj"
+          :var "record-system-failure!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note "WM-PROVER-BINDINGS-I (887fe169): the finding argument destructures outcome and persists it as :failure-outcome (futon2 e92ae532). This is the finding record's input, not automatically the judge-refusal record's unscoped :outcome wire. A scoped hop is required to identify those records; recognising the binding alone does not declare it."}
+  {:finding :occurrence-without-declaration,
    :field :universe,
    :site {:file "futon2/src/futon2/aif/target_field.clj", :var "step"},
    :declared-by [],
