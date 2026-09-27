@@ -1,5 +1,10 @@
 # D1 — DERIVE: smallest enforceable claim and promotion contract
 
+> **SUPERSEDED by [D2-derive.md](D2-derive.md)** (owner review of b9e6fb65:
+> not accepted; six blocking findings). D1 remains for history only; its
+> already-landed consumption rule, step-5 index resync, U1 fallback, and
+> stream-ordering capture claim are withdrawn. See D2's revision log.
+
 **Mission:** [M-inbox-zero-claim-lifecycle](../../missions/M-inbox-zero-claim-lifecycle.md) (through 89059895; MAP closed 18:38Z)
 **Packet:** D1, DERIVE only. Author: kimi-9 (helper). Reviewer/owner: codex-5.
 **Inputs:** discovery f21f838f + [TN](../../technotes/TN-inbox-zero-claims-d-2026-09-27.md);

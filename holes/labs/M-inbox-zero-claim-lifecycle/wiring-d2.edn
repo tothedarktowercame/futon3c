@@ -1,0 +1,77 @@
+;; WIRING MAP — M-inbox-zero-claim-lifecycle, D2 authority/consumption flow.
+;; Format grounded in futon3c.diagramprover.wiring (ingest; findings:
+;; written-never-read, read-never-written, multiply-written; conformance).
+;; Boxes without :site are proposed (exempt from conformance by the checker's
+;; own rule); boxes with :site declare against existing source and any
+;; :declaration-without-occurrence finding names an unimplemented packet —
+;; reported, not hidden. Field names use the D2 document's vocabulary.
+{:spec/id :inbox-zero-claim-lifecycle-d2
+ :boxes
+ [{:box/id :cli-tool-hooks
+   ;; PreToolUse/PostToolUse hook processes (CLI-owned synchronization;
+   ;; structural change, D2 §3). No :site — new surface.
+   :writes [:capture/pre :capture/post]}
+
+  {:box/id :dev-stream-correlation
+   ;; Joins CLI hook captures with the agent/tool_use stream; mints nothing
+   ;; itself. Existing seam: dev/futon3c/dev.clj pending tool-edit map.
+   :site {:file "dev/futon3c/dev.clj"}
+   :reads [:capture/pre :capture/post]
+   :writes [:claim/authorization]}
+
+  {:box/id :witness-mint
+   ;; Delta verification + baseline rule; publishes claim with :authorization
+   ;; via atomic witness rename. Existing: inbox_zero/witness.clj.
+   :site {:file "src/futon3c/inbox_zero/witness.clj"}
+   :reads [:claim/authorization]
+   :writes [:claim/record]}
+
+  {:box/id :watcher-intake
+   ;; Single snapshot writer. Existing: futon3 inbox-zero-lib watcher.clj.
+   :site {:file "../futon3/inbox-zero-lib/src/futon3/inbox_zero/watcher.clj"}
+   :reads [:claim/record :claim/release]
+   :writes [:snapshot/records]}
+
+  {:box/id :eligibility
+   ;; One pure predicate; prospective promotable? only. New namespace.
+   :reads [:snapshot/records :witness-queue/releases :git/head :git/path-oid
+           :git/trailer-consumption]
+   :writes [:plan/include]}
+
+  {:box/id :turn-promotion
+   ;; Screen/route/gate; commit message carries claim trailer.
+   :site {:file "src/futon3c/inbox_zero/turn_promotion.clj"}
+   :reads [:plan/include]
+   :writes [:commit/message]}
+
+  {:box/id :executor
+   ;; One-time byte capture, private index, manual pre-commit hook with
+   ;; GIT_INDEX_FILE, commit-tree, update-ref CAS; never writes shared index.
+   :site {:file "../futon3/inbox-zero-lib/src/futon3/inbox_zero/promote_exec.clj"}
+   :reads [:plan/include :commit/message :git/head]
+   :writes [:git/commit :claim/release :promotion/receipt]}
+
+  {:box/id :link-derivation
+   ;; Historical attribution: receipt/trailer basis, not current dirt.
+   :site {:file "../futon3/inbox-zero-lib/src/futon3/inbox_zero/projection.clj"}
+   :reads [:snapshot/records :promotion/receipt]
+   :writes [:link/record]}
+
+  {:box/id :push
+   ;; Existing push policy, unchanged.
+   :site {:file "../futon3/inbox-zero-lib/src/futon3/inbox_zero/promote_push.clj"}
+   :reads [:git/commit]
+   :writes [:git/pushed]}
+
+  {:box/id :read-back
+   ;; Operator surface: current claims, releases, orphan-commit discrepancy.
+   :reads [:snapshot/records :witness-queue/releases :link/record]}]}
+
+;; Boundary fields BY DESIGN — Git/filesystem state owned outside this system:
+;; read-never-written :git/head :git/path-oid :git/trailer-consumption
+;; :witness-queue/releases; written-never-read :git/pushed (pushes to remote).
+;; Checker run 2026-09-27 (futon3c.diagramprover.wiring, repo root futon3c):
+;; ingest OK; multiply-written []; boundary fields as listed above;
+;; conformance = 21 × :declaration-without-occurrence, all naming the
+;; unimplemented D2 packets (no :site-unreadable). Findings expected and
+;; reported, per this file's header contract.
