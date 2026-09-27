@@ -89,6 +89,12 @@
     (is (= :forward-inbound-refused (:why r)))))
 
 (deftest real-decision-through-rank-actions-to-cascade-ranker
+  ;; Resource lookup makes these read-only source dependencies visible to the
+  ;; registry's recording loader; they are not evaluated or live-loaded.
+  (doseq [[resource path] [["futon2/aif/efe.clj" "../futon2/src/futon2/aif/efe.clj"]
+                           ["futon2/report/war_machine.clj" "../futon2/scripts/futon2/report/war_machine.clj"]]]
+    (is (= (.getCanonicalPath (io/file path))
+           (.getCanonicalPath (io/file (io/resource resource)))) resource))
   (let [p (assoc inbound :from {:literal-arg-key :cascade-belief}
                 :to {:call "efe/rank-actions" :arg 1 :callee-box :forward})
         q (assoc onward :to {:call "rank-cascade-actions" :arg 1 :callee-box :kernel})
