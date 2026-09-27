@@ -13,8 +13,15 @@ Edge kinds, strongest first:
   co-rejected      two patterns both turned down for the same fragment (these
                    largely reflect what the search returned together)
   next-in-session  patterns cited in consecutive analysed turns of a session
-The graph is undirected; @why edges from the library are included, marked
-as such, so components can be read with or without them.
+The graph is undirected; authored edges from the library are included, marked
+as such, so components can be read with or without them. There are two
+authored kinds, and they are different topologies (Joe, 2026-09-27):
+  why   @why lists the patterns this one follows from: causal, reasoning
+        backwards from the pattern to what forced it
+  how   pattern ids cited in @how, the pattern's practical recipe:
+        pragmatic, reasoning forwards to what you do next
+@why is a list of ids; @how is prose that sometimes cites ids, so an id
+counts there only where it resolves to a library file.
 
 Usage: mined_pattern_graph.py [--batches DIR] [--library DIR] [--out FILE]
 Prints a component summary per cumulative edge kind.
@@ -26,7 +33,7 @@ import json
 import os
 import re
 
-KINDS = ["why", "co-cited", "rejected-beside", "co-rejected", "next-in-session"]
+KINDS = ["why", "how", "co-cited", "rejected-beside", "co-rejected", "next-in-session"]
 
 
 def library_ids(lib):
@@ -43,6 +50,21 @@ def why_edges(ids):
             for line in fh:
                 if line.lstrip().startswith("@why"):
                     for tok in re.split(r"[\s,\[\]]+", line.strip()[4:]):
+                        if tok in ids and tok != pid:
+                            out.append((pid, tok, {"file": path}))
+    return out
+
+
+ID_IN_PROSE = re.compile(r"[\w\-\u4e00-\u9fff]+/[\w\-\u4e00-\u9fff]+")
+
+
+def how_edges(ids):
+    out = []
+    for pid, path in ids.items():
+        with open(path, errors="ignore") as fh:
+            for line in fh:
+                if line.lstrip().startswith("@how"):
+                    for tok in ID_IN_PROSE.findall(line):
                         if tok in ids and tok != pid:
                             out.append((pid, tok, {"file": path}))
     return out
@@ -120,6 +142,7 @@ def main():
     ids = library_ids(args.library)
     edges, records = mined_edges(args.batches, ids)
     edges["why"] = why_edges(ids)
+    edges["how"] = how_edges(ids)
 
     merged = {}
     for kind in KINDS:
@@ -142,7 +165,7 @@ def main():
               f"  components {len(comps):4}  singletons {singles}")
 
     strong = [e for k in ("co-cited", "rejected-beside") for e in edges[k]]
-    giant = components(strong + edges["why"], list(ids))[0]
+    giant = components(strong + edges["why"] + edges["how"], list(ids))[0]
     with open(args.out, "w") as fh:
         json.dump({"records": records, "patterns": len(ids), "summary": summary,
                    "giant_without_weak_edges": sorted(giant),
