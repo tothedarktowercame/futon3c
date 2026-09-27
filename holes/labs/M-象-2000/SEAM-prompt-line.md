@@ -65,3 +65,44 @@ basis, not the absence of `*` and `?`.
 
 The renderer and the `:pattern` segment are M-象-2000's (P7a). The `:inbox-zero` segment's
 provider belongs to codex-5's inbox-zero claim-lifecycle work, written against this seam.
+
+## API decisions (2026-09-27, claude-17 with codex-5)
+
+codex-5 (M-inbox-zero-claim-lifecycle) raised the questions; the renderer owner settles
+them here. Nothing below is built yet; the registry lands as packet **P7a-1**.
+
+1. **One registry, in the futon3c JVM:** namespace `futon3c.agency.prompt-line`.
+   `(register-provider! {:segment/id :inbox-zero :provider "<ns/fn name>"
+   :fn f :budget-ms 100})`. Re-registering the same id with a different provider is
+   refused (rule 4). The per-turn header is rendered in the JVM at invoke time; the
+   Emacs REPL reads the same render via `GET /api/alpha/prompt-line?agent=&session=`
+   when it inserts a prompt (at turn end), never per keystroke.
+2. **Provider context** (a map, read-only): `:agent-id`, `:session-id` (exact),
+   `:surface`, `:render-at` (instant set by the registry), `:budget-ms`, and
+   `:worktree-roots`: the canonical roots the registry knows for that agent
+   (from its registration/cwd); **absent when unknown**, and then a provider that needs
+   them must return nil (omit). No provider infers ownership from root or mtime alone.
+3. **Provider contract:** `(f ctx) → segment-map | nil`. nil = omit. The registry runs
+   providers in parallel with a deadline (per-provider `:budget-ms`, default 100;
+   whole render 250); a late, nil, invalid or throwing provider is **omitted** and the
+   prompt renders without it.
+4. **Provenance distinguishes observation from render:** the provider sets
+   `:segment/observed-at` (when it looked) and `:segment/basis`
+   `{:evidence-ref … :scope {…}}`; the registry adds `:segment/rendered-at`. A stale
+   observation is the provider's to judge: it omits rather than asserting old state.
+5. **Composition:** only `:pattern` supplies the prompt's *value*. Every other segment
+   supplies at most one `:segment/marker` character and a `:segment/header` phrase. The
+   prompt is `$` + pattern value + markers in registration order + `"> "`. No segments
+   at all gives the plain `"> "`, unchanged for seats without providers.
+6. **Weakest claim wins in the marker:** a provider with mixed evidence emits the
+   weaker marker (for inbox-zero, `?` over `*`), and its `:segment/header` spells out
+   both, e.g. "inbox-zero: 3 own (verified), 2 unattributed". A marker never
+   summarises away the unresolved part.
+7. **Omissions are inspectable, never blocking:** the registry keeps the last render per
+   (agent, session): `{:rendered-at … :segments […] :omitted [{:segment/id … :reason
+   :timeout|:error|:nil|:invalid}]}` at `GET /api/alpha/prompt-line/last?agent=&session=`.
+8. **Test seam:** a pure `render` function over a context and a provider list, so
+   providers are tested with fake contexts and the renderer with fake providers
+   (`futon3c.agency.prompt-line-test`). codex-5's provider is written against it once
+   P7a-1 lands; its `*` authority waits on codex-5's claim-lifecycle proof, as they
+   stated, and until then it emits only `?` from a fresh observation.
