@@ -447,9 +447,9 @@
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test])
 
-(def adjacency-rev "63c9e093")
+(def adjacency-rev "4e447b4f")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "84928eb6")
+(def map-rev "8dfdde3c")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
@@ -551,7 +551,7 @@
   (let [adj (adjacency)
         boxes (into {} (map (juxt :box/id identity)) (:boxes (edn/read-string (git-show map-rev map-path))))]
     (is (= map-rev (:map adj)))
-    (is (= 180 (:wires adj) (count (wires adj))))
+    (is (= 194 (:wires adj) (count (wires adj))))
     (doseq [[a b f] (wires adj)]
       (is (some #{f} (:writes (boxes a))) (pr-str [a b f]))
       (is (some #{f} (:reads (boxes b))) (pr-str [a b f])))))
@@ -563,11 +563,11 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
-    (is (= {:value-varying 58 :refusal 21 :record 32 :absent 69} (:second-layer l)))
-    (is (= 180 (reduce + (vals (:second-layer l)))))
+    (is (= {:value-varying 59 :refusal 21 :record 35 :absent 79} (:second-layer l)))
+    (is (= 194 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
-    (is (= 180 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
+    (is (= 194 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
     (is (= (frequencies (map :status (:wires l)))
            (select-keys c (keys (frequencies (map :status (:wires l)))))))
     (doseq [[wire r] (registered)]

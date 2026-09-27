@@ -1,15 +1,15 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "63c9e093",
-  :map "84928eb6"},
+  :rev "4e447b4f",
+  :map "8dfdde3c"},
  :second-layer
- {:value-varying 58, :refusal 21, :record 32, :absent 69},
+ {:value-varying 59, :refusal 21, :record 35, :absent 79},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
-  :witnessed-hermetically 170,
+  :witnessed-hermetically 184,
   :unverified 0,
-  :wires 180},
+  :wires 194},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -604,6 +604,16 @@
      :ran-at "2026-09-27T16:58:56.809831970Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/the-target-reaches-the-reader}
+  {:wire
+   [:flight-judge-opts
+    :temporal-inspect
+    [:temporal-previous {:record :flight}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
   {:wire [:flight-record-summary :click-reason-test :failure],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -677,6 +687,16 @@
    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test/the-flights-readings-reach-the-drivers-summary}
   {:wire
    [:flight-run
+    :flight-judge-opts
+    [:temporal-receipt {:record :enactment-entry}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-judge-opts-temporal-receipt-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:flight-run
     :flight-steps-source
     [:step {:record :enactment-entry}]],
    :status :witnessed-hermetically,
@@ -720,6 +740,20 @@
    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value,
    :note
    "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence."}
+  {:wire [:r0-enact-step :flight-run :record-path],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-record-path-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire [:r0-enact-step :flight-run :temporal-receipt],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-temporal-receipt-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
    :second-layer
@@ -900,17 +934,53 @@
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :chosen-target],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/selector-field-controls-loop-plan,
+     :kind :value-varying,
+     :product [:result :plan],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-fcdd44192a9003bb992cbb19aac0e17d8eded9210f8c026a66842d619ed4449f",
+     :git-head "6af1ddb4253b21649c592b912d5722f232b01644",
+     :test-revision "6af1ddb4253b21649c592b912d5722f232b01644",
+     :ran-at "2026-09-27T17:22:42.484583396Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :draw-seed],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/selector-field-controls-loop-plan,
+     :kind :record,
+     :product [:result :plan],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-211e8ac688d768c94b147ba6e10da6736962af884c8908e7c241fb386dc6d3e1",
+     :git-head "3033128faf60b61b1ef2559d6583ba08eb72550f",
+     :test-revision "3033128faf60b61b1ef2559d6583ba08eb72550f",
+     :ran-at "2026-09-27T17:13:46.002855837Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :target-selection],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/selector-field-controls-loop-plan,
+     :kind :record,
+     :product [:result :plan],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e0ad8141c1029a4b548f016f96b3422cda9c4f6d65157a64563d5bd5a9bddd2c",
+     :git-head "3033128faf60b61b1ef2559d6583ba08eb72550f",
+     :test-revision "3033128faf60b61b1ef2559d6583ba08eb72550f",
+     :ran-at "2026-09-27T17:13:27.029649435Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
@@ -2061,7 +2131,19 @@
    "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately."}
   {:wire [:r9-decision :flight-record-click :kind],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/abstention-kind-is-recorded-not-an-ask-status,
+     :kind :record,
+     :product [:clicks 0 :abstention :kind],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-545196973ed34a43c5648f0e16dec4a2ad9959a1743d8db8f66fbd2813f27bc3",
+     :git-head "1cbe6c7b6cfcb5b903325fac5abaabeea691ff5c",
+     :test-revision "1cbe6c7b6cfcb5b903325fac5abaabeea691ff5c",
+     :ran-at "2026-09-27T17:15:29.948411252Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/the-observed-handoff,
    :note
@@ -2461,6 +2543,86 @@
      :ran-at "2026-09-27T04:42:03.356501907Z"}},
    :test
    futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/the-run-records-publication-reaches-the-reader}
+  {:wire
+   [:temporal-finalize
+    :temporal-envelope
+    [:temporal-cursor {:record :enactment}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-finalize
+    :temporal-envelope
+    [:temporal-posterior {:record :enactment}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-finalize
+    :temporal-envelope
+    [:temporal-receipt {:record :enactment}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-finalize
+    :temporal-write-once
+    [:temporal-receipt {:record :enactment}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-finalize-temporal-write-once-temporal-receipt-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-inspect
+    :r1-token-input
+    [:temporal-previous {:record :temporal-inspection}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-inspect
+    :r1-token-temporal
+    [:temporal-previous {:record :temporal-inspection}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-write-once
+    :temporal-read-receipt
+    [:digest {:record :temporal-publication}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-digest-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:temporal-write-once
+    :temporal-read-receipt
+    [:record-path {:record :temporal-publication}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-record-path-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
   {:wire [:tick-flight-assembly :construction-assemble-one :universes],
    :status :witnessed-hermetically,
    :second-layer
@@ -2500,6 +2662,26 @@
      :ran-at "2026-09-27T04:42:23.485662173Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
+  {:wire
+   [:token-belief-stage
+    :r1-token-initialization
+    [:initialization {:record :token-belief-stage}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+  {:wire
+   [:token-belief-stage
+    :token-initialization-observations
+    [:initialization {:record :token-belief-stage}]],
+   :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
+   :test
+   futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test/real-courier-reaches-reader,
+   :note
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :witnessed-hermetically,
    :second-layer
