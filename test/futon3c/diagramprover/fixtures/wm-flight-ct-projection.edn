@@ -38,8 +38,9 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R14-I, on F1a-2c's ffe2c596: [:beta {:record :cascade-problem}] from :construction-assemble-one to :r13-family-parameters; new :r14-precision-carry and :r14-selection-posterior, dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 54f7e7cd from 9567d6bb on 2026-09-26
 ;; re-pinned at 775aaa6d from 9567d6bb on 2026-09-26
+;; re-pinned at da64df45 from 9567d6bb on 2026-09-27
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "775aaa6d",
+ :map-sha "da64df45",
  :futon5-sha "aeeee96",
  :counts {:inputs 45, :outputs 26, :components 108, :edges 223},
  :validate
