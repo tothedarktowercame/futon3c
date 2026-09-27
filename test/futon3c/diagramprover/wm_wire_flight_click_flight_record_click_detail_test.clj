@@ -19,7 +19,8 @@
   (:require [clojure.test :refer [deftest is]]
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-runner :as fr]
-            [futon3c.diagramprover.wm-wire :as w]))
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-click-record-products-9a :as products]))
 
 (defn- refusal-body [seat]
   {:error "wm-click-cast-not-invoke-ready" :unready [{:seat seat :reason :not-invoke-ready}]})
@@ -67,6 +68,9 @@
   {:wire [:flight-click :flight-record-click :detail]
    :kind :witnessed-hermetically
    :test `the-refused-clicks-detail-reaches-the-click-entry
+   :second-layer {:test `click-field-is-recorded-without-changing-stop-rule
+                  :kind :record :product [:products]
+                  :intervention :before-reader}
    :check check
    :live-records-read live-records-read})
 
@@ -105,3 +109,14 @@
       (is (every? #(nil? (get-in % [:abstention :detail])) entries) path)))
   (is (= {:kind :click-not-started :missing :click}
          (:abstention (first (:clicks (:flight (w/read-record (:path (first live-records-read))))))))))
+
+(deftest click-field-is-recorded-without-changing-stop-rule
+  (doseq [[status after] products/scenarios]
+    (let [r (products/products :detail after)]
+      (is (= (:written r) (:products r)))
+      (is (apply not= (:products r)))
+      (is (= (:written r) (:needs r)))
+      (is (= [status status] (:statuses r)))
+      (is (= [[:earlier :later] [:earlier :later]] (:carried r)))
+      (is (apply = (:unchanged r)) "Every other part of the flight record is identical.")
+      (println :detail :products (:products r) :flight-status (:statuses r)))))

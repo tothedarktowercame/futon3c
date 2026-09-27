@@ -18,7 +18,8 @@
   flight-278b6988, is the flight whose missing cast motivated it)."
   (:require [clojure.test :refer [deftest is]]
             [futon2.aif.flight-runner :as fr]
-            [futon3c.diagramprover.wm-wire :as w]))
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-click-record-products-9a :as products]))
 
 (def record
   {:path (str w/spike-dir "/flight-ada87008/flight-ada87008.edn")
@@ -38,6 +39,9 @@
   {:wire [:flight-click :flight-record-click :cast]
    :kind :verified
    :test `the-clicks-cast-reaches-the-flight-records-click-entry
+   :second-layer {:test `click-field-is-recorded-without-changing-stop-rule
+                  :kind :record :product [:products]
+                  :intervention :before-reader}
    :check check
    :record record})
 
@@ -70,3 +74,14 @@
 (deftest the-earlier-flights-carry-no-cast
   (is (= (:sha256 earlier-record) (w/sha256-file (:path earlier-record))))
   (is (not-any? :cast (:clicks (:flight (w/read-record (:path earlier-record)))))))
+
+(deftest click-field-is-recorded-without-changing-stop-rule
+  (doseq [[status after] products/scenarios]
+    (let [r (products/products :cast after)]
+      (is (= (:written r) (:products r)))
+      (is (apply not= (:products r)))
+      
+      (is (= [status status] (:statuses r)))
+      (is (= [[:earlier :later] [:earlier :later]] (:carried r)))
+      (is (apply = (:unchanged r)) "Every other part of the flight record is identical.")
+      (println :cast :products (:products r) :flight-status (:statuses r)))))
