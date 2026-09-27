@@ -1,13 +1,13 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "cd408b75",
-  :map "da64df45"},
+  :rev "f7217227",
+  :map "c1afad17"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
-  :witnessed-hermetically 163,
+  :witnessed-hermetically 164,
   :unverified 0,
-  :wires 173},
+  :wires 174},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -66,6 +66,12 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/the-observed-handoff}
+  {:wire [:construction-assemble-one :r4-kernel :cascade-spec],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/the-observed-handoff,
+   :note
+   "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record."}
   {:wire
    [:construction-assemble-one
     :r4-kernel
