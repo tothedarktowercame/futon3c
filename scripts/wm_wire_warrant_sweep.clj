@@ -80,7 +80,11 @@
 (defn definition-name [{:keys [form]}]
   (when (and (seq? form) (symbol? (first form))
              (str/starts-with? (name (first form)) "def")
-             (not= "defmethod" (name (first form))) (symbol? (second form)))
+             ;; these are used under names other than their own (methods,
+             ;; ->Constructors), so they are never followed by name
+             (not (#{"defmethod" "defrecord" "deftype" "defprotocol" "definterface"}
+                   (name (first form))))
+             (symbol? (second form)))
     (symbol (name (second form)))))
 
 (defn form-delta [old new]
@@ -149,42 +153,86 @@
                     #(concat (when (coll? %) (seq (without-docstring %)))
                              (when (reader-conditional? %) [(:form %)])) form)))
 
-(defn external-mentions
-  "Short names through which `text` can refer to definitions of namespace
-   `target`. A file that defines its own var of the same short name does not
-   mention the target's. Anything not resolved by reading the ns form falls
-   back to every short name in the file and every changed name found anywhere
-   in its text (the over-matching rule)."
-  [target names parsed text]
+(defn mention-fn
+  "For one consumer file, a function from one of its forms to the short names
+   through which that form can refer to definitions of namespace `target`.
+   A file that defines its own var of the same short name does not mention the
+   target's. Anything not resolved by reading the ns form falls back to every
+   short name in the form and every sought name found in its text (the
+   over-matching rule)."
+  [target names parsed]
   (let [nsf (ns-form parsed)
         specs (when nsf (libspecs (:form nsf)))
         body (remove #(identical? % nsf) (:forms parsed))
-        syms (mapcat #(raw-symbols (:form %)) body)
         tname (str target)
+        alias-of #(some-> (or (get-in % [:opts :as]) (get-in % [:opts :as-alias])) str)
         mine (filter #(= target (:lib %)) specs)
-        aliases (set (keep #(some-> (or (get-in % [:opts :as]) (get-in % [:opts :as-alias])) str) mine))
-        other-aliases (set (keep #(some-> (or (get-in % [:opts :as]) (get-in % [:opts :as-alias])) str)
-                                 (remove #(= target (:lib %)) specs)))
-        refer-all? (some #(or (= :all (get-in % [:opts :refer])) (and (:use? %) (not (get-in % [:opts :only])))) mine)
+        aliases (set (keep alias-of mine))
+        other-aliases (set (keep alias-of (remove #(= target (:lib %)) specs)))
+        refer-all? (some #(or (= :all (get-in % [:opts :refer]))
+                              (and (:use? %) (not (get-in % [:opts :only])))) mine)
         referred (set (map #(symbol (name %))
                            (mapcat #(concat (let [r (get-in % [:opts :refer])] (when (sequential? r) r))
                                             (get-in % [:opts :only])) mine)))
         ;; the namespace named outside the ns form, as a bare symbol or inside a
         ;; string that is not a docstring: a require or resolve made at run time
-        outside? (or (some #(and (nil? (namespace %)) (= tname (name %))) syms)
+        outside? (or (some #(and (nil? (namespace %)) (= tname (name %)))
+                           (mapcat #(raw-symbols (:form %)) body))
                      (some #(str/includes? % tname) (mapcat #(code-strings (:form %)) body)))
         fallback? (or (nil? nsf) (some :odd? specs) refer-all? outside?
-                      (some #(and (sequential? (get-in % [:opts :refer])) (not (every? symbol? (get-in % [:opts :refer])))) mine))]
-    (if fallback?
-      ;; a name can also arrive inside a string, so the text is searched
-      (into (set (:symbols parsed)) (filter #(str/includes? text (str %)) names))
-      (set (concat
-            (for [s syms :let [q (namespace s)]
-                  :when (and q (or (= q tname) (aliases q)
-                                   ;; an alias this ns form does not declare: undecided, so counted
-                                   (and (not (other-aliases q)) (not (str/includes? q ".")))))]
-              (symbol (name s)))
-            (for [s syms :when (and (nil? (namespace s)) (referred s))] s))))))
+                      (some #(and (sequential? (get-in % [:opts :refer]))
+                                  (not (every? symbol? (get-in % [:opts :refer])))) mine))]
+    (fn [{:keys [form text symbols]}]
+      (if fallback?
+        (into (set symbols) (filter #(str/includes? text (str %)) names))
+        (let [syms (raw-symbols form)]
+          (set (concat
+                (for [s syms :let [q (namespace s)]
+                      :when (and q (or (= q tname) (aliases q)
+                                       ;; an alias this ns form does not declare: undecided, so counted
+                                       (and (not (other-aliases q)) (not (str/includes? q ".")))))]
+                  (symbol (name s)))
+                (for [s syms :when (and (nil? (namespace s)) (referred s))] s))))))))
+
+(defn test-form? [{:keys [form]}]
+  (and (seq? form) (symbol? (first form)) (= "deftest" (name (first form)))))
+
+(defn reach
+  "Follow the changed definitions through the closure, file to file, by reading.
+   `start` is {namespace #{short names}}. A definition that mentions a reached
+   name is itself reached. Returns the first place where a reached name arrives
+   at something that runs without being called — a deftest, or a top-level form
+   that is not a named definition — or nil when no such place exists."
+  [files start]
+  (loop [reached start]
+    (let [step
+          (reduce
+           (fn [acc {:keys [path parsed]}]
+             (if (:reason parsed)
+               (reduced {:hit {:file path :names [] :reason (:reason parsed)}})
+               (let [own (or (source-ns parsed) (symbol path))
+                     nsf (ns-form parsed)
+                     fns (into {} (for [[target names] (:reached acc) :when (not= target own)]
+                                    [target (mention-fn target names parsed)]))
+                     found
+                     (for [f (:forms parsed) :when (not (identical? f nsf))
+                           :let [used (into (set/intersection (get-in acc [:reached own] #{}) (:symbols f))
+                                            (mapcat (fn [[target m]]
+                                                      (set/intersection (get-in acc [:reached target]) (m f)))
+                                                    fns))
+                                 n (definition-name f)
+                                 used (disj used n)]
+                           :when (seq used)]
+                       {:name n :test? (test-form? f) :used used})
+                     hit (first (filter #(or (:test? %) (nil? (:name %))) found))]
+                 (if hit
+                   (reduced {:hit {:file path :names (vec (sort (:used hit)))
+                                   :reason :changed-definition-reachable}})
+                   (update-in acc [:reached own] (fnil into #{}) (map :name found))))))
+           {:reached reached} files)]
+      (cond (:hit step) (:hit step)
+            (= reached (:reached step)) nil
+            :else (recur (:reached step))))))
 
 (defn check-path [root closure path]
   (let [base {:path path :changed-names [] :reachable-names []}]
@@ -194,26 +242,24 @@
         (if-not (re-find #"\.(clj|cljc|bb)$" path)
           (assoc base :reason :non-clojure-source)
           (if-let [old (*history-content* (str file) sha)]
-            (let [delta (form-delta old (slurp file)) result (merge base delta)]
+            (let [new-text (slurp file)
+                  delta (form-delta old new-text) result (merge base delta)]
               (if (not= :cleared (:reason delta)) result
                 (let [names (set (:reachable-names delta))
-                      hits (for [{other :path} closure
-                                 :let [other-file (source-file root other)]
-                                 ;; A changed test must itself count as a consumer.
-                                 :when (re-find #"\.(clj|cljc|cljs|bb)$" other)
-                                 :when (or (not= file other-file)
-                                           (some #(and (= path (:path %)) (:warrant-test? %)) closure)
-                                           (str/includes? (str file) "/test/"))
-                                 :let [other-text (slurp other-file)
-                                       parsed (parse-source other-text)
-                                       target (source-ns (parse-source (slurp file)))
-                                       mentions (cond (:reason parsed) #{}
-                                                      (or (nil? target) (= file other-file)) (:symbols parsed)
-                                                      :else (external-mentions target names parsed other-text))
-                                       used (set/intersection names mentions)]
-                                 :when (or (:reason parsed) (seq used))]
-                             {:file other :names (vec (sort used)) :reason (or (:reason parsed) :changed-definition-reachable)})]
-                  (if-let [hit (first hits)]
+                      parsed (parse-source new-text)
+                      target (or (source-ns parsed) (symbol path))
+                      ;; a changed or removed deftest in the changed file itself
+                      own-test (seq (filter #(and (test-form? %) (names (definition-name %))) (:forms parsed)))
+                      files (for [{other :path} closure
+                                  :when (re-find #"\.(clj|cljc|cljs|bb)$" other)
+                                  :let [other-file (source-file root other)]
+                                  :when (not= file other-file)]
+                              {:path other :parsed (parse-source (slurp other-file))})
+                      hit (if own-test
+                            {:file path :names (vec (sort (map definition-name own-test)))
+                             :reason :changed-definition-reachable}
+                            (reach files {target names}))]
+                  (if hit
                     (assoc result :reason (:reason hit) :consumer hit)
                     result))))
             (assoc base :reason :old-content-unavailable))))
