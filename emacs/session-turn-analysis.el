@@ -452,11 +452,13 @@ bell was accepted, not that the turn was interpreted.")
   (call-process "python3" nil nil nil
                 session-mode--dispatch-reaper "--set-job" path job-id))
 
-(defun session-mode--reap-dispatch (path &optional agent)
+(defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
 AGENT is the seat it went to: if that seat ran out of usage, bench it and
-send the turn to the other seat instead of warning."
+send the turn to the other seat instead of warning.  A job still running
+is asked about again, up to TRIES (default 3) times in all: a single reap
+that found it running left the lighter's health unchanged for good."
   (let ((buf (generate-new-buffer " *session-analysis-reap*")))
     (make-process
      :name "session-analysis-reap" :buffer buf :noquery t
@@ -477,6 +479,11 @@ send the turn to the other seat instead of warning."
                                                 "--retry" path)
                                   (message "象: %s is out of usage; %s now takes turn analysis"
                                            agent other)
+                                  ;; Not `ok' -- nothing is analysed yet -- but
+                                  ;; no longer failing: the other seat has it.
+                                  (session-mode--set-analysis-health
+                                   nil (format "%s out of usage; %s took %s"
+                                               agent other (file-name-base path)))
                                   (session-mode--dispatch-analysis path other)
                                   t))))
                         ((string-match-p "REFUSED\\|FAILED" out)
@@ -493,7 +500,12 @@ send the turn to the other seat instead of warning."
                                            (file-name-base path))))
                         ((string-match-p "analyzed" out)
                          (session-mode--set-analysis-health
-                          'ok (format "%s: analysed" (file-name-base path)))))))
+                          'ok (format "%s: analysed" (file-name-base path))))
+                        ((and (string-match-p "running" out)
+                              (> (or tries 3) 1))
+                         (run-at-time session-mode-analysis-reap-after nil
+                                      #'session-mode--reap-dispatch path agent
+                                      (1- (or tries 3)))))))
                    (when (buffer-live-p (process-buffer proc))
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
