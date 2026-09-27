@@ -124,3 +124,24 @@ claude-17 turn 76 (evidence e-76cf557a…): 1 `control/agential-pattern-hygiene`
 - a card set by the agent always wins over retrieval.
 By P21 neither is an attestation: attestation happens at use, and a card is a claim of
 intended use that the work then bears out or not.
+
+## Candidate P7a-2: the operator picks the pattern (Joe, 2026-09-27)
+
+TAB at the start of an empty input line opens a short list of **nearby** patterns; the
+one Joe picks overrides the retrieved rank 1 for that turn, shows in the prompt, and is
+sent with the turn as an operator's stated pattern.
+
+- **Nearby, computed classically:** the other two ids of the last retrieval, plus
+  rank 1's neighbours in the mined graph (`why`, `how`, `co-cited` edges), about six in
+  all, each with its title. No model call.
+- **Precedence:** the operator's pick for the turn beats an agent's card, and an agent's
+  card beats retrieval. The header says which: `operator-chosen`, `card`, `retrieved`.
+- **Sent with the turn** as a structured field of the operator act (not prose), so the
+  receiving agent sees it and it is recorded on the evidence.
+- **Why it matters beyond the UI:** a pattern Joe chooses for his own turn is a human
+  label stated at the moment of use. It is (a) a correct label for 小象's lexicon
+  (E-classical-wastage-scanner: 大象 builds, 小象 learns), (b) a direct check on the
+  retrieval ("the embedding said X, Joe chose Y"), and (c) under P21 a use-time
+  attribution by an independent party, not by the proposer.
+- **Constraint:** TAB keeps its current meaning everywhere except the start of an
+  empty input line; check the REPL's existing TAB binding before taking it.
