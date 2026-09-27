@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 43, :refusal 20, :record 10, :absent 107},
+ {:value-varying 48, :refusal 20, :record 13, :absent 99},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -773,7 +773,19 @@
     :r7-fold-call
     [:horizon-steps {:record :depth-anticipation}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/anticipated-depth-is-recorded-without-changing-selection,
+     :kind :record,
+     :product [:policy-depth-used],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-ecbf5d1cd7eeab544bb1e9e74f78622bf71fbd88f164c4661f1b4588567e917e",
+     :git-head "a5f5a328e13118d9ead0af3274115f5973da92a4",
+     :test-revision "a5f5a328e13118d9ead0af3274115f5973da92a4",
+     :ran-at "2026-09-27T15:30:01.500346916Z"}},
    :test
    futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/the-judge-produces-the-received-value,
    :note
@@ -783,7 +795,19 @@
     :construction-assemble
     [:horizon-steps {:record :sources}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/sources-horizon-changes-assembly-and-g,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-13bfd826d79914a88ec73fad36d2dc8e9ef7fc227f7b9b3e762e21fc0457c7c1",
+     :git-head "a5f5a328e13118d9ead0af3274115f5973da92a4",
+     :test-revision "a5f5a328e13118d9ead0af3274115f5973da92a4",
+     :ran-at "2026-09-27T15:29:34.617941203Z"}},
    :test
    futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/the-writer-reaches-the-reader}
   {:wire
@@ -934,12 +958,36 @@
    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test/published-value-reaches-reader}
   {:wire [:r2-store-coverage :r3-store-coverage :coverage],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test/published-carrier-controls-reader-product,
+     :kind :value-varying,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-31e06fe40e4853c84fc68d126dba14488591e4107260510f2c4963d07ea1ddae",
+     :git-head "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :test-revision "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :ran-at "2026-09-27T15:28:32.303123787Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test/published-value-reaches-reader}
   {:wire [:r2-store-criteria :r3-store-criteria :criteria],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test/published-carrier-controls-reader-product,
+     :kind :value-varying,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-9df66d1ffa830708f93b2e3f785b81a14577cfa968541134c1d6cd3f72c15ae5",
+     :git-head "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :test-revision "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :ran-at "2026-09-27T15:28:08.651610140Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test/published-value-reaches-reader}
   {:wire
@@ -960,7 +1008,19 @@
    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r3-store-locators :locators],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test/published-carrier-controls-reader-product,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-8cdabe72637a77ae3a2b124cbf7e5ee72c88c1db2dceabd51d27444b03688259",
+     :git-head "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :test-revision "154ea70f97baa16d34b0f1cefc168e39a75c3a1a",
+     :ran-at "2026-09-27T15:28:20.017963353Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r9-measured-a-version :locators],
@@ -1575,7 +1635,19 @@
    futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test/the-pair-overlap-reaches-the-r8-test}
   {:wire [:r9-classify-target :r9-decision :class],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test/changed-class-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-96cdb0e3804cad5ca607cf2060cdcb0a89420ecee0b7f002742ca03fa71fba70",
+     :git-head "47273dc96324192d02b5caacc1e881357a9eb394",
+     :test-revision "47273dc96324192d02b5caacc1e881357a9eb394",
+     :ran-at "2026-09-27T15:28:27.467486871Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -1707,7 +1779,19 @@
    "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/changed-class-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-7907b873a12ccd8f757ac6b974e7b882eb388f11b3c97f51898a10fc02ceb3c2",
+     :git-head "47273dc96324192d02b5caacc1e881357a9eb394",
+     :test-revision "47273dc96324192d02b5caacc1e881357a9eb394",
+     :ran-at "2026-09-27T15:28:45.311660677Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -1743,7 +1827,19 @@
    "Writer: war_machine.clj cascade-decision-admitted's :live-c guard (\"cascade decision refused\", :kind). Reader: futon2 judge-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-embedding-neighbour-classify-target-derived-via-test/changed-class-product,
+     :kind :record,
+     :product [:recorded],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e93e86973f055f2dcd1a769370caee306cfe8c0e7eeaa57f1b2f66a1b0141d2f",
+     :git-head "47273dc96324192d02b5caacc1e881357a9eb394",
+     :test-revision "47273dc96324192d02b5caacc1e881357a9eb394",
+     :ran-at "2026-09-27T15:29:01.467655139Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
