@@ -1,13 +1,13 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "f7217227",
-  :map "c1afad17"},
+  :rev "0059b8c2",
+  :map "17aa769d"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
-  :witnessed-hermetically 164,
+  :witnessed-hermetically 165,
   :unverified 0,
-  :wires 174},
+  :wires 175},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -710,6 +710,12 @@
    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/the-real-reader-produces-the-received-value,
    :note
    "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission."}
+  {:wire [:r7-fold-call :r3a-predict-observation :loop-belief],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/real-judge-hands-belief-to-real-predictor,
+   :note
+   "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls."}
   {:wire [:r7-fold-call :r9-decision :conditioning-steps],
    :status :witnessed-hermetically,
    :test
