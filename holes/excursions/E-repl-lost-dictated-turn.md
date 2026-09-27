@@ -18,3 +18,11 @@ it into the other ("woven in with a continuation", Joe).
 session 564c8e50… between 18:40 and 18:55Z (origin now distinguishes operator from
 harness); agent-repl-park.el's resume insertion versus claude-repl's input marker
 (see memory note "REPL Argument list too long = marker drift").
+
+**Second case (same day).** The park wake for codex-4's job
+invoke-1790535920570-25608-872383eb was released at 19:17:30Z ("park
+park-ec690381-c891-4e76-9242-3b96321d81fc will wake claude-17") and never arrived as a
+turn in `*claude-repl:claude-17*`; the result was found only by polling the job. At
+that time the store was slow (reads >5 s at 19:17:44-45Z) and one claude-17 chat-turn
+append was rejected. So the lost deliveries are not only dictated turns: a park resume
+went missing too, which points at the REPL's delivery path, not at voxterm.
