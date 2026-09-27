@@ -1,6 +1,6 @@
 ;; re-pinned at blob fa63adb31df4e05703df9d4c207cd71eef73742f from 9567d6bb on 2026-09-27
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "same commit: MAP-2B-P5",
+ :map-sha "b58e8df19ae0336ff041715628808836c6d6426f",
  :map-blob "fa63adb31df4e05703df9d4c207cd71eef73742f",
  :futon5-sha "aeeee96",
  :counts {:inputs 46, :outputs 26, :components 113, :edges 231},

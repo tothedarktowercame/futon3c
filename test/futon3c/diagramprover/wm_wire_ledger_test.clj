@@ -36,7 +36,12 @@
   generated from the map at map-rev), checks each wire against the map at
   map-rev, writes holes/labs/M-wm-wiring/wm-wire-ledger.edn, and asserts the
   ledger's counts equal what the checks found."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.test-registry :as registry]
             [futon3c.evidence.http-backend :as http-backend]
@@ -222,6 +227,11 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test
+    futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test
     futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test
     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test
     futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test

@@ -20,7 +20,7 @@
   :writer {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge" :line 7271}
   :reader {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation" :line 1243}
   :reader-is-test-box? false :packet "MAP-2B-P1+"}
-{:map-commit "same commit: MAP-2B-P5",
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
  :edge
  [:r1-token-initialization
   :r1-token-temporal
@@ -37,7 +37,7 @@
   :line 138},
  :reader-is-test-box? false,
  :packet "MAP-2B-P5"}
-{:map-commit "same commit: MAP-2B-P5",
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
  :edge
  [:r1-token-legacy
   :r1-token-initialization
@@ -54,7 +54,7 @@
   :line 114},
  :reader-is-test-box? false,
  :packet "MAP-2B-P5"}
-{:map-commit "same commit: MAP-2B-P5",
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
  :edge
  [:r1-token-temporal
   :r9-decision
@@ -71,7 +71,7 @@
   :line 6459},
  :reader-is-test-box? false,
  :packet "MAP-2B-P5"}
-{:map-commit "same commit: MAP-2B-P5",
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
  :edge
  [:r9-decision :r4-kernel [:cascade-belief {:record :rank-state}]],
  :registry-edge [:R1 :R4],
@@ -86,7 +86,7 @@
   :line 1083},
  :reader-is-test-box? false,
  :packet "MAP-2B-P5"}
-{:map-commit "same commit: MAP-2B-P5",
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
  :edge
  [:r9-decision
   :r4-rank-dispatch
