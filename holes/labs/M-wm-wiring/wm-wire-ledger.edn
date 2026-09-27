@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 48, :refusal 20, :record 13, :absent 99},
+ {:value-varying 50, :refusal 21, :record 18, :absent 91},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -74,22 +74,70 @@
    "Tamper on merged sources BEFORE decision and persist-run-record!. Reader converter feeds rollout; altered produces changes q and B digest. Absent sources refuse assembly no-admitted-interpretation, so the persisted abstention gives no-measured-a, earlier than no-interpretation."}
   {:wire [:c8-registry-get :c8-entry :message],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/diagnostic-is-recorded-without-changing-refusal,
+     :kind :record,
+     :product [:data :message],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-7d34f210c8c17797bddfb1e5d06c4b0611275f720c02757f0eee3cdc16a1270e",
+     :git-head "032b525fdeed1526d1f3167f7fe54cebcc68d3b7",
+     :test-revision "032b525fdeed1526d1f3167f7fe54cebcc68d3b7",
+     :ran-at "2026-09-27T15:48:15.068037821Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/the-exception-message-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-entry :timeout-ms],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/diagnostic-is-recorded-without-changing-refusal,
+     :kind :record,
+     :product [:data :timeout-ms],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-525c5d1b724eba8886bd23973d0e52687fc647bc9ec37edec171775c6b31ea0f",
+     :git-head "7f9f6c173f5a7cc5a26db427b20aea26f1c4693b",
+     :test-revision "7f9f6c173f5a7cc5a26db427b20aea26f1c4693b",
+     :ran-at "2026-09-27T15:52:05.092529139Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/the-timeout-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-latest :message],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/diagnostic-is-recorded-without-changing-refusal,
+     :kind :record,
+     :product [:data :message],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-509df4c4e8da8de84f5b04a9620db9d64737c68d4891f0b6f347ba68a475a88e",
+     :git-head "032b525fdeed1526d1f3167f7fe54cebcc68d3b7",
+     :test-revision "032b525fdeed1526d1f3167f7fe54cebcc68d3b7",
+     :ran-at "2026-09-27T15:49:11.472654661Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/the-exception-message-reaches-the-latest-refusal}
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/diagnostic-is-recorded-without-changing-refusal,
+     :kind :record,
+     :product [:data :timeout-ms],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-ec753d7d821d96fe3ddb6869f29b880049666c26e08218964a6016e914abe5e1",
+     :git-head "7f9f6c173f5a7cc5a26db427b20aea26f1c4693b",
+     :test-revision "7f9f6c173f5a7cc5a26db427b20aea26f1c4693b",
+     :ran-at "2026-09-27T15:52:17.387344106Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
@@ -838,7 +886,20 @@
   {:wire
    [:r14-precision-carry :r9-decision [:beta {:record :precision}]],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test/changed-beta-refuses-the-sealed-carrier,
+     :kind :refusal,
+     :product [:refusal :kind],
+     :intervention :before-reader,
+     :expected :precision-consumption-mismatch},
+    :evidence
+    {:warrant-id
+     "test-registry-e3fa746f2d75cc5939438e54c685b6aaa359a3fb8902c2910875feb65b6be7fa",
+     :git-head "c01c40e124ddf55c4e84bbe33477bc214ef34a25",
+     :test-revision "c01c40e124ddf55c4e84bbe33477bc214ef34a25",
+     :ran-at "2026-09-27T15:40:35.659293460Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -953,7 +1014,19 @@
     :r3-store-constraints-read
     :constraints-read],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test/publication-changes-reader-product,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-4eb8e4ca0d39d6848a262de53598a5a0996cae7c63c2841e01d114c212564122",
+     :git-head "827188aa273503c138257b9b1e3148c25f392090",
+     :test-revision "827188aa273503c138257b9b1e3148c25f392090",
+     :ran-at "2026-09-27T15:52:08.930863825Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test/published-value-reaches-reader}
   {:wire [:r2-store-coverage :r3-store-coverage :coverage],
@@ -995,7 +1068,19 @@
     :r3-store-locator-declines
     :locator-declines],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test/publication-changes-reader-product,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-696d5f441565590ed66eb12c915480e414b951ee1acc909ae3fa2a51d0da3275",
+     :git-head "827188aa273503c138257b9b1e3148c25f392090",
+     :test-revision "827188aa273503c138257b9b1e3148c25f392090",
+     :ran-at "2026-09-27T15:52:22.030032335Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test/published-value-reaches-reader}
   {:wire
@@ -1003,7 +1088,19 @@
     :r3-store-locator-questions
     :locator-questions],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test/publication-changes-reader-product,
+     :kind :record,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e27a8fc173fb68e8286daf7f08cd3eb9a43d7e6169714cb64fd4ea190fb94507",
+     :git-head "827188aa273503c138257b9b1e3148c25f392090",
+     :test-revision "827188aa273503c138257b9b1e3148c25f392090",
+     :ran-at "2026-09-27T15:52:33.668700324Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r3-store-locators :locators],

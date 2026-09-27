@@ -467,7 +467,12 @@
         ;; value, the prover cannot say so, and a second-layer test that varies
         ;; the value and watches the product is exactly the evidence the
         ;; heuristic lacks — so it does not make the wire record-only.
-        todos (filter #(and (= :to-do (:kind %)) (not (true? (:heuristic %))))
+        ;; :attribution-limit true is the MAP's annotation for the same case
+        ;; (futon3c 3da56600): :heuristic is the prover's own flag, compared
+        ;; exactly by the map test, so a map author cannot set it.
+        todos (filter #(and (= :to-do (:kind %))
+                            (not (true? (:heuristic %)))
+                            (not (true? (:attribution-limit %))))
                       (:expected-findings model))
         explicit (set (for [b (:boxes model) f (:attribution-findings b)
                             :when (= :to-do (:kind f))] (:wire f)))]
@@ -530,7 +535,7 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
-    (is (= {:value-varying 48 :refusal 20 :record 13 :absent 99} (:second-layer l)))
+    (is (= {:value-varying 50 :refusal 21 :record 18 :absent 91} (:second-layer l)))
     (is (= 180 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
@@ -610,4 +615,6 @@
             f {:role :reads :box/id :r1-outer-cascade :field :eligible :kind :to-do :finding :declared-read-not-found}]
         (is (true? ((ctx [f]) wire)) "a plain :to-do read makes the wire record-only")
         (is (not ((ctx [(assoc f :heuristic true)]) wire)) "a heuristic attribution limit does not")
+        (is (not ((ctx [(assoc f :attribution-limit true)]) wire)) "a map-annotated attribution limit does not")
+        (is ((ctx [(assoc f :attribution-limit false)]) wire) "an annotation that is not true still blocks")
         (is (not ((ctx [(assoc f :field :clock-lineage)]) wire)) "another field's finding does not touch this wire")))))
