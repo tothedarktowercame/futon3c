@@ -60,6 +60,7 @@
 (require 'button)
 (require 'json)
 (require 'subr-x)
+(require 'futon-url)
 
 (defgroup mission-mode nil
   "Live mission scope view."
@@ -612,40 +613,42 @@ FILES are absolute paths under ~/code; MISSIONS are entity ids."
     (condition-case nil
         (let* ((url (format "%s/api/futon/hyperedges?end=%s&limit=300"
                             mission-mode-proxy-url (url-hexify-string entity-id)))
-               (buf (url-retrieve-synchronously url t t 4))
+               (buf (futon-url-retrieve-synchronously url 4))
                files missions)
           (when buf
-            (with-current-buffer buf
-              (goto-char (point-min))
-              (when (search-forward "\n\n" nil t)
-                ;; url-retrieve buffers are raw bytes: decode before parsing,
-                ;; or the `→' in code/v05/file→mission never matches.
-                (let* ((json-str (decode-coding-string
-                                  (buffer-substring-no-properties (point) (point-max))
-                                  'utf-8))
-                       ;; json.el: objects → alists with symbol keys (hx/type, hx/ends).
-                       (hxs (append (cdr (assq 'hyperedges
-                                               (json-read-from-string json-str)))
-                                    nil)))
-                  (dolist (hx hxs)
-                    (let ((type (format "%s" (or (cdr (assq 'hx/type hx)) "")))
-                          (ends (append (cdr (assq 'hx/ends hx)) nil)))
-                      (cond
-                       ((string-match-p "file→mission\\|file->mission" type)
-                        (dolist (end ends)
-                          (let ((eid (cdr (assq 'entity-id end))))
-                            (when (and (stringp eid)
-                                       (string-match "\\`\\([a-z0-9]+\\)-[a-z]/file/\\(.+\\)\\'" eid))
-                              (push (format "/home/joe/code/%s/%s"
-                                            (match-string 1 eid) (match-string 2 eid))
-                                    files)))))
-                       ((string-match-p "mission-cross-ref" type)
-                        (dolist (end ends)
-                          (let ((eid (cdr (assq 'entity-id end))))
-                            (when (and (stringp eid)
-                                       (string-match-p "/mission/" eid)
-                                       (not (equal eid entity-id)))
-                              (push eid missions))))))))))
+            (unwind-protect
+		(with-current-buffer buf
+		  (goto-char (point-min))
+		  (when (search-forward "\n\n" nil t)
+                    ;; url-retrieve buffers are raw bytes: decode before parsing,
+                    ;; or the `→' in code/v05/file→mission never matches.
+                    (let* ((json-str (decode-coding-string
+                                      (buffer-substring-no-properties (point) (point-max))
+                                      'utf-8))
+			   ;; json.el: objects → alists with symbol keys (hx/type, hx/ends).
+			   (hxs (append (cdr (assq 'hyperedges
+						   (json-read-from-string json-str)))
+					nil)))
+                      (dolist (hx hxs)
+			(let ((type (format "%s" (or (cdr (assq 'hx/type hx)) "")))
+                              (ends (append (cdr (assq 'hx/ends hx)) nil)))
+			  (cond
+			   ((string-match-p "file→mission\\|file->mission" type)
+                            (dolist (end ends)
+                              (let ((eid (cdr (assq 'entity-id end))))
+				(when (and (stringp eid)
+					   (string-match "\\`\\([a-z0-9]+\\)-[a-z]/file/\\(.+\\)\\'" eid))
+				  (push (format "/home/joe/code/%s/%s"
+						(match-string 1 eid) (match-string 2 eid))
+					files)))))
+			   ((string-match-p "mission-cross-ref" type)
+                            (dolist (end ends)
+                              (let ((eid (cdr (assq 'entity-id end))))
+				(when (and (stringp eid)
+					   (string-match-p "/mission/" eid)
+					   (not (equal eid entity-id)))
+				  (push eid missions)))))))))))
+              ;; A parse error must not strand the response buffer.
               (kill-buffer buf)))
           (cons (delete-dups (nreverse files))
                 (delete-dups (nreverse missions))))

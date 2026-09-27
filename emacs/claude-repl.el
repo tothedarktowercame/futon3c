@@ -14,6 +14,7 @@
 (require 'cl-lib)
 (require 'json)
 (require 'url)
+(require 'futon-url)
 (require 'agent-chat)
 (require 'agent-chat-invariants)
 (load (expand-file-name "futon3c-blackboard.el"
@@ -1482,7 +1483,7 @@ Returns (ok . old-session-id) on success, nil on failure."
           '(("Content-Type" . "application/json")))
          (url-request-data "{}")
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t 10)
+                     (futon-url-retrieve-synchronously url 10)
                    (error nil)))
          (result nil))
     (when (buffer-live-p buffer)
@@ -1512,7 +1513,7 @@ Returns (ok . old-session-id) on success, nil on failure."
             ("Content-Type" . "text/plain")))
          (url-request-data (encode-coding-string clj-code 'utf-8))
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t 10)
+                     (futon-url-retrieve-synchronously url 10)
                    (error nil)))
          (result nil))
     (when (buffer-live-p buffer)

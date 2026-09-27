@@ -10,6 +10,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'url)
+(require 'futon-url)
 (require 'url-util)
 
 (defconst agent-chat--source-file
@@ -955,7 +956,7 @@ real freeze was the poller, now async."
                           (if (and sid (stringp sid))
                               (format "&session-id=%s" (url-hexify-string sid))
                             "")))
-             (resp-buf (url-retrieve-synchronously url t t 1))
+             (resp-buf (futon-url-retrieve-synchronously url 1))
              (body nil))
         (when resp-buf
           (with-current-buffer resp-buf
@@ -2813,46 +2814,6 @@ Replaces the `(session: ...)' text in the first line."
         (json-parse-string text :object-type 'plist)
       (error nil))))
 
-(defun agent-chat--url-retrieve-with-deadline (url timeout)
-  "Retrieve URL silently, waiting at most TIMEOUT seconds; return the buffer.
-
-Unlike `url-retrieve-synchronously', a request that misses the deadline is
-cancelled rather than abandoned.  That function returns nil on timeout and
-leaves the request running, so a late answer lands in a buffer nobody kills and
-an answer that never comes holds its socket open for the life of Emacs.  With
-the 1 s evidence timeout and 1.4 MB session queries, a day of use left 20 such
-buffers in the graph daemon (2026-09-27); unanswered requests of the same kind
-are what exhausted its descriptors.  TIMEOUT nil waits indefinitely."
-  (let* ((data-buffer nil)
-         (proc-buffer (url-retrieve url (lambda (&rest _) (setq data-buffer (current-buffer)))
-                                    nil t t))
-         (deadline (and timeout (+ (float-time) timeout))))
-    (when proc-buffer
-      (catch 'done
-        (while (not data-buffer)
-          (when (or (not (buffer-live-p proc-buffer))
-                    (and deadline (> (float-time) deadline)))
-            (throw 'done nil))
-          ;; Follow a redirect the way `url-retrieve-synchronously' does.
-          (let ((redirect (buffer-local-value 'url-redirect-buffer proc-buffer)))
-            (when (and redirect (not (eq redirect proc-buffer)))
-              (let (kill-buffer-query-functions) (kill-buffer proc-buffer))
-              (setq proc-buffer redirect)))
-          (let ((proc (get-buffer-process proc-buffer)))
-            (when (and proc (memq (process-status proc) '(closed exit signal failed)))
-              (throw 'done nil)))
-          (accept-process-output nil 0.05)))
-      (unless (eq data-buffer proc-buffer)
-        (when (buffer-live-p proc-buffer)
-          (let ((proc (get-buffer-process proc-buffer)))
-            (when proc
-              ;; url.el's end-of-document sentinel re-issues a request whose
-              ;; connection closed early, so detach it before deleting.
-              (set-process-sentinel proc #'ignore)
-              (delete-process proc)))
-          (let (kill-buffer-query-functions) (kill-buffer proc-buffer)))))
-    data-buffer))
-
 (defun agent-chat-evidence-request-json (method url timeout &optional payload)
   "Send METHOD to URL with JSON PAYLOAD and return plist with :status and :json."
   (let* ((url-request-method method)
@@ -2865,7 +2826,7 @@ are what exhausted its descriptors.  TIMEOUT nil waits indefinitely."
                               'utf-8)))
          (request-error nil)
          (buffer (condition-case err
-                     (agent-chat--url-retrieve-with-deadline url timeout)
+                     (futon-url-retrieve-synchronously url timeout)
                    (error
                     (setq request-error (error-message-string err))
                     nil))))

@@ -104,12 +104,14 @@
     jsonrpc--process-filter
     comint-output-filter
     internal-default-process-filter
-    url-retrieve-synchronously)
+    url-retrieve-synchronously
+    futon-url-retrieve-synchronously)
   "Symbol-level functions to time via around-advice when tracing is enabled.
 Process filters bypass `pre-command-hook' and `timer-event-handler', so a
 multi-second filter call is invisible without this wrap. Synchronous URL
 calls block in `accept-process-output' and look the same as a stalled
-loop; wrapping `url-retrieve-synchronously' catches that case.")
+loop; wrapping `url-retrieve-synchronously' and its deadline-bounded
+replacement `futon-url-retrieve-synchronously' catches that case.")
 
 (defun joe-input-trace--make-filter-advice (fn-symbol)
   "Return an around-advice that logs FN-SYMBOL's timing."

@@ -9,6 +9,7 @@
 (require 'server)
 (require 'subr-x)
 (require 'url)
+(require 'futon-url)
 
 (defgroup futon3c-blackboard nil
   "Generic controls for futon3c blackboard buffers."
@@ -139,7 +140,7 @@ When nil, uses `scripts/agency-hud-terminal' from the futon3c project root."
             ("Content-Type" . "text/plain; charset=utf-8")))
          (url-request-data payload)
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t (or timeout-seconds 2))
+                     (futon-url-retrieve-synchronously url (or timeout-seconds 2))
                    (error nil))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer

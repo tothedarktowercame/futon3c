@@ -20,6 +20,7 @@
 (require 'sqlite)
 (require 'subr-x)
 (require 'url)
+(require 'futon-url)
 (require 'url-http)
 (require 'url-util)
 (declare-function claude-repl--registry-model-for-agent "claude-repl" (agent-id))
@@ -1824,7 +1825,7 @@ When ELAPSED-SECONDS is non-nil, include it in the display."
             ("Content-Type" . "text/plain; charset=utf-8")))
          (url-request-data payload)
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t (or timeout-seconds 2))
+                     (futon-url-retrieve-synchronously url (or timeout-seconds 2))
                    (error nil))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
@@ -4298,7 +4299,7 @@ Returns (ok . old-session-id) on success, nil on failure."
           '(("Content-Type" . "application/json")))
          (url-request-data "{}")
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t 10)
+                     (futon-url-retrieve-synchronously url 10)
                    (error nil)))
          (result nil))
     (when (buffer-live-p buffer)

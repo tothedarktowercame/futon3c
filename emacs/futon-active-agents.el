@@ -23,6 +23,7 @@
 (require 'tabulated-list)
 (require 'subr-x)
 (require 'seq)
+(require 'futon-url)
 
 (defgroup futon-active-agents nil
   "Roster view filtered to agents that are currently working."
@@ -78,7 +79,7 @@ futon3c/holes/excursions/E-drainer-stall-announced-jobs.md."
 (defun futon-active-agents--get-json (path)
   "GET PATH from the agency API and return parsed JSON, or nil on failure."
   (let* ((url (concat (string-remove-suffix "/" futon-active-agents-api-url) path))
-         (buf (ignore-errors (url-retrieve-synchronously url t t 4))))
+         (buf (ignore-errors (futon-url-retrieve-synchronously url 4))))
     (when buf
       (unwind-protect
           (with-current-buffer buf

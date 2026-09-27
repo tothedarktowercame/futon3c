@@ -6,6 +6,7 @@
 (require 'subr-x)
 (require 'trace)
 (require 'url)
+(require 'futon-url)
 
 (declare-function websocket-open "websocket" (url &rest args))
 (declare-function websocket-openp "websocket" (websocket))
@@ -250,7 +251,7 @@ that need a T2 boundary stamp for paired in-system timing runs.")
 
 (defun smart-cursor--read-json-response (url)
   "Fetch URL synchronously and parse its JSON body as an alist."
-  (let ((buffer (url-retrieve-synchronously url t t 5)))
+  (let ((buffer (futon-url-retrieve-synchronously url 5)))
     (unless buffer
       (user-error "Smart Cursor could not reach %s" url))
     (unwind-protect
@@ -266,7 +267,7 @@ that need a T2 boundary stamp for paired in-system timing runs.")
 
 (defun smart-cursor--read-json-hash-response (url)
   "Fetch URL synchronously and parse its JSON body as a hash table."
-  (let ((buffer (url-retrieve-synchronously url t t 5)))
+  (let ((buffer (futon-url-retrieve-synchronously url 5)))
     (unless buffer
       (user-error "Smart Cursor could not reach %s" url))
     (unwind-protect
