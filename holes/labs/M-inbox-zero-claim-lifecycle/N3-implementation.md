@@ -69,23 +69,30 @@ No other paths staged in any repo; pre-existing dirt untouched.
 Current live state (owner-verified, re-confirmed read-only during N3):
 `GET /api/alpha/war-machine` → 503 `war-machine-snapshot-unavailable`,
 scheduler `running? false`. The running futon3c JVM still executes the OLD
-sweeper code, which still emits the unsound personal notices. Cutover is
-therefore paired:
+sweeper code, which still emits the unsound personal notices. **Corrected
+sequence (N4, finding 5): the consumer must be proven live BEFORE the old
+lane is cut over** — removing the old notices while the pressure surface is
+still 503 trades a noisy lane for an unread one. Deployment is a separate,
+reviewed authorization; this packet executes none of it.
 
-1. **Reload sweeper in the futon3c JVM** (Drawbridge `load-file
+1. **Prove the consumer first:** regenerate one WM snapshot (one
+   `futon2.report.war-machine` run, or start the wm scheduler — Joe's call
+   per the restart-safety rule) and verify `GET /api/alpha/war-machine`
+   serves commit-hygiene queues with the `ownership-unknown` annotation,
+   remainder names, and the rendered `### Uncertain detail` section. If
+   this fails, STOP — the old lane stays until the surface works.
+2. **Reload sweeper in the futon3c JVM** (Drawbridge `load-file
    src/futon3c/inbox_zero/sweeper.clj`, futon3/AGENTS.md procedure) — stops
-   the unsound notices structurally. This is a runtime act for Joe/owner,
-   not this packet.
-2. **Confirm one sweeper pass** writes `storage/inbox-zero/uncertain-pressure.edn`
-   and the backlog (read-only verification of file contents/mtime).
-3. **Run one mana snapshot** (`bb futon0/scripts/mana-snapshot.bb`) and
-   verify `:uncertainty {:status "available"}` plus per-repo `:uncertain`.
-4. **Regenerate the WM snapshot** (one `futon2.report.war-machine` run, or
-   start the wm scheduler — Joe's call per restart-safety rule) and verify
-   `GET /api/alpha/war-machine` serves commit-hygiene queues with
-   `ownership-unknown` annotation and remainder/drilldown lines.
-5. Only then is C8's "documented triage route" demonstrable; C8 stays
-   unchecked until a reviewer sees steps 2–4 outputs.
+   the unsound notices structurally.
+3. **Paired publisher/consumer verification:** confirm one sweeper pass
+   writes `storage/inbox-zero/uncertain-pressure.edn` and the backlog
+   (read-only checks), run one mana snapshot
+   (`bb futon0/scripts/mana-snapshot.bb`), verify `:uncertainty {:status
+   "available"}` and per-repo `:uncertain`, then re-verify the
+   war-machine route shows the SAME repo's uncertain count — publisher
+   and consumer checked as one pair, not independently assumed.
+4. Only then is C8's "documented triage route" demonstrable; C8 stays
+   unchecked until a reviewer sees step-3 outputs.
 
 Prerequisite risks: step 4 depends on the WM scheduler/futon2 report
 pipeline being runnable in this environment (currently down — read-only

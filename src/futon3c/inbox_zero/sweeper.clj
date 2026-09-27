@@ -217,17 +217,18 @@
 
   ROOT is canonicalized so downstream joins (mana snapshot per-repo) match
   by real worktree identity, never by label: futon3c-d and futon3c are
-  different roots. :newest is bounded; :remainder reports the rest so a
-  bounded display never silently drops files."
+  different roots. :paths carries the COMPLETE per-file drilldown (newest
+  first); bounded displays take a prefix and use :remainder for the rest,
+  so no file is ever silently dropped from the record."
   [windows roster {:keys [label root entries]}]
   (let [sorted (vec (sort-by :mtime-ms > entries))
-        newest (mapv #(select-keys % [:path :mtime-ms]) (take sample-size sorted))]
+        paths (mapv #(select-keys % [:path :mtime-ms]) sorted)]
     {:label label
      :root (.getCanonicalPath (io/file root))
      :dirty-count (count entries)
      :untracked (count (filter :untracked? entries))
-     :newest newest
-     :remainder (max 0 (- (count entries) (count newest)))
+     :paths paths
+     :remainder (max 0 (- (count paths) sample-size))
      :diagnostic-overlaps (diagnostic-overlaps windows roster entries)}))
 
 (defn- atomic-write! [path value]
@@ -274,9 +275,11 @@
                                     "the current bytes is unknown (C8). Current state, "
                                     "not a queue: rewritten every pass.")
                          :repos (vec (sort-by :label rows))})
+    true
     (catch Throwable error
       (print-fn (str "[inbox-zero] operator backlog unwritable: "
-                     (.getMessage error))))))
+                     (.getMessage error)))
+      false)))
 
 (def ^:private default-uncertain-pressure-path
   "/home/joe/code/storage/inbox-zero/uncertain-pressure.edn")
@@ -286,16 +289,43 @@
   snapshot (futon0) merges into the War Machine commit-hygiene queues.
   Current state, rewritten every pass; :interval-ms lets consumers mark
   staleness instead of trusting a silent file."
-  [path rows now backlog-path print-fn]
+  [path rows now backlog-path diagnostics-available? print-fn]
   (try
     (atomic-write! path {:at now
                          :generated-by "futon3c.inbox-zero.sweeper"
                          :interval-ms default-interval-ms
                          :drilldown backlog-path
+                         :diagnostics-available? (boolean diagnostics-available?)
                          :repos (vec (sort-by :label rows))})
+    true
     (catch Throwable error
       (print-fn (str "[inbox-zero] uncertain-pressure feed unwritable: "
-                     (.getMessage error))))))
+                     (.getMessage error)))
+      false)))
+
+(defn- finish-pass
+  "Publish both outputs and return typed completeness. A pass is :complete?
+  only when BOTH the backlog and the pressure feed were written; a write
+  failure is reported, never silently counted as success."
+  [counts backlog-path pressure-path now aux-ok? print-fn]
+  (let [backlog-ok? (write-backlog! backlog-path (:uncertain-rows counts)
+                                    now print-fn)
+        feed-ok? (write-uncertain-pressure! pressure-path
+                                            (:uncertain-rows counts) now
+                                            backlog-path aux-ok? print-fn)
+        counts (-> counts
+                   (dissoc :uncertain-rows)
+                   (assoc :backlog-written? (boolean backlog-ok?)
+                          :feed-written? (boolean feed-ok?)
+                          :diagnostics-available? (boolean aux-ok?)
+                          :complete? (and (boolean backlog-ok?)
+                                          (boolean feed-ok?))))]
+    (when-not (:complete? counts)
+      (print-fn (str "[inbox-zero] uncertain-pressure pass INCOMPLETE: "
+                     "backlog-written?=" (:backlog-written? counts)
+                     " feed-written?=" (:feed-written? counts))))
+    (print-fn (str "[inbox-zero] uncertain-pressure pass: " (pr-str counts)))
+    counts))
 
 (defn sweep-dirty-repos!
   "Run one bounded uncertain-pressure pass. Every collaborator is injectable.
@@ -331,8 +361,18 @@
                       vec)
             ;; Only pay for the roster and the job ledger when something is
             ;; over the line; a clean stack costs one git status per repo.
-            windows (if (seq over) (windows-fn) [])
-            roster (if (seq over) (roster-fn) {})
+            ;; Their failure degrades diagnostics, never the pressure rows.
+            aux-ok? (atom true)
+            aux-fn (fn [f fallback]
+                     (try (f)
+                          (catch Throwable error
+                            (reset! aux-ok? false)
+                            (print-fn (str "[inbox-zero] diagnostic input "
+                                           "unavailable (overlaps omitted): "
+                                           (.getMessage error)))
+                            fallback)))
+            windows (if (seq over) (aux-fn windows-fn []) [])
+            roster (if (seq over) (aux-fn roster-fn {}) {})
             counts
             (reduce
              (fn [counts repo]
@@ -355,12 +395,7 @@
                     :over-threshold (count over)
                     :uncertain-rows [])
              over)]
-        (write-backlog! backlog-path (:uncertain-rows counts) now print-fn)
-        (write-uncertain-pressure! pressure-path (:uncertain-rows counts)
-                                   now backlog-path print-fn)
-        (let [counts (dissoc counts :uncertain-rows)]
-          (print-fn (str "[inbox-zero] uncertain-pressure pass: " (pr-str counts)))
-          counts))
+        (finish-pass counts backlog-path pressure-path now @aux-ok? print-fn))
       (catch Throwable error
         (try
           (print-fn (str "[inbox-zero] uncertain-pressure pass failed: "

@@ -72,17 +72,20 @@
     ;; no delivery machinery exists anymore: nothing but prints in calls
     (is (empty? (remove #(= :print (first %)) @calls)))
     (is (= 1 (:uncertain counts)))
-    ;; all ten files represented: 5 sampled newest + remainder 5
+    ;; all ten files represented in the FULL drilldown: 10 paths recorded,
+    ;; bounded display would take 5 and remainder reports the other 5
     (is (= 10 (:dirty-count row)))
-    (is (= 5 (count (:newest row))))
+    (is (= 10 (count (:paths row))))
     (is (= 5 (:remainder row)))
+    (is (= "runs/out-0.edn" (:path (first (:paths row)))))
     ;; overlaps are diagnostics naming all three seats, never assignment
     (is (= 10 (count (:diagnostic-overlaps row))))
     (is (= ["codex-4" "kimi-9" "xiang"]
            (get (:diagnostic-overlaps row) "runs/out-0.edn")))
-    ;; backlog carries the same repo
+    ;; backlog carries the same repo WITH the complete per-file drilldown
     (is (= 1 (count (:repos backlog))))
-    (is (= "futon3c-d" (:label (first (:repos backlog)))))))
+    (is (= "futon3c-d" (:label (first (:repos backlog)))))
+    (is (= 10 (count (:paths (first (:repos backlog))))))))
 
 (deftest sole-overlap-is-still-not-authorship
   ;; Exactly one live agent overlapping every write: still no delivery.
@@ -140,7 +143,7 @@
         second-feed (read-string (slurp (:pressure-path options)))]
     (is (= (dissoc first-feed :at) (dissoc second-feed :at)))
     (is (= 11 (:dirty-count (first (:repos second-feed)))))
-    (is (= 5 (count (:newest (first (:repos second-feed))))))
+    (is (= 11 (count (:paths (first (:repos second-feed))))))
     (is (= 6 (:remainder (first (:repos second-feed)))))))
 
 (deftest uncertain-row-canonicalizes-the-root
@@ -195,6 +198,39 @@
   (is (= {} (sweeper/diagnostic-overlaps [(window "codex-16" 60 10)]
                                          {"codex-10" "s10"}
                                          [(entry "a.edn" 30)]))))
+
+(deftest auxiliary-input-failure-never-suppresses-pressure
+  ;; windows-fn/roster-fn throwing must degrade diagnostics, not rows:
+  ;; the feed and backlog are still written, marked unavailable.
+  (let [calls (atom [])
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                       :windows-fn (fn [] (throw (ex-info "agency down" {})))
+                       :roster-fn (fn [] (throw (ex-info "agency down" {}))))
+        counts (sweeper/sweep-dirty-repos! options)
+        feed (read-string (slurp (:pressure-path options)))]
+    (is (= 1 (:uncertain counts)))
+    (is (false? (:diagnostics-available? counts)))
+    (is (true? (:complete? counts)))
+    (is (false? (:diagnostics-available? feed)))
+    (is (= {} (:diagnostic-overlaps (first (:repos feed)))))
+    (is (= 11 (count (:paths (first (:repos feed))))))))
+
+(deftest a-write-failure-is-never-reported-as-complete
+  ;; An unwritable feed path must surface typed incompleteness; the
+  ;; backlog half still succeeds and the pass says so.
+  (let [calls (atom [])
+        blocker (java.io.File. (temp-dir) "a-file-not-a-dir")
+        _ (spit blocker "occupied")
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                       :pressure-path (str (java.io.File. blocker "feed.edn")))
+        counts (sweeper/sweep-dirty-repos! options)]
+    (is (true? (:backlog-written? counts)))
+    (is (false? (:feed-written? counts)))
+    (is (false? (:complete? counts)))
+    (is (some (fn [call]
+                (and (= :print (first call))
+                     (str/includes? (second call) "INCOMPLETE")))
+              @calls))))
 
 ;; ---------- the push lane ----------
 
