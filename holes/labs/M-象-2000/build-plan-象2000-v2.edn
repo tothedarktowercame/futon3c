@@ -52,7 +52,7 @@
    :deps [] :decision nil :v2 :new
    :patterns [:象/行有定名]}
   {:id :P7a  :title "Last turn's retrieval shown at the next turn" :segment :rehearsal
-   :deps [] :decision {:theme :format :question "Change what every turn shows at its start?"} :v2 :same
+   :deps [] :decision nil :decided "Joe 2026-09-27: yes, as a prompt line -- top pattern before the REPL > marker and in the per-turn header beside surface facts; every seat; wire to existing sigil/backpack" :v2 :same
    :patterns [:象/双时并记]}
   {:id :P7b  :title "Retrieval run over artefacts as they are written" :segment :rehearsal
    :deps [] :decision nil :v2 :new
