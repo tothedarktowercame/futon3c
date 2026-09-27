@@ -20,6 +20,10 @@
 
 (def now "2026-02-10T12:00:00Z")
 
+(deftest origin-backfill-evidence-type
+  (is (shapes/valid? shapes/EvidenceType :origin/backfill))
+  (is (not (shapes/valid? shapes/EvidenceType :origin/unknown-kind))))
+
 ;; =============================================================================
 ;; TypedAgentId
 ;; =============================================================================
