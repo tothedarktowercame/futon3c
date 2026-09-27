@@ -1,0 +1,211 @@
+{
+  "pins": {
+    "evidence-system-as-of": "2026-09-27T21:56:59.788969Z"
+  },
+  "probes": {
+    "retrieval": {
+      "hi": {
+        "params": {
+          "author": "claude-11",
+          "limit": 1000,
+          "session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+          "since": "2026-09-24T16:22:48.527475353Z",
+          "system-as-of": "2026-09-24T16:22:48.565Z"
+        },
+        "response": {
+          "count": 1,
+          "entries": [
+            {
+              "evidence/at": "2026-09-24T16:22:48.527475353Z",
+              "evidence/author": "claude-11",
+              "evidence/body": "{\"event\" \"context-retrieval\", \"agent-id\" \"claude-11\", \"at\" \"2026-09-24T16:22:48.527248468Z\", \"turn\" 6, \"query\" \"So, we don't need to redirect claude-1 or claude-10 \\\"live\\\" but we should create an enforcement rule \", \"results\" [{:id \"translation/route-the-untranslatable\", :title \"Refuse What Cannot Be Translated, And Route It With The Reason\", :score 0.3967, :rank 1, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"} {:id \"aif/scheduled-observer-entrypoint\", :title \"Scheduled Observer Entrypoint (and the No-Op Trap)\", :score 0.3743, :rank 2, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"} {:id \"inbox-zero/gate-fails-loudly\", :title \"Make The Check A Facility That Fails Loudly On Change\", :score 0.3696, :rank 3, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"}]}",
+              "evidence/claim-type": "step",
+              "evidence/id": "e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b",
+              "evidence/session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+              "evidence/subject": {
+                "ref/id": "claude-11",
+                "ref/type": "agent"
+              },
+              "evidence/tags": [
+                "invoke",
+                "dev",
+                "context-retrieval",
+                "futon3a"
+              ],
+              "evidence/type": "coordination"
+            }
+          ],
+          "limit": 1000,
+          "scanned": 1
+        }
+      },
+      "lo": {
+        "params": {
+          "author": "claude-11",
+          "limit": 1000,
+          "session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+          "since": "2026-09-24T16:22:48.527475353Z",
+          "system-as-of": "2026-09-24T16:22:48.564Z"
+        },
+        "response": {
+          "count": 0,
+          "entries": [],
+          "limit": 1000,
+          "scanned": 0
+        }
+      }
+    },
+    "turn-commits": {
+      "hi": {
+        "params": {
+          "author": "claude-11",
+          "limit": 1000,
+          "session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+          "since": "2026-09-24T16:22:46.007027481Z",
+          "system-as-of": "2026-09-24T16:22:46.036Z"
+        },
+        "response": {
+          "count": 1,
+          "entries": [
+            {
+              "evidence/at": "2026-09-24T16:22:46.007027481Z",
+              "evidence/author": "claude-11",
+              "evidence/body": {
+                "clocked-mission": "M-autoclock-in",
+                "clocked-target": "M-autoclock-in",
+                "commit-count": 2,
+                "commits": [
+                  {
+                    "author": "Joseph Corneli",
+                    "committed-at": "2026-09-24T16:21:03+00:00",
+                    "repo": "futon2",
+                    "repo-path": "/home/joe/code/futon2",
+                    "sha": "4c502847a031a1b98a8d0d47cca26be72e12d387",
+                    "subject": "PROOF-2a: kernel = co-application of the enabled frontier with a conflict flag; carrier = containment order with meets for overlapping pairs only; X0(e) against horizon and linear-extension spread; Clause T cost ordering — each from the M-futon-seams worked example"
+                  },
+                  {
+                    "author": "Joseph Corneli",
+                    "committed-at": "2026-09-24T16:22:34+00:00",
+                    "repo": "futon3c",
+                    "repo-path": "/home/joe/code/futon3c",
+                    "sha": "80428193c9f221276dc6769ab2d539120561af73",
+                    "subject": "kimi: the caller's clock is the default work target; a refusal sends an inbox-zero-style reminder"
+                  }
+                ],
+                "event": "turn-commits",
+                "mission-id": "M-autoclock-in",
+                "transport": "emacs-claude-repl",
+                "turn-id": "claude-11-turn-4"
+              },
+              "evidence/claim-type": "observation",
+              "evidence/id": "emacs-19af606bf41e8e62417c17410be3ab8c",
+              "evidence/in-reply-to": "emacs-ebc473b8aee68f01a07dc89fcb78ca34",
+              "evidence/session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+              "evidence/subject": {
+                "ref/id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+                "ref/type": "session"
+              },
+              "evidence/tags": [
+                "emacs-claude-repl",
+                "turn-commits",
+                "git",
+                "target-clocked"
+              ],
+              "evidence/type": "coordination"
+            }
+          ],
+          "limit": 1000,
+          "scanned": 1
+        }
+      },
+      "lo": {
+        "params": {
+          "author": "claude-11",
+          "limit": 1000,
+          "session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+          "since": "2026-09-24T16:22:46.007027481Z",
+          "system-as-of": "2026-09-24T16:22:46.034Z"
+        },
+        "response": {
+          "count": 0,
+          "entries": [],
+          "limit": 1000,
+          "scanned": 0
+        }
+      }
+    }
+  },
+  "early": {
+    "evidence/at": "2026-09-24T16:22:46.007027481Z",
+    "evidence/author": "claude-11",
+    "evidence/body": {
+      "clocked-mission": "M-autoclock-in",
+      "clocked-target": "M-autoclock-in",
+      "commit-count": 2,
+      "commits": [
+        {
+          "author": "Joseph Corneli",
+          "committed-at": "2026-09-24T16:21:03+00:00",
+          "repo": "futon2",
+          "repo-path": "/home/joe/code/futon2",
+          "sha": "4c502847a031a1b98a8d0d47cca26be72e12d387",
+          "subject": "PROOF-2a: kernel = co-application of the enabled frontier with a conflict flag; carrier = containment order with meets for overlapping pairs only; X0(e) against horizon and linear-extension spread; Clause T cost ordering — each from the M-futon-seams worked example"
+        },
+        {
+          "author": "Joseph Corneli",
+          "committed-at": "2026-09-24T16:22:34+00:00",
+          "repo": "futon3c",
+          "repo-path": "/home/joe/code/futon3c",
+          "sha": "80428193c9f221276dc6769ab2d539120561af73",
+          "subject": "kimi: the caller's clock is the default work target; a refusal sends an inbox-zero-style reminder"
+        }
+      ],
+      "event": "turn-commits",
+      "mission-id": "M-autoclock-in",
+      "transport": "emacs-claude-repl",
+      "turn-id": "claude-11-turn-4"
+    },
+    "evidence/claim-type": "observation",
+    "evidence/id": "emacs-19af606bf41e8e62417c17410be3ab8c",
+    "evidence/in-reply-to": "emacs-ebc473b8aee68f01a07dc89fcb78ca34",
+    "evidence/session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+    "evidence/subject": {
+      "ref/id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+      "ref/type": "session"
+    },
+    "evidence/tags": [
+      "emacs-claude-repl",
+      "turn-commits",
+      "git",
+      "target-clocked"
+    ],
+    "evidence/type": "coordination"
+  },
+  "retrieval": {
+    "evidence/at": "2026-09-24T16:22:48.527475353Z",
+    "evidence/author": "claude-11",
+    "evidence/body": "{\"event\" \"context-retrieval\", \"agent-id\" \"claude-11\", \"at\" \"2026-09-24T16:22:48.527248468Z\", \"turn\" 6, \"query\" \"So, we don't need to redirect claude-1 or claude-10 \\\"live\\\" but we should create an enforcement rule \", \"results\" [{:id \"translation/route-the-untranslatable\", :title \"Refuse What Cannot Be Translated, And Route It With The Reason\", :score 0.3967, :rank 1, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"} {:id \"aif/scheduled-observer-entrypoint\", :title \"Scheduled Observer Entrypoint (and the No-Op Trap)\", :score 0.3743, :rank 2, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"} {:id \"inbox-zero/gate-fails-loudly\", :title \"Make The Check A Facility That Fails Loudly On Change\", :score 0.3696, :rank 3, :retrieval-source \"futon3a\", :retrieval-method \"embeddings\"}]}",
+    "evidence/claim-type": "step",
+    "evidence/id": "e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b",
+    "evidence/session-id": "85fc3016-f51c-4083-bcc6-5a0f8e22cb11",
+    "evidence/subject": {
+      "ref/id": "claude-11",
+      "ref/type": "agent"
+    },
+    "evidence/tags": [
+      "invoke",
+      "dev",
+      "context-retrieval",
+      "futon3a"
+    ],
+    "evidence/type": "coordination"
+  },
+  "commit": {
+    "author": "Joseph Corneli",
+    "author-at": "2026-09-24T16:22:34+00:00",
+    "commit-at": "2026-09-24T16:22:34+00:00",
+    "sha": "80428193c9f221276dc6769ab2d539120561af73",
+    "subject": "kimi: the caller's clock is the default work target; a refusal sends an inbox-zero-style reminder"
+  },
+  "answer": "QUERY retrieval-ordering detail: turn-commits emacs-19af606bf41e8e62417c17410be3ab8c event-at=2026-09-24T16:22:46.007027481Z; system-bracket=(2026-09-24T16:22:46.034Z, 2026-09-24T16:22:46.036Z]; retrieval e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b event-at=2026-09-24T16:22:48.527475353Z; system-bracket=(2026-09-24T16:22:48.564Z, 2026-09-24T16:22:48.565Z]; ordering=turn-commits stored before retrieval; git 80428193c9f221276dc6769ab2d539120561af73 commit-at=2026-09-24T16:22:34+00:00 (source emacs-19af606bf41e8e62417c17410be3ab8c); retrieval system-time gap to git commit-at=(14.564, 14.565]s; basis=LIST system-as-of visibility, not exact insertion timestamps"
+}

@@ -18,6 +18,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time as time_module
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -125,9 +127,19 @@ def capture():
     def get(route, params):
         url = BASE + route + '?' + urllib.parse.urlencode(params)
         started = now()
-        with urllib.request.urlopen(urllib.request.Request(
-                url, headers={'Accept': 'application/json'}), timeout=60) as response:
-            result = json.load(response)
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(urllib.request.Request(
+                        url, headers={'Accept': 'application/json'}), timeout=60) as response:
+                    result = json.load(response)
+                break
+            except (urllib.error.URLError, TimeoutError) as error:
+                if (isinstance(error, urllib.error.HTTPError)
+                        and error.code not in (429, 502, 503, 504)) or attempt == 2:
+                    raise
+                delay = 2 ** (attempt + 1)
+                print(f'read retry in {delay}s: {error}', file=sys.stderr)
+                time_module.sleep(delay)
         require(not result.get('error') and result.get('ok') is not False,
                 f'store refused {url}: {result}')
         pins['reads'].append({'url': url, 'started-at': started, 'finished-at': now()})
@@ -161,6 +173,19 @@ def capture():
                        and since <= r['at'] < before}, seat + ' session')
         rows.extend(scan({'session-id': session, 'since': since, 'before': before}))
     require(len({eid(r) for r in rows}) == len(rows), 'duplicate evidence ids across pages')
+    brackets = {}
+    for label, rid, lo, hi in (
+        ('turn-commits', 'emacs-19af606bf41e8e62417c17410be3ab8c',
+         '2026-09-24T16:22:46.034Z', '2026-09-24T16:22:46.036Z'),
+        ('retrieval', 'e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b',
+         '2026-09-24T16:22:48.564Z', '2026-09-24T16:22:48.565Z')):
+        r = one((r for r in rows if eid(r) == rid), 'retrieval-ordering detail')
+        brackets[label] = {}
+        for edge, stamp in (('lo', lo), ('hi', hi)):
+            params = {'author': r['evidence/author'], 'session-id': r['evidence/session-id'],
+                      'since': at(r), 'limit': 1000, 'system-as-of': stamp}
+            brackets[label][edge] = {'params': params, 'response': get('evidence', params)}
+    files['retrieval-ordering.json'] = js(brackets).encode()
     files['evidence.jsonl'] = ''.join(js(r) + '\n' for r in rows).encode()
 
     for name, params in (
@@ -239,7 +264,7 @@ def read_snapshot(directory):
     actual = {p.relative_to(directory).as_posix() for p in directory.rglob('*') if p.is_file()}
     require(actual == set(files) | {'manifest.json'}, 'snapshot contains unmanifested files')
     required = {'pins.json', 'git.json', 'hyperedges.json', 'evidence.jsonl',
-                'notice-turns.jsonl', 'origin-backfills.jsonl', 'rules.json', 'clearance.json', WINDOW}
+                'notice-turns.jsonl', 'origin-backfills.jsonl', 'rules.json', 'clearance.json', 'retrieval-ordering.json', WINDOW}
     require(required <= files.keys(),
             'snapshot manifest missing required files')
     return files
@@ -358,6 +383,52 @@ def clearance_answer(files):
             and r['clearance/provenance']['grant-status'] == 'unrecorded', prefix + 'invalid provenance')
     return (f'{at(incident)[11:16]} incident explained by {at(source)[11:16]} ({resolved["commit"][:8]}); '
             f'measures may end (permission only); {len(comp)} notices owed/unsettled')
+
+
+def retrieval_ordering(files, early, retrieval, commit):
+    """Prove fixed, saved LIST visibility brackets; never infer exact insertion time."""
+    prefix = 'retrieval-ordering detail: '
+    data = json.loads(files['retrieval-ordering.json'])
+    instant = lambda t: dt.datetime.fromisoformat(t.replace('Z', '+00:00'))
+    pin = instant(json.loads(files['pins.json'])['evidence-system-as-of'])
+    bounds = {}
+    for label, record in (('turn-commits', early), ('retrieval', retrieval)):
+        bounds[label] = []
+        for edge in ('lo', 'hi'):
+            params = data[label][edge]['params']
+            response = data[label][edge]['response']
+            require(params.get('author') == record['evidence/author']
+                    and params.get('session-id') == record['evidence/session-id']
+                    and params.get('since') == at(record) and params.get('limit') == 1000,
+                    prefix + label + ' probe scope mismatch')
+            entries = response.get('entries')
+            require(isinstance(entries, list) and not response.get('error')
+                    and response.get('ok') is not False and not response.get('incomplete')
+                    and not response.get('next-cursor') and len(entries) < 1000,
+                    prefix + label + ' incomplete response')
+            hits = [r for r in entries if eid(r) == eid(record)]
+            require(len(hits) == (0 if edge == 'lo' else 1),
+                    prefix + label + ' ' + edge + ' visibility mismatch')
+            if hits:
+                require(hits[0] == record, prefix + label + ' record mismatch')
+            stamp = params['system-as-of']
+            require(instant(stamp) <= pin, prefix + 'probe exceeds capture pin')
+            bounds[label].append(stamp)
+        lo, hi = map(instant, bounds[label])
+        require(0 < (hi - lo).total_seconds() <= .010,
+                prefix + label + ' bracket must be positive and <=10ms')
+    tc, ret = bounds['turn-commits'], bounds['retrieval']
+    ordering = ('turn-commits stored before retrieval'
+                if instant(tc[1]) < instant(ret[0]) else 'not ordered')
+    gap = [(instant(t) - instant(commit['commit-at'])).total_seconds() for t in ret]
+    return ('QUERY retrieval-ordering detail: turn-commits ' + eid(early)
+            + ' event-at=' + at(early) + '; system-bracket=(' + tc[0] + ', ' + tc[1] + ']'
+            + '; retrieval ' + eid(retrieval) + ' event-at=' + at(retrieval)
+            + '; system-bracket=(' + ret[0] + ', ' + ret[1] + ']'
+            + '; ordering=' + ordering + '; git ' + commit['sha']
+            + ' commit-at=' + commit['commit-at'] + ' (source ' + eid(early) + ')'
+            + f'; retrieval system-time gap to git commit-at=({gap[0]:.3f}, {gap[1]:.3f}]s'
+            + '; basis=LIST system-as-of visibility, not exact insertion timestamps')
 
 
 def reconstruct(files):
@@ -492,7 +563,7 @@ def reconstruct(files):
         '16:20 retrieval: ' + eid(retrieval) + '; event-at=' + at(retrieval)
         + '; rank=' + str(hit['rank']) + ' ' + hit['id'],
         '80428193 git commit-at=' + commits['80428193']['commit-at'] + '; turn-commits event-at=' + at(early),
-        'STUB retrieval system-time ordering: unavailable until P6; the hand-filled six-second claim compares retrieval with invoke completion, not git commit time.',
+        retrieval_ordering(files, early, retrieval, commits['80428193']),
         'Commit existence query: absent at 2026-09-24T16:00:00Z; present at 2026-09-24T17:00:00Z. Commit existence does not establish runtime rule validity.',
         'Rule application queries use sourced live-time intervals; adopted/committed events remain separately queryable. Reconstructed adoption is not a P3 grant.']
     return {'rows': table, 'details': details}, pins
@@ -505,7 +576,10 @@ def check(report, expected):
     require(len(want) == len(got), f'row count mismatch: expected {len(want)}, got {len(got)}')
     for i, (a, b) in enumerate(zip(want, got), 1):
         require(a == b, f'row {i} ({b["when"]}) mismatch: expected {js(a)}; got {js(b)}')
-    require(fixture['details'] == report['details'], 'details mismatch')
+    require(len(fixture['details']) == len(report['details']), 'details count mismatch')
+    for wanted, actual in zip(fixture['details'], report['details']):
+        name = 'retrieval-ordering detail' if 'retrieval-ordering detail:' in wanted else 'detail'
+        require(wanted == actual, name + ' mismatch: expected ' + wanted + '; got ' + actual)
 
 
 def main():

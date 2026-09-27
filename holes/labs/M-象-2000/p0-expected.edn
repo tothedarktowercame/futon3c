@@ -1,6 +1,6 @@
 ;; P0 semantic acceptance fixture. Capture pins are checked separately.
 ;; Sources: IDENTIFY and build-plan-象2000-v2.edn :acceptance.
-;; No row STUBs remain; retrieval timing is an additional subclaim STUB.
+;; No row or retrieval detail STUBs remain; LIST visibility brackets are captured.
 ;; The 15:48 act delegates via claude-10 (see :details).
 {:rows [
    {:when "09-24 15:48"
@@ -71,7 +71,7 @@
    "Derivation is a bounded session/order reconstruction, not a stored causal edge."
    "16:20 retrieval: e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b; event-at=2026-09-24T16:22:48.527475353Z; rank=3 inbox-zero/gate-fails-loudly"
    "80428193 git commit-at=2026-09-24T16:22:34+00:00; turn-commits event-at=2026-09-24T16:22:46.007027481Z"
-   "STUB retrieval system-time ordering: unavailable until P6; the hand-filled six-second claim compares retrieval with invoke completion, not git commit time."
+   "QUERY retrieval-ordering detail: turn-commits emacs-19af606bf41e8e62417c17410be3ab8c event-at=2026-09-24T16:22:46.007027481Z; system-bracket=(2026-09-24T16:22:46.034Z, 2026-09-24T16:22:46.036Z]; retrieval e-9c5a5211-25c5-42a5-984c-d0e5d48bac5b event-at=2026-09-24T16:22:48.527475353Z; system-bracket=(2026-09-24T16:22:48.564Z, 2026-09-24T16:22:48.565Z]; ordering=turn-commits stored before retrieval; git 80428193c9f221276dc6769ab2d539120561af73 commit-at=2026-09-24T16:22:34+00:00 (source emacs-19af606bf41e8e62417c17410be3ab8c); retrieval system-time gap to git commit-at=(14.564, 14.565]s; basis=LIST system-as-of visibility, not exact insertion timestamps"
    "Commit existence query: absent at 2026-09-24T16:00:00Z; present at 2026-09-24T17:00:00Z. Commit existence does not establish runtime rule validity."
    "Rule application queries use sourced live-time intervals; adopted/committed events remain separately queryable. Reconstructed adoption is not a P3 grant."
  ]}

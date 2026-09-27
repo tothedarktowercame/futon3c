@@ -1,5 +1,8 @@
 # P0 retrieval ordering — API prerequisite (2026-09-27)
 
+**Update:** the prerequisite below was resolved using existing LIST visibility
+queries, not an API change. See the second-pass result below.
+
 Owner request: replace the remaining retrieval-ordering detail stub using P6
 system timestamps, pin the answer, and reject a rehashed snapshot whose two
 system times are swapped. Status: **blocked on source exposure**, not completed.
@@ -55,3 +58,59 @@ that the requested two-system-times query and swapped-times regression exist.
 No new detail line or successful live --check output is claimed. Python gates
 are deferred until an implementation can use the real fields; this artifact is
 the sourced prerequisite for the requesting owner, not a completed P0 packet.
+
+## Second pass: bracket query implemented
+
+claude-17 supplied the bounded bisection probe in
+[bisect_system_time_probe.py](bisect_system_time_probe.py). P0 uses its **fixed
+brackets**, not a fresh bisection, to keep additional store load at four
+sequential LIST reads. Turn-commits probes are 16:22:46.034Z/.036Z; retrieval
+probes are 16:22:48.564Z/.565Z, all on 2026-09-24. Each read retains author,
+exact session, event-at lower filter and limit1000. Request parameters and raw
+responses are saved in `retrieval-ordering.json`, covered by the manifest and
+captured request log. All probe times must be at or before the capture pin.
+
+Replay validates complete non-paginated responses, matching scope, absence at
+lo, exactly one identical target record at hi, and positive width <=10ms.
+The interval is **(lo, hi]**, not an exact insertion timestamp. The ordering is
+computed from tc.hi < retrieval.lo; otherwise it says `not ordered`. These
+observations place record visibility near the original event, without replacing
+event time with system time or asserting unobserved ingestion provenance.
+Git commit-at remains separately sourced from Git and the turn-commits record.
+The retrieval storage gap to commit-at is (14.564,14.565] seconds. This resolves
+the old six-second claim without modifying historical MAP-Q5.
+
+**Route limitation:** the owner probe found BY-ID ignores system-as-of. The API
+contract limits temporal reads to LIST/count; BY-ID must not be used for this
+purpose. P0 uses only LIST. Rejecting unsupported temporal BY-ID parameters is
+a futon1b contract-hardening gap, outside this packet.
+
+The previous 'API change required' conclusion was too strong: exact timestamps
+are not exposed, but the existing temporal selector supplies bounded visibility
+evidence. The snapshot test fixture preserves the real responses, not fabricated
+timestamp fields. HTTP transient failures are retried sequentially, at most
+three attempts, with 2s/4s backoff and stderr diagnostics; nontransient errors
+fail immediately. No JVM reload/restart or store write is needed.
+
+### Validation
+
+- Live `python3 scripts/xiang2000_p0.py --snapshot /tmp/p0-ordering-checked-v2
+  --check`: `stubs: 0 of 12`, `check: PASS`.
+- Two `--from-snapshot /tmp/p0-ordering-checked-v2 --check` outputs are
+  byte-identical to the live output (including capture pins).
+- `P0_ORDERING_SNAPSHOT=/tmp/p0-ordering-checked-v2 python3 -m unittest discover
+  -s scripts -p 'test_xiang2000_p0*.py'`: **16 tests, OK**, no skips.
+- The CLI mutation test copies the snapshot, swaps only the two records' raw
+  bracket responses, recomputes manifest hashes, and checks nonzero exit naming
+  `retrieval-ordering detail`. A second rehashed copy makes lo contain the target
+  and is also refused. Unit controls pin the real answer, reject incomplete
+  absence, derive `not ordered` for overlapping bounds, and exercise 503 backoff.
+- `py_compile` passes for P0 and the new test; `git diff --check` clean.
+- One intermediate capture got HTTP503 on an existing hyperedge read and exposed
+  a new retry name collision with P0's local `time` string. Fixed by module alias,
+  with a regression; the final checked capture succeeded. No restart/reload.
+
+Old snapshots lacking `retrieval-ordering.json` cannot prove this added detail
+and are refused as missing required inputs; no synthetic migration is applied.
+The committed compact fixture contains the actual four responses and joined
+records. The full successful capture remains at the temporary path above.
