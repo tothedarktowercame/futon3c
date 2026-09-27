@@ -49,7 +49,7 @@
 
 (defcustom claude-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
-      (when-let ((base (getenv "FUTON3C_EVIDENCE_BASE")))
+      (when-let* ((base (getenv "FUTON3C_EVIDENCE_BASE")))
         (format "%s/api/alpha/evidence" (string-remove-suffix "/" base)))
       (format "%s/api/alpha/evidence"
               (string-remove-suffix "/" agent-chat-agency-base-url)))
@@ -492,9 +492,9 @@ sessions."
 
 (defun claude-repl--frame-add-event (type summary &optional payload)
   "Add an event to the current frame."
-  (when-let ((fid claude-repl--current-frame-id))
+  (when-let* ((fid claude-repl--current-frame-id))
     (claude-repl--ensure-frame-table)
-    (when-let ((frame (gethash fid claude-repl--frame-table)))
+    (when-let* ((frame (gethash fid claude-repl--frame-table)))
       (let* ((events (plist-get frame :events))
              (ordinal (length events))
              (event (list :at (current-time) :type type
@@ -509,18 +509,18 @@ sessions."
 
 (defun claude-repl--frame-append-text (text)
   "Append TEXT to the current frame's assistant-text."
-  (when-let ((fid claude-repl--current-frame-id))
+  (when-let* ((fid claude-repl--current-frame-id))
     (claude-repl--ensure-frame-table)
-    (when-let ((frame (gethash fid claude-repl--frame-table)))
+    (when-let* ((frame (gethash fid claude-repl--frame-table)))
       (plist-put frame :assistant-text
                  (concat (or (plist-get frame :assistant-text) "") text))
       (puthash fid frame claude-repl--frame-table))))
 
 (defun claude-repl--close-frame (&optional status)
   "Close the current frame with STATUS."
-  (when-let ((fid claude-repl--current-frame-id))
+  (when-let* ((fid claude-repl--current-frame-id))
     (claude-repl--ensure-frame-table)
-    (when-let ((frame (gethash fid claude-repl--frame-table)))
+    (when-let* ((frame (gethash fid claude-repl--frame-table)))
       (plist-put frame :status (or status "done"))
       (plist-put frame :finished-at (current-time))
       (plist-put frame :updated-at (current-time))
@@ -560,7 +560,7 @@ Falls back to unbound idle agents, then returns nil."
                        (condition-case nil
                            (json-parse-buffer :object-type 'alist)
                          (error nil)))))))
-    (when-let ((agents-val (alist-get 'agents result)))
+    (when-let* ((agents-val (alist-get 'agents result)))
       (let* ((entries (cond
                        ((hash-table-p agents-val)
                         (let (pairs)
@@ -759,7 +759,7 @@ In both cases, rebinds the agent's socket to this Emacs daemon."
       (let ((sf claude-repl-session-file))
         (when (and (file-exists-p sf)
                    (fboundp 'agent-chat-update-session-id))
-          (when-let ((sid (claude-repl--read-session-id-file sf)))
+          (when-let* ((sid (claude-repl--read-session-id-file sf)))
             (agent-chat-update-session-id sid))))
       (message "claude-repl: registered as %s (socket: %s)" agent-id
                (or socket-name "default"))
@@ -790,7 +790,7 @@ session isolation between buffers."
    '("claude" "session-start" "chat"))
   ;; The first user turn is composed before Claude mints a session id.
   ;; Flush it now so session timelines keep a complete user/assistant pair.
-  (when-let ((pending (agent-chat-consume-pending-user-turn)))
+  (when-let* ((pending (agent-chat-consume-pending-user-turn)))
     (claude-repl--emit-user-turn-evidence! pending)))
 
 (defun claude-repl--emit-turn-evidence! (role text)
@@ -1026,7 +1026,7 @@ CALLBACK is called with the final response text on completion."
                         :turn-id ,turn-id
                         :surface "emacs-repl"
                         :caller ,(agent-turn-origin-caller))
-                      (when-let ((clock-id (claude-repl--dispatch-clock-id)))
+                      (when-let* ((clock-id (claude-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *futon3c-invoke-stream*"))
          (line-buffer "")
@@ -1202,7 +1202,7 @@ CALLBACK is called with the final response text on completion."
                                (when sid
                                  (agent-chat-update-session-id sid)
                                  (when claude-repl-session-file
-                                   (when-let ((session-dir (file-name-directory claude-repl-session-file)))
+                                   (when-let* ((session-dir (file-name-directory claude-repl-session-file)))
                                      (make-directory session-dir t))
                                    (write-region sid nil claude-repl-session-file nil 'silent))
                                  (claude-repl--emit-session-start-evidence! sid))
@@ -1593,9 +1593,9 @@ agency registry and persist the recovered id back to the file so the
 file-based machinery stays consistent.  Returns nil when no session
 exists anywhere yet."
   (or (claude-repl--read-session-id-file claude-repl-session-file)
-      (when-let ((sid (claude-repl--agency-session-id)))
+      (when-let* ((sid (claude-repl--agency-session-id)))
         (when claude-repl-session-file
-          (when-let ((dir (file-name-directory claude-repl-session-file)))
+          (when-let* ((dir (file-name-directory claude-repl-session-file)))
             (make-directory dir t))
           (write-region sid nil claude-repl-session-file nil 'silent))
         sid)))
@@ -1673,7 +1673,7 @@ Then auto-register with the server and load existing session-id."
                        (condition-case nil
                            (json-parse-buffer :object-type 'alist)
                          (error nil)))))))
-    (when-let ((agents-val (alist-get 'agents result)))
+    (when-let* ((agents-val (alist-get 'agents result)))
       (let* ((entries (cond
                        ((hash-table-p agents-val)
                         (let (pairs)
@@ -1846,7 +1846,7 @@ auto-registration — binds directly to the named agent."
         (claude-repl--init-display)
         (claude-repl--refresh-displayed-model-title)
         ;; Emit session-start evidence if a session file exists
-        (when-let ((sid (claude-repl--read-session-id-file session-file)))
+        (when-let* ((sid (claude-repl--read-session-id-file session-file)))
           (claude-repl--emit-session-start-evidence! sid))))
     (message "claude-repl: attached to %s" agent-id)
     buffer))

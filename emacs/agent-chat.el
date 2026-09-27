@@ -812,7 +812,7 @@ the current \"Cooked for\" line."
 (defun agent-chat--turn-flair-width ()
   "Return display width for the transcript turn-end flair."
   (max 40
-       (or (when-let ((win (get-buffer-window (current-buffer))))
+       (or (when-let* ((win (get-buffer-window (current-buffer))))
              (window-body-width win))
            fill-column
            80)))
@@ -839,7 +839,7 @@ text-face overlays were removed, painting everything prompt-face orange
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
   (let (prompt-pos)
-    (when-let ((marker-pos (and (markerp agent-chat--prompt-marker)
+    (when-let* ((marker-pos (and (markerp agent-chat--prompt-marker)
                                 (marker-position agent-chat--prompt-marker))))
       (save-excursion
         (goto-char marker-pos)
@@ -1221,7 +1221,7 @@ exact ID, and at most one target may be named per level."
 
 (defun agent-chat--normalize-creation-mission-id (mission)
   "Return normalized mission id for creation-clock MISSION."
-  (when-let ((id (agent-chat-normalize-mission-id mission)))
+  (when-let* ((id (agent-chat-normalize-mission-id mission)))
     (if (string-prefix-p "M-" id)
         id
       (concat "M-" id))))
@@ -1244,7 +1244,7 @@ operator intent, not a passing mention.  Return the audit witness, or nil when
 MISSION is not yet a filesystem-backed mission target."
   (interactive (list (agent-chat--read-clock-id 'mission "Created mission M-*: ")
                      "manual-creation-clock"))
-  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+  (when-let* ((mission-id (agent-chat--normalize-creation-mission-id mission)))
     (when (agent-chat--mission-clock-target-exists-p mission-id)
       (let ((old-target (agent-chat-mission-label)))
         (agent-chat-set-clock! (list :campaign-id nil
@@ -1270,7 +1270,7 @@ MISSION is not yet a filesystem-backed mission target."
 The watcher resolves through `agent-chat--clock-target-candidates', so it only
 fires after the mission exists on disk.  It deliberately does not require the
 no-target floor; the creation-clock rule is explicit creation intent."
-  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+  (when-let* ((mission-id (agent-chat--normalize-creation-mission-id mission)))
     (agent-chat--cancel-creation-clock-watch!)
     (let* ((buf (current-buffer))
            (started (float-time))
@@ -1347,7 +1347,7 @@ Returns the promotion witness plist, or nil when no promotion happened."
              (null agent-chat--mission-id)
              (null agent-chat--excursion-id)
              (null agent-chat--ticket-id))
-        (when-let ((target (agent-chat--auto-clock-target-from-text text)))
+        (when-let* ((target (agent-chat--auto-clock-target-from-text text)))
           (unless (agent-chat--clock-target-equal-p target)
             (let ((old-target (agent-chat-mission-label)))
               (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
@@ -1481,7 +1481,7 @@ NOW is an epoch timestamp used by batch smoke checks."
   (when (and agent-chat-edit-activity-clock-enabled
              (> agent-chat-edit-activity-clock-threshold 0)
              (> agent-chat-edit-activity-clock-window-seconds 0))
-    (when-let ((target (agent-chat--edit-activity-file-target file)))
+    (when-let* ((target (agent-chat--edit-activity-file-target file)))
       (let* ((timestamp (or now (float-time)))
              (target-id (plist-get target :id))
              (events (gethash target-id agent-chat--edit-activity-save-events)))
@@ -1496,7 +1496,7 @@ NOW is an epoch timestamp used by batch smoke checks."
             (dolist (buf (or buffers (agent-chat--chat-buffers)))
               (when (buffer-live-p buf)
                 (with-current-buffer buf
-                  (when-let ((witness (agent-chat--maybe-edit-activity-reclock
+                  (when-let* ((witness (agent-chat--maybe-edit-activity-reclock
                                        target count)))
                     (push witness witnesses)))))
             (nreverse witnesses)))))))
@@ -1872,7 +1872,7 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
          ;; Run hooks — allow text transformation
          (transformed text))
     (dolist (fn agent-chat--insert-message-hook)
-      (when-let ((result (funcall fn name transformed)))
+      (when-let* ((result (funcall fn name transformed)))
         (setq transformed result)))
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
@@ -1908,7 +1908,7 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
 Only scrolls when the end of the buffer is already visible in the
 window, meaning the user is following the output. If the user has
 scrolled away, their view and cursor are left undisturbed."
-  (when-let ((win (get-buffer-window (current-buffer))))
+  (when-let* ((win (get-buffer-window (current-buffer))))
     (when (and (pos-visible-in-window-p (point-max) win)
                (>= (window-point win) (max (point-min) (1- (point-max)))))
       (with-selected-window win
@@ -2073,7 +2073,7 @@ The filter also appends raw output to the process buffer for the sentinel."
           (when (and (not (string-empty-p (string-trim line)))
                      (buffer-live-p chat-buffer))
             (condition-case nil
-                (when-let ((status (funcall parse-event-fn line)))
+                (when-let* ((status (funcall parse-event-fn line)))
                   (with-current-buffer chat-buffer
                     (agent-chat-update-progress status)))
               (error nil))))))))
@@ -3255,7 +3255,7 @@ under outbox/failed and return nil."
                                           (mode . "emacs"))
                                         (agent-chat--mission-body-fields)))
                        (tags . ,(apply #'vector tags)))))
-        (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+        (when-let* ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
           (set last-id-var new-id)
           (set last-emitted-var sid))))
     (unless (and (stringp (symbol-value last-id-var))
@@ -3356,7 +3356,7 @@ character the operator meant to write."
                  (not (string-empty-p (symbol-value last-id-var))))
         (setq payload (append payload
                               `((in-reply-to . ,(symbol-value last-id-var))))))
-      (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+      (when-let* ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
         (set last-id-var new-id)
         (when (eq agent-chat--last-evidence-delivery-outcome 'acked)
@@ -3396,7 +3396,7 @@ character the operator meant to write."
                      (not (string-empty-p (symbol-value last-id-var))))
             (setq payload (append payload
                                   `((in-reply-to . ,(symbol-value last-id-var))))))
-          (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+          (when-let* ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
             (set session-var sid)
             (set last-id-var new-id)))))))
 
@@ -3480,7 +3480,7 @@ character the operator meant to write."
               "\\`[a-zA-Z]+://\\([^/:?#]+\\)\\(?::\\([0-9]+\\)\\)?\\(?:[/?#].*\\)?\\'"
               clean))
         (cons (match-string 1 clean)
-              (if-let ((port (match-string 2 clean)))
+              (if-let* ((port (match-string 2 clean)))
                 (string-to-number port)
                 default-port))
       (cons "127.0.0.1" default-port))))
@@ -3895,7 +3895,7 @@ Return (KIND PATH LINE), where KIND is `file', `url', or nil."
          (string-match "\\`\\(/[^#]+\\)\\(?:#L\\([0-9]+\\)\\)?\\'" target))
     (list 'file
           (match-string 1 target)
-          (when-let ((line (match-string 2 target)))
+          (when-let* ((line (match-string 2 target)))
             (string-to-number line))))
    ((and (stringp target)
          (string-match-p "\\`https?://" target))
@@ -3905,7 +3905,7 @@ Return (KIND PATH LINE), where KIND is `file', `url', or nil."
 
 (defun agent-chat--workspace-root ()
   "Return the nearest workspace root for the current buffer, or nil."
-  (when-let ((root (or (locate-dominating-file default-directory "AGENTS.md")
+  (when-let* ((root (or (locate-dominating-file default-directory "AGENTS.md")
                        (when buffer-file-name
                          (locate-dominating-file buffer-file-name "AGENTS.md"))
                        (and agent-chat--source-file
