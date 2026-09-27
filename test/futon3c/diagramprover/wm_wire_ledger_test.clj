@@ -41,6 +41,9 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test]
+            [futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test]
             [futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test]
             [futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test]
             [futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test]
@@ -211,6 +214,9 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test
+    futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test
     futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test
     futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test
     futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test
