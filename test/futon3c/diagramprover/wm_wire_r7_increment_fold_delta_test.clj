@@ -48,7 +48,10 @@
       :why "the live selection's :e-source is {:records 0 :samples 0 :uniform true}: no live delta ever reached a fold"}]))
 
 (def wire
-  {:wire [:r7-increment :r7-fold :delta]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/a-zero-delta-counts-nothing-and-fails-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r7-increment :r7-fold :delta]
    :kind :witnessed-hermetically
    :test `the-delta-reaches-the-fold
    :check check

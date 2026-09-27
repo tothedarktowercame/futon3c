@@ -36,11 +36,98 @@
   generated from the map at map-rev), checks each wire against the map at
   map-rev, writes holes/labs/M-wm-wiring/wm-wire-ledger.edn, and asserts the
   ledger's counts equal what the checks found."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [futon3c.test-registry :as registry]
+            [futon3c.evidence.http-backend :as http-backend]
             [clojure.java.shell :as sh]
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test]
+            [futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test]
+            [futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test]
+            [futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test]
+            [futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test]
+            [futon3c.diagramprover.wm-wire-r4-kernel-r4-test-order-use-test]
+            [futon3c.diagramprover.wm-wire-r4-kernel-r4-coapply-test-order-use-test]
+            [futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test]
+            [futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test]
+            [futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test]
+            [futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test]
+            [futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test]
+            [futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test]
+            [futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test]
+            [futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test]
+            [futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test]
+            [futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test]
+            [futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test]
+            [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test]
+            [futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test]
+            [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test]
+            [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test]
+            [futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test]
+            [futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test]
+            [futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test]
+            [futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test]
+            [futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test]
+            [futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test]
+            [futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test]
+            [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test]
+            [futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test]
+            [futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test]
+            [futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test]
+            [futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test]
+            [futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test]
+            [futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test]
             [futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test]
             [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test]
             [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test]
@@ -130,10 +217,102 @@
             [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test]
             [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test]
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test]
-            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
+            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test]
+            [futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test]
+            [futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test
+  '[
+    futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test
+    futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test
+    futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test
+    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test
+    futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test
+    futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test
+    futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test
+    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test
+    futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test
+    futon3c.diagramprover.wm-wire-r4-kernel-r4-test-order-use-test
+    futon3c.diagramprover.wm-wire-r4-kernel-r4-coapply-test-order-use-test
+    futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test
+    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test
+    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test
+    futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test
+    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test
+    futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test
+    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test
+    futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test
+    futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test
+    futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test
+    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test
+    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test
+    futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test
+    futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test
+    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test
+    
+   futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test
+   futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test
+   futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test
+    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test
+    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test
+    futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test
+    futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test
+    futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test
+    futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test
+    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test
+    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test
+    futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test
+    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test
+    futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test
+    futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test
+    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test
+    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test
+    futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test
+    futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test
+    futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test
+    futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test
+    futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test
+    futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test
     futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test
     futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test
     futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test
@@ -231,11 +410,17 @@
     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test
     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
-    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
+    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test
+    futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test
+    futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test
+    futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test])
 
-(def adjacency-rev "874cb7f4")
+(def adjacency-rev "79a8988d")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "08482abe")
+(def map-rev "b58e8df1")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
@@ -254,17 +439,39 @@
 (defn registered []
   (into {} (for [n wire-test-nses :let [wire @(ns-resolve n 'wire)]] [(:wire wire) wire])))
 
+(defn second-layer-context [model]
+  (let [backend (http-backend/make-http-backend "http://localhost:7070")
+        todos (filter #(= :to-do (:kind %)) (:expected-findings model))
+        explicit (set (for [b (:boxes model) f (:attribution-findings b)
+                            :when (= :to-do (:kind f))] (:wire f)))]
+    {:allowed-nses (set wire-test-nses)
+     :latest (memoize #(registry/latest-run-for-namespace
+                        backend {:namespace % :namespace-ledger-file
+                                 (registry/namespace-ledger-path {})}))
+     :last-commit (fn [v] (let [r (sh/sh "git" "log" "-1" "--format=%H" "--" (:file (meta v)))]
+                           (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
+     :ancestor? (fn [a b] (zero? (:exit (sh/sh "git" "merge-base" "--is-ancestor" a b))))
+     :record-only? (fn [[_ reader field :as wire]]
+                     (or (explicit wire)
+                         (some #(and (= reader (:box/id %)) (= field (:field %))
+                                     (= :reads (:role %))) todos)))}))
+
 (defn ledger []
   (let [adj (adjacency)
         reg (registered)
+        context (second-layer-context (edn/read-string (git-show map-rev map-path)))
         entries (vec (for [wire (wires adj)
                            :let [r (get reg wire)
                                  ok? (and r (w/received? ((:check r))))]]
-                       (cond-> {:wire wire :status (if ok? (:kind r) :unverified)}
+                       (cond-> {:wire wire :status (if ok? (:kind r) :unverified)
+                                :second-layer (w/second-layer r context)}
                          (and ok? (= :verified (:kind r))) (assoc :record (:record r))
                          ok? (assoc :test (:test r))
+                         (:note r) (assoc :note (:note r))
                          (and r (not ok?)) (assoc :registered-test-failed (:test r)))))]
     {:adjacency {:path adjacency-path :rev adjacency-rev :map (:map adj)}
+     :second-layer (merge {:value-varying 0 :refusal 0 :record 0 :absent 0}
+                          (frequencies (map #(or (get-in % [:second-layer :declared :kind]) :absent) entries)))
      :definition 'futon3c.diagramprover.wm-wire-ledger-test
      :counts (merge {:verified 0 :witnessed-hermetically 0 :unverified 0}
                     (frequencies (map :status entries))
@@ -275,7 +482,7 @@
   (let [adj (adjacency)
         boxes (into {} (map (juxt :box/id identity)) (:boxes (edn/read-string (git-show map-rev map-path))))]
     (is (= map-rev (:map adj)))
-    (is (= 163 (:wires adj) (count (wires adj))))
+    (is (= 180 (:wires adj) (count (wires adj))))
     (doseq [[a b f] (wires adj)]
       (is (some #{f} (:writes (boxes a))) (pr-str [a b f]))
       (is (some #{f} (:reads (boxes b))) (pr-str [a b f])))))
@@ -287,9 +494,11 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
+    (is (= {:value-varying 26 :refusal 20 :record 0 :absent 134} (:second-layer l)))
+    (is (= 180 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
-    (is (= 163 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
+    (is (= 180 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
     (is (= (frequencies (map :status (:wires l)))
            (select-keys c (keys (frequencies (map :status (:wires l)))))))
     (doseq [[wire r] (registered)]
@@ -337,3 +546,25 @@
             "a wire added to the ledger since the coverage was derived")
         (is (seq (coverage-join-problems ledger-wires "0000000" cov)) "the coverage at another map revision")
         (is (seq (coverage-join-problems ledger-wires (:map adj) (update-in cov [:wires 0] dissoc :coverage))) "a row with no class")))))
+
+(deftest second-layer-admission-is-separate-from-declaration
+  (let [r {:wire [:writer :reader :value]
+           :second-layer {:test `second-layer-admission-is-separate-from-declaration
+                          :kind :value-varying :product [:derived] :intervention :before-reader}}
+        opts {:allowed-nses #{'futon3c.diagramprover.wm-wire-ledger-test}
+              :latest (constantly {:evidence/id "witness" :payload {:warrant? true :git-head "new"}})
+              :last-commit (constantly "old") :ancestor? = :record-only? (constantly false)}]
+    (is (= "witness" (get-in (w/second-layer r (assoc opts :ancestor? (constantly true)))
+                             [:evidence :warrant-id])))
+    (is (= {:absent :stale-warrant :found-id "witness" :git-head "new" :test-revision "old"}
+           (:evidence (w/second-layer r opts))))
+    (is (= :no-warrant (get-in (w/second-layer r (assoc opts :latest (constantly nil))) [:evidence :absent])))
+    (is (= {:absent :no-second-layer-test} (w/second-layer (dissoc r :second-layer) opts)))
+    (doseq [test ['futon3c.diagramprover.wm-wire-ledger-test/nonexistent
+                 'futon3c.diagramprover.wm-wire-ledger-test/ledger]]
+      (is (= {:wire (:wire r) :reason :not-an-admitted-deftest}
+             (try (w/second-layer (assoc-in r [:second-layer :test] test) opts)
+                  (catch clojure.lang.ExceptionInfo e (select-keys (ex-data e) [:wire :reason]))))))
+    (is (= :computational-use-still-to-do
+           (try (w/second-layer r (assoc opts :record-only? (constantly true)))
+                (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))))

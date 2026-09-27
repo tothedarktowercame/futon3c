@@ -95,7 +95,10 @@
       :why "hand-authored exemplar records (no :want-span, no proposals; grep of the exemplar directory finds neither key)"}]))
 
 (def wire
-  {:wire [:r2-served-by-reading :r2-verifier :want-span]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/a-missing-span-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:result :reason] :intervention :before-reader :expected :want-span-outside-instance}
+  :wire [:r2-served-by-reading :r2-verifier :want-span]
    :kind :witnessed-hermetically
    :test `the-want-span-reaches-the-verifier
    :check check

@@ -1,0 +1,106 @@
+;; Wires added to the wiring map by PROOF-2a <2>2b declarations (claude-9's map
+;; batch, 2026-09-27), in commit order. The input to <2>3's next round of
+;; first-layer wire tests (claude-8's lane) and to codex-3's single
+;; regeneration pass (adjacency, figures, org, ledger, coverage) after them.
+;; Agreed with claude-8 (invoke-1790472731131-25192-640f5ec5): map packets do
+;; NOT regenerate adjacency, figures, org layer, ledger or coverage; the ledger
+;; test reads the map at its pinned revision, so it stays green meanwhile.
+;; Each entry: {:map-commit sha :edge [box-from box-to field] :registry-edge [Rx Ry]
+;;              :term sym :writer {:file :var :line} :reader {:file :var :line}
+;;              :reader-is-test-box? bool :packet "MAP-2B-…"}
+[{:map-commit "c1afad170de503c246673f1bd90a18b63b08b625"
+  :edge [:construction-assemble-one :r4-kernel :cascade-spec]
+  :registry-edge [:CTAU-TOKEN :R5] :term :C-tau
+  :writer {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one" :line 168}
+  :reader {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions" :line 1116}
+  :reader-is-test-box? false :packet "MAP-2B-P3"}
+ {:map-commit "17aa769d2e23fa571eefbf69feb5ed08131eb98b"
+  :edge [:r7-fold-call :r3a-predict-observation :loop-belief]
+  :registry-edge [:R1 :R3a] :term :mu
+  :writer {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge" :line 7271}
+  :reader {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation" :line 1243}
+  :reader-is-test-box? false :packet "MAP-2B-P1+"}
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
+ :edge
+ [:r1-token-initialization
+  :r1-token-temporal
+  [:continuation-belief {:record :initialized-token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt",
+  :line 114},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal",
+  :line 138},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
+ :edge
+ [:r1-token-legacy
+  :r1-token-initialization
+  [:continuation-belief {:record :legacy-token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "legacy-input-receipt",
+  :line 68},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt",
+  :line 114},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
+ :edge
+ [:r1-token-temporal
+  :r9-decision
+  [:continuation-belief {:record :token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal",
+  :line 138},
+ :reader
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
+ :edge
+ [:r9-decision :r4-kernel [:cascade-belief {:record :rank-state}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader
+ {:file "futon2/src/futon2/aif/efe.clj",
+  :var "rank-cascade-actions",
+  :line 1117},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "b58e8df19ae0336ff041715628808836c6d6426f",
+ :edge
+ [:r9-decision
+  :r4-rank-dispatch
+  [:cascade-belief {:record :rank-state}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader
+ {:file "futon2/src/futon2/aif/efe.clj",
+  :var "rank-actions",
+  :line 1432},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+]

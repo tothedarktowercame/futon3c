@@ -9,12 +9,48 @@
 ;; row table (row 2 = C, row 6 = A, row 7 = E). Then each theory edge is one
 ;; of: :declared (a map field from a box of Ra to a box of Rb), :boxed-no-field
 ;; (both ends have boxes, no field between them), :unboxed (an end has no box).
-;;   bb wm_vs_equation_dag.bb [map-rev] > out.edn
+;;   bb wm_vs_equation_dag.bb [map-rev] [registry-rev] > out.edn
+;; registry-rev (or env REGISTRY_REV) reads the registry from that futon2
+;; revision, like the map; publication runs pass it so another lane's
+;; uncommitted registry edit is not read. Each edge also carries :inventory,
+;; its <2>2b class: raw by-var credit is :declared only when wm-term-fields.edn
+;; covers every symbol. Partial/wrong-term coverage is :does-not-carry; no
+;; correspondence on any credited field is :cannot-tell. This branch still
+;; wins over :hole (named in the registry's top-level :holes under :edge or
+;; :edges; the entry's :status is
+;; carried as :hole-status) wins over :code-path-note (an equation row's :code
+;; records a "CODE-PATH NOTE for [<a> <b>]..." marker for the edge, the shape
+;; RC7+RC8 used on :belief-state, futon2 9c4cc59a) else :none. Fixture env
+;; overrides WM_VS_DAG_MAP_FILE / WM_VS_DAG_REGISTRY_FILE and
+;; WM_VS_DAG_TERM_FIELDS_FILE are for the test. The term table's bytes are
+;; independently pinned in the output by :term-fields-sha256.
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.set :as set] '[clojure.java.shell :as sh])
+(require '[babashka.classpath :as cp] '[clojure.java.io :as io])
+(cp/add-classpath "src")
+(require '[futon3c.diagramprover.wiring :as wiring])
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
+(def registry-path "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")
 (def map-rev (first *command-line-args*))
-(def m (edn/read-string {:default tagged-literal} (if map-rev (:out (sh/sh "git" "show" (str map-rev ":" map-path))) (slurp map-path))))
-(def reg (edn/read-string {:default (fn [_ v] v)} (slurp "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")))
+(def registry-rev (or (second *command-line-args*) (System/getenv "REGISTRY_REV")))
+(def map-file (System/getenv "WM_VS_DAG_MAP_FILE"))
+(def registry-file (System/getenv "WM_VS_DAG_REGISTRY_FILE"))
+(def m (edn/read-string {:default tagged-literal}
+         (if map-file (slurp map-file)
+             (if map-rev (:out (sh/sh "git" "show" (str map-rev ":" map-path))) (slurp map-path)))))
+(def reg (edn/read-string {:default (fn [_ v] v)}
+           (if registry-file (slurp registry-file)
+               (if registry-rev
+                 (:out (sh/sh "git" "-C" "/home/joe/code/futon2" "show" (str registry-rev ":holes/labs/wm-contract/aif-equations.edn")))
+                 (slurp registry-path)))))
+;; The table is a separate reviewed input, never inferred from field spelling.
+(def term-fields-path (or (System/getenv "WM_VS_DAG_TERM_FIELDS_FILE")
+                         "holes/labs/M-wm-wiring/wm-term-fields.edn"))
+(def term-fields-text (slurp term-fields-path))
+(def term-fields (edn/read-string term-fields-text))
+(def term-fields-sha256
+  (format "%064x" (java.math.BigInteger.
+                   1 (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                              (.getBytes term-fields-text "UTF-8")))))
 (def eqs (remove #(= :retired (:status %)) (:equations reg)))
 (def defs (into {} (map (fn [e] [(:defines e) e]) eqs)))
 (def exo (into {} (map (fn [x] [(:symbol x) x]) (:exogenous reg))))
@@ -29,7 +65,7 @@
 (defn box-file [b] (some-> (or (:site b) (:intended-site b)) :file (str/replace #".*/" "")))
 (def node-boxes (into {} (for [[n fs] node-files] [n (set (map :box/id (filter #(fs (box-file %)) boxes)))])))
 ;; node -> vars, the function names the :code strings name in parentheses (a precise join)
-(def node-vars (reduce (fn [acc e] (update acc (:node e) (fnil into #{}) (map second (re-seq #"\(([a-z][a-z0-9-]*[a-z0-9][!?]?)[,) ]" (str (:code e))))))
+(def node-vars (reduce (fn [acc e] (update acc (:node e) (fnil into #{}) (map second (re-seq #"\(([a-z][a-z0-9-]*[a-z0-9][!?*]?)[,) :]" (str (:code e))))))
                        {} (:equations reg)))
 (def node-boxes-by-var (into {} (for [[n vs] node-vars] [n (set (map :box/id (filter #(vs (get-in % [:site :var])) boxes)))])))
 (def no-site-nodes (vec (sort-by str (for [n (set (concat (map :node eqs) (keep :node (vals exo)))) :when (empty? (node-files n))] n))))
@@ -53,14 +89,112 @@
   (concat (for [[f w] writers :when (from-boxes w) r (readers f) :when (to-boxes r)] [f w r])
           (for [[f w r] passes-edges :when (and (from-boxes w) (to-boxes r))] [f w r])))
 (defn edge-status [ba bb] (let [fs (fields-between ba bb)] [(cond (seq fs) :declared (and (seq ba) (seq bb)) :boxed-no-field :else :unboxed) (vec fs)]))
+;; <2>2b inventory classes (JOIN-2B-I). Hole edges: the registry's top-level
+;; :holes entries name edges under :edge (one) or :edges (several); entries
+;; about a bare :symbol are not edges and are ignored.
+(def hole-edges
+  (into {} (for [h (:holes reg)
+                 e (if (:edge h) [(:edge h)] (:edges h))]
+             [(vec e) (:status h)])))
+;; Code-path-note edges: an equation row's :code records that some of its
+;; imported terms reach it through another row's update with the marker
+;; "CODE-PATH NOTE for [<a> <b>], ..." (RC7+RC8, futon2 9c4cc59a, on
+;; :belief-state for [:R2 :R1] [:R16 :R1] [:R4 :R1]). Match exactly that
+;; marker in the :code field -- no other prose -- and take the edge literals
+;; of the sentence it introduces (up to the first "(").
+(def code-path-note-edges
+  (into #{} (for [e (:equations reg)
+                  :let [c (str (:code e))]
+                  :when (str/includes? c "CODE-PATH NOTE for")
+                  :let [after (subs c (+ (.indexOf c "CODE-PATH NOTE for") (count "CODE-PATH NOTE for")))
+                        mention (first (str/split after #"\(" 2))
+                        edges (map (fn [s] (edn/read-string s)) (re-seq #"\[:R[0-9A-Za-z]+ :R[0-9A-Za-z]+\]" mention))]
+                  :when (seq edges)
+                  edge edges]
+              edge)))
+(defn term-coverage [edge symbols fields]
+  (let [credited (set (map first fields))
+        matched (filterv #(and (= edge (:edge %)) (credited (:field %))) term-fields)
+        covered (set/intersection symbols (set (map :term matched)))]
+    {:entries matched :covered covered :uncovered (set/difference symbols covered)
+     :status (cond (= covered symbols) :declared
+                   (seq matched) :does-not-carry
+                   :else :cannot-tell)}))
+(defn inventory [edge by-var coverage]
+  (cond (= :declared by-var) (:status coverage)
+        (contains? hole-edges edge) :hole
+        (contains? code-path-note-edges edge) :code-path-note
+        :else :none))
+(def max-path-intermediates 4)
+(def placed-boxes (apply set/union #{} (vals node-boxes-by-var)))
+;; Only positional/carry checks need source text. Read the map's repo pins,
+;; never a sibling lane's uncommitted source.
+(def proof-root
+  (delay
+    (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                         "join-path-" (make-array java.nio.file.attribute.FileAttribute 0)))]
+      (doseq [f (distinct (keep #(get-in % [:site :file]) boxes))
+              :let [[repo path] (str/split f #"/" 2) rev (get (:repos m) repo)]
+              :when rev
+              :let [r (sh/sh "git" "-C" (str "/home/joe/code/" repo) "show" (str rev ":" path))]
+              :when (zero? (:exit r))]
+        (io/make-parents (io/file root f))
+        (spit (io/file root f) (:out r)))
+      (str root))))
+(def checked-path-hops
+  (delay
+    (vec (distinct
+           (concat
+             (for [[f writer] writers reader (readers f)
+                   :let [box (first (filter #(= reader (:box/id %)) boxes))
+                         carry (first (filter #(= f (:field %)) (:carries box)))]
+                   :when (or (nil? carry)
+                             (:ok? (wiring/carry-attribution @proof-root boxes reader carry)))]
+               [f writer reader])
+             (for [box boxes pass (:passes box)
+                   :when (:ok? (wiring/pass-attribution @proof-root boxes (:box/id box) pass))
+                   :let [fn-name (some-> (get-in pass [:from :returns-of]) (str/replace #".*/" ""))
+                         src (or (and fn-name (box-by-var fn-name)) (:box/id box))]]
+               [(:value pass) src (get-in pass [:to :callee-box])]))))))
+(defn term-path [edge term starts ends]
+  (let [fields (set (map :field (filter #(and (= edge (:edge %)) (= term (:term %))) term-fields)))
+        hops (group-by second (sort-by pr-str (filter #(fields (first %)) @checked-path-hops)))]
+    (letfn [(walk [box seen path]
+              (some (fn [[_ _ next-box :as hop]]
+                      (when-not (seen next-box)
+                        (let [next-path (conj path hop)]
+                          (cond
+                            (ends next-box) (when (<= 2 (count next-path)) next-path)
+                            (or (placed-boxes next-box)
+                                (> (count next-path) max-path-intermediates)) nil
+                            :else (walk next-box (conj seen next-box) next-path)))))
+                    (get hops box)))]
+      (some #(walk % #{%} []) (sort-by str starts)))))
 (def edge-report
   (for [[[a b] syms] (sort-by (comp str key) theory)
         :let [[st-file fs-file] (edge-status (node-boxes a) (node-boxes b))
-              [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))]]
-    {:edge [a b] :symbols syms
-     :by-file st-file :by-var st-var
-     :fields-by-file fs-file :fields-by-var fs-var
-     :registry-no-site (vec (filter (set no-site-nodes) [a b]))}))
+              [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))
+              coverage (when (= :declared st-var) (term-coverage [a b] syms fs-var))
+              paths (into (sorted-map) (for [term (sort syms)
+                                            :when (not (contains? (:covered coverage) term))
+                                            :let [path (term-path [a b] term
+                                                                  (or (node-boxes-by-var a) #{})
+                                                                  (or (node-boxes-by-var b) #{}))]
+                                            :when path] [term path]))
+              covered (set/union (or (:covered coverage) #{}) (set (keys paths)))
+              path-complete? (and (seq paths) (= syms covered))
+              inv (if path-complete? :declared (inventory [a b] st-var coverage))]]
+    (cond-> {:edge [a b] :symbols syms
+             :by-file st-file :by-var st-var
+             :fields-by-file fs-file :fields-by-var fs-var
+             :inventory inv
+             :registry-no-site (vec (filter (set no-site-nodes) [a b]))}
+      coverage (assoc :term-coverage (dissoc coverage :status))
+      path-complete? (assoc :path (val (first paths)) :paths paths
+                            :term-coverage {:entries (vec (filter #(and (= [a b] (:edge %))
+                                                                                       (covered (:term %))) term-fields))
+                                            :covered covered :uncovered #{}})
+      (= :hole inv) (assoc :hole-status (hole-edges [a b])))))
 ;; the flight's producers of the registry's exogenous symbols, by the mission's row table
 (def producer-report
   (for [[s r] (sort exo-rows)
@@ -73,11 +207,21 @@
      :fields-leaving-the-row (vec (for [[f w rd] fs] [f w rd (to-nodes rd)]))}))
 (def node-report (for [n (sort-by str (set (concat (map :node eqs) (keep :node (vals exo)))))]
                    {:node n :files (vec (sort (node-files n))) :boxes (vec (sort (node-boxes n)))}))
-(prn {:map (or map-rev "working tree") :registry (:as-of reg)
+(prn {:map (or map-rev map-file "working tree") :registry (:as-of reg)
+      :registry-rev (or registry-rev registry-file "working tree")
+      :term-fields term-fields-path :term-fields-sha256 term-fields-sha256
       :theory-edges (count theory)
       :registry-names-no-site no-site-nodes
       :summary-by-file (frequencies (map :by-file edge-report))
       :summary-by-var (frequencies (map :by-var edge-report))
+      :summary-inventory (frequencies (map :inventory edge-report))
+      :inventory-none (vec (sort-by str (map :edge (filter #(= :none (:inventory %)) edge-report))))
+      :inventory-does-not-carry (vec (sort-by str (map :edge (filter #(= :does-not-carry (:inventory %)) edge-report))))
+      :inventory-cannot-tell (vec (sort-by str (map :edge (filter #(= :cannot-tell (:inventory %)) edge-report))))
+      :holes-not-in-dag (vec (sort-by str (remove (set (map :edge edge-report)) (keys hole-edges))))
       :nodes (for [n node-report] (assoc n :vars (vec (sort (node-vars (:node n)))) :boxes-by-var (vec (sort (node-boxes-by-var (:node n))))))
       :edges edge-report
       :producers producer-report})
+
+(when (realized? proof-root)
+  (doseq [f (reverse (file-seq (io/file @proof-root)))] (io/delete-file f)))

@@ -62,7 +62,10 @@
       :why "hand-authored exemplar records; no sources, no assembled problem"}]))
 
 (def wire
-  {:wire [:tick-flight-assembly :construction-assemble-one [:wants {:record :sources}]]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/a-removed-want-is-a-typed-refusal-and-fails-the-wire :kind :refusal
+                  :product [:problem :kind] :intervention :before-reader :expected :want-not-declared}
+  :wire [:tick-flight-assembly :construction-assemble-one [:wants {:record :sources}]]
    :kind :witnessed-hermetically
    :test `the-flights-wants-reach-assembly
    :check check

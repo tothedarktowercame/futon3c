@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "89bec0b1aafcc7a530b4140e886c0eebc7c958a868d5950986c851c3be947ee9")
-(def repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"})
+(def map-sha256 "522fb4ae3e43086700e1c36c307694b2edff11ac7f29c0b082ac5c84c3afd44a")
+(def repos {"futon2" "46191890f79ff8c69cd0a6e2efc5e105aab0e763" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -142,7 +142,8 @@
 (def expected-outside-closure
   ;; built component sites not in the load closure of test-registry-307b8969
   ;; (mission-reading-c8-test, futon2 d5320918)
-  #{"futon2/scripts/futon2/wm/extract_outcomes.clj"
+  #{"futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"
+    "futon2/scripts/futon2/wm/extract_outcomes.clj"
     "futon2/scripts/wm_scheduled_run.clj"
     "futon2/src/futon2/aif/enactment_habit.clj"
     ;; WM-HABIT-FOLD-CALL-I: the tick's reader of the flights' receipts,
@@ -179,3 +180,14 @@
              (set (filter trace-sites expected-outside-closure)))))
     (is (false? (wiring/sites-resolve? root components load-closure {:closure-root (str root "/futon2")}))
         "N0 does not hold yet for the whole map: stated, not hidden")))
+
+(deftest judge-to-prediction-passes-belief-not-tags
+  (let [s (spec) root (materialise s)
+        box (first (filter #(= :r7-fold-call (:box/id %)) (:boxes s)))
+        pass (first (filter #(= "belief/predict-observation" (get-in % [:to :call])) (:passes box)))
+        accepted (wiring/pass-attribution root (:boxes s) :r7-fold-call pass)
+        wrong (wiring/pass-attribution root (:boxes s) :r7-fold-call (assoc-in pass [:to :arg] 2))]
+    (is (= :loop-belief (:value pass)))
+    (is (:ok? accepted) (pr-str accepted))
+    (is (false? (:ok? wrong)) (pr-str wrong))
+    (is (keyword? (:why wrong)) (pr-str wrong))))

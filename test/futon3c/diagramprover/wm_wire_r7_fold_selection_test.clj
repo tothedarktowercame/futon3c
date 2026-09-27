@@ -70,7 +70,10 @@
       :why "no habit read recorded: selection failed on the registry read before E was read"}]))
 
 (def wire
-  {:wire [:r7-fold :r7-selection :enactment-records]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-selection-test/no-fold-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:reader :reason] :intervention :before-reader :expected :no-enactment-fold}
+  :wire [:r7-fold :r7-selection :enactment-records]
    :kind :witnessed-hermetically
    :test `the-fold-reaches-selection
    :check check

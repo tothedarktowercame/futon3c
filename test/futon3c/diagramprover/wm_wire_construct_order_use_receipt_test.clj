@@ -74,7 +74,10 @@
       :why "hand-authored exemplar records; no constructed candidate, no order-use output"}]))
 
 (def wire
-  {:wire [:construction-construct :r4-order-use :construction-receipt]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/a-missing-receipt-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:reader :absent] :intervention :before-reader :expected :no-order-on-receipt}
+  :wire [:construction-construct :r4-order-use :construction-receipt]
    :kind :witnessed-hermetically
    :test `the-construction-receipt-reaches-order-use
    :check check

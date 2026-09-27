@@ -53,7 +53,10 @@
       :why "hand-authored (claude-10, 2026-09-24): schema :m-futon-seams/proof2a-enactment-v1, not enact-fn's :wm/enactment-v1; its :attempts were not written by the writer"}]))
 
 (def wire
-  {:wire [:r0-enact-step :wc-checker :attempts]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r0-wc-attempts-test/different-attempts-at-the-reader-fail-the-wire :kind :value-varying
+                  :product [:verdict] :intervention :before-reader}
+  :wire [:r0-enact-step :wc-checker :attempts]
    :kind :witnessed-hermetically
    :test `the-attempts-reach-the-wc-checker
    :check check

@@ -197,7 +197,9 @@
                   (= c \^) (let [[_ j] (form (inc i))
                                  [node j'] (form j)]
                              [(when node (assoc node :meta true)) j'])
-                  (#{\' \` \@} c) (form (inc i))
+                  (#{\' \`} c) (let [[node j] (form (inc i))]
+                                  [(when node (assoc node :quoted? true)) j])
+                  (= c \@) (form (inc i))
                   (= c \~) (form (if (= c2 \@) (+ i 2) (inc i)))
                   (= c \#)
                   (cond (= c2 \{) (coll i :set \} 2)
@@ -230,9 +232,9 @@
   or nil. Found by `parse-forms`, a paren-aware text scan; no code is read
   or evaluated."
   [^String text var-name]
-  (some (fn [{:keys [kind children start end]}]
+  (some (fn [{:keys [kind children start end quoted?]}]
           (let [named (second children)]
-            (when (and (= :list kind) (= :token (:kind named))
+            (when (and (not quoted?) (= :list kind) (= :token (:kind named))
                        (= (str var-name) (:text named)))
               {:start start :end end :text (subs text start end)})))
         (:forms (parse-forms text))))
@@ -256,14 +258,6 @@
   (let [h (first (:children node))]
     (when (= :token (:kind h)) (:text h))))
 
-(defn- keys-vector?
-  "PARENT (a vector) is the value of :keys (or :ns/keys for a field in ns) in
-  GRAND, a destructuring map."
-  [grand gidx field]
-  (and (= :map (:kind grand)) (odd? gidx)
-       (let [k (:text (nth (:children grand) (dec gidx)))]
-         (= k (if-let [ns (namespace field)] (str ":" ns "/keys") ":keys")))))
-
 (defn- thread-first-step?
   "NODE (a list) is a step of a thread-first form: position 2 onward of ->
   or some->, or a step position (3, 5, …; the tests are not threaded) of
@@ -280,8 +274,8 @@
 (defn- classify-keyword
   "WRITE: map-literal key, key argument of assoc/update, a key in the path of
   assoc-in/update-in. READ: argument of get, a key in the path of get-in, a
-  keyword in function position (also as a step of ->, ->>, some->, some->>),
-  an entry of a destructuring :keys vector. Inside a thread-first step
+  keyword in function position (also as a step of ->, ->>, some->, some->>).
+  Binding reads are classified separately by `binding-reads`. Inside a thread-first step
   (`thread-first-step?`: ->, some->, cond->) the same calls with the
   threaded argument omitted: (assoc :k v …) and (update :k f) write :k,
   (assoc-in [:k …] v) and (update-in [:k …] f) write the path's keys,
@@ -289,7 +283,7 @@
   (select-keys m [:k …]), or of the step (select-keys [:k …]), is a READ.
   Still :unclassified (a stated limit): the key of (dissoc m :k),
   (contains? m :k) and the keys of (rename-keys m {…}). Else :unclassified."
-  [parent idx grand gidx great ggidx field]
+  [parent idx grand gidx great ggidx _field]
   (let [h (head-text parent)
         step? (thread-first-step? grand gidx)]
     (case (:kind parent)
@@ -308,7 +302,6 @@
                       (and (= 2 gidx) (#{"assoc-in" "update-in"} gh)) :writes
                       (and gstep? (= 1 gidx) (#{"get-in" "select-keys"} gh)) :reads
                       (and gstep? (= 1 gidx) (#{"assoc-in" "update-in"} gh)) :writes
-                      (keys-vector? grand gidx field) :reads
                       :else :unclassified))
       :map (if (even? idx) :writes :unclassified)
       :unclassified)))
@@ -446,15 +439,101 @@
                   acc)))
             acc (pairs-of literal))))
 
+(defn- seal-effects [source]
+  (let [f (some-> (var-form source "seal") :text parse-forms :forms first)
+        kids (:children f)
+        params (first (filter #(= :vector (:kind %)) kids))
+        param (when (= 1 (count (:children params))) (token-text (first (:children params))))]
+    (letfn [(effects [node]
+              (cond
+                (and param (= param (token-text node))) {:ok? true :overwrites #{} :drops #{}}
+                (= "assoc" (head-text node))
+                (let [[_ base & args] (:children node) prior (effects base)
+                      pairs (partition 2 args)
+                      keys (map (comp key->record first) pairs)]
+                  (if (and (:ok? prior) (even? (count args)) (every? some? keys))
+                    (update prior :overwrites into keys)
+                    {:ok? false :why :wrapper-definition-unsupported}))
+                (= "dissoc" (head-text node))
+                (let [[_ base & args] (:children node) prior (effects base) keys (map key->record args)]
+                  (if (and (:ok? prior) (every? some? keys))
+                    (update prior :drops into keys)
+                    {:ok? false :why :wrapper-definition-unsupported}))
+                :else {:ok? false :why :wrapper-definition-unsupported}))]
+      (if f (effects (last kids)) {:ok? false :why :wrapper-definition-missing}))))
+
+(defn sealed-return-attributions
+  "Attribute a returned seal(merge ...) field from source, without evaluating it.
+  Only a locally defined seal with a proved assoc/dissoc body is understood.
+  Merge operands must all resolve to literal maps; last operand wins. Optional
+  :binding demands that the winner came from that binding (a losing binding
+  gets :merge-source-overwritten). Unknown wrappers/operands refuse typed.
+  Held branches through a local function remain unsupported, explicitly."
+  ([source var field] (sealed-return-attributions source var field {}))
+  ([source var field {:keys [binding]}]
+   (let [effects (seal-effects source)
+         form (some-> (var-form source var) :text parse-forms :forms first)]
+     (letfn [(literal [node env]
+               (if (= :map (:kind node)) node
+                   (when-let [init (get env (token-text node))]
+                     (when (= :map (:kind init)) init))))
+             (at-seal [node env]
+               (let [arg (second (:children node))
+                     operands (rest (:children arg))
+                     lits (mapv #(literal % env) operands)
+                     winners (reduce (fn [m [i operand lit]]
+                                       (reduce (fn [m [k _]]
+                                                 (assoc m (key->record k)
+                                                        {:merge-side i :binding (token-text operand)
+                                                         :key-start (:start k)}))
+                                               m (partition 2 (:children lit))))
+                                     {} (map vector (range) operands lits))
+                     winner (get winners field)]
+                 (cond
+                   (not (:ok? effects)) effects
+                   (not= "merge" (head-text arg)) {:ok? false :why :wrapper-argument-not-merge}
+                   (some nil? lits) {:ok? false :why :merge-operand-unknown}
+                   ((:drops effects) field) {:ok? false :why :wrapper-drops-field :field field}
+                   ((:overwrites effects) field) {:ok? false :why :wrapper-overwrites-field :field field}
+                   (nil? winner) {:ok? false :why :merge-field-absent :field field}
+                   (and binding (not= binding (:binding winner)))
+                   (assoc winner :ok? false :why :merge-source-overwritten :field field)
+                   :else (assoc winner :ok? true :field field :wrapper "seal" :preserved? true
+                                :wrapper-effects (dissoc effects :ok?)))))
+             (returns [node env]
+               (let [kids (:children node) h (head-text node)]
+                 (cond
+                   (nil? node) []
+                   (or (:quoted? node) (= "quote" h)) []
+                   (= "seal" h) [(if (contains? env "seal")
+                                   {:ok? false :why :wrapper-shadowed}
+                                   (at-seal node env))]
+                   (#{"let" "let*"} h)
+                   (let [env (reduce (fn [e [k v]] (if-let [n (token-text k)]
+                                                    (assoc e n (or (literal v e) v)) e))
+                                     env (partition 2 (:children (second kids))))]
+                     (returns (last kids) env))
+                   (= "cond" h) (mapcat #(returns % env) (map second (partition 2 (rest kids))))
+                   (#{"if" "if-not" "if-let" "if-some"} h) (mapcat #(returns % env) (drop 2 kids))
+                   (= "try" h) (mapcat #(returns % env)
+                                       (concat (take-last 1 (remove #(#{"catch" "finally"} (head-text %)) (rest kids)))
+                                               (map #(last (:children %)) (filter #(= "catch" (head-text %)) (rest kids)))))
+                   (#{"do" "when" "when-not"} h) (returns (last kids) env)
+                   (= :list (:kind node)) [{:ok? false :why :unknown-return-wrapper :wrapper h}]
+                   :else [])))]
+       (vec (returns (last (:children form)) {}))))))
+
 (defn- owner-map
   "start offset -> #{records} for every map literal whose keys count as writes
   of a record: the literals in return position (owned by the site's
   :returns-record records) and the scoped literals nested under them."
-  [forms {:keys [returns scoped]}]
+  [forms {:keys [returns scoped source var field]}]
   (reduce (fn [acc form]
             (reduce (fn [acc [l env]] (expand-owners acc l env returns (or scoped #{})))
                     acc (defn-return-maps form)))
-          {} forms))
+          (if (and source var field)
+            (into {} (for [a (sealed-return-attributions source var field) :when (:ok? a)]
+                       [[:key (:key-start a)] returns])) {}) forms))
 
 (defn- site-cfg
   "What a site's boxes say about naming a record in its text: :aliases
@@ -503,8 +582,92 @@
                      (and (or (= :map (:kind parent))
                               (and (= "assoc" ph) (<= 2 idx)))
                           (even? idx)
-                          (contains? (get (:owners cfg) (:start parent) #{}) r)))]
+                          (or (contains? (get (:owners cfg) (:start parent) #{}) r)
+                              (contains? (get (:owners cfg) [:key (:start (nth (:children parent) idx nil))] #{}) r))))]
        r))))
+
+(defn- quoted-form? [node]
+  (or (:quoted? node)
+      (and (= :list (:kind node))
+           (#{"quote" "clojure.core/quote"} (head-text node)))))
+
+(defn- binding-reads
+  "Positions reading FIELD in actual binding patterns, with their record
+  attribution. Data maps with a :keys entry are not bindings. Supports
+  defn/defn-/fn/defmethod parameters and let/loop/conditional/comprehension
+  bindings, including nested patterns. Unknown macro binding forms remain
+  unclassified. A map's :as or its direct binding initializer may name a
+  declared record alias; a nested pattern does not inherit its parent's
+  record. Bare destructured parameters need positional evidence for scope.
+  Quotation (including syntax quotation) is conservatively not evaluated."
+  [forms field candidates cfg]
+  (let [found (volatile! {})
+        fstr (str field)
+        records (fn [names]
+                  (set (filter (fn [r]
+                                 (some (conj (get (:aliases cfg) r #{}) (name r)) names))
+                               candidates)))]
+    (letfn [(pattern [node init]
+              (when-not (quoted-form? node)
+                (case (:kind node)
+                  :vector (doseq [child (:children node)] (pattern child nil))
+                  :map
+                  (let [pairs (partition 2 (:children node))
+                        as-name (some (fn [[k v]] (when (= ":as" (token-text k)) (token-text v))) pairs)
+                        attr (records (remove nil? [as-name (when-not (quoted-form? init)
+                                                             (token-text init))]))]
+                    (doseq [[binding selector] pairs
+                            :let [k (token-text binding)]]
+                      (cond
+                        (and k (or (= ":keys" k)
+                                   (re-matches #":[^:/]+/keys" k)))
+                        (doseq [sy (:children selector)
+                                :let [s (token-text sy)]
+                                :when (and s (not (quoted-form? sy)))
+                                :let [s (str/replace s #"^:" "")
+                                      key-text (if (= ":keys" k)
+                                                 (str ":" s)
+                                                 (str (subs k 0 (- (count k) 4))
+                                                      (last (str/split s #"/"))))]
+                                :when (= fstr key-text)]
+                          (vswap! found assoc (:start sy) attr))
+                        (and k (str/starts-with? k ":")) nil
+                        :else
+                        (do (when (= fstr (token-text selector))
+                              (vswap! found assoc (:start selector) attr))
+                            (pattern binding nil)))))
+                  nil)))
+            (bindings [v comprehension?]
+              (when (= :vector (:kind v))
+                (doseq [[pat init] (partition 2 (:children v))]
+                  (cond
+                    (and comprehension? (= ":let" (token-text pat))) (bindings init false)
+                    (and comprehension? (#{":when" ":while"} (token-text pat))) nil
+                    :else (pattern pat init)))))
+            (parameters [args]
+              (let [args (if (= :map (:kind (first args))) (rest args) args)]
+                (if (= :vector (:kind (first args)))
+                  (pattern (first args) nil)
+                  (doseq [arity args :when (and (= :list (:kind arity))
+                                               (not (quoted-form? arity))
+                                               (= :vector (:kind (first (:children arity)))))]
+                    (pattern (first (:children arity)) nil)))))
+            (visit [node]
+              (when-not (quoted-form? node)
+                (let [kids (:children node)
+                      h (when (= :list (:kind node)) (head-text node))]
+                  (cond
+                    (#{"defn" "defn-" "clojure.core/defn" "clojure.core/defn-"} h)
+                    (parameters (drop 2 kids))
+                    (#{"fn" "fn*" "clojure.core/fn"} h)
+                    (parameters (if (= :token (:kind (second kids))) (drop 2 kids) (rest kids)))
+                    (= "defmethod" h) (parameters (drop 3 kids))
+                    (#{"let" "let*" "loop" "loop*" "if-let" "when-let" "if-some" "when-some"} h)
+                    (bindings (second kids) false)
+                    (#{"for" "doseq"} h) (bindings (second kids) true))
+                  (doseq [child kids] (visit child)))))]
+      (doseq [form forms] (visit form)))
+    @found))
 
 (defn- field-usage*
   "`field-usage`, optionally restricted by :only-record r (count only the
@@ -513,30 +676,34 @@
   `site-cfg`."
   [^String text field {:keys [only-record not-records cfg]}]
   (let [fstr (str field)
-        fname (name field)
         text-matches (count (re-seq (re-pattern
                                      (str (java.util.regex.Pattern/quote fstr) "(?![\\w-])"))
                                     text))
         uses (volatile! [])
         token-hits (volatile! 0)
         forms (:forms (parse-forms text))
-        cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms cfg)))
+        cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms (assoc cfg :field field))))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
+        binding-uses (binding-reads forms field (cands) cfg)
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
                                  :else true))]
     (letfn [(visit [node parent idx grand gidx great ggidx]
-              (if (= :token (:kind node))
+              (cond
+                (quoted-form? node) nil
+                (= :token (:kind node))
                 (cond
+                  (contains? binding-uses (:start node))
+                  (do (when (= fstr (:text node)) (vswap! token-hits inc))
+                      (when (counts? (get binding-uses (:start node)))
+                        (vswap! uses conj :reads)))
                   (= fstr (:text node))
                   (do (vswap! token-hits inc)
                       (when (counts? (when parent (attributed-records parent idx grand gidx (cands) cfg)))
                         (vswap! uses conj (if parent
                                             (classify-keyword parent idx grand gidx great ggidx field)
-                                            :unclassified))))
-                  (and (= fname (:text node)) parent (= :vector (:kind parent))
-                       (keys-vector? grand gidx field))
-                  (when (counts? #{}) (vswap! uses conj :reads)))
+                                            :unclassified)))))
+                :else
                 (doseq [[i child] (map-indexed vector (:children node))]
                   (visit child node i parent idx grand gidx))))]
       (doseq [form forms]
@@ -575,7 +742,8 @@
 (defn- vertex-occurs? [text vertex scopes cfg]
   (if (or (vertex-record vertex) (seq (scopes (vertex-field vertex))))
     (pos? (reduce + (vals (vertex-usage text vertex scopes cfg))))
-    (field-occurs? text vertex)))
+    (or (field-occurs? text vertex)
+        (pos? (:reads (field-usage text vertex))))))
 
 (defn- site-scope
   "{:text …} for SITE: the whole file, or with :var only that top-level form;
@@ -604,6 +772,7 @@
 ;;                                  ;   {:returns-of "ns/fn"}         a call to fn, or a local bound to one
 ;;                                  ;   {:literal-arg-key :k}         a map literal (under assoc/merge/
 ;;                                  ;      update/->/cond->, or let-bound) that has key :k
+;;                                  ;   {:param p :via caller-box-or-pass-id} unchanged inbound parameter
 ;;                                  ;   {:element-of F'}              (get local expr) where local is F'
 ;;    :to    {:call "ns/fn" :arg n :callee-box id}}   ; n is 1-based
 ;; and it is EVIDENCE OF OCCURRENCE, for the declaring box and the callee box, only
@@ -617,20 +786,27 @@
 ;;       source accepted, at least one of them real; a source that is the return of the
 ;;       SAME passing call is typed :self-recurrent and does not count as real;
 ;;   (c) the callee box's site var is that call's fn, and in the arity matching the call's
-;;       argument count its nth parameter is a plain symbol used in the body.
+;;       argument count its nth parameter is a used plain symbol, or destructures the
+;;       supplied :to :field-path (default [value-field]) to a used local.
 ;; Where a condition fails the declared entries get no evidence, so they are
 ;; :declaration-without-occurrence, with :passes-failed naming the first failure.
 ;; LIMITS (the next ones): a function value passed as an argument and called under
 ;; the parameter's name (:via-param); a map literal that is an element of a returned
 ;; sequence ((cons step ...)); a call threaded through -> / ->>; shadowing in the
 ;; callee body is not modelled; the receiver of a keyed read must be a symbol.
+;; For destructured parameters :to may carry :field-path [outer inner ...];
+;; absent that, [value-field] is checked. Every step must be present in a
+;; supplied literal map, directly or through an existing literal binding.
+;; An opaque map-producing call is :supplied-field-not-proved, never guessed.
 
 (defn- walk-nodes
   "Every [node ancestors] in NODE's subtree (NODE included), ancestors being the
-  chain from BASE-CHAIN down to the node's parent."
+  chain from BASE-CHAIN down to the node's parent. Quoted data is not a call
+  or a use of a parameter."
   [node base-chain]
-  (cons [node base-chain]
-        (mapcat #(walk-nodes % (conj base-chain node)) (:children node))))
+  (when-not (quoted-form? node)
+    (cons [node base-chain]
+          (mapcat #(walk-nodes % (conj base-chain node)) (:children node)))))
 
 (defn- contains-node? [outer inner]
   (and (<= (:start outer) (:start inner)) (<= (:end inner) (:end outer))))
@@ -641,7 +817,7 @@
   "The forms in return position of NODE, any kind (a call, a symbol, a literal);
   a `recur` is no return."
   [node]
-  (if-not (#{:list :fn} (:kind node))
+  (if (or (quoted-form? node) (not (#{:list :fn} (:kind node))))
     [node]
     (let [kids (:children node) h (head-text node) n (count kids)
           at (fn [is] (mapcat return-leaves (keep #(nth kids % nil) is)))]
@@ -738,43 +914,195 @@
             (some-> (nth (:children node) 1 nil) (literal-node (conj chain node))))
     nil))
 
+(defn- binding-key [sym source]
+  [sym (:start (:vector source)) (:pair-index source)])
+
+(defn- crosses-function-scope?
+  "This rule does not infer captured values or parameter bindings across a fn."
+  [source chain]
+  (some #(or (= :fn (:kind %))
+             (#{"fn" "fn*"} (head-text %)))
+        (drop (inc (count (:chain source))) chain)))
+
+(defn- same-loop-binding?
+  "An updater must receive THIS loop slot, possibly through let aliases.
+  Another loop slot or a shadowing binding is not a recurrence witness."
+  [node chain wanted seen]
+  (when (= :token (:kind node))
+    (let [sym (:text node) source (sym-sources sym node chain)
+          key (when source (binding-key sym source))]
+      (when (and source (not (crosses-function-scope? source chain))
+                 (not (contains? seen key)))
+        (or (= key wanted)
+            (and (not (:loop? source))
+                 (seq (:entries source))
+                 (every? (fn [entry]
+                           (and (nil? (:key entry))
+                                (same-loop-binding?
+                                 (:init entry)
+                                 (conj (:chain source) (:form source) (:vector source))
+                                 wanted (conj seen key))))
+                         (:entries source))))))))
+
+(defn- callback-source
+  "Locate the nearest binder; only literal callbacks of known collection calls
+  introduce element provenance. Captures and general parameter flow stay absent."
+  [node chain]
+  (let [sym (token-text node)]
+    (loop [i (dec (count chain))]
+      (if (neg? i)
+        {:why :callback-not-a-literal}
+        (let [form (nth chain i) h (head-text form)
+              prefix (subvec chain 0 i)
+              local (sym-sources sym node (conj [] form))]
+          (cond
+            (and (#{"let" "let*" "loop"} h) local)
+            {:why :shadowed-callback-parameter}
+
+            (#{"if-let" "when-let" "if-some" "when-some" "letfn" "for"
+               "binding" "with-open" "catch" "as->"} h)
+            {:why :callback-binding-scope-not-established}
+
+            (= "doseq" h)
+            (let [v (second (:children form)) [pat coll] (:children v)]
+              (if (and (= :vector (:kind v)) (= 2 (count (:children v)))
+                       (= sym (token-text pat)))
+                {:collection coll :chain (conj prefix form v)}
+                {:why :unsupported-doseq-binding}))
+
+            (or (= :fn (:kind form)) (#{"fn" "fn*"} h))
+            (let [params (second (:children form))
+                  anonymous? (= :fn (:kind form))
+                  position (if anonymous?
+                             (case sym ("%" "%1") 0 "%2" 1 nil)
+                             (when (= :vector (:kind params))
+                               (first (keep-indexed
+                                       #(when (= sym (token-text %2)) %1)
+                                       (:children params)))))
+                  parent (peek prefix)
+                  call (head-text parent)
+                  kids (:children parent)
+                  unary? (#{"map" "mapv" "mapcat" "filter" "filterv"
+                            "remove" "keep" "run!"} call)
+                  reduce? (= "reduce" call)
+                  expected (if reduce? 1 0)
+                  argc (if reduce? 4 3)]
+              (cond
+                (nil? position) {:why :callback-parameter-not-bound}
+                (not= form (second kids)) {:why :callback-not-a-literal}
+                (not (or unary? reduce?)) {:why :callback-call-not-supported}
+                (sym-sources call parent (pop prefix)) {:why :shadowed-collection-call}
+                (and reduce? (zero? position)) {:why :reduce-accumulator-not-an-element}
+                (not= position expected) {:why :callback-parameter-not-an-element}
+                (not= argc (count kids)) {:why :callback-collection-arity}
+                (and anonymous?
+                     (some (fn [[n _]]
+                             (let [t (token-text n)]
+                               (and t (str/starts-with? t "%")
+                                    (not (contains? (if reduce? #{"%" "%1" "%2"} #{"%" "%1"}) t)))))
+                           (walk-nodes form [])))
+                {:why :callback-parameter-arity}
+                (and (not anonymous?)
+                     (not= (count (:children params)) (if reduce? 2 1)))
+                {:why :callback-parameter-arity}
+                :else {:collection (last kids) :chain prefix}))
+
+            ;; Parameters of ordinary functions are deliberately not inferred.
+            (#{"defn" "defn-"} h) {:why :callback-not-a-literal}
+            :else (recur (dec i))))))))
+
+(defn- collection-prov
+  "Prove the collection itself, stripping only element-preserving wrappers and
+  let aliases. Transforming calls cannot borrow their input's provenance."
+  [spec node chain ctx depth]
+  (let [h (head-text node) n (count (:children node))
+        fail (fn [why] {:ok? false :real? false :self? false :why why})
+        transparent? (case h
+                       "sort-by" (#{3 4} n)
+                       "sort" (#{2 3} n)
+                       ("reverse" "distinct") (= 2 n)
+                       false)]
+    (cond
+      (> depth 8) (fail :provenance-too-deep)
+      (quoted-form? node) (fail :quoted-data)
+      (and transparent? (not (sym-sources h node chain)))
+      (collection-prov spec (last (:children node)) (conj chain node) ctx (inc depth))
+      (#{"map" "mapv" "mapcat" "keep"} h) (fail :collection-transforms-elements)
+      (= :token (:kind node))
+      (let [source (sym-sources (:text node) node chain)]
+        (cond
+          (and source (crosses-function-scope? source chain))
+          (fail :function-scope-not-established)
+          (and source (not (:loop? source))
+               (every? #(nil? (:key %)) (:entries source)))
+          (combine
+           (for [e (:entries source)]
+             (collection-prov spec (:init e)
+                              (conj (:chain source) (:form source) (:vector source))
+                              ctx (inc depth))))
+          :else (prov spec node chain ctx depth)))
+      :else (prov spec node chain ctx depth))))
+
+(defn- callback-element-prov [spec node chain ctx depth]
+  (let [{:keys [collection why] :as source} (callback-source node chain)]
+    (if why
+      {:ok? false :real? false :self? false :why why}
+      (let [result (collection-prov spec collection (:chain source) ctx (inc depth))]
+        (if (:ok? result)
+          result
+          (assoc result :why :callback-collection-unproven
+                        :collection-why (:why result)))))))
+
 (defn- prov-leaf
   [spec node chain ctx depth]
   (let [{:keys [aliases call visited]} ctx
         fail (fn [why] {:ok? false :real? false :self? false :why why})]
     (cond
+      (quoted-form? node) (fail :quoted-data)
       (< 8 depth) (fail :provenance-too-deep)
       (and (#{:list} (:kind node)) (= call (head-text node)) (not (:returns-of spec)))
       {:ok? true :real? false :self? true}
+      (and (:loop-binding ctx) (get (:checked-updates ctx) (head-text node)))
+      (let [arg (get (:checked-updates ctx) (head-text node))
+            supplied (nth (:children node) arg nil)]
+        (if (same-loop-binding? supplied (conj chain node) (:loop-binding ctx) #{})
+          {:ok? true :real? false :self? true}
+          (fail :update-of-another-binding)))
       (:element-of spec)
-      (if (and (= "get" (head-text node)) (< 2 (count (:children node))))
+      (cond
+        (and (= "get" (head-text node)) (< 2 (count (:children node))))
         (prov (:element-of spec) (nth (:children node) 1) (conj chain node) ctx (inc depth))
-        (fail :not-an-element))
+        (= :token (:kind node))
+        (callback-element-prov (:element-of spec) node chain ctx depth)
+        :else (fail :not-an-element))
       (= :token (:kind node))
       (let [t (:text node)]
         (if (or (str/starts-with? t ":") (re-matches #"[-+]?\d.*" t))
           (fail :not-a-symbol)
           (if-let [src (sym-sources t node chain)]
             (let [k [t (:start (:vector src)) (:pair-index src)]]
-              (if (contains? visited k)
-                no-prov
-                (let [ctx (update ctx :visited conj k)
-                      inits (for [e (:entries src)]
-                                  (if (:key e)
-                                    (if (and (:keyed-read spec)
-                                             (= (:key e) (str (first (:keyed-read spec))))
-                                             (contains? (record-names (second (:keyed-read spec)) aliases)
-                                                        (token-text (:init e))))
-                                      {:ok? true :real? true :self? false}
-                                      (fail :destructured-key-not-declared))
-                                    (prov spec (:init e) (conj (:chain src) (:form src) (:vector src)) ctx (inc depth))))
-                          recurs (when (:loop? src)
-                                   (for [[n cch] (walk-nodes (:form src) (:chain src))
-                                         :when (and (#{:list} (:kind n)) (= "recur" (head-text n)))
-                                         :let [a (nth (:children n) (inc (:pair-index src)) nil)]
-                                         :when a]
-                                     (prov spec a (conj cch n) ctx (inc depth))))]
-                  (combine (concat inits recurs)))))
+              (if (and (seq (:checked-updates ctx)) (crosses-function-scope? src chain))
+                (fail :function-scope-not-established)
+                (if (contains? visited k)
+                  no-prov
+                  (let [ctx (cond-> (update ctx :visited conj k)
+                              (:loop? src) (assoc :loop-binding k))
+                        inits (for [e (:entries src)]
+                                    (if (:key e)
+                                      (if (and (:keyed-read spec)
+                                               (= (:key e) (str (first (:keyed-read spec))))
+                                               (contains? (record-names (second (:keyed-read spec)) aliases)
+                                                          (token-text (:init e))))
+                                        {:ok? true :real? true :self? false}
+                                        (fail :destructured-key-not-declared))
+                                      (prov spec (:init e) (conj (:chain src) (:form src) (:vector src)) ctx (inc depth))))
+                            recurs (when (:loop? src)
+                                     (for [[n cch] (walk-nodes (:form src) (:chain src))
+                                           :when (and (#{:list} (:kind n)) (= "recur" (head-text n)))
+                                           :let [a (nth (:children n) (inc (:pair-index src)) nil)]
+                                           :when a]
+                                       (prov spec a (conj cch n) ctx (inc depth))))]
+                    (combine (concat inits recurs))))))
             (fail :unbound-symbol))))
       (:keyed-read spec)
       (let [[f r] (:keyed-read spec)]
@@ -796,21 +1124,68 @@
 
 (defn- call-sites
   "[call-node ancestors arg-index-shift] for every call of CALL in FORMS: a form headed
-  by CALL (shift 0) or (partial CALL ...) (shift 1)."
+  by CALL (including the body of #(CALL ...), shift 0) or (partial CALL ...) (shift 1)."
   [forms call]
   (for [form forms
         [n chain] (walk-nodes form [])
-        :when (#{:list} (:kind n))
+        :when (#{:list :fn} (:kind n))
         :let [h (head-text n)
               shift (cond (= call h) 0
                           (and (= "partial" h) (= call (token-text (nth (:children n) 1 nil)))) 1)]
         :when shift]
     [n chain shift]))
 
+(defn- parameter-fields
+  "Map parameter field paths and their locals; only called on parameter patterns."
+  ([node] (parameter-fields node []))
+  ([node path]
+   (when (= :map (:kind node))
+     (mapcat
+      (fn [[binding selector]]
+        (let [k (token-text binding)]
+          (cond
+            (and k (or (= k ":keys") (re-matches #":[^:/]+/keys" k)))
+            (for [sy (:children selector) :let [v (token-text sy)] :when v]
+              {:field-path (conj path (keyword (if (= k ":keys") v
+                                                 (str (subs k 1 (- (count k) 4))
+                                                      (last (str/split v #"/"))))))
+               :local (last (str/split v #"/"))})
+            (and k (str/starts-with? k ":")) []
+            (some-> (token-text selector) (str/starts-with? ":"))
+            (let [p (conj path (keyword (subs (token-text selector) 1)))]
+              (if (= :map (:kind binding)) (parameter-fields binding p)
+                  (when k [{:field-path p :local k}])))
+            :else [])))
+      (partition 2 (:children node))))))
+
+(defn- local-used? [body local]
+  (letfn [(binds? [pat]
+            (or (= local (token-text pat))
+                (some #(= local (:local %)) (parameter-fields pat))
+                (and (= :map (:kind pat))
+                     (some (fn [[k v]] (and (= ":as" (token-text k))
+                                           (= local (token-text v))))
+                           (partition 2 (:children pat))))))
+          (used? [node]
+            (when-not (quoted-form? node)
+              (let [kids (:children node) h (head-text node)]
+                (cond
+                  (= local (token-text node)) true
+                  (#{"let" "let*" "loop" "loop*"} h)
+                  (loop [pairs (seq (partition 2 (:children (second kids))))]
+                    (if-let [[pat init] (first pairs)]
+                      (or (used? init) (when-not (binds? pat) (recur (next pairs))))
+                      (some used? (drop 2 kids))))
+                  ;; Nested callable bindings require a separate closure rule.
+                  ;; Do not mistake their parameter declarations for this local.
+                  (#{"fn" "fn*" "defn" "defn-"} h) false
+                  :else (some used? kids)))))]
+    (boolean (some used? body))))
+
 (defn- callee-check
   "Condition (c): the callee's nth parameter, in the arity matching ARGC (or the first
-  with enough parameters when the call is a partial), is a plain symbol used in the body."
-  [callee-text call var n argc partial?]
+  with enough parameters when the call is a partial), is a used symbol or binds the supplied field path to a used local."
+  [callee-text call var n argc partial? field-path]
   (let [form (first (:forms (parse-forms callee-text)))
         kids (drop 2 (:children form))
         arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)
@@ -830,12 +1205,102 @@
       (let [[pv body] pick
             p (nth (:children pv) (dec n) nil)
             sym (token-text p)]
-        (cond
-          (or (nil? sym) (str/starts-with? sym "&") (str/starts-with? sym ":"))
-          {:ok? false :why :param-not-a-plain-symbol}
-          (not (some (fn [b] (some (fn [[nn _]] (= sym (token-text nn))) (walk-nodes b []))) body))
-          {:ok? false :why :param-unused}
-          :else {:ok? true})))))
+        (if (= :map (:kind p))
+          (if-let [entry (first (filter #(= field-path (:field-path %)) (parameter-fields p)))]
+            (let [used? (local-used? body (:local entry))]
+              (assoc entry :ok? used? :used? used? :why (when-not used? :param-unused)))
+            {:ok? false :why :parameter-field-not-bound :field-path field-path})
+          (cond
+            (or (nil? sym) (str/starts-with? sym "&") (str/starts-with? sym ":"))
+            {:ok? false :why :param-not-a-plain-symbol}
+            (not (some (fn [b] (some (fn [[nn _]] (= sym (token-text nn))) (walk-nodes b []))) body))
+            {:ok? false :why :param-unused :local sym :used? false}
+            :else {:ok? true :local sym :used? true
+                   :parameter-arity (count (:children pv)) :parameter-position n}))))))
+
+(defn- supplied-field? [node chain path]
+  (when-let [literal (literal-node node chain)]
+    (let [value (some (fn [[k v]] (when (= (str (first path)) (token-text k)) v))
+                      (partition 2 (:children literal)))]
+      (and value (or (= 1 (count path)) (supplied-field? value chain (rest path)))))))
+
+(def ^:dynamic *checking-update-witness* false)
+(declare check-pass)
+
+(defn- checked-updates
+  "Only another declared pass of this same value/from can certify an updater.
+  It must independently pass the existing recurrence check; dependencies cannot
+  certify one another recursively. This certifies dataflow, not numeric identity."
+  [repo-root by-id aliases box {:keys [value from to]}]
+  (when-not *checking-update-witness*
+    (into {}
+          (for [p (:passes box)
+                :when (and (= value (:value p)) (= from (:from p))
+                           (not= (:call to) (get-in p [:to :call]))
+                           (nil? (get-in p [:to :field-path])))
+                :let [r (binding [*checking-update-witness* true]
+                          (check-pass repo-root by-id aliases box p))]
+                :when (and (:ok? r) (:self-recurrent? r))]
+            [(get-in p [:to :call]) (get-in p [:to :arg])]))))
+
+(def ^:dynamic *forward-path* #{})
+
+(defn- forward-provenance
+  "Compose only a named, independently accepted inbound pass. This is a path
+  witness, not an assertion about every caller of the forwarding function.
+  Unknown binding contexts are refused rather than treated as transparent."
+  [repo-root by-id box pass forms argument chain]
+  (let [{:keys [param via]} (:from pass)
+        local (str param)
+        form (first forms)
+        kids (drop 2 (:children form))
+        arities (filter #(and (= :list (:kind %))
+                              (= :vector (:kind (first (:children %))))) kids)
+        bodies (if (seq arities)
+                 (map #(vector (first (:children %)) (rest (:children %))) arities)
+                 (let [pv (first (filter #(= :vector (:kind %)) kids))]
+                   [[pv (rest (drop-while #(not (identical? pv %)) kids))]]))
+        [pv _] (first (filter (fn [[_ bs]] (some #(contains-node? % argument) bs)) bodies))
+        position (some (fn [[i p]] (when (= local (token-text p)) (inc i)))
+                       (map-indexed vector (:children pv)))
+        contexts (remove #(or (identical? % form)
+                              (some (fn [a] (identical? a %)) arities))
+                         chain)
+        inbound (for [[id caller] by-id
+                      p (:passes caller)
+                      :when (and (or (= via id) (= via (:id p)))
+                                 (= (:box/id box) (get-in p [:to :callee-box]))
+                                 (= (:value pass) (:value p)))]
+                  [caller p])]
+    (cond
+      (not (and param via)) {:ok? false :why :forward-source-incomplete}
+      (not= local (token-text argument)) {:ok? false :why :forward-value-transformed}
+      (not (and (#{"defn" "defn-"} (head-text form)) position))
+      {:ok? false :why :forward-not-own-parameter}
+      (or (sym-sources local argument chain)
+          (sym-sources (get-in pass [:to :call]) argument chain)
+          (some #(and (= :list (:kind %))
+                      (not (contains? #{"let" "let*" "if" "if-not" "when" "when-not"
+                                        "cond" "case" "do"} (head-text %))))
+                contexts))
+      {:ok? false :why :forward-binding-context}
+      (not= 1 (count inbound)) {:ok? false :why :forward-inbound-not-unique}
+      :else
+      (let [[caller p] (first inbound)
+            key [(:box/id caller) p]]
+        (if (contains? *forward-path* key)
+          {:ok? false :why :forward-cycle}
+          (let [r (binding [*forward-path* (conj *forward-path* key)]
+                    (check-pass repo-root by-id
+                                (:aliases (site-cfg [caller])) caller p))]
+            (cond
+              (not (:ok? r)) {:ok? false :why :forward-inbound-refused}
+              (not (and (= local (:local r))
+                        (= position (:parameter-position r))
+                        (= (count (:children pv)) (:parameter-arity r))
+                        (not-any? #(= "&" (token-text %)) (:children pv))))
+              {:ok? false :why :forward-inbound-parameter-mismatch}
+              :else {:ok? true :real? true :self? false})))))))
 
 (defn- check-pass
   "Conditions (a)-(c) for PASS carried by BOX. Returns {:ok? bool :why kw :self-recurrent? bool}."
@@ -852,23 +1317,53 @@
       (nil? (:text callee-scope)) {:ok? false :why :callee-site-unreadable}
       :else
       (let [forms (:forms (parse-forms caller-text))
-            sites (call-sites forms call)]
+            sites (call-sites forms call)
+            updates (checked-updates repo-root by-id aliases box pass)]
         (if (empty? sites)
           {:ok? false :why :call-not-found}
           (let [results (for [[n chain shift] sites
                               :let [a (nth (:children n) (+ arg shift) nil)]]
                           (assoc (if-not a
                                    {:ok? false :why :call-has-too-few-arguments}
-                                   (prov from a (conj chain n) {:aliases aliases :call call :visited #{}} 0))
-                                 :argc (dec (count (:children n))) :partial? (pos? shift)))
-                good (first (filter #(and (:ok? %) (:real? %)) results))]
+                                   (if (:param from)
+                                     (forward-provenance repo-root by-id box pass forms a chain)
+                                     (prov from a (conj chain n) {:aliases aliases :call call :visited #{} :checked-updates updates} 0)))
+                                 :argc (dec (count (:children n))) :partial? (pos? shift)
+                                 :argument a :ancestors (conj chain n)))
+                results (if (:param from)
+                          (map (fn [r]
+                                 (if-not (:ok? r) r
+                                   (let [c (callee-check (:text callee-scope) call
+                                                         (:var (:site callee)) arg
+                                                         (:argc r) (:partial? r)
+                                                         (or (:field-path to)
+                                                             [(vertex-field (vertex-key value))]))]
+                                     (if (:ok? c) r (merge r c)))))
+                               results)
+                          results)
+                good (when (or (not (:param from)) (every? :ok? results))
+                       (first (filter #(and (:ok? %) (:real? %)) results)))]
             (if-not good
-              {:ok? false :why (or (:why (first (remove :ok? results))) :argument-has-no-real-source)}
+              (let [bad (first (remove :ok? results))]
+                (cond-> {:ok? false :why (or (:why bad) :argument-has-no-real-source)}
+                  (:collection-why bad) (assoc :collection-why (:collection-why bad))))
               (let [c (callee-check (:text callee-scope) call (:var (:site callee)) arg
-                                    (:argc good) (:partial? good))]
-                (if (:ok? c)
-                  {:ok? true :self-recurrent? (boolean (:self? good))}
-                  c)))))))))
+                                    (:argc good) (:partial? good)
+                                    (or (:field-path to) [(vertex-field (vertex-key value))]))]
+                (cond
+                  (not (:ok? c)) c
+                  (and (:field-path c)
+                       (not (supplied-field? (:argument good) (:ancestors good) (:field-path c))))
+                  (assoc c :ok? false :why :supplied-field-not-proved)
+                  :else (assoc c :self-recurrent? (boolean (:self? good))))))))))))
+
+(defn pass-attribution
+  "Explain a positional pass against actual site source, including field path,
+  bound local and use for a destructured parameter. No execution or stubs."
+  [repo-root boxes box-id pass]
+  (let [by-id (into {} (map (juxt :box/id identity)) boxes)
+        box (get by-id box-id)]
+    (check-pass repo-root by-id (:aliases (site-cfg [box])) box pass)))
 
 (defn- passes-evidence
   "{:evidence {[box-id vertex role] 1} :failed {[box-id vertex] why}} over every :passes of
@@ -897,6 +1392,199 @@
                   (update :failed assoc [cb v] (:why res))))))
         acc (:passes box)))
      {:evidence {} :failed {}} boxes)))
+
+(defn- carry-return-proof
+  "All returned arms must derive from a let-bound source call or a parameter
+  with an accepted inbound witness. No arbitrary
+  record transformer, dynamic key, or recursive fixed point is assumed."
+  [text field source-call & [parameter-witness]]
+  (let [form (first (:forms (parse-forms text)))
+        name (token-text (second (:children form)))
+        tail (drop 2 (:children form))
+        multi (filter #(and (= :list (:kind %))
+                            (= :vector (:kind (first (:children %))))) tail)
+        arities (if (seq multi)
+                  (into {} (map #(vector (count (:children (first (:children %))))
+                                         {:params (first (:children %))
+                                          :body (vec (rest (:children %)))}) multi))
+                  (let [pv (first (filter #(= :vector (:kind %)) tail))]
+                    (when pv {(count (:children pv))
+                              {:params pv :body (vec (rest (drop-while #(not= pv %) tail)))}})))
+        fail (fn [why] {:ok? false :why why})
+        parameter-env (fn [arity]
+                        (into {} (for [p (:children (:params arity))
+                                       e (pattern-entries p nil)]
+                                   [(:sym e) (if (and parameter-witness
+                                                     (= (:sym e) (:local parameter-witness))
+                                                     (= (count (:children (:params arity)))
+                                                        (:parameter-arity parameter-witness))
+                                                     (= (:sym e) (token-text (nth (:children (:params arity))
+                                                                                (dec (:parameter-position parameter-witness)) nil))))
+                                              {:ok? true :arms #{:carried}}
+                                              (fail :parameter-not-a-carried-local))])))
+        combine-arms (fn [rs]
+                       (or (first (remove :ok? rs))
+                           {:ok? true :arms (set (mapcat :arms rs))}))]
+    (letfn [(record [node env seen bound?]
+              (let [h (head-text node) kids (:children node)
+                    base #(record (second kids) env seen false)
+                    literal-keys (fn [xs] (every? #(some-> (token-text %) (str/starts-with? ":")) xs))]
+                (cond
+                  (nil? node) (fail :missing-return-arm)
+                  (quoted-form? node) (fail :quoted-data)
+                  (= :token (:kind node))
+                  (get env (token-text node) (fail :not-a-carried-local))
+                  (and (#{"assoc" "merge" "dissoc" "select-keys"} h) (contains? env h))
+                  (fail :shadowed-record-operation)
+                  (and source-call (= :list (:kind node)) (= source-call h))
+                  (if (and bound? (not (contains? env h)))
+                    {:ok? true :arms #{:carried}}
+                    (fail :source-not-bound-or-shadowed))
+                  (#{"let" "let*"} h)
+                  (let [v (second kids)]
+                    (if-not (and (= :vector (:kind v)) (even? (count (:children v))))
+                      (fail :unsupported-carry-binding)
+                      (let [env' (reduce
+                                  (fn [e [pat init]]
+                                    (if-let [sym (token-text pat)]
+                                      (assoc e sym
+                                             (if (contains? e sym)
+                                               (fail :rebound-carried-local)
+                                               (record init e seen true)))
+                                      ;; Destructuring can shadow a carried local;
+                                      ;; reject its scope instead of guessing.
+                                      (reduced ::unsupported)))
+                                  env (partition 2 (:children v)))]
+                        (if (= ::unsupported env')
+                          (fail :unsupported-carry-binding)
+                          (record (last kids) env' seen false)))))
+                  (#{"if" "if-not"} h)
+                  (if (= 4 (count kids))
+                    (combine-arms (map #(record % env seen false) (drop 2 kids)))
+                    (fail :missing-return-arm))
+                  (= "do" h) (record (last kids) env seen false)
+                  (= "cond" h)
+                  (let [pairs (partition 2 (rest kids))]
+                    (if (and (even? (count (rest kids)))
+                             (= ":else" (token-text (first (last pairs)))))
+                      (combine-arms (map #(record (second %) env seen false) pairs))
+                      (fail :missing-return-arm)))
+                  (= "assoc" h)
+                  (let [r (base) pairs (partition 2 (drop 2 kids)) ks (map first pairs)]
+                    (cond
+                      (not (:ok? r)) r
+                      (or (empty? pairs) (odd? (count (drop 2 kids))) (not (literal-keys ks)))
+                      (fail :unproved-assoc-key)
+                      (some #(= (str field) (token-text %)) ks) {:ok? true :arms #{:overridden}}
+                      :else r))
+                  (= "merge" h)
+                  (let [r (base) operands (drop 2 kids)]
+                    (if-not (:ok? r) r
+                      (if (every? #(and (= :map (:kind %))
+                                       (literal-keys (take-nth 2 (:children %)))) operands)
+                        (if (some #(some (fn [k] (= (str field) (token-text k)))
+                                        (take-nth 2 (:children %))) operands)
+                          {:ok? true :arms #{:overridden}} r)
+                        (fail :unproved-merge-operand))))
+                  (= "dissoc" h)
+                  (let [r (base) ks (drop 2 kids)]
+                    (cond
+                      (not (:ok? r)) r
+                      (not (literal-keys ks)) (fail :unproved-dissoc-key)
+                      (some #(= (str field) (token-text %)) ks) (fail :carried-field-removed)
+                      :else r))
+                  (= "select-keys" h)
+                  (let [r (base) ks (nth kids 2 nil)]
+                    (cond
+                      (not (:ok? r)) r
+                      (not (and (= 3 (count kids)) (= :vector (:kind ks))
+                                (literal-keys (:children ks)))) (fail :unproved-selected-keys)
+                      (not (some #(= (str field) (token-text %)) (:children ks)))
+                      (fail :carried-field-removed)
+                      :else r))
+                  (= name h)
+                  (let [arity (dec (count kids))]
+                    (if (or parameter-witness (contains? seen arity) (not (contains? arities arity))
+                            (contains? env name))
+                      (fail :unproved-return-delegation)
+                      (record (last (:body (get arities arity)))
+                              (parameter-env (get arities arity)) (conj seen arity) false)))
+                  :else (fail :return-not-derived-from-source))))]
+      (if-not (and (#{"defn" "defn-"} (head-text form)) (seq arities))
+        (fail :carry-site-not-a-defn)
+        (combine-arms (for [[arity a] arities]
+                        (record (last (:body a)) (parameter-env a) #{arity} false)))))))
+
+(defn- parameter-carry-proof
+  [repo-root boxes box field from text]
+  (let [by-id (into {} (map (juxt :box/id identity) boxes))
+        inbound (for [caller boxes p (:passes caller)
+                      :when (and (or (= (:via from) (:box/id caller))
+                                     (= (:via from) (:id p)))
+                                 (= (:box/id box) (get-in p [:to :callee-box]))
+                                 (= (vertex-key field) (vertex-key (:value p))))]
+                  [caller p])]
+    (cond
+      (not (and (:param from) (:via from) text))
+      {:ok? false :why :forward-source-incomplete}
+      (not= 1 (count inbound)) {:ok? false :why :forward-inbound-not-unique}
+      :else
+      (let [[caller p] (first inbound)
+            r (check-pass repo-root by-id (:aliases (site-cfg [caller])) caller p)]
+        (cond
+          (not (:ok? r)) {:ok? false :why :forward-inbound-refused}
+          (not (and (= (str (:param from)) (:local r))
+                    (:parameter-position r) (:parameter-arity r)))
+          {:ok? false :why :forward-inbound-parameter-mismatch}
+          :else (assoc (carry-return-proof text (vertex-field (vertex-key field)) nil r)
+                       :source-box (:box/id caller) :field (vertex-key field)))))))
+
+(defn carry-attribution
+  "A checked read of a source record through a whole returned value. Carries
+  never erase graph writers: source and wrapper output need distinct record
+  scopes when the wrapper can override the field. A parameter source uses
+  :from {:param p :via caller-box-or-pass-id} and composes only that inbound path."
+  [repo-root boxes box-id {:keys [field from]}]
+  (let [box (first (filter #(= box-id (:box/id %)) boxes))
+        call (:returns-of from)
+        vertex (when field (vertex-key field))
+        candidates (filter #(and (= (some-> call (str/split #"/") last) (get-in % [:site :var]))
+                                  (some #{vertex} (entries % :writes))) boxes)
+        source (first candidates)
+        cfg (when source (site-cfg [source]))
+        text (when box (:text (site-scope repo-root (:site box))))
+        source-text (when source (:text (site-scope repo-root (:site source))))]
+    (cond
+      (and field (:param from) (nil? call))
+      (parameter-carry-proof repo-root boxes box field from text)
+      (not (and field (string? call))) {:ok? false :why :malformed-carry}
+      (not= 1 (count candidates)) {:ok? false :why :carry-source-writer-not-unique}
+      (not (and text source-text)) {:ok? false :why :carry-site-unreadable}
+      (or (not= call (get-in source [:site :var]))
+          (not= (get-in box [:site :file]) (get-in source [:site :file])))
+      {:ok? false :why :callee-identity-not-resolved}
+      (or (nil? (:returns-record source))
+          (and (vertex-record vertex) (not= (vertex-record vertex) (:returns-record source))))
+      {:ok? false :why :carry-source-record-not-declared}
+      (zero? (:writes (vertex-usage source-text [(vertex-field vertex) (:returns-record source)]
+                                    (scopes-of [[(vertex-field vertex) (:returns-record source)]]) cfg)))
+      {:ok? false :why :carry-source-write-not-proved}
+      :else (assoc (carry-return-proof text (vertex-field vertex) call)
+                   :source-box (:box/id source) :field vertex))))
+
+(defn- carries-evidence [repo-root boxes]
+  (reduce
+   (fn [acc box]
+     (reduce (fn [a carry]
+               (let [field (vertex-key (:field carry))
+                     r (carry-attribution repo-root boxes (:box/id box) carry)]
+                 (if (:ok? r)
+                   (if (contains? (:arms r) :carried)
+                     (assoc-in a [:evidence [(:box/id box) field :reads]] 1)
+                     a)
+                   (assoc-in a [:failed [(:box/id box) field]] (:why r)))))
+             acc (:carries box)))
+   {:evidence {} :failed {}} boxes))
 
 (defn conformance
   "Compare declared box reads/writes with occurrences in their named sites.
@@ -928,10 +1616,16 @@
          field-universe (set (fields-in boxes))
          scopes (scopes-of field-universe)
          boxes-by-site (group-by :site (filter :site boxes))
-         cfg-of (into {} (map (fn [[site bs]] [site (site-cfg bs)])) boxes-by-site)
+         cfg-of (into {} (map (fn [[site bs]] [site (assoc (site-cfg bs) :var (:var site)
+                                      :source (try (let [s (slurp (site-path repo-root site))]
+                                                     (when (re-find #"\(defn-?\s+seal\s" s) s))
+                                                   (catch Exception _ nil)))])) boxes-by-site)
          {:keys [evidence failed]} (if (some :passes boxes)
                                      (passes-evidence repo-root boxes cfg-of)
                                      {:evidence {} :failed {}})
+         carry-evidence (carries-evidence repo-root boxes)
+         evidence (merge evidence (:evidence carry-evidence))
+         carry-failed (:failed carry-evidence)
          evidence-of (fn [box field role] (get evidence [(:box/id box) field role] 0))
          evidenced? (fn [box field role] (pos? (evidence-of box field role)))
          ;; An unreadable or malformed site is a FINDING, not an exception: the
@@ -963,7 +1657,9 @@
                     :role role
                     :site site}
              (contains? failed [(:box/id box) field])
-             (assoc :passes-failed (get failed [(:box/id box) field]))))
+             (assoc :passes-failed (get failed [(:box/id box) field]))
+             (contains? carry-failed [(:box/id box) field])
+             (assoc :carries-failed (get carry-failed [(:box/id box) field]))))
          undeclared-occurrences
          (for [[site site-boxes] boxes-by-site
                :let [text (get-in site-text [site :text])
@@ -997,7 +1693,10 @@
               :site site
               :usage u
               :heuristic true}))]
-     (->> (concat unreadable-sites missing-declarations undeclared-occurrences role-mismatches)
+     (->> (concat
+            (for [[[box-id field] why] carry-failed]
+              {:finding :carry-not-proved :box/id box-id :field field :reason why})
+            unreadable-sites missing-declarations undeclared-occurrences role-mismatches)
           (sort-by (juxt (comp str :finding) (comp str :field)))
           vec))))
 
@@ -1008,7 +1707,10 @@
   [repo-root {:keys [boxes]}]
   (let [boxes (or boxes [])
         scopes (scopes-of (fields-in boxes))
-        cfg-of (into {} (map (fn [[site bs]] [site (site-cfg bs)]))
+        cfg-of (into {} (map (fn [[site bs]] [site (assoc (site-cfg bs) :var (:var site)
+                                      :source (try (let [s (slurp (site-path repo-root site))]
+                                                     (when (re-find #"\(defn-?\s+seal\s" s) s))
+                                                   (catch Exception _ nil)))]))
                      (group-by :site (filter :site boxes)))
         evidence (when (some :passes boxes) (:evidence (passes-evidence repo-root boxes cfg-of)))]
     (vec

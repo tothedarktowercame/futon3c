@@ -45,7 +45,10 @@
       :why "hand-authored: the provider grain (the failed first attempt's), the different real value the second bad case drives the reader with"}]))
 
 (def wire
-  {:wire [:r5-flight-call :r5-grain-gate :grain]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r5-gate-grain-test/a-typed-absence-at-the-reader-fails-the-wire :kind :refusal
+                  :product [:reason] :intervention :before-reader :expected :grain-not-declared}
+  :wire [:r5-flight-call :r5-grain-gate :grain]
    :kind :witnessed-hermetically
    :test `the-candidates-grain-reaches-the-gate
    :check check

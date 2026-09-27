@@ -104,7 +104,10 @@
     :why "predates WM-HABIT-FOLD-CALL-I: both habit reads {:status :absent :reason :no-enactment-fold}; judge passed no fold live"}])
 
 (def wire
-  {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/no-fold-passed-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:reader :reason] :intervention :before-reader :expected :no-enactment-fold}
+  :wire [:r7-fold-call :habit-fold-call-test :enactment-fold]
    :kind :witnessed-hermetically
    :test `the-fold-judge-hands-reaches-the-selection
    :check check

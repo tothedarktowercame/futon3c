@@ -73,7 +73,10 @@
       :why "no :eligible anywhere in the flight record; neither end"}]))
 
 (def wire
-  {:wire [:eligibility :r1-outer-cascade :eligible]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/a-different-ruling-fails-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:eligibility :r1-outer-cascade :eligible]
    :kind :witnessed-hermetically
    :test `the-eligibility-ruling-reaches-the-cascade
    :check check

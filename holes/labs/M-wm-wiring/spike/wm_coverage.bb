@@ -4,9 +4,12 @@
 ;; condition, which only through a failure branch, and which no root reaches.
 ;; Read-only for the map, the ledger and the org layer.
 ;;
-;;   bb holes/labs/M-wm-wiring/spike/wm_coverage.bb [LEDGER-REV] [ORG-LAYER-REV-OR-FILE]
+;;   bb holes/labs/M-wm-wiring/spike/wm_coverage.bb [LEDGER-REV-OR-FILE] [ORG-LAYER-REV-OR-FILE]
 ;;
-;; Inputs are read from git (default HEAD), never from the working tree:
+;; Inputs default to git HEAD. Either argument can instead be an EDN file for an
+;; informational run. File snapshots are hashed and marked :uncommitted-input;
+;; they require WM_COVERAGE_OUT outside the canonical coverage path. Commit the
+;; inputs and regenerate by revision before publishing the coverage companion.
 ;;   wm-wire-ledger.edn at LEDGER-REV     the wires [writer reader field]; its :adjacency
 ;;                                        :map names the map revision
 ;;   wm-flight-wiring.edn at that map rev the boxes and their kinds
@@ -51,6 +54,7 @@
 ;;                     :no-path-from-root; or every combination is contradictory
 ;;                     (:why :mutually-exclusive-branches)
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.set :as set]
+         '[clojure.java.io :as io]
          '[clojure.java.shell :refer [sh]] '[clojure.pprint :as pp])
 
 (def home (System/getProperty "user.home"))
@@ -60,20 +64,36 @@
   (let [{:keys [exit out err]} (apply sh "git" "-C" f3c args)]
     (when-not (zero? exit) (die "git" args err)) out))
 (def lab "holes/labs/M-wm-wiring/")
-(def ledger-rev (str/trim (git "rev-parse" "--short=8" (or (first *command-line-args*) "HEAD"))))
+(def ledger-arg (or (first *command-line-args*) "HEAD"))
 (def org-arg (or (second *command-line-args*) "HEAD"))
-;; ORG-LAYER-REV may be a file path (contains "/"): an INFORMATIONAL run over an uncommitted
-;; org layer, marked :uncommitted-input in the output; set WM_COVERAGE_OUT so it does not
-;; overwrite the committed companion, and do not commit its output.
-(def org-file? (str/includes? org-arg "/"))
+(defn file-input? [arg]
+  (or (.isFile (io/file arg)) (str/ends-with? arg ".edn") (str/starts-with? arg "/")))
+(def ledger-file? (file-input? ledger-arg))
+(def org-file? (file-input? org-arg))
+(def canonical-out (str f3c "/" lab "wm-wire-coverage.edn"))
+(def out-path (or (System/getenv "WM_COVERAGE_OUT") canonical-out))
+(defn canonical-path [path] (.getCanonicalPath (io/file path)))
+(when (and (or ledger-file? org-file?)
+           (= (canonical-path out-path) (canonical-path canonical-out)))
+  (die "file inputs require WM_COVERAGE_OUT outside the canonical coverage path; commit inputs and regenerate by revision before publishing"))
+(doseq [input (cond-> [] ledger-file? (conj ledger-arg) org-file? (conj org-arg))]
+  (when (= (canonical-path input) (canonical-path out-path))
+    (die "output would overwrite an input:" input)))
+(def ledger-rev (if ledger-file? ledger-arg (str/trim (git "rev-parse" "--short=8" ledger-arg))))
 (def org-rev (if org-file? org-arg (str/trim (git "rev-parse" "--short=8" org-arg))))
 (defn show [rev file] (git "show" (str rev ":" lab file)))
 (defn read-edn [s] (edn/read-string {:default (fn [_ v] v)} s))
+(defn sha256 [s]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                        (.getBytes s java.nio.charset.StandardCharsets/UTF_8))]
+    (apply str (map #(format "%02x" (bit-and 255 %)) digest))))
 
-(def ledger (read-edn (show ledger-rev "wm-wire-ledger.edn")))
+(def ledger-text (if ledger-file? (slurp ledger-arg) (show ledger-rev "wm-wire-ledger.edn")))
+(def ledger (read-edn ledger-text))
 (def map-rev (get-in ledger [:adjacency :map]))
 (def m (read-edn (git "show" (str map-rev ":" lab "wm-flight-wiring.edn"))))
-(def org (read-edn (if org-file? (slurp org-arg) (show org-rev "wm-org-layer.edn"))))
+(def org-text (if org-file? (slurp org-arg) (show org-rev "wm-org-layer.edn")))
+(def org (read-edn org-text))
 (def wires (mapv :wire (:wires ledger)))
 (when (empty? wires) (die "the ledger has no wires"))
 
@@ -218,7 +238,7 @@
 ;; path and promotes the gate-refusal wire to :witness.
 (def refusal-boxes #{:gate-refuse})
 (def refusal-call-cond "(call of a refusal box: decision_gate refuse!)")
-(defn edge-of [c from to cond-1 along]
+(defn edge-of [_c from to cond-1 along]
   (let [cs (concat (when cond-1 [cond-1]) along (when (refusal-boxes to) [refusal-call-cond]))]
     {:from from :to to
      :conds (vec (distinct cs))
@@ -273,7 +293,7 @@
         (empty? (get R box)) {:why :no-path-from-root}
         :else {:paths (get R box)}))
 
-(defn classify [R [w r f :as wire]]
+(defn classify [R [w r _f :as wire]]
   (let [we (end-info R w) re (end-info R r)]
     (if-let [why (or (:why we) (:why re))]
       {:wire wire :coverage :unreachable :why why :writer-end (or (:why we) :ok) :reader-end (or (:why re) :ok)}
@@ -305,9 +325,11 @@
 (def used (into (sorted-map) (for [t (distinct (mapcat :conds edges))] [t (cond-class t)])))
 
 (def out
-  {:inputs {:ledger {:rev ledger-rev :map map-rev :wires (count wires)}
-            :org-layer {:rev org-rev :uncommitted-input org-file? :map-rev (:map-rev org) :futon2-rev (:futon2-rev org)
-                        :calls (count (:calls org)) :roots roots}
+  {:inputs {:ledger (cond-> {:rev ledger-rev :map map-rev :wires (count wires)}
+                      ledger-file? (assoc :uncommitted-input true :sha256 (sha256 ledger-text)))
+            :org-layer (cond-> {:rev org-rev :uncommitted-input org-file? :map-rev (:map-rev org) :futon2-rev (:futon2-rev org)
+                               :calls (count (:calls org)) :roots roots}
+                         org-file? (assoc :sha256 (sha256 org-text)))
             :stale? (not= map-rev (:map-rev org))
             :stale-note "true when the org layer was generated from an older map than the ledger's: boxes added since are :box-not-in-org-layer, not map defects"}
    :counts counts
@@ -318,7 +340,6 @@
    :undecided (vec (sort (for [[t c] used :when (:undecided c)] t)))
    :wires (mapv (fn [r] (-> r (update :writer-path #(some-> % vec)) (update :reader-path #(some-> % vec)))) rows)})
 
-(def out-path (or (System/getenv "WM_COVERAGE_OUT") (str f3c "/" lab "wm-wire-coverage.edn")))
 (spit (str out-path ".tmp")
       (str ";; GENERATED by holes/labs/M-wm-wiring/spike/wm_coverage.bb -- do not edit; method and rule in the script header.\n"
            (with-out-str (pp/pprint out))))

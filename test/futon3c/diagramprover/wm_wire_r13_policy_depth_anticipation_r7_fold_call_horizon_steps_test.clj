@@ -1,0 +1,24 @@
+(ns futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-fold-in-support :as support]))
+(defn check [] (support/observe :horizon :none))
+(def wire {:wire [:r13-policy-depth-anticipation :r7-fold-call [:horizon-steps {:record :depth-anticipation}]]
+           :kind :witnessed-hermetically :test `the-judge-produces-the-received-value :check check
+           :live-records-read support/live-records-read
+           :note "Reader produces :policy-depth-used (3 -> 4); not cascade family T. The cascade-horizon remains sourced independently from cascade-sources."})
+(deftest the-judge-produces-the-received-value
+  (support/assert-live-pins)
+  (let [o (check)]
+    (is (nil? (get-in o [:result :wire-error])))
+    (is (w/received? o))))
+(deftest absence-before-the-judge-does-not-witness-the-wire
+  (let [o (support/observe :horizon :absent)]
+    (is (not (w/received? o)))
+    (is (= 1 (:reader o)))))
+(deftest different-carrier-changes-the-produced-value
+  (let [o (support/observe :horizon :different)]
+    (is (nil? (get-in o [:result :wire-error])))
+    (is (not (w/received? o)))
+    (is (= 4 (:reader o)))
+    (is (= 3 (get-in o [:result :cascade-horizon :value])))))
