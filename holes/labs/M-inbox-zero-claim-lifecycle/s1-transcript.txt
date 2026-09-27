@@ -1,0 +1,32 @@
+ASSERT [repro-A] ordinary-success-index-state: DEFECT REPRODUCED status after clean D2 promotion = 'MM f' (expected clean, got phantom staged reversal)
+ASSERT [repro-A] cached-diff-is-reversal: DEFECT REPRODUCED staged diff is H->X reversal of the just-promoted content; a later porcelain `git commit` would silently revert H
+ASSERT [repro-A] later-commit-reverts: DEFECT REPRODUCED porcelain commit of the phantom staged entry reverted promoted content to 'X'
+ASSERT [repro-B] trailer-lost-under-ref-rewrite: DEFECT REPRODUCED scan of mint..HEAD finds no trailer after update-ref back to mint HEAD; reachable-history consumption is not monotone
+ASSERT [repro-D1] resync-clobbers-foreign-staged: DEFECT REPRODUCED after `git reset HEAD -- f`, staged entry is 62d8fe9f not B's 7a0dc879; foreign staged content destroyed
+ASSERT [owner-gap] native-commit-in-gap-reverts: DEFECT REPRODUCED S0 candidate: native porcelain commit of stale index X lands over H during the unlocked post-CAS gap; promotion silently reverted
+ASSERT [owner-receipt] s0-recovery-names-wrong-commit: DEFECT REPRODUCED S0 recover() pinned the receipt to current HEAD (the descendant), not the claim commit; identity reconstruction was unverified
+ASSERT [s1-ordinary] commit-succeeds: BEHAVIOR OK verdict :committed
+ASSERT [s1-ordinary] status-clean-no-phantom: BEHAVIOR OK ordinary success is clean: index advanced to committed blob
+ASSERT [s1-ordinary] native-usable-after: BEHAVIOR OK native git writers usable immediately after completion
+ASSERT [s1-ordinary] later-commit-no-revert: BEHAVIOR OK no phantom reversal remains for a later commit to land
+ASSERT [s1-gap] native-add-refused-in-critical-interval: BEHAVIOR OK native `git add` refused by the ownership-carrying index.lock
+ASSERT [s1-gap] native-commit-refused-in-critical-interval: BEHAVIOR OK native `git commit` refused mid-interval; promoted content not reverted
+ASSERT [s1-gap] completion-clean: BEHAVIOR OK after completion: status clean, lock released
+ASSERT [s1-gap] native-usable-after-interval: BEHAVIOR OK native writers usable after release
+ASSERT [s1-foreign] other-path-foreign-preserved: BEHAVIOR OK promoted path clean; unrelated foreign staged entry intact
+ASSERT [s1-foreign] same-path-foreign-held-at-plan: BEHAVIOR OK plan-time hold; no commit, foreign staged blob untouched, no lock left
+ASSERT [s1-contention] single-winner: BEHAVIOR OK 8 racing executors: 1 winner, 7 losers
+ASSERT [s1-contention] stale-plan-recheck: BEHAVIOR OK loser re-reads the winner's prepare and can detect its own plan is stale
+ASSERT [s1-contention] malformed-fails-closed: BEHAVIOR OK malformed prepare: recovery refuses, claim never promotable
+ASSERT [s1-crash] C1-after-prepare: BEHAVIOR OK no commit, HEAD unchanged, claim excluded pending operator
+ASSERT [s1-crash] C2-orphan-lock-carries-ownership: BEHAVIOR OK orphan lock is ours-formatted with tx/pid/host, verifiable
+ASSERT [s1-crash] C2-native-blocked-until-recovery: BEHAVIOR OK native writer refused while orphan lock unexplained
+ASSERT [s1-crash] C2-recovery-pins-exact-commit: BEHAVIOR OK recovery verified trailer+parent+tree, pinned exact commit, cleared dead-owner lock, refreshed index; status clean
+ASSERT [s1-crash] C2-native-usable-after-recovery: BEHAVIOR OK native writers usable after recovery
+ASSERT [s1-crash] C3-foreign-lock-never-removed: BEHAVIOR OK unexplained native lock reported and left in place; journal still resolved to the exact commit; refresh deferred, not forced
+ASSERT [s1-crash] C4-receipt-pins-claim-commit-not-head: BEHAVIOR OK descendant present: receipt names the exact claim commit (parent+tree verified), refresh skipped on changed HEAD — no blind refresh
+ASSERT [s1-crash] C4-descendant-content-untouched: BEHAVIOR OK descendant's content never rewritten by old-transaction recovery
+ASSERT [s1-filter] stateful-filter-typed-refusal: BEHAVIOR OK execution-time persisted OID != frozen authorized OID: typed refusal, no commit, no restaging of whatever the stateful filter returned
+ASSERT [s1-filter] refusal-does-not-reauthorize: BEHAVIOR OK claim stays excluded after mismatch; operator resolution required
+
+SUMMARY: defect-reproductions 2/2 confirmed; desired-behavior demonstrations 23/23 passed
