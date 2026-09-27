@@ -115,6 +115,9 @@
             [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test]
             [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test]
             [futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test]
+            [futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test]
             [futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test]
             [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test]
             [futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test]
@@ -289,6 +292,9 @@
     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test
     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test
     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test
+    futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test
     futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test
     futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test
     futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test
