@@ -2,6 +2,8 @@
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
   :rev "0059b8c2",
   :map "17aa769d"},
+ :second-layer
+ {:value-varying 26, :refusal 20, :record 0, :absent 129},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -12,6 +14,20 @@
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test/absent-carrier-before-reader-is-not-a-witness,
+     :kind :refusal,
+     :product [:assembled :kind],
+     :intervention :before-reader,
+     :expected :no-admitted-interpretation},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-5931d5428d5fb4bdaaedc35c7e82aa28a29686aa40c4d8909b4c74fceafcd33f",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test/the-real-reader-receives-the-published-value,
    :note
@@ -19,6 +35,19 @@
   {:wire
    [:ask-merge-published :construction-construct :interpretations],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/different-carrier-changes-the-reader-product,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-4614ec74fb7be9de1826c3ef3e3fa862196dec656ee3970aa4ba72f124eeb0ac",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/the-real-reader-receives-the-published-value,
    :note
@@ -26,28 +55,46 @@
   {:wire
    [:ask-merge-published :flight-conditioning-step :interpretations],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test/different-carrier-changes-the-reader-product,
+     :kind :value-varying,
+     :product [:step :q],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-090aa444ccd38f49cd9575d31c4e100fc47667efddf20981ff46df5d1bdfe0f1",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test/the-real-reader-receives-the-published-value,
    :note
    "Tamper on merged sources BEFORE decision and persist-run-record!. Reader converter feeds rollout; altered produces changes q and B digest. Absent sources refuse assembly no-admitted-interpretation, so the persisted abstention gives no-measured-a, earlier than no-interpretation."}
   {:wire [:c8-registry-get :c8-entry :message],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/the-exception-message-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-entry :timeout-ms],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/the-timeout-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-latest :message],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/the-exception-message-reaches-the-latest-refusal}
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test/the-produced-input-is-received,
    :note
@@ -57,6 +104,7 @@
     :r13-family-parameters
     [:beta {:record :cascade-problem}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test/the-observed-handoff}
   {:wire
@@ -64,10 +112,25 @@
     :r13-family-parameters
     [:horizon-steps {:record :cascade-problem}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/the-observed-handoff}
   {:wire [:construction-assemble-one :r4-kernel :cascade-spec],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/bad-carriers-before-the-real-reader,
+     :kind :refusal,
+     :product [:ranked :kind],
+     :intervention :before-reader,
+     :expected :missing-cascade-want},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-fdf02b6dab7a09cf3e62a9e834612a79b9cc49a357877b54f30ea6935f958a1d",
+     :git-head "77df5d2d2c259356c0eb3cd606faf83a84c906e8",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/the-observed-handoff,
    :note
@@ -77,6 +140,7 @@
     :r4-kernel
     [:want {:record :cascade-spec}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/the-observed-handoff}
   {:wire
@@ -84,14 +148,30 @@
     :r9-decision
     [:want {:record :cascade-problem}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test/the-observed-handoff}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/a-missing-receipt-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :absent],
+     :intervention :before-reader,
+     :expected :no-order-on-receipt},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-fe76b672850971e674b4021555fa5082a52a013b024324116df95f1cb50ff1c4",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/the-construction-receipt-reaches-order-use}
   {:wire [:construction-construct :r9-decision :construction-receipt],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test/the-observed-handoff}
   {:wire
@@ -99,6 +179,19 @@
     :selection-candidate-derivations
     :construction-receipt],
    :status :verified,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/different-value-before-reader-fails,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-51f4aacd276f9b12459a34118b1cb1ffbf8c921e626f170e0b319e795978fe6b",
+     :git-head "8f5d2161e9c2bb4b91f949085f75ce3f88a293b4",
+     :test-revision nil}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -125,30 +218,49 @@
    "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry."}
   {:wire [:dispatch :clock-in :mission-id],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test/the-writer-reaches-the-reader}
   {:wire [:eligibility :r1-outer-cascade :eligible],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/a-different-ruling-fails-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-074f53699fa2e1f7968b751be151e5a66d6a48708c9f3ad4c9ad52a6402b06c8",
+     :git-head "850e0419cd889e276498016b72ad6177bf2bcf0d",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-eligibility-ruling-reaches-the-cascade}
   {:wire [:flight-cast :click-start :author],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test/the-author-seat-reaches-the-click-endpoint}
   {:wire [:flight-cast :click-start :repair-reviewer],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test/the-repair-reviewer-seat-reaches-the-click-endpoint}
   {:wire [:flight-cast :click-start :reviewer],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test/the-reviewer-seat-reaches-the-click-endpoint}
   {:wire [:flight-click :flight-cast-test :cast],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test/the-cast-reaches-the-components-own-test}
   {:wire [:flight-click :flight-record-click :cast],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/flight-ada87008/flight-ada87008.edn",
@@ -158,44 +270,52 @@
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test/the-clicks-cast-reaches-the-flight-records-click-entry}
   {:wire [:flight-click :flight-record-click :detail],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/the-refused-clicks-detail-reaches-the-click-entry}
   {:wire [:flight-click :flight-record-click :status],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
   {:wire [:flight-click-wants :click-start :wants],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test/the-real-reader-receives-the-published-value,
    :note
    "Real http-click-fn post body into direct handle-wm-click-start, request shape from flight-click-http-test. Runner IO captures handler-produced options; no click issued."}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :flight-judge-opts :wants],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :universe],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-d00574c8.edn",
     :sha256
@@ -209,23 +329,28 @@
    futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-click [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry :flight-judge-opts [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-run [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :loop-test :target-source],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test/the-placement-reaches-the-loop-test}
   {:wire [:flight-entry :r0-enact-step [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test/the-target-reaches-the-reader}
   {:wire
@@ -233,47 +358,58 @@
     :r10-observe-publication
     [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r2-flight-read [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r9-close-cause [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/the-target-reaches-the-reader}
   {:wire [:flight-record-summary :click-reason-test :failure],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-click-reason-test-failure-test/the-close-failure-reaches-the-components-own-test}
   {:wire [:flight-record-summary :flight-click-close-test :chosen],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test/the-clicks-selection-reaches-the-components-own-test}
   {:wire [:flight-record-summary :flight-record-click :chosen],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/the-clicks-selection-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-record-click :failure],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-run :chosen],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/the-writer-reaches-the-reader}
   {:wire [:flight-run :flight-driver-summary :needs],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test/the-flights-needs-reach-the-drivers-summary}
   {:wire [:flight-run :flight-driver-summary :readings],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test/the-flights-readings-reach-the-drivers-summary}
   {:wire
@@ -281,18 +417,22 @@
     :flight-steps-source
     [:step {:record :enactment-entry}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test/the-observed-handoff}
   {:wire [:gate-refuse :gate-refusal-read :error],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test/the-gates-error-reaches-gate-refusal}
   {:wire [:loop-entry :loop-plan :trigger],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test/the-writers-value-reaches-the-reader}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test/the-trigger-reaches-the-cascade}
   {:wire
@@ -300,96 +440,167 @@
     :r7-fold-call
     [:belief {:record :morning-brief-fold}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value,
    :note
    "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps currently throw IllegalArgumentException; negative records it, source unfixed."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r0-test-attempts-test/the-attempts-reach-the-row-0-test}
   {:wire [:r0-enact-step :r0-test :grain-gate],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/the-gate-refusal-reaches-the-row-0-test}
   {:wire [:r0-enact-step :r5-test :attempts],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r0-r5-test-attempts-test/the-attempts-reach-the-grain-gate-test}
   {:wire [:r0-enact-step :r5-test :grain-gate],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test/the-gate-pass-reaches-the-grain-gate-test}
   {:wire [:r0-enact-step :r7-flight-call :attempts],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test/different-attempts-at-the-reader-fail-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-d1a2ea206fb5d6cd34068c1a34a065ff2311f9c14cdf704d3f32c3dd3d0635f7",
+     :git-head "f2b3b9ad6f7da662100f506ed0631b58529a98dd",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test/the-attempts-reach-the-flights-wc-call}
   {:wire [:r0-enact-step :r7-increment :attempts],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test/absent-attempts-at-the-reader-fail-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-f21bfa466837c3f46f357537b51b7158b7bfae54d6de8f9c1100f970a6bc7097",
+     :git-head "f2b3b9ad6f7da662100f506ed0631b58529a98dd",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test/the-attempts-reach-the-increment}
   {:wire [:r0-enact-step :wc-checker :attempts],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-wc-attempts-test/different-attempts-at-the-reader-fail-the-wire,
+     :kind :value-varying,
+     :product [:verdict],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-dce8270a384d25581e883ff135e22e9572c6f591bb80a40308bf968ce873c5f5",
+     :git-head "d42189bd76af309889ca90577056336f2a5d37f5",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r0-wc-attempts-test/the-attempts-reach-the-wc-checker}
   {:wire [:r0-enact-step :wc-checker :grain-gate],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/a-recorded-refusal-the-gate-contradicts-fails-the-wire,
+     :kind :value-varying,
+     :product [:verdict],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-548b729245ebba45608cc3a01521568f985d21445b3a115ccde8f7d8d98f54cc",
+     :git-head "d42189bd76af309889ca90577056336f2a5d37f5",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/the-gate-pass-reaches-the-wc-checker}
   {:wire [:r1-outer-cascade :flight-entry :chosen-target],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-chosen-target-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :draw-seed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :target-selection],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :chosen-target],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :draw-seed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :flight-plan :target-selection],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :chosen-target],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :draw-seed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-plan :target-selection],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-test-draw-seed-test/the-draw-seed-reaches-the-loop-test}
   {:wire [:r1-outer-cascade :r1-test :chosen-target],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-outer-cascade :r1-test :draw-seed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-draw-seed-test/the-draw-seed-reaches-the-r1-test}
   {:wire [:r1-outer-cascade :r1-test :target-selection],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-produced-input-is-received,
    :note
@@ -397,10 +608,24 @@
   {:wire
    [:r10-observe-publication :r0-enact-step :publication-observed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test/the-observation-reaches-the-enactment}
   {:wire [:r10-observe-publication :r0-test :publication-observed],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test/tampering-the-writer-fails-the-test-with-the-tampered-value,
+     :kind :value-varying,
+     :product [:report-type],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-18381d5878bba081ecae02de467891cd7d6fbd5a1e585885947e2530a337919c",
+     :git-head "d5e33f17145096b9720ae8283d193f47a9e0516a",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test/the-test-box-consumes-the-writers-present-observation,
    :note
@@ -408,12 +633,14 @@
   {:wire
    [:r10-observe-publication :r1-outer-cascade :publication-observed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test/the-produced-input-is-received,
    :note
    "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r10-observe-publication :r10-test :publication-observed],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r10-publication-observed-test/the-observation-reaches-the-enactment-record}
   {:wire
@@ -421,6 +648,7 @@
     :r7-fold-call
     [:horizon-steps {:record :depth-anticipation}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/the-judge-produces-the-received-value,
    :note
@@ -430,6 +658,7 @@
     :construction-assemble
     [:horizon-steps {:record :sources}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/the-writer-reaches-the-reader}
   {:wire
@@ -437,6 +666,19 @@
     :r14-selection-posterior
     [:beta {:record :precision}]],
    :status :verified,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test/hermetically-the-posterior-moves-with-the-carried-temperature,
+     :kind :value-varying,
+     :product [:a],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-d5e24ac2b0abaa7a47288ce6b9f311a6be40abadb907a734a54ab07eb9ee4f56",
+     :git-head "f2b3b9ad6f7da662100f506ed0631b58529a98dd",
+     :test-revision nil}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -447,6 +689,7 @@
   {:wire
    [:r14-precision-carry :r9-decision [:beta {:record :precision}]],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -459,6 +702,20 @@
     :r9-selection-law
     [:beta {:record :precision}]],
    :status :verified,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test/hermetically-the-advancing-beta-is-the-laws-beta,
+     :kind :refusal,
+     :product [:refusal :kind],
+     :intervention :before-reader,
+     :expected :invalid-temperature},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-c242aee7f085bbfa9baf8d1f465a24e51f950160bd75c6a9204ec160175ed3ea",
+     :git-head "f2b3b9ad6f7da662100f506ed0631b58529a98dd",
+     :test-revision nil}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -471,10 +728,25 @@
     :r3a-channel-prediction-error
     :tick-observation],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/an-unobserved-channel-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:record :status],
+     :intervention :before-reader,
+     :expected :absent},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-57f467bd64cc929e91b3c40e56be2cf79b4f386762161032ab83171ce89f124a",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/the-tick-observation-reaches-the-channel-prediction-error}
   {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
     :sha256
@@ -483,18 +755,48 @@
    futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/the-read-steps-text-pin-reaches-the-flight-record}
   {:wire [:r2-served-by-reading :r2-test :text-sha256],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-test-text-sha256-test/the-text-pin-reaches-the-components-test}
   {:wire [:r2-served-by-reading :r2-test :want-span],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-test-want-span-test/the-want-span-reaches-the-components-test}
   {:wire [:r2-served-by-reading :r2-verifier :text-sha256],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test/a-different-texts-pin-fails-the-wire,
+     :kind :refusal,
+     :product [:result :reason],
+     :intervention :before-reader,
+     :expected :text-mismatch},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-2988755700a1ae9112d2f7206eff019378fdfe4d3b813cace84a57c808e711dc",
+     :git-head "5fcd79cbfe6e09aa3d24ba047b23af13469909bc",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test/the-text-pin-reaches-the-verifier}
   {:wire [:r2-served-by-reading :r2-verifier :want-span],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/a-missing-span-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:result :reason],
+     :intervention :before-reader,
+     :expected :want-span-outside-instance},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-b4a95810b979f22352dec77ad95df6f811975ec83253621fb10b6090615f84dd",
+     :git-head "5fcd79cbfe6e09aa3d24ba047b23af13469909bc",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/the-want-span-reaches-the-verifier}
   {:wire
@@ -502,14 +804,17 @@
     :r3-store-constraints-read
     :constraints-read],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test/published-value-reaches-reader}
   {:wire [:r2-store-coverage :r3-store-coverage :coverage],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test/published-value-reaches-reader}
   {:wire [:r2-store-criteria :r3-store-criteria :criteria],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test/published-value-reaches-reader}
   {:wire
@@ -517,6 +822,7 @@
     :r3-store-locator-declines
     :locator-declines],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test/published-value-reaches-reader}
   {:wire
@@ -524,14 +830,17 @@
     :r3-store-locator-questions
     :locator-questions],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r3-store-locators :locators],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r9-measured-a-version :locators],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test/the-stores-locator-reaches-the-reader}
   {:wire
@@ -539,16 +848,31 @@
     :r7-fold-call
     [:driver {:record :r3d-driver}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/different-carrier-changes-the-produced-value,
+     :kind :value-varying,
+     :product [:result :belief],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-b80e8b37821e6267ea277ab2777c20da0d5758aa136ac1d885330d0751eb7dad",
+     :git-head "dbe2427dd4309ffd9766c6d4b89e380ad0db8e88",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/the-judge-produces-the-received-value,
    :note
    "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation."}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/the-writer-reaches-the-reader}
   {:wire [:r3-flight-ask :r3-test :library-root],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/the-writer-reaches-the-reader}
   {:wire
@@ -556,26 +880,82 @@
     :r7-weighted-error
     [:error {:record :prediction-error}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test/an-absent-observation-carries-no-error-and-fails-the-wire,
+     :kind :value-varying,
+     :product [:weighted-error],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-9ab3a52361d85d72ee7af6b87c834c5464f887b972ac431e1fe06c72c2dfa609",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test/the-prediction-error-reaches-the-reweighting}
   {:wire [:r4-constructor :r4-coapply-test :descent],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-constructor-coapply-descent-test/the-descent-reaches-the-coapplication-kernel-test}
   {:wire [:r4-constructor :r4-coapply-test :units],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-constructor-coapply-units-test/the-units-reach-the-coapplication-kernel-test}
   {:wire [:r4-constructor :r4-order-use :descent],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/a-missing-order-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :absent],
+     :intervention :before-reader,
+     :expected :no-order-on-receipt},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-6b23cac01a822d8b882272ed482c348eca771c46f1d06cc3d733af321b48ecaa",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/the-descent-reaches-order-use}
   {:wire [:r4-constructor :r4-order-use :precedence-violations],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/a-nonempty-violations-fails-the-wire,
+     :kind :value-varying,
+     :product [:meta :order-not-used],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-f435149de041f8f9b3372a4e696de0aacdad5abc1bbad4fde0d98f0453a845ed",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/the-precedence-violations-reach-order-use}
   {:wire [:r4-constructor :r4-order-use :units],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-constructor-order-use-units-test/a-missing-order-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :absent],
+     :intervention :before-reader,
+     :expected :no-order-on-receipt},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-e9ef4f34b414d0e1c9f4040fc6425127a6ae3b981f566321ba087f4596c68eb0",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-units-test/the-units-reach-order-use}
   {:wire
@@ -583,50 +963,73 @@
     :r4-push-forward
     [:kernel {:record :evaluation}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test/the-writer-reaches-the-reader}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r4-kernel :r4-coapply-test :order-use],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon2.aif.coapply-kernel-test/the-ranking-scores-a-non-chain-by-co-application,
    :note
    "Existing ranking co-application test calls the real ranker through order-kernel-test/rank and reads independent order-use. Reader value captured from its assertion report."}
   {:wire [:r4-kernel :r4-test :order-use],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon2.aif.order-kernel-test/the-chain-scores-its-order-and-equals-the-list-kernel,
    :note
    "Existing chain test calls efe/rank-cascade-actions through order-kernel-test/rank and asserts entry order-use. Reader value captured from its clojure.test equality report."}
   {:wire [:r4-kernel :r8-selection-candidate :controller-score],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
    :note
    "Real ranker chain G read by selection-candidate into :g; typed absence and changed score altered before reader."}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/the-reader-receives-the-kernel-value,
    :note
    "Ranker over order-kernel-test chain fixture; selector re-emits controller-score at top level. Carrier mutated before real selector."}
   {:wire [:r5-flight-call :r5-grain-gate :grain],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r5-gate-grain-test/a-typed-absence-at-the-reader-fails-the-wire,
+     :kind :refusal,
+     :product [:reason],
+     :intervention :before-reader,
+     :expected :grain-not-declared},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-e54ab3eb190f2ea2563354690c32430f1e4246c96ece5d3db32c243a8a9826ff",
+     :git-head "d42189bd76af309889ca90577056336f2a5d37f5",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r5-gate-grain-test/the-candidates-grain-reaches-the-gate}
   {:wire [:r5-flight-call :r5-test :grain],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r5-test-grain-test/the-candidates-grain-reaches-the-grain-gate-test}
   {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -634,10 +1037,12 @@
     :r6-cascade-lane
     [:rates {:record :sourced-rates}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-test :measurement],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -645,6 +1050,7 @@
     :r9-measured-a-version
     [:measurement {:record :sourced-rates}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/the-writers-measurement-reaches-the-reader}
   {:wire
@@ -652,6 +1058,7 @@
     :r9-measured-a-version
     [:rates {:record :sourced-rates}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/the-sourced-rates-reach-measured-a-version,
    :note
@@ -661,44 +1068,104 @@
     :r9-measured-a-version
     [:status {:record :sourced-rates}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test/absent-status-before-reader,
+     :kind :refusal,
+     :product [:result :reason],
+     :intervention :before-reader,
+     :expected :sourcing-refused},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-7fccbc9d443a021913a4acd2d20bdac7eb2313cdebae6dd3e27c2078d5f1e312",
+     :git-head "2b9125bea0f0662ee875cbbd87c72588233e9663",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test/the-sourced-status-reaches-measured-a-version,
    :note
    "Writer: observation_rates.clj sourced-rates (:status :sourced). Reader: war_machine.clj measured-a-version (:6361): a :sourced status produces the measured-A record, anything else {:status :absent :reason :sourcing-refused}. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a."}
   {:wire [:r7-flight-call :flight-run :increment],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/the-writers-increment-reaches-the-enactments-entry}
   {:wire [:r7-flight-call :r7-call-test :wc],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-wc-test/the-wc-verdict-reaches-the-call-test}
   {:wire [:r7-flight-call :r7-fold-source :increment],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-increment-test/the-increment-receipt-reaches-the-fold-source}
   {:wire [:r7-fold :r1-outer-cascade :enactment-records],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test/the-produced-input-is-received,
    :note
    "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r7-fold :r7-selection :enactment-records],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-selection-test/no-fold-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :reason],
+     :intervention :before-reader,
+     :expected :no-enactment-fold},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-7d16d6119bb9b7da3afd047770ceda75d1e09e71afe115d4e2877ff97db48860",
+     :git-head "042a0570a38ab1c2fd6cb55c4220057c4a025493",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
   {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/no-fold-passed-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :reason],
+     :intervention :before-reader,
+     :expected :no-enactment-fold},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-f01daa42080704fdfdd6bbf99c3adaf3bfd8a7a07e03ab823ad59e6e868a0862",
+     :git-head "33a759802e6606c2b10f2328c4bb917e165ff15e",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
   {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/the-real-reader-produces-the-received-value,
    :note
    "Reconcile returns the carried posterior for surviving entities; absence is nil at the reader door and produces the fresh prior."}
   {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/different-carrier-changes-the-reader-product,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-73f85ddf3e2b6b7a52ccb7876dbd6f1416db15aa2f5444a0d93444530d598c7f",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/the-real-reader-produces-the-received-value,
    :note
@@ -706,64 +1173,163 @@
   {:wire
    [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/absence-at-the-reader-door-is-not-a-witness,
+     :kind :refusal,
+     :product [:error :reason],
+     :intervention :before-reader,
+     :expected :malformed-prediction-triple},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-ec815fe15bcdbe04afcf5a3002643a1359d2c769c9db6f94cff479e85b8c4d33",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/the-real-reader-produces-the-received-value,
    :note
    "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission."}
   {:wire [:r7-fold-call :r3a-predict-observation :loop-belief],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/different-belief-changes-the-real-prediction,
+     :kind :value-varying,
+     :product [:predictions :annotation-health],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-d18d2afaa76a2e2d055c8d80a037f8f9ea6b2b15f21d953a521cb50fd19ca4a5",
+     :git-head "653ee1738fb032b8f7872cc842f7c3f6141d8161",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/real-judge-hands-belief-to-real-predictor,
    :note
    "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls."}
   {:wire [:r7-fold-call :r9-decision :conditioning-steps],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test/absence-at-the-reader-door-is-not-a-witness,
+     :kind :refusal,
+     :product [:prefixes],
+     :intervention :before-reader,
+     :expected :no-flight-records},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-4556bb085bb614f4c24980467acce2a378be3f32935fb79742e80981004beede",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test/the-real-reader-produces-the-received-value,
    :note
    "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update."}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test/different-carrier-changes-the-reader-product,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-467636c59ccc50e9b9850bbabe41006c735e10f1a2be942bc7daf7ad01770657",
+     :git-head "4b8a8da6a6bdea48401c93374ac2e2a247a82dd1",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test/the-real-reader-produces-the-received-value,
    :note
    "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry."}
   {:wire [:r7-increment :r7-call-test :delta],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-call-delta-test/the-delta-reaches-the-call-test}
   {:wire [:r7-increment :r7-call-test :wc-failures],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test/the-wc-failures-reach-the-call-test}
   {:wire [:r7-increment :r7-fold :delta],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/a-zero-delta-counts-nothing-and-fails-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-b22ed2af7188be68c8d36ace0111d17cbda4567755da6b97bcac3b596bc019ba",
+     :git-head "33a759802e6606c2b10f2328c4bb917e165ff15e",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/the-delta-reaches-the-fold}
   {:wire [:r7-increment :r7-test :delta],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/a-zero-delta-counts-nothing-and-fails-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-56f2daeda8c06e4e296c5d349f07b6bd07809bcfd47849cbc88bab764b627c57",
+     :git-head "33a759802e6606c2b10f2328c4bb917e165ff15e",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/the-delta-reaches-the-selection-test}
   {:wire [:r7-selection :r7-test :e-source],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/a-different-weighted-error-fails-the-wire,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-c8a8771e415757db2416f1a0ac8896a8c6ecf1f36c5b71fd6cc225098f7e4dd7",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/the-weighted-error-reaches-the-driver-aggregation}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-produced-input-is-received,
    :note
    "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r8-overlap :r8-test :pair-overlap],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r8-overlap-r8-test-pair-overlap-test/the-pair-overlap-reaches-the-r8-test}
   {:wire [:r9-classify-target :r9-decision :class],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -773,28 +1339,47 @@
    futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test/the-relation-class-reaches-the-decision}
   {:wire [:r9-classify-target :r9-relation-test :class],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-classify-target-relation-test-class-test/the-class-reaches-the-relation-test}
   {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test/the-close-cause-reaches-the-components-test}
   {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/the-close-cause-reaches-finding-failure-cause}
   {:wire [:r9-close-cause :r9-finding-store :failure-cause],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
   {:wire [:r9-decision :flight-conditioning-step :measured-a],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test/missing-record-field-is-typed,
+     :kind :refusal,
+     :product [:step :reason],
+     :intervention :before-reader,
+     :expected :no-measured-a},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-d5ec5074b7b446aa0d26ce09400a8e1b31d06d41453154469b8dbf4a4499918a",
+     :git-head "d2f07cd48233da234b067e3a5dc724960d770b0c",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test/the-observed-handoff,
    :note
    "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately."}
   {:wire [:r9-decision :flight-record-click :kind],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/the-observed-handoff,
    :note
@@ -815,12 +1400,26 @@
     "Same click, :universe-not-admitted at both ends; neither has [:decision :kind]. Two records do not meet the one-record VERIFIED definition."}}
   {:wire [:r9-decision :gate-refusal-test :kind],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/different-value-before-reader,
+     :kind :value-varying,
+     :product [:report-type],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-7411ff3011f82c68c49fa713daa6ed68ebb690ec868f4d6ca9ab59bfb2a93949",
+     :git-head "2b9125bea0f0662ee875cbbd87c72588233e9663",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/the-gate-refusal-kind-reaches-the-box,
    :note
    "Writer: war_machine.clj cascade-decision-admitted -> decision-gate/emit! (\"Inadmissible decision\", :reason). Reader: futon2 gate-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -830,18 +1429,33 @@
    futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/the-target-class-reaches-the-class-model}
   {:wire [:r9-decision :r9-judge-refusal-read :kind],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test/the-real-reader-handoff,
    :note
    "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind."}
   {:wire [:r9-decision :r9-judge-refusal-test :kind],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/different-value-before-reader,
+     :kind :value-varying,
+     :product [:report-type],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-4f19ba4022aa2350e01f6f23a24b4dde0f0b888c16ca294b877971d81642315b",
+     :git-head "2b9125bea0f0662ee875cbbd87c72588233e9663",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/the-judge-refusal-kind-reaches-the-box,
    :note
    "Writer: war_machine.clj cascade-decision-admitted's :live-c guard (\"cascade decision refused\", :kind). Reader: futon2 judge-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
    :status :verified,
+   :second-layer {:absent :no-second-layer-test},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -851,6 +1465,7 @@
    futon3c.diagramprover.wm-wire-r9-embedding-neighbour-classify-target-derived-via-test/the-embedding-receipt-reaches-classify-target}
   {:wire [:r9-embedding-neighbour :r9-relation-test :derived-via],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-embedding-neighbour-relation-test-derived-via-test/the-embedding-receipt-reaches-the-relation-test}
   {:wire
@@ -858,21 +1473,25 @@
     :r8-selection-candidate
     [:f-prefix {:record :ranked-entry}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/the-reader-receives-the-kernel-value,
    :note
    "Real persisted decision -> conditioning-step with canonical policy key -> prefix admission -> production-ranked -> selection-candidate. Computed F retained under :f-prefix and :f; no synthetic history."}
   {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test/the-sorry-cells-judge-refusal-reaches-the-abstention-carrier}
   {:wire [:r9-judge-refusal :r9-judge-refusal-test :judge-refusal],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test/the-judge-refusal-reaches-the-components-test}
   {:wire
    [:r9-judge-refusal-abstention :r9-failure-classifier :outcome],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/the-abstentions-outcome-reaches-the-failure-classifier}
   {:wire
@@ -880,6 +1499,20 @@
     :flight-conditioning-step
     [:measurement {:record :measured-a}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test/absence-before-reader-fails,
+     :kind :refusal,
+     :product [:step :reason],
+     :intervention :before-reader,
+     :expected :unmeasured-class},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-c6ec7ff773d5b42ccf77871aaf9da060bc441112b26f24973d83a3a32337734d",
+     :git-head "d2f07cd48233da234b067e3a5dc724960d770b0c",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test/the-observed-handoff,
    :note
@@ -889,44 +1522,79 @@
     :flight-conditioning-step
     [:rates {:record :measured-a}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test/the-observed-handoff}
   {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test/the-phase-kind-reaches-the-components-test}
   {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/the-phase-kind-reaches-the-failure-classifier}
   {:wire [:r9-selection-law :r0-enact-step :candidate],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-candidate-enact-test/no-chosen-candidate-is-a-typed-absence-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :absent],
+     :intervention :before-reader,
+     :expected :no-decision},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-c2ee785c01ccad42837d43cd71471e4579bc1b05aaa996154ca482a1c2faad20",
+     :git-head "01f9d6f254cefe069fd21039284c640b866b476c",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
   {:wire [:r9-selection-law :r7-increment :candidate],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/the-real-reader-handoff,
    :note
    "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed."}
   {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/the-posterior-mode-reaches-the-decision}
   {:wire [:r9-selection-law :r9-test :candidate],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-candidate-reaches-the-selection-test}
   {:wire [:r9-selection-law :r9-test :enacted-steps],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-enacted-steps-reach-the-selection-test}
   {:wire [:r9-selection-law :r9-test :per-policy-argmax],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/different-value-before-reader,
+     :kind :value-varying,
+     :product [:verdict],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-722439da704765f3b12c09d27183588faf3795f5b83ec5e11832e6480d1863af",
+     :git-head "631893d06462d3bb3f9e4fc91dc744374c0e6fc5",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/the-real-reader-handoff,
    :note
@@ -936,6 +1604,19 @@
     :r0-enact-step
     [:precedence {:record :chosen}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/different-value-before-reader,
+     :kind :value-varying,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-9ac9e7e99d5453f945b856a6adc3858861774eb7cba0c8bd05e8a65d8c8ac442",
+     :git-head "2b9125bea0f0662ee875cbbd87c72588233e9663",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/the-chosen-precedence-reaches-enact-fn,
    :note
@@ -945,10 +1626,37 @@
     :r10-observe-publication
     :repair/publication],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/a-different-publication-than-the-writers-does-not-witness-the-wire,
+     :kind :value-varying,
+     :product [:observation :observed],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-96c910a61ca6b894e9a17ee145159c07c2a8a07e1ac6350c0bc7c38bf39b1889",
+     :git-head "004f90be07ff448007dc2db0637adc114e86cdf6",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/the-run-records-publication-reaches-the-reader}
   {:wire [:tick-flight-assembly :construction-assemble-one :universes],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/no-flight-is-a-typed-refusal-and-fails-the-wire,
+     :kind :refusal,
+     :product [:reader :kind],
+     :intervention :before-reader,
+     :expected :universe-not-admitted},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-da7a344d4912eb93e2f0a42379982181b8bf4390a56ce7abaf3247550f6e698b",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/the-flights-universe-reaches-assembly}
   {:wire
@@ -956,22 +1664,63 @@
     :construction-assemble-one
     [:wants {:record :sources}]],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/a-removed-want-is-a-typed-refusal-and-fails-the-wire,
+     :kind :refusal,
+     :product [:problem :kind],
+     :intervention :before-reader,
+     :expected :want-not-declared},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-4032fda16c53d85e670eb524c4be5c8504e98788bdad518ec18fa88d0bafb39d",
+     :git-head "d50aae6e504c3ec34a05af34cfbd52e15e99f150",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :witnessed-hermetically,
+   :second-layer {:absent :no-second-layer-test},
    :test
    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value,
    :note
    "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
   {:wire [:wc-checker :r7-increment :wc-verdict],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/different-value-before-reader,
+     :kind :value-varying,
+     :product [:result :wc-failures],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-29df69ffc1f35c974178277808796ca1cc584a84c6c52196be1fb679be13cc3f",
+     :git-head "631893d06462d3bb3f9e4fc91dc744374c0e6fc5",
+     :test-revision nil}},
    :test
    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/the-real-reader-handoff,
    :note
    "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
   {:wire [:wc-checker :r7-test :wc-verdict],
    :status :witnessed-hermetically,
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test/different-verdict-before-the-real-reader,
+     :kind :value-varying,
+     :product [:result :wc-failures],
+     :intervention :before-reader},
+    :evidence
+    {:absent :stale-warrant,
+     :found-id
+     "test-registry-46a4be6eee10aad27aafca2ba3951a146cbd2d814c84a8f469b8f5182e7c9c1b",
+     :git-head "2db7d11c3b26eadc0a0c222a4694c65748052d5b",
+     :test-revision nil}},
    :test
    futon2.aif.selection-reads-fold-test/real-checker-verdict-into-increment,
    :note
