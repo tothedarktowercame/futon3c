@@ -14,7 +14,8 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.policy :as policy]
-            [futon3c.diagramprover.wm-wire :as w]))
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-selection-test-products :as products]))
 
 ;; the reader's own fixtures (selection_law_candidate_test.clj:16-33)
 (defn- step [id target]
@@ -73,6 +74,10 @@
   {:wire [:r9-selection-law :r9-test :candidate]
    :kind :witnessed-hermetically
    :test `the-candidate-reaches-the-selection-test
+   :second-layer {:test `the-real-test-report-depends-on-the-field
+                  :kind :value-varying
+                  :product [:reports]
+                  :intervention :before-reader}
    :check check
    :live-records-read live-records-read})
 
@@ -97,3 +102,19 @@
   (let [{:keys [path sha256]} (first live-records-read)]
     (is (= sha256 (w/sha256-file path)))
     (is (= :C1 (get-in (w/read-record path) [:decision :selection-law :candidate])))))
+
+(deftest the-real-test-report-depends-on-the-field
+  (let [before (products/assertion-report :candidate identity)
+        after (products/assertion-report :candidate (constantly :cas/b))
+        a (:reports before)
+        b (:reports after)]
+    (is (= 1 (count (:calls before)) (count (:calls after))))
+    (is (= [0.5 1.0 1.0] (get-in before [:calls 0 :scores])
+           (get-in after [:calls 0 :scores])))
+    (is (every? #(= :pass (:type %)) a))
+    (is (= [:pass :pass :fail :fail :fail] (mapv :type b)))
+    (is (not= a b))
+    (is (= (mapv a [0 1]) (mapv b [0 1]))
+        "Assertions independent of the intervened field are identical.")
+    (println :candidate :before (:calls before) :after (:calls after)
+             :reports (mapv :type a) (mapv :type b))))
