@@ -3,9 +3,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.evidence.http-backend :as http-backend]
             [futon3c.evidence.store :as store]
             [futon3c.test-registry :as registry]
+            [futon3c.test-registry.local-store :as local-store]
             [futon3c.test-registry.validation :as validation]
             [futon3c.test-registry.validation-adapters :as adapters])
   (:import [java.nio.file Files]
@@ -60,15 +60,15 @@
 (deftest cli-register-and-report-share-the-configured-backend
   (let [dir (temp-dir) backend (atom {:entries {} :order []})
         opts (options dir backend)
-        config (io/file dir "spec.edn") urls (atom []) calls (atom [])
+        config (io/file dir "spec.edn") opens (atom []) calls (atom [])
         spec (assoc (dissoc opts :backend) :agency-url "http://isolated-evidence:7070"
                     :subject-id "component/a" :author "validation-test"
                     :repo-root "/isolated/specimen"
                     :command ["clojure" "-M:test" "-n" "isolated-test"])]
     (try
       (spit config (pr-str spec))
-      (with-redefs [http-backend/make-http-backend
-                    (fn [url] (swap! urls conj url) backend)
+      (with-redefs [local-store/open
+                    (fn [options] (swap! opens conj options) backend)
                     registry/register-run!
                     (fn [actual options]
                       (swap! calls conj [actual options])
@@ -85,26 +85,27 @@
         (let [report (with-out-str (validation/-main "report" (str config)))]
           (is (str/includes? report "component/a current test-registry-"))
           (is (str/includes? report "fabricated no-warrant test-registry-does-not-exist"))
-          (is (str/includes? report "SUMMARY {:current 1, :no-warrant 1}")))
-        (is (= ["http://isolated-evidence:7070" "http://isolated-evidence:7070"] @urls))
+          (is (str/includes? report
+                             "SUMMARY {:current 1, :no-warrant 1, :subjects 2}")))
+        (is (= 2 (count @opens)))
         (is (identical? backend (ffirst @calls)))
         (is (not (contains? (second (first @calls)) :subject-id))))
       (finally (cleanup! dir)))))
 
 (deftest process-default-atom-is-not-a-validation-backend
-  (let [dir (temp-dir) remote (atom {:entries {} :order []})
-        explicit (atom {:entries {} :order []}) urls (atom [])]
+  (let [dir (temp-dir) local (atom {:entries {} :order []})
+        explicit (atom {:entries {} :order []}) opens (atom [])]
     (try
-      (with-redefs [http-backend/make-http-backend (fn [url] (swap! urls conj url) remote)
+      (with-redefs [local-store/open (fn [options] (swap! opens conj options) local)
                     registry/register-run! (fn [backend _]
-                                             (is (identical? remote backend))
+                                             (is (identical? local backend))
                                              (warrant! backend "2026-09-19T00:00:00Z"))]
         (is (identical? explicit (:backend (validation/resolve-options {:backend explicit}))))
-        (is (identical? remote (:backend (validation/resolve-options {:agency-url "http://explicit"}))))
+        (is (identical? local (:backend (validation/resolve-options {:agency-url "http://explicit"}))))
         (is (:warrant? (validation/register-and-bind!
                         (options dir store/!store)
                         {:agency-url "http://spec" :subject-id "component/a" :author "test"})))
-        (is (= ["http://explicit" "http://spec"] @urls)))
+        (is (= 2 (count @opens))))
       (finally (cleanup! dir)))))
 
 (deftest refused-bind-and-enqueue-are-durable-without-changing-readers

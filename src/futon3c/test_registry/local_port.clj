@@ -3,10 +3,10 @@
   (:require [futon2.aif.registry-port :as port]
             [futon3c.evidence.backend :as backend]
             [futon3c.test-registry :as registry]
+            [futon3c.test-registry.local-store :as local-store]
             [futon3c.test-registry.sqlite-backend :as sqlite]))
 
-(defn registry-path []
-  (or (System/getenv "REGISTRY_DB") sqlite/default-path))
+(defn registry-path [] (local-store/path))
 
 (defn- verified-entry [store entry]
   (when entry

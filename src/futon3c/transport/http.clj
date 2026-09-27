@@ -68,6 +68,8 @@
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.test-registry.local-store :as registry-store]
+            [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.pattern-card-provider]
@@ -2467,6 +2469,22 @@
   (or (:evidence-store config)
       (get-in config [:registry :peripheral-config :evidence-store])))
 
+(defn- test-registry-store-for-config
+  "The registry has its own local authority; general evidence never enters
+  these handlers."
+  [config]
+  (registry-store/open config))
+
+(defn- local-store-refusal [throwable fallback]
+  (let [{:keys [reason path]} (ex-data throwable)]
+    (if (= :local-store-unavailable reason)
+      {:record/type :test-registry/refusal
+       :reason :local-store-unavailable
+       :details {:path path :message (.getMessage throwable)}}
+      {:record/type :test-registry/refusal
+       :reason fallback
+       :details {:message (.getMessage throwable)}})))
+
 (def ^:private default-test-registry-root "/home/joe/code/futon3c")
 (def ^:private test-registry-report-cache-ms 30000)
 (defonce ^:private test-registry-report-cache (atom nil))
@@ -2478,7 +2496,7 @@
   [config]
   (let [root (io/file (or (:test-registry-root config)
                           default-test-registry-root))]
-    {:backend (evidence-store-for-config config)
+    {:backend (test-registry-store-for-config config)
      :index-file (str (io/file root "data/test-registry-validation/subjects.ednlog"))
      :queue-file (str (io/file root "data/test-registry-validation/revalidation.ednlog"))}))
 
@@ -2509,7 +2527,7 @@
   (if-let [payload (parse-json-map (read-body request))]
     (try
       (let [check! (requiring-resolve 'futon3c.test-registry/check-record!)
-            result (check! (evidence-store-for-config config)
+            result (check! (test-registry-store-for-config config)
                            (select-keys payload [:entry-id :repo-root :changed-paths]))]
         ;; The evidence lookup route exposes the mint-time payload, including
         ;; its recorded :warrant?.  This route answers a different question:
@@ -2522,9 +2540,7 @@
                         "Uncommitted drift usually means a lane is mid-edit; "
                         "wait, do not re-dispatch.")}))
       (catch Throwable throwable
-        (json-response 500 {:record/type :test-registry/refusal
-                            :reason :check-endpoint-failed
-                            :details {:message (.getMessage throwable)}})))
+        (json-response 500 (local-store-refusal throwable :check-endpoint-failed))))
     (json-response 400 {:record/type :test-registry/refusal
                         :reason :invalid-json})))
 
@@ -2549,8 +2565,6 @@
   [request config]
   (try
     (let [params (parse-query-params request)
-          raw-limit (get params "limit")
-          limit (when (seq (str raw-limit)) (enc/parse-int raw-limit 0))
           raw-command (get params "command")
           command (when (seq (str raw-command))
                     (try (edn/read-string raw-command)
@@ -2558,45 +2572,25 @@
       (if (= ::invalid-command command)
         (json-response 400 {:record/type "test-registry/refusal"
                             :reason "invalid-command"})
-        (let [lookup (requiring-resolve
-                      (if command
-                        'futon3c.test-registry/latest-run-for-command
-                        'futon3c.test-registry/latest-run-for-namespace))
-              ledger-path (requiring-resolve 'futon3c.test-registry/namespace-ledger-path)
-              ;; The ledger path is a server option, not request input: the
-              ;; :test-registry-root option locates the checkout, and the resolved
-              ;; default under its data directory is the same file the registry
-              ;; CLI's register subcommand writes to, so live registrations are
-              ;; ledgered where this lookup reads.
-              root (:test-registry-root config default-test-registry-root)
-              result (lookup (evidence-store-for-config config)
-                             (cond-> (if command {:command command} {:namespace (get params "namespace")})
-                               true (assoc :namespace-ledger-file (ledger-path {:futon3c-root root}))
-                               (and limit (pos? limit)) (assoc :limit limit)))]
+        (let [backend (test-registry-store-for-config config)
+              result (if command
+                       (registry-sqlite/latest-run-for-command backend command)
+                       (registry-sqlite/latest-run-for-namespace
+                        backend (get params "namespace")))]
           (cond
-            (:record/type result)
-            (json-response 400 {:record/type (str (symbol (:record/type result)))
-                                :reason (name (:reason result))})
-
-            (= :none (:status result))
-            (json-response 200 {:latest (cond-> {:found false
-                                                 :reason (name (:reason result))
-                                                 :scanned (:scanned result)
-                                                 :registry-entries (:registry-entries result)}
-                                          (:limit result) (assoc :limit (:limit result)))})
+            (nil? result)
+            (json-response 200 {:latest {:found false
+                                         :reason (if command
+                                                   "no-run-for-command"
+                                                   "no-run-for-namespace")}})
 
             :else
-            (json-response 200 {:latest (cond-> {:found true
-                                                 :entry-id (:evidence/id result)
-                                                 :ran-at (get-in result [:payload :ran-at])
-                                                 :scanned (:scanned result)}
-                                          (seq (:undecodable result))
-                                          (assoc :undecodable (mapv #(str (:evidence/id %))
-                                                                    (:undecodable result))))})))))
+            (let [payload (some-> result :evidence/body :payload-edn edn/read-string)]
+              (json-response 200 {:latest {:found true
+                                           :entry-id (:evidence/id result)
+                                           :ran-at (:ran-at payload)}}))))))
     (catch Throwable throwable
-      (json-response 500 {:record/type :test-registry/refusal
-                          :reason :latest-endpoint-failed
-                          :details {:message (.getMessage throwable)}}))))
+      (json-response 500 (local-store-refusal throwable :latest-endpoint-failed)))))
 
 (defn handle-test-registry-run
   "POST /api/alpha/test-registry/run — register a mechanical test run.
@@ -2616,7 +2610,7 @@
                  (string? (:artifact-dir spec)) (not (str/blank? (:artifact-dir spec))))
           (try
             (let [register! (requiring-resolve 'futon3c.test-registry/register-run!)
-                  record (register! (evidence-store-for-config config) spec)]
+                  record (register! (test-registry-store-for-config config) spec)]
               (json-response 200 {:evidence/id (:evidence/id record)
                                   :warrant? (boolean (get-in record [:payload :warrant?]))
                                   :postcheck (get-in record [:payload :postcheck])
@@ -2629,9 +2623,7 @@
                                       :reason :run-endpoint-failed
                                       :details {:message (.getMessage throwable)}}))))
             (catch Throwable throwable
-              (json-response 500 {:record/type :test-registry/refusal
-                                  :reason :run-endpoint-failed
-                                  :details {:message (.getMessage throwable)}})))
+              (json-response 500 (local-store-refusal throwable :run-endpoint-failed))))
           (json-response 400 {:record/type :test-registry/refusal
                               :reason :run-spec-invalid
                               :details {:required [:repo-root :command :author :artifact-dir]}}))))

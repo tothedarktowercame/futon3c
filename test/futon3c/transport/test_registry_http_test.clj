@@ -4,6 +4,7 @@
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
             [futon3c.test-registry :as registry]
+            [futon3c.test-registry.sqlite-backend :as sqlite]
             [futon3c.test-registry.validation :as validation]
             [futon3c.transport.http :as http])
   (:import [java.nio.file Files]
@@ -26,6 +27,53 @@
     (spit file content)
     file))
 
+(defn- temp-db []
+  (let [dir (.toFile (Files/createTempDirectory
+                      "test-registry-http-db-"
+                      (make-array FileAttribute 0)))]
+    [dir (str (io/file dir "registry.sqlite"))]))
+
+(deftest latest-endpoint-reads-only-the-local-registry
+  (let [[dir path] (temp-db)
+        backend (sqlite/sqlite-backend path)
+        general (atom {:entries {} :order []})]
+    (try
+      (let [intent (registry/append-record!
+                    backend {:kind :intent :author "http-test" :run/id "local"} nil)
+            run (registry/append-record!
+                 backend {:kind :run :author "http-test" :run/id "local"
+                          :namespace "example.local-test"
+                          :command ["clojure" "-M:test" "-n" "example.local-test"]
+                          :ran-at "2026-09-27T23:00:00Z"
+                          :finished-at "2026-09-27T23:00:01Z"
+                          :warrant? true}
+                 (:evidence/id intent))
+            response (http/handle-test-registry-latest
+                      {:query-string "namespace=example.local-test"}
+                      {:registry-db path :evidence-store general})
+            body (json-body response)]
+        (is (= 200 (:status response)))
+        (is (= (:evidence/id run) (get-in body [:latest :entry-id])))
+        (is (= {:entries {} :order []} @general)
+            "general evidence store receives no registry query"))
+      (finally
+        (doseq [file (reverse (file-seq dir))]
+          (io/delete-file file true))))))
+
+(deftest unavailable-local-store-is-a-typed-server-refusal
+  (let [dir (.toFile (Files/createTempDirectory
+                      "test-registry-http-unavailable-"
+                      (make-array FileAttribute 0)))
+        response (http/handle-test-registry-latest
+                  {:query-string "namespace=example.local-test"}
+                  {:registry-db (.getAbsolutePath dir)})
+        body (json-body response)]
+    (try
+      (is (= 500 (:status response)))
+      (is (= "local-store-unavailable" (:reason body)))
+      (is (= (.getAbsolutePath dir) (get-in body [:details :path])))
+      (finally (io/delete-file dir true)))))
+
 (deftest check-endpoint-is-the-existing-check-authority
   (let [backend (atom {:entries {} :order []})
         check! (fn [received-backend options]
@@ -41,7 +89,7 @@
       (let [direct (check! backend payload)
             response (http/handle-test-registry-check
                       {:body (json/generate-string payload)}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (= 200 (:status response)))
         (is (= direct (:check body)))
@@ -51,7 +99,7 @@
       (let [response (http/handle-test-registry-check
                       {:body (json/generate-string
                               (assoc payload :entry-id "fabricated"))}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (false? (get-in body [:check :warrant?])))
         (is (= "record-not-found" (get-in body [:check :reason])))))))
@@ -86,7 +134,7 @@
                              {:body (json/generate-string
                                      {:entry-id "test-registry-stale"
                                       :repo-root root-path :changed-paths []})}
-                             {:evidence-store (atom {})}))]
+                             {:test-registry-backend (atom {})}))]
                   (is (false? (get-in body [:check :warrant?])))
                   (is (= "stale-sha" (get-in body [:check :reason])))
                   (is (= "uncommitted"
@@ -118,7 +166,7 @@
                                                     :entry-id (:warrant-id binding)}})}
         (fn []
           (let [response (http/handle-test-registry-report
-                          {} {:evidence-store backend
+                          {} {:test-registry-backend backend
                               :test-registry-root (.getAbsolutePath root)})
                 body (json-body response)
                 binding-count (count (validation/subjects
@@ -142,7 +190,7 @@
     (try
       (reset! @#'futon3c.transport.http/test-registry-report-cache nil)
       (with-redefs [validation/report! (fn [_] (swap! calls inc) report)]
-        (let [config {:evidence-store (atom {})
+        (let [config {:test-registry-backend (atom {})
                       :test-registry-root (.getAbsolutePath root)}]
           (is (= json-report (json-body (http/handle-test-registry-report {} config))))
           (is (= json-report (json-body (http/handle-test-registry-report {} config))))
@@ -167,7 +215,7 @@
     (with-redefs [registry/register-run! register!]
       (let [response (http/handle-test-registry-run
                       {:body (json/generate-string spec)}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (= 200 (:status response)))
         (is (= 1 (count @calls)))
@@ -180,14 +228,14 @@
       (reset! calls [])
       (let [response (http/handle-test-registry-run
                       {:body (json/generate-string (assoc spec :warrant? true))}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (= 400 (:status response)))
         (is (= "caller-supplied-outcome-refused" (:reason body)))
         (is (empty? @calls)))
       (let [response (http/handle-test-registry-run
                       {:body (json/generate-string (dissoc spec :artifact-dir))}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (= 400 (:status response)))
         (is (= "run-spec-invalid" (:reason body)))))))
@@ -204,7 +252,7 @@
                       {:body (json/generate-string
                               {:repo-root "/repo" :command ["make" "test"]
                                :author "a" :artifact-dir "/tmp/x"})}
-                      {:evidence-store backend})
+                      {:test-registry-backend backend})
             body (json-body response)]
         (is (= 200 (:status response)))
         (is (= "test-registry/refusal" (:record/type body)))

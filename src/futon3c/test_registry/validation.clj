@@ -6,9 +6,9 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.evidence.http-backend :as http-backend]
             [futon3c.evidence.store :as store]
-            [futon3c.test-registry :as registry])
+            [futon3c.test-registry :as registry]
+            [futon3c.test-registry.local-store :as local-store])
   (:import [java.nio.file Files StandardOpenOption]
            [java.time Instant]
            [java.util UUID]))
@@ -34,18 +34,13 @@
     value))
 
 (defn resolve-options
-  "Standalone callers use the same HTTP evidence backend as the registry CLI.
+  "Standalone callers use the local SQLite registry backend.
   An explicitly supplied isolated backend remains available for library/tests;
   the process-local default store is never used for validation warrants."
   [options]
   (if (and (:backend options) (not (identical? store/!store (:backend options))))
     options
-    (assoc options :backend
-           (http-backend/make-http-backend
-            (or (:agency-url options)
-                (System/getenv "FUTON3C_AGENCY_URL")
-                (System/getenv "FUTON3C_AGENCY_BASE")
-                "http://localhost:7070")))))
+    (assoc options :backend (local-store/open options))))
 
 (defn- record-refusals! [file operation attempted-args f]
   (try
