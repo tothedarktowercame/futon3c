@@ -26,7 +26,7 @@
 ;; WIRE-23-C1: the W_c checker has its executable bb file as its site;
 ;; its printed verdict has no :wc-verdict key (standing attribution finding).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "4cc4378a8ca7fe6813b343338ded9768c0de3ab4" "futon3c" "ebe40c9127cd7129d49f4cc0e307b6750ea2b8e6"}
+ :repos {"futon2" "0ed71d6d471501eb548b345cf5133a50b01e5d8b" "futon3c" "ebe40c9127cd7129d49f4cc0e307b6750ea2b8e6"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -350,7 +350,7 @@
  :writes [[:temporal-previous {:record :flight}]]}
 
   {:box/id :tick-flight-assembly :box/kind :component
-   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
+   :site {:file "futon2/src/futon2/aif/wm/construction_inputs.clj" :var "flight-assembly-input"}
    ;; WM-HANDOFF-H5-I: writes the target's :universes (the flight's
    ;; :universe merged over the declared sources'), read by assemble-one.
    ;; WM-HANDOFF-H8-I: writes the sources' :wants of the flight's target
@@ -451,7 +451,7 @@
   ;; (:horizon-steps depth-anticipation) for the trace and the depth record.
   ;; None of these sites is named in R13's registry :code (RC10)
   {:box/id :r13-sources-horizon :box/kind :component
-   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "assemble-cascade-problems-with-published"}
+   :site {:file "futon2/src/futon2/aif/wm/construction_inputs.clj" :var "assemble-cascade-problems-with-published"}
    :writes [[:horizon-steps {:record :sources}]]}
   {:box/id :construction-assemble :box/kind :component
    :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble"}
@@ -3955,9 +3955,25 @@
    :note
    "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
   {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "source-wants :a-exits"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "MAP-EXITS-PIN (claude-9): futon2 0e9fc73d3's typed absence {:absent :lifecycle-definition-invalid :detail invalid} (flight.clj:99) when the lifecycle definition cannot be read or does not yield the eight exits; a refusal payload on the source record, not a flow another box reads"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj", :var "dispatch!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "MAP-EXITS-PIN (claude-9): futon2 c19f2de48 puts the run harness in WM agent dispatch payloads ({:kind :war-machine|:unknown :basis :producer-context ...}); the harness record's own kind, not a flow the map's boxes declare"}
+  {:finding :occurrence-without-declaration,
    :field :locators,
    :site
-   {:file "futon2/scripts/futon2/report/war_machine.clj",
+   {:file "futon2/src/futon2/aif/wm/construction_inputs.clj",
     :var "flight-assembly-input"},
    :declared-by [],
    :rows [],

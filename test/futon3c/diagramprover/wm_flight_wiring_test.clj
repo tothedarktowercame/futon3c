@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "07a2338d2a02e05e5027f25fc8c7604b5232152633ccd0a00743ba38ab692126")
-(def repos {"futon2" "4cc4378a8ca7fe6813b343338ded9768c0de3ab4"
+(def map-sha256 "cca25efa477e8a8f801919077f513c31bd70522906f464846b4e24ad6d7dc2fa")
+(def repos {"futon2" "0ed71d6d471501eb548b345cf5133a50b01e5d8b"
             "futon3c" "ebe40c9127cd7129d49f4cc0e307b6750ea2b8e6"})
 
 (defn- sha256 [path]
@@ -160,6 +160,9 @@
     ;; MAP-2B-EXITS: lifecycle secondary wants landed after the registered
     ;; mission-reading closure and are pinned independently by this map.
     "futon2/src/futon2/aif/lifecycle_exits.clj"
+    ;; WM-SPLIT-I1B: the construction inputs moved out of the war-machine
+    ;; report (futon2 35a457e1a), after that closure was registered
+    "futon2/src/futon2/aif/wm/construction_inputs.clj"
     ;; H-T-CALLER-I: the outer cascade's select and the loop entry's plan
     ;; mode, written after that closure was registered
     "futon2/src/futon2/aif/outer_cascade.clj"
