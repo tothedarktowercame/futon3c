@@ -1,0 +1,34 @@
+ASSERT [repro-A] ordinary-success-index-state: DEFECT REPRODUCED status after clean D2 promotion = 'MM f' (expected clean, got phantom staged reversal)
+ASSERT [repro-A] cached-diff-is-reversal: DEFECT REPRODUCED staged diff is H->X reversal of the just-promoted content; a later porcelain `git commit` would silently revert H
+ASSERT [repro-A] later-commit-reverts: DEFECT REPRODUCED porcelain commit of the phantom staged entry reverted promoted content to 'X'
+ASSERT [repro-B] trailer-lost-under-ref-rewrite: DEFECT REPRODUCED scan of mint..HEAD finds no trailer after update-ref back to mint HEAD; reachable-history consumption is not monotone
+ASSERT [repro-CE2] original-ce2-held: BEHAVIOR OK trailer survives ordinary later commits; original CE2 variant is consumed
+ASSERT [repro-CE2] already-landed-false-as-owner-showed: BEHAVIOR OK HEAD:path != worktree OID; consumption evidence is the trailer alone in this variant
+ASSERT [repro-D1] resync-clobbers-foreign-staged: DEFECT REPRODUCED after `git reset HEAD -- f`, staged entry is 62d8fe9f not B's 7a0dc879; foreign staged content destroyed
+ASSERT [repro-D2] foreign-staged-preserved: BEHAVIOR OK B's staged entry survives D2 promotion untouched
+ASSERT [repro-D2] committed-blob-authorized: BEHAVIOR OK HEAD received exactly the authorized blob
+ASSERT [repro-D2] status-honest-foreign-dirt: BEHAVIOR OK status 'MM f' shows B's staged content vs new HEAD — visible, attributed dirt
+ASSERT [cand-I1] ordinary-success-clean: BEHAVIOR OK after candidate promotion: status clean, no phantom staged reversal
+ASSERT [cand-I1] head-and-worktree: BEHAVIOR OK HEAD and worktree both hold authorized content
+ASSERT [cand-I1] later-commit-no-revert: BEHAVIOR OK later porcelain commit does not revert promoted content
+ASSERT [cand-I2] plan-time-staged-elsewhere-signal: BEHAVIOR OK prepare saw index entry != mint-HEAD blob: in production this path is held :staged-elsewhere at plan time; the refresh rule below is the second line
+ASSERT [cand-I2] foreign-same-path-preserved: BEHAVIOR OK conditional refresh saw entry != clean mint-HEAD entry and left B's staged blob untouched
+ASSERT [cand-I2] commit-still-authorized: BEHAVIOR OK commit contains exactly authorized content
+ASSERT [cand-I3] foreign-other-path-untouched: BEHAVIOR OK promoted path refreshed clean; unrelated foreign staged path untouched
+ASSERT [cand-I4] interleaving-aborts-refresh: BEHAVIOR OK byte comparison detected the native interleaving; refresh aborted, no clobber
+ASSERT [cand-I4] foreign-late-write-preserved: BEHAVIOR OK foreign staged content intact after aborted refresh
+ASSERT [cand-I4] commit-unaffected: BEHAVIOR OK promoted commit stands; only the cosmetic refresh was deferred
+ASSERT [cand-I4] retry-preserves-foreign: BEHAVIOR OK re-planned refresh compares against the new live entry and preserves it
+ASSERT [cand-lock] native-git-honors-index-lock: BEHAVIOR OK native `git add` refuses while the real index.lock is held; the conditional-refresh section is atomic against native writers
+ASSERT [cand-lock] lock-release-restores: BEHAVIOR OK native writer proceeds after lock release (no permanent blockage)
+ASSERT [cand-crash] C1-after-prepare: BEHAVIOR OK no commit, HEAD unchanged, resolution=ambiguous-fail-closed; claim never reauthorized
+ASSERT [cand-crash] C2-after-cas-recovers: BEHAVIOR OK recovery completed outcome+refresh from trailer; no second commit, status clean
+ASSERT [cand-crash] C3-rewrite-fails-closed: BEHAVIOR OK trailer gone, no durable outcome: ambiguous, claim excluded pending operator — never reauthorized
+ASSERT [cand-crash] C3b-durable-outcome-survives-rewrite: BEHAVIOR OK durable outcome consumes even when reachable history is rewritten
+ASSERT [cand-crash] C4-refresh-only-recovery: BEHAVIOR OK recovery performed conditional refresh only, no recommit
+ASSERT [hook] mutating-hook-detected: BEHAVIOR OK post-hook write-tree != frozen tree: mutation of the private index by a hook is detectable and must hold the promotion
+ASSERT [hook] refusing-hook-holds: BEHAVIOR OK explicitly-run pre-commit refusal propagates as a held promotion
+ASSERT [filter] stateful-filter-diverges: DEFECT REPRODUCED same bytes, two filter invocations: f70f10e4 != 223b7836; a precomputed expected OID cannot be trusted — the OID returned by the actual `hash-object -w` invocation is the only stageable identity
+ASSERT [filter] stage-returned-oid: BEHAVIOR OK staging uses the persisted object's returned OID
+
+SUMMARY: defect-reproductions 6/6 confirmed; desired-behavior demonstrations 26/26 passed
