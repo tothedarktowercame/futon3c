@@ -53,6 +53,13 @@
    {:id "by-string" :old "(ns by-string) (defn called [] 1)" :new "(ns by-string) (defn called [] 2)"
     :test "(ns consumer) (defn check [] ((resolve (symbol \"by-string\" \"called\"))))"
     :class :stale-closure :reason :changed-definition-reachable}
+   ;; prose about the changed namespace is not a call into it
+   {:id "docstring" :old "(ns docstring) (defn called [] 1)" :new "(ns docstring) (defn called [] 2)"
+    :test "(ns consumer \"see docstring/called\") ;; docstring/called\n(defn check \"Used by docstring called.\" [] 1)"
+    :class :current-by-form :reason :changed-definitions-unreachable}
+   {:id "run-time-require" :old "(ns run-time-require) (defn called [] 1)" :new "(ns run-time-require) (defn called [] 2)"
+    :test "(ns consumer) (defn check [] (require 'run-time-require) ((resolve 'called)))"
+    :class :stale-closure :reason :changed-definition-reachable}
    {:id "quoted" :old "(ns quoted) (defn called [] 1)" :new "(ns quoted) (defn called [] 2)"
     :test "(ns consumer) (defn check [] ((requiring-resolve 'quoted/called)))"
     :class :stale-closure :reason :changed-definition-reachable}])

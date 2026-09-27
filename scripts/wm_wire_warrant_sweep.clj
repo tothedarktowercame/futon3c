@@ -130,9 +130,20 @@
                              (when (reader-conditional? %) [(:form %)])
                              (when (meta %) [(meta %)])) form)))
 
-(defn count-of [text s]
-  (loop [i 0 n 0]
-    (let [j (str/index-of text s i)] (if j (recur (+ j (count s)) (inc n)) n))))
+(defn without-docstring
+  "A def-shaped form with its docstring removed: prose about a function is
+   not a call to it. (def name \"text\") keeps its string, which is the value."
+  [form]
+  (if (and (seq? form) (symbol? (first form)) (str/starts-with? (name (first form)) "def")
+           (symbol? (second form)) (string? (nth form 2 nil)) (> (count form) 3))
+    (concat (take 2 form) (drop 3 form))
+    form))
+
+(defn code-strings [form]
+  (filter string?
+          (tree-seq #(or (coll? %) (reader-conditional? %))
+                    #(concat (when (coll? %) (seq (without-docstring %)))
+                             (when (reader-conditional? %) [(:form %)])) form)))
 
 (defn external-mentions
   "Short names through which `text` can refer to definitions of namespace
@@ -154,9 +165,11 @@
         referred (set (map #(symbol (name %))
                            (mapcat #(concat (let [r (get-in % [:opts :refer])] (when (sequential? r) r))
                                             (get-in % [:opts :only])) mine)))
-        qualified-direct (count (filter #(= tname (namespace %)) syms))
-        outside (- (count-of text tname) (if nsf (count-of (:text nsf) tname) 0) qualified-direct)
-        fallback? (or (nil? nsf) (some :odd? specs) refer-all? (pos? outside)
+        ;; the namespace named outside the ns form, as a bare symbol or inside a
+        ;; string that is not a docstring: a require or resolve made at run time
+        outside? (or (some #(and (nil? (namespace %)) (= tname (name %))) syms)
+                     (some #(str/includes? % tname) (mapcat #(code-strings (:form %)) body)))
+        fallback? (or (nil? nsf) (some :odd? specs) refer-all? outside?
                       (some #(and (sequential? (get-in % [:opts :refer])) (not (every? symbol? (get-in % [:opts :refer])))) mine))]
     (if fallback?
       ;; a name can also arrive inside a string, so the text is searched
@@ -183,6 +196,7 @@
                       hits (for [{other :path} closure
                                  :let [other-file (source-file root other)]
                                  ;; A changed test must itself count as a consumer.
+                                 :when (re-find #"\.(clj|cljc|cljs|bb)$" other)
                                  :when (or (not= file other-file)
                                            (some #(and (= path (:path %)) (:warrant-test? %)) closure)
                                            (str/includes? (str file) "/test/"))
