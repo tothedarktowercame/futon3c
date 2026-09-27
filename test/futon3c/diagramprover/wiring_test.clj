@@ -2,6 +2,7 @@
   (:require [clojure.edn]
             [clojure.java.io]
             [clojure.java.shell]
+            [clojure.string]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.graph :as graph]
             [futon3c.diagramprover.wiring :as wiring]))
@@ -306,6 +307,39 @@
              :field :g :role :reads :site site}]
            (wiring/conformance "." {:spec/id :prefix
                                     :boxes [{:box/id :b :site site :reads [:g]}]})))))
+
+(deftest var-form-selects-a-method-by-dispatch-value
+  (let [text (str "(defmulti m :kind)\n"
+                  "(defmethod m :a [x] (a-body x))\n"
+                  "(defmethod m :a-longer [x] (longer-body x))\n"
+                  "(defmethod m :b [x] (b-body x))\n"
+                  "(defmethod m [:a :b] [x] (pair-body x))\n"
+                  "(defmethod m \"s\" [x] (string-body x))\n"
+                  "(defmethod m :default [x] (default-body x))\n"
+                  "(defmethod other :a [x] (other-body x))\n"
+                  "(defn m-helper [] 1)\n(defn helper [] 2)\n")
+        body #(:text (wiring/var-form text %))]
+    (is (= "(defmethod m :a [x] (a-body x))" (body "m :a")) "not the defmulti, not :a-longer, not other")
+    (is (= "(defmethod m :a-longer [x] (longer-body x))" (body "m :a-longer")))
+    (is (= "(defmulti m :kind)" (body "m")) "a plain name resolves as before")
+    (is (nil? (body "m :missing")))
+    (is (nil? (body "absent :a")))
+    (is (= "(defmethod m [:a :b] [x] (pair-body x))" (body "m [:a :b]")))
+    (is (= "(defmethod m \"s\" [x] (string-body x))" (body "m \"s\"")))
+    (is (= "(defmethod m :default [x] (default-body x))" (body "m :default")))
+    (is (= "(defmethod m :b [x] (b-body x))" (body "  m   :b  ")) "surrounding space is trimmed")
+    (is (= "(defn m-helper [] 1)" (body "m-helper")))
+    (is (= "(defn helper [] 2)" (body "helper")))
+    (is (nil? (wiring/var-form (str text "(defmethod m :a [y] (again y))\n") "m :a"))
+        "two methods with one dispatch value name no site"))
+  ;; live pin: the lifecycle-exits reader in futon2 flight.clj
+  (let [flight (slurp "../futon2/src/futon2/aif/flight.clj")
+        method (wiring/var-form flight "source-wants :a-exits")
+        multi (wiring/var-form flight "source-wants")]
+    (is (clojure.string/includes? (str (:text method)) "exits/flight-exits"))
+    (is (clojure.string/starts-with? (str (:text multi)) "(defmulti"))
+    (is (not= (:start method) (:start multi)))
+    (println "source-wants :a-exits at" (:start method) "source-wants at" (:start multi))))
 
 (deftest var-form-survives-strings-meta-and-comments
   (let [text (slurp var-sample)]

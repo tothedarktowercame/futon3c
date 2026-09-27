@@ -229,15 +229,41 @@
 (defn var-form
   "The top-level form in TEXT whose second element is the symbol VAR-NAME
   (`(defn name …)`, `(def ^:private name …)`, …), as {:start :end :text},
-  or nil. Found by `parse-forms`, a paren-aware text scan; no code is read
+  or nil. VAR-NAME of the form `name dispatch-value` selects the one
+  `(defmethod name dispatch-value …)` instead. Found by `parse-forms`, a paren-aware text scan; no code is read
   or evaluated."
   [^String text var-name]
-  (some (fn [{:keys [kind children start end quoted?]}]
-          (let [named (second children)]
-            (when (and (not quoted?) (= :list kind) (= :token (:kind named))
-                       (= (str var-name) (:text named)))
-              {:start start :end end :text (subs text start end)})))
-        (:forms (parse-forms text))))
+  (let [[_ multi dispatch] (re-matches #"(?s)\s*(\S+)\s+(\S.*?)\s*" (str var-name))]
+    (if multi
+      ;; "name dispatch-value" names one method of a multimethod:
+      ;; (defmethod name dispatch-value ...). The dispatch value is compared
+      ;; as source text, since a string is not a node of the scan. Two
+      ;; methods with the same name and dispatch value name no site.
+      (let [n (count text)
+            hits (keep (fn [{:keys [kind children start end quoted?]}]
+                         (let [[head named] children
+                               from (when named
+                                      (loop [i (:end named)]
+                                        (if (and (< i n) (Character/isWhitespace (.charAt text i)))
+                                          (recur (inc i))
+                                          i)))
+                               to (when from (+ from (count dispatch)))]
+                           (when (and (not quoted?) (= :list kind)
+                                      (= "defmethod" (:text head))
+                                      (= :token (:kind named)) (= multi (:text named))
+                                      (<= to end)
+                                      (= dispatch (subs text from to))
+                                      (let [c (.charAt text to)]
+                                        (or (Character/isWhitespace c) (#{\( \) \[ \] \{ \}} c))))
+                             {:start start :end end :text (subs text start end)})))
+                       (:forms (parse-forms text)))]
+        (when (= 1 (count hits)) (first hits)))
+      (some (fn [{:keys [kind children start end quoted?]}]
+              (let [named (second children)]
+                (when (and (not quoted?) (= :list kind) (= :token (:kind named))
+                           (= (str var-name) (:text named)))
+                  {:start start :end end :text (subs text start end)})))
+            (:forms (parse-forms text))))))
 
 (defn- field-occurs? [text field]
   (boolean
