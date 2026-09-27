@@ -48,7 +48,7 @@
 (defn box-file [b] (some-> (or (:site b) (:intended-site b)) :file (str/replace #".*/" "")))
 (def node-boxes (into {} (for [[n fs] node-files] [n (set (map :box/id (filter #(fs (box-file %)) boxes)))])))
 ;; node -> vars, the function names the :code strings name in parentheses (a precise join)
-(def node-vars (reduce (fn [acc e] (update acc (:node e) (fnil into #{}) (map second (re-seq #"\(([a-z][a-z0-9-]*[a-z0-9][!?]?)[,) ]" (str (:code e))))))
+(def node-vars (reduce (fn [acc e] (update acc (:node e) (fnil into #{}) (map second (re-seq #"\(([a-z][a-z0-9-]*[a-z0-9][!?*]?)[,) :]" (str (:code e))))))
                        {} (:equations reg)))
 (def node-boxes-by-var (into {} (for [[n vs] node-vars] [n (set (map :box/id (filter #(vs (get-in % [:site :var])) boxes)))])))
 (def no-site-nodes (vec (sort-by str (for [n (set (concat (map :node eqs) (keep :node (vals exo)))) :when (empty? (node-files n))] n))))
