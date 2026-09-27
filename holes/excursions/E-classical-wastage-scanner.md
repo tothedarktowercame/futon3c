@@ -57,6 +57,9 @@ labelled:
 
 ## Acceptance
 
+The first two items are tests on Joe's own logs, where the incidents are
+labelled; item 5 is the generality test.
+
 1. Run on the 09-22 → 09-26 corpus without being told about the incident, it
    finds the 09-24 red tape: the 42 notices as one incident with its start and
    end, priced, attributed to the harness rather than Joe, and matched to
@@ -68,6 +71,9 @@ labelled:
 4. Two runs on the same input give byte-identical output. It makes no network
    calls (checked, for example, by running it in a network namespace with no
    interfaces).
+5. On one other operator's non-private logs, the generic structural detectors
+   run without Agency-specific rules, and the report says which of its
+   findings a person looking at those logs agrees with.
 
 ## Relation to M-象-2000
 
@@ -84,6 +90,49 @@ Before running on anyone else's transcripts: their consent; the output stays
 with them by default; the report quotes the minimum text needed to locate each
 incident. Classical and offline is what makes this possible, and it does not
 replace asking.
+
+## 大象 first, then 小象 (Joe, 2026-09-27)
+
+Naming: **大象** is the LLM interpreter (the reserved seat 象 that reads every
+operator turn); **小象** is this scanner. 小象 can only classify with a lexicon
+of categorised lexemes, and that lexicon comes from running 大象 for a while.
+
+Where that stands (measured 2026-09-27 over 319 live 象 analyses, 1,567
+fragments): session-mode's vocabulary has 18 intents, 393 hand cue phrases and
+280 learned cues, each learned cue proposed by 象 with its source record and a
+reason. So 大象 is already writing 小象's lexicon. A cue matches 44% of
+fragments; where one matches it names 象's intent 84% of the time. Both
+numbers are **in-sample** (the cues were learned from these records) and so
+flatter the lexicon; coverage is uneven ("approve" 70/121, "explain" 43/175).
+
+Rule for when 小象 can stand alone for an intent: each week, score 小象
+against the next week's 大象 labels, which it has not seen. Keep 大象 on an
+intent until coverage and agreement on unseen turns stop rising.
+
+## One operator is not a population
+
+Joe: "templated messages are possibly unique to my use case with Agency", and
+"others may talk to their agents in very different ways to me". Two
+consequences:
+
+- **The lexicon is one person's idiolect.** 393 + 280 cues learned from Joe's
+  turns say how Joe approves, defers and complains, not how operators do. A
+  lexicon built this way needs other operators' turns before it says anything
+  general.
+- **The structural detectors split into two kinds.** Some signals exist in
+  any stock transcript: the same tool error returned K times; the same command
+  rerun with no edit between; user interrupts; permission denials; turns with
+  tool calls and no file or state change; compaction and context resets; long
+  gaps. Others are Agency's: harness notices, park wakes, bells. Only the first
+  kind tests the scanner on anyone else's logs, and the 09-24 red tape belongs
+  to the second.
+
+So the pilot wants other people's **non-private** agent chats, run through
+大象 as well as 小象. Candidates to look for, none checked yet: collaborators
+willing to share sessions from open work; published agent trajectories (these
+are mostly agent–environment, not operator–agent, so they test the structural
+detectors but not the lexicon). A collaborator's own data stays under the
+consent terms below.
 
 ## Not decided
 
