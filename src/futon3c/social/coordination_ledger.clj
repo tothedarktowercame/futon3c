@@ -146,7 +146,7 @@
          "R10 scheduled dispatch receipt must identify its dispatch and commission"
          {:commission/id commission-id :receipt receipt}))
       (let [at (now-str)
-            entry {:evidence/id (str "e-" (UUID/randomUUID))
+            entry (cond-> {:evidence/id (str "e-" (UUID/randomUUID))
                    :evidence/subject {:ref/type :task :ref/id commission-id}
                    :evidence/type :coordination
                    :evidence/claim-type :step
@@ -159,6 +159,8 @@
                                    :dispatch/receipt receipt}
                    :evidence/tags [:coordination :scheduled-dispatch :R10]
                    :evidence/session-id (str (:dispatch/id receipt))}
+                    (contains? receipt :dispatch/harness)
+                    (assoc :evidence/harness (:dispatch/harness receipt)))
             recorded (boundary/append! (or evidence-store estore/!store) entry)]
         (when-not (:ok recorded)
           (refuse-scheduled-dispatch!

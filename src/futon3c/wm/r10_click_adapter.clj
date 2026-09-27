@@ -52,6 +52,8 @@
                         :commission/id (:commission/id linked)
                         :dispatch/id click-id
                         :click/id click-id
+                        :dispatch/harness {:kind :war-machine :basis :producer-context
+                                           :execution-id click-id}
                         :click/result click-result})))})))})]
       (commission/mark-recorded!
        {:reservation-root binding/reservation-root
