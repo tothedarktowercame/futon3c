@@ -63,7 +63,7 @@ is deferred. The six audited commits remain evidence, not commits to rewrite.
 - [ ] **C5 — Coherent views:** Promotion, dirty-set projection, and new
   session-commit links agree on applicable claim authority; a derived link
   is not presented as independent proof of authorship.
-- [ ] **C6 — Operational closure:** Read back the released successor for
+- [x] **C6 — Operational closure:** Read back the released successor for
   `claim:8c7eb3879d22…` through the current-claim projection. Document any
   remaining intake delay and its effect on safety. Publication alone is not closure.
 - [ ] **C7 — Review and discovery:** Relevant checks pass, independent review
@@ -117,7 +117,8 @@ HEAD is omitted because the gap and incident evidence are already concrete.
   active path-claim intersection. All six audited commits eventually had links
   to claude-10, including the three independently established claude-8 edits.
 - **Q4: Has the narrow release taken effect?** Answered: not in the persisted
-  projection at the latest read-back, 18:38:06.782Z. Published at
+  projection at the 18:38:06.782Z read-back; subsequently confirmed released
+  at 18:54:27.002Z (checkpoint below). Published at
   2026-09-27T18:16:17.037Z via `write-witness!`; still absent from the snapshot's
   current claims at 18:19:43.150Z. The watcher was advancing slowly, not proven
   stopped. Re-read current state before proposing recovery.
@@ -208,7 +209,7 @@ release read-back, supported editing surfaces, and any remaining tickets.
 | Packet | Status | Deliverable / evidence |
 |---|---|---|
 | D — Discovery | Done | f21f838f; source trace, six-commit audit, complete dated inventories |
-| R — One stale claim | Published; read-back pending | Released successor `claim:release-inbox-zero-claims-d-8c7eb3879d22-20260927`; C6 remains open |
+| R — One stale claim | Done | Released successor confirmed by real current-claims projection on the 18:54Z snapshot; C6 met |
 | M — Finish survey | Done | Reviewed Q4–Q6 answers; two proposals unproven; reduced estimate withdrawn |
 | V — Design and regression spike | Next | Resolve evidence/consumption/index requirements in DERIVE; ARGUE/VERIFY and fidelity tests follow |
 | I — Implement and review | Pending | Scoped commits, independent review, C1–C7 evidence |
@@ -387,3 +388,62 @@ operational follow-through. Continue implementation/review/documentation only
 when preceding obligations are met, retaining the no-restart and canonical
 shared-checkout constraints. Parks on actual job IDs carry this continuation
 through the Emacs REPL; no internal Codex collaborators are used.
+
+### Checkpoint 2026-09-27 18:55Z — D1 returned for revision; C6 complete
+
+D1 author commit **b9e6fb65**, artifact
+[design packet](../labs/M-inbox-zero-claim-lifecycle/D1-derive.md), reviewed
+by codex-5. **DERIVE remains not started as an accepted specification**;
+D1 is a proposed design with blocking findings, not a completed phase.
+
+Two reviewer experiments used a real temporary Git repository, bounded by
+`timeout 25`, removed automatically on exit. No shared checkout was altered:
+
+- **CE2:** A commits H; no receipt is published; B commits X on a new HEAD,
+  then leaves H dirty. Authorized and worktree OID were
+  `a9edc74f3848050ab04b488787d715349bb9b215`, HEAD's path OID was
+  `62d8fe9f6db631bd3a19140699101c9e281c9f9d`. D1's already-landed predicate
+  is false, so it does not prevent reuse after a commit/receipt crash gap.
+- **Same-path index resync:** B stages `B staged bytes`; D1's
+  `git reset -q HEAD -- f` replaces the staged value with `X`. The worktree
+  survives but B's staged work does not. An empty index observed earlier does
+  not prevent this race. Private commit staging does not justify this resync.
+
+Additional source/design findings returned to the helper:
+
+- A consumed/already-landed claim is ineligible for a new promotion but must
+  remain usable to explain its own commit. D1's I8 “eligible at derivation
+  time” prevents positive post-commit links; separate prospective permission
+  from historical receipt attribution while sharing authority semantics.
+- Buffered tool-use observation is not proof a pre-read completes before
+  tool execution. Endpoint equality does not prove every interleaving is
+  detected. Define trusted raw bytes, authorized modes, filters and real tool
+  semantics; a filter-normalized baseline may hide different raw prebytes.
+- Checking a hash then rereading for `hash-object -w` can write different
+  content. Freeze captured bytes, conversion context, old HEAD/tree/parent;
+  inventory hooks/signing/config semantics lost by replacing `git commit`.
+- The lifecycle's named executable wiring checker exists at
+  `src/futon3c/diagramprover/wiring.clj` (including ingest, read/write checks
+  and source conformance). Surveying argument-map checkers did not justify
+  D1's claim that no grounded wiring format exists.
+
+Dispatched bounded revision **D2**, job
+**invoke-1790535289457-25601-41cedf69**, to kimi-9. It may revise design
+artifacts and run disposable real-Git experiments; no production/state changes.
+Return a corrected implementable contract or a precise structural blocker and
+smallest evidence-producing spike. No weaker crash fallback, unreviewed phase
+exit, or acceptance-criterion relaxation is authorized. Owner parks on this
+actual job and reviews the continuation before advancing.
+
+**C6 evidence:** streamed snapshot at **2026-09-27T18:54:27.002Z** contains
+1,484 claims, 655 current tuples, 654 active tuples. The target tuple now
+projects `:released` via
+`claim:release-inbox-zero-claims-d-8c7eb3879d22-20260927`, referencing the
+original `claim:8c7eb3879d22ea52d75ef793b7316dc1d08cc70eb9ae5cee2f5ac8bb0307dc84`.
+A bounded bb call to the real `projection/current-claims` over the streamed
+claim records asserted released current state and preservation of the original
+active historical record. Publication was 18:16:17.037Z; the successor was
+absent at 18:38Z and present by 18:54Z. These are observation bounds, not the
+exact ingestion timestamp. During the delay, promotion still saw stale active
+authority; the general repair must account for this lag. No restart, reload,
+forced watcher cycle or competing snapshot writer was needed for closure.
