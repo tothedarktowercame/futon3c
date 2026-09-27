@@ -121,3 +121,23 @@
   (park/park! (assoc request :awaiting [] :timer-due-ms 10) {:now-ms 5})
   (park/sweep-deadlines! {:now-ms 20 :resume! (fn [_])})
   (is (= [:promise/park-made :promise/woken :promise/released] (take-last 3 (types)))))
+
+(deftest outcome-sweep-is-rate-limited
+  (let [calls (atom 0)
+        last-ms @#'futon3c.agency.promise-history/!outcome-sweep-last-ms
+        pending @#'futon3c.agency.promise-history/!outcome-sweep-pending
+        saved [@last-ms @pending]]
+    (try
+      (reset! last-ms 0) (reset! pending false)
+      (with-redefs [futon3c.agency.promise-outcome/sweep! (fn [_ _] (swap! calls inc))
+                    futon3c.agency.promise-history/backend (fn [] nil)]
+        (futon3c.agency.promise-history/sweep-outcomes!)
+        (Thread/sleep 300)
+        (futon3c.agency.promise-history/sweep-outcomes!)
+        (Thread/sleep 300)
+        (is (= 1 @calls) "a second sweep inside the interval is skipped")
+        (reset! last-ms 0)
+        (futon3c.agency.promise-history/sweep-outcomes!)
+        (Thread/sleep 300)
+        (is (= 2 @calls) "a sweep runs again once the interval has passed"))
+      (finally (reset! last-ms (first saved)) (reset! pending (second saved))))))

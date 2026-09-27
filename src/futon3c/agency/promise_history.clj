@@ -198,11 +198,22 @@
                    (get-in % [:evidence/body :followup-id])) entries))))
 
 (defonce ^:private !outcome-sweep-pending (atom false))
+(defonce ^:private !outcome-sweep-last-ms (atom 0))
+(def outcome-sweep-min-interval-ms
+  "A sweep reads the whole promise history (~20 s per read on 2026-09-27). Queued
+   from the 30 s park timer it held one of futon1b's four query permits most of the
+   time, and appends elsewhere hit 504 permit timeouts. Lapse is judged against the
+   deadline itself, so a slower sweep only delays when it is noticed."
+  (* 5 60 1000))
 (defn sweep-outcomes!
-  "Queue at most one deadline scan on the ordered background writer. Never block
-   the park timer on evidence IO; history remains the source after cache deletion."
+  "Queue at most one deadline scan on the ordered background writer, and at most
+   one per outcome-sweep-min-interval-ms. Never block the park timer on evidence IO;
+   history remains the source after cache deletion."
   []
-  (when (compare-and-set! !outcome-sweep-pending false true)
+  (when (and (>= (- (System/currentTimeMillis) @!outcome-sweep-last-ms)
+                 outcome-sweep-min-interval-ms)
+             (compare-and-set! !outcome-sweep-pending false true))
+    (reset! !outcome-sweep-last-ms (System/currentTimeMillis))
     (try
       (.execute writer ^Runnable
                 (bound-fn []
