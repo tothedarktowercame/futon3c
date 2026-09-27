@@ -1,6 +1,6 @@
 # M-inbox-zero-claim-lifecycle
 
-**Status:** MAP (2026-09-27)
+**Status:** DERIVE pending; MAP complete (2026-09-27)
 **Owner:** codex-5 (initial author); claude-8 is the requesting discovery owner/reviewer.
 **Repos:** futon3c, futon3/inbox-zero-lib; operational state in storage/inbox-zero.
 **Lifecycle:** [Futonic Mission Lifecycle](../../../futon4/holes/mission-lifecycle.md)
@@ -116,24 +116,31 @@ HEAD is omitted because the gap and incident evidence are already concrete.
 - **Q3: Are attribution links independent evidence?** Answered: no; they use
   active path-claim intersection. All six audited commits eventually had links
   to claude-10, including the three independently established claude-8 edits.
-- **Q4: Has the narrow release taken effect?** Open. Published at
+- **Q4: Has the narrow release taken effect?** Answered: not in the persisted
+  projection at the latest read-back, 18:38:06.782Z. Published at
   2026-09-27T18:16:17.037Z via `write-witness!`; still absent from the snapshot's
   current claims at 18:19:43.150Z. The watcher was advancing slowly, not proven
   stopped. Re-read current state before proposing recovery.
-- **Q5: What is the smallest sufficient change?** Open. Inventory existing
-  turn IDs, tool-result evidence, Git object identities, consumption records,
-  and test seams before choosing new record types or instrumentation.
-- **Q6: How do unsupported/mixed edits and delayed intake behave?** Open.
-  Enumerate observable refusal cases and concurrency orderings using real
-  dependencies. Do not infer ownership from filenames, age, or a recent claim.
+- **Q5: What is the smallest sufficient change?** Survey answered: no candidate
+  has established sufficiency. The corrected inventory and counterexamples
+  below identify available IDs, tool input, hash semantics, missing consumption
+  evidence and test seams. Selecting the minimum sufficient design is DERIVE
+  work; neither the full edit chain nor hash-only design is adopted.
+- **Q6: How do unsupported/mixed edits and delayed intake behave?** Answered
+  by source tracing and the reviewed counterexamples below: they can retain
+  sole-claim eligibility, include another editor's dirt, or reuse unconsumed
+  authority. Execution checks paths/status rather than content. Future refusal
+  semantics and their real-Git demonstrations belong to DERIVE/VERIFY.
 
 Surprises: the existing clean-after-claim rule documents the same defect from
 August 26 but is not used by promotion. Shell edits can leave no new claim,
 so an old sole claimant wins rather than producing an ambiguity. Two commit
 messages list two planned paths even though their actual diffs change only one.
 
-**MAP exit: Not met.** Q4–Q6 remain open; discovery is substantial but does
-not yet establish the minimum implementable repair.
+**MAP exit: Met.** Judged by codex-5 after review of kimi-9's corrected survey
+(18:38Z checkpoint below). Each survey question has a concrete factual answer
+or a demonstrated absence of evidence; ready/missing inventory is complete.
+This does not mark C6 complete or accept a sufficient implementation design.
 
 ## 3. DERIVE
 
@@ -202,8 +209,8 @@ release read-back, supported editing surfaces, and any remaining tickets.
 |---|---|---|
 | D — Discovery | Done | f21f838f; source trace, six-commit audit, complete dated inventories |
 | R — One stale claim | Published; read-back pending | Released successor `claim:release-inbox-zero-claims-d-8c7eb3879d22-20260927`; C6 remains open |
-| M — Finish survey | Next | Q4–Q6, minimum-change options, revised estimate |
-| V — Design and regression spike | Pending | DERIVE/ARGUE/VERIFY, C1/C2 reproduction and fidelity tests |
+| M — Finish survey | Done | Reviewed Q4–Q6 answers; two proposals unproven; reduced estimate withdrawn |
+| V — Design and regression spike | Next | Resolve evidence/consumption/index requirements in DERIVE; ARGUE/VERIFY and fidelity tests follow |
 | I — Implement and review | Pending | Scoped commits, independent review, C1–C7 evidence |
 | O — Operating documentation | Pending | Navigable instructions and final checkpoint |
 
@@ -289,3 +296,70 @@ Q4 read-back at **18:35:14.241Z** still finds the original active claim and
 still reports running, cycle 557 in inbox-zero, last completed cycle at
 18:24:36.087Z and no last error. Keep the distinction between a durable
 published release and current persisted authority explicit.
+
+### Checkpoint 2026-09-27 18:38Z — corrected survey accepted; MAP closed
+
+kimi-9 completed follow-up `invoke-1790534092997-25562-b34e879d`, accepted
+all four review counterexamples, and withdrew hash-only sufficiency and the
+1–1.5 day estimate. codex-5 checked the source excerpts and consolidated the
+survey. Previous checkpoints retain their historical judgments; the current
+phase verdict above records this review's outcome.
+
+Corrected ready/missing inventory, supplementing the initial table:
+
+| Ready, with evidence | Missing / DERIVE obligation |
+|---|---|
+| Agency inbox job IDs are persisted (`agency/inbox.clj:25-68`); Claude CLI `invoke-once` has a local `invoke-trace-id` (`dev.clj:3594-3615`), with a corresponding warm path | Neither ID is passed through the current witness hooks or promotion calls; decide what identity is required and how to propagate it |
+| Tool inputs survive until correlated successful results (`dev.clj:1100-1140`) | No transaction evidence establishes that a pre-state belongs to A and excludes intervening B edits |
+| Observation raw-byte hashes and HEAD, with optional claim extension possible | Define canonical Git object/mode/deletion evidence and conversions; index/hash is nil |
+| Real-Git executor harness and injectable planner/turn pipeline | Verify content through commit despite shared-index writers; an empty index at entry is insufficient |
+| Immutable release intake and current-claim projection | Immediate or otherwise safe consumption semantics despite delayed release ingestion |
+| Existing dirty-set clean-after filter | Consistent authority semantics for promotion, dirty sets, and newly derived commit links |
+
+The helper's specific receipt tuple and “atomic pre/post witness” are **design
+candidates**, not surveyed existing facilities or proven minimum requirements.
+The existing hooks observe a tool stream; they do not own a transaction around
+filesystem mutation. Adding two hash reads to them cannot by itself establish
+atomicity or exclusion of another writer. Likewise, a local invoke trace ID is
+available, but its presence does not prove it is a stable replay identity.
+A new Agency plumbing signature may be one option; this survey does not prove
+it is necessary or that no existing context path could carry the ID.
+
+DERIVE must settle these obligations:
+
+1. **Edit authority:** establish provenance for exactly the authorized delta
+   and baseline, or refuse when that cannot be established. Address mixed
+   preexisting dirt and edits between tool execution and witness capture.
+2. **Consumption:** prevent a consumed claim authorizing new work, including
+   identical content on a changed HEAD before release intake. Specify receipt,
+   crash and replay behavior; do not equate byte equality with authority.
+3. **Git semantics and commit integrity:** distinguish raw-byte SHA-256 from
+   Git object IDs; account for clean filters, CRLF, symlinks, explicit deletion
+   and mode. Establish that the checked content is the content committed,
+   including index writes between staging/checking/commit. Git's per-command
+   locking does not establish one transaction across those separate commands.
+4. **Identity and views:** select only the identity information required by
+   the above invariants, and make the relevant projections agree.
+
+No blanket claim of “no content is captured anywhere” is accepted: file
+observations do capture hashes and tool inputs exist transiently. The specific
+absence is durable evidence binding the claimed edit transaction to content.
+
+Latest Q4 evidence: the streamed state scan at **18:38:06.782Z** still has
+1,483 claims, all historical records active, and the target current claim is
+unchanged. Snapshot mtime is 18:24:32.478Z. The published successor remains
+pending; C6 is unchecked. The next operational action is read-back and, if
+still pending, read-only diagnosis of the owning watcher's intake. No direct
+snapshot edit or second writer is an acceptable recovery.
+
+**Next packet:** DERIVE the smallest enforceable authority/consumption/commit
+contract, then use a real-Git VERIFY spike for the four reviewed counterexamples,
+object/mode/filter cases and a positive promotion. Preserve the original C1–C7.
+The helper estimates 0.5–1 engineering day for a bounded survey/spike and a
+provisional 1.5–3 days for full work, but neither is a delivery commitment.
+Time-box the next packet by its evidence deliverables and re-estimate after
+it; no code or runtime change is authorized merely by this estimate.
+
+Validation: reviewed source and Agency results, streamed live snapshot,
+checked mission phase markers and relative links. No implementation, extra
+helper dispatch, reload, restart, watcher tick or state mutation in this review.
