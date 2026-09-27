@@ -22,7 +22,8 @@
   selection law has :e-source {:records 0 :samples 0 :uniform true}. The
   reader is a test box with no runtime, so no live record can carry its
   end, and the wire is WITNESSED-HERMETICALLY."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.diagramprover.wm-wire-selection-handoff-products :as products]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.cascade-habit-store :as habit]
@@ -69,7 +70,9 @@
     :why "the writer's end only: [:decision :selection-law :e-source] is {:records 0 :samples 0 :uniform true}; the reader is a test box, no live record carries its end"}])
 
 (def wire
-  {:wire [:r7-selection :r7-test :e-source]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r7-selection-e-source-test/changed-selection-product :kind :value-varying
+                   :product [:reports] :intervention :before-reader}
+   :wire [:r7-selection :r7-test :e-source]
    :kind :witnessed-hermetically
    :test `the-e-source-reaches-the-selection-test
    :check check
@@ -101,3 +104,12 @@
   (is (= {:source :enactment-fold :records 0 :samples 0 :uniform true}
          (get-in (w/read-record (:path (first live-records-read)))
                  [:decision :selection-law :e-source]))))
+
+(deftest changed-selection-product
+  (let [a (products/assertion-product false) b (products/assertion-product true)]
+    (prn :wire-2l-5b :e-source :before (dissoc a :reports) :after (dissoc b :reports))
+    (is (= 2 (get-in a [:carrier :records])))
+    (is (= 99 (get-in b [:carrier :records])))
+    (is (= {:begin-test-var 1 :pass 4 :end-test-var 1} (:counts a)))
+    (is (= {:begin-test-var 1 :pass 3 :fail 1 :end-test-var 1} (:counts b)))
+    (is (not= (:reports a) (:reports b)))))

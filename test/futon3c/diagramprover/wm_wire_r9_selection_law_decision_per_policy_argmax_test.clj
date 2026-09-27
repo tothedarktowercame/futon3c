@@ -15,7 +15,8 @@
   so the witness performs its read verbatim — (get-in decision
   [:selection-law :per-policy-argmax :action]) — on the writer's live
   decision and observes the action the decision would hand on."
-  (:require [clojure.java.io :as io]
+  (:require [futon3c.diagramprover.wm-wire-selection-handoff-products :as products]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.policy :as policy]
             [futon3c.diagramprover.wm-wire :as w]))
@@ -79,7 +80,9 @@
       :why "no :per-policy-argmax: selection failed on the registry read"}]))
 
 (def wire
-  {:wire [:r9-selection-law :r9-decision :per-policy-argmax]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/changed-selection-product :kind :record
+                   :product [:recorded] :intervention :before-reader}
+   :wire [:r9-selection-law :r9-decision :per-policy-argmax]
    :kind :witnessed-hermetically
    :test `the-posterior-mode-reaches-the-decision
    :check check
@@ -112,3 +115,16 @@
     (is (= :C1 (get-in r [:decision :selection-law :per-policy-argmax :action :id])))
     (is (map? (get-in r [:decision :selection-certificate :candidate-derivations]))
         "unrefused: the decision's read passed, but the action is not echoed")))
+
+(deftest changed-selection-product
+  (let [a (products/decision-product false) b (products/decision-product true)]
+    (prn :wire-2l-5b :argmax :before (dissoc a :derivations :supplied :recorded)
+         :after (dissoc b :derivations :supplied :recorded))
+    (is (= 3 (count (distinct (:scores a))) (count (distinct (:scores b)))))
+    (is (= (:supplied a) (:recorded a))) (is (= (:supplied b) (:recorded b)))
+    (is (not= (get-in a [:recorded :action :id]) (get-in b [:recorded :action :id])))
+    (is (not= (:posterior a) (:posterior b)))
+    ;; war_machine.clj:6900-6910 validates membership/payload; it does not
+    ;; choose another action from the argmax or filter the derivation map.
+    (is (nil? (get-in a [:derivations :status])))
+    (is (= (:derivations a) (:derivations b)))))
