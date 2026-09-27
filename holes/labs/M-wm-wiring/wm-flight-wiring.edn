@@ -26,7 +26,7 @@
 ;; WIRE-23-C1: the W_c checker has its executable bb file as its site;
 ;; its printed verdict has no :wc-verdict key (standing attribution finding).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "46191890f79ff8c69cd0a6e2efc5e105aab0e763" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -537,6 +537,40 @@
    :reads [[:kernel {:record :evaluation}]]}
   {:box/id :r4-token-likelihood :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "token-likelihood"}}
+  ;; MAP-2B-P5: distinct scopes preserve each helper's override authority.
+  ;; The final belief may be observed initialization or a verified posterior.
+  {:box/id :r1-token-legacy :row 1 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "legacy-input-receipt"}
+   :returns-record :legacy-token-belief-input
+   :writes [[:continuation-belief {:record :legacy-token-belief-input}]]}
+  {:box/id :r1-token-initialization :row 1 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "initialization-input-receipt"}
+   :returns-record :initialized-token-belief-input
+   :reads [[:continuation-belief {:record :legacy-token-belief-input}]]
+   :writes [[:continuation-belief {:record :initialized-token-belief-input}]]
+   :carries [{:field [:continuation-belief {:record :legacy-token-belief-input}]
+              :from {:returns-of "legacy-input-receipt"}}]}
+  {:box/id :r1-token-input :row 1 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "input-receipt"}
+   :note "Attribution limit: the inbound pass witnesses the result of apply syntactically; initialization-input-receipt is its literal first argument. This rule does not resolve apply's callee identity."
+   :passes [{:id :token-initialization-to-temporal
+             :value [:continuation-belief {:record :initialized-token-belief-input}]
+             :from {:returns-of "apply"}
+             :to {:call "consume-temporal" :arg 1 :callee-box :r1-token-temporal}}]}
+  {:box/id :r1-token-temporal :row 1 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "consume-temporal"}
+   :returns-record :token-belief-input
+   :reads [[:continuation-belief {:record :initialized-token-belief-input}]]
+   :writes [[:continuation-belief {:record :token-belief-input}]]
+   :carries [{:field [:continuation-belief {:record :initialized-token-belief-input}]
+              :from {:param receipt :via :r1-token-input}}]}
+  {:box/id :r4-rank-dispatch :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-actions"}
+   :reads [[:cascade-belief {:record :rank-state}]]
+   :passes [{:value [:cascade-belief {:record :rank-state}]
+             :from {:param state :via :token-belief-to-rank}
+             :to {:call "rank-cascade-actions" :arg 1 :field-path [:cascade-belief]
+                  :callee-box :r4-kernel}}]}
   {:box/id :r4-kernel :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
    ;; WM-HANDOFF-H9+H11-I: reads the cascade spec's want, (:want spec-in)
@@ -550,7 +584,7 @@
    ;; assemble-one writes the literal (cascade_problems.clj:168); this scorer
    ;; reads (:cascade-spec opts) at efe.clj:1116, before building C_tau locally.
    ;; Declaring the carrier does not certify the generated distribution.
-   :record-aliases {:cascade-spec ["spec-in"]}
+   :record-aliases {:cascade-spec ["spec-in"] :rank-state ["state"]}
    ;; WM-HANDOFF-H6-I (the rates island): reads the sourced rates the
    ;; cascade lane passes it as :adjudication-rates (the scorer that
    ;; consumes A; it runs at the lane's R5, after the rates are sourced).
@@ -562,7 +596,7 @@
    ;; path, both unboxed; select-action-cascades re-emits the chosen one)
       ;; WM-NODE-R5-I: reads G as {:keys [g certificate]} off
    ;; horizon-g-sparse-cert's return; not declared (see :r5-g-sparse-cert)
-   :reads [:adjudication-rates :cascade-spec [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
+   :reads [[:cascade-belief {:record :rank-state}] :adjudication-rates :cascade-spec [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
   ;; WM-NODE-R5-I (WM-SUPERSET-D section 8): G on the cascade path.
   ;; rank-cascade-actions (:r4-kernel, R5's registry var) calls
   ;; cascade-model-manifest/horizon-g-sparse-cert with a map literal
@@ -675,7 +709,11 @@
   {:box/id :r9-decision :row 9 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
    :record-aliases {:precision ["beta-state"]}
-   :passes [{:value [:beta {:record :precision}] :from {:literal-arg-key :beta}
+   :passes [{:id :token-belief-to-rank :value [:cascade-belief {:record :rank-state}]
+             :from {:literal-arg-key :cascade-belief}
+             :to {:call "efe/rank-actions" :arg 1 :field-path [:cascade-belief]
+                  :callee-box :r4-rank-dispatch}}
+            {:value [:beta {:record :precision}] :from {:literal-arg-key :beta}
              :to {:call "policy/select-action-cascades" :arg 2
                   :field-path [:beta] :callee-box :r9-selection-law}}]
    ;; WM-MAP-REPLAY-I: the joint decision's typed refusal (ex-info with
@@ -700,7 +738,7 @@
    ;; hands production-ranked the recorded value
    ;; ((:policy-prefixes token-belief-input)), so F is computed from exactly
    ;; what the certificate records
-   :reads [[:beta {:record :precision}] :per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps [:policy-prefixes {:record :token-belief-input}]] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
+   :reads [[:continuation-belief {:record :token-belief-input}] [:beta {:record :precision}] :per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps [:policy-prefixes {:record :token-belief-input}]] :writes [[:cascade-belief {:record :rank-state}] :kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
   ;; F1c-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 6efecb1e, 26079b48): the F supply.
   ;; production-ranked writes each ranked entry's :f-prefix from the
   ;; candidate's admitted prefix (:computed Σf, :zero-support, or
@@ -3992,16 +4030,7 @@
   :note
   "WM-HANDOFF-H4-I: :needs at construct is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
 
- {:finding :occurrence-without-declaration,
-  :field :status,
-  :site
-  {:file "futon2/src/futon2/aif/cascade_problems.clj",
-   :var "assemble-one"},
-  :declared-by [],
-  :rows [4],
-  :kind :standing,
-  :note
-  "WM-HANDOFF-H4-I: :status at assemble-one is another record's key (a refusal's :kind/:status, a guard's :needs, a candidate's :universe read), reported now because the box was added for :interpretations; the prover has no per-record scope"}
+ 
 
  {:finding :occurrence-without-declaration,
   :field :status,
@@ -4348,51 +4377,11 @@
   :kind :standing,
   :note
   "WM-NODE-R1-I: trace-record's :status is another record's key (the tagged observation's, the decision's), reported because the box was added for :mu-post"}
-  {:finding :declaration-without-occurrence,
-   :box/id :r1-outer-cascade,
-   :field :clock-lineage,
-   :role :reads,
-   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
-   :rows [1],
-   :kind :to-do,
-   :note
-   "WIRE-23-FINAL: D2 (ceb8498d) witnesses the clock-in -> r1-outer-cascade clock-lineage hop hermetically through clock-props. At futon2 628a8837a select reads clock-lineage from opts and plan-from-field! forwards it, but there is no production read-back supplying those opts. The wire remains witnessed-hermetically; wiring the production carrier is still to-do. The declaration-without-occurrence finding below is evaluated at the older pinned e92ae532 source."}
-  {:finding :declaration-without-occurrence,
-   :box/id :r1-outer-cascade,
-   :field :enactment-records,
-   :role :reads,
-   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
-   :rows [1],
-   :kind :to-do,
-   :note
-   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
-  {:finding :declaration-without-occurrence,
-   :box/id :r1-outer-cascade,
-   :field :next-step,
-   :role :reads,
-   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
-   :rows [1],
-   :kind :to-do,
-   :note
-   "WIRE-LANE-1B-I (fbeea918): outer-cascade/select does not read :next-step. The intended read remains to-do and its within-lane wire stays UNVERIFIED; no read is deleted."}
-  {:finding :declaration-without-occurrence,
-   :box/id :r1-outer-cascade,
-   :field :pair-overlap,
-   :role :reads,
-   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
-   :rows [1],
-   :kind :to-do,
-   :note
-   "WIRE-LANE-1B-I (fbeea918): outer-cascade/select does not read :pair-overlap. The intended read remains to-do and its within-lane wire stays UNVERIFIED; no read is deleted."}
-  {:finding :declaration-without-occurrence,
-   :box/id :r1-outer-cascade,
-   :field :publication-observed,
-   :role :reads,
-   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
-   :rows [1],
-   :kind :to-do,
-   :note
-   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  
+  
+  
+  
+  
   {:finding :occurrence-without-declaration,
    :field :chosen,
    :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
@@ -4814,18 +4803,7 @@
   :usage {:reads 0, :writes 0, :unclassified 4},
   :kind :standing,
   :finding :declared-read-not-found}
- {:role :reads,
-  :site
-  {:file "futon2/scripts/futon2/report/war_machine.clj",
-   :var "cascade-lane"},
-  :box/id :r6-cascade-lane,
-  :field :measurement,
-  :heuristic true,
-  :note
-  "WIRE-23-C1: Measurement is now attributed to the returned sourced-rates record. The legacy unscoped rates-lane declaration remains for its existing wire evidence; the scoped equivalent is a follow-up map correction.",
-  :usage {:reads 0, :writes 1, :unclassified 1},
-  :kind :standing,
-  :finding :declared-read-not-found}
+ 
  {:role :writes,
   :site
   {:file "futon2/src/futon2/aif/observation_rates.clj",
@@ -5026,4 +5004,410 @@
  {:finding :occurrence-without-declaration :field :cascade-spec
   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-lane"} :declared-by [] :kind :standing
   :note "MAP-2B-P3: this existing caller/test also mentions the spec carrier. This packet declares only assemble-one to rank-cascade-actions; no additional writer/reader is claimed at this site."}
-]}
+
+  {:finding :declaration-without-occurrence,
+ :box/id :construction-assemble-one,
+ :field :cascade-spec,
+ :role :writes,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation."}
+  {:finding :declaration-without-occurrence,
+ :box/id :construction-assemble-one,
+ :field [:beta :cascade-problem],
+ :role :writes,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation."}
+  {:finding :declaration-without-occurrence,
+ :box/id :construction-assemble-one,
+ :field [:horizon-steps :cascade-problem],
+ :role :writes,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation."}
+  {:finding :declaration-without-occurrence,
+ :box/id :construction-assemble-one,
+ :field [:want :cascade-problem],
+ :role :writes,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation."}
+  {:finding :declaration-without-occurrence,
+ :box/id :construction-assemble-one,
+ :field [:want :cascade-spec],
+ :role :writes,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation."}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :clock-lineage,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :eligible,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 1, :unclassified 2},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :enactment-records,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-lane"},
+ :box/id :r6-cascade-lane,
+ :field :measurement,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: measurement is emitted on the rates provenance; the declared read is not attributed by the heuristic. Existing rates wire, outside the token-belief chain.",
+ :usage {:reads 0, :writes 1, :unclassified 0},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :next-step,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :pair-overlap,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+ :box/id :r1-outer-cascade,
+ :field :publication-observed,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: outer-cascade/select obtains the input via helpers; the occurrence heuristic does not attribute those helper reads. Existing first-layer tests witness the record handoff; declaration retained with this attribution limit.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:role :reads,
+ :site
+ {:file "futon2/src/futon2/aif/cascade_problems.clj",
+  :var "assemble-one"},
+ :box/id :construction-assemble-one,
+ :field :universes,
+ :heuristic true,
+ :note
+ "MAP-2B-P5 pin advance: HG2-Ic extracted base-problem assembly; this declaration still names assemble-one. The writer now lies in the shared assembly helper; requires a separate map repair, not credit through delegation.",
+ :usage {:reads 0, :writes 0, :unclassified 1},
+ :kind :to-do,
+ :finding :declared-read-not-found}
+  {:finding :occurrence-without-declaration,
+ :field :attempts,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :candidate,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :class,
+ :site
+ {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :clock-lineage,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :clock-lineage,
+ :site
+ {:file "futon2/src/futon2/aif/outer_loop.clj",
+  :var "plan-from-field!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :construction-receipt,
+ :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :controller-score,
+ :site {:file "futon2/src/futon2/aif/efe.clj", :var "rank-actions"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :delta,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :detail,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :enactment-records,
+ :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :enactment-records,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :enactment-records,
+ :site
+ {:file "futon2/src/futon2/aif/outer_loop.clj",
+  :var "plan-from-field!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :grain,
+ :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :grain-gate,
+ :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :interpretations,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :kind,
+ :site {:file "futon2/src/futon2/aif/efe.clj", :var "rank-actions"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :kind,
+ :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :kind,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "legacy-input-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :kind,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :locators,
+ :site
+ {:file "futon2/test/futon2/aif/gate_refusal_abstention_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :measured-a,
+ :site
+ {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+  :var "persist-run-record!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :outcome,
+ :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :pair-overlap,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :publication-observed,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :publication-observed,
+ :site
+ {:file "futon2/src/futon2/aif/outer_loop.clj",
+  :var "plan-from-field!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :repair/publication,
+ :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :status,
+ :site {:file "futon2/src/futon2/aif/efe.clj", :var "rank-actions"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "legacy-input-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :status,
+ :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :universe,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :universe,
+ :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}
+  {:finding :occurrence-without-declaration,
+ :field :universe,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "legacy-input-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-P5 pin advance/new box: this occurrence is outside the declared continuation-belief/cascade-belief handoff. No wire claimed; scope separately."}]}

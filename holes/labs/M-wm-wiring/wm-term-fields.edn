@@ -39,4 +39,38 @@
   :identity "Record-grain correspondence: inputs for the step-indexed preference, constructed inside the scorer. The want field alone is not C_tau, and the carrier is not an already evaluated preference distribution."}
  {:edge [:R1 :R3a] :term :mu :field :loop-belief :grain :field
   :provenance "codex-2, MAP-2B-P1+: war_machine.clj judge binds the carried belief through morning-brief-fold and loops with that belief, then passes it as argument 1 to belief/predict-observation (current site :7271; map source futon2 e92ae532). belief.clj:1243-1270 predict-observation consumes belief as its first parameter (sites read at futon2 8c018ffa). PROVER-E3-I checks the same loop binding and independently proved E1 update from [:belief :morning-brief-fold]; argument 2 is entity-tags and is rejected by the real-source test."
-  :identity "mu is the carried per-entity belief population, not tick-observation or channel-prediction."}]
+  :identity "mu is the carried per-entity belief population, not tick-observation or channel-prediction."}
+{:edge [:R1 :R4],
+ :term :mu,
+ :field [:continuation-belief {:record :legacy-token-belief-input}],
+ :grain :field,
+ :provenance
+ "Read by codex-1 at futon2 46191890f79ff8c69cd0a6e2efc5e105aab0e763: token_belief_predecessor.clj:68-98 -> :114-136 (legacy-input-receipt -> initialization-input-receipt)",
+ :identity
+ "R1 token belief, not entity/status mu. Initialization may be observed re-initialization; the final receipt may instead contain the verified temporal posterior. Carry credit does not assert equality across an authorized override."}
+{:edge [:R1 :R4],
+ :term :mu,
+ :field
+ [:continuation-belief {:record :initialized-token-belief-input}],
+ :grain :field,
+ :provenance
+ "Read by codex-1 at futon2 46191890f79ff8c69cd0a6e2efc5e105aab0e763: token_belief_predecessor.clj:114-136 -> :138-178 via :180-191 (initialization-input-receipt -> input-receipt -> consume-temporal)",
+ :identity
+ "R1 token belief, not entity/status mu. Initialization may be observed re-initialization; the final receipt may instead contain the verified temporal posterior. Carry credit does not assert equality across an authorized override."}
+{:edge [:R1 :R4],
+ :term :mu,
+ :field [:continuation-belief {:record :token-belief-input}],
+ :grain :field,
+ :provenance
+ "Read by codex-1 at futon2 46191890f79ff8c69cd0a6e2efc5e105aab0e763: token_belief_predecessor.clj:138-178 -> scripts/futon2/report/war_machine.clj:6602-6606 (consume-temporal -> cascade-decision-admitted)",
+ :identity
+ "R1 token belief, not entity/status mu. Initialization may be observed re-initialization; the final receipt may instead contain the verified temporal posterior. Carry credit does not assert equality across an authorized override."}
+{:edge [:R1 :R4],
+ :term :mu,
+ :field [:cascade-belief {:record :rank-state}],
+ :grain :field,
+ :provenance
+ "Read by codex-1 at futon2 46191890f79ff8c69cd0a6e2efc5e105aab0e763: scripts/futon2/report/war_machine.clj:6808 -> src/futon2/aif/efe.clj:1432-1459 -> :1117 (cascade-decision-admitted -> rank-actions -> rank-cascade-actions)",
+ :identity
+ "R1 token belief, not entity/status mu. Initialization may be observed re-initialization; the final receipt may instead contain the verified temporal posterior. Carry credit does not assert equality across an authorized override."}
+]

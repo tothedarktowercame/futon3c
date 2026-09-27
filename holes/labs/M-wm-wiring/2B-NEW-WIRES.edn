@@ -19,4 +19,88 @@
   :registry-edge [:R1 :R3a] :term :mu
   :writer {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge" :line 7271}
   :reader {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation" :line 1243}
-  :reader-is-test-box? false :packet "MAP-2B-P1+"}]
+  :reader-is-test-box? false :packet "MAP-2B-P1+"}
+{:map-commit "same commit: MAP-2B-P5",
+ :edge
+ [:r1-token-initialization
+  :r1-token-temporal
+  [:continuation-belief {:record :initialized-token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt",
+  :line 114},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal",
+  :line 138},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "same commit: MAP-2B-P5",
+ :edge
+ [:r1-token-legacy
+  :r1-token-initialization
+  [:continuation-belief {:record :legacy-token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "legacy-input-receipt",
+  :line 68},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt",
+  :line 114},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "same commit: MAP-2B-P5",
+ :edge
+ [:r1-token-temporal
+  :r9-decision
+  [:continuation-belief {:record :token-belief-input}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal",
+  :line 138},
+ :reader
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "same commit: MAP-2B-P5",
+ :edge
+ [:r9-decision :r4-kernel [:cascade-belief {:record :rank-state}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader
+ {:file "futon2/src/futon2/aif/efe.clj",
+  :var "rank-cascade-actions",
+  :line 1083},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+{:map-commit "same commit: MAP-2B-P5",
+ :edge
+ [:r9-decision
+  :r4-rank-dispatch
+  [:cascade-belief {:record :rank-state}]],
+ :registry-edge [:R1 :R4],
+ :term :mu,
+ :writer
+ {:file "futon2/scripts/futon2/report/war_machine.clj",
+  :var "cascade-decision-admitted",
+  :line 6459},
+ :reader
+ {:file "futon2/src/futon2/aif/efe.clj",
+  :var "rank-actions",
+  :line 1432},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-P5"}
+]
