@@ -99,6 +99,76 @@
                         (if (= d next-d) d (recur next-d))))]
         {:changed-names (vec (sort changed)) :reachable-names (vec (sort reached)) :reason :cleared}))))
 
+(defn ns-form [parsed]
+  (first (filter #(and (seq? (:form %)) (= 'ns (first (:form %)))) (:forms parsed))))
+
+(defn source-ns [parsed]
+  (let [n (second (:form (ns-form parsed)))] (when (symbol? n) n)))
+
+(defn libspecs
+  "Every [lib & opts] in an ns form, prefix lists expanded. Read only."
+  [form]
+  (let [clauses (filter #(and (seq? %) (#{:require :use} (first %))) form)]
+    (for [clause clauses
+          spec (rest clause)
+          [lib opts] (cond
+                       (symbol? spec) [[spec []]]
+                       (and (sequential? spec) (symbol? (first spec))
+                            (some sequential? (rest spec)) (not (some keyword? (rest spec))))
+                       (for [s (rest spec)]
+                         (if (symbol? s) [(symbol (str (first spec) "." s)) []]
+                             [(symbol (str (first spec) "." (first s))) (rest s)]))
+                       (and (sequential? spec) (symbol? (first spec))) [[(first spec) (rest spec)]]
+                       :else [])]
+      {:lib lib :use? (= :use (first clause)) :opts (apply hash-map (if (even? (count opts)) opts []))
+       :odd? (odd? (count opts))})))
+
+(defn raw-symbols [form]
+  (filter symbol?
+          (tree-seq #(or (coll? %) (reader-conditional? %) (seq (meta %)))
+                    #(concat (when (coll? %) (seq %))
+                             (when (reader-conditional? %) [(:form %)])
+                             (when (meta %) [(meta %)])) form)))
+
+(defn count-of [text s]
+  (loop [i 0 n 0]
+    (let [j (str/index-of text s i)] (if j (recur (+ j (count s)) (inc n)) n))))
+
+(defn external-mentions
+  "Short names through which `text` can refer to definitions of namespace
+   `target`. A file that defines its own var of the same short name does not
+   mention the target's. Anything not resolved by reading the ns form falls
+   back to every short name in the file and every changed name found anywhere
+   in its text (the over-matching rule)."
+  [target names parsed text]
+  (let [nsf (ns-form parsed)
+        specs (when nsf (libspecs (:form nsf)))
+        body (remove #(identical? % nsf) (:forms parsed))
+        syms (mapcat #(raw-symbols (:form %)) body)
+        tname (str target)
+        mine (filter #(= target (:lib %)) specs)
+        aliases (set (keep #(some-> (or (get-in % [:opts :as]) (get-in % [:opts :as-alias])) str) mine))
+        other-aliases (set (keep #(some-> (or (get-in % [:opts :as]) (get-in % [:opts :as-alias])) str)
+                                 (remove #(= target (:lib %)) specs)))
+        refer-all? (some #(or (= :all (get-in % [:opts :refer])) (and (:use? %) (not (get-in % [:opts :only])))) mine)
+        referred (set (map #(symbol (name %))
+                           (mapcat #(concat (let [r (get-in % [:opts :refer])] (when (sequential? r) r))
+                                            (get-in % [:opts :only])) mine)))
+        qualified-direct (count (filter #(= tname (namespace %)) syms))
+        outside (- (count-of text tname) (if nsf (count-of (:text nsf) tname) 0) qualified-direct)
+        fallback? (or (nil? nsf) (some :odd? specs) refer-all? (pos? outside)
+                      (some #(and (sequential? (get-in % [:opts :refer])) (not (every? symbol? (get-in % [:opts :refer])))) mine))]
+    (if fallback?
+      ;; a name can also arrive inside a string, so the text is searched
+      (into (set (:symbols parsed)) (filter #(str/includes? text (str %)) names))
+      (set (concat
+            (for [s syms :let [q (namespace s)]
+                  :when (and q (or (= q tname) (aliases q)
+                                   ;; an alias this ns form does not declare: undecided, so counted
+                                   (and (not (other-aliases q)) (not (str/includes? q ".")))))]
+              (symbol (name s)))
+            (for [s syms :when (and (nil? (namespace s)) (referred s))] s))))))
+
 (defn check-path [root closure path]
   (let [base {:path path :changed-names [] :reachable-names []}]
     (try
@@ -116,8 +186,13 @@
                                  :when (or (not= file other-file)
                                            (some #(and (= path (:path %)) (:warrant-test? %)) closure)
                                            (str/includes? (str file) "/test/"))
-                                 :let [parsed (parse-source (slurp other-file))
-                                       used (set/intersection names (:symbols parsed))]
+                                 :let [other-text (slurp other-file)
+                                       parsed (parse-source other-text)
+                                       target (source-ns (parse-source (slurp file)))
+                                       mentions (cond (:reason parsed) #{}
+                                                      (or (nil? target) (= file other-file)) (:symbols parsed)
+                                                      :else (external-mentions target names parsed other-text))
+                                       used (set/intersection names mentions)]
                                  :when (or (:reason parsed) (seq used))]
                              {:file other :names (vec (sort used)) :reason (or (:reason parsed) :changed-definition-reachable)})]
                   (if-let [hit (first hits)]

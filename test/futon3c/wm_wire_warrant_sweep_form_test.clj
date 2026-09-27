@@ -32,6 +32,29 @@
     :class :stale-closure :reason :old-content-unavailable}
    {:id "removed" :old "(ns fixture) (defn called [] 1)"
     :new "(ns fixture)" :test "(ns consumer) (defn check [] (f/called))"
+    :class :stale-closure :reason :changed-definition-reachable}
+   ;; a consumer's own var of the same short name is not a call into the changed file
+   {:id "own-main" :old "(ns own-main) (defn called [] 1) (defn -main [] (called))"
+    :new "(ns own-main) (defn called [] 2) (defn -main [] (called))"
+    :test "(ns consumer (:require [clojure.string :as str])) (defn -main [] (str/trim \"x\"))"
+    :class :current-by-form :reason :changed-definitions-unreachable}
+   {:id "aliased" :old "(ns aliased) (defn called [] 1)" :new "(ns aliased) (defn called [] 2)"
+    :test "(ns consumer (:require [aliased :as wm])) (defn check [] (wm/called))"
+    :class :stale-closure :reason :changed-definition-reachable}
+   {:id "other-alias" :old "(ns other-alias) (defn called [] 1)" :new "(ns other-alias) (defn called [] 2)"
+    :test "(ns consumer (:require [elsewhere :as e] [other-alias :as wm])) (defn check [] (e/called) (wm/untouched))"
+    :class :current-by-form :reason :changed-definitions-unreachable}
+   {:id "referred" :old "(ns referred) (defn called [] 1)" :new "(ns referred) (defn called [] 2)"
+    :test "(ns consumer (:require [referred :refer [called]])) (defn check [] (called))"
+    :class :stale-closure :reason :changed-definition-reachable}
+   {:id "refer-all" :old "(ns refer-all) (defn called [] 1)" :new "(ns refer-all) (defn called [] 2)"
+    :test "(ns consumer (:require [refer-all :refer :all])) (defn check [] (called))"
+    :class :stale-closure :reason :changed-definition-reachable}
+   {:id "by-string" :old "(ns by-string) (defn called [] 1)" :new "(ns by-string) (defn called [] 2)"
+    :test "(ns consumer) (defn check [] ((resolve (symbol \"by-string\" \"called\"))))"
+    :class :stale-closure :reason :changed-definition-reachable}
+   {:id "quoted" :old "(ns quoted) (defn called [] 1)" :new "(ns quoted) (defn called [] 2)"
+    :test "(ns consumer) (defn check [] ((requiring-resolve 'quoted/called)))"
     :class :stale-closure :reason :changed-definition-reachable}])
 
 (deftest form-grain-against-real-git-history
