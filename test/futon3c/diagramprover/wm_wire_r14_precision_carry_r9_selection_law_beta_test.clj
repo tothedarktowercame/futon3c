@@ -24,7 +24,10 @@
 (defn check [] (t/observe t/law-reader-field))
 
 (def wire
-  {:wire [:r14-precision-carry :r9-selection-law [:beta {:record :precision}]]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test/hermetically-the-advancing-beta-is-the-laws-beta :kind :refusal
+                  :product [:refusal :kind] :intervention :before-reader :expected :invalid-temperature}
+  :wire [:r14-precision-carry :r9-selection-law [:beta {:record :precision}]]
    :kind :verified
    :test `the-carried-beta-reaches-the-selection-law
    :check check

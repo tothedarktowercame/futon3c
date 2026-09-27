@@ -54,7 +54,10 @@
       :why "hand-authored exemplar records; no observation, no prediction error"}]))
 
 (def wire
-  {:wire [:r2-judge-observation :r3a-channel-prediction-error :tick-observation]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/an-unobserved-channel-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:record :status] :intervention :before-reader :expected :absent}
+  :wire [:r2-judge-observation :r3a-channel-prediction-error :tick-observation]
    :kind :witnessed-hermetically
    :test `the-tick-observation-reaches-the-channel-prediction-error
    :check check

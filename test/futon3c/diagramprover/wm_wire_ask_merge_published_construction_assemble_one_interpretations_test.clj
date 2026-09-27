@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-ask-out-support :as support]))
 (def positive (delay (support/interpretations :assemble :none)))
 (defn check [] @positive)
-(def wire {:wire [:ask-merge-published :construction-assemble-one :interpretations]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test/absent-carrier-before-reader-is-not-a-witness :kind :refusal
+                  :product [:assembled :kind] :intervention :before-reader :expected :no-admitted-interpretation}
+  :wire [:ask-merge-published :construction-assemble-one :interpretations]
            :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value :check check
            :live-records-read support/live-records-read
            :note "Returned sources tampered before assemble-one; assembled interpretations and problem-tokens witness the read."})

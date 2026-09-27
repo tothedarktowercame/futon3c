@@ -15,7 +15,10 @@
 (def positive (delay (support/refusal-box :judge :none)))
 (defn check [] (let [o @positive] {:writer (:writer o) :reader (:reader o)}))
 
-(def wire {:wire [:r9-decision :r9-judge-refusal-test :kind]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/different-value-before-reader :kind :value-varying
+                  :product [:report-type] :intervention :before-reader}
+  :wire [:r9-decision :r9-judge-refusal-test :kind]
            :kind :witnessed-hermetically :test `the-judge-refusal-kind-reaches-the-box
            :check check
            :live-records-read support/refusal-live-records-read

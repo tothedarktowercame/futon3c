@@ -60,7 +60,10 @@
       :why "hand-authored exemplar records; no sources, no assembled problem"}]))
 
 (def wire
-  {:wire [:tick-flight-assembly :construction-assemble-one :universes]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/no-flight-is-a-typed-refusal-and-fails-the-wire :kind :refusal
+                  :product [:reader :kind] :intervention :before-reader :expected :universe-not-admitted}
+  :wire [:tick-flight-assembly :construction-assemble-one :universes]
    :kind :witnessed-hermetically
    :test `the-flights-universe-reaches-assembly
    :check check

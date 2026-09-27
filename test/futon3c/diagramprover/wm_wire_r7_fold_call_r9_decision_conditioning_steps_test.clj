@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-out-support :as support]))
 (defn check [] (support/decision :conditioning-steps :none))
-(def wire {:wire [:r7-fold-call :r9-decision :conditioning-steps]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test/absence-at-the-reader-door-is-not-a-witness :kind :refusal
+                  :product [:prefixes] :intervention :before-reader :expected :no-flight-records}
+  :wire [:r7-fold-call :r9-decision :conditioning-steps]
            :kind :witnessed-hermetically :test `the-real-reader-produces-the-received-value :check check
            :live-records-read support/live-records-read
            :note "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update."})

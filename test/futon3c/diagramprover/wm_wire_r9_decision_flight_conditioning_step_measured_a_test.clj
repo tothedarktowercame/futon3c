@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-measured-support :as support]))
 (defn check [] (support/tick-observe :measured-a :none))
-(def wire {:wire [:r9-decision :flight-conditioning-step :measured-a]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test/missing-record-field-is-typed :kind :refusal
+                  :product [:step :reason] :intervention :before-reader :expected :no-measured-a}
+  :wire [:r9-decision :flight-conditioning-step :measured-a]
            :kind :witnessed-hermetically :test `the-observed-handoff :check check
            :live-records-read support/live-records-read
            :note "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately."})

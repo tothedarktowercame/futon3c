@@ -36,3 +36,33 @@
 (defn tmp-dir [prefix]
   (str (java.nio.file.Files/createTempDirectory
         prefix (make-array java.nio.file.attribute.FileAttribute 0))))
+
+(defn second-layer
+  "Resolve a declaration independently of its execution evidence. Product paths
+  address the test's reader observation (or the returned product itself).
+  Callers supply registry/Git reads so admission fixtures need neither service."
+  [{:keys [wire] :as r} {:keys [allowed-nses latest last-commit ancestor? record-only?]}]
+  (if-let [{:keys [test kind product intervention expected] :as d} (:second-layer r)]
+    (let [n (when (symbol? test) (some-> test namespace symbol))
+          v (when (and n (find-ns n)) (ns-resolve n (symbol (name test))))
+          fail! #(throw (ex-info "Invalid second-layer declaration" {:wire wire :reason % :declaration d}))]
+      (when-not (and (symbol? test) (or (contains? allowed-nses n)
+                                  (and (= n (some-> (:test r) namespace symbol))
+                                       (.startsWith (str n) "futon2."))) (var? v) (:test (meta v)))
+        (fail! :not-an-admitted-deftest))
+      (when-not (and (#{:value-varying :refusal :record} kind) (vector? product)
+                     (= :before-reader intervention) (or (not= kind :refusal) (keyword? expected)))
+        (fail! :malformed-second-layer))
+      (when (and (record-only? wire) (not= :record kind))
+        (fail! :computational-use-still-to-do))
+      (let [run (latest (str n)) p (:payload run)
+            id (:evidence/id run) pin (:git-head p) revision (last-commit v)
+            evidence (cond
+                       (not (true? (:warrant? p)))
+                       {:absent :no-warrant :found-id id :lookup-reason (:reason run)}
+                       (not (and revision pin (ancestor? revision pin)))
+                       {:absent :stale-warrant :found-id id :git-head pin :test-revision revision}
+                       :else {:warrant-id id :git-head pin :test-revision revision :ran-at (:ran-at p)})]
+        {:declared (assoc d :test (symbol (str (ns-name (:ns (meta v)))) (str (:name (meta v)))))
+         :evidence evidence}))
+    {:absent :no-second-layer-test}))

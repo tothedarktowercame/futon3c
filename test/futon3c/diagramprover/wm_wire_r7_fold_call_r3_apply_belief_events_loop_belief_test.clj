@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-out-support :as support]))
 (defn check [] (support/simple :belief :none))
-(def wire {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/different-carrier-changes-the-reader-product :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r7-fold-call :r3-apply-belief-events :loop-belief]
            :kind :witnessed-hermetically :test `the-real-reader-produces-the-received-value :check check
            :live-records-read support/live-records-read
            :note "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader."})

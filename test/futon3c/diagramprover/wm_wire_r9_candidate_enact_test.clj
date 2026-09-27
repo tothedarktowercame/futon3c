@@ -119,7 +119,10 @@
       :why "carries :candidate :cas/a-registry-first, hand-authored (claude-10, 2026-09-24), as is click-001.edn (claude-1): neither the selection law nor enact-fn wrote it"}]))
 
 (def wire
-  {:wire [:r9-selection-law :r0-enact-step :candidate]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-candidate-enact-test/no-chosen-candidate-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:reader :absent] :intervention :before-reader :expected :no-decision}
+  :wire [:r9-selection-law :r0-enact-step :candidate]
    :kind :witnessed-hermetically
    :test `the-selected-candidate-reaches-the-enactment
    :check check

@@ -57,7 +57,10 @@
       :why "hand-authored exemplar records; no prediction-error record"}]))
 
 (def wire
-  {:wire [:r3a-prediction-error :r7-weighted-error [:error {:record :prediction-error}]]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test/an-absent-observation-carries-no-error-and-fails-the-wire :kind :value-varying
+                  :product [:weighted-error] :intervention :before-reader}
+  :wire [:r3a-prediction-error :r7-weighted-error [:error {:record :prediction-error}]]
    :kind :witnessed-hermetically
    :test `the-prediction-error-reaches-the-reweighting
    :check check

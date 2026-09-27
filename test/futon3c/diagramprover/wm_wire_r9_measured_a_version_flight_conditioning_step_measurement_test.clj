@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-measured-support :as support]))
 (defn check [] (support/tick-observe :measurement :none))
-(def wire {:wire [:r9-measured-a-version :flight-conditioning-step [:measurement {:record :measured-a}]]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test/absence-before-reader-fails :kind :refusal
+                  :product [:step :reason] :intervention :before-reader :expected :unmeasured-class}
+  :wire [:r9-measured-a-version :flight-conditioning-step [:measurement {:record :measured-a}]]
            :kind :witnessed-hermetically :test `the-observed-handoff :check check
            :live-records-read support/live-records-read
            :note "Measurement is consumed by the real target-local/read and unmeasured-class check, not retained on the step; no downstream recorded measurement end (second-layer item)."})

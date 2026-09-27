@@ -27,7 +27,10 @@
 (defn check [] (t/observe t/law-reader-field))
 
 (def wire
-  {:wire [:r14-precision-carry :r14-selection-posterior [:beta {:record :precision}]]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test/hermetically-the-posterior-moves-with-the-carried-temperature :kind :value-varying
+                  :product [:a] :intervention :before-reader}
+  :wire [:r14-precision-carry :r14-selection-posterior [:beta {:record :precision}]]
    :kind :verified
    :test `the-carried-beta-reaches-the-posterior
    :check check

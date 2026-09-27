@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-in-support :as support]))
 (defn check [] (support/observe :driver :none))
-(def wire {:wire [:r3-aggregate-driver :r7-fold-call [:driver {:record :r3d-driver}]]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/different-carrier-changes-the-produced-value :kind :value-varying
+                  :product [:result :belief] :intervention :before-reader}
+  :wire [:r3-aggregate-driver :r7-fold-call [:driver {:record :r3d-driver}]]
            :kind :witnessed-hermetically :test `the-judge-produces-the-received-value :check check
            :live-records-read support/live-records-read
            :note "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation."})

@@ -37,6 +37,9 @@
   map-rev, writes holes/labs/M-wm-wiring/wm-wire-ledger.edn, and asserts the
   ledger's counts equal what the checks found."
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
+            [futon3c.test-registry :as registry]
+            [futon3c.evidence.http-backend :as http-backend]
             [clojure.java.shell :as sh]
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
@@ -426,18 +429,39 @@
 (defn registered []
   (into {} (for [n wire-test-nses :let [wire @(ns-resolve n 'wire)]] [(:wire wire) wire])))
 
+(defn second-layer-context [model]
+  (let [backend (http-backend/make-http-backend "http://localhost:7070")
+        todos (filter #(= :to-do (:kind %)) (:expected-findings model))
+        explicit (set (for [b (:boxes model) f (:attribution-findings b)
+                            :when (= :to-do (:kind f))] (:wire f)))]
+    {:allowed-nses (set wire-test-nses)
+     :latest (memoize #(registry/latest-run-for-namespace
+                        backend {:namespace % :namespace-ledger-file
+                                 (registry/namespace-ledger-path {})}))
+     :last-commit (fn [v] (let [r (sh/sh "git" "log" "-1" "--format=%H" "--" (:file (meta v)))]
+                           (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
+     :ancestor? (fn [a b] (zero? (:exit (sh/sh "git" "merge-base" "--is-ancestor" a b))))
+     :record-only? (fn [[_ reader field :as wire]]
+                     (or (explicit wire)
+                         (some #(and (= reader (:box/id %)) (= field (:field %))
+                                     (= :reads (:role %))) todos)))}))
+
 (defn ledger []
   (let [adj (adjacency)
         reg (registered)
+        context (second-layer-context (edn/read-string (git-show map-rev map-path)))
         entries (vec (for [wire (wires adj)
                            :let [r (get reg wire)
                                  ok? (and r (w/received? ((:check r))))]]
-                       (cond-> {:wire wire :status (if ok? (:kind r) :unverified)}
+                       (cond-> {:wire wire :status (if ok? (:kind r) :unverified)
+                                :second-layer (w/second-layer r context)}
                          (and ok? (= :verified (:kind r))) (assoc :record (:record r))
                          ok? (assoc :test (:test r))
                          (:note r) (assoc :note (:note r))
                          (and r (not ok?)) (assoc :registered-test-failed (:test r)))))]
     {:adjacency {:path adjacency-path :rev adjacency-rev :map (:map adj)}
+     :second-layer (merge {:value-varying 0 :refusal 0 :record 0 :absent 0}
+                          (frequencies (map #(or (get-in % [:second-layer :declared :kind]) :absent) entries)))
      :definition 'futon3c.diagramprover.wm-wire-ledger-test
      :counts (merge {:verified 0 :witnessed-hermetically 0 :unverified 0}
                     (frequencies (map :status entries))
@@ -460,6 +484,8 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
+    (is (= {:value-varying 26 :refusal 20 :record 0 :absent 129} (:second-layer l)))
+    (is (= 175 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
     (is (= 175 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
@@ -510,3 +536,25 @@
             "a wire added to the ledger since the coverage was derived")
         (is (seq (coverage-join-problems ledger-wires "0000000" cov)) "the coverage at another map revision")
         (is (seq (coverage-join-problems ledger-wires (:map adj) (update-in cov [:wires 0] dissoc :coverage))) "a row with no class")))))
+
+(deftest second-layer-admission-is-separate-from-declaration
+  (let [r {:wire [:writer :reader :value]
+           :second-layer {:test `second-layer-admission-is-separate-from-declaration
+                          :kind :value-varying :product [:derived] :intervention :before-reader}}
+        opts {:allowed-nses #{'futon3c.diagramprover.wm-wire-ledger-test}
+              :latest (constantly {:evidence/id "witness" :payload {:warrant? true :git-head "new"}})
+              :last-commit (constantly "old") :ancestor? = :record-only? (constantly false)}]
+    (is (= "witness" (get-in (w/second-layer r (assoc opts :ancestor? (constantly true)))
+                             [:evidence :warrant-id])))
+    (is (= {:absent :stale-warrant :found-id "witness" :git-head "new" :test-revision "old"}
+           (:evidence (w/second-layer r opts))))
+    (is (= :no-warrant (get-in (w/second-layer r (assoc opts :latest (constantly nil))) [:evidence :absent])))
+    (is (= {:absent :no-second-layer-test} (w/second-layer (dissoc r :second-layer) opts)))
+    (doseq [test ['futon3c.diagramprover.wm-wire-ledger-test/nonexistent
+                 'futon3c.diagramprover.wm-wire-ledger-test/ledger]]
+      (is (= {:wire (:wire r) :reason :not-an-admitted-deftest}
+             (try (w/second-layer (assoc-in r [:second-layer :test] test) opts)
+                  (catch clojure.lang.ExceptionInfo e (select-keys (ex-data e) [:wire :reason]))))))
+    (is (= :computational-use-still-to-do
+           (try (w/second-layer r (assoc opts :record-only? (constantly true)))
+                (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))))

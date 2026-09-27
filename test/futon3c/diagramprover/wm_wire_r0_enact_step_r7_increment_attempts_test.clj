@@ -48,7 +48,10 @@
 (defn check [] (observe))
 
 (def wire
-  {:wire [:r0-enact-step :r7-increment :attempts]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test/absent-attempts-at-the-reader-fail-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r0-enact-step :r7-increment :attempts]
    :kind :witnessed-hermetically
    :test `the-attempts-reach-the-increment
    :check check

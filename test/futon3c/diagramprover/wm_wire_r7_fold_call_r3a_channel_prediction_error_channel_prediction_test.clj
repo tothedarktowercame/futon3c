@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-out-support :as support]))
 (defn check [] (support/simple :prediction :none))
-(def wire {:wire [:r7-fold-call :r3a-channel-prediction-error :channel-prediction]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/absence-at-the-reader-door-is-not-a-witness :kind :refusal
+                  :product [:error :reason] :intervention :before-reader :expected :malformed-prediction-triple}
+  :wire [:r7-fold-call :r3a-channel-prediction-error :channel-prediction]
            :kind :witnessed-hermetically :test `the-real-reader-produces-the-received-value :check check
            :live-records-read support/live-records-read
            :note "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission."})

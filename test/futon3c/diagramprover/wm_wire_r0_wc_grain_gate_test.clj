@@ -63,7 +63,10 @@
   (if (map? verdict) (:failures verdict) verdict))
 
 (def wire
-  {:wire [:r0-enact-step :wc-checker :grain-gate]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/a-recorded-refusal-the-gate-contradicts-fails-the-wire :kind :value-varying
+                  :product [:verdict] :intervention :before-reader}
+  :wire [:r0-enact-step :wc-checker :grain-gate]
    :kind :witnessed-hermetically
    :test `the-gate-pass-reaches-the-wc-checker
    :check check

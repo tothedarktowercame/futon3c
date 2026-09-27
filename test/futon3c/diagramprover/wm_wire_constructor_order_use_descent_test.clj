@@ -73,7 +73,10 @@
       :why "hand-authored exemplar records; no containment order, no order-use output"}]))
 
 (def wire
-  {:wire [:r4-constructor :r4-order-use :descent]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/a-missing-order-is-a-typed-absence-and-fails-the-wire :kind :refusal
+                  :product [:reader :absent] :intervention :before-reader :expected :no-order-on-receipt}
+  :wire [:r4-constructor :r4-order-use :descent]
    :kind :witnessed-hermetically
    :test `the-descent-reaches-order-use
    :check check

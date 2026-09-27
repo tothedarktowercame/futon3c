@@ -3,7 +3,10 @@
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-out-support :as support]))
 (defn check [] (support/decision :enactment-fold :none))
-(def wire {:wire [:r7-fold-call :r9-decision :enactment-fold]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test/different-carrier-changes-the-reader-product :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r7-fold-call :r9-decision :enactment-fold]
            :kind :witnessed-hermetically :test `the-real-reader-produces-the-received-value :check check
            :live-records-read support/live-records-read
            :note "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry."})

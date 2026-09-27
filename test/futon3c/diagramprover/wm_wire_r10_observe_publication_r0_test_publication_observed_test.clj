@@ -45,7 +45,10 @@
 (defn check [] (support/r0-test-observe identity))
 
 (def wire
-  {:wire [:r10-observe-publication :r0-test :publication-observed]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test/tampering-the-writer-fails-the-test-with-the-tampered-value :kind :value-varying
+                  :product [:report-type] :intervention :before-reader}
+  :wire [:r10-observe-publication :r0-test :publication-observed]
    :kind :witnessed-hermetically
    :test `the-test-box-consumes-the-writers-present-observation
    :check check

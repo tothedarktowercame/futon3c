@@ -26,7 +26,10 @@
 (defn check [] (support/publication-observe identity))
 
 (def wire
-  {:wire [:run-record-publication :r10-observe-publication :repair/publication]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/a-different-publication-than-the-writers-does-not-witness-the-wire :kind :value-varying
+                  :product [:observation :observed] :intervention :before-reader}
+  :wire [:run-record-publication :r10-observe-publication :repair/publication]
    :kind :witnessed-hermetically
    :test `the-run-records-publication-reaches-the-reader
    :check check

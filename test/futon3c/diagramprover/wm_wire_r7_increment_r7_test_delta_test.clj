@@ -64,7 +64,10 @@
     :why "the one live selection law's :e-source is {:records 0 :samples 0 :uniform true}: no live increment receipt, so no delta ever reached a fold or a selection"}])
 
 (def wire
-  {:wire [:r7-increment :r7-test :delta]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/a-zero-delta-counts-nothing-and-fails-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r7-increment :r7-test :delta]
    :kind :witnessed-hermetically
    :test `the-delta-reaches-the-selection-test
    :check check

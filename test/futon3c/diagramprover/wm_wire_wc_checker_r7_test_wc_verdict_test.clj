@@ -27,7 +27,10 @@
 (def positive (delay (observe :none)))
 (defn check [] @positive)
 (def wire
-  {:wire [:wc-checker :r7-test :wc-verdict]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test/different-verdict-before-the-real-reader :kind :value-varying
+                  :product [:result :wc-failures] :intervention :before-reader}
+  :wire [:wc-checker :r7-test :wc-verdict]
    :kind :witnessed-hermetically
    :test 'futon2.aif.selection-reads-fold-test/real-checker-verdict-into-increment
    :check check :live-records-read support/live-records-read

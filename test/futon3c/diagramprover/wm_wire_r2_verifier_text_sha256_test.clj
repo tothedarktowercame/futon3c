@@ -103,7 +103,10 @@
       :why "hand-authored exemplar records (no :text-sha256, no proposals; grep of the exemplar directory finds neither key)"}]))
 
 (def wire
-  {:wire [:r2-served-by-reading :r2-verifier :text-sha256]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test/a-different-texts-pin-fails-the-wire :kind :refusal
+                  :product [:result :reason] :intervention :before-reader :expected :text-mismatch}
+  :wire [:r2-served-by-reading :r2-verifier :text-sha256]
    :kind :witnessed-hermetically
    :test `the-text-pin-reaches-the-verifier
    :check check

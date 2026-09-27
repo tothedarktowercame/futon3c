@@ -65,7 +65,10 @@
       :why "hand-authored exemplar records; no containment order, no order-use output"}]))
 
 (def wire
-  {:wire [:r4-constructor :r4-order-use :precedence-violations]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/a-nonempty-violations-fails-the-wire :kind :value-varying
+                  :product [:meta :order-not-used] :intervention :before-reader}
+  :wire [:r4-constructor :r4-order-use :precedence-violations]
    :kind :witnessed-hermetically
    :test `the-precedence-violations-reach-order-use
    :check check

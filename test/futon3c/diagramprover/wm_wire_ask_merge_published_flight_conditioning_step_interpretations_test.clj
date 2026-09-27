@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-ask-out-support :as support]))
 (def positive (delay (support/step :none)))
 (defn check [] @positive)
-(def wire {:wire [:ask-merge-published :flight-conditioning-step :interpretations]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test/different-carrier-changes-the-reader-product :kind :value-varying
+                  :product [:step :q] :intervention :before-reader}
+  :wire [:ask-merge-published :flight-conditioning-step :interpretations]
            :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value :check check
            :live-records-read support/live-records-read
            :note "Tamper on merged sources BEFORE decision and persist-run-record!. Reader converter feeds rollout; altered produces changes q and B digest. Absent sources refuse assembly no-admitted-interpretation, so the persisted abstention gives no-measured-a, earlier than no-interpretation."})

@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-selection-out-support :as support]))
 (def positive (delay (support/observe :verdict :none)))
 (defn check [] @positive)
-(def wire {:wire [:wc-checker :r7-increment :wc-verdict]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/different-value-before-reader :kind :value-varying
+                  :product [:result :wc-failures] :intervention :before-reader}
+  :wire [:wc-checker :r7-increment :wc-verdict]
            :kind :witnessed-hermetically :test `the-real-reader-handoff :check check
            :live-records-read support/live-records-read
            :note "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."})

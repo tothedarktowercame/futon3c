@@ -38,7 +38,10 @@
 (defn check [] (observe :none))
 
 (def wire
-  {:wire [:construction-assemble-one :r4-kernel :cascade-spec]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/bad-carriers-before-the-real-reader :kind :refusal
+                  :product [:ranked :kind] :intervention :before-reader :expected :missing-cascade-want}
+  :wire [:construction-assemble-one :r4-kernel :cascade-spec]
    :kind :witnessed-hermetically :test `the-observed-handoff :check check
    :live-records-read live-records-read
    :note "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record."})

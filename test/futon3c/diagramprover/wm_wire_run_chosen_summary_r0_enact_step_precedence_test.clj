@@ -13,7 +13,10 @@
 (def positive (delay (support/chosen-precedence :none)))
 (defn check [] (let [o @positive] {:writer (:writer o) :reader (:reader o)}))
 
-(def wire {:wire [:run-chosen-summary :r0-enact-step [:precedence {:record :chosen}]]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/different-value-before-reader :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:run-chosen-summary :r0-enact-step [:precedence {:record :chosen}]]
            :kind :witnessed-hermetically :test `the-chosen-precedence-reaches-enact-fn
            :check check
            :live-records-read support/precedence-live-records-read

@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-selection-out-support :as support]))
 (def positive (delay (support/observe :candidate-checker :none)))
 (defn check [] @positive)
-(def wire {:wire [:r9-selection-law :wc-checker :candidate]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/different-value-before-reader :kind :value-varying
+                  :product [:verdict] :intervention :before-reader}
+  :wire [:r9-selection-law :wc-checker :candidate]
            :kind :witnessed-hermetically :test `the-real-reader-handoff :check check
            :live-records-read support/live-records-read
            :note "WIRE-23-C1 declares the executable checker site. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."})

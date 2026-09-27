@@ -35,7 +35,10 @@
 
 (defn check [] (observe :none))
 (def wire
-  {:wire [:r7-fold-call :r3a-predict-observation :loop-belief]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/different-belief-changes-the-real-prediction :kind :value-varying
+                  :product [:predictions :annotation-health] :intervention :before-reader}
+  :wire [:r7-fold-call :r3a-predict-observation :loop-belief]
    :kind :witnessed-hermetically
    :test `real-judge-hands-belief-to-real-predictor
    :check check

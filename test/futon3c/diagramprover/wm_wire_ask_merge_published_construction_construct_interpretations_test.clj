@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-ask-out-support :as support]))
 (def positive (delay (support/interpretations :construct :none)))
 (defn check [] @positive)
-(def wire {:wire [:ask-merge-published :construction-construct :interpretations]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/different-carrier-changes-the-reader-product :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:ask-merge-published :construction-construct :interpretations]
            :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value :check check
            :live-records-read support/live-records-read
            :note "Published patterns passed to real construct; receipt unreached-wants determines which open wants were produced. Missing interpretations refuse invalid-input."})

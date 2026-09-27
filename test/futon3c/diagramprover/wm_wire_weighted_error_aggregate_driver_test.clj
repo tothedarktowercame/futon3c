@@ -62,7 +62,10 @@
       :why "hand-authored exemplar records; no weighted error, no driver record"}]))
 
 (def wire
-  {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/a-different-weighted-error-fails-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r7-weighted-error :r3-aggregate-driver :weighted-error]
    :kind :witnessed-hermetically
    :test `the-weighted-error-reaches-the-driver-aggregation
    :check check

@@ -59,7 +59,10 @@
 (defn check [] (observe))
 
 (def wire
-  {:wire [:r0-enact-step :r7-flight-call :attempts]
+  {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test/different-attempts-at-the-reader-fail-the-wire :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:r0-enact-step :r7-flight-call :attempts]
    :kind :witnessed-hermetically
    :test `the-attempts-reach-the-flights-wc-call
    :check check

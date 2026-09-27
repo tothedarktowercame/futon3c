@@ -4,7 +4,10 @@
             [futon3c.diagramprover.wm-wire-construction-support :as support]))
 (defn observe [mutation] (support/derivation mutation))
 (defn check [] (support/live-digest))
-(def wire {:wire [:construction-construct :selection-candidate-derivations :construction-receipt]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/different-value-before-reader-fails :kind :value-varying
+                  :product [:reader] :intervention :before-reader}
+  :wire [:construction-construct :selection-candidate-derivations :construction-receipt]
            :kind :verified
            :test `the-observed-handoff :check check
            :live-records-read support/live-records-read

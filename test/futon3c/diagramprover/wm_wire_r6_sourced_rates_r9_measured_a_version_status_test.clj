@@ -15,7 +15,10 @@
 (def positive (delay (support/measured :status :none)))
 (defn check [] (let [o @positive] {:writer (:writer o) :reader (:reader o)}))
 
-(def wire {:wire [:r6-sourced-rates :r9-measured-a-version [:status {:record :sourced-rates}]]
+(def wire {
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test/absent-status-before-reader :kind :refusal
+                  :product [:result :reason] :intervention :before-reader :expected :sourcing-refused}
+  :wire [:r6-sourced-rates :r9-measured-a-version [:status {:record :sourced-rates}]]
            :kind :witnessed-hermetically :test `the-sourced-status-reaches-measured-a-version
            :check check
            :live-records-read support/measured-live-records-read
