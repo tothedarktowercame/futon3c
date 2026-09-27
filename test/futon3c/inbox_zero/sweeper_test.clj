@@ -378,6 +378,7 @@
         feed (read-string (slurp (:pressure-path options)))]
     (is (= 1 (:errored counts)))
     (is (false? (:collection-complete? counts)))
+    (is (false? (:complete? counts)))
     (is (= 1 (get-in feed [:collection :row-failures])))
     (is (false? (get-in feed [:collection :complete?])))
     (is (= ["futon2-d"] (map :label (:repos feed))))))

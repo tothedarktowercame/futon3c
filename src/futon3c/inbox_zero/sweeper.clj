@@ -328,7 +328,8 @@
                           :backlog-written? (boolean backlog-ok?)
                           :feed-written? (boolean feed-ok?)
                           :diagnostics-available? (boolean aux-ok?)
-                          :complete? (and (boolean backlog-ok?)
+                          :complete? (and (zero? (:row-failures counts))
+                                          (boolean backlog-ok?)
                                           (boolean feed-ok?))))]
     (when-not (:complete? counts)
       (print-fn (str "[inbox-zero] uncertain-pressure pass INCOMPLETE: "
