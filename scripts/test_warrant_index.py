@@ -3,6 +3,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -81,6 +82,13 @@ class IndexTest(unittest.TestCase):
         self.a.write_text('edited'); self.check('stale', [self.a])
         self.a.write_text('original'); self.check('current')
         self.a.unlink(); self.check('stale', [self.a], 'unreadable')
+
+    def test_warrant_without_file_rows_is_never_current(self):
+        self.entry(); self.runcli('put', 'one')
+        self.check('current')
+        db = sqlite3.connect(self.base[self.base.index('--db') + 1])
+        db.execute('DELETE FROM files WHERE namespace=?', ('test.one',)); db.commit(); db.close()
+        self.check('unverifiable')
 
     def test_refused_preserves_previous(self):
         self.entry(); self.runcli('put', 'one')

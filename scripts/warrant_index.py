@@ -202,10 +202,13 @@ def check(db, namespaces):
             except OSError:
                 hashes[path] = None
     changes = {ns: [] for ns in namespaces}
+    covered = {ns for ns, _, _ in rows}
     for ns, path, digest in rows:
         if hashes[path] != digest:
             changes[ns].append({'path': path, 'reason': 'unreadable' if hashes[path] is None else 'hash-mismatch'})
-    return [{'namespace': ns, 'class': 'no-warrant' if ns not in headers else 'stale' if changes[ns] else 'current',
+    # A warrant row with no file rows certifies nothing: it is never current.
+    return [{'namespace': ns, 'class': 'no-warrant' if ns not in headers else 'unverifiable' if ns not in covered
+             else 'stale' if changes[ns] else 'current',
              'entry-id': headers.get(ns), 'changed': sorted(changes[ns], key=lambda c: c['path'])}
             for ns in sorted(namespaces)]
 
@@ -258,7 +261,7 @@ def main(argv=None):
         known.update(r[0] for r in db.execute('SELECT namespace FROM warrants'))
         selected = {ns for ns in (args.ns if args.ns is not None else known) if ns.startswith(args.prefix)}
         rows = check(db, selected)
-        counts = {s: sum(r['class'] == s for r in rows) for s in ('current', 'stale', 'no-warrant')}
+        counts = {s: sum(r['class'] == s for r in rows) for s in ('current', 'stale', 'unverifiable', 'no-warrant')}
         if args.json:
             print(json.dumps({'namespaces': rows, 'counts': counts}))
         else:
