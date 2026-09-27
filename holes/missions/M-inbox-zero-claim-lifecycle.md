@@ -688,3 +688,46 @@ implementation if its routing evidence and visibility contract are adequate.
 C1–C7 remain unchanged, C8 added by Joe's steering, C6 complete, full DERIVE
 not yet accepted. No JVM reload/restart, state writes or notification sends
 were performed in this review.
+
+### Checkpoint 2026-09-27 19:30Z — N1 source/consumer review; N2 dispatched
+
+N1 **3db44558**, [proposal](../labs/M-inbox-zero-claim-lifecycle/N1-notifications.md),
+reviewed by codex-5. The mixed-repo backlog omission and temporal-overlap
+misrouting are confirmed. Proposed routing direction is useful; implementation
+is **not yet authorized** because evidence and consumer claims remain unsound:
+
+- An exact-session tool witness or confirmed attribution record is historical;
+  neither current record schema binds the current dirty bytes. N1 E1/E2 must
+  not reintroduce the stale-claim defect as “authorship-grade” notification input.
+- `futon3/inbox-zero-lib/src/futon3/inbox_zero/escalation.clj` routes supplied
+  items, using a seat already named on the item/plan or a literal tier-2
+  `street-sweeper` fallback. A historical routing decision does not establish
+  a current, exact-session triage responsibility grant. Read-only lookup of
+  `/api/alpha/agents/street-sweeper` returned **Agent not found** during review.
+- N1 both finds no programmatic backlog reader and calls the same file a
+  consumed surface. Writing uncertain work there while almost eliminating
+  notices is not demonstrated visibility. Need an existing discoverable
+  consumer integration, or a precise routing/surface decision from Joe.
+- The cited `agency/inbox.clj` persisted payload does not contain session-id;
+  session availability must be established from actual invoke records, not
+  asserted from those lines. Missing identity cannot map to the current seat.
+
+Owner also inspected the existing inbox-zero board consumer and batch dispatch.
+They consume watcher state and enforce their own dispatch/commit constraints;
+that does not establish that they read `operator-backlog.edn` or display it to
+an operator. Do not route uncertain dirt through their commit path as a shortcut.
+The standing escalation policy says volume alone is not operator judgement;
+a visible repo-pressure display is different from an unsolicited judgement task.
+
+Dispatched **N2**, job **invoke-1790537360720-25622-6f75c30f**, to kimi-9:
+resolve these source facts and identify an actual operator-facing surface
+(Emacs/HUD/mission UI or another demonstrated consumer) with a small testable
+producer-to-display integration. No fabricated authorship, standing role or
+recipient. If a preference/authority choice is indispensable, return the one
+missing decision and two grounded options for owner presentation. Retain old
+notice-classification compatibility, mixed-repo completeness, dedupe and exact
+session discipline in the proposed implementation contract.
+
+N2 is document/source survey only, <=160-line deliverable, explicit-path commit;
+no source/runtime/state changes or outgoing notices. Owner parks on N2. The
+transaction recovery blocker remains recorded for S2; C6 remains complete.
