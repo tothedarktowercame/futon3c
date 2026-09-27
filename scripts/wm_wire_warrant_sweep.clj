@@ -49,6 +49,14 @@
 
 (def ^:dynamic *history-content* history-content)
 (def ^:dynamic *parse-cache* nil)
+;; One scan reads each file once and resolves each (namespace, file) pair once.
+;; Files are taken not to change while a scan runs.
+(def ^:dynamic *memo* nil)
+(defn memo [k f]
+  (if-not *memo* (f)
+    (let [hit (get @*memo* k ::none)]
+      (if (not= ::none hit) hit
+        (let [v (f)] (swap! *memo* assoc k v) v)))))
 
 (defn symbol-names [form]
   (set (keep #(when (symbol? %) (symbol (name %)))
@@ -159,8 +167,8 @@
    A file that defines its own var of the same short name does not mention the
    target's. Anything not resolved by reading the ns form falls back to every
    short name in the form and every sought name found in its text (the
-   over-matching rule)."
-  [target names parsed]
+   over-matching rule). The returned function takes a form and the names sought."
+  [target parsed]
   (let [nsf (ns-form parsed)
         specs (when nsf (libspecs (:form nsf)))
         body (remove #(identical? % nsf) (:forms parsed))
@@ -182,17 +190,27 @@
         fallback? (or (nil? nsf) (some :odd? specs) refer-all? outside?
                       (some #(and (sequential? (get-in % [:opts :refer]))
                                   (not (every? symbol? (get-in % [:opts :refer])))) mine))]
-    (fn [{:keys [form text symbols]}]
-      (if fallback?
-        (into (set symbols) (filter #(str/includes? text (str %)) names))
-        (let [syms (raw-symbols form)]
-          (set (concat
-                (for [s syms :let [q (namespace s)]
-                      :when (and q (or (= q tname) (aliases q)
-                                       ;; an alias this ns form does not declare: undecided, so counted
-                                       (and (not (other-aliases q)) (not (str/includes? q ".")))))]
-                  (symbol (name s)))
-                (for [s syms :when (and (nil? (namespace s)) (referred s))] s))))))))
+    (if fallback?
+      (fn [{:keys [text symbols]} names]
+        (into (set symbols) (filter #(str/includes? text (str %)) names)))
+      ;; resolved once per form; the answer does not depend on the names sought
+      (let [resolved
+            (into {}
+                  (for [{:keys [form] :as f} body
+                        :let [syms (raw-symbols form)]]
+                    [(:text f)
+                     (set (concat
+                           (for [s syms :let [q (namespace s)]
+                                 :when (and q (or (= q tname) (aliases q)
+                                                  ;; an alias this ns form does not declare: undecided, so counted
+                                                  (and (not (other-aliases q)) (not (str/includes? q ".")))))]
+                             (symbol (name s)))
+                           (for [s syms :when (and (nil? (namespace s)) (referred s))] s)))]))]
+        (fn [f _names] (get resolved (:text f) #{}))))))
+
+;; The namespace whose warrant is being read. A deftest in any other file of the
+;; closure is loaded but not run by that warrant. nil: every deftest counts.
+(def ^:dynamic *warranted-ns* nil)
 
 (defn test-form? [{:keys [form]}]
   (and (seq? form) (symbol? (first form)) (= "deftest" (name (first form)))))
@@ -212,23 +230,28 @@
                (reduced {:hit {:file path :names [] :reason (:reason parsed)}})
                (let [own (or (source-ns parsed) (symbol path))
                      nsf (ns-form parsed)
-                     fns (into {} (for [[target names] (:reached acc) :when (not= target own)]
-                                    [target (mention-fn target names parsed)]))
+                     fns (into {} (for [[target names] (:reached acc) :when (and (seq names) (not= target own))]
+                                    [target (memo [:mention target path] #(mention-fn target parsed))]))
                      found
                      (for [f (:forms parsed) :when (not (identical? f nsf))
                            :let [used (into (set/intersection (get-in acc [:reached own] #{}) (:symbols f))
                                             (mapcat (fn [[target m]]
-                                                      (set/intersection (get-in acc [:reached target]) (m f)))
+                                                      (let [names (get-in acc [:reached target])]
+                                                        (set/intersection names (m f names))))
                                                     fns))
                                  n (definition-name f)
                                  used (disj used n)]
                            :when (seq used)]
-                       {:name n :test? (test-form? f) :used used})
+                       {:name n :used used
+                        :test? (and (test-form? f)
+                                    (or (nil? *warranted-ns*) (= (str own) (str *warranted-ns*))))})
                      hit (first (filter #(or (:test? %) (nil? (:name %))) found))]
                  (if hit
                    (reduced {:hit {:file path :names (vec (sort (:used hit)))
                                    :reason :changed-definition-reachable}})
-                   (update-in acc [:reached own] (fnil into #{}) (map :name found))))))
+                   (if (seq found)
+                     (update-in acc [:reached own] (fnil into #{}) (map :name found))
+                     acc)))))
            {:reached reached} files)]
       (cond (:hit step) (:hit step)
             (= reached (:reached step)) nil
@@ -254,11 +277,13 @@
                                   :when (re-find #"\.(clj|cljc|cljs|bb)$" other)
                                   :let [other-file (source-file root other)]
                                   :when (not= file other-file)]
-                              {:path other :parsed (parse-source (slurp other-file))})
+                              {:path other
+                               :parsed (memo [:file (str other-file)] #(parse-source (slurp other-file)))})
                       hit (if own-test
                             {:file path :names (vec (sort (map definition-name own-test)))
                              :reason :changed-definition-reachable}
-                            (reach files {target names}))]
+                            (memo [:reach path names *warranted-ns* (mapv :path files)]
+                                  #(reach (vec files) {target names})))]
                   (if hit
                     (assoc result :reason (:reason hit) :consumer hit)
                     result))))
@@ -297,7 +322,7 @@
     (merge {:namespace namespace :entry-id (:entry-id hit)}
            (if hit
              (let [payload (read-payload (:entry-id hit))]
-               (if payload (classify root payload)
+               (if payload (binding [*warranted-ns* namespace] (classify root payload))
                    {:class :read-failed :reason :registry-read-failed :detail :indexed-entry-missing}))
              {:class :no-warrant}))
     (catch Exception e
@@ -307,7 +332,8 @@
 (defn scan [root namespaces read-payload]
   (try
     (let [index (:namespaces (registry/namespace-ledger (str root "/data/test-registry/namespace-ledger.edn")))]
-      (binding [*history-content* (memoize history-content) *parse-cache* (atom {})]
+      (binding [*history-content* (memoize history-content) *parse-cache* (atom {})
+                *memo* (atom {})]
         (mapv #(assess root % (get index %) read-payload) namespaces)))
     (catch Exception e
       (mapv #(hash-map :namespace % :class :read-failed :reason :registry-read-failed

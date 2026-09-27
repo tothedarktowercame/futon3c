@@ -6,6 +6,7 @@
 
 (load-file "scripts/wm_wire_warrant_sweep.clj")
 (def classify (ns-resolve 'wm-wire-warrant-sweep 'classify))
+(def warranted-ns (ns-resolve 'wm-wire-warrant-sweep '*warranted-ns*))
 
 (def cases
   [{:id "unmentioned" :old "(ns fixture) (defn unused [] 1)"
@@ -92,6 +93,16 @@
    {:id "record" :old "(ns record) (defrecord Thing [a])" :new "(ns record) (defrecord Thing [a b])"
     :test "(ns consumer (:require [record :as r])) (deftest check (r/->Thing 1))"
     :class :stale-closure :reason :unnamed-form-changed}
+   ;; another namespace's deftest is loaded, not run, by this warrant
+   {:id "other-test" :old "(ns other-test) (defn called [] 1)" :new "(ns other-test) (defn called [] 2)"
+    :mid "(ns elsewhere-test (:require [other-test :as wm])) (deftest theirs (wm/called))"
+    :test "(ns consumer (:require [elsewhere-test])) (deftest check 1)"
+    :warranted "consumer"
+    :class :current-by-form :reason :changed-definitions-unreachable}
+   {:id "own-test" :old "(ns own-test) (defn called [] 1)" :new "(ns own-test) (defn called [] 2)"
+    :test "(ns consumer (:require [own-test :as wm])) (deftest check (wm/called))"
+    :warranted "consumer" :names ['called]
+    :class :stale-closure :reason :changed-definition-reachable}
    {:id "quoted" :old "(ns quoted) (defn called [] 1)" :new "(ns quoted) (defn called [] 2)"
     :test "(ns consumer) (deftest check ((requiring-resolve 'quoted/called)))"
     :class :stale-closure :reason :changed-definition-reachable}])
@@ -109,7 +120,7 @@
         (spit (io/file dir (str id "_test.clj")) test))
       (git "add" ".")
       (git "-c" "user.name=fixture" "-c" "user.email=fixture@invalid" "-c" "commit.gpgsign=false" "commit" "-qm" "fixture")
-      (doseq [{:keys [id new class reason missing? separate-test? mid names]} cases]
+      (doseq [{:keys [id new class reason missing? separate-test? mid names warranted]} cases]
         (let [file (io/file dir (str id ".clj"))
               test-file (io/file dir (str id "_test.clj"))
               mid-file (io/file dir (str id "_mid.clj"))
@@ -117,9 +128,10 @@
                                {:path (.getName test-file) :sha256 (registry/file-sha test-file)}]
                         mid (conj {:path (.getName mid-file) :sha256 (registry/file-sha mid-file)}))
               _ (spit file new)
-              result (classify (str dir) {:warrant? true :results {:failures 0 :errors 0}
+              result (with-bindings {warranted-ns warranted}
+                       (classify (str dir) {:warrant? true :results {:failures 0 :errors 0}
                                           :load-closure (if separate-test? [(first closure)] closure)
-                                          :test-files (when separate-test? {(.getName test-file) (registry/file-sha test-file)})})]
+                                          :test-files (when separate-test? {(.getName test-file) (registry/file-sha test-file)})}))]
           (is (= class (:class result)) (str id " " result))
           (is (= reason (:reason result)) (str id " " result))
           (when (= reason :changed-definition-reachable)
