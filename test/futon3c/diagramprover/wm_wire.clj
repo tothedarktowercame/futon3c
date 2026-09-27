@@ -3,7 +3,9 @@
   live-record reads. What a wire test is, and the three statuses, are
   defined once, in futon3c.diagramprover.wm-wire-ledger-test's docstring."
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [futon3c.test-registry :as registry]
+            [futon3c.test-registry.sqlite-backend :as sqlite])
   (:import [java.security MessageDigest]))
 
 (def spike-dir "holes/labs/M-wm-wiring/spike")
@@ -36,6 +38,25 @@
 (defn tmp-dir [prefix]
   (str (java.nio.file.Files/createTempDirectory
         prefix (make-array java.nio.file.attribute.FileAttribute 0))))
+
+(def ^:dynamic *warrant-store-path*
+  "Local warrant database override. Nil selects REGISTRY_DB, then
+  the test registry's canonical local path."
+  nil)
+
+(defn warrant-store-path []
+  (or *warrant-store-path*
+      (System/getenv "REGISTRY_DB")
+      sqlite/default-path))
+
+(defn latest-local-run
+  "Return the newest local run for namespace after verifying its registry
+  chain. A namespace absent from the local store is a normal typed absence."
+  [namespace]
+  (let [backend (sqlite/sqlite-backend (warrant-store-path))]
+    (if-let [entry (sqlite/latest-run-for-namespace backend namespace)]
+      (last (registry/read-chain! backend (:evidence/id entry)))
+      {:record/type :absent :reason :no-local-record :namespace namespace})))
 
 (defn second-layer
   "Resolve a declaration independently of its execution evidence. Product paths

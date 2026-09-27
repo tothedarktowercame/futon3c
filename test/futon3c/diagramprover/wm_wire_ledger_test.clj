@@ -57,8 +57,6 @@
             [futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [futon3c.test-registry :as registry]
-            [futon3c.evidence.http-backend :as http-backend]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.pprint :as pp]
@@ -486,8 +484,7 @@
          :rel (str (.relativize (.toPath root) (.toPath f)))}))))
 
 (defn second-layer-context [model]
-  (let [backend (http-backend/make-http-backend "http://localhost:7070")
-        ;; A :to-do read finding makes a wire record-only when the map says the
+  (let [;; A :to-do read finding makes a wire record-only when the map says the
         ;; reader does not make the read yet (a design intention). A :to-do that
         ;; carries :heuristic true is an ATTRIBUTION limit (the read is made
         ;; through a helper the occurrence heuristic cannot see; MAP-2B-P5 pin
@@ -505,9 +502,7 @@
         explicit (set (for [b (:boxes model) f (:attribution-findings b)
                             :when (= :to-do (:kind f))] (:wire f)))]
     {:allowed-nses (set wire-test-nses)
-     :latest (memoize #(registry/latest-run-for-namespace
-                        backend {:namespace % :namespace-ledger-file
-                                 (registry/namespace-ledger-path {})}))
+     :latest (memoize w/latest-local-run)
      ;; A var's (:file (meta v)) is classpath-relative ("futon3c/diagramprover/x.clj",
      ;; or a futon2 test path for the futon2-side wrappers); git needs the path
      ;; inside the var's own repository. WIRE-26-C found every declared witness
