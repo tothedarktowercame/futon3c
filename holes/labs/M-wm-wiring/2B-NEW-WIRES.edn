@@ -13,4 +13,10 @@
   :registry-edge [:CTAU-TOKEN :R5] :term :C-tau
   :writer {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one" :line 168}
   :reader {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions" :line 1116}
-  :reader-is-test-box? false :packet "MAP-2B-P3"}]
+  :reader-is-test-box? false :packet "MAP-2B-P3"}
+ {:map-commit "17aa769d2e23fa571eefbf69feb5ed08131eb98b"
+  :edge [:r7-fold-call :r3a-predict-observation :loop-belief]
+  :registry-edge [:R1 :R3a] :term :mu
+  :writer {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge" :line 7271}
+  :reader {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation" :line 1243}
+  :reader-is-test-box? false :packet "MAP-2B-P1+"}]

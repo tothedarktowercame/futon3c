@@ -41,6 +41,7 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test]
             [futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test]
             [futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test]
             [futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test]
@@ -218,6 +219,7 @@
 
 (def wire-test-nses
   '[
+    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test
     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test
     futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test
     futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test
