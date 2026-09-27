@@ -3113,6 +3113,10 @@
                :tags (or (normalize-tags (:tags payload))
                          (normalize-tags (get payload "tags")))}]
     (-> entry
+        ;; Emacs supplies provenance before its durable outbox write. Preserve
+        ;; it through this compatibility ingress; never replace it with login identity.
+        (cond-> (or (contains? payload :origin) (contains? payload "origin"))
+          (assoc :origin (or (:origin payload) (get payload "origin"))))
         (cond-> (or (nil? (:evidence-id entry))
                     (str/blank? (str (:evidence-id entry))))
           (dissoc :evidence-id))
