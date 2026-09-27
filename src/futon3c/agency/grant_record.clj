@@ -44,7 +44,8 @@
     (when-not (text? (get r k)) (refuse! :missing-grant k)))
   (scope! (:grant/scope r))
   (let [{:keys [from until] :as interval} (:grant/interval r)]
-    (when-not (and (map? interval) (= #{:from :until} (set (keys interval))))
+    (when-not (and (map? interval) (contains? interval :from)
+                   (every? #{:from :until} (keys interval)))
       (refuse! :invalid-interval :grant/interval))
     (stamp! from)
     (when until (when-not (before? from until) (refuse! :invalid-interval :grant/interval))))
@@ -154,16 +155,23 @@
     (if granted {:status :recorded :act-id (:hx/id (last (:chain granted)))}
         {:status :unrecorded :reason :no-covering-explicit-grant})))
 
-(defn payload [{:keys [record idempotency-key] :as request} context]
+(defn- drop-nils
+  "futon1b does not store nil map values, so an absent key is how an open
+   interval or a root grant is written; the payload must match its readback."
+  [m]
+  (into {} (keep (fn [[k v]] (when-not (nil? v) [k (if (map? v) (drop-nils v) v)]))) m))
+
+(defn payload [{:keys [idempotency-key] :as request} context]
   (when-not (= #{:record :idempotency-key} (set (keys request))) (refuse! :invalid-request :request))
   (when-not (text? idempotency-key) (refuse! :invalid-request :idempotency-key))
+  (let [record (drop-nils (:record request))]
   (validate! record context)
   {:hx/type :grant/record :hx/mint-id true :hx/idempotency-key idempotency-key
    :hx/valid-time (get-in record [:grant/interval :from])
    :hx/endpoints (cond-> [(get-in record [:grant/source :id])
                           (str "agent:" (:grant/grantee record))]
                    (:grant/parent record) (conj (:grant/parent record)))
-   :hx/props (assoc record :grant/schema 1)})
+   :hx/props (assoc record :grant/schema 1)}))
 
 (defn- path-id [prefix id] (str prefix (URLEncoder/encode id "UTF-8")))
 (defn live-context! [base record]

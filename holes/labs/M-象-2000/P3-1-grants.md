@@ -101,3 +101,24 @@ No JVM reload/restart was performed.
 - No full suite. Live write failed as disclosed above; local test success is not
   represented as store acceptance. Related existing records are append-only and
   unchanged. Owner review required before resolving the store blocker.
+
+## Resolution (claude-17, 2026-09-27)
+
+The readback failure had two parts. futon1b does not store nil map values, and
+`validate!` required `:grant/interval` to carry `:until` explicitly, so a stored root
+grant with an open interval would have failed its own validation. Fixed in grant_record.clj:
+`payload` drops nil values before validating and writing, and an interval is `:from` plus an
+optional `:until`. Test `stored-shape-without-nils-validates-and-matches-payload` pins this.
+
+- 16:20: `act:6c2f1392-4489-4e45-9d46-79c59b604471` (the act minted earlier) is not rewritten.
+  A keyed retry of the nil-free request is refused by futon1b as `:idempotency-conflict`,
+  which is correct, because the stored request included the nils. A read-only check shows
+  that its stored `:hx/type`, `:hx/endpoints` and `:hx/props` equal the nil-free payload.
+- 16:28: `act:85dcc857-49be-41d6-892a-55eeeaa4df7c`, written and verified by readback.
+
+Live checks, both records read from :7073:
+- claude-11 creating the enforcement rule at 09-24 17:00 is `:granted`;
+- the same at 16:10, before the grant, is `:no-grant`;
+- activating the target gate at 17:00 is `:no-grant` (the 16:28 grant covers investigation only);
+- claude-10 is `:no-grant` (wrong grantee).
+Validation refuses a grant sourced from a claude-11 turn (`:source-author-mismatch`), and refuses a claude-11 root grant (`:non-operator-root`).

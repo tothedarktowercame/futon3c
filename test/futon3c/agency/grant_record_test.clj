@@ -96,3 +96,13 @@
                                 (if (= method "POST") {:ok true :hx/id "act:new"}
                                     (first (:evidence context))))]
     (is (= :readback-mismatch (reason #(grant/write! "http://unused" request))))))
+
+(deftest stored-shape-without-nils-validates-and-matches-payload
+  (let [p (grant/payload request context)
+        stored (:hx/props p)
+        walk (fn walk [m] (some (fn [[_ v]] (or (nil? v) (and (map? v) (walk v)))) m))]
+    (is (not (walk stored)))
+    (is (not (contains? (:grant/interval stored) :until)))
+    (is (= (dissoc stored :grant/schema) (grant/validate! (dissoc stored :grant/schema) context)))
+    (is (= :invalid-interval
+           (reason #(grant/validate! (assoc-in real-record [:grant/interval :to] until) context))))))
