@@ -731,3 +731,43 @@ session discipline in the proposed implementation contract.
 N2 is document/source survey only, <=160-line deliverable, explicit-path commit;
 no source/runtime/state changes or outgoing notices. Owner parks on N2. The
 transaction recovery blocker remains recorded for S2; C6 remains complete.
+
+### Checkpoint 2026-09-27 — N2 reviewed; N3 local implementation authorized
+
+Owner reviewed N2 **cf87f30d** against the producer, projection and consumer.
+Choose **A: producer-side integration**, keeping mana JSON, WM projection and
+markdown consistent. N2 corrects historical-claim authority and invented triage
+routing. It identifies real existing consumers; it does not yet establish live
+replacement visibility. Owner GET `/api/alpha/war-machine` returned **503**,
+`running? false`, no cached days. C8 is not complete and runtime cutover is
+blocked pending a demonstrated available replacement surface.
+
+Source corrections: `scan-metabolic-balance` reconstructs per-repo maps and
+would discard added fields; `summarize-working-tree-hygiene` reconstructs again,
+filters positive pressure, and takes eight queues. Merely merging uncertainty
+into mana is insufficient. The implementation must propagate it through actual
+projection/rendering, retain low-pressure uncertain dirt, expose bounded-list
+remainder and accessible full detail, and distinguish missing/stale input from
+zero. Joins must preserve canonical worktree identity, including the difference
+between `futon3c-d` and display labels. A backlog pathname alone does not prove
+a usable drilldown. No serve-time overlay with divergent producer semantics.
+
+**N3 dispatched to kimi-9**, actual job
+**invoke-1790537808721-25626-98b07480**: bounded local implementation and tests,
+explicit-path commits across the necessary repos. Structurally replace unsafe
+personal attribution with authorship-unknown repo pressure; do not add a flag
+that re-enables the known-unsound route. Preserve unrelated sweeper lanes.
+Temporal overlaps and historical citations remain diagnostic only. Cover Joe's
+example, sole overlap, historical claims, mixed uncertainty, repeat/rollover,
+identity aliases, missing/stale/malformed data, low pressure and queue overflow.
+Require a real producer-to-projection-to-consumer fixture and normal lint,
+parenthesis and targeted test gates. Existing historical p6o3 classification
+must remain compatible. Owner will independently review commits and evidence.
+
+This authorization is **local code only**. No live state/snapshot writes,
+notifications, scheduler start, reload or restart. The packet must document the
+concrete paired deployment prerequisites; it must not switch off running notices
+while the replacement consumer is unavailable. No claim of C8 completion or
+full DERIVE exit is authorized. S1 recovery unlock/relock failure remains open
+for later S2, capture remains unproven, C6 release remains complete. Owner parks
+on the actual N3 job; deadline wake requires job inspection, not redispatch.
