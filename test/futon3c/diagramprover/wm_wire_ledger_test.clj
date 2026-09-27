@@ -201,7 +201,13 @@
             [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test]
             [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test]
             [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test]
-            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
+            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]
+            [futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test]
+            [futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test]
+            [futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test]
+            [futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test]
+            [futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test]))
 
 (def wire-test-nses
   '[
@@ -375,7 +381,13 @@
     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test
     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
-    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
+    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test
+    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test
+    futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test
+    futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test
+    futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test
+    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test])
 
 (def adjacency-rev "2ba350a3")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
