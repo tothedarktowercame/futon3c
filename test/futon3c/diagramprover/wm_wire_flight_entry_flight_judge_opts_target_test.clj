@@ -1,13 +1,17 @@
 (ns futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test
   "Scoped target handoff. Negative controls change the flight before the real reader."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-target-readers-11a :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-target-support :as support]))
 
 (defn check [] (support/observe :flight-judge-opts identity))
 (def wire {:wire [:flight-entry :flight-judge-opts [:target {:record :flight}]]
            :kind :witnessed-hermetically
-           :test `the-target-reaches-the-reader :check check
+           :test `the-target-reaches-the-reader :second-layer {:test `target-determines-reader-product
+                          :kind :record :product [:outputs]
+                          :intervention :before-reader}
+           :check check
            :live-records-read support/live-records-read})
 
 (deftest the-target-reaches-the-reader
@@ -21,3 +25,12 @@
   (let [o (support/observe :flight-judge-opts (constantly "M-other-target"))]
     (is (= "M-other-target" (:reader o)) (pr-str o))
     (is (not (w/received? o)))))
+
+(deftest target-determines-reader-product
+  (let [r (products/products :opts)
+        [a b] (:outputs r)]
+    (is (= (mapv #(dissoc % :target) (:flights r))
+           (repeat 2 (dissoc (first (:flights r)) :target))))
+    (is (= products/targets (mapv #(get-in % [:flight :target]) [a b])))
+    (is (= (update a :flight dissoc :target) (update b :flight dissoc :target)))
+    (println :opts :products [a b])))
