@@ -66,3 +66,12 @@ modular cascade at the edge of the giant connected one.
 3. **S3 adapter from flexiarg to cascade shape:** propose `:produces`/`:needs`
    for a flexiarg the cascade does not cover, as an interpretation (象/释义非授)
    that is confirmed before the constructor uses it.
+
+## Found during INSTANTIATE (2026-09-27)
+
+P0 (`scripts/xiang2000_p0.py --check`) is the natural C8 locator for M-象-2000's first
+completion criterion, but it cannot be registered yet: the test registry's command
+validator accepts Clojure test namespaces and Lean builds only (codex-4), while the
+WM's C8 description names bb and sh gates as well (futon2 `mission_reading.clj:53-62`).
+Either the validator widens to the commands the WM already describes, or P0 gets a bb
+wrapper. A small first task for this excursion.
