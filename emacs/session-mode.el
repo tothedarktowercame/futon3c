@@ -858,9 +858,11 @@ Use the real inserted span, including any agent-chat text transformations."
 Also annotate the latest sent operator turn.  Drafts use local cues only;
 sent turns can request agent interpretation through `session-turn-analysis'.
 Kept separate from full session markup so typing never triggers retrieval."
-  ;; A red 象 says this buffer's operator turns are on the record: captured
-  ;; and sent for interpretation.  No 象 means off the record.
-  :lighter (:propertize " 象" face (:foreground "red" :weight bold))
+  ;; A 象 says this buffer's operator turns are on the record: captured and
+  ;; sent for interpretation.  No 象 means off the record.  Red means the
+  ;; interpretation is working or not yet known to fail; pink means the last
+  ;; dispatch or reap failed (see `session-mode--analysis-lighter').
+  :lighter (:eval (session-mode--analysis-lighter))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c s i") #'session-mode-describe-turn-intent)
             map)
@@ -879,6 +881,22 @@ Kept separate from full session markup so typing never triggers retrieval."
     (mapc #'delete-overlay (append session-mode--draft-tag-overlays session-mode--sent-tag-overlays))
     (setq session-mode--draft-tag-overlays nil session-mode--sent-tag-overlays nil
           session-mode--draft-tags nil)))
+
+(defvar session-mode--analysis-health)        ; session-turn-analysis.el
+(defvar session-mode--analysis-health-detail)
+
+(defun session-mode--analysis-lighter ()
+  "The 象 lighter, pink while delegated analysis is known to be failing."
+  (let ((failing (eq session-mode--analysis-health 'failing)))
+    (propertize " 象"
+                'face `(:foreground ,(if failing "hot pink" "red") :weight bold)
+                'help-echo
+                (concat (if failing
+                            "Turns are captured, but interpretation is FAILING"
+                          "Turns are captured and sent for interpretation")
+                        (if session-mode--analysis-health-detail
+                            (concat "\nLast: " session-mode--analysis-health-detail)
+                          "")))))
 
 (defun session-mode--tags-after-init (&rest _)
   "Enable local tags after an agent-chat buffer creates its input marker."

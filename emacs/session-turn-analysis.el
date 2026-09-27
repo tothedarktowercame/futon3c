@@ -328,8 +328,13 @@ seat to be idle, so it may land a dispatch or two late.  nil never resets."
 (defvar session-mode--analysis-dispatch-count 0
   "Dispatches to the analysis seat since its conversation was last cleared.")
 
-(defcustom session-mode-analysis-sender "agency_send.py"
-  "Path to futon3c's agency_send.py, used when delegating the analysis."
+(defcustom session-mode-analysis-sender
+  (expand-file-name "../scripts/agency_send.py"
+                    (file-name-directory (or load-file-name buffer-file-name)))
+  "Path to futon3c's agency_send.py, used when delegating the analysis.
+Absolute, because the dispatch runs in whatever buffer the turn landed in:
+a bare \"agency_send.py\" resolved against that buffer's `default-directory'
+and python3 exited 2 on the missing file everywhere but futon3c/scripts."
   :type 'string
   :group 'session-mode)
 
@@ -376,6 +381,23 @@ answer is \"still running\" and nothing is written."
                     (file-name-directory (or load-file-name buffer-file-name)))
   "Clears the analysis seat's conversation when it is idle.")
 
+(defvar session-mode--analysis-health nil
+  "What the last evidence says about delegated turn analysis.
+nil until something is known; `ok' once a reap finds a turn analysed;
+`failing' after a dispatch that did not deliver or a job that was refused,
+failed or unreachable.  Delivery alone changes nothing: exit 0 means the
+bell was accepted, not that the turn was interpreted.")
+
+(defvar session-mode--analysis-health-detail nil
+  "One line saying why `session-mode--analysis-health' has its value.")
+
+(defun session-mode--set-analysis-health (health detail)
+  "Record HEALTH with DETAIL and redraw the 象 lighter."
+  (setq session-mode--analysis-health health
+        session-mode--analysis-health-detail
+        (format "%s — %s" (format-time-string "%H:%M") detail))
+  (force-mode-line-update t))
+
 (defun session-mode--record-dispatch-job (path job-id)
   "Note on the record at PATH that its dispatch created JOB-ID."
   (call-process "python3" nil nil nil
@@ -390,12 +412,23 @@ A refusal and a busy seat both left `requested' before this existed."
      :sentinel (lambda (proc _e)
                  (when (memq (process-status proc) '(exit signal))
                    (with-current-buffer (process-buffer proc)
-                     (when (string-match-p "REFUSED\\|FAILED" (buffer-string))
-                       (display-warning
-                        'session-mode
-                        (format "Turn analysis was not done: %s"
-                                (string-trim (buffer-string)))
-                        :warning)))
+                     (let ((out (string-trim (buffer-string))))
+                       (cond
+                        ((string-match-p "REFUSED\\|FAILED" out)
+                         (session-mode--set-analysis-health
+                          'failing (format "%s: job refused or failed"
+                                           (file-name-base path)))
+                         (display-warning
+                          'session-mode
+                          (format "Turn analysis was not done: %s" out)
+                          :warning))
+                        ((string-match-p "unreachable" out)
+                         (session-mode--set-analysis-health
+                          'failing (format "%s: job status unreachable"
+                                           (file-name-base path))))
+                        ((string-match-p "analyzed" out)
+                         (session-mode--set-analysis-health
+                          'ok (format "%s: analysed" (file-name-base path)))))))
                    (when (buffer-live-p (process-buffer proc))
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
@@ -523,11 +556,17 @@ state -- never silently complete."
            ;; and a silent failure is the one that costs a day.
            (when (memq (process-status proc) '(exit signal))
              (if (/= (process-exit-status proc) 0)
-                 (display-warning
+                 (progn
+                   (session-mode--set-analysis-health
+                    'failing (format "dispatch to %s %s"
+                                     session-mode-analysis-agent (string-trim event)))
+                  (display-warning
                   'session-mode
-                  (format "Analysis dispatch to %s failed (%s). The record stays `requested'."
-                          session-mode-analysis-agent (string-trim event))
-                  :warning)
+                  (format "Analysis dispatch to %s failed (%s). The record stays `requested'.\n%s"
+                          session-mode-analysis-agent (string-trim event)
+                          (with-current-buffer (process-buffer proc)
+                            (string-trim (buffer-string))))
+                  :warning))
                ;; Exit 0 means DELIVERED, not done. The seat can still refuse --
                ;; kimi-1 did, on 2026-09-24, for want of a requisition line --
                ;; and that left the record at `requested', indistinguishable
@@ -558,7 +597,9 @@ state -- never silently complete."
                                 (shell-quote-argument session-mode-analysis-sender)
                                 (shell-quote-argument agent)
                                 (shell-quote-argument session-mode-analysis-caller))))
-      (error (display-warning 'session-mode
+      (error (session-mode--set-analysis-health
+              'failing (format "dispatch to %s: %s" agent (error-message-string err)))
+             (display-warning 'session-mode
                               (format "Analysis dispatch to %s failed: %s"
                                       agent (error-message-string err)))))))
 
