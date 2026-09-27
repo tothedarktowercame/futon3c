@@ -1,10 +1,45 @@
-# P6o-3: reconstructed origin backfill (production write held)
+# P6o-3: reconstructed origin backfill
 
 The tool is `scripts/xiang2000_p6o3.py`; tests are
 `scripts/test_xiang2000_p6o3.py`. No historical record is modified. The new
 `:origin/backfill` evidence type is registered in the shared shape definition.
 
-## Dry run and unresolved reconciliation
+## Owner ruling and production execution
+
+Claude-17 approved the reviewed plan on 2026-09-27: the reconstructed rules
+are the authority; 436/27 are undocumented hand-count approximations, not
+replayable membership lists. This resolves the write hold described below.
+The exact pinned plan was executed: **671 written, 0 skipped, originals modified
+0**, comprising 597 park wakes, 32 inbox notices and 42 Kimi notices. Each new
+record was read back. The live rerun wrote **0** and skipped **671** matching
+interpretations. One overlapping read initially received HTTP 503
+`expensive-read-busy`; rerunning after the P0 capture finished succeeded.
+No JVM reload was needed.
+
+P0 now queries Joe-attributed user chat turns from 09-24 19:04 inclusive through
+09-25 19:59 inclusive, matching the Kimi notice rule and harness origin. A known
+write-time stamp takes precedence; an absent/unknown stamp may use an inferred
+backfill. It counts source IDs, not interpretation rows. Both the notice turns
+and backfill records are captured in the integrity-checked snapshot; evidence
+reads share one P6 system-as-of pin.
+
+Validation after the write:
+
+- Live P0: `QUERY ... 42 notices ...`, `stubs: 3 of 12`, `check: PASS`.
+- Two offline snapshot replays are byte-identical to each other and the live run.
+- A copied snapshot with one Kimi backfill removed (and its manifest rebuilt to
+  represent that altered dataset) reports 41; `--check` exits 1 naming row 6.
+  Removed id: `origin-backfill:12bddfaac65ec3a36077dfe0ebc65b9c85ff93180ee9d0550223a1dcfbce63fd`.
+- Changing the expected commit SHA exits 1 naming row 5. Byte tampering without
+  updating the manifest exits 1 naming `origin-backfills.jsonl`, with no answer.
+- Ten Python tests pass, compilation passes, EDN check-parens passes. No Clojure
+  source changed in this follow-up.
+
+Live output: `/tmp/p0-origins-live.log`; snapshot:
+`/tmp/xiang2000-p0-origins-snapshot`; write and replay receipts:
+`/tmp/p6o3-write.log` and `/tmp/p6o3-rerun.log`.
+
+## Initial dry run and reconciliation hold
 
 Read-only run on 2026-09-27, pinned at system time
 `2026-09-27T18:58:28.219689Z`, event-time window
@@ -29,8 +64,8 @@ that baseline exceeds the saved export by 30/5. A single later event-time
 cutoff does not recover it: at 09-26 12:16:24.283845877Z the running counts are
 436/25/42; when inbox reaches 27 at 13:25:46.776232408Z, wakes are already 459.
 No original baseline membership list was found, so examples of its alleged
-missing 30/5 cannot honestly be listed. Production writes are held under the
-packet's “numbers match or differences are explained” condition. **Written: 0.**
+missing 30/5 cannot honestly be listed. At initial review, production writes were held under the
+packet's “numbers match or differences are explained” condition. **Written at initial review: 0.**
 The owner can resolve the remaining baseline discrepancy or revise the accepted
 scope; this report does not silently treat unknown membership as reconciled.
 
@@ -104,8 +139,8 @@ rule/version, `basis: backfill-inferred`, and the window. The envelope's own
 origin is harness/write-time because this script writes the interpretation now.
 It does not change the original author, origin, timestamps or text, and grants
 no authority. Readers must opt into these interpretation records separately
-from original write-time stamps. No shared-JVM reload or production write was
-performed in this packet.
+from original write-time stamps. No shared-JVM reload was performed; the production write followed the owner
+ruling above.
 
 ## Gates
 
@@ -116,5 +151,5 @@ performed in this packet.
 - clj-kondo: zero errors/warnings; check-parens: OK for the shape and its test.
 - `futon3c.social.shapes-test`: 50 tests, 132 assertions, zero failures/errors.
 
-Live idempotence remains unverified because the production write gate is held;
-the passing replay test uses an isolated in-memory test store.
+The isolated replay test uses an in-memory store; production replay results are
+recorded in the execution section above.

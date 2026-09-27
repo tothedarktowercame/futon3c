@@ -7,8 +7,8 @@ Use --expected FILE to check a different EDN fixture. No third-party packages.
 The fixture checks the semantic report; capture timestamps/hashes are separate pins.
 Snapshots include raw evidence rows, hyperedge responses, git records and the exact
 operator files consumed. They are integrity checked, not cryptographically signed.
-P6 will replace evidence snapshots with server-side system-as-of reads; evidence/at
-is event time, NOT an XTDB system timestamp. Until then system time is unavailable.
+Evidence reads use P6 system-as-of and retain raw snapshot replay; evidence/at
+is event time, NOT an XTDB system timestamp.
 """
 import argparse
 import datetime as dt
@@ -28,6 +28,9 @@ EXPECTED = REPO / 'holes/labs/M-象-2000/p0-expected.edn'
 COMMITS = ('5146606d', '2ef7a010', '626df9fa', '80428193')
 TURNS = ('claude-10-turn-30', 'claude-11-turn-2', 'claude-11-turn-3', 'claude-11-turn-6')
 WINDOW = 'storage/operator-turns/window-0922/operator-turns-joe.jsonl'
+NOTICE_START = '2026-09-24T19:04:00Z'
+NOTICE_END = '2026-09-25T20:00:00Z'  # Includes the entire displayed 19:59 minute.
+NOTICE_SOURCE = 'chat-turns author=joe; harness write-time origin or origin/backfill; rule=kimi-notice'
 
 
 def require(ok, message):
@@ -112,8 +115,9 @@ def at(row):
 
 def capture():
     files = {}
-    pins = {'schema': 1, 'started-at': now(), 'evidence-system-as-of': None,
-            'pin-method': 'snapshot (P6 temporal evidence API pending)', 'reads': [],
+    pin = now().replace('+00:00', 'Z')
+    pins = {'schema': 1, 'started-at': pin, 'evidence-system-as-of': pin,
+            'pin-method': 'snapshot with P6 system-as-of evidence reads', 'reads': [],
             'operator-files': {}}
 
     def get(route, params):
@@ -127,6 +131,22 @@ def capture():
         pins['reads'].append({'url': url, 'started-at': started, 'finished-at': now()})
         return result
 
+    def scan(params):
+        params = dict(params, **{'limit': 1000, 'system-as-of': pin})
+        result, cursors = [], set()
+        while True:
+            page = get('evidence', params)
+            require(isinstance(page.get('entries'), list), 'evidence response lacks entries')
+            result.extend(page['entries'])
+            cursor = page.get('next-cursor')
+            if not cursor:
+                require(not page.get('incomplete'), 'incomplete evidence scan')
+                return result
+            key = (cursor['at'], cursor['id'])
+            require(key not in cursors, 'evidence pagination repeated cursor')
+            cursors.add(key)
+            params.update({'cursor-at': key[0], 'cursor-id': key[1]})
+
     files[WINDOW] = (ROOT / WINDOW).read_bytes()
     operators = [json.loads(line) for line in files[WINDOW].splitlines()]
     rows = []
@@ -137,21 +157,14 @@ def capture():
         session = one({r['session'] for r in operators
                        if (r['turn_id'] or '').startswith(seat + '-turn-')
                        and since <= r['at'] < before}, seat + ' session')
-        params = {'session-id': session, 'since': since, 'before': before, 'limit': 1000}
-        cursors = set()
-        while True:
-            page = get('evidence', params)
-            require(isinstance(page.get('entries'), list), 'evidence response lacks entries')
-            rows.extend(page['entries'])
-            cursor = page.get('next-cursor')
-            if not cursor:
-                break
-            key = (cursor['at'], cursor['id'])
-            require(key not in cursors, 'evidence pagination repeated cursor')
-            cursors.add(key)
-            params.update({'cursor-at': key[0], 'cursor-id': key[1]})
+        rows.extend(scan({'session-id': session, 'since': since, 'before': before}))
     require(len({eid(r) for r in rows}) == len(rows), 'duplicate evidence ids across pages')
     files['evidence.jsonl'] = ''.join(js(r) + '\n' for r in rows).encode()
+
+    for name, params in (
+            ('notice-turns.jsonl', {'author': 'joe', 'since': NOTICE_START, 'before': NOTICE_END}),
+            ('origin-backfills.jsonl', {'type': 'origin/backfill'})):
+        files[name] = ''.join(js(r) + '\n' for r in scan(params)).encode()
 
     def git(*args):
         return subprocess.check_output(['git', '-C', str(REPO), *args], text=True).strip()
@@ -213,9 +226,36 @@ def read_snapshot(directory):
         files[name] = data
     actual = {p.relative_to(directory).as_posix() for p in directory.rglob('*') if p.is_file()}
     require(actual == set(files) | {'manifest.json'}, 'snapshot contains unmanifested files')
-    require({'pins.json', 'git.json', 'hyperedges.json', 'evidence.jsonl', WINDOW} <= files.keys(),
+    required = {'pins.json', 'git.json', 'hyperedges.json', 'evidence.jsonl',
+                'notice-turns.jsonl', 'origin-backfills.jsonl', WINDOW}
+    require(required <= files.keys(),
             'snapshot manifest missing required files')
     return files
+
+
+def notice_count(files):
+    """Count distinct source turns, never interpretation records. Known write-time
+    origins take precedence; unknown/absent stamps may use inferred backfills.
+    The kimi-notice rule is the reviewed reconstructed P6o-3 producer template.
+    """
+    from xiang2000_p6o3 import classify
+    backfills = [json.loads(line) for line in files['origin-backfills.jsonl'].splitlines()]
+    inferred = {body(r).get('source-id') for r in backfills
+                if r.get('evidence/type') == 'origin/backfill'
+                and body(r).get('basis') == 'backfill-inferred'
+                and body(r).get('rule') == 'kimi-notice'
+                and body(r).get('origin') == 'harness'}
+    ids = set()
+    for r in (json.loads(line) for line in files['notice-turns.jsonl'].splitlines()):
+        b = body(r)
+        if (r.get('evidence/author') != 'joe' or b.get('event') != 'chat-turn'
+                or b.get('role') != 'user' or not NOTICE_START <= at(r) < NOTICE_END
+                or (classify(b.get('text')) or {}).get('rule') != 'kimi-notice'):
+            continue
+        kind = (r.get('evidence/origin') or {}).get('kind')
+        if kind == 'harness' or (kind in (None, 'unknown') and eid(r) in inferred):
+            ids.add(eid(r))
+    return len(ids)
 
 
 def reconstruct(files):
@@ -331,8 +371,8 @@ def reconstruct(files):
     table += [
         row('09-24 16:34', 'commit ' + commits['5146606d']['sha'][:8] + ': each Kimi call carries a requisition',
             'claude-11', eid(landed) + '; git ' + commits['5146606d']['sha']),
-        row('09-24 19:04 → 09-25 19:59', "42 notices delivered as turns under Joe's name", 'harness',
-            'hand-filled IDENTIFY; origin/backfill pending P6o', 'STUB'),
+        row('09-24 19:04 → 09-25 19:59', f"{notice_count(files)} notices delivered as turns under Joe's name",
+            'harness', NOTICE_SOURCE),
         row('09-25', 'followups removed (' + ', '.join(commits[p]['sha'][:8] for p in COMMITS[1:3]) + ')',
             'Joe, claude-14', '; '.join(eid(r) for r in removed) + '; git 2ef7a010, 626df9fa'),
         row('as of 09-24 16:00', 'requisition rule absent', 'query',
