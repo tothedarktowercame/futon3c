@@ -633,3 +633,58 @@ created. Review that result, then prioritize a bounded N survey/design packet
 with kimi-9. Owner will connect the notification contract to the authority
 contract without forcing notification repair to wait for every commit-mechanics
 implementation detail. No runtime/source behavior changed in this checkpoint.
+
+### Checkpoint 2026-09-27 19:26Z — S1 review; notification packet prioritized
+
+S1 **4a65b781** artifacts:
+[report](../labs/M-inbox-zero-claim-lifecycle/S1-report.md),
+[harness](../labs/M-inbox-zero-claim-lifecycle/s1-git-transaction.py),
+[transcript](../labs/M-inbox-zero-claim-lifecycle/s1-transcript.txt).
+Owner read the implementation and independently reran under `timeout 60`:
+reported 23 candidate assertions and two new defect reproductions pass; the
+five historical S0 defect assertions also rerun. No production mutation.
+
+Progress: native index.lock spans the ordinary ref-CAS/index-update interval;
+receipt lookup now verifies a claim commit's parent and tree rather than just
+naming current HEAD; journal acquisition uses O_EXCL and file/directory fsync;
+persisted-object mismatch refuses instead of changing authorization. These
+improve the tested paths but do not establish the full transaction contract.
+
+**Blocking recovery counterexample (owner, real Git):** create baseline X,
+authorized H; `s1_commit(..., crash_at="in-critical-after-cas")`; emulate dead
+owner exactly as S1's own test does. Wrap `lock_release_ours` to run native
+`git commit` immediately after the first successful unlink during recovery.
+`recover_s1` removes the orphan lock before reacquiring it. Native commit in
+that gap exits 0 and makes HEAD:f = X (stale reversal); recovery reports
+`:recovered-committed`. Disposable repo removed in `finally`, `timeout 25`.
+This is an ordinary cooperating Git writer, not an adversary copying lock
+contents. The unsafe interval remains in recovery even though normal execution
+now excludes it. No residual-risk acceptance is granted.
+
+Other review limits: `lock_release_ours` rechecks only the transaction field,
+not the claimed byte-for-byte identity. Its check then unlink is not atomic
+against another recovery actor. Recovery must not clear another transaction's
+ours-formatted lock simply because its PID appears dead. Typed journal
+completion must distinguish a verified commit receipt from pending/refused
+index reconciliation; a deferred refresh is not full completion. These remain
+explicit transaction requirements, alongside capture and full predicate tests.
+Power-loss behavior has not been tested and is not claimed.
+
+**Next priority is Joe's notification example, C8.** Dispatched **N1**, job
+**invoke-1790537123218-25620-7babadc4**, to kimi-9. Deliver one bounded,
+source-backed notification routing/wording design and implementation packet,
+not production edits. It must inspect the actual consumed operator/backlog
+surface, dedupe, exact-session relevance, sole/ambiguous temporal overlap,
+synthetic windows, and mixed known/unknown paths. Temporal overlap must not
+assign commit/delete work; uncertainty must remain visible, not vanish when
+some other path has a recipient. Survey exact-text classification consumers
+before changing message format. Do not fabricate ownership or a repo-owner map.
+
+N1 is reviewed independently of unfinished transaction mechanics, so C8 can
+progress without waiting for the full promotion redesign. No S2 dispatch yet;
+the reproducible recovery blocker above is retained for that future packet.
+Owner parks on N1, reviews the concrete proposal, and then authorizes a narrow
+implementation if its routing evidence and visibility contract are adequate.
+C1–C7 remain unchanged, C8 added by Joe's steering, C6 complete, full DERIVE
+not yet accepted. No JVM reload/restart, state writes or notification sends
+were performed in this review.
