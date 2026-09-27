@@ -1,0 +1,358 @@
+{
+  "as-of": "2026-09-27T22:18:11.900276Z",
+  "coverage": {
+    "kind": "eight-job-fixture-cut",
+    "evidence-window": [
+      "2026-09-27T00:00:00Z",
+      "2026-09-27T22:18:11.900276Z"
+    ]
+  },
+  "evidence": [
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T22:03:06.439333953Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790546585343-25693-c50aba00",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-5",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T22:03:06.439281775Z"
+      },
+      "evidence/session-id": "invoke-1790546585343-25693-c50aba00",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T22:03:06.439281775Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-5"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-1a7e216e-960a-423b-ab6d-16975b3f0efd"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T21:54:44.798290286Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790546083866-25690-f025814e",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-5",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T21:54:44.798240242Z"
+      },
+      "evidence/session-id": "invoke-1790546083866-25690-f025814e",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T21:54:44.798240242Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-5"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-7ba3dd89-f412-464e-8a33-804e8df37a0d"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T21:46:13.530498490Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790545572299-25685-258cc9ab",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-5",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T21:46:13.530385649Z"
+      },
+      "evidence/session-id": "invoke-1790545572299-25685-258cc9ab",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T21:46:13.530385649Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-5"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-e9b9a861-cfcc-4ffa-b7cb-f7ea4282eb25"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T20:26:40.720735475Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790540799674-25653-e4b9b785",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-4",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T20:26:40.720683748Z"
+      },
+      "evidence/session-id": "invoke-1790540799674-25653-e4b9b785",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T20:26:40.720683748Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-4"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-46693b8c-fe54-4b3e-8963-72f292aee61e"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T20:12:27.145479719Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790539946049-25644-91e630d2",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-4",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T20:12:27.145427040Z"
+      },
+      "evidence/session-id": "invoke-1790539946049-25644-91e630d2",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T20:12:27.145427040Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-4"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-a37a9846-06ca-4112-aecc-40d84e4d738a"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "codex-5",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T19:56:44.415048624Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790539003417-25635-c9c4175e",
+        "edge/kind": "invoke",
+        "edge/from": "codex-5",
+        "edge/to": "claude-17",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T19:56:44.414965609Z"
+      },
+      "evidence/session-id": "invoke-1790539003417-25635-c9c4175e",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T19:56:44.414965609Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "claude-17"
+      },
+      "evidence/author": "codex-5",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-44c8c4eb-5f38-4036-9f7e-b7394a1f1e14"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "codex-4",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T19:59:39.072241943Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790539177774-25638-6b49179b",
+        "edge/kind": "invoke",
+        "edge/from": "codex-4",
+        "edge/to": "p5-hash-probe",
+        "edge/surface": "http",
+        "edge/at": "2026-09-27T19:59:39.072197780Z"
+      },
+      "evidence/session-id": "invoke-1790539177774-25638-6b49179b",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T19:59:39.072197780Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "p5-hash-probe"
+      },
+      "evidence/author": "codex-4",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-5b36e475-dbbf-43b7-9c92-d24be5413dc7"
+    },
+    {
+      "evidence/origin": {
+        "kind": "unknown",
+        "actor": "unknown",
+        "writer": "futon3c.evidence.boundary",
+        "attributed-author": "claude-17",
+        "authorization": "unknown",
+        "recorded-at": "2026-09-27T19:49:50.085756712Z",
+        "basis": "write-time"
+      },
+      "evidence/body": {
+        "edge/id": "invoke-1790538588909-25630-83088148",
+        "edge/kind": "invoke",
+        "edge/from": "claude-17",
+        "edge/to": "codex-4",
+        "edge/surface": "bell",
+        "edge/at": "2026-09-27T19:49:50.085700307Z"
+      },
+      "evidence/session-id": "invoke-1790538588909-25630-83088148",
+      "evidence/tags": [
+        "coordination",
+        "mesh-edge"
+      ],
+      "evidence/at": "2026-09-27T19:49:50.085700307Z",
+      "evidence/type": "coordination",
+      "evidence/subject": {
+        "ref/type": "agent",
+        "ref/id": "codex-4"
+      },
+      "evidence/author": "claude-17",
+      "evidence/claim-type": "step",
+      "evidence/id": "e-d71ebb54-beed-481e-9778-f50cd08ee02f"
+    }
+  ],
+  "jobs": [
+    {
+      "job-id": "invoke-1790546585343-25693-c50aba00",
+      "agent-id": "codex-5",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T22:03:05.343623344Z",
+      "started-at": "2026-09-27T22:03:06.901201276Z",
+      "finished-at": "2026-09-27T22:12:29.300695562Z"
+    },
+    {
+      "job-id": "invoke-1790546083866-25690-f025814e",
+      "agent-id": "codex-5",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T21:54:43.866031777Z",
+      "started-at": "2026-09-27T21:54:44.902940178Z",
+      "finished-at": "2026-09-27T22:02:20.215568018Z"
+    },
+    {
+      "job-id": "invoke-1790545572299-25685-258cc9ab",
+      "agent-id": "codex-5",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T21:46:12.299859721Z",
+      "started-at": "2026-09-27T21:46:13.728919916Z",
+      "finished-at": "2026-09-27T21:48:56.911146789Z"
+    },
+    {
+      "job-id": "invoke-1790540799674-25653-e4b9b785",
+      "agent-id": "codex-4",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T20:26:39.674556499Z",
+      "started-at": "2026-09-27T20:26:40.867609117Z",
+      "finished-at": "2026-09-27T20:35:23.589744301Z"
+    },
+    {
+      "job-id": "invoke-1790539946049-25644-91e630d2",
+      "agent-id": "codex-4",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T20:12:26.049674600Z",
+      "started-at": "2026-09-27T20:12:27.294101555Z",
+      "finished-at": "2026-09-27T20:25:41.376574672Z"
+    },
+    {
+      "job-id": "invoke-1790539003417-25635-c9c4175e",
+      "agent-id": "claude-17",
+      "caller": "codex-5",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T19:56:43.417960157Z",
+      "started-at": "2026-09-27T19:56:44.528260911Z",
+      "finished-at": "2026-09-27T19:57:27.044739520Z"
+    },
+    {
+      "job-id": "invoke-1790539177774-25638-6b49179b",
+      "agent-id": "p5-hash-probe",
+      "caller": "codex-4",
+      "surface": "http",
+      "state": "done",
+      "created-at": "2026-09-27T19:59:37.774196339Z",
+      "started-at": "2026-09-27T19:59:39.753665498Z",
+      "finished-at": "2026-09-27T20:00:16.029037999Z"
+    },
+    {
+      "job-id": "invoke-1790538588909-25630-83088148",
+      "agent-id": "codex-4",
+      "caller": "claude-17",
+      "surface": "bell",
+      "state": "done",
+      "created-at": "2026-09-27T19:49:48.909208795Z",
+      "started-at": "2026-09-27T19:49:50.491869263Z",
+      "finished-at": "2026-09-27T20:02:58.731733666Z"
+    }
+  ]
+}
