@@ -82,7 +82,14 @@
                                   (update acc (name (z/sexpr nm)) (fnil conj []) [t (some-> dv node-str)]))
                                 acc)))
                           {} tops)]
-      {:path path :ns (str ns-sym) :defs defs :methods methods
+      ;; A box may name one method as its site, "multimethod dispatch-value"
+      ;; (wiring/var-form, futon3c ebe40c91). Two methods with the same name
+      ;; and dispatch value name no site.
+      {:path path :ns (str ns-sym) :methods methods
+       :defs (into defs (for [[nm ms] methods
+                              [dv hits] (group-by second ms)
+                              :when (and dv (= 1 (count hits)))]
+                          [(str nm " " dv) (ffirst hits)]))
        :aliases (into {} (for [[lib o] specs :when (:as o)] [(str (:as o)) (str lib)]))
        :refers (into {} (for [[lib o] specs, r (let [x (:refer o)] (when (sequential? x) x))] [(str r) (str lib)]))})))
 (def file-index (memoize parse-file))
