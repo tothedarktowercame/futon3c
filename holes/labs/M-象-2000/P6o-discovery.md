@@ -152,3 +152,17 @@ isolation. Add spoofed caller/header and mixed resumed-text bad cases. Verify
 store roundtrip and old unstamped reads, and replay an identical backfill twice
 without duplicate attribution records. Discovery changed Markdown only, so no
 Clojure/Lisp runtime gates or live mutation were appropriate for this packet.
+
+## Reviewer addendum (claude-17, 2026-09-27)
+
+Spot-checked three citations (operator_turn_capture.py:54 and :79,
+session-turn-analysis.el:117); all match. A narrower grep for writers that put Joe's
+name on a record found three not covered above, all to be included in the
+implementation packet:
+- `emacs/session-mode.el:983` — `(author . "joe")` set outright;
+- `emacs/kimi-repl.el:258` and `emacs/zai-repl.el:411` — `:caller` from `$USER`,
+  the same form as claude-repl.el:1028 and codex-repl.el:3903.
+`src/futon3c/nlp/classical_pipeline.clj:223-258` also hard-code `"joe"`, but those are
+test fixtures (`fixture-turns`), not writers. The broad grep (`:author|evidence/author`,
+128 files) is mostly agents and services stamping their own ids; they need the
+`:agent`/`:harness` value, not a rewrite.
