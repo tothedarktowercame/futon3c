@@ -358,7 +358,11 @@ Atom and whole-paragraph commits are not captured yet."
                              ("file" . ,(file-name-nondirectory file))
                              ("line" . ,line)))
               'utf-8)))
-        (url-retrieve latex-wysiwyg-rocket-url (lambda (_) nil) nil t t)))))
+        ;; The callback runs in the response buffer; left alive, one buffer
+        ;; accumulates per captured edit for the life of the session.
+        (url-retrieve latex-wysiwyg-rocket-url
+                      (lambda (_) (kill-buffer (current-buffer)))
+                      nil t t)))))
 
 (defcustom latex-wysiwyg-save-after-edit t
   "When non-nil, save the buffer after a successful edit."
