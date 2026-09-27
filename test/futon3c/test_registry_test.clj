@@ -957,7 +957,7 @@
            (is (= (get-in run [:payload :ran-at]) (:query/since (first @queries)))
                "the fill reads only what registered after the ledger's newest :ran-at")
            (is (= registry/default-namespace-fill-limit (:query/limit (first @queries))))
-           (is (= 3 @reads) "targeted reads only: the chain's links and parent, never a page")))))))
+           (is (= 2 @reads) "targeted reads only: each chain entry once, reusing the verified parent")))))))
 
 (deftest a-complete-namespace-ledger-concludes-absence
   ;; first use builds the ledger from one full scan; a complete build plus

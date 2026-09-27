@@ -525,21 +525,42 @@
         (fail! :invalid-record-envelope {:evidence/id (:evidence/id entry)}))
       payload)))
 
-(defn read-chain! [backend id]
-  (loop [id id seen #{} entries []]
-    (when (contains? seen id) (fail! :chain-cycle {:evidence/id id}))
-    (let [entry (store/get-entry* backend id)]
-      (when-not entry (fail! :missing-entry {:evidence/id id}))
-      (let [payload (decode entry) previous (:previous payload)
-            row {:evidence/id id :sha256 (get-in entry [:evidence/body :sha256]) :payload payload}]
-        (if (= previous (none :genesis))
-          (do (when (:evidence/in-reply-to entry) (fail! :chain-link-mismatch {:evidence/id id}))
-              (vec (reverse (conj entries row))))
-          (let [parent (store/get-entry* backend (:evidence/id previous))]
-            (when-not (and parent (= (:evidence/id previous) (:evidence/in-reply-to entry))
-                           (= (:sha256 previous) (get-in parent [:evidence/body :sha256])))
-              (fail! :chain-link-mismatch {:evidence/id id}))
-            (recur (:evidence/id previous) (conj seen id) (conj entries row))))))))
+(def ^:dynamic *registry-read-retry-delays-ms*
+  "Three retries after the initial failed read; absence is never retried."
+  [250 500 1000])
+
+(defn- read-chain-entry! [backend id attempts]
+  (loop [attempt 1 pauses *registry-read-retry-delays-ms*]
+    (let [entry (if (instance? futon3c.evidence.http_backend.HttpBackend backend)
+                  (http-backend/get-entry-or-failure backend id)
+                  (store/get-entry* backend id))]
+      (swap! attempts assoc id attempt)
+      (if (= :read-failed (:error/code entry))
+        (if-let [pause (first pauses)]
+          (do (Thread/sleep (long pause)) (recur (inc attempt) (next pauses)))
+          (fail! :registry-read-failed {:evidence/id id :kind (:error/kind entry)
+                                        :attempts attempt :failure entry}))
+        entry))))
+
+(defn read-chain!
+  "Read and verify a chain; HTTP read failures retry before typed refusal.
+   Successful read counts are metadata, not changes to the hashed rows."
+  [backend id]
+  (let [attempts (atom {})]
+    (loop [id id seen #{} entries [] fetched nil]
+      (when (contains? seen id) (fail! :chain-cycle {:evidence/id id}))
+      (let [entry (or fetched (read-chain-entry! backend id attempts))]
+        (when-not entry (fail! :missing-entry {:evidence/id id}))
+        (let [payload (decode entry) previous (:previous payload)
+              row {:evidence/id id :sha256 (get-in entry [:evidence/body :sha256]) :payload payload}]
+          (if (= previous (none :genesis))
+            (do (when (:evidence/in-reply-to entry) (fail! :chain-link-mismatch {:evidence/id id}))
+                (with-meta (vec (reverse (conj entries row))) {:registry-read-attempts @attempts}))
+            (let [parent (read-chain-entry! backend (:evidence/id previous) attempts)]
+              (when-not (and parent (= (:evidence/id previous) (:evidence/in-reply-to entry))
+                             (= (:sha256 previous) (get-in parent [:evidence/body :sha256])))
+                (fail! :chain-link-mismatch {:evidence/id id}))
+              (recur (:evidence/id previous) (conj seen id) (conj entries row) parent))))))))
 
 (defn append-record!
   "Append through the single evidence boundary and verify the returned chain.

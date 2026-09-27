@@ -90,6 +90,21 @@
     (contains? entry :evidence/ephemeral?)
     (assoc :ephemeral? (:evidence/ephemeral? entry))))
 
+(def ^:dynamic *entry-read-timeout-ms*
+  "Single-entry reads with failure classification; milliseconds."
+  5000)
+
+(defn get-entry-or-failure
+  "Read one HTTP entry without conflating transport failure with absence.
+   Only a clean 404 or a decodable 200 without an entry means absent. The
+   legacy EvidenceBackend/-get contract remains unchanged."
+  [backend evidence-id]
+  (let [url (api-url (:base-url backend) (str "/api/alpha/evidence/" (path-segment evidence-id)))
+        resp @(http/get url {:timeout *entry-read-timeout-ms*})]
+    (if (and (= 404 (:status resp)) (nil? (:error resp)))
+      nil
+      (or (classify-read-response resp url) (:entry (parse-response resp))))))
+
 (defrecord HttpBackend [base-url]
   backend/EvidenceBackend
 
