@@ -52,7 +52,10 @@
    :site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}
    :reads [:trigger :next-step :eligible :pair-overlap :enactment-records :publication-observed
            :clock-lineage]
-   :writes [:chosen-target :draw-seed :target-selection]}
+   :writes [:chosen-target :draw-seed :target-selection]
+   :attribution-findings
+   [{:kind :to-do :wire [:clock-in :r1-outer-cascade :clock-lineage]
+     :note "WIRE-23-FINAL: D2 (ceb8498d) witnesses the clock-in -> r1-outer-cascade clock-lineage hop hermetically through clock-props. At futon2 628a8837a select reads clock-lineage from opts and plan-from-field! forwards it, but there is no production read-back supplying those opts. The wire remains witnessed-hermetically; wiring the production carrier is still to-do. The declaration-without-occurrence finding below is evaluated at the older pinned e92ae532 source."}]}
   {:box/id :r1-test :row 1 :box/kind :test
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"}
    :reads [:draw-seed :chosen-target :target-selection]}
@@ -4350,7 +4353,7 @@
    :rows [1],
    :kind :to-do,
    :note
-   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+   "WIRE-23-FINAL: D2 (ceb8498d) witnesses the clock-in -> r1-outer-cascade clock-lineage hop hermetically through clock-props. At futon2 628a8837a select reads clock-lineage from opts and plan-from-field! forwards it, but there is no production read-back supplying those opts. The wire remains witnessed-hermetically; wiring the production carrier is still to-do. The declaration-without-occurrence finding below is evaluated at the older pinned e92ae532 source."}
   {:finding :declaration-without-occurrence,
    :box/id :r1-outer-cascade,
    :field :enactment-records,

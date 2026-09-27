@@ -1,5 +1,5 @@
 (ns futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test
-  "Wire [:r6-sourced-rates :r9-measured-a-version :measurement]: the
+  "Wire [:r6-sourced-rates :r9-measured-a-version [:measurement {:record :sourced-rates}]]: the
   measurement provenance on sourced-rates' :sourced return reaching
   measured-a-version's own :measurement, keyed [target token].
 
@@ -24,7 +24,7 @@
 (defn check [] (support/measurement-observe identity))
 
 (def wire
-  {:wire [:r6-sourced-rates :r9-measured-a-version :measurement]
+  {:wire [:r6-sourced-rates :r9-measured-a-version [:measurement {:record :sourced-rates}]]
    :kind :witnessed-hermetically
    :test `the-writers-measurement-reaches-the-reader
    :check check
