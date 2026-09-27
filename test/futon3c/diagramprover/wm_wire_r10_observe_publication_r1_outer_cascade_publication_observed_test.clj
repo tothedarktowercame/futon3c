@@ -1,10 +1,14 @@
 (ns futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-outer-record-products-15a :as products]
             [futon3c.diagramprover.wm-wire-outer-inputs-support :as support]))
 (defn check [] (support/observe :publication-observed :none))
 (def wire {:wire [:r10-observe-publication :r1-outer-cascade :publication-observed]
            :kind :witnessed-hermetically :test `the-produced-input-is-received :check check
+           :second-layer {:test `recorded-input-does-not-change-mixed-selection
+                          :kind :record :product [:target-selection :inputs :publication-observed]
+                          :intervention :before-reader}
            :live-records-read support/live-records-read
            :note "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."})
 (deftest the-produced-input-is-received
@@ -31,3 +35,6 @@
     (is (:unchanged-law? o))))
 (deftest pinned-live-records-lack-the-reader-end
   (is (support/live-reader-absent?)))
+
+(deftest recorded-input-does-not-change-mixed-selection
+  (products/assert-record-products :publication-observed))
