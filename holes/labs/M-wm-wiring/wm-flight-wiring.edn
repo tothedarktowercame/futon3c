@@ -26,11 +26,13 @@
 ;; WIRE-23-C1: the W_c checker has its executable bb file as its site;
 ;; its printed verdict has no :wc-verdict key (standing attribution finding).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "2d3987ceb2c61ad25af60bd3620c3ea1023bcd97" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "4cc4378a8ca7fe6813b343338ded9768c0de3ab4" "futon3c" "ebe40c9127cd7129d49f4cc0e307b6750ea2b8e6"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
- :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation}
+ :field-roles {:owner-text :constraint
+               :lifecycle-definition-text :constraint
+               :want-span :observation :text-sha256 :observation}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists, and the outer cascade (select) chooses among
   ;; its eligible targets; the loop entry's plan mode calls it (H-T-CALLER-I). Running a flight is not wired.
@@ -173,6 +175,28 @@
   {:box/id :r3-store-constraints-read :row 3 :box/kind :component
    :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-constraints"}
    :reads [:constraints-read]}
+  ;; MAP-2B-EXITS: the lifecycle definition is an exogenous constraint read
+  ;; by the A-exits method. It is positional (`read root ... path`), so the
+  ;; occurrence checker cannot attribute the conceptual field at that site.
+  {:box/id :lifecycle-definition-reader :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "definition-exits"}
+   :writes [[:phase {:record :lifecycle-definition-exit}]]}
+  {:box/id :lifecycle-secondary-wants :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied"}
+   :reads [[:phase {:record :lifecycle-definition-exit}]]
+   :writes [[:role {:record :secondary-want}]]}
+  {:box/id :lifecycle-flight-exits :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits"}
+   :reads [[:role {:record :secondary-want}]]
+   :writes [[:wants {:record :lifecycle-exits}]]}
+  {:box/id :flight-source-wants-a-exits :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"}
+   :reads [:lifecycle-definition-text [:wants {:record :lifecycle-exits}]]
+   :writes [[:lifecycle-exits {:record :source}]]
+   :attribution-findings
+   [{:kind :to-do :field :lifecycle-definition-text :role :reads
+     :heuristic true :attribution-limit true
+     :note "MAP-2B-EXITS: source-wants :a-exits really reads futon4/holes/mission-lifecycle.md through its positional read-text function, but no keyword at the method site names the conceptual input field."}]}
   ;; WM-NODE-R2-R3a-I (WM-SUPERSET-D sections 1-2): the tick's observation
   ;; and prediction error, in judge before the cascade assembly (obs/observe
   ;; at war_machine :6909, fe/channel-prediction-error at :7037, before
@@ -4929,19 +4953,6 @@
   :kind :standing,
   :note
   "WIRE-23-C1: The bb CLI emits its verdict positionally, not under :wc-verdict; grain-gate is checked through lookup forms the heuristic does not classify as reads. The executable site is declared and these textual limits stay standing."}
- {:role :reads,
-  :site
-  {:file
-   "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj"},
-  :box/id :wc-checker,
-  :field :grain-gate,
-  :heuristic true,
-  :note
-  "WIRE-23-C1: The bb CLI emits its verdict positionally, not under :wc-verdict; grain-gate is checked through lookup forms the heuristic does not classify as reads. The executable site is declared and these textual limits stay standing.",
-  :usage {:reads 0, :writes 0, :unclassified 4},
-  :kind :standing,
-  :finding :declared-read-not-found}
- 
  {:role :writes,
   :site
   {:file "futon2/src/futon2/aif/observation_rates.clj",
@@ -5771,4 +5782,83 @@
  :kind :to-do,
  :note
  "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :written-never-read
+ :field [:lifecycle-exits :source]
+ :writers [:flight-source-wants-a-exits]
+ :kind :standing
+ :note "MAP-2B-EXITS: the A-exits method retains the typed lifecycle source record for consumers outside this map slice."}
+{:finding :read-never-written
+ :field :lifecycle-definition-text
+ :readers [:flight-source-wants-a-exits]
+ :kind :standing
+ :note "MAP-2B-EXITS: the lifecycle definition is an exogenous constraint, like owner-text; no component on this map writes the file."}
+{:finding :declaration-without-occurrence
+ :box/id :flight-source-wants-a-exits :field :lifecycle-definition-text :role :reads
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"}
+ :kind :to-do :attribution-limit true
+ :note "MAP-2B-EXITS: the method reads the definition through positional read-text arguments; the occurrence heuristic cannot name that conceptual field."}
+{:finding :declaration-without-occurrence
+ :box/id :flight-source-wants-a-exits :field [:lifecycle-exits :source] :role :writes
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"}
+ :kind :standing :note "MAP-2B-EXITS: record-scoped source write; the textual checker does not infer the nested record scope."}
+{:finding :declaration-without-occurrence
+ :box/id :lifecycle-definition-reader :field [:phase :lifecycle-definition-exit] :role :writes
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "definition-exits"}
+ :kind :standing :note "MAP-2B-EXITS: record-scoped phase write; the textual checker does not infer the returned exit record scope."}
+{:finding :declaration-without-occurrence
+ :box/id :lifecycle-secondary-wants :field [:phase :lifecycle-definition-exit] :role :reads
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied"}
+ :kind :standing :note "MAP-2B-EXITS: supplied consumes definition-exits positionally; the scoped courier is verified by its wire test."}
+{:finding :declaration-without-occurrence
+ :box/id :lifecycle-secondary-wants :field [:role :secondary-want] :role :writes
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied"}
+ :kind :standing :note "MAP-2B-EXITS: record-scoped role write; the textual checker does not infer the returned criterion scope."}
+{:finding :declaration-without-occurrence
+ :box/id :lifecycle-flight-exits :field [:role :secondary-want] :role :reads
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits"}
+ :kind :standing :note "MAP-2B-EXITS: flight-exits consumes supplied criteria through a local binding; its wire test varies the real writer."}
+{:finding :declaration-without-occurrence
+ :box/id :lifecycle-flight-exits :field [:wants :lifecycle-exits] :role :writes
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits"}
+ :kind :standing :note "MAP-2B-EXITS: record-scoped wants write; the textual checker does not infer the result record scope."}
+{:finding :declaration-without-occurrence
+ :box/id :flight-source-wants-a-exits :field [:wants :lifecycle-exits] :role :reads
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"}
+ :kind :standing :note "MAP-2B-EXITS: the method reads (:wants secondary); secondary is the lifecycle-exits return but the checker does not infer that alias."}
+{:finding :occurrence-without-declaration :field :coverage
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: existing primary-want bookkeeping inside the newly nameable defmethod, not a lifecycle-definition wire."}
+{:finding :occurrence-without-declaration :field :criteria
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: aggregate return key around the scoped secondary-want courier."}
+{:finding :occurrence-without-declaration :field :criteria
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: existing primary/source record field exposed by naming the defmethod."}
+{:finding :occurrence-without-declaration :field :criteria
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: local aggregate access around the scoped role courier."}
+{:finding :occurrence-without-declaration :field :kind
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: criterion kind is not a lifecycle wiring field."}
+{:finding :occurrence-without-declaration :field :kind
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "definition-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: criterion/refusal kind is not the scoped phase courier."}
+{:finding :occurrence-without-declaration :field :kind
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: source and refusal kinds are not lifecycle wiring fields."}
+{:finding :occurrence-without-declaration :field :locators
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: existing merged output exposed by naming the defmethod; this packet maps secondary wants."}
+{:finding :occurrence-without-declaration :field :universe
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: existing merged output exposed by naming the defmethod; this packet maps secondary wants."}
+{:finding :occurrence-without-declaration :field :universe
+ :site {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: lifecycle observation output is adjacent to, but distinct from, the secondary-wants wire mapped here."}
+{:finding :occurrence-without-declaration :field :wants
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: unscoped aggregate output; the lifecycle input is separately scoped to its return record."}
+{:finding :occurrence-without-declaration :field [:wants :sources]
+ :site {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits"} :declared-by []
+ :kind :standing :note "MAP-2B-EXITS: primary source wants are an existing carrier, separate from the lifecycle secondary-wants courier."}
 ]}

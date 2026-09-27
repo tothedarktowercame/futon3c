@@ -22,8 +22,9 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "b9640e01cfb7a6aed2d5bf9079bd9dd12a459ea59e1b8ce806dfee35a35dd1a9")
-(def repos {"futon2" "2d3987ceb2c61ad25af60bd3620c3ea1023bcd97" "futon3c" "58f1a8cb"})
+(def map-sha256 "07a2338d2a02e05e5027f25fc8c7604b5232152633ccd0a00743ba38ab692126")
+(def repos {"futon2" "4cc4378a8ca7fe6813b343338ded9768c0de3ab4"
+            "futon3c" "ebe40c9127cd7129d49f4cc0e307b6750ea2b8e6"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -156,6 +157,9 @@
     "futon2/src/futon2/aif/enactment_fold_source.clj"
     "futon2/src/futon2/aif/flight_driver.clj"
     "futon2/src/futon2/aif/grain_gate.clj"
+    ;; MAP-2B-EXITS: lifecycle secondary wants landed after the registered
+    ;; mission-reading closure and are pinned independently by this map.
+    "futon2/src/futon2/aif/lifecycle_exits.clj"
     ;; H-T-CALLER-I: the outer cascade's select and the loop entry's plan
     ;; mode, written after that closure was registered
     "futon2/src/futon2/aif/outer_cascade.clj"

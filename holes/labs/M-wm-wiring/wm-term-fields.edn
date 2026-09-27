@@ -73,4 +73,10 @@
  "Read by codex-1 at futon2 46191890f79ff8c69cd0a6e2efc5e105aab0e763: scripts/futon2/report/war_machine.clj:6808 -> src/futon2/aif/efe.clj:1432-1459 -> :1117 (cascade-decision-admitted -> rank-actions -> rank-cascade-actions)",
  :identity
  "R1 token belief, not entity/status mu. Initialization may be observed re-initialization; the final receipt may instead contain the verified temporal posterior. Carry credit does not assert equality across an authorized override."}
+{:edge [:R2 :R3]
+ :term :W-how
+ :field [:wants {:record :lifecycle-exits}]
+ :grain :field
+ :provenance "codex-1, MAP-2B-EXITS: lifecycle_exits.clj:13-24 reads the eight phase exits; :35-47 marks supplied criteria :role :how; :144-176 returns their admitted wants; flight.clj:52-120 merges those wants and retains [:source :lifecycle-exits]."
+ :identity "Secondary wants are the lifecycle definition's phase exits (the how), not the mission-authored outcome wants (the why)."}
 ]
