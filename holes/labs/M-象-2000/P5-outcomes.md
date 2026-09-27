@@ -57,3 +57,28 @@ criterion job fails, wake fires, no fulfilled record; after release deletes the
 cache, the retained-history sweep emits only lapsed. Other tests cover successful
 job evidence, prose, absent jobs, followups, late success, fresh backend instances
 without local state, and P2b/P17 compatibility with the new records.
+
+## Live receipt (2026-09-27)
+
+Reloaded additively from canonical master. A temporary local peripheral invoked
+`sha256sum` on the evaluator source through the real `/api/alpha/invoke` route:
+job `invoke-1790539177774-25638-6b49179b`, terminal ledger state `done`, finished
+`2026-09-27T20:00:16.029037999Z`. Its HTTP result was consumed and its delivery
+receipt recorded; the probe peripheral was deregistered afterward.
+
+Park `park-28f489cc-7a0f-436b-8d6f-1eaf0ef545d8` had that job as both dependency
+and criterion, beneficiary Joe, next-day P1 deadline, zero resume budget.
+GET :7073 evidence for session `p5-live-codex4-20260927` returned exactly one
+`promise/fulfilled`: `promise-outcome:23177258-7e68-37df-9e09-e313dc449480`.
+Its job observation records `done`, the finish timestamp and criterion job id;
+its origin is harness/promise-outcome. The original transition chain contains
+park-made, dependency-terminated, budget-exhausted. Thus fulfilment does not
+require (and is not manufactured by) a wake. GET /parked confirms no residual park.
+Repeated evaluation increments existing rather than written (observed written=1,
+existing=3). Raw receipt: `/tmp/p5-live-evidence.json`.
+
+The timer also encounters legacy pre-repair promises carrying criterion metadata.
+It refuses them with `Incomplete pre-repair promise`, increments the visible
+failure count, and emits no inferred outcome for them. Journal inspection confirms
+these refusals account for the observed sweep failures; the successful probe is
+format 3. Repairing those historical gaps remains outside this packet.
