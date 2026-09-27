@@ -12,7 +12,8 @@
   bare-:kind exception carrying :failure-kind, the reader's var reads that
   very exception, and one hermetic tick whose judge throws the same
   exception closes with the kind as its recorded [:data :failure-kind]."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-failure-products-15c :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.full-loop-runner :as runner]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-r9-support :as sup]))
@@ -44,7 +45,9 @@
 (defn check [] (observe :substrate-mission-registry-empty))
 
 (def wire
-  {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/typed-precedence-is-preserved
+                  :kind :record :product [:classification] :intervention :before-reader}
+   :wire [:r9-phase-kind :r9-failure-classifier :failure-kind]
    :kind :witnessed-hermetically
    :test `the-phase-kind-reaches-the-failure-classifier
    :check check
@@ -80,3 +83,11 @@
   (let [r (w/read-record (:path live-record))]
     (is (= {:kind :substrate-unreachable} (:failure-data r)))
     (is (= :untyped-failure (:failure-kind r)))))
+
+(deftest typed-precedence-is-preserved
+  (let [rows (products/precedence :failure-kind)]
+    (prn :wire-2l-15c :failure-kind :classification rows)
+    (is (= [{:explicit :invalid-temperature :classified :invalid-temperature}
+            {:explicit :invalid-temperature :classified :invalid-temperature}
+            {:explicit nil :classified :transport-unavailable}
+            {:explicit :outer-kind :classified :outer-kind}] rows))))

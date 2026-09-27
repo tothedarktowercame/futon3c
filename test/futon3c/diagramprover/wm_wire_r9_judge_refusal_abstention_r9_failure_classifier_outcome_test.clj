@@ -14,7 +14,8 @@
   recorded [:data :failure-kind], which is explicit-failure-kind's read of
   :outcome (failure-kind-from consults it first), off one hermetic tick
   whose judge throws a typed refusal."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-failure-products-15c :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.full-loop-runner :as runner]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-r9-support :as sup]))
@@ -50,7 +51,9 @@
 (defn check [] (observe :live-c-stale))
 
 (def wire
-  {:wire [:r9-judge-refusal-abstention :r9-failure-classifier :outcome]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/typed-precedence-is-preserved
+                  :kind :record :product [:classification] :intervention :before-reader}
+   :wire [:r9-judge-refusal-abstention :r9-failure-classifier :outcome]
    :kind :witnessed-hermetically
    :test `the-abstentions-outcome-reaches-the-failure-classifier
    :check check
@@ -83,3 +86,11 @@
       (is (= {:status :absent :reason :no-selection-decision-recorded}
              (get-in r [:decision :abstention]))
           "pre-fix: no abstention, so no :outcome :abstained for the classifier to read"))))
+
+(deftest typed-precedence-is-preserved
+  (let [rows (products/precedence :outcome)]
+    (prn :wire-2l-15c :outcome :classification rows)
+    (is (= [{:explicit :abstained :classified :abstained}
+            {:explicit :abstained :classified :abstained}
+            {:explicit nil :classified :transport-unavailable}
+            {:explicit :outer-kind :classified :outer-kind}] rows))))

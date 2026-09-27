@@ -12,7 +12,8 @@
   :failure-cause run-opportunity-core! put on the finding it handed the
   store; the reader's value is finding-failure-cause of the record the
   real repair/record-system-failure! durably wrote of that finding."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-failure-products-15c :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.full-loop-runner :as runner]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-r9-support :as sup]))
@@ -38,7 +39,9 @@
 (defn check [] (observe "beneath"))
 
 (def wire
-  {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/changed-cause-is-preserved
+                  :kind :record :product [:read] :intervention :before-reader}
+   :wire [:r9-close-cause :r9-finding-cause-read :failure-cause]
    :kind :witnessed-hermetically
    :test `the-close-cause-reaches-finding-failure-cause
    :check check
@@ -71,3 +74,13 @@
   (let [r (w/read-record (:path live-record))]
     (is (not (contains? r :failure-cause)))
     (is (= {:absent :cause-not-on-record} (runner/finding-failure-cause r)))))
+
+(deftest changed-cause-is-preserved
+  (let [{:keys [values inputs stored read missing classification]} (products/store-products)]
+    (prn :wire-2l-15c :read :before (first values) :after (second values)
+         :classification classification :missing missing)
+    (is (not= (first values) (second values)))
+    (is (= values (mapv :failure-cause stored) read))
+    (is (= (dissoc (first inputs) :failure-cause) (dissoc (second inputs) :failure-cause)))
+    (is (= (first classification) (second classification)))
+    (is (= {:absent :cause-not-on-record} missing))))
