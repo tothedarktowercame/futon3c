@@ -18,7 +18,8 @@
   WITNESSED-HERMETICALLY: a real select's :draw-seed is handed with its
   :chosen-target to a real resolve-target, whose :draw-seed is the reader's
   value under the field."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-entry-products-10a :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.flight-driver :as driver]
             [futon2.aif.outer-cascade :as oc]
             [futon3c.diagramprover.wm-wire :as w]))
@@ -66,6 +67,9 @@
   {:wire [:r1-outer-cascade :flight-entry :draw-seed]
    :kind :witnessed-hermetically
    :test `the-draw-seed-reaches-the-flight-entry
+   :second-layer {:test `entry-stores-provenance-without-changing-flight-wants
+                  :kind :record :product [:products]
+                  :intervention :before-reader}
    :check check
    :live-records-read live-records-read})
 
@@ -98,3 +102,16 @@
       (is (not-any? #(and (map? %) (contains? % :draw-seed))
                     (tree-seq coll? seq r))
           (str path " carries no :draw-seed")))))
+
+(deftest entry-stores-provenance-without-changing-flight-wants
+  (doseq [mission products/missions]
+    (let [r (products/products mission :draw-seed)]
+      (is (= (:written r) (:products r)))
+      (is (apply not= (:products r)))
+      (is (apply = (:flights r)))
+      (is (apply = (:wants r)) "Real click-wants is unchanged, not just the placement.")
+      (is (seq (get-in r [:wants 0 :wants])))
+      (is (= [(:target mission) (:target mission)] (:target r)))
+      (is (= [(:path mission) (:path mission)] (:path r)))
+      (println :draw-seed (:target mission) :products (:products r)
+               :wants (get-in r [:wants 0 :wants])))))
