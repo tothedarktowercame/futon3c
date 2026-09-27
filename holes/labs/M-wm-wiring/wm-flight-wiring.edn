@@ -382,7 +382,7 @@
    ;; WM-NODE-R13-I: also stamps the family's horizon on each problem,
    ;; :horizon-steps horizon in base-problem (horizon is assemble's
    ;; (:horizon-steps sources), passed positionally)
-   :writes [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]
+   :writes [:cascade-spec [:want {:record :cascade-spec}] [:want {:record :cascade-problem}]
             [:horizon-steps {:record :cascade-problem}]
             ;; WM-NODE-R14-I: and each problem's beta (:beta beta in
             ;; base-problem, beta from the sources' context rates)
@@ -547,6 +547,10 @@
    ;; name ((assoc base-problem :precedences ...) under :cascade-problem in
    ;; the returned map), which :returns-record does not attribute: the next
    ;; prover limit, a let-bound literal returned by name. Not declared
+   ;; MAP-2B-P3: the whole :cascade-spec carries want, schedule, lam and mu.
+   ;; assemble-one writes the literal (cascade_problems.clj:168); this scorer
+   ;; reads (:cascade-spec opts) at efe.clj:1116, before building C_tau locally.
+   ;; Declaring the carrier does not certify the generated distribution.
    :record-aliases {:cascade-spec ["spec-in"]}
    ;; WM-HANDOFF-H6-I (the rates island): reads the sourced rates the
    ;; cascade lane passes it as :adjudication-rates (the scorer that
@@ -559,7 +563,7 @@
    ;; path, both unboxed; select-action-cascades re-emits the chosen one)
       ;; WM-NODE-R5-I: reads G as {:keys [g certificate]} off
    ;; horizon-g-sparse-cert's return; not declared (see :r5-g-sparse-cert)
-   :reads [:adjudication-rates [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
+   :reads [:adjudication-rates :cascade-spec [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
   ;; WM-NODE-R5-I (WM-SUPERSET-D section 8): G on the cascade path.
   ;; rank-cascade-actions (:r4-kernel, R5's registry var) calls
   ;; cascade-model-manifest/horizon-g-sparse-cert with a map literal
@@ -5011,4 +5015,16 @@
   :kind :standing,
   :note
   "WIRE-23-C1: The sourced alias attributes this occurrence to the sourced-rates record; its existing unscoped declaration has not been broadened in this packet."}
+ {:finding :occurrence-without-declaration :field :cascade-spec
+  :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"} :declared-by [] :kind :standing
+  :note "MAP-2B-P3: this existing caller/test also mentions the spec carrier. This packet declares only assemble-one to rank-cascade-actions; no additional writer/reader is claimed at this site."}
+ {:finding :occurrence-without-declaration :field :cascade-spec
+  :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"} :declared-by [] :kind :standing
+  :note "MAP-2B-P3: this existing caller/test also mentions the spec carrier. This packet declares only assemble-one to rank-cascade-actions; no additional writer/reader is claimed at this site."}
+ {:finding :occurrence-without-declaration :field :cascade-spec
+  :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"} :declared-by [] :kind :standing
+  :note "MAP-2B-P3: this existing caller/test also mentions the spec carrier. This packet declares only assemble-one to rank-cascade-actions; no additional writer/reader is claimed at this site."}
+ {:finding :occurrence-without-declaration :field :cascade-spec
+  :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-lane"} :declared-by [] :kind :standing
+  :note "MAP-2B-P3: this existing caller/test also mentions the spec carrier. This packet declares only assemble-one to rank-cascade-actions; no additional writer/reader is claimed at this site."}
 ]}

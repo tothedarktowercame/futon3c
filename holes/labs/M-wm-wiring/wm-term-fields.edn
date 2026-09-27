@@ -33,4 +33,7 @@
   :provenance "codex-1: war_machine.clj judge writes final :belief; trace.clj:445 persists it as :mu-post; war_machine.clj:7222 reads the predecessor's :mu-post into reconcile-belief-carry."
   :identity "s-next is the updated entity belief persisted as mu-post and carried into the next tick."}
  {:edge [:R7 :R4] :term :rates :field :adjudication-rates :grain :field
-  :provenance "codex-1: efe.clj:1171 rank-cascade-actions reads :adjudication-rates; :1221 passes those rates into cascade-model-manifest/horizon-g-sparse-cert."}]
+  :provenance "codex-1: efe.clj:1171 rank-cascade-actions reads :adjudication-rates; :1221 passes those rates into cascade-model-manifest/horizon-g-sparse-cert."}
+ {:edge [:CTAU-TOKEN :R5] :term :C-tau :field :cascade-spec :grain :record
+  :provenance "codex-2, MAP-2B-P3: futon2 cascade_problems.clj:168-171 assemble-one writes the cascade-spec literal with want, c-schedule, lam, mu; efe.clj:1116-1150 rank-cascade-actions reads cascade-spec into spec-in, copies its preference inputs, and :1221-1230 passes the assembled spec to horizon-g-sparse-cert. Sites read at futon2 94c6d9158."
+  :identity "Record-grain correspondence: inputs for the step-indexed preference, constructed inside the scorer. The want field alone is not C_tau, and the carrier is not an already evaluated preference distribution."}]
