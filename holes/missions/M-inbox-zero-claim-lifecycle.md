@@ -447,3 +447,61 @@ absent at 18:38Z and present by 18:54Z. These are observation bounds, not the
 exact ingestion timestamp. During the delay, promotion still saw stale active
 authority; the general repair must account for this lag. No restart, reload,
 forced watcher cycle or competing snapshot writer was needed for closure.
+
+### Checkpoint 2026-09-27 19:05Z — D2 review; S0 evidence spike dispatched
+
+D2 **8fedc4cc** provides a substantive revision and
+[grounded wiring declarations](../labs/M-inbox-zero-claim-lifecycle/wiring-d2.edn).
+[Current candidate](../labs/M-inbox-zero-claim-lifecycle/D2-derive.md)
+is **not accepted** as an implementable contract. DERIVE remains pending;
+ARGUE/VERIFY phase exits have not been claimed. C6 remains complete.
+
+Improvements retained for the next design: distinguish prospective promotion
+permission from historical receipt attribution; target releases at claim IDs;
+stop resetting foreign staged content; survey actual repository hooks; use the
+existing wiring checker and report unimplemented conformance findings. These
+are useful directions, not proof of the revised end-to-end contract.
+
+Owner ran two further real-Git checks in a disposable repository under
+`timeout 25`, with automatic cleanup and no shared checkout mutation:
+
+1. **Normal positive path fails:** baseline/shared index X, authorized
+   worktree H, no foreign writer. D2's private-index commit + ref CAS gives
+   HEAD=H, index=X, worktree=H, `git status --porcelain` = `MM f`. The cached
+   diff reverses H to X. D2 §9's claim that this finishes clean is false.
+   The unchanged index entry is not another seat's dirt; it is the executor's
+   incomplete index/ref transition. Leaving it can revert the promotion in a
+   later commit. C4 must cover ordinary index state as well as HEAD contents.
+2. **Consumption is not monotone under a ref rewrite:** after A's trailer
+   commit H, omit receipt publication and reset HEAD to mint HEAD using
+   `update-ref`. H remains in the worktree, but `mint-head..HEAD` has no
+   reachable trailer. D2's trailer scan cannot establish prior consumption.
+   Safe crash/retry behavior needs a durable protocol independent of this
+   reachability assumption, or a justified structural ownership constraint.
+
+Other remaining obligations: pre-commit hooks may mutate the private index,
+so checked-before-hook is not checked-before-commit. Two filter invocations
+can produce different object IDs even with immutable raw input; compare the
+actual persisted object. CLI-owned hooks order one CLI's tool, not arbitrary
+other writers; observed mode differences do not prove the tool authorized a
+chmod. Filter-normalized baselines and path-alias races need explicit treatment.
+These are requirements to verify, not permission to weaken the criteria.
+
+Dispatched **S0**, job **invoke-1790535890716-25607-a6653719**, to kimi-9:
+a bounded executable real-Git evidence packet feeding DERIVE, not another
+prose-only sufficiency argument. Authorized artifacts: disposable-repo script,
+report, optional D2 review banner. No production/runtime/state changes.
+
+S0 must reproduce the known defects, then test a minimal transaction candidate
+for clean ordinary success, foreign same/other-path staged-state preservation,
+Git-compatible locking and durable prepare/commit/recovery crash cutpoints.
+It also tests mutating/refusing hooks and a deterministic stateful clean filter.
+Capture prerequisites remain explicit; no live CLI configuration change or
+billable model invocation is part of this packet. A structural blocker is an
+acceptable evidence result; routing around one is not.
+
+Owner will review S0 and update the contract before advancing DERIVE. This
+spike is targeted risk reduction inside an unresolved design, not a claim that
+the mission has skipped ARGUE or completed VERIFY. Helper returns actual
+commands, assertions, transcripts and go/no-go judgments; owner independently
+checks the decisive cases. Continuation uses a park on the real S0 job ID.
