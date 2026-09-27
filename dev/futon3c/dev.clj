@@ -3638,7 +3638,10 @@ RESPOND WITH ONLY:
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
               ;; Launch process with ProcessBuilder
               pb (let [pb* (doto (ProcessBuilder. ^java.util.List (vec args))
-                            (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))]
+                            (.redirectInput (java.lang.ProcessBuilder$Redirect/from
+                                              (java.io.File.
+                                                (if (.contains (.toLowerCase (System/getProperty "os.name")) "win")
+                                                  "NUL" "/dev/null")))))]
                       (when-let [d (cwd/resolve-cwd cwd)] (.directory pb* (java.io.File. d)))
                       pb*)
               proc (.start pb)

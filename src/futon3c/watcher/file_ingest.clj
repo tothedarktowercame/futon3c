@@ -488,12 +488,26 @@
 
 ;; ---------- collect-file dispatch ----------
 
+(def ^:private base-excluded-dir-re
+  "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
+
+(defn- extra-excluded-dir-alternation
+  "Installation-scoped extra dir exclusions from FUTON3C_WATCH_EXCLUDE_DIRS (comma-separated dir
+   NAMES, e.g. \"data,home\"), OR'd into the base regex. Unset = base only. Do NOT bake /home/ or
+   /data/ into the base: Joe's futon checkouts live under /home/joe/code and would be wholly
+   excluded — this is why the extra exclusions are env-scoped to an installation (mfuton) only."
+  []
+  (when-let [dirs (some-> (System/getenv "FUTON3C_WATCH_EXCLUDE_DIRS") clojure.string/trim not-empty)]
+    (let [names (->> (clojure.string/split dirs #",") (map clojure.string/trim) (remove clojure.string/blank?))]
+      (when (seq names)
+        (str "|/(" (clojure.string/join "|" (map #(java.util.regex.Pattern/quote %) names)) ")/")))))
+
 (def ^:private excluded-dir-re
   ;; Must stay in sync with futon3c.watcher.multi's exclusion regex —
   ;; collect-repo* walking dirs the watcher excludes is how a single
   ;; futon3a .clj ingest swept 10,734 .venv .py files into serial
   ;; python_ast_helper subprocesses (watcher wedged 2026-06-10).
-  #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
+  (re-pattern (str base-excluded-dir-re (extra-excluded-dir-alternation))))
 
 (defn collect-file [path]
   (when-not (re-find excluded-dir-re (str path))

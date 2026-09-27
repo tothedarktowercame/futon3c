@@ -31,7 +31,8 @@
             [clojure.java.shell :refer [sh]]
             [babashka.http-client :as http]
             [cheshire.core :as json]
-            [futon3c.agency.registry :as registry]))
+            [futon3c.agency.registry :as registry]
+            [futon3c.watcher.write-pace :as write-pace]))
 
 (def FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
                  (System/getenv "FUTON1A_URL") "http://localhost:7071"))
@@ -66,6 +67,7 @@
                   (seq labels) (assoc "hx/labels" labels)
                   props (assoc "hx/props" props)
                   *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*))
+        _ (write-pace/pace!)
         resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
@@ -131,8 +133,9 @@
    Field separator: U+001F (Unit Separator). Record separator: U+001E
    (Record Separator). Both are guaranteed not to appear in commit
    content."
-  ([repo] (list-commits repo nil))
-  ([repo since-sha]
+  ([repo] (list-commits repo nil nil))
+  ([repo since-sha] (list-commits repo since-sha nil))
+  ([repo since-sha subtree]
    (let [field-sep ""
          record-sep ""
          range-spec (when (and since-sha (not (str/blank? since-sha)))
@@ -140,7 +143,8 @@
          git-args (cond-> ["log" "--reverse" "--no-merges"
                            (str "--format=%H" field-sep "%ae" field-sep
                                 "%an" field-sep "%at" field-sep "%B" record-sep)]
-                    range-spec (conj range-spec))
+                    range-spec (conj range-spec)
+                    (and subtree (seq subtree)) (conj "--" subtree))
          text (apply run-git repo git-args)]
      (->> (str/split text (re-pattern record-sep))
           (map str/trim)
@@ -158,15 +162,26 @@
                      :mission (parse-mission-trailer body)})))))))
 
 (defn files-changed
-  "Names of files added/modified in this commit (no deletions)."
-  [repo sha]
-  (let [text (run-git repo "show" "--name-status" "--format=" sha)]
-    (->> (str/split-lines text)
-         (remove str/blank?)
-         (keep (fn [line]
-                 (let [[status path] (str/split line #"\s+" 2)]
-                   (when (and path (#{"A" "M"} status))
-                     (str/trim path))))))))
+  "Names of files added/modified in this commit (no deletions). With SUBTREE,
+   scope `git show` to that pathspec and strip the `<subtree>/` prefix so the
+   returned paths are subtree-relative — matching the file cold-scan of the
+   installation content dir, for a repo whose watched content is a subdirectory
+   of the git root (mfuton under gh)."
+  ([repo sha] (files-changed repo sha nil))
+  ([repo sha subtree]
+   (let [args (cond-> ["show" "--name-status" "--format=" sha]
+                (and subtree (seq subtree)) (conj "--" subtree))
+         text (apply run-git repo args)
+         prefix (when (and subtree (seq subtree)) (str subtree "/"))]
+     (->> (str/split-lines text)
+          (remove str/blank?)
+          (keep (fn [line]
+                  (let [[status path] (str/split line #"\s+" 2)]
+                    (when (and path (#{"A" "M"} status))
+                      (let [p (str/trim path)]
+                        (if (and prefix (str/starts-with? p prefix))
+                          (subs p (count prefix))
+                          p))))))))))
 
 (defn current-head-sha
   "Return the current HEAD commit SHA for REPO."
@@ -452,9 +467,9 @@
    a map (backfill) or a function (live mode). Var qnames get per-repo
    prefixed via `(str repo-label \"/\" qname)` to match phase-1 vertex
    ID convention."
-  [labels base-props repo-label commit file->vars repo-root]
+  [labels base-props repo-label commit file->vars git-root subtree]
   (let [pf (fn [q] (str repo-label "/" q))
-        files (files-changed repo-root (:sha commit))]
+        files (files-changed git-root (:sha commit) subtree)]
     (vec
      (for [path files
            :let [vs (file->vars path)]
@@ -485,9 +500,9 @@
    cross-file symbol resolution to share ids; versioning them is the
    historical-replay slice (D3 slice 2). A var vertex is single-endpoint,
    so it time-travels cleanly here with zero id-convention risk."
-  [labels base-props repo-label commit file->structure repo-root]
+  [labels base-props repo-label commit file->structure git-root subtree]
   (let [pf (fn [q] (str repo-label "/" q))
-        files (files-changed repo-root (:sha commit))]
+        files (files-changed git-root (:sha commit) subtree)]
     (vec
      (for [path files
            :let [{:keys [vars]} (when file->structure (file->structure path))]
@@ -523,8 +538,9 @@
 
    Returns: {:n-ingested <int> :latest-sha <string-or-nil> :n-failed <int>
              :n-blocks <int> :n-mana-credited <int>}"
-  [{:keys [commits repo-root repo-label file->structure prev-sha verbose?]}]
-  (let [labels ["v05" "phase-3" repo-label]
+  [{:keys [commits repo-root git-root subtree repo-label file->structure prev-sha verbose?]}]
+  (let [git-root (or git-root repo-root)
+        labels ["v05" "phase-3" repo-label]
         base-props {"repo" repo-label "phase" 3}
         ;; :edits resolves a changed file's vars from the parsed structure.
         file->vars (fn [path]
@@ -565,7 +581,7 @@
       (doseq [c commits]
         (binding [*valid-time-ms* (commit-vt-ms c)]
           (doseq [r (ingest-edits-for-commit! labels base-props repo-label
-                                              c file->vars repo-root)]
+                                              c file->vars git-root subtree)]
             (check! r))))
 
       (when verbose?
@@ -573,7 +589,7 @@
       (doseq [c commits]
         (binding [*valid-time-ms* (commit-vt-ms c)]
           (doseq [r (ingest-structure-for-commit! labels base-props repo-label
-                                                   c file->structure repo-root)]
+                                                   c file->structure git-root subtree)]
             (check! r))))
 
       (when (commit-mission-edges-enabled?)
@@ -602,11 +618,14 @@
   "Backfill mode. Walks ALL commits in the repo. Idempotent.
    Args map: {:repo-root :repo-label :file->structure}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
-  [{:keys [repo-root repo-label file->structure]}]
-  (let [commits (list-commits repo-root nil)
+  [{:keys [repo-root repo-label file->structure git-root subtree]}]
+  (let [git-root (or git-root repo-root)
+        commits (list-commits git-root nil subtree)
         result (ingest-commits-batch!
                 {:commits commits
                  :repo-root repo-root
+                 :git-root git-root
+                 :subtree subtree
                  :repo-label repo-label
                  :file->structure file->structure
                  :prev-sha nil
@@ -622,13 +641,16 @@
 
    Args map: {:repo-root :repo-label :file->structure}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
-  [{:keys [repo-root repo-label file->structure]}]
-  (let [since-sha (last-indexed-commit-sha repo-label)
-        commits (list-commits repo-root since-sha)
-        head-sha (current-head-sha repo-root)
+  [{:keys [repo-root repo-label file->structure git-root subtree]}]
+  (let [git-root (or git-root repo-root)
+        since-sha (last-indexed-commit-sha repo-label)
+        commits (list-commits git-root since-sha subtree)
+        head-sha (current-head-sha git-root)
         result (ingest-commits-batch!
                 {:commits commits
                  :repo-root repo-root
+                 :git-root git-root
+                 :subtree subtree
                  :repo-label repo-label
                  :file->structure file->structure
                  :prev-sha since-sha

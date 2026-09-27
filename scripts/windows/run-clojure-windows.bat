@@ -82,6 +82,23 @@ if defined CLJ_JVM_OPTS (
 ) else (
   set "CLJ_JVM_OPTS=-Djava.io.tmpdir=%LOCAL_TMP%"
 )
+rem --- application-JVM max heap -------------------------------------------
+rem Without an explicit -Xmx the JVM takes its default maximum of 1/4 of
+rem physical RAM (16 GiB on a 64 GiB host).  The long-lived dev-stack JVM
+rem reached a 17.7 GiB working set on 2026-09-16 and was the largest single
+rem load behind an unrecoverable host hang: physical-memory thrash with no
+rem bugcheck, services missing 60-second SCM deadlines, mouse and
+rem Ctrl+Alt+Del dead.  CLJ_JVM_OPTS above cannot carry the cap - the
+rem Clojure CLI passes it only to the short-lived classpath-building JVM.
+rem -J reaches the application JVM and ClojureTools appends it after any
+rem alias :jvm-opts, so it is authoritative and an alias cannot raise it.
+rem Set RUN_CLOJURE_MAX_HEAP (e.g. 10g) to retune, or "none" to opt out.
+if not defined RUN_CLOJURE_MAX_HEAP set "RUN_CLOJURE_MAX_HEAP=6g"
+if /I "%RUN_CLOJURE_MAX_HEAP%"=="none" (
+  set "RUN_CLOJURE_HEAP_OPT="
+) else (
+  set "RUN_CLOJURE_HEAP_OPT=-J-Xmx%RUN_CLOJURE_MAX_HEAP%"
+)
 
 set "LOCAL_M2_EDN=%LOCAL_M2:\=/%"
 if not defined RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH set "RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH=0"
@@ -143,7 +160,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-call "%CLOJURE_BAT%" %*
+call "%CLOJURE_BAT%" %RUN_CLOJURE_HEAP_OPT% %*
 set "RC=%ERRORLEVEL%"
 popd >nul 2>nul
 exit /b %RC%

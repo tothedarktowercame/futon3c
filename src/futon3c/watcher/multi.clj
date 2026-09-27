@@ -31,6 +31,7 @@
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest]
             [futon3c.watcher.freshness :as freshness]
+            [futon3c.watcher.roots :as roots]
             [futon3.inbox-zero.watcher :as inbox-zero])
   (:import [java.time Instant]
            [java.nio.channels FileChannel OverlappingFileLockException]
@@ -46,7 +47,16 @@
 
 (def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "multiarg" "md"})
 (def NOISE-PATTERN
-  #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
+  ;; In sync with futon3c.watcher.file-ingest/excluded-dir-re, including the installation-scoped
+  ;; FUTON3C_WATCH_EXCLUDE_DIRS extra (mfuton sets data,home so the watcher skips runtime data +
+  ;; evolver scratch incl its own logs). Do NOT bake /home/ or /data/ into the base list — Joe's
+  ;; futon checkouts live under /home/joe/code and would be wholly excluded.
+  (re-pattern
+   (str "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/"
+        (when-let [dirs (some-> (System/getenv "FUTON3C_WATCH_EXCLUDE_DIRS") str/trim not-empty)]
+          (let [names (->> (str/split dirs #",") (map str/trim) (remove str/blank?))]
+            (when (seq names)
+              (str "|/(" (str/join "|" (map #(java.util.regex.Pattern/quote %) names)) ")/")))))))
 
 (def VERTEX-TYPES ["code/v05/namespace" "code/v05/var" "code/v05/test"])
 (def RENAMED-LINK-TYPE "edge/renamed-to")
@@ -1383,13 +1393,16 @@
     ;; shape {:ns :vars}), not just var qnames — commit-ingest derives :edits
     ;; var-resolution from it AND emits var vertices at the commit's valid-time
     ;; for db-as-of time-travel. One parse per changed file.
-    (let [file->structure (fn [rel-path]
+    (let [{:keys [git-root subtree]} (roots/git-scope-for root)
+          file->structure (fn [rel-path]
                             (let [abs (str root "/" rel-path)]
                               (when (.exists (io/file abs))
                                 (try (file-ingest/collect-file abs)
                                      (catch Throwable _ nil)))))
           report (commit-ingest/ingest-new-commits!
                   {:repo-root root
+                   :git-root git-root
+                   :subtree subtree
                    :repo-label label
                    :file->structure file->structure})]
       (when (pos? (:n-ingested report))

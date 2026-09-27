@@ -49,5 +49,5 @@ rem (2g/768m); adjust for this machine — it is this host's own file, so the
 rem Linode's tighter 3.8G numbers can never overwrite them on pull.
 if not defined FUTON3C_HEAP set "FUTON3C_HEAP=2g"
 if not defined FUTON3C_DIRECT set "FUTON3C_DIRECT=768m"
-call "%~dp0run-clojure-windows.bat" -J-Xmx%FUTON3C_HEAP% -J-XX:MaxDirectMemorySize=%FUTON3C_DIRECT% -M:dev-serve %*
+call "%~dp0run-clojure-windows.bat" '-J-Xmx%FUTON3C_HEAP%' '-J-XX:MaxDirectMemorySize=%FUTON3C_DIRECT%' -M:dev-serve %*
 exit /b %ERRORLEVEL%

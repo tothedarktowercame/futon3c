@@ -18,6 +18,33 @@
       (is (str/includes? @seen-url "repo=demo"))
       (is (str/includes? @seen-url "latest=true&limit=1")))))
 
+(deftest files-changed-scopes-and-strips-subtree
+  (testing "with a subtree, git show is pathspec-scoped and the subtree/ prefix is stripped"
+    (let [seen (atom nil)]
+      (with-redefs [sut/run-git (fn [repo & args]
+                                  (reset! seen {:repo repo :args (vec args)})
+                                  "M\tmfuton/src/a.clj\nA\tmfuton/src/b.clj\n")]
+        (is (= ["src/a.clj" "src/b.clj"] (sut/files-changed "/gh" "sha1" "mfuton")))
+        (is (= "/gh" (:repo @seen)))
+        (is (= ["show" "--name-status" "--format=" "sha1" "--" "mfuton"] (:args @seen))))))
+  (testing "without a subtree, paths are verbatim and no pathspec is added"
+    (let [seen (atom nil)]
+      (with-redefs [sut/run-git (fn [_repo & args]
+                                  (reset! seen (vec args))
+                                  "M\tsrc/a.clj\n")]
+        (is (= ["src/a.clj"] (sut/files-changed "/repo" "sha1")))
+        (is (= ["show" "--name-status" "--format=" "sha1"] @seen))))))
+
+(deftest list-commits-scopes-subtree-pathspec
+  (testing "list-commits appends -- <subtree> so only subtree-touching commits are walked"
+    (let [seen (atom nil)]
+      (with-redefs [sut/run-git (fn [_repo & args] (reset! seen (vec args)) "")]
+        (sut/list-commits "/gh" nil "mfuton")
+        (is (= ["--" "mfuton"] (take-last 2 @seen))))
+      (with-redefs [sut/run-git (fn [_repo & args] (reset! seen (vec args)) "")]
+        (sut/list-commits "/repo" nil)
+        (is (not= "--" (last @seen)))))))
+
 (defn- tmp-dir []
   (doto (java.io.File/createTempFile "commit-ingest-" "")
     (.delete)
@@ -47,7 +74,7 @@
   (testing "live ingestion anchors the in-memory cursor at HEAD"
     (let [recorded (atom nil)]
       (with-redefs [sut/last-indexed-commit-sha (fn [_] "old-side-tip")
-                    sut/list-commits (fn [_ since]
+                    sut/list-commits (fn [_ since & _]
                                        (is (= "old-side-tip" since))
                                        [{:sha "older-mainline"}
                                         {:sha "latest-non-merge"}])

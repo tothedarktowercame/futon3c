@@ -20,7 +20,14 @@ if not defined MFUTON_HOME (
 
 for %%I in ("%MFUTON_HOME%") do set "MFUTON_HOME=%%~fI"
 set "MFUTON_CODEX_PY=%MFUTON_HOME%\agent_skills\development\codex-python.bat"
-set "MFUTON_LAUNCHER=%MFUTON_HOME%\src\mfuton\development\futon3c_dev_stack_windows.py"
+rem MFUTON_LAUNCHER_DIR: the package directory the Python launcher now lives in.
+rem The single-file `futon3c_dev_stack_windows.py` was CST-split into the subdir
+rem package `futon3c_dev_stack_windows/` (commit 70d80dbb8, gregory, 2026-05-28,
+rem Wave 17); the file is gone, the package's auto-generated `__main__.py` is
+rem the `python -m` entry point. This wrapper now invokes the package via `-m`
+rem instead of a file path so it survives the split (and any future split that
+rem keeps the same dotted module name).
+set "MFUTON_LAUNCHER_DIR=%MFUTON_HOME%\src\mfuton\development\futon3c_dev_stack_windows"
 set "DEV_STACK_CONFIG=%MFUTON_HOME%\config\futon3c-dev-stack-windows.json"
 
 if not exist "%MFUTON_CODEX_PY%" (
@@ -28,8 +35,8 @@ if not exist "%MFUTON_CODEX_PY%" (
   exit /b 1
 )
 
-if not exist "%MFUTON_LAUNCHER%" (
-  1>&2 echo [dev-stack-windows] ERROR: missing %MFUTON_LAUNCHER%.
+if not exist "%MFUTON_LAUNCHER_DIR%\__main__.py" (
+  1>&2 echo [dev-stack-windows] ERROR: missing %MFUTON_LAUNCHER_DIR%\__main__.py.
   exit /b 1
 )
 
@@ -38,5 +45,5 @@ if not exist "%DEV_STACK_CONFIG%" (
   exit /b 1
 )
 
-call "%MFUTON_CODEX_PY%" "%MFUTON_LAUNCHER%" --futon3c-root "%REPO_ROOT%" --config "%DEV_STACK_CONFIG%" %*
+call "%MFUTON_CODEX_PY%" -m mfuton.development.futon3c_dev_stack_windows --futon3c-root "%REPO_ROOT%" --config "%DEV_STACK_CONFIG%" %*
 exit /b %ERRORLEVEL%

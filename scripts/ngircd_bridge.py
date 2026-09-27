@@ -231,6 +231,11 @@ BRIDGE_ROSTER_BOT_TYPES = {
     for item in os.environ.get("BRIDGE_ROSTER_BOT_TYPES", "claude,codex,zai").split(",")
     if item.strip()
 }
+BRIDGE_UNGATED_NICKS = {
+    nick.strip().lower()
+    for nick in os.environ.get("BRIDGE_UNGATED_NICKS", "").split(",")
+    if nick.strip()
+}
 IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
     os.environ.get("IRC_COMMAND_OWNER_AGENT_MAP", "")
 )
@@ -401,8 +406,8 @@ ARTIFACT_REF_PATTERNS = [
 ]
 
 # Ungated nicks receive ALL channel messages, not just @mentions.
-# Toggle with !ungate <nick> and !gate <nick>.
-ungated_nicks: set[str] = set()
+# Seed with BRIDGE_UNGATED_NICKS; toggle at runtime with !ungate <nick> and !gate <nick>.
+ungated_nicks: set[str] = set(BRIDGE_UNGATED_NICKS)
 
 FM_MATH_TICKLE_CONTROL_RE = re.compile(
     r"(?im)^(?:@tickle:?[ \t]+)?(?:BELL[ \t]+[A-Za-z0-9._:-]+|I['’]ll take[ \t]+[A-Za-z0-9._:-]+)\s*$"

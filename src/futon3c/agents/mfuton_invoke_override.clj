@@ -8,9 +8,26 @@
             [futon3c.dev.irc :as dev-irc]
             [futon3c.mfuton-mode :as mfuton-mode]))
 
+(defn claude-role-backend
+  "Which backend serves a Claude-role agent's invoke: :claude (the real `claude -p`
+   path) or :codex (redirect to Codex).
+
+   Decoupled from mfuton-mode ON PURPOSE so the backend can be switched back and
+   forth without also changing prompt-override or IRC-projection behavior (both of
+   which stay gated on mfuton-mode?). Explicit FUTON3C_CLAUDE_ROLE_BACKEND wins:
+   \"claude\" => :claude, \"codex\" => :codex. When unset, falls back to mfuton-mode?
+   for backward compatibility (mfuton mode historically implied the codex redirect),
+   so existing deployments are unchanged."
+  []
+  (case (some-> (config/env "FUTON3C_CLAUDE_ROLE_BACKEND") str/trim str/lower-case not-empty)
+    "claude" :claude
+    "codex"  :codex
+    (if (mfuton-mode/mfuton-mode?) :codex :claude)))
+
 (defn claude-role-codex-opts
-  "Return Codex invoke opts for a Claude-role agent when mfuton mode is active.
-   Returns nil outside mfuton mode so generic futon behavior stays unchanged."
+  "Return Codex invoke opts for a Claude-role agent when the Claude-role backend is
+   :codex (see `claude-role-backend`). Returns nil when the backend is :claude, so
+   the caller runs the real `claude -p` invoke path."
   [{:keys [agent-id
            session-file
            session-id-atom
@@ -21,7 +38,7 @@
            reasoning-effort
            timeout-ms
            cwd]}]
-  (when (mfuton-mode/mfuton-mode?)
+  (when (= :codex (claude-role-backend))
     {:codex-bin "codex"
      :profile profile
      :model model
