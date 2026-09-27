@@ -16,7 +16,8 @@
   run record it writes — which now carries :failure — is read by
   record-summary (the writer's var) and kept by record-click (the
   reader's var)."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.diagramprover.wm-wire-summary-products :as products]
+            [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-runner :as fr]
@@ -102,6 +103,9 @@
 
 (def wire
   {:wire [:flight-record-summary :flight-record-click :failure]
+   :second-layer {:test `summary-field-is-recorded-without-changing-progress
+                  :kind :record :product [:clicks 0 :failure]
+                  :intervention :before-reader}
    :kind :witnessed-hermetically
    :test `the-clicks-failure-reaches-the-click-entry
    :check check
@@ -147,3 +151,21 @@
   (doseq [path (:paths (nth live-records-read 2))]
     (is (not-any? :failure (:clicks (:flight (w/read-record path)))) path))
   (is (not-any? :failure (:clicks (:flight (w/read-record (:path (second live-records-read))))))))
+
+(deftest summary-field-is-recorded-without-changing-progress
+  ;; flight/record-click:426,429 stores the fields; :409-413 determines
+  ;; progress from wants/before/after. run!:577 delegates that decision.
+  (let [[a b] (products/products :record-click :failure)
+        ra (:record a) rb (:record b)]
+    (is (= (dissoc (:carrier a) :failure) (dissoc (:carrier b) :failure)))
+    (is (= (get-in a [:carrier :failure]) (get-in ra [:clicks 0 :failure])))
+    (is (= (get-in b [:carrier :failure]) (get-in rb [:clicks 0 :failure])))
+    (is (not= (get-in ra [:clicks 0 :failure]) (get-in rb [:clicks 0 :failure])))
+    (is (= (update ra :clicks #(mapv (fn [c] (dissoc c :failure)) %))
+           (update rb :clicks #(mapv (fn [c] (dissoc c :failure)) %))))
+    (is (= :no-progress (:status ra) (:status rb)))
+    (is (= 1 (count (:clicks ra)) (count (:clicks rb))))
+    
+    (println :summary-product :record-click :failure
+             (pr-str [(get-in ra [:clicks 0 :failure]) (get-in rb [:clicks 0 :failure])])
+             :status [(:status ra) (:status rb)])))

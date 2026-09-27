@@ -16,7 +16,8 @@
   through full-loop-runner/run-opportunity! in hermetic stores (the r9
   wire's seam), and the run record it writes is read by record-summary
   (the writer's var) and kept by record-click (the reader's var)."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.diagramprover.wm-wire-summary-products :as products]
+            [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-runner :as fr]
@@ -111,6 +112,9 @@
 
 (def wire
   {:wire [:flight-record-summary :flight-record-click :chosen]
+   :second-layer {:test `summary-field-is-recorded-without-changing-progress
+                  :kind :record :product [:clicks 0 :chosen]
+                  :intervention :before-reader}
    :kind :witnessed-hermetically
    :test `the-clicks-selection-reaches-the-click-entry
    :check check
@@ -149,3 +153,21 @@
     (is (= {:status :absent :reason :no-chosen-action}
            (get-in (w/read-record (:path eighth-run)) [:decision :chosen])))
     (is (not-any? :chosen (:clicks (:flight (w/read-record (:path eighth-flight))))))))
+
+(deftest summary-field-is-recorded-without-changing-progress
+  ;; flight/record-click:426,429 stores the fields; :409-413 determines
+  ;; progress from wants/before/after. run!:577 delegates that decision.
+  (let [[a b] (products/products :record-click :chosen)
+        ra (:record a) rb (:record b)]
+    (is (= (dissoc (:carrier a) :chosen) (dissoc (:carrier b) :chosen)))
+    (is (= (get-in a [:carrier :chosen]) (get-in ra [:clicks 0 :chosen])))
+    (is (= (get-in b [:carrier :chosen]) (get-in rb [:clicks 0 :chosen])))
+    (is (not= (get-in ra [:clicks 0 :chosen]) (get-in rb [:clicks 0 :chosen])))
+    (is (= (update ra :clicks #(mapv (fn [c] (dissoc c :chosen)) %))
+           (update rb :clicks #(mapv (fn [c] (dissoc c :chosen)) %))))
+    (is (= :no-progress (:status ra) (:status rb)))
+    (is (= 1 (count (:clicks ra)) (count (:clicks rb))))
+    
+    (println :summary-product :record-click :chosen
+             (pr-str [(get-in ra [:clicks 0 :chosen]) (get-in rb [:clicks 0 :chosen])])
+             :status [(:status ra) (:status rb)])))
