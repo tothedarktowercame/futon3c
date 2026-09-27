@@ -943,6 +943,115 @@
                                  wanted (conj seen key))))
                          (:entries source))))))))
 
+(defn- callback-source
+  "Locate the nearest binder; only literal callbacks of known collection calls
+  introduce element provenance. Captures and general parameter flow stay absent."
+  [node chain]
+  (let [sym (token-text node)]
+    (loop [i (dec (count chain))]
+      (if (neg? i)
+        {:why :callback-not-a-literal}
+        (let [form (nth chain i) h (head-text form)
+              prefix (subvec chain 0 i)
+              local (sym-sources sym node (conj [] form))]
+          (cond
+            (and (#{"let" "let*" "loop"} h) local)
+            {:why :shadowed-callback-parameter}
+
+            (#{"if-let" "when-let" "if-some" "when-some" "letfn" "for"
+               "binding" "with-open" "catch" "as->"} h)
+            {:why :callback-binding-scope-not-established}
+
+            (= "doseq" h)
+            (let [v (second (:children form)) [pat coll] (:children v)]
+              (if (and (= :vector (:kind v)) (= 2 (count (:children v)))
+                       (= sym (token-text pat)))
+                {:collection coll :chain (conj prefix form v)}
+                {:why :unsupported-doseq-binding}))
+
+            (or (= :fn (:kind form)) (#{"fn" "fn*"} h))
+            (let [params (second (:children form))
+                  anonymous? (= :fn (:kind form))
+                  position (if anonymous?
+                             (case sym ("%" "%1") 0 "%2" 1 nil)
+                             (when (= :vector (:kind params))
+                               (first (keep-indexed
+                                       #(when (= sym (token-text %2)) %1)
+                                       (:children params)))))
+                  parent (peek prefix)
+                  call (head-text parent)
+                  kids (:children parent)
+                  unary? (#{"map" "mapv" "mapcat" "filter" "filterv"
+                            "remove" "keep" "run!"} call)
+                  reduce? (= "reduce" call)
+                  expected (if reduce? 1 0)
+                  argc (if reduce? 4 3)]
+              (cond
+                (nil? position) {:why :callback-parameter-not-bound}
+                (not= form (second kids)) {:why :callback-not-a-literal}
+                (not (or unary? reduce?)) {:why :callback-call-not-supported}
+                (sym-sources call parent (pop prefix)) {:why :shadowed-collection-call}
+                (and reduce? (zero? position)) {:why :reduce-accumulator-not-an-element}
+                (not= position expected) {:why :callback-parameter-not-an-element}
+                (not= argc (count kids)) {:why :callback-collection-arity}
+                (and anonymous?
+                     (some (fn [[n _]]
+                             (let [t (token-text n)]
+                               (and t (str/starts-with? t "%")
+                                    (not (contains? (if reduce? #{"%" "%1" "%2"} #{"%" "%1"}) t)))))
+                           (walk-nodes form [])))
+                {:why :callback-parameter-arity}
+                (and (not anonymous?)
+                     (not= (count (:children params)) (if reduce? 2 1)))
+                {:why :callback-parameter-arity}
+                :else {:collection (last kids) :chain prefix}))
+
+            ;; Parameters of ordinary functions are deliberately not inferred.
+            (#{"defn" "defn-"} h) {:why :callback-not-a-literal}
+            :else (recur (dec i))))))))
+
+(defn- collection-prov
+  "Prove the collection itself, stripping only element-preserving wrappers and
+  let aliases. Transforming calls cannot borrow their input's provenance."
+  [spec node chain ctx depth]
+  (let [h (head-text node) n (count (:children node))
+        fail (fn [why] {:ok? false :real? false :self? false :why why})
+        transparent? (case h
+                       "sort-by" (#{3 4} n)
+                       "sort" (#{2 3} n)
+                       ("reverse" "distinct") (= 2 n)
+                       false)]
+    (cond
+      (> depth 8) (fail :provenance-too-deep)
+      (quoted-form? node) (fail :quoted-data)
+      (and transparent? (not (sym-sources h node chain)))
+      (collection-prov spec (last (:children node)) (conj chain node) ctx (inc depth))
+      (#{"map" "mapv" "mapcat" "keep"} h) (fail :collection-transforms-elements)
+      (= :token (:kind node))
+      (let [source (sym-sources (:text node) node chain)]
+        (cond
+          (and source (crosses-function-scope? source chain))
+          (fail :function-scope-not-established)
+          (and source (not (:loop? source))
+               (every? #(nil? (:key %)) (:entries source)))
+          (combine
+           (for [e (:entries source)]
+             (collection-prov spec (:init e)
+                              (conj (:chain source) (:form source) (:vector source))
+                              ctx (inc depth))))
+          :else (prov spec node chain ctx depth)))
+      :else (prov spec node chain ctx depth))))
+
+(defn- callback-element-prov [spec node chain ctx depth]
+  (let [{:keys [collection why] :as source} (callback-source node chain)]
+    (if why
+      {:ok? false :real? false :self? false :why why}
+      (let [result (collection-prov spec collection (:chain source) ctx (inc depth))]
+        (if (:ok? result)
+          result
+          (assoc result :why :callback-collection-unproven
+                        :collection-why (:why result)))))))
+
 (defn- prov-leaf
   [spec node chain ctx depth]
   (let [{:keys [aliases call visited]} ctx
@@ -959,9 +1068,12 @@
           {:ok? true :real? false :self? true}
           (fail :update-of-another-binding)))
       (:element-of spec)
-      (if (and (= "get" (head-text node)) (< 2 (count (:children node))))
+      (cond
+        (and (= "get" (head-text node)) (< 2 (count (:children node))))
         (prov (:element-of spec) (nth (:children node) 1) (conj chain node) ctx (inc depth))
-        (fail :not-an-element))
+        (= :token (:kind node))
+        (callback-element-prov (:element-of spec) node chain ctx depth)
+        :else (fail :not-an-element))
       (= :token (:kind node))
       (let [t (:text node)]
         (if (or (str/starts-with? t ":") (re-matches #"[-+]?\d.*" t))
@@ -1011,11 +1123,11 @@
 
 (defn- call-sites
   "[call-node ancestors arg-index-shift] for every call of CALL in FORMS: a form headed
-  by CALL (shift 0) or (partial CALL ...) (shift 1)."
+  by CALL (including the body of #(CALL ...), shift 0) or (partial CALL ...) (shift 1)."
   [forms call]
   (for [form forms
         [n chain] (walk-nodes form [])
-        :when (#{:list} (:kind n))
+        :when (#{:list :fn} (:kind n))
         :let [h (head-text n)
               shift (cond (= call h) 0
                           (and (= "partial" h) (= call (token-text (nth (:children n) 1 nil)))) 1)]
@@ -1157,7 +1269,9 @@
                                  :argument a :ancestors (conj chain n)))
                 good (first (filter #(and (:ok? %) (:real? %)) results))]
             (if-not good
-              {:ok? false :why (or (:why (first (remove :ok? results))) :argument-has-no-real-source)}
+              (let [bad (first (remove :ok? results))]
+                (cond-> {:ok? false :why (or (:why bad) :argument-has-no-real-source)}
+                  (:collection-why bad) (assoc :collection-why (:collection-why bad))))
               (let [c (callee-check (:text callee-scope) call (:var (:site callee)) arg
                                     (:argc good) (:partial? good)
                                     (or (:field-path to) [(vertex-field (vertex-key value))]))]
