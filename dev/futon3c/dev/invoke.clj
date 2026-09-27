@@ -8,7 +8,7 @@
    Evidence emission goes through `futon3c.evidence.boundary/append!` —
    the single routing authority that binds I-single-boundary +
    I-evidence-per-turn (M-invariant-queue-unstuck, INSTANTIATE-2)."
-  (:require [futon3c.evidence.boundary :as boundary]
+  (:require [futon3c.evidence.origin :as origin] [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
@@ -78,6 +78,7 @@
   (when evidence-store
     (boundary/append!
      evidence-store
+     (origin/stamp
      {:subject {:ref/type :agent :ref/id agent-id}
       :type :coordination
       :claim-type :step
@@ -88,7 +89,10 @@
                    "agent-id" agent-id
                    "at" (str (Instant/now)))
       :tags (into [:invoke :dev agent-id]
-                  (or tags []))})))
+                  (or tags []))}
+     (if (= event-type "invoke-start") origin/*input*
+         (origin/harness "invoke-lifecycle" nil))
+     "futon3c.dev.invoke"))))
 
 ;; ---------------------------------------------------------------------------
 ;; Artifact helpers

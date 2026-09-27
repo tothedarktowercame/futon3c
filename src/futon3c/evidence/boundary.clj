@@ -43,6 +43,7 @@
 
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [futon3c.evidence.backend :as backend]
+            [futon3c.evidence.origin :as origin]
             [futon3c.evidence.invariant :as invariant]
             [futon3c.evidence.subject :as subject]
             [futon3c.evidence.store :as store]
@@ -313,7 +314,7 @@
    `dev/futon3c/dev/invoke.clj` and `src/futon3c/transport/http.clj`)."
   [evidence-store entry-or-args]
   (try
-    (let [coerced (marks/maybe-decorate-turn (coerce-input entry-or-args))
+    (let [coerced (marks/maybe-decorate-turn (coerce-input (origin/stamp entry-or-args nil "futon3c.evidence.boundary")))
           ;; Resolve the backend ONCE so append* and verify-persisted
           ;; agree on which backend they're addressing. Without this, a
           ;; nil evidence-store causes append* to silently fall back to

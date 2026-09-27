@@ -55,7 +55,8 @@
      failures (port in use, permission denied).
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
-  (:require [futon3c.transport.protocol :as proto]
+  (:require [futon3c.evidence.origin :as origin]
+            [futon3c.transport.protocol :as proto]
             [futon3c.apm.conductor-binding :as conductor-binding]
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
@@ -4496,22 +4497,11 @@
 ;; consumer can mistake a non-operator turn for an operator one. From/To/Origin are
 ;; TOTAL (always stamped); the keep/drop rule is the single predicate
 ;; "operator ∈ {From,To}". Origin resolves the role of From and never returns nil.
-(def ^:private harness-callers
-  #{"auto-bellback" "auto" "system" "cron" "heartbeat" "apm-harvest" "claude-loop"})
-
 (defn- resolve-origin
-  "Resolve the provenance role of a turn's author (the From endpoint):
-   \"operator\" (Joe) | \"harness\" (automated agency/harness senders) | \"agent\"
-   (a named agent, or any other programmatic caller — the safe non-operator default).
-   Total: always returns one of the three."
+  "Classify at routing time; unknown callers are never guessed to be agents."
   [caller surface]
-  (let [c (some-> caller str str/trim str/lower-case)
-        s (some-> surface str str/trim str/lower-case)]
-    (cond
-      (or (= c "joe") (= c "joe-repl"))                 "operator"
-      (or (contains? harness-callers c)
-          (= s "auto-bellback"))                        "harness"
-      :else                                             "agent")))
+  (name (:kind (origin/source {:caller caller :surface surface
+                               :registered-agent? (boolean (reg/get-agent (str caller)))}))))
 
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
@@ -4897,11 +4887,17 @@
   (let [aid (str agent-id)
         invoke-options (assoc (or invoke-options {})
                               :dispatch-id (str dispatch-id))
-        first-result (reg/invoke-agent! aid prompt invoke-options)]
+        context (origin/source {:caller (:caller invoke-options)
+                                :surface (get-in (ensure-invoke-jobs-ledger!) [:jobs dispatch-id :surface])
+                                :registered-agent? (boolean (reg/get-agent (str (:caller invoke-options))))
+                                :source-id dispatch-id})
+        invoke! (fn [] (binding [origin/*input* context]
+                         (reg/invoke-agent! aid prompt (assoc invoke-options :origin context))))
+        first-result (invoke!)]
     (if (claude-missing-conversation-result? aid first-result)
       (let [reset-result (reg/reset-session! aid)]
         (if (:ok reset-result)
-          (let [retry-result (reg/invoke-agent! aid prompt invoke-options)]
+          (let [retry-result (invoke!)]
             (cond-> retry-result
               (map? retry-result)
               (assoc :session-recovery

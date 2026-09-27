@@ -89,7 +89,7 @@
         validated (if (shapes/valid? shapes/EvidenceEntry m)
                     m
                     (let [{:keys [evidence-id subject type claim-type author body pattern-id session-id
-                                  in-reply-to fork-of conjecture? ephemeral? tags]} m
+                                  in-reply-to fork-of conjecture? ephemeral? tags origin]} m
                           entry {:evidence/id (or evidence-id (gen-id))
                                  :evidence/subject subject
                                  :evidence/type type
@@ -99,6 +99,7 @@
                                  :evidence/body body
                                  :evidence/tags (vec (or tags []))}
                           entry (cond-> entry
+                                  origin (assoc :evidence/origin origin)
                                   pattern-id (assoc :evidence/pattern-id pattern-id)
                                   session-id (assoc :evidence/session-id session-id)
                                   in-reply-to (assoc :evidence/in-reply-to in-reply-to)

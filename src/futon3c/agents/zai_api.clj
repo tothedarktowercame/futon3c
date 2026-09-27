@@ -3,7 +3,7 @@
 
    Z.AI supplies the model and OpenAI-style tool calls; this namespace supplies
    the local agent loop and delegates real work to futon3c.peripheral.real-backend."
-  (:require [cheshire.core :as json]
+  (:require [futon3c.evidence.origin :as origin] [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -1096,7 +1096,13 @@
    transcript; the ledger + visible line preserve loss-accounting instead)."
   [agent-id evidence-store entry]
   (try
-    (persist-transcript-entry! evidence-store entry)
+    (let [event (get-in entry [:evidence/body :event])
+          source (case event
+                   :turn-start origin/*input*
+                   (:turn-round :turn-commits) {:kind :agent :actor (str agent-id)}
+                   (origin/harness "zai-transcript" (:evidence/id entry)))]
+      (persist-transcript-entry! evidence-store
+                                 (origin/stamp entry source "futon3c.agents.zai-api")))
     (catch Throwable t
       (try
         (sink! agent-id {:type "text"

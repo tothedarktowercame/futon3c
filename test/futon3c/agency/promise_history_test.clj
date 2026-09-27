@@ -39,6 +39,8 @@
       (is (= [:promise/park-made :promise/dependency-terminated :promise/woken :promise/released]
              (mapv :evidence/type entries)))
       (is (not-any? #(re-find #"fulfil|kept" (str (:evidence/type %))) entries))
+      (is (every? #(= :harness (get-in % [:evidence/origin :kind])) entries))
+      (is (every? #(= "test-p2a" (:evidence/author %)) entries))
       (is (= 4 (count (set (map :evidence/id entries)))))
       (is (apply < (map #(get-in % [:evidence/body :history/sequence]) entries)))
       (is (= 1 (count @wakes)))
@@ -71,6 +73,8 @@
     (queue/ack! id)
     (queue/ack! id)
     (is (= [:promise/followup-enqueued :promise/followup-dequeued :promise/followup-terminal] (types)))
+    (is (every? #(= :harness (get-in % [:evidence/origin :kind])) (rows)))
+    (is (every? #(= "test-p2a" (:evidence/author %)) (rows)))
     (is (= :acked (get-in (last (rows)) [:evidence/body :state])))
     (is (every? #(= id (get-in % [:evidence/body :followup-id])) (rows)))))
 

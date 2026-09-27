@@ -9,7 +9,8 @@
 
    Derived from: library/social/ARGUMENT.flexiarg (R1-R11)
                  futon5/data/missions/social-exotype.edn (ports + components)"
-  (:require [malli.core :as m]
+  (:require [futon1b-origin :as origin]
+            [malli.core :as m]
             [malli.error :as me]))
 
 ;; =============================================================================
@@ -331,6 +332,7 @@
    [:evidence/type EvidenceType]
    [:evidence/claim-type ClaimType]
    [:evidence/author :string]
+   [:evidence/origin {:optional true} [:fn origin/valid?]]
    [:evidence/at Timestamp]
    [:evidence/body :any]
    [:evidence/tags [:vector :keyword]]

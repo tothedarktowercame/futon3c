@@ -18,6 +18,7 @@
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
   (:require [clojure.edn :as edn]
+            [futon3c.evidence.origin :as origin]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.blackboard :as bb]
@@ -1112,7 +1113,13 @@
                    turn-var (requiring-resolve 'futon3c.agency.clock-decision/*turn*)
                    context (start! aid-val current-session prompt invoke-options)]
                (vreset! clock-context context)
-               (with-bindings {turn-var context}
+               (with-bindings {turn-var context
+                               #'origin/*input*
+                               (or origin/*input*
+                                   (origin/source {:caller (:caller invoke-options)
+                                                   :surface (:surface invoke-options)
+                                                   :registered-agent? (boolean (get-agent (str (:caller invoke-options))))
+                                                   :source-id (or (:dispatch-id invoke-options) (:turn-id invoke-options))}))}
                  (cond
                invoke-fn
                      (let [call-invoke (fn []

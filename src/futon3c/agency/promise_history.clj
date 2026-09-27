@@ -4,7 +4,7 @@
    currently assigns valid/system time at insertion (P6). An ordered background
    writer prevents evidence outages from blocking parking or waking. Failed or
    process-lost writes leave history incomplete; authority/recovery is P2c's task."
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.evidence.origin :as origin] [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.agency.promise-capture :as capture]
             [futon3c.evidence.boundary :as boundary]
@@ -107,7 +107,10 @@
                  ^Runnable
                  (bound-fn []
                    (try
-                     (let [result (boundary/append! (backend) entry)]
+                     (let [result (boundary/append! (backend)
+                                                     (origin/stamp entry
+                                                       (origin/harness "promise-history" promise-id)
+                                                       "futon3c.agency.promise-history"))]
                        (if (:ok result)
                          (swap! !counts update :written inc)
                          (failed! type (:error/code result))))
