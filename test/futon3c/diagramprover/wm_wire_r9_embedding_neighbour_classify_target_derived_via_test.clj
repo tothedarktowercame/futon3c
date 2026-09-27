@@ -14,7 +14,8 @@
   projected away. The live pin agrees with the reader box's own live test
   (relation-derivation-test/m-autoclock-in-live, same neighbour, same
   cosine, same pin shas)."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-class-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def record-path
@@ -43,7 +44,9 @@
 (defn check [] (observe))
 
 (def wire
-  {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-embedding-neighbour-classify-target-derived-via-test/changed-class-product :kind :record
+                   :product [:recorded] :intervention :before-reader}
+   :wire [:r9-embedding-neighbour :r9-classify-target :derived-via]
    :kind :verified
    :test `the-embedding-receipt-reaches-classify-target
    :check check
@@ -70,3 +73,18 @@
     (is (some? (:reader o)))
     (is (not= (:writer o) (:reader o)))
     (is (not (w/received? o)))))
+
+(deftest changed-class-product
+  (let [[a b] (products/provenance-products)]
+    (prn :wire-2l-6b :derived-via :before (select-keys (:recorded a) [:neighbour :cosine :stated-relation])
+         :after (select-keys (:recorded b) [:neighbour :cosine :stated-relation])
+         :class-before (get-in a [:calculation :class]) :class-after (get-in b [:calculation :class]))
+    (is (= 1.0 (get-in a [:supplied :cosine])))
+    (is (= 0.25 (get-in b [:supplied :cosine])))
+    (is (= (:supplied a) (dissoc (:recorded a) :stated-relation)))
+    (is (= (:supplied b) (dissoc (:recorded b) :stated-relation)))
+    (is (not= (:recorded a) (:recorded b)))
+    ;; focus_receipt.clj:278,287-304: adds stated-path absence, carries
+    ;; derived-via; class/eligibility depend on the separate relation row.
+    (is (= :associated (get-in a [:calculation :class]) (get-in b [:calculation :class])))
+    (is (= (:calculation a) (:calculation b)))))

@@ -14,7 +14,8 @@
   the same record — :related is scorer-class's image of :associated and of
   no other relation, so the value the decision read is inverted out of what
   it did with it."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-class-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def record-path
@@ -49,7 +50,9 @@
 (defn check [] (observe))
 
 (def wire
-  {:wire [:r9-classify-target :r9-decision :class]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-classify-target-decision-class-test/changed-class-product :kind :value-varying
+                   :product [:scores] :intervention :before-reader}
+   :wire [:r9-classify-target :r9-decision :class]
    :kind :verified
    :test `the-relation-class-reaches-the-decision
    :check check
@@ -78,3 +81,15 @@
     (is (= :focus (:reader o)))
     (is (not= (:writer o) (:reader o)))
     (is (not (w/received? o)))))
+
+(deftest changed-class-product
+  (let [a (products/class-product :class false)
+        b (products/class-product :class true)]
+    (prn :wire-2l-6b :class :before (dissoc a :controls) :after (dissoc b :controls))
+    (is (= 1 (:calls a) (:calls b)))
+    (is (= (:controls a) (:controls b)))
+    (is (= (:beta a) (:beta b)))
+    (is (= 3 (count (:scores a)) (count (:scores b))))
+    (doseq [g (:scores a)] (is (< (Math/abs (- g (- (Math/log 0.55)))) 1e-12)))
+    (doseq [g (:scores b)] (is (< (Math/abs (- g (- (Math/log 0.35)))) 1e-12)))
+    (is (not= (:scores a) (:scores b)))))

@@ -11,7 +11,8 @@
   recoverable from the same record: the recorded classifications the
   decision attached (its own target-classifications) mapped through
   scorer-class, the constant of the writer's site at war_machine.clj:6532."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-class-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def record-path
@@ -44,7 +45,9 @@
 (defn check [] (observe))
 
 (def wire
-  {:wire [:r9-decision :r9-class-model :target-class]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-decision-class-model-target-class-test/changed-class-product :kind :value-varying
+                   :product [:scores] :intervention :before-reader}
+   :wire [:r9-decision :r9-class-model :target-class]
    :kind :verified
    :test `the-target-class-reaches-the-class-model
    :check check
@@ -68,3 +71,15 @@
     (is (some? (:reader o)))
     (is (not= (:writer o) (:reader o)))
     (is (not (w/received? o)))))
+
+(deftest changed-class-product
+  (let [a (products/class-product :target-class false)
+        b (products/class-product :target-class true)]
+    (prn :wire-2l-6b :target-class :before (dissoc a :controls) :after (dissoc b :controls))
+    (is (= 1 (:calls a) (:calls b)))
+    (is (= (:controls a) (:controls b)))
+    (is (= (:beta a) (:beta b)))
+    (is (= 3 (count (:scores a)) (count (:scores b))))
+    (doseq [g (:scores a)] (is (< (Math/abs (- g (- (Math/log 0.55)))) 1e-12)))
+    (doseq [g (:scores b)] (is (< (Math/abs (- g (- (Math/log 0.35)))) 1e-12)))
+    (is (not= (:scores a) (:scores b)))))
