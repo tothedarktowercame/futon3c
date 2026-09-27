@@ -101,3 +101,58 @@
       (is (some #(and (= :wrapper (:box/id %)) (= :reads (:role %))
                       (= :declared-read-not-found (:finding %)))
                 (w/conformance root {:boxes boxes} {:heuristic? true}))))))
+
+(def parameter-carry {:field field :from {:param 'receipt :via :inbound}})
+(def parameter-boxes
+  [{:box/id :caller :site {:file "source.clj" :var "caller"}
+    :passes [{:id :inbound :value field :from {:literal-arg-key :belief}
+              :to {:call "wrapper" :arg 1 :callee-box :wrapper}}]}
+   {:box/id :wrapper :site {:file "source.clj" :var "wrapper"}
+    :returns-record :new :reads [field] :carries [parameter-carry]}])
+
+(defn- parameter-check [body edit]
+  (source (str "(defn caller [] (wrapper {:belief 1} true)) "
+               "(defn wrapper [receipt condition] " body ")")
+          #(w/carry-attribution % (edit parameter-boxes) :wrapper parameter-carry)))
+
+(deftest parameter-carry-composes-inbound-and-checks-all-arms
+  (doseq [body ["receipt" "(assoc receipt :other 2)"
+               "(if condition receipt (assoc receipt :belief 2))"
+               "(merge receipt {:other 2})" "(dissoc receipt :other)"
+               "(select-keys receipt [:belief])"]]
+    (is (:ok? (parameter-check body identity)) body))
+  (is (= #{:carried :overridden}
+         (:arms (parameter-check "(if condition receipt (assoc receipt :belief 2))" identity)))))
+
+(deftest invalid-parameter-carries-are-refused
+  (doseq [body ["(let [receipt {}] receipt)"
+               "(let [receipt (assoc receipt :other 2)] receipt)"
+               "((fn [receipt] receipt) {})"
+               "(dissoc receipt :belief)" "(select-keys receipt [:other])"
+               "(if condition receipt {})" "(merge receipt condition)"
+               "(transform receipt)" "(assoc receipt condition 2)"
+               "(let [assoc vector] (assoc receipt :belief 2))"]]
+    (is (false? (:ok? (parameter-check body identity))) body))
+  (doseq [edit [#(assoc-in % [0 :passes] [])
+               #(assoc-in % [0 :passes 0 :from] {:returns-of "missing"})
+               #(assoc-in % [0 :passes 0 :to :arg] 2)
+               #(assoc-in % [0 :passes 0 :to :call] "missing")]]
+    (is (false? (:ok? (parameter-check "receipt" edit))))))
+
+(deftest real-temporal-consumer-carries-and-overrides-its-parameter
+  (let [resource (io/resource "futon2/aif/token_belief_predecessor.clj")
+        file "../futon2/src/futon2/aif/token_belief_predecessor.clj"
+        f [:continuation-belief {:record :initialization}]
+        c {:field f :from {:param 'receipt :via :input}}
+        pass {:value f :from {:returns-of "apply"}
+              :to {:call "consume-temporal" :arg 1 :callee-box :consumer}}
+        bs [{:box/id :input :site {:file file :var "input-receipt"} :passes [pass]}
+            {:box/id :consumer :site {:file file :var "consume-temporal"}
+             :returns-record :temporal :reads [f] :carries [c]}]
+        r (w/carry-attribution "." bs :consumer c)]
+    (is (= (.getCanonicalPath (io/file resource)) (.getCanonicalPath (io/file file))))
+    ;; This inbound proves the actual apply result, not apply's function target.
+    (is (:ok? (w/pass-attribution "." bs :input pass)))
+    (is (:ok? r) (pr-str r))
+    (is (= #{:carried :overridden} (:arms r)))
+    (is (false? (:ok? (w/carry-attribution "." (assoc-in bs [0 :passes] []) :consumer c))))))

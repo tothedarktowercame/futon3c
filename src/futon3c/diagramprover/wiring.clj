@@ -1394,9 +1394,10 @@
      {:evidence {} :failed {}} boxes)))
 
 (defn- carry-return-proof
-  "All returned arms must derive from a let-bound source call. No arbitrary
+  "All returned arms must derive from a let-bound source call or a parameter
+  with an accepted inbound witness. No arbitrary
   record transformer, dynamic key, or recursive fixed point is assumed."
-  [text field source-call]
+  [text field source-call & [parameter-witness]]
   (let [form (first (:forms (parse-forms text)))
         name (token-text (second (:children form)))
         tail (drop 2 (:children form))
@@ -1413,7 +1414,14 @@
         parameter-env (fn [arity]
                         (into {} (for [p (:children (:params arity))
                                        e (pattern-entries p nil)]
-                                   [(:sym e) (fail :parameter-not-a-carried-local)])))
+                                   [(:sym e) (if (and parameter-witness
+                                                     (= (:sym e) (:local parameter-witness))
+                                                     (= (count (:children (:params arity)))
+                                                        (:parameter-arity parameter-witness))
+                                                     (= (:sym e) (token-text (nth (:children (:params arity))
+                                                                                (dec (:parameter-position parameter-witness)) nil))))
+                                              {:ok? true :arms #{:carried}}
+                                              (fail :parameter-not-a-carried-local))])))
         combine-arms (fn [rs]
                        (or (first (remove :ok? rs))
                            {:ok? true :arms (set (mapcat :arms rs))}))]
@@ -1428,7 +1436,7 @@
                   (get env (token-text node) (fail :not-a-carried-local))
                   (and (#{"assoc" "merge" "dissoc" "select-keys"} h) (contains? env h))
                   (fail :shadowed-record-operation)
-                  (and (= :list (:kind node)) (= source-call h))
+                  (and source-call (= :list (:kind node)) (= source-call h))
                   (if (and bound? (not (contains? env h)))
                     {:ok? true :arms #{:carried}}
                     (fail :source-not-bound-or-shadowed))
@@ -1496,7 +1504,7 @@
                       :else r))
                   (= name h)
                   (let [arity (dec (count kids))]
-                    (if (or (contains? seen arity) (not (contains? arities arity))
+                    (if (or parameter-witness (contains? seen arity) (not (contains? arities arity))
                             (contains? env name))
                       (fail :unproved-return-delegation)
                       (record (last (:body (get arities arity)))
@@ -1507,10 +1515,35 @@
         (combine-arms (for [[arity a] arities]
                         (record (last (:body a)) (parameter-env a) #{arity} false)))))))
 
+(defn- parameter-carry-proof
+  [repo-root boxes box field from text]
+  (let [by-id (into {} (map (juxt :box/id identity) boxes))
+        inbound (for [caller boxes p (:passes caller)
+                      :when (and (or (= (:via from) (:box/id caller))
+                                     (= (:via from) (:id p)))
+                                 (= (:box/id box) (get-in p [:to :callee-box]))
+                                 (= (vertex-key field) (vertex-key (:value p))))]
+                  [caller p])]
+    (cond
+      (not (and (:param from) (:via from) text))
+      {:ok? false :why :forward-source-incomplete}
+      (not= 1 (count inbound)) {:ok? false :why :forward-inbound-not-unique}
+      :else
+      (let [[caller p] (first inbound)
+            r (check-pass repo-root by-id (:aliases (site-cfg [caller])) caller p)]
+        (cond
+          (not (:ok? r)) {:ok? false :why :forward-inbound-refused}
+          (not (and (= (str (:param from)) (:local r))
+                    (:parameter-position r) (:parameter-arity r)))
+          {:ok? false :why :forward-inbound-parameter-mismatch}
+          :else (assoc (carry-return-proof text (vertex-field (vertex-key field)) nil r)
+                       :source-box (:box/id caller) :field (vertex-key field)))))))
+
 (defn carry-attribution
   "A checked read of a source record through a whole returned value. Carries
   never erase graph writers: source and wrapper output need distinct record
-  scopes when the wrapper can override the field."
+  scopes when the wrapper can override the field. A parameter source uses
+  :from {:param p :via caller-box-or-pass-id} and composes only that inbound path."
   [repo-root boxes box-id {:keys [field from]}]
   (let [box (first (filter #(= box-id (:box/id %)) boxes))
         call (:returns-of from)
@@ -1522,6 +1555,8 @@
         text (when box (:text (site-scope repo-root (:site box))))
         source-text (when source (:text (site-scope repo-root (:site source))))]
     (cond
+      (and field (:param from) (nil? call))
+      (parameter-carry-proof repo-root boxes box field from text)
       (not (and field (string? call))) {:ok? false :why :malformed-carry}
       (not= 1 (count candidates)) {:ok? false :why :carry-source-writer-not-unique}
       (not (and text source-text)) {:ok? false :why :carry-site-unreadable}
