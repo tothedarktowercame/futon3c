@@ -17,7 +17,8 @@
   :readings entry — [:served-by :text-sha256] (the writer's value) and
   :text-sha256 (the reader's copy) — and they are equal. The pin below is
   flight-278b6988.edn, asserted by sha256 before it is read."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-initialization-hash-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def record
@@ -41,6 +42,8 @@
    :kind :verified
    :test `the-read-steps-text-pin-reaches-the-flight-record
    :check check
+   :second-layer {:test `read-step-records-served-text-hash
+                  :kind :record :product [:text-sha256] :intervention :before-reader}
    :record record})
 
 (deftest the-read-steps-text-pin-reaches-the-flight-record
@@ -67,3 +70,16 @@
     (is (some? other))
     (is (not= (:writer o) other))
     (is (not (w/received? (assoc o :reader other))))))
+
+(deftest read-step-records-served-text-hash
+  ;; read-fn's return copies the hash; quote checking is inside served/reading,
+  ;; before this boundary. No downstream staleness decision is made here.
+  (let [[a b] (products/hash-products)
+        pa (:product a) pb (:product b)]
+    (is (= (get-in a [:carrier :text-sha256]) (:text-sha256 pa)))
+    (is (= (get-in b [:carrier :text-sha256]) (:text-sha256 pb)))
+    (is (not= (:text-sha256 pa) (:text-sha256 pb)))
+    (is (= (dissoc (:carrier a) :text-sha256) (dissoc (:carrier b) :text-sha256)))
+    (is (= (dissoc pa :text-sha256 :served-by) (dissoc pb :text-sha256 :served-by)))
+    (println "read-back hashes" (pr-str [(:text-sha256 pa) (:text-sha256 pb)])
+             "unchanged needs" (pr-str (:needs pa)))))
