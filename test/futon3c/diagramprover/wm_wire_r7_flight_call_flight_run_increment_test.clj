@@ -11,7 +11,8 @@
   a real one-click flight/run! with the real enact-fn (the lane-8
   driver's exemplar-backed fixture) and the real wc-verdict-fn (real
   checker, real enactment-habit/increment)."
-  (:require [futon3c.diagramprover.wm-wire-summary-conditioning-products :as conditioning]
+  (:require [futon3c.diagramprover.wm-wire-continued-enact-products :as continued]
+            [futon3c.diagramprover.wm-wire-summary-conditioning-products :as conditioning]
             [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-publication-support :as support]))
@@ -26,8 +27,8 @@
 
 (def wire
   {:wire [:r7-flight-call :flight-run :increment]
-   :second-layer {:test `increment-policy-key-is-carried-into-the-step
-                  :kind :record :product [:enactments 0 :step :policy-key]
+   :second-layer {:test `policy-key-selects-the-continued-posterior
+                  :kind :value-varying :product [:enactments 1 :step :p-o]
                   :intervention :before-reader}
    :kind :witnessed-hermetically
    :test `the-writers-increment-reaches-the-enactments-entry
@@ -78,3 +79,17 @@
     (is (not= (:policy-key sa) (:policy-key sb)))
     (is (= (dissoc sa :policy-key) (dissoc sb :policy-key)))
     (println :increment-conditioning (pr-str (mapv #(select-keys % [:policy-key :q :p-o :f]) [sa sb])))))
+
+(deftest policy-key-selects-the-continued-posterior
+  (let [{:keys [first a b]} (continued/chain-pair)]
+    (is (= :present (:status first) (:status a) (:status b)))
+    (is (= (:q first) (get-in a [:s-prev :value])))
+    (is (= :chain (get-in a [:s-prev :source])))
+    (is (= {:value {#{} 1} :source :initial-belief} (:s-prev b)))
+    (is (= (select-keys a [:b :o :measured-a :occurrence])
+           (select-keys b [:b :o :measured-a :occurrence])))
+    (is (= 11/12 (:p-o a)))
+    (is (= 1/12 (:p-o b)))
+    (is (not= (:q a) (:q b)))
+    (is (< (:f a) (:f b)))
+    (println :continued-policy-key (pr-str (mapv #(select-keys % [:s-prev :q :p-o :f]) [a b])))))

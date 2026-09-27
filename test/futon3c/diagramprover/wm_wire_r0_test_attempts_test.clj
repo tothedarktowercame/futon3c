@@ -15,7 +15,8 @@
   flight-enact-test shape (two patterns, no grain pattern), the writer's
   value is (:attempts (:enactment out)), and the reader's is (:attempts
   record) read back from the record file the writer wrote."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-continued-enact-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-enact-driver :as d]))
 
@@ -45,6 +46,9 @@
 
 (def wire
   {:wire [:r0-enact-step :r0-test :attempts]
+   :second-layer {:test `real-enact-test-detects-field-change
+                  :kind :value-varying :product [:reports :type]
+                  :intervention :before-reader}
    :kind :witnessed-hermetically
    :test `the-attempts-reach-the-row-0-test
    :check check
@@ -75,3 +79,18 @@
     (is (= [{:absent :no-dispatch-configured}] (mapv :enactment (:enactments (:flight f278)))))
     (is (= [{:absent :no-decision}] (mapv :enactment (:enactments (:flight f005)))))
     (is (= :m-futon-seams/proof2a-enactment-v1 (:schema ex)))))
+
+(deftest real-enact-test-detects-field-change
+  (let [{:keys [a b target other-a other-b]} (products/assertion-products :attempts)
+        reports-a (:reports a) reports-b (:reports b)]
+    (is (= 12 (count reports-a) (count reports-b)))
+    (is (every? #(= :pass (:type %)) reports-a))
+    (is (= :fail (:type (nth reports-b target))))
+    (is (= :fail (:type (nth reports-b 10))) "disk equality independently detects changed return")
+    (is (= {:pass 10 :fail 2} (frequencies (map :type reports-b))))
+    (is (= other-a other-b))
+    (doseq [call (concat (:calls a) (:calls b))]
+      (is (= (dissoc (:written call) :attempts) (dissoc (:carrier call) :attempts))))
+    (println :enact-test-product :attempts
+             (pr-str (mapv #(select-keys % [:type :expected :actual])
+                           [(nth reports-a target) (nth reports-b target)])))))
