@@ -889,7 +889,7 @@ Kept separate from full session markup so typing never triggers retrieval."
   "The 象 lighter, pink while delegated analysis is known to be failing."
   (let ((failing (eq session-mode--analysis-health 'failing)))
     (propertize " 象"
-                'face `(:foreground ,(if failing "hot pink" "red") :weight bold)
+                'face `(:foreground ,(if failing "hot pink" "red"))
                 'help-echo
                 (concat (if failing
                             "Turns are captured, but interpretation is FAILING"
