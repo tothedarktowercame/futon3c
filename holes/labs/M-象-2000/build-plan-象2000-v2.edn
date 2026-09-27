@@ -34,7 +34,7 @@
    :deps [:P2b] :decision nil :decided "Joe 2026-09-27: split -- crash tests now; authority switch held until P2b compare is equal on live data for a week, then back to Joe" :v2 :new
    :patterns [:agency/state-atomicity :social/idempotent-handoff]}
   {:id :P3   :title "Grant record type (scope, interval, parent grant)" :segment :supply
-   :deps [:P6b :P6o] :decision {:theme :new-type :question "A new record type for grants of authority?"} :v2 :changed
+   :deps [:P6b :P6o] :decision nil :decided "Joe 2026-09-27: approved; explicit grants only; add dispatch graph, semi-automated case, harness kind (WM / Zai / none)" :v2 :changed
    :patterns [:象/名分有据]}
   {:id :P4   :title "After-the-fact report of acts without authority" :segment :supply
    :deps [:P3] :decision nil :v2 :changed
