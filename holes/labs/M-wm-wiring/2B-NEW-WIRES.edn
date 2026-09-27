@@ -159,6 +159,27 @@
  {:file "futon2/src/futon2/aif/flight.clj", :var "run!", :line 468},
  :reader-is-test-box? false,
  :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "1c6a903a"
+ :edge [:lifecycle-definition-reader :lifecycle-secondary-wants
+        [:phase {:record :lifecycle-definition-exit}]]
+ :term :W-how
+ :writer {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "definition-exits" :line 13}
+ :reader {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied" :line 35}
+ :reader-is-test-box? false :packet "MAP-2B-EXITS"}
+{:map-commit "1c6a903a"
+ :edge [:lifecycle-secondary-wants :lifecycle-flight-exits
+        [:role {:record :secondary-want}]]
+ :term :W-how
+ :writer {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "supplied" :line 35}
+ :reader {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits" :line 144}
+ :reader-is-test-box? false :packet "MAP-2B-EXITS"}
+{:map-commit "1c6a903a"
+ :edge [:lifecycle-flight-exits :flight-source-wants-a-exits
+        [:wants {:record :lifecycle-exits}]]
+ :term :W-how
+ :writer {:file "futon2/src/futon2/aif/lifecycle_exits.clj" :var "flight-exits" :line 144}
+ :reader {:file "futon2/src/futon2/aif/flight.clj" :var "source-wants :a-exits" :line 52}
+ :reader-is-test-box? false :packet "MAP-2B-EXITS"}
 {:map-commit "8dfdde3c",
  :edge
  [:temporal-finalize

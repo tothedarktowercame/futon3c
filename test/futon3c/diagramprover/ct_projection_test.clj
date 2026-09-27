@@ -51,7 +51,7 @@
       (is (:valid (check v :type-safety)) "vacuous: no edge carries a :type")
       (is (not-any? :type (:edges d)) "why: the map's fields carry no types")
       (is (:valid (check v :timescale-ordering))
-          "the constraint is :owner-text (the map's :field-roles), which no box writes")
+          "the constraints are the exogenous owner and lifecycle-definition texts")
       (is (:valid (check v :exogeneity)))
       (is (:valid (check v :compositional-closure))))))
 
@@ -62,8 +62,10 @@
   (let [r (proj/i4-report (head-map) {})]
     (is (= [] (get-in r [:bypass :to-preferences])))
     (is (= [] (get-in r [:bypass :to-preferences-positional])))
-    (is (= [{:field :owner-text :writers [] :observed-by []}] (:preference-fields r))
-        "the owner's text is exogenous by declaration")))
+    (is (= [{:field :lifecycle-definition-text :writers [] :observed-by []}
+            {:field :owner-text :writers [] :observed-by []}]
+           (:preference-fields r))
+        "both source texts are exogenous by declaration")))
 
 (deftest i4-habit-path-bypasses-the-checker
   ;; the enactment reaches the outer cascade's :enactment-records through
@@ -108,9 +110,9 @@
 
 (defn- with-owner-text [m]
   (-> m
-      (assoc :field-roles {:owner-text :constraint
-                           :want-span :observation
-                           :text-sha256 :observation})
+      (update :field-roles merge {:owner-text :constraint
+                                  :want-span :observation
+                                  :text-sha256 :observation})
       (update :boxes (fn [bs] (mapv #(if (= :r2-served-by-reading (:box/id %))
                                        (update % :reads (fn [rs] (if (some #{:owner-text} rs) (vec rs) (conj (vec rs) :owner-text))))
                                        %)
@@ -120,12 +122,14 @@
   (let [m (with-owner-text (head-map))
         {:keys [d v]} (validated m)
         inputs (get-in d [:ports :input])]
-    (is (= [:pref/owner-text] (map :id (filter :constraint inputs))))
+    (is (= [:pref/lifecycle-definition-text :pref/owner-text]
+           (map :id (filter :constraint inputs))))
     (is (not-any? #(#{:pref/want-span :pref/text-sha256} (:id %)) inputs))
     (is (not-any? #(= :world/r2-served-by-reading (:id %)) inputs)
         "the reading box now reads a declared field")
     (is (:valid (check v :timescale-ordering)) "no box writes the constraint")
-    (is (= [{:field :owner-text :writers [] :observed-by []}]
+    (is (= [{:field :lifecycle-definition-text :writers [] :observed-by []}
+            {:field :owner-text :writers [] :observed-by []}]
            (:preference-fields (proj/i4-report m {}))))
     (testing "a box that writes the owner's text is an I3 finding and an I4 bypass"
       (let [planted (update m :boxes conj {:box/id :planted-editor :box/kind :component
@@ -142,7 +146,7 @@
   ;; map's projection
   (let [m (head-map)
         stripped (-> m
-                     (dissoc :field-roles)
+                     (update :field-roles dissoc :owner-text :want-span :text-sha256)
                      (update :boxes (fn [bs] (mapv #(if (= :r2-served-by-reading (:box/id %))
                                                       (update % :reads (fn [rs] (vec (remove #{:owner-text} rs))))
                                                       %)

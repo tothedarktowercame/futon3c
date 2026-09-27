@@ -1,7 +1,9 @@
+;; re-pinned at 1c6a903a from 1c6a903a on 2026-09-27
+;; re-pinned at 1c6a903a from 9567d6bb on 2026-09-27
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "8dfdde3c",
+ :map-sha "1c6a903a",
  :futon5-sha "aeeee96",
- :counts {:inputs 49, :outputs 26, :components 122, :edges 248},
+ :counts {:inputs 51, :outputs 27, :components 126, :edges 254},
  :validate
  {:all-valid false,
   :checks
@@ -84,6 +86,7 @@
     :check :spec-coverage,
     :unspecified-outputs
     [:out/gamma.precision
+     :out/lifecycle-exits.source
      :out/observation.enactment-entry
      :out/tau.precision]}
    {:valid true, :check :timescale-ordering, :violations []}
@@ -94,7 +97,8 @@
   :mission/id :wm-flight-wiring},
  :i4
  {:preference-fields
-  [{:field :owner-text, :writers [], :observed-by []}],
+  [{:field :lifecycle-definition-text, :writers [], :observed-by []}
+   {:field :owner-text, :writers [], :observed-by []}],
   :scored-facts
   {:read-by :r1-outer-cascade,
    :fields
@@ -34419,5 +34423,4 @@
       :controller-score
       :candidate
       :delta],
-     :to :enactment-records}]}},
- :map-blob "311be8f4b78c7b46a7ca6cdc02ea5e03a71dc6c4"}
+     :to :enactment-records}]}}}
