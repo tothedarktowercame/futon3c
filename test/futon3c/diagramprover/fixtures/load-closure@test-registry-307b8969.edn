@@ -609,4 +609,6 @@
   {:ns "futon2.aif.mission-reading-c8-test",
    :path "test/futon2/aif/mission_reading_c8_test.clj",
    :sha256
-   "427fbc7b5889bf1cce8eed7344c16620d78e97b068299ba6e7b18449efcc50c3"}]}
+   "427fbc7b5889bf1cce8eed7344c16620d78e97b068299ba6e7b18449efcc50c3"}
+ {:ns "futon2.aif.temporal-update", :path "src/futon2/aif/temporal_update.clj", :sha256 "0c016a63840523561422c939bbd9058ec89251e01e6c7ff8bc00337efa7bafcf"}]
+ :extensions [{:evidence/id "test-registry-b7f2d971bf1819592c32ab15eb389426cf19bd142f7d0f12fcd0affa73ad1623", :command ["clojure" "-M:test" "-n" "futon2.aif.temporal-update-test"], :git-head "f7684f96667763ea62a7610e3d012ab65a0fbf73", :added ["src/futon2/aif/temporal_update.clj"], :note "MAP-2B-TEMPORAL r6: this entry is copied from the named registered run, not the original 307b8969 closure."}]}

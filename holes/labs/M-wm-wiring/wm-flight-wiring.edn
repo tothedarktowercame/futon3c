@@ -97,14 +97,24 @@
   ;; interpretation store (reading/publish-*! in read-fn, reading/
   ;; published-* in flight/source-wants, which click-wants calls), not
   ;; boxed here
-  {:box/id :flight-run :box/kind :component
-   :site {:file "futon2/src/futon2/aif/flight.clj" :var "run!"}
-   ;; WM-HANDOFF-H9+H11-I: run! names the flight f: (:target f), scoped
-   :record-aliases {:flight ["f"]}
-   ;; F1a-1-I (futon2 d04711eb, 6165ec8b): the observation that followed an
-   ;; enacted step, on its :enactments entry (flight/step-observation). Its
-   ;; reader is F1b's step admission, not built: a to-do finding until then.
-   :reads [:needs [:target {:record :flight}] :chosen :increment] :writes [:readings :needs [:observation {:record :enactment-entry}] [:step {:record :enactment-entry}]]}
+  {:box/id :flight-run,
+ :box/kind :component,
+ :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+ :record-aliases {:flight ["f"], :enacted ["enacted"]},
+ :reads
+ [:needs
+  [:target {:record :flight}]
+  :chosen
+  :increment
+  :temporal-receipt
+  :record-path],
+ :writes
+ [:readings
+  :needs
+  [:observation {:record :enactment-entry}]
+  [:step {:record :enactment-entry}]
+  [:temporal-receipt {:record :enactment-entry}]]}
+
   {:box/id :flight-ask-fn :box/kind :component
    ;; WM-HANDOFF-H9+H11-I: the ask step's (:target flight)
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "ask-fn"}
@@ -305,10 +315,16 @@
   {:box/id :flight-click-wants :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "click-wants"}
    :writes [:wants :universe]}
-  {:box/id :flight-judge-opts :box/kind :component
-   :site {:file "futon2/src/futon2/aif/flight.clj" :var "judge-opts"}
-   ;; WM-HANDOFF-H9+H11-I: (:target flight), scoped
-   :reads [:wants :universe [:target {:record :flight}]]}
+  {:box/id :flight-judge-opts,
+ :box/kind :component,
+ :site {:file "futon2/src/futon2/aif/flight.clj", :var "judge-opts"},
+ :reads
+ [:wants
+  :universe
+  [:target {:record :flight}]
+  [:temporal-receipt {:record :enactment-entry}]],
+ :writes [[:temporal-previous {:record :flight}]]}
+
   {:box/id :tick-flight-assembly :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
    ;; WM-HANDOFF-H5-I: writes the target's :universes (the flight's
@@ -549,27 +565,60 @@
    :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "legacy-input-receipt"}
    :returns-record :legacy-token-belief-input
    :writes [[:continuation-belief {:record :legacy-token-belief-input}]]}
-  {:box/id :r1-token-initialization :row 1 :box/kind :component
-   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "initialization-input-receipt"}
-   :returns-record :initialized-token-belief-input
-   :reads [[:continuation-belief {:record :legacy-token-belief-input}]]
-   :writes [[:continuation-belief {:record :initialized-token-belief-input}]]
-   :carries [{:field [:continuation-belief {:record :legacy-token-belief-input}]
-              :from {:returns-of "legacy-input-receipt"}}]}
-  {:box/id :r1-token-input :row 1 :box/kind :component
-   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "input-receipt"}
-   :note "Attribution limit: the inbound pass witnesses the result of apply syntactically; initialization-input-receipt is its literal first argument. This rule does not resolve apply's callee identity."
-   :passes [{:id :token-initialization-to-temporal
-             :value [:continuation-belief {:record :initialized-token-belief-input}]
-             :from {:returns-of "apply"}
-             :to {:call "consume-temporal" :arg 1 :callee-box :r1-token-temporal}}]}
-  {:box/id :r1-token-temporal :row 1 :box/kind :component
-   :site {:file "futon2/src/futon2/aif/token_belief_predecessor.clj" :var "consume-temporal"}
-   :returns-record :token-belief-input
-   :reads [[:continuation-belief {:record :initialized-token-belief-input}]]
-   :writes [[:continuation-belief {:record :token-belief-input}]]
-   :carries [{:field [:continuation-belief {:record :initialized-token-belief-input}]
-              :from {:param receipt :via :r1-token-input}}]}
+  {:returns-record :initialized-token-belief-input,
+ :writes
+ [[:continuation-belief {:record :initialized-token-belief-input}]],
+ :record-aliases {:token-belief-stage ["stage"]},
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt"},
+ :box/id :r1-token-initialization,
+ :box/kind :component,
+ :row 1,
+ :reads
+ [[:continuation-belief {:record :legacy-token-belief-input}]
+  [:initialization {:record :token-belief-stage}]],
+ :carries
+ [{:field [:continuation-belief {:record :legacy-token-belief-input}],
+   :from {:returns-of "legacy-input-receipt"}}]}
+
+  {:box/id :r1-token-input,
+ :row 1,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "input-receipt"},
+ :note
+ "Attribution limit: the inbound pass witnesses the result of apply syntactically; initialization-input-receipt is its literal first argument. This rule does not resolve apply's callee identity.",
+ :passes
+ [{:id :token-initialization-to-temporal,
+   :value
+   [:continuation-belief {:record :initialized-token-belief-input}],
+   :from {:returns-of "apply"},
+   :to
+   {:call "consume-temporal",
+    :arg 1,
+    :callee-box :r1-token-temporal}}],
+ :record-aliases {:temporal-inspection ["inspection"]},
+ :reads [[:temporal-previous {:record :temporal-inspection}]]}
+
+  {:returns-record :token-belief-input,
+ :writes [[:continuation-belief {:record :token-belief-input}]],
+ :record-aliases {:temporal-inspection ["inspection"]},
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal"},
+ :box/id :r1-token-temporal,
+ :box/kind :component,
+ :row 1,
+ :reads
+ [[:continuation-belief {:record :initialized-token-belief-input}]
+  [:temporal-previous {:record :temporal-inspection}]],
+ :carries
+ [{:field
+   [:continuation-belief {:record :initialized-token-belief-input}],
+   :from {:param receipt, :via :r1-token-input}}]}
+
   {:box/id :r4-rank-dispatch :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-actions"}
    :reads [[:cascade-belief {:record :rank-state}]]
@@ -647,10 +696,93 @@
    :reads [:order-use :descent :units]}
 
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
-  {:box/id :r0-enact-step :row 0 :box/kind :component
-   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   ;; WM-HANDOFF-H9+H11-I: base-step {:target (:target flight) ...}
-   :reads [:candidate [:precedence {:record :chosen}] :publication-observed [:target {:record :flight}]] :writes [:attempts :grain-gate]}
+{:box/id :temporal-finalize,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record"},
+ :returns-record :enactment,
+ :writes
+ [[:temporal-receipt {:record :enactment}]
+  [:temporal-posterior {:record :enactment}]
+  [:temporal-cursor {:record :enactment}]],
+ :note
+ "MAP-2B-TEMPORAL: finalize-record is the finalized-record writer. publish! also writes typed refusal receipts directly; these real alternative paths are an explicit attribution limit, not absent wiring."}
+{:box/id :temporal-publish,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj", :var "publish!"},
+ :note
+ "MAP-2B-TEMPORAL limit: history error, no predecessor and lock contention write :temporal-receipt directly before write-once!, through a local callback on the history path. They carry typed refusals. Declaring these writes on the enactment scope as well would create multiply-written; splitting scopes cannot prove the return through write-once!/callback."}
+{:box/id :temporal-write-once,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "write-once!"},
+ :record-aliases
+ {:enactment ["final"], :temporal-publication ["receipt"]},
+ :return-paths {:temporal-publication [:receipt]},
+ :reads [[:temporal-receipt {:record :enactment}]],
+ :writes
+ [[:record-path {:record :temporal-publication}]
+  [:digest {:record :temporal-publication}]]}
+{:box/id :temporal-envelope,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj", :var "envelope"},
+ :record-aliases {:enactment ["record"]},
+ :reads
+ [[:temporal-receipt {:record :enactment}]
+  [:temporal-posterior {:record :enactment}]
+  [:temporal-cursor {:record :enactment}]]}
+{:box/id :temporal-read-receipt,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt"},
+ :record-aliases {:temporal-publication ["receipt"]},
+ :reads
+ [[:record-path {:record :temporal-publication}]
+  [:digest {:record :temporal-publication}]]}
+{:box/id :temporal-inspect,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "inspect-trace"},
+ :returns-record :temporal-inspection,
+ :reads [[:temporal-previous {:record :flight}]],
+ :writes [[:temporal-previous {:record :temporal-inspection}]]}
+{:box/id :token-belief-stage,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_carry.clj",
+  :var "legacy-stage"},
+ :returns-record :token-belief-stage,
+ :writes [[:initialization {:record :token-belief-stage}]]}
+{:box/id :token-initialization-observations,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/token_initialization_policy.clj",
+  :var "apply-observations"},
+ :record-aliases {:token-belief-stage ["stage"]},
+ :reads [[:initialization {:record :token-belief-stage}]]}
+  {:box/id :r0-enact-step,
+ :row 0,
+ :box/kind :component,
+ :site
+ {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+ :reads
+ [:candidate
+  [:precedence {:record :chosen}]
+  :publication-observed
+  [:target {:record :flight}]],
+ :writes
+ [:attempts
+  :grain-gate
+  :temporal-receipt
+  :record-path],
+ :returns-record :enacted}
+
   ;; WIRE-23-C1: the runner writes the selected action's precedence into
   ;; the chosen summary; enact-fn reads (:precedence chosen), not enacted-steps.
   {:box/id :run-chosen-summary :box/kind :component
@@ -5424,4 +5556,219 @@
   {:finding :occurrence-without-declaration :field :text-sha256
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn"}
    :declared-by [] :kind :standing
-   :note "MAP-FIX-SBR: read-fn:682 also copies the served-by digest onto its returned reading record. This declaration covers its scoped read from served-by; the unscoped output is not a second source of that value."}]}
+   :note "MAP-FIX-SBR: read-fn:682 also copies the served-by digest onto its returned reading record. This declaration covers its scoped read from served-by; the unscoped output is not a second source of that value."}
+{:finding :declaration-without-occurrence,
+ :box/id :flight-run,
+ :field [:temporal-receipt :enactment-entry],
+ :role :writes,
+ :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6 attribution limit: run! projects the enacted temporal receipt into :enactments with select-keys; judge-opts reads that entry. The record courier exists, but the projected scoped record is not attributed.",
+ :attribution-limit true}
+{:finding :declaration-without-occurrence,
+ :box/id :flight-judge-opts,
+ :field [:temporal-receipt :enactment-entry],
+ :role :reads,
+ :site {:file "futon2/src/futon2/aif/flight.clj", :var "judge-opts"},
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6 attribution limit: run! projects the enacted temporal receipt into :enactments with select-keys; judge-opts reads that entry. The record courier exists, but the projected scoped record is not attributed.",
+ :attribution-limit true}
+{:finding :occurrence-without-declaration,
+ :field :attempts,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :detail,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :error,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj", :var "publish!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :kind,
+ :site
+ {:file "futon2/src/futon2/aif/token_initialization_policy.clj",
+  :var "apply-observations"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site
+ {:file "futon2/src/futon2/aif/flight_runner.clj",
+  :var "wc-verdict-fn"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site
+ {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :record-path,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "write-once!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_initialization_policy.clj",
+  :var "apply-observations"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "inspect-trace"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_carry.clj",
+  :var "legacy-stage"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :status,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj", :var "envelope"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :temporal-receipt,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :temporal-receipt,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :temporal-receipt,
+ :site {:file "futon2/src/futon2/aif/flight.clj", :var "judge-opts"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :temporal-receipt,
+ :site
+ {:file "futon2/src/futon2/aif/temporal_update.clj", :var "publish!"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6 attribution limit: publish! directly writes typed :temporal-receipt refusals on history error, missing predecessor and lock contention, then calls write-once! (also through its local callback). These are real alternate writes; the one-writer declaration names finalize-record, not a claim that refusal paths are absent.",
+ :attribution-limit true}
+{:finding :occurrence-without-declaration,
+ :field :universe,
+ :site
+ {:file "futon2/src/futon2/aif/token_initialization_policy.clj",
+  :var "apply-observations"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+{:finding :occurrence-without-declaration,
+ :field :universe,
+ :site
+ {:file "futon2/src/futon2/aif/token_belief_carry.clj",
+  :var "legacy-stage"},
+ :declared-by [],
+ :kind :to-do,
+ :note
+ "MAP-2B-TEMPORAL r6: additional unscoped occurrence exposed by the courier's field vocabulary and component sites. Scoped courier fields are declared separately; this occurrence is not claimed as an additional wire."}
+]}
