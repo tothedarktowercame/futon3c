@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 50, :refusal 21, :record 18, :absent 91},
+ {:value-varying 51, :refusal 21, :record 23, :absent 85},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -382,28 +382,76 @@
    "Real http-click-fn post body into direct handle-wm-click-start, request shape from flight-click-http-test. Runner IO captures handler-produced options; no click issued."}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test/reader-carries-the-intervened-value,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-861f80ab4d8213da7ac017fc9bc38262432875f0361a94cc6ca72faa1c74c26d",
+     :git-head "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :test-revision "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :ran-at "2026-09-27T16:02:07.393205145Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :flight-judge-opts :wants],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test/reader-carries-the-intervened-value,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-8798672a1934d2f3d2d433a3e7e2b125f8b3a8375408c7d370944a818976631e",
+     :git-head "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :test-revision "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :ran-at "2026-09-27T16:01:44.730962827Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :universe],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test/reader-carries-the-intervened-value,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-4ec72df3237aa15abcdcb27f755947a2ba074db2a02807190cfd1c3f1684e031",
+     :git-head "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :test-revision "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :ran-at "2026-09-27T16:02:51.566533346Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test/the-real-reader-receives-the-published-value,
    :note
    "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test/reader-carries-the-intervened-value,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-cfadb0017620ee0cdaac96b4903352763b6970de8e425808435ef99226736dd5",
+     :git-head "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :test-revision "a5b8ec29dedd8fb9c028b5d3840ec4a4ff0660a8",
+     :ran-at "2026-09-27T16:02:29.137702192Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test/the-real-reader-receives-the-published-value,
    :note
@@ -1149,12 +1197,36 @@
    "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation."}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/prompt-records-root-without-reading-patterns,
+     :kind :record,
+     :product [:text],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-931a211fe0080021b22b1a404afcf12a5de729eb85693818e187411c6f2de6fb",
+     :git-head "888a7811c6a602d27a96a7aaf416c309c9d5d579",
+     :test-revision "888a7811c6a602d27a96a7aaf416c309c9d5d579",
+     :ran-at "2026-09-27T16:02:25.611903075Z"}},
    :test
    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/the-writer-reaches-the-reader}
   {:wire [:r3-flight-ask :r3-test :library-root],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/real-test-box-detects-root-change,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-b318d43fc84ae1d973e95cb0e26f46a36edae4b0c639acc1ac2c06f78b7bc915",
+     :git-head "888a7811c6a602d27a96a7aaf416c309c9d5d579",
+     :test-revision "888a7811c6a602d27a96a7aaf416c309c9d5d579",
+     :ran-at "2026-09-27T16:02:58.470079151Z"}},
    :test
    futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/the-writer-reaches-the-reader}
   {:wire
