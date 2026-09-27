@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
-  :witnessed-hermetically 165,
-  :unverified 0,
+  :witnessed-hermetically 164,
+  :unverified 1,
   :wires 175},
  :wires
  [{:wire
@@ -18,11 +18,11 @@
    "Returned sources tampered before assemble-one; assembled interpretations and problem-tokens witness the read."}
   {:wire
    [:ask-merge-published :construction-construct :interpretations],
-   :status :witnessed-hermetically,
-   :test
-   futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/the-real-reader-receives-the-published-value,
+   :status :unverified,
    :note
-   "Published patterns passed to real construct; receipt unreached-wants determines which open wants were produced. Missing interpretations refuse invalid-input."}
+   "Published patterns passed to real construct; receipt unreached-wants determines which open wants were produced. Missing interpretations refuse invalid-input.",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/the-real-reader-receives-the-published-value}
   {:wire
    [:ask-merge-published :flight-conditioning-step :interpretations],
    :status :witnessed-hermetically,
