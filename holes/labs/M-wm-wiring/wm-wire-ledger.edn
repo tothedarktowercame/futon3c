@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 38, :refusal 20, :record 6, :absent 116},
+ {:value-varying 43, :refusal 20, :record 10, :absent 107},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -1112,14 +1112,38 @@
    "Existing chain test calls efe/rank-cascade-actions through order-kernel-test/rank and asserts entry order-use. Reader value captured from its clojure.test equality report."}
   {:wire [:r4-kernel :r8-selection-candidate :controller-score],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/candidate-records-controller-score,
+     :kind :record,
+     :product [:g],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-531c69be00237a54ba9c8f944c9fd7e324e69b9313926eb518c53b6708bd8b76",
+     :git-head "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :test-revision "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :ran-at "2026-09-27T15:15:42.633333496Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
    :note
    "Real ranker chain G read by selection-candidate into :g; typed absence and changed score altered before reader."}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/score-changes-selection-posterior,
+     :kind :value-varying,
+     :product [:selection-law :posterior],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a7098df7bc47d754c9976462aada5a7f189274bbaec9b3f9d84cc0125d9842f5",
+     :git-head "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :test-revision "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :ran-at "2026-09-27T15:15:07.203160119Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/the-reader-receives-the-kernel-value,
    :note
@@ -1505,7 +1529,19 @@
    futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/the-delta-reaches-the-selection-test}
   {:wire [:r7-selection :r7-test :e-source],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-selection-e-source-test/changed-selection-product,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-fb90f17cac80d73612ff1e03c22e73288c7c081d7d261e027097191bb65aa97e",
+     :git-head "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :test-revision "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :ran-at "2026-09-27T15:10:30.339913729Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
@@ -1725,7 +1761,19 @@
     :r8-selection-candidate
     [:f-prefix {:record :ranked-entry}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/candidate-records-prefix-and-posterior-uses-it,
+     :kind :record,
+     :product [:f],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-687538033d1bdb0905675ffe2c8475db46f3c5798781a80e3a926fb29c7b0a14",
+     :git-head "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :test-revision "d1daa9bef550ede67096c3fe43f881aa031aac9b",
+     :ran-at "2026-09-27T15:16:20.103498884Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/the-reader-receives-the-kernel-value,
    :note
@@ -1807,29 +1855,89 @@
    futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
   {:wire [:r9-selection-law :r7-increment :candidate],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/changed-selection-product,
+     :kind :record,
+     :product [:receipt :record-id],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-844968cbd7ed20acf6c5a4ea0ac25786d359e1a7971b1191eb32edad80ebfd77",
+     :git-head "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :test-revision "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :ran-at "2026-09-27T15:10:09.264542079Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/the-real-reader-handoff,
    :note
    "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed."}
   {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/changed-selection-product,
+     :kind :record,
+     :product [:recorded],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-efa48923392cc0ae9b7d6a49432b5da8c8c6b2b68bf23dffe4d574aefc93fc2a",
+     :git-head "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :test-revision "7ed5be84cbdfcb54ec094a6613db359c40720b91",
+     :ran-at "2026-09-27T15:09:52.259148176Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/the-posterior-mode-reaches-the-decision}
   {:wire [:r9-selection-law :r9-test :candidate],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-real-test-report-depends-on-the-field,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-92a6e46da91851fd3976fe615d09f1aa20c40271124611bf37187f17cf7e3f1d",
+     :git-head "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :test-revision "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :ran-at "2026-09-27T15:12:05.590469Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-candidate-reaches-the-selection-test}
   {:wire [:r9-selection-law :r9-test :enacted-steps],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-real-test-report-depends-on-the-field,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e22f0b1eb2b2d3b6dc6fc381aaf0c74a22e98ff60802394a4c4bd5c5a0a8f471",
+     :git-head "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :test-revision "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :ran-at "2026-09-27T15:10:57.276364553Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-enacted-steps-reach-the-selection-test}
   {:wire [:r9-selection-law :r9-test :per-policy-argmax],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-real-test-report-depends-on-the-field,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-5ad1d7f47f0a26e99dea6693d9de5262e4eebed01da408ff413067035c1e7bef",
+     :git-head "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :test-revision "d5b9641661f16c30e3fb1428b472f8571faccf63",
+     :ran-at "2026-09-27T15:11:12.703264869Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
