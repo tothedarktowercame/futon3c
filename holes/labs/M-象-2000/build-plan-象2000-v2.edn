@@ -76,7 +76,7 @@
    :deps [:P5] :decision nil :decided "Joe 2026-09-27: approved; empty HOWEVER refused, 'failure mode unknown' + review date accepted" :v2 :changed
    :patterns [:象/三层规格 :象/裁亦有失 :象/措施随案]}
   {:id :P13b :title "Adopted, committed, live; versions by live time" :segment :institutions
-   :deps [:P13a] :decision {:theme :semantics :question "Answer 'in force at T' from runtime evidence rather than commit time? (Source per rule kind: load record for code rules, first-execution trace for rules the dispatcher runs.)"} :v2 :changed
+   :deps [:P13a] :decision nil :decided "Joe 2026-09-27: in force = applied (runtime evidence); non-traditional vs 'ignorance of the law is no excuse' (promulgation), noted; all three times kept so the other reading stays answerable" :v2 :changed
    :patterns [:象/提交非生效]}
   {:id :P14  :title "Incident clearance: resolved, measures can end, compensation list" :segment :institutions
    :deps [:P6 :P13a :P5] :decision nil :v2 :narrowed
