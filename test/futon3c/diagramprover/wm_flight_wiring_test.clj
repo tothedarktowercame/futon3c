@@ -47,8 +47,13 @@
       (spit (io/file root f) out))
     (str root)))
 
+;; :attribution-limit is the map's own annotation (like :note): a finding whose
+;; read or write IS made in the code through a form the prover cannot attribute
+;; (PROOF-2a sheet item 7). The prover never emits it, so it is not compared.
+;; :heuristic stays compared: the prover sets it on its occurrence-heuristic
+;; findings, and that flag must match.
 (defn- comparable [f]
-  (cond-> (dissoc f :rows :kind :note)
+  (cond-> (dissoc f :rows :kind :note :attribution-limit)
     (contains? f :error) (-> (dissoc :error) (assoc :error? true))))
 
 (defn report [root s]
