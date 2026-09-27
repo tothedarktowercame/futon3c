@@ -40,7 +40,7 @@
    :deps [:P3] :decision nil :v2 :changed
    :patterns [:象/名分有据 :象/释义非授]}
   {:id :P5   :title "Five promise outcomes; release no longer deletes" :segment :supply
-   :deps [:P2a] :decision {:theme :semantics :question "Stop deleting a park on release, and stop counting a wake as fulfilment?"} :v2 :rewritten
+   :deps [:P2a] :decision nil :decided "Joe 2026-09-27: narrowed to additive fulfilled/lapsed outcome records; /tmp deletion stays (cache of P2a history)" :v2 :rewritten
    :patterns [:象/诺必践 :象/两种规格]}
   {:id :P6   :title "Evidence as-of on both time axes" :segment :supply
    :deps [] :decision nil :v2 :changed
