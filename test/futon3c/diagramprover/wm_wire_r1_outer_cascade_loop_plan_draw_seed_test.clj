@@ -1,7 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test
   "Wire [:r1-outer-cascade :loop-plan :draw-seed]. Real loop calls;
   no live record carries both ends. See support/live-records-read."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-loop-products-12a :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-plan-support :as support]))
 
@@ -15,6 +16,9 @@
   {:wire [:r1-outer-cascade :loop-plan :draw-seed]
    :kind :witnessed-hermetically
    :test `the-writers-value-reaches-the-reader
+   :second-layer {:test `selector-field-controls-loop-plan
+                  :kind :record :product [:result :plan]
+                  :intervention :before-reader}
    :check check :live-records-read support/live-records-read})
 
 (deftest the-writers-value-reaches-the-reader
@@ -32,3 +36,12 @@
 
 (deftest live-records-do-not-witness-this-wire
   (support/assert-live-records))
+
+(deftest selector-field-controls-loop-plan
+  (let [[a b] (products/products :draw-seed)
+        pa (get-in a [:result :plan]) pb (get-in b [:result :plan])]
+    (is (= (:written a) (:written b)) "Same real field, seed, and selector output.")
+    (is (not= (get-in pa [:placement :draw-seed]) (get-in pb [:placement :draw-seed])))
+    (is (= (get-in b [:handed :draw-seed]) (get-in pb [:placement :draw-seed])))
+    (is (= (update pa :placement dissoc :draw-seed) (update pb :placement dissoc :draw-seed)))
+    (println :draw-seed :values [(get-in pa [:placement :draw-seed]) (get-in pb [:placement :draw-seed])])) )

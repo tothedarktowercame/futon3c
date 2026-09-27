@@ -1,7 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test
   "Wire [:r1-outer-cascade :loop-plan :chosen-target]. Real loop calls;
   no live record carries both ends. See support/live-records-read."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-loop-products-12a :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-plan-support :as support]))
 
@@ -15,6 +16,9 @@
   {:wire [:r1-outer-cascade :loop-plan :chosen-target]
    :kind :witnessed-hermetically
    :test `the-writers-value-reaches-the-reader
+   :second-layer {:test `selector-field-controls-loop-plan
+                  :kind :value-varying :product [:result :plan]
+                  :intervention :before-reader}
    :check check :live-records-read support/live-records-read})
 
 (deftest the-writers-value-reaches-the-reader
@@ -32,3 +36,25 @@
 
 (deftest live-records-do-not-witness-this-wire
   (support/assert-live-records))
+
+(deftest selector-field-controls-loop-plan
+  (let [[a b] (products/products :chosen-target)
+        pa (get-in a [:result :plan]) pb (get-in b [:result :plan])]
+    (is (= (:written a) (:written b)) "Same real field, seed, and selector output.")
+    (is (not= (:requisition pa) (:requisition pb)))
+    (doseq [p [pa pb]]
+      (let [m (first (filter #(= (:target %) (:requisition p)) products/missions))]
+        (is (= (select-keys m [:repo :path]) (select-keys (:want-source p) [:repo :path])))))
+    (is (not= (get-in pa [:want-source :path]) (get-in pb [:want-source :path])))
+    (is (= #{3 6} (set (map #(count (get-in % [:wants :in-view])) [pa pb]))))
+    (is (not= (:wants pa) (:wants pb)))
+    (println :chosen-target :plans
+             (mapv #(select-keys % [:requisition :want-source :wants]) [pa pb]))))
+
+(deftest target-outside-field-passes-nil-location-to-plan
+  (let [[_ b] (products/products :missing)]
+    (is (= "M-not-in-field" (get-in b [:handed :chosen-target])))
+    (is (nil? (get-in b [:handed :repo])))
+    (is (nil? (get-in b [:handed :path])))
+    (println :missing-target :handed (:handed b)
+             :plan (select-keys (get-in b [:result :plan]) [:requisition :want-source :wants]))))
