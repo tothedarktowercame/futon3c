@@ -72,6 +72,12 @@
            :author (:evidence/author entry)
            :body (:evidence/body entry)
            :tags (mapv enum-name (:evidence/tags entry))}
+    (contains? entry :evidence/harness)
+    (assoc :harness (:evidence/harness entry))
+
+    (contains? entry :evidence/origin)
+    (assoc :origin (:evidence/origin entry))
+
     (:evidence/pattern-id entry)
     (assoc :pattern-id (enum-name (:evidence/pattern-id entry)))
 

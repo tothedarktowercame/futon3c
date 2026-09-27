@@ -3124,6 +3124,11 @@
         ;; it through this compatibility ingress; never replace it with login identity.
         (cond-> (or (contains? payload :origin) (contains? payload "origin"))
           (assoc :origin (or (:origin payload) (get payload "origin"))))
+        ;; Preserve execution context verbatim, including explicit nil for
+        ;; authoritative store rejection. Namespaced input takes precedence.
+        (cond-> (some #(contains? payload %) [:evidence/harness "evidence/harness" :harness "harness"])
+          (assoc :harness (get payload (first (filter #(contains? payload %)
+                                                    [:evidence/harness "evidence/harness" :harness "harness"])))))
         (cond-> (or (nil? (:evidence-id entry))
                     (str/blank? (str (:evidence-id entry))))
           (dissoc :evidence-id))

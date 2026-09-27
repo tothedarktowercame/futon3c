@@ -99,6 +99,9 @@
                                  :evidence/body body
                                  :evidence/tags (vec (or tags []))}
                           entry (cond-> entry
+                                  (or (contains? m :harness) (contains? m :evidence/harness))
+                                  (assoc :evidence/harness (if (contains? m :evidence/harness)
+                                                            (:evidence/harness m) (:harness m)))
                                   origin (assoc :evidence/origin origin)
                                   pattern-id (assoc :evidence/pattern-id pattern-id)
                                   session-id (assoc :evidence/session-id session-id)
