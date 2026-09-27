@@ -11,7 +11,8 @@
   WITNESSED-HERMETICALLY: the real sourced-rates driven through the real
   measured-a-version over admitted labels, as
   flight_conditioning_step_test's produced-measured-a does."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-rates-products-support :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-publication-support :as support]))
 
@@ -24,7 +25,9 @@
 (defn check [] (support/measurement-observe identity))
 
 (def wire
-  {:wire [:r6-sourced-rates :r9-measured-a-version [:measurement {:record :sourced-rates}]]
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/reader-product-changes-at-the-carrier :kind :refusal
+                   :product [:reason] :intervention :before-reader :expected :no-measured-rates}
+   :wire [:r6-sourced-rates :r9-measured-a-version [:measurement {:record :sourced-rates}]]
    :kind :witnessed-hermetically
    :test `the-writers-measurement-reaches-the-reader
    :check check
@@ -58,3 +61,12 @@
     (is (not-any? #(and (map? %) (contains? % :measured-a))
                   (tree-seq coll? seq (w/read-record path)))
         (str path " has no [:decision :measured-a]"))))
+
+(deftest reader-product-changes-at-the-carrier
+  (let [before (products/measured-product :measurement identity)
+        after (products/measured-product :measurement #(zipmap (keys %) (repeat :absent)))]
+    (is (= :wm/measured-a-v1 (:schema before)))
+    (is (every? #(= {:numerator 0 :denominator 5} (:false-neg %))
+                (vals (:measurement before))))
+    (is (= {:status :absent :reason :no-measured-rates} after))
+    (println :measurement-product (:schema before) :after after)))
