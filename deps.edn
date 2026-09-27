@@ -12,6 +12,7 @@
   org.clojure/tools.nrepl   {:mvn/version "0.2.13"}
   org.clojure/core.logic    {:mvn/version "1.1.0"}
   rewrite-clj/rewrite-clj   {:mvn/version "1.1.49"}
+  org.xerial/sqlite-jdbc    {:mvn/version "3.44.1.0"}
 
   ;; futon3b gate pipeline — social loop submits tasks through gates
   futon3b/futon3b           {:local/root "../futon3b"}
