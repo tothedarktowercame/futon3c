@@ -64,7 +64,7 @@
    :deps [:P1 :P2a :P5 :P6 :P8] :decision nil :v2 :same
    :patterns [:象/欠与被欠]}
   {:id :P10  :title "withdraw: interpretation separate from effect" :segment :acts
-   :deps [:P5 :P6b] :decision {:theme :new-type :question "Add the withdraw intent, and who may confirm its effect?"} :v2 :rewritten
+   :deps [:P5 :P6b] :decision nil :decided "Joe 2026-09-27: authors withdraw own acts at once (incl. pattern-card swaps); others' acts need a grant; 象-inferred withdrawals of Joe's words provisional, visible, reversible by one word; Ostrom framing" :v2 :rewritten
    :patterns [:象/释义非授 :象/收回亦是行]}
   {:id :P11  :title "Agreement records (offer + accept)" :segment :acts
    :deps [:P3 :P9] :decision {:theme :new-type :question "A new pair of act types, offer and accept?"} :v2 :same
