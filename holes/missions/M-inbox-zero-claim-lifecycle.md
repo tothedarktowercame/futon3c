@@ -771,3 +771,49 @@ while the replacement consumer is unavailable. No claim of C8 completion or
 full DERIVE exit is authorized. S1 recovery unlock/relock failure remains open
 for later S2, capture remains unproven, C6 release remains complete. Owner parks
 on the actual N3 job; deadline wake requires job inspection, not redispatch.
+
+### Checkpoint 2026-09-27 — N3 reviewed; N4 corrective implementation
+
+Reviewed N3 source commits futon3c 4a20507d, futon0 8399bee, futon2
+8427db315 and report a514e47a. Unsafe personal-assignment machinery is
+structurally removed in local source; runtime remains unchanged. **Not accepted
+for deployment/C8 completion.** Owner found concrete visibility failures:
+
+- Backlog and feed share a row containing only five newest filenames. The
+  advertised full detail cannot enumerate the remainder; plain pathname text
+  does not establish usable UI navigation.
+- Producer merge iterates only mana manifest roots. Owner executed actual
+  merge function with empty manifest and an uncertainty root carrying ten
+  dirty paths: result `[]`. Worktree identity also disappears at WM scan.
+- Owner executed actual loader on `{:repos [{:root "/tmp" :dirty-count -7}]}`
+  in a disposable EDN file: returned `:available`, nil timestamp/age and
+  `:stale? false`. Missing required freshness/count validation is confirmed.
+- Projection defaults missing uncertainty to numeric zero. Actual table does
+  not render missing/malformed or stale uncertainty status. Overflow detail
+  points to a backlog that does not contain all ordinary pressure queues.
+- Diagnostic-window failures can suppress reporting; publication failures
+  need explicit incomplete status. Tests must cover these boundaries.
+
+Owner probes ran with timeout and removed disposable data. First loader probe
+failed before invocation because script initialization resolved NO_SOURCE_PATH;
+second loaded only the real loader/merge definitions and produced the results
+above. No test suite rerun was needed to establish these new counterexamples.
+N3's disclosed accidental live mana regeneration violated packet scope; the
+correction must make tests safely importable and sandbox all outputs. Skipped
+.bb files do not count as checked parentheses.
+
+Dispatched corrective implementation **N4** to kimi-9, actual job
+**invoke-1790538875534-25633-c905b834**. Require complete navigable detail,
+canonical-root union without invented measurements, validated freshness and
+explicit unknown state, real producer-through-render tests and failure cases.
+The first dispatch attempt was locally rejected for requisition syntax, so
+there was no duplicate accepted job. Deployment report must establish available
+consumer BEFORE removing the live notice lane, not reload first into a 503.
+No deployment, state writes or notification sends authorized by this packet.
+
+Joe's prompt steering is recorded: agent/design-pattern prompt such as
+`$象/诺必践*>` may consume verified current-work dirt in future; `?` may
+represent unresolved checkout dirt. Baseline prompt must not imply clean, and
+this reporting feed cannot authorize `*`. No prompt implementation or message
+to claude-7 dispatched. C6 complete; transaction recovery S2 and capture remain
+open; full DERIVE pending. Owner parks on N4 for independent review.
