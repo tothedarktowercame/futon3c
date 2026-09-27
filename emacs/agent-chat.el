@@ -3341,7 +3341,8 @@ character the operator meant to write."
                                   (if is-user
                                       turn-source
                                     (list :kind "agent" :actor assistant-author))))
-                      (harness . ,(agent-turn-harness-stamp turn-source sid))
+                      ,@(when (fboundp 'agent-turn-harness-stamp)
+                          `((harness . ,(agent-turn-harness-stamp turn-source sid))))
                       (session-id . ,sid)
                       (body . ,(append `((event . "chat-turn")
                                          (transport . ,transport)
@@ -3394,7 +3395,9 @@ character the operator meant to write."
                           (author . ,assistant-author)
                           (origin . ,(agent-turn-origin-stamp assistant-author "agent-chat/turn-commits"
                                       (list :kind "agent" :actor assistant-author)))
-                          (harness . ,(agent-turn-harness-stamp agent-turn-origin-current sid))
+                          ,@(when (fboundp 'agent-turn-harness-stamp)
+                              `((harness . ,(agent-turn-harness-stamp
+                                             agent-turn-origin-current sid))))
                           (session-id . ,sid)
                           (body . ,body)
                           (tags . ,(apply #'vector tags)))))

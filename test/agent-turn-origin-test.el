@@ -138,3 +138,22 @@
                 "p3-session")))
     (should (equal (alist-get 'kind stamp) "none"))
     (should-not (equal (alist-get 'kind stamp) "war-machine"))))
+
+(ert-deftest p3-3c-old-loaded-origin-omits-harness-safely ()
+  (with-temp-buffer
+    (let ((agent-turn-origin-current '(:kind "operator" :actor "joe"))
+          (saved-function (symbol-function 'agent-turn-harness-stamp))
+          payload)
+      (unwind-protect
+          (progn
+            (fmakunbound 'agent-turn-harness-stamp)
+            (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                      ((symbol-function 'agent-chat-evidence-enabled-p)
+                       (lambda (&rest _) t))
+                      ((symbol-function 'agent-chat-evidence-post-entry-id)
+                       (lambda (_url _timeout p) (setq payload p) "p3-3c-old")))
+              (agent-chat-emit-turn-evidence!
+               "test" 1 t "p3-session" "user" "text" "agent" "test" nil
+               'p6o-session 'p6o-last))
+            (should-not (assq 'harness payload)))
+        (fset 'agent-turn-harness-stamp saved-function)))))

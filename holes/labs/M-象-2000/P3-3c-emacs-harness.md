@@ -8,6 +8,12 @@ The Emacs evidence payload builder now writes `harness` for chat-turn and
 turn-commits records from the turn's write-time provenance. It does not use the
 displayed author or caller name.
 
+Because Joe's Emacs loads these files directly from the shared checkout, the
+payload builder first checks whether `agent-turn-harness-stamp` is defined. If
+`agent-chat.el` is observed before the updated origin module is loaded, it
+omits the optional field. This preserves the storage contract and avoids a
+live `void-function` failure.
+
 - Operator input is `none`, based on the producer context, with the session as
   `source-ref`.
 - An explicitly job-bound bell copies that job's harness. A bound job without
@@ -56,7 +62,9 @@ The real `agent-chat-emit-turn-evidence!` payload builder produced:
 
 ## Loading
 
-Joe can load the committed code in the running Emacs with:
+The reload order is required: `agent-turn-origin.el` first defines the helper;
+`agent-chat.el` second loads its callers. Joe can load the committed code in
+the running Emacs with:
 
 ```elisp
 (progn
