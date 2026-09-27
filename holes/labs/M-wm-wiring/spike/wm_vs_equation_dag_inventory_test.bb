@@ -135,5 +135,59 @@
       (finally
         (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
 
+(deftest composed-path-requires-every-hop-and-unplaced-intermediates
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "join-path-test-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        mf (io/file dir "map.edn") rf (io/file dir "registry.edn")
+        a {:box/id :box-b :site {:file "b.clj" :var "make-b"} :writes [:first]}
+        x {:box/id :middle :site {:file "x.clj" :var "helper"} :reads [:first] :writes [:second]}
+        b {:box/id :box-c :site {:file "c.clj" :var "make-c"} :reads [:second]}
+        entries (mapv #(assoc (first fixture-correspondence) :field %) [:first :second])]
+    (try
+      (doseq [[label bs es reg expected]
+              [[:path [a x b] entries fixture-registry :declared]
+               [:missing-hop [a x b] (vec (take 1 entries)) fixture-registry :hole]
+               [:placed-middle [a (assoc-in x [:site :var] "make-d") b]
+                entries fixture-registry :hole]
+               [:cycle [a (assoc x :writes [:loop] :reads [:first :back])
+                        {:box/id :loop :site {:file "loop.clj" :var "looper"}
+                         :reads [:loop] :writes [:back]} b]
+                (into entries (map #(assoc (first fixture-correspondence) :field %) [:loop :back]))
+                fixture-registry :hole]
+               [:wrong-term [a x b] (assoc-in entries [1 :term] :wrong) fixture-registry :hole]
+               [:extra-symbol [a x b] entries
+                (-> fixture-registry
+                    (update :equations conj {:defines :s-b2 :node :RB :imports []})
+                    (update-in [:equations 2 :imports] conj :s-b2)) :hole]]]
+        (spit mf (pr-str {:boxes bs})) (spit rf (pr-str reg))
+        (let [r (generate mf rf es)
+              _ (is (zero? (:exit r)) (str label ": " (:err r)))
+              edge (first (filter #(= [:RB :RC] (:edge %)) (:edges (edn/read-string (:out r)))))]
+          (is (= expected (:inventory edge)) (str label))
+          (if (= expected :declared)
+            (is (= [[:first :box-b :middle] [:second :middle :box-c]] (:path edge)))
+            (is (nil? (:path edge))))))
+      (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
+
+(deftest path-length-bound
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "join-bound-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        mf (io/file dir "map.edn") rf (io/file dir "registry.edn")]
+    (try
+      (spit rf (pr-str fixture-registry))
+      (doseq [n [4 5]]
+        (let [fields (mapv #(keyword (str "f" %)) (range (inc n)))
+              mids (mapv #(hash-map :box/id (keyword (str "middle" %))
+                                   :site {:file "x.clj" :var (str "helper" %)}
+                                   :reads [(fields %)] :writes [(fields (inc %))]) (range n))
+              bs (into [{:box/id :box-b :site {:file "b.clj" :var "make-b"} :writes [(first fields)]}
+                        {:box/id :box-c :site {:file "c.clj" :var "make-c"} :reads [(last fields)]}] mids)]
+          (spit mf (pr-str {:boxes bs}))
+          (let [r (generate mf rf (mapv #(assoc (first fixture-correspondence) :field %) fields))
+                edge (first (filter #(= [:RB :RC] (:edge %)) (:edges (edn/read-string (:out r)))))]
+            (is (zero? (:exit r)) (:err r))
+            (is (= (if (= n 4) :declared :hole) (:inventory edge))))))
+      (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
+
 (let [result (run-tests)]
   (when (pos? (+ (:fail result) (:error result))) (System/exit 1)))

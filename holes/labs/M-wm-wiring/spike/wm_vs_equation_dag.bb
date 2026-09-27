@@ -25,6 +25,9 @@
 ;; WM_VS_DAG_TERM_FIELDS_FILE are for the test. The term table's bytes are
 ;; independently pinned in the output by :term-fields-sha256.
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.set :as set] '[clojure.java.shell :as sh])
+(require '[babashka.classpath :as cp] '[clojure.java.io :as io])
+(cp/add-classpath "src")
+(require '[futon3c.diagramprover.wiring :as wiring])
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def registry-path "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")
 (def map-rev (first *command-line-args*))
@@ -122,18 +125,75 @@
         (contains? hole-edges edge) :hole
         (contains? code-path-note-edges edge) :code-path-note
         :else :none))
+(def max-path-intermediates 4)
+(def placed-boxes (apply set/union #{} (vals node-boxes-by-var)))
+;; Only positional/carry checks need source text. Read the map's repo pins,
+;; never a sibling lane's uncommitted source.
+(def proof-root
+  (delay
+    (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                         "join-path-" (make-array java.nio.file.attribute.FileAttribute 0)))]
+      (doseq [f (distinct (keep #(get-in % [:site :file]) boxes))
+              :let [[repo path] (str/split f #"/" 2) rev (get (:repos m) repo)]
+              :when rev
+              :let [r (sh/sh "git" "-C" (str "/home/joe/code/" repo) "show" (str rev ":" path))]
+              :when (zero? (:exit r))]
+        (io/make-parents (io/file root f))
+        (spit (io/file root f) (:out r)))
+      (str root))))
+(def checked-path-hops
+  (delay
+    (vec (distinct
+           (concat
+             (for [[f writer] writers reader (readers f)
+                   :let [box (first (filter #(= reader (:box/id %)) boxes))
+                         carry (first (filter #(= f (:field %)) (:carries box)))]
+                   :when (or (nil? carry)
+                             (:ok? (wiring/carry-attribution @proof-root boxes reader carry)))]
+               [f writer reader])
+             (for [box boxes pass (:passes box)
+                   :when (:ok? (wiring/pass-attribution @proof-root boxes (:box/id box) pass))
+                   :let [fn-name (some-> (get-in pass [:from :returns-of]) (str/replace #".*/" ""))
+                         src (or (and fn-name (box-by-var fn-name)) (:box/id box))]]
+               [(:value pass) src (get-in pass [:to :callee-box])]))))))
+(defn term-path [edge term starts ends]
+  (let [fields (set (map :field (filter #(and (= edge (:edge %)) (= term (:term %))) term-fields)))
+        hops (group-by second (sort-by pr-str (filter #(fields (first %)) @checked-path-hops)))]
+    (letfn [(walk [box seen path]
+              (some (fn [[_ _ next-box :as hop]]
+                      (when-not (seen next-box)
+                        (let [next-path (conj path hop)]
+                          (cond
+                            (ends next-box) (when (<= 2 (count next-path)) next-path)
+                            (or (placed-boxes next-box)
+                                (> (count next-path) max-path-intermediates)) nil
+                            :else (walk next-box (conj seen next-box) next-path)))))
+                    (get hops box)))]
+      (some #(walk % #{%} []) (sort-by str starts)))))
 (def edge-report
   (for [[[a b] syms] (sort-by (comp str key) theory)
         :let [[st-file fs-file] (edge-status (node-boxes a) (node-boxes b))
               [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))
               coverage (when (= :declared st-var) (term-coverage [a b] syms fs-var))
-              inv (inventory [a b] st-var coverage)]]
+              paths (into (sorted-map) (for [term (sort syms)
+                                            :when (not (contains? (:covered coverage) term))
+                                            :let [path (term-path [a b] term
+                                                                  (or (node-boxes-by-var a) #{})
+                                                                  (or (node-boxes-by-var b) #{}))]
+                                            :when path] [term path]))
+              covered (set/union (or (:covered coverage) #{}) (set (keys paths)))
+              path-complete? (and (seq paths) (= syms covered))
+              inv (if path-complete? :declared (inventory [a b] st-var coverage))]]
     (cond-> {:edge [a b] :symbols syms
              :by-file st-file :by-var st-var
              :fields-by-file fs-file :fields-by-var fs-var
              :inventory inv
              :registry-no-site (vec (filter (set no-site-nodes) [a b]))}
       coverage (assoc :term-coverage (dissoc coverage :status))
+      path-complete? (assoc :path (val (first paths)) :paths paths
+                            :term-coverage {:entries (vec (filter #(and (= [a b] (:edge %))
+                                                                                       (covered (:term %))) term-fields))
+                                            :covered covered :uncovered #{}})
       (= :hole inv) (assoc :hole-status (hole-edges [a b])))))
 ;; the flight's producers of the registry's exogenous symbols, by the mission's row table
 (def producer-report
@@ -162,3 +222,6 @@
       :nodes (for [n node-report] (assoc n :vars (vec (sort (node-vars (:node n)))) :boxes-by-var (vec (sort (node-boxes-by-var (:node n))))))
       :edges edge-report
       :producers producer-report})
+
+(when (realized? proof-root)
+  (doseq [f (reverse (file-seq (io/file @proof-root)))] (io/delete-file f)))
