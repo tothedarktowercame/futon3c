@@ -34,3 +34,30 @@ No server route or JVM reload is needed. P0 snapshots include raw `rules.json`
 under both capture-time XTDB pins and its integrity manifest, permitting offline
 replay. P0 rows 9 and 10 now query application time; only clearance remains a row
 stub. The separate retrieval system-time subclaim remains explicitly unresolved.
+
+## Live acceptance
+
+Implementation: `fc7e768a`. Both appended records verified through GET hyperedges:
+
+- Initial application: `act:4b526112-dd5d-4765-a8a6-ed8701d0089c`.
+- Followup withdrawal: `act:9bb67b13-caf7-4f96-9232-52bacf99fd8e`.
+
+Kondo: 0 errors/warnings. Parens: OK. Namespaced rule-timeline tests: 5 tests,
+15 assertions; rule-record: 5 tests, 36 assertions; all passed. Python P0 tests:
+5 passed; py_compile passed.
+
+Live `--snapshot /tmp/p13b-p0-final --check`: exit 0. Two `--from-snapshot`
+replays matched the live bytes exactly. Output:
+
+```
+QUERY | as of 09-24 17:00 | committed, not yet live
+QUERY | as of 09-25 21:00 | followup half withdrawn
+stubs: 1 of 12
+check: PASS
+```
+
+Bad case: replacing initial live time with commit time in a COPY of the snapshot,
+then updating its integrity hash, yielded exit 1 naming **row 9**, expected
+`committed, not yet live`, got `requisition rule applied`. An additional byte
+alteration without updating the manifest yielded exit 1, `snapshot hash mismatch:
+rules.json`, with no answer printed. No server reload was needed.
