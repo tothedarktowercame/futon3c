@@ -233,3 +233,59 @@ cycle 557, previous cycle finished 18:24:36.087Z, current cycle started
 18:24:41.091Z, progress 18:27:27.694Z, inbox-zero phase, no last error.
 This establishes continued slow progress, not closure or a stopped watcher.
 No restart, reload, extra cycle, or competing snapshot writer was used.
+
+### Checkpoint 2026-09-27 18:35Z — first MAP survey reviewed
+
+kimi-9 completed job `invoke-1790533836865-25557-ed31bba7`. codex-5 reviewed
+its source inventory and challenged its proposed sufficiency argument. The
+Agency job retains the full response; this checkpoint records the reviewed
+findings rather than adopting all helper conclusions.
+
+Additional ready infrastructure:
+
+- `dev/futon3c/dev.clj:1100-1140` retains tool input until a non-error result,
+  correlating by agent/session/tool-use ID. Claim minting discards the edit's
+  content. `witness.clj:139-146` binds a claim to that tool call and path.
+- `futon3/inbox-zero-lib/src/futon3/inbox_zero/watcher.clj:184-194,224-235`
+  computes raw-byte SHA-256 for observations and records HEAD. **Index hash is
+  always nil here**, so the field's presence is not reusable index evidence.
+- `state.clj:68-120` permits additional claim keys. That makes an optional
+  extension syntactically possible; it does not establish backward-compatible
+  semantics or authorize treating old records as content-qualified.
+- `futon3/test/futon3/inbox_zero/promote_exec_test.clj` has a real temporary
+  Git repository harness; planner purity and turn-promotion injection seams
+  allow focused regression tests without a shared live checkout.
+- Current claim/promotion calls have no durable turn identity propagated into
+  them. **This is not proof that the system lacks one:** Agency has invoke
+  job IDs. Reuse and propagation through the CLI/tool-result boundary remain
+  to be surveyed.
+
+The helper proposed post-result claim hashes, a historical clean baseline,
+one eligibility predicate, staged-object checks and release-on-commit, with
+an estimate of 1–1.5 days. **Neither sufficiency nor that revised estimate is
+accepted yet.** Concrete gaps requiring a revised answer:
+
+1. Clean X is observed; B changes it to X+B; A edits another part; the claimed
+   post-result hash is X+B+A. The proposed clean-baseline and hash-equality
+   conditions both hold while including B's work. Reading the hash after
+   the tool result also permits B to edit between the result and that read.
+2. Content equality does not establish unconsumed authority. After A commits
+   H, B can reintroduce H on a different HEAD before release/clean intake.
+   The design must state baseline/consumption evidence rather than declare
+   byte-identical attribution irrelevant to the agreed criteria.
+3. `git ls-files -s` returns Git object IDs and modes, not raw-byte SHA-256.
+   Filters, symlinks, modes and explicit deletions need defined semantics;
+   a nil hash alone is not a deletion witness. A staged-content check must
+   also address shared-index mutation before the subsequent commit.
+
+Follow-up job **invoke-1790534092997-25562-b34e879d** asks kimi-9 to correct
+the inventory, test these arguments against source, and estimate a bounded
+next spike separately from full implementation. It remains read-only. Neither
+a full edit chain nor a hash-only repair is established necessary/sufficient.
+MAP remains open; no production behavior was changed.
+
+Q4 read-back at **18:35:14.241Z** still finds the original active claim and
+1,483 claim records, without the published release successor. Watcher status
+still reports running, cycle 557 in inbox-zero, last completed cycle at
+18:24:36.087Z and no last error. Keep the distinction between a durable
+published release and current persisted authority explicit.
