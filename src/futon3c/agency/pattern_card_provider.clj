@@ -10,6 +10,14 @@
 (def stale-after (Duration/ofMinutes 30))
 (defonce ^:private !retrievals (atom {}))
 (defonce ^:private !refreshing (atom #{}))
+(defonce ^:private !checked-at (atom {}))
+
+(def recheck-interval-ms
+  "At most one background LIST read per seat per interval. Until the dev
+   namespace's observe-entry! hook is loaded, this recheck is what brings a newer
+   retrieval into the cache; it also stops a seat with no retrievals, or a stale
+   one, from querying futon1b on every render."
+  60000)
 
 (defn active-pattern-card
   "P10 hook. A card, when implemented, takes precedence over retrieval."
@@ -53,7 +61,7 @@
                              :observed-at at
                              :results results})))))))))
 
-(defn reset-cache! [] (reset! !retrievals {}))
+(defn reset-cache! [] (reset! !retrievals {}) (reset! !checked-at {}))
 
 (defn refresh!
   "Refresh an exact seat from the evidence LIST seam. Intended for startup/tests,
@@ -83,6 +91,15 @@
              (catch Throwable _)
              (finally (swap! !refreshing disj key)))))))
 
+(defn- recheck-async!
+  [agent session]
+  (let [key [(str agent) (str session)]
+        now (System/currentTimeMillis)
+        before @!checked-at]
+    (when (and (>= (- now (get before key 0)) recheck-interval-ms)
+               (compare-and-set! !checked-at before (assoc before key now)))
+      (refresh-async! agent session))))
+
 (defn- fresh? [render-at observed-at]
   (try
     (let [age (Duration/between (Instant/parse observed-at) (Instant/parse render-at))]
@@ -96,10 +113,11 @@
   (or (active-pattern-card ctx)
       (let [key [(str agent-id) (str session-id)]
             cached (get @!retrievals key)]
+        (recheck-async! agent-id session-id)
         (if-not cached
-          (do (refresh-async! agent-id session-id) nil)
+          nil
           (if-not (fresh? (str render-at) (:observed-at cached))
-            (do (refresh-async! agent-id session-id) nil)
+            nil
             (let [ranked (sort-by #(long (or (result-field % :rank) Long/MAX_VALUE))
                                   (:results cached))
                   top (first ranked)

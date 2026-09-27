@@ -41,3 +41,16 @@
          (:segment/value
           (pattern/provider {:agent-id "claude-17" :session-id "target"
                              :render-at "2026-09-27T20:00:00Z"})))))
+
+(deftest background-reads-are-rate-limited-per-seat
+  (let [calls (atom [])]
+    (with-redefs [pattern/refresh-async! (fn [a s] (swap! calls conj [a s]))]
+      (dotimes [_ 5]
+        (pattern/provider {:agent-id "claude-17" :session-id "none"
+                           :render-at "2026-09-27T20:00:00Z"}))
+      (pattern/observe-entry! (entry "e-fresh" "claude-17" "target"
+                                     "2026-09-27T19:59:50Z" "fresh/pattern"))
+      (dotimes [_ 3]
+        (pattern/provider {:agent-id "claude-17" :session-id "target"
+                           :render-at "2026-09-27T20:00:00Z"})))
+    (is (= [["claude-17" "none"] ["claude-17" "target"]] @calls))))
