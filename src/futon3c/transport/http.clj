@@ -4536,16 +4536,45 @@
   (name (:kind (origin/source {:caller caller :surface surface
                                :registered-agent? (boolean (reg/get-agent (str caller)))}))))
 
+(defn- pattern-prompt-fact
+  [{:segment/keys [value header]}]
+  (if-let [[_ _ score tail]
+           (and (string? header)
+                (re-matches #"retrieved\s+(\S+)\s+(\S+)(.*)" header))]
+    (str "pattern " value " (retrieved, score " score tail ")")
+    (str "pattern " value (when-not (str/blank? header) (str " (" header ")")))))
+
+(defn- prompt-facts-line
+  [agent-id session-id surface]
+  (when (and (not (str/blank? (str agent-id)))
+             (not (str/blank? (str session-id))))
+    (try
+      (let [segments (:segments (prompt-line/render!
+                                 {:agent-id (str agent-id)
+                                  :session-id (str session-id)
+                                  :surface surface}))
+            facts (mapv (fn [{:segment/keys [id header] :as segment}]
+                          (if (= :pattern id)
+                            (pattern-prompt-fact segment)
+                            (str (name id)
+                                 (when-not (str/blank? header) (str " " header)))))
+                        segments)]
+        (when (seq facts)
+          (str "Prompt: " (str/join "; " facts) "\n")))
+      (catch Throwable _ nil))))
+
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
    on every turn — even when session history has messages from other surfaces.
    Also includes the agent's pattern backpack if any patterns are active."
   ([prompt surface caller]
-   (wrap-surface-header prompt surface caller nil nil))
+   (wrap-surface-header prompt surface caller nil nil nil))
   ([prompt surface caller agent-id]
-   (wrap-surface-header prompt surface caller agent-id nil))
+   (wrap-surface-header prompt surface caller agent-id nil nil))
   ([prompt surface caller agent-id thread]
+   (wrap-surface-header prompt surface caller agent-id thread nil))
+  ([prompt surface caller agent-id thread session-id]
    (if (and surface (not (str/blank? (str surface))))
      (let [backpack (when agent-id
                       (some-> (get @reg/!registry (str agent-id))
@@ -4570,6 +4599,7 @@
             ;; Caller retained as a legacy alias of From for back-compat with existing parsers.
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
+            (prompt-facts-line agent-id session-id surface)
             ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
             ;; and forbid a manual re-send — independent of bell-router, since the dup
             ;; happened with bell-router off (the agent re-sent defensively).
@@ -4673,9 +4703,11 @@
 (defn- wrap-agent-facing-surface
   "Apply authoritative surface header plus any live agent-facing projection."
   ([prompt surface caller agent-id]
-   (wrap-agent-facing-surface prompt surface caller agent-id nil))
+   (wrap-agent-facing-surface prompt surface caller agent-id nil nil))
   ([prompt surface caller agent-id thread]
-   (str (wrap-surface-header "" surface caller agent-id thread)
+   (wrap-agent-facing-surface prompt surface caller agent-id thread nil))
+  ([prompt surface caller agent-id thread session-id]
+   (str (wrap-surface-header "" surface caller agent-id thread session-id)
         (or (surface-projection-block agent-id) "")
         (or (problem-conductor-contract-block agent-id) "")
         prompt)))
@@ -4969,7 +5001,8 @@
                         {:refusal :invoke-job-execution-reuse :job-id job-id})))
       (reset! execution-started? true)
       (register-job-worker! job-id (Thread/currentThread) nil)
-      (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+      (let [session-id (some-> (reg/get-agent (str agent-id)) :agent/session-id)
+            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id)
             ;; Announced jobs reach this direct-invoke boundary from the agent's
             ;; turn drainer. Give them the same ledger observability as bell jobs:
             ;; compose with a stream consumer already installed by another surface,
@@ -5087,7 +5120,8 @@
                        ;; warrant in the delivered turn header (see
                        ;; wrap-surface-header), without searching the registry.
                        (some? warrants) (assoc :warrants warrants)))
-            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
+            session-id (some-> (reg/get-agent (str agent-id)) :agent/session-id)
+            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread session-id)
             ;; Install a ledger-appending event sink for the duration of the
             ;; invoke so bell-seeded turns record text/tool_use events (the
             ;; invoke-stream path installs its own sink; bells had none, so
@@ -6040,7 +6074,8 @@
                                      long)
                   evidence-store (evidence-store-for-config config)
                   ev-opts (when mission-id [:mission-id mission-id])
-                  effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+                  session-id (some-> (reg/get-agent (str agent-id)) :agent/session-id)
+                  effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id)
                   ;; Terminal done/error emission from an invoke result — shared by the
                   ;; queued (E2) path and the legacy direct path.
                   emit-terminal!
