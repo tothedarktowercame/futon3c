@@ -1,7 +1,8 @@
 ;; re-pinned at 1c6a903a from 1c6a903a on 2026-09-27
 ;; re-pinned at 1c6a903a from 9567d6bb on 2026-09-27
+;; re-pinned at db5da3a5 from 9567d6bb on 2026-09-27
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "1c6a903a",
+ :map-sha "db5da3a5",
  :futon5-sha "aeeee96",
  :counts {:inputs 51, :outputs 27, :components 126, :edges 254},
  :validate
