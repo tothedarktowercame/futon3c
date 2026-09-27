@@ -29,7 +29,8 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.http-backend :as http-backend]
             [futon3c.evidence.store :as store]
-            [futon3c.test-registry.ledger :as ledger])
+            [futon3c.test-registry.ledger :as ledger]
+            [futon3c.test-registry.sqlite-backend :as sqlite])
   (:import [java.net URL]
            [java.nio.file Files StandardOpenOption]
            [java.security MessageDigest]
@@ -1721,26 +1722,56 @@
     (println (json/generate-string result))
     (prn result)))
 
+(defn- local-backend [options]
+  (let [path (:registry-db options sqlite/default-path)]
+    (try
+      (sqlite/sqlite-backend path)
+      (catch Exception e
+        (fail! :local-store-unavailable {:path path :error (.getMessage e)})))))
+
+(defn- local-latest [backend operation options]
+  (let [entry (case operation
+                "latest-for-namespace"
+                (if (nonblank? (:namespace options))
+                  (sqlite/latest-run-for-namespace backend (:namespace options))
+                  (fail! :namespace-required {}))
+
+                "latest-for-command"
+                (if (command-key (:command options))
+                  (sqlite/latest-run-for-command backend (:command options))
+                  (fail! :command-required {})))]
+    (if entry
+      (assoc (last (read-chain! backend (:evidence/id entry)))
+             :resolved-by :local-sqlite)
+      (assoc (none :no-local-record)
+             :resolved-by :local-sqlite
+             :locator (select-keys options [:namespace :command])))))
+
+(defn run-cli-operation
+  "Run one command-line operation against the configured local registry.
+   :agency-url is deliberately ignored: CLI storage has no remote fallback."
+  [operation options]
+  (try
+    (let [backend (local-backend options)]
+      (case operation
+        ;; Keep the transitional namespace-ledger append for current sweep and
+        ;; wire-ledger readers. CLI latest never consults or fills that file.
+        "run" (register-run! backend
+                             (assoc options :namespace-ledger-file
+                                    (namespace-ledger-path options)))
+        "check" (check-record! backend options)
+        ("latest-for-namespace" "latest-for-command")
+        (local-latest backend operation options)
+        "review" (review! backend options)
+        "lane" (lane! backend options)
+        (fail! :unknown-operation {:operation operation})))
+    (catch Exception e
+      (or (ex-data e) (refusal :registry-failed {:error (.getMessage e)})))))
+
 (defn -main [operation config-path]
   (try
     (let [options (edn/read-string (slurp config-path))
-          backend (http-backend/make-http-backend (:agency-url options "http://localhost:7070"))
-          result (case operation
-                   ;; The register subcommand threads the resolved ledger path
-                   ;; (option, env, else the checkout default) so a live
-                   ;; registration is ledgered where the /latest handler —
-                   ;; which resolves the same default — reads it.
-                   "run" (register-run! backend
-                                        (assoc options :namespace-ledger-file
-                                               (namespace-ledger-path options)))
-                   "check" (check-record! backend options)
-                   ;; Read-only namespace lookup (AR-42). Same shape of
-                   ;; exposure as "check": one subcommand over one config.
-                   "latest-for-namespace" (latest-run-for-namespace backend options)
-                   "latest-for-command" (latest-run-for-command backend options)
-                   "review" (review! backend options)
-                   "lane" (lane! backend options)
-                   (fail! :unknown-operation {:operation operation}))]
+          result (run-cli-operation operation options)]
       (emit-result options result)
       (shutdown-agents)
       ;; The lookup's question is "does the registry hold a run for this
