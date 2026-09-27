@@ -68,8 +68,8 @@
                 (loop [forms []]
                   (let [[f raw] (reader/read+string {:eof ::eof :read-cond :preserve} r)]
                     (if (= ::eof f)
-                      {:forms forms :symbols (apply set/union #{} (map (comp symbol-names :form) forms))}
-                      (recur (conj forms {:form f :text raw})))))))
+                      {:forms forms :symbols (apply set/union #{} (map :symbols forms))}
+                      (recur (conj forms {:form f :text raw :symbols (symbol-names f)})))))))
             (catch Exception _ {:reason :unreadable}))]
       (when *parse-cache* (swap! *parse-cache* assoc text result)) result)))
 
@@ -95,7 +95,7 @@
                                  (set/union (set (keys ad)) (set (keys bd)))))
             reached (loop [d changed]
                       (let [next-d (into d (for [[n fs] bd
-                                                :when (some #(seq (set/intersection d (symbol-names (:form %)))) fs)] n))]
+                                                :when (some #(seq (set/intersection d (:symbols %))) fs)] n))]
                         (if (= d next-d) d (recur next-d))))]
         {:changed-names (vec (sort changed)) :reachable-names (vec (sort reached)) :reason :cleared}))))
 
@@ -113,7 +113,9 @@
                       hits (for [{other :path} closure
                                  :let [other-file (source-file root other)]
                                  ;; A changed test must itself count as a consumer.
-                                 :when (or (not= file other-file) (str/includes? (str file) "/test/"))
+                                 :when (or (not= file other-file)
+                                           (some #(and (= path (:path %)) (:warrant-test? %)) closure)
+                                           (str/includes? (str file) "/test/"))
                                  :let [parsed (parse-source (slurp other-file))
                                        used (set/intersection names (:symbols parsed))]
                                  :when (or (:reason parsed) (seq used))]
@@ -141,11 +143,14 @@
     (not (true? (:warrant? payload))) {:class :no-warrant}
     (not (seq (:load-closure payload))) {:class :no-warrant :reason :missing-load-closure}
     :else
-    (let [changed (registry/closure-diff
-                   (registry/closure-shas (:load-closure payload))
-                   (registry/current-closure-shas root (:load-closure payload)))]
+    (let [tests (:test-files payload)
+          closure (vals (merge (into {} (map (juxt :path identity) (:load-closure payload)))
+                               (into {} (for [[path sha] tests]
+                                          [path {:path path :sha256 sha :warrant-test? true}]))))
+          changed (registry/closure-diff (registry/closure-shas closure)
+                                         (registry/current-closure-shas root closure))]
       (if (seq changed) (merge {:changed-paths (vec (take 5 changed)) :changed-count (count changed)}
-                               (form-classification root (:load-closure payload) changed))
+                               (form-classification root closure changed))
           {:class :current}))))
 
 (defn assess [root namespace hit read-payload]

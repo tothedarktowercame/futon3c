@@ -18,6 +18,9 @@
     :new "(ns fixture) (defn- helper [] 2) (defn middle [] (helper)) (defn called [] (middle))"
     :test "(ns consumer) (defn check [] (f/called))"
     :class :stale-closure :reason :changed-definition-reachable}
+   {:id "separate-test" :old "(ns fixture) (defn called [] 1)"
+    :new "(ns fixture) (defn called [] 2)" :test "(ns consumer) (defn check [] (f/called))"
+    :separate-test? true :class :stale-closure :reason :changed-definition-reachable}
    {:id "ns" :old "(ns fixture) (defn unused [] 1)"
     :new "(ns other) (defn unused [] 1)" :test "(ns consumer)"
     :class :stale-closure :reason :ns-form-changed}
@@ -43,13 +46,15 @@
         (spit (io/file dir (str id "_test.clj")) test))
       (git "add" ".")
       (git "-c" "user.name=fixture" "-c" "user.email=fixture@invalid" "-c" "commit.gpgsign=false" "commit" "-qm" "fixture")
-      (doseq [{:keys [id new class reason missing?]} cases]
+      (doseq [{:keys [id new class reason missing? separate-test?]} cases]
         (let [file (io/file dir (str id ".clj"))
               test-file (io/file dir (str id "_test.clj"))
               closure [{:path (.getName file) :sha256 (if missing? "not-a-sha" (registry/file-sha file))}
                        {:path (.getName test-file) :sha256 (registry/file-sha test-file)}]
               _ (spit file new)
-              result (classify (str dir) {:warrant? true :results {:failures 0 :errors 0} :load-closure closure})]
+              result (classify (str dir) {:warrant? true :results {:failures 0 :errors 0}
+                                          :load-closure (if separate-test? [(first closure)] closure)
+                                          :test-files (when separate-test? {(.getName test-file) (registry/file-sha test-file)})})]
           (is (= class (:class result)) (str id " " result))
           (is (= reason (:reason result)) (str id " " result))
           (when (= reason :changed-definition-reachable)
