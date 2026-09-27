@@ -33,3 +33,29 @@ Default CLI is validation only. `--write` uses P6b minting/idempotency and verif
 exact readback. No route changes or JVM reload. P0 captures `clearance.json` in
 its integrity manifest; row 12 validates the notice set against the record before
 printing. The retrieval-ordering detail remains unresolved and unchanged.
+
+## Live receipt and gates
+
+Implementation: `a6401e1b`. Appended and verified:
+`act:0d850827-6af2-4ef9-92d3-8bbec4c7a618` (`:minted? true`, `:verified? true`).
+All rule hyperedges before/after the append were identical. The namespaced tests
+also compare rule application at 09-24 17:00, 18:00 and 09-25 21:00 with and
+without a clearance record.
+
+Kondo: zero warnings/errors; check-parens: OK; py_compile: passed.
+Clojure: incident-clearance 4 tests/56 assertions, rule-record 5/36,
+rule-timeline 5/15; all passed. P0 Python: 9 tests passed.
+
+Live `--snapshot /tmp/p14-p0-final --check` exited 0:
+
+```
+QUERY | clearance | 15:48 incident explained by 15:54 (d5e3147e); measures may end (permission only); 42 notices owed/unsettled
+stubs: 0 of 12
+check: PASS
+```
+
+Two offline replays matched the live output byte-for-byte. Removing one
+compensation entry in a snapshot COPY and rehashing it produced exit 1:
+`ERROR: row 12 (clearance): compensation set differs from notice set (41 vs 42)`.
+An unmanifested byte change then produced exit 1:
+`ERROR: snapshot hash mismatch: clearance.json`. Both printed no answer.
