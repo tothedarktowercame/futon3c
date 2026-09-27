@@ -4,6 +4,7 @@
 ;; Description: Common faces, buffer state, display, and streaming
 ;;   infrastructure shared by claude-repl.el (Claude) and codex-repl.el (Codex).
 
+(require 'agent-turn-origin)
 (require 'cl-lib)
 (require 'browse-url)
 (require 'json)
@@ -2470,7 +2471,9 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
                             :agent-name agent-name
                             :hooks hooks
                             :speaker speaker
-                            :origin origin)))))
+                            :origin origin
+                            :provenance (copy-tree (or agent-turn-origin-input
+                                                       (agent-turn-origin-decide origin speaker))))))))
 
 (defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
   "Queue current input as an operator turn behind an in-flight unsolicited turn."
@@ -2493,6 +2496,7 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
            (call-async-fn (plist-get entry :call-async-fn))
            (agent-name (plist-get entry :agent-name))
            (hooks (plist-get entry :hooks))
+           (agent-turn-origin-input (plist-get entry :provenance))
            (speaker (or (plist-get entry :speaker) "joe"))
            (origin (or (plist-get entry :origin) 'operator)))
       (setq agent-chat--queued-operator-turns
@@ -2501,7 +2505,8 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
 
 (defun agent-chat--finish-pending-turn ()
   "Clear pending-turn metadata and drain any queued turn."
-  (setq agent-chat--pending-turn-origin nil)
+  (setq agent-chat--pending-turn-origin nil
+        agent-turn-origin-current nil)
   (agent-chat--drain-queued-operator-turns))
 
 (defun agent-chat--start-turn
@@ -2517,6 +2522,9 @@ operator input arriving while they run is queued for the next turn."
          (before-send (plist-get hooks :before-send))
          (on-response (plist-get hooks :on-response))
          (on-launch-error (plist-get hooks :on-launch-error)))
+    (setq agent-turn-origin-current
+          (copy-tree (or agent-turn-origin-input
+                         (agent-turn-origin-decide origin speaker))))
     (agent-chat-insert-message speaker trimmed)
     (when (agent-chat--operator-speaker-p speaker)
       (agent-chat--maybe-auto-clock-from-turn trimmed))
@@ -2574,20 +2582,22 @@ operator input arriving while they run is queued for the next turn."
        (agent-chat--drain-queued-operator-turns)))))
 
 (defun agent-chat-send-unsolicited-input
-    (call-async-fn agent-name text &optional speaker hooks)
+    (call-async-fn agent-name text &optional speaker hooks provenance)
   "Start an unsolicited continuation/notification turn with TEXT.
 The turn is attributed to SPEAKER (default \"continuation\") and will never
 consume the reply slot of a later operator message. If another turn is already
 in flight, the unsolicited turn is QUEUED and drains when the current turn
 finishes — never signal an error here: the caller (e.g. the park delivery
 path) may already have recorded the delivery, so refusing would lose it."
+  (let ((agent-turn-origin-input
+         (or provenance (agent-turn-origin-decide 'unsolicited speaker))))
   (if (process-live-p agent-chat--pending-process)
       (progn
         (agent-chat--queue-turn call-async-fn agent-name hooks text
                                 (or speaker "continuation") 'unsolicited)
         (message "[%s] background turn queued behind the current turn" agent-name))
     (agent-chat--start-turn call-async-fn agent-name hooks text
-                            (or speaker "continuation") 'unsolicited)))
+                            (or speaker "continuation") 'unsolicited))))
 
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.
@@ -3235,6 +3245,10 @@ under outbox/failed and return nil."
                        (type . "coordination")
                        (claim-type . "goal")
                        (author . ,(or (getenv "USER") user-login-name "joe"))
+                       (origin . ,(agent-turn-origin-stamp
+                                   (or (getenv "USER") user-login-name "joe")
+                                   "agent-chat/session-start"
+                                   '(:kind "harness" :actor "session-start")))
                        (session-id . ,sid)
                        (body . ,(append `((event . "session-start")
                                           (source . ,source)
@@ -3319,6 +3333,12 @@ character the operator meant to write."
                       (type . "coordination")
                       (claim-type . ,claim-type)
                       (author . ,author)
+                      (origin . ,(agent-turn-origin-stamp
+                                  author "agent-chat/turn"
+                                  (if is-user
+                                      (prog1 (or agent-turn-origin-evidence-user agent-turn-origin-current)
+                                        (setq agent-turn-origin-evidence-user nil))
+                                    (list :kind "agent" :actor assistant-author))))
                       (session-id . ,sid)
                       (body . ,(append `((event . "chat-turn")
                                          (transport . ,transport)
@@ -3367,6 +3387,8 @@ character the operator meant to write."
                           (type . "coordination")
                           (claim-type . "observation")
                           (author . ,assistant-author)
+                          (origin . ,(agent-turn-origin-stamp assistant-author "agent-chat/turn-commits"
+                                      (list :kind "agent" :actor assistant-author)))
                           (session-id . ,sid)
                           (body . ,body)
                           (tags . ,(apply #'vector tags)))))
@@ -3428,10 +3450,15 @@ character the operator meant to write."
   "Remember TEXT as the current user turn until a session ID is known."
   (when (and (stringp text)
              (not (string-empty-p (string-trim text))))
-    (setq agent-chat--pending-user-turn-text (string-trim text))))
+    (setq agent-chat--pending-user-turn-text (string-trim text)
+          agent-turn-origin-pending-user
+          (copy-tree (or agent-turn-origin-current '(:kind "unknown" :actor "unknown"))))))
 
 (defun agent-chat-consume-pending-user-turn ()
   "Return and clear any staged sessionless user turn text."
+  (when agent-chat--pending-user-turn-text
+    (setq agent-turn-origin-evidence-user agent-turn-origin-pending-user
+          agent-turn-origin-pending-user nil))
   (prog1 agent-chat--pending-user-turn-text
     (setq agent-chat--pending-user-turn-text nil)))
 

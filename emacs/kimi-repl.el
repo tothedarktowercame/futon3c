@@ -255,7 +255,7 @@ must never break buffer setup."
                         :prompt ,text
                         :surface "emacs-repl"
                         :timeout-ms ,kimi-repl-turn-timeout-ms
-                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                        :caller ,(agent-turn-origin-caller))
                       (when-let ((clock-id (kimi-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *kimi-repl-stream*"))

@@ -20,6 +20,7 @@
 
 ;;; Code:
 
+(require 'agent-turn-origin)
 (require 'json)
 (require 'cl-lib)
 (require 'subr-x)
@@ -962,7 +963,10 @@ A future refiner can learn new phrases from `session-mode-turn-corrections'."
                    (if entry (setcdr entry (append (cdr entry) (list phrase)))
                      (setq rules (append rules (list (list tag phrase)))))))) changes)
     (let* ((record `((at . ,(format-time-string "%FT%TZ" nil t))
-                     (author . "joe") (text . ,text)
+                     (author . "joe")
+                     (origin . ,(agent-turn-origin-stamp "joe" "session-mode/correction"
+                                 '(:kind "operator" :actor "joe")))
+                     (text . ,text)
                      (sentences . ,(vconcat (nreverse pairs)))
                      (method . "human-labels; existing-cue reassignment; exact-sentence examples")))
            (records (append session-mode-turn-corrections (list record))))

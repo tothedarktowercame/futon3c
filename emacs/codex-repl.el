@@ -3900,7 +3900,7 @@ CALLBACK receives the final response text."
                       `(:agent-id ,codex-repl-agency-agent-id
                         :prompt ,text
                         :surface "emacs-repl"
-                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                        :caller ,(agent-turn-origin-caller))
                       (when-let ((clock-id (codex-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *codex-repl-stream*"))

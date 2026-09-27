@@ -120,7 +120,8 @@ reply slot."
                     (or (agent-repl-capability :agent-name) "agent")
                     prompt
                     "continuation"
-                    (agent-repl-capability :hooks))
+                    (agent-repl-capability :hooks)
+                    (list :kind "harness" :actor "parked-resume" :source-id park-id))
                    ;; Bug 3: ACK delivery after send returns without error. If the
                    ;; ACK is lost, the server redelivers; the dedup ring skips it.
                    (agent-repl-park--ack park-id))
@@ -307,7 +308,8 @@ interval before reaping guarantees the sentinel has had its turn."
                                 (agent-repl-capability :sender)
                                 (or (agent-repl-capability :agent-name) "agent")
                                 (plist-get item :prompt) "followup"
-                                (agent-repl-capability :hooks))))
+                                (agent-repl-capability :hooks)
+                                (list :kind "harness" :actor "followup" :source-id id))))
                            (agent-repl-followup--ack id api-url))))))
                (when (buffer-live-p response-buffer) (kill-buffer response-buffer))))))))))
 

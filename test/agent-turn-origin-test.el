@@ -1,0 +1,102 @@
+;;; agent-turn-origin-test.el --- P6o-2 origin checks -*- lexical-binding: t; -*-
+(require 'ert)
+(require 'cl-lib)
+(require 'agent-chat)
+(require 'claude-repl)
+(require 'codex-repl)
+(require 'kimi-repl)
+(require 'zai-repl)
+(require 'session-mode)
+(defvar p6o-session nil)
+(defvar p6o-last nil)
+
+(ert-deftest p6o-turn-evidence-keeps-author-and-origin ()
+  (dolist (case '((operator "joe" "typed" "operator")
+                  (operator "joe" "🗣 dictated" "operator")
+                  (unsolicited "continuation" "wake" "harness")
+                  (unsolicited "followup" "notice" "harness")
+                  (agent "claude-17" "agent text" "agent")))
+    (with-temp-buffer
+      (let ((agent-turn-origin-current (agent-turn-origin-decide (nth 0 case) (nth 1 case))) payload)
+        (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                  ((symbol-function 'agent-chat-evidence-enabled-p) (lambda (&rest _) t))
+                  ((symbol-function 'agent-chat-evidence-post-entry-id)
+                   (lambda (_url _timeout p) (setq payload p) "p6o")))
+          (agent-chat-emit-turn-evidence! "test" 1 t "p6o" "user" (nth 2 case) "agent" "test" nil 'p6o-session 'p6o-last))
+        (should (equal (alist-get 'author payload) (or (getenv "USER") user-login-name "joe")))
+        (should (equal (alist-get 'kind (alist-get 'origin payload)) (nth 3 case)))
+        (should (equal (alist-get 'actor (alist-get 'origin payload)) (agent-turn-origin-caller)))))))
+
+(ert-deftest p6o-all-four-repl-request-builders-use-source ()
+  (dolist (sender '(claude-repl--call-claude-streaming codex-repl--call-codex-async
+                   kimi-repl--call-agency-streaming zai-repl--call-agency-streaming))
+    (with-temp-buffer
+      (let ((agent-turn-origin-current '(:kind "harness" :actor "parked-resume")))
+        (cl-letf (((symbol-function 'agent-chat-dispatch-clock-id) (lambda () nil))
+                  ((symbol-function 'codex-repl--resolved-api-base) (lambda () "http://test"))
+                  ((symbol-function 'codex-repl--frame-start) #'ignore)
+                  ((symbol-function 'codex-repl--display-invoke-buffer) #'ignore)
+                  ((symbol-function 'codex-repl--append-invoke-trace) #'ignore)
+                  ((symbol-function 'codex-repl--record-invoke-timing!) #'ignore)
+                  ((symbol-function 'make-process)
+                   (lambda (&rest args)
+                     (throw 'payload (json-parse-string
+                                      (cadr (member "-d" (plist-get args :command)))
+                                      :object-type 'plist)))))
+          (let ((payload (catch 'payload (funcall sender "p6o" #'ignore))))
+            (should (equal (plist-get payload :caller) "parked-resume"))
+            (should (equal (plist-get payload :surface) "emacs-repl"))))))))
+
+(ert-deftest p6o-queued-provenance-is-owned-by-the-turn ()
+  (with-temp-buffer
+    (let ((agent-turn-origin-input '(:kind "harness" :actor "parked-resume" :source-id "park-1")))
+      (agent-chat--queue-turn #'ignore "agent" nil "wake" "continuation" 'unsolicited))
+    (agent-chat--queue-turn #'ignore "agent" nil "typed" "joe" 'operator)
+    (cl-letf (((symbol-function 'agent-chat--start-turn)
+               (lambda (&rest _) (setq agent-turn-origin-current agent-turn-origin-input))))
+      (agent-chat--drain-queued-operator-turns)
+      (should (equal (plist-get agent-turn-origin-current :source-id) "park-1"))
+      (agent-chat--drain-queued-operator-turns)
+      (should (equal (plist-get agent-turn-origin-current :kind) "operator")))))
+
+(ert-deftest p6o-session-start-is-harness ()
+  (with-temp-buffer
+    (let (payload)
+      (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                ((symbol-function 'agent-chat-evidence-enabled-p) (lambda (&rest _) t))
+                ((symbol-function 'agent-chat-evidence-post-entry-id)
+                 (lambda (_url _timeout p) (setq payload p) "p6o")))
+        (let ((p6o-session nil) (p6o-last nil))
+          (agent-chat-emit-session-start-evidence! "test" 1 "p6o" 'p6o-session 'p6o-last 'p6o-last "test" nil)))
+      (should (equal (alist-get 'kind (alist-get 'origin payload)) "harness")))))
+
+(ert-deftest p6o-session-mode-human-correction-origin ()
+  (let ((session-mode-turn-vocabulary nil) (session-mode-turn-corrections nil) records)
+    (cl-letf (((symbol-function 'session-mode--load-live-vocabulary) #'ignore)
+              ((symbol-function 'session-mode--save-live-vocabulary)
+               (lambda (_rules r) (setq records r))))
+      (session-mode-correct-sentences "Please do it." '("request")))
+    (should (equal (alist-get 'author (car records)) "joe"))
+    (should (equal (alist-get 'kind (alist-get 'origin (car records))) "operator"))))
+
+(ert-deftest p6o-before-send-hook-sees-harness-provenance ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count) #'ignore)
+              ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore)
+              ((symbol-function 'agent-chat-scroll-to-bottom) #'ignore))
+      (agent-chat-init-buffer (list :title "p6o" :session-id "p6o" :agent-name "agent"
+                                   :agent-id "agent" :thinking-text "thinking" :thinking-prop 'p6o))
+      (let (seen)
+        (agent-chat-send-unsolicited-input
+         (lambda (&rest _) nil) "agent" "wake" "continuation"
+         (list :before-send (lambda (_) (setq seen (agent-turn-origin-caller)))))
+        (should (equal seen "parked-resume"))))))
+
+(ert-deftest p6o-first-user-record-retains-source-while-waiting ()
+  (with-temp-buffer
+    (setq agent-turn-origin-current '(:kind "harness" :actor "parked-resume"))
+    (agent-chat-stage-pending-user-turn "wake")
+    (setq agent-turn-origin-current '(:kind "operator" :actor "joe"))
+    (should (equal (agent-chat-consume-pending-user-turn) "wake"))
+    (should (equal (plist-get agent-turn-origin-evidence-user :kind) "harness"))
+    (should (equal (agent-turn-origin-caller) "joe"))))

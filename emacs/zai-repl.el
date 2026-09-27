@@ -408,7 +408,7 @@ the id is display-only, so a failed read must never break buffer setup."
                         :prompt ,text
                         :surface "emacs-repl"
                         :timeout-ms ,zai-repl-turn-timeout-ms
-                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                        :caller ,(agent-turn-origin-caller))
                       (when-let ((clock-id (zai-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *zai-repl-stream*"))
