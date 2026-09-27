@@ -633,3 +633,76 @@ must not eat a character he meant to write."
   ;; the marker's trailing space goes with it, not into the text
   (should (equal (cdr (agent-chat-split-surface-marker "🗣    spaced out"))
                  "spaced out")))
+
+;;; Evidence requests must not leave requests behind when they time out.
+;; 2026-09-27: `url-retrieve-synchronously' abandons a timed-out request, and
+;; the graph daemon had accumulated 20 orphaned evidence responses.
+
+(defun agent-chat-test--http-server (delay)
+  "Start a server answering each request with a JSON body after DELAY seconds.
+DELAY nil means never answer.  Return the server process."
+  (make-network-process
+   :name "agent-chat-test-http" :server t :host "127.0.0.1" :service t
+   :family 'ipv4 :noquery t :sentinel #'ignore
+   :filter (lambda (proc _)
+             (when delay
+               (run-at-time delay nil
+                            (lambda ()
+                              (when (process-live-p proc)
+                                (process-send-string
+                                 proc (concat "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                                              "Content-Length: 11\r\n\r\n{\"ok\":true}")))))))))
+
+(defun agent-chat-test--leftovers (port)
+  "Open client connections and response buffers belonging to PORT."
+  (list :connections
+        (cl-count-if (lambda (p)
+                       (and (not (process-contact p :server))
+                            (eq (process-status p) 'open)
+                            (equal (plist-get (process-contact p t) :service) port)))
+                     (process-list))
+        :buffers
+        (cl-count-if (lambda (b)
+                       (string-prefix-p (format " *http 127.0.0.1:%d" port) (buffer-name b)))
+                     (buffer-list))))
+
+(defmacro agent-chat-test--with-http-server (delay port-var &rest body)
+  (declare (indent 2))
+  (let ((server (make-symbol "server")))
+    `(let* ((,server (agent-chat-test--http-server ,delay))
+            (,port-var (process-contact ,server :service))
+            (url-show-status nil))
+       (unwind-protect (progn ,@body)
+         (dolist (p (process-list))
+           (when (equal (plist-get (process-contact p t) :service) ,port-var)
+             (set-process-sentinel p #'ignore)
+             (delete-process p)))))))
+
+(defun agent-chat-test--settle (seconds)
+  (let ((end (+ (float-time) seconds)))
+    (while (< (float-time) end) (accept-process-output nil 0.05))))
+
+(ert-deftest agent-chat-evidence-request-returns-json-and-cleans-up ()
+  (agent-chat-test--with-http-server 0 port
+    (let ((resp (agent-chat-evidence-request-json
+                 "GET" (format "http://127.0.0.1:%d/api/alpha/evidence" port) 2)))
+      (should (equal 200 (plist-get resp :status)))
+      (should (plist-get resp :json))
+      (agent-chat-test--settle 0.2)
+      (should (equal 0 (plist-get (agent-chat-test--leftovers port) :buffers))))))
+
+(ert-deftest agent-chat-evidence-request-cancels-an-unanswered-request ()
+  (agent-chat-test--with-http-server nil port
+    (let ((resp (agent-chat-evidence-request-json
+                 "GET" (format "http://127.0.0.1:%d/api/alpha/evidence" port) 0.3)))
+      (should (equal 0 (plist-get resp :status)))
+      (should (equal '(:connections 0 :buffers 0) (agent-chat-test--leftovers port))))))
+
+(ert-deftest agent-chat-evidence-request-leaves-no-buffer-for-a-late-answer ()
+  (agent-chat-test--with-http-server 0.6 port
+    (let ((resp (agent-chat-evidence-request-json
+                 "GET" (format "http://127.0.0.1:%d/api/alpha/evidence" port) 0.3)))
+      (should (equal 0 (plist-get resp :status)))
+      ;; Give the server time to send its late answer.
+      (agent-chat-test--settle 1.0)
+      (should (equal '(:connections 0 :buffers 0) (agent-chat-test--leftovers port))))))
