@@ -12,7 +12,7 @@
  :derived true
  :instance 2
  :cascade {:path "holes/labs/M-\u8c61-2000/cascade-\u8c612000-v2.edn"
-           :sha256 "0f25f1a63b6716ffe071598786d2f34ee066a46086a5e7e333e39966ce873da3"}
+           :sha256 "d6823215afa28641ecfc8e0e7b4bf66d5b2841d7739796c7ffa9a1981acfc7b8"}
  :nodes
  [{:id :have-port :role :scope
    :form "the instance as the mission measures it \u2014 nothing enters here: this cascade's initial state is empty, so every token is built"
