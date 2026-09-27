@@ -1,12 +1,12 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "1103e7a3",
-  :map "54f7e7cd"},
+  :rev "cd408b75",
+  :map "da64df45"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 7,
-  :witnessed-hermetically 142,
-  :unverified 24,
+ {:verified 10,
+  :witnessed-hermetically 163,
+  :unverified 0,
   :wires 173},
  :wires
  [{:wire
@@ -47,7 +47,11 @@
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test/the-produced-input-is-received,
+   :note
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire
    [:construction-assemble-one
     :r13-family-parameters
@@ -154,12 +158,6 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
-  {:wire [:flight-click :r9-measured-a-version :status],
-   :status :unverified,
-   :note
-   "Wrong writer: measured-a-version reads sourced-rates status, not http-click-fn status. Replacement: [:r6-sourced-rates :r9-measured-a-version :status].",
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test/the-observed-handoff}
   {:wire [:flight-click-wants :click-start :wants],
    :status :witnessed-hermetically,
    :test
@@ -317,8 +315,13 @@
    :test
    futon3c.diagramprover.wm-wire-r0-r5-test-grain-gate-test/the-gate-pass-reaches-the-grain-gate-test}
   {:wire [:r0-enact-step :r7-flight-call :attempts],
-   :status :unverified}
-  {:wire [:r0-enact-step :r7-increment :attempts], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test/the-attempts-reach-the-flights-wc-call}
+  {:wire [:r0-enact-step :r7-increment :attempts],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test/the-attempts-reach-the-increment}
   {:wire [:r0-enact-step :wc-checker :attempts],
    :status :witnessed-hermetically,
    :test
@@ -380,17 +383,29 @@
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-wire-is-unverified-because-the-reader-reads-no-next-step}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-produced-input-is-received,
+   :note
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire
    [:r10-observe-publication :r0-enact-step :publication-observed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test/the-observation-reaches-the-enactment}
   {:wire [:r10-observe-publication :r0-test :publication-observed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test/the-test-box-consumes-the-writers-present-observation,
+   :note
+   "flight_enact_test drives the real observe-publication-fn (enact-fn's default, no override) over a fixture whose target HAS a repair obligation discharged on a real persist-run-record!-written run record; the present value {:observed true :at \"run-pub\" :evidence {:repair/id \"occ-t\" :status :receipt-committed ...}} crosses into the test's assertion. No live record carries both ends, so witnessed hermetically."}
   {:wire
    [:r10-observe-publication :r1-outer-cascade :publication-observed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test/the-produced-input-is-received,
+   :note
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r10-observe-publication :r10-test :publication-observed],
    :status :witnessed-hermetically,
    :test
@@ -415,15 +430,36 @@
    [:r14-precision-carry
     :r14-selection-posterior
     [:beta {:record :precision}]],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r14-selection-posterior-beta-test/the-carried-beta-reaches-the-posterior}
   {:wire
    [:r14-precision-carry :r9-decision [:beta {:record :precision}]],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test/the-carried-beta-reaches-the-decision}
   {:wire
    [:r14-precision-carry
     :r9-selection-law
     [:beta {:record :precision}]],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+   :test
+   futon3c.diagramprover.wm-wire-r14-precision-carry-r9-selection-law-beta-test/the-carried-beta-reaches-the-selection-law}
   {:wire
    [:r2-judge-observation
     :r3a-channel-prediction-error
@@ -489,7 +525,9 @@
    :test
    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r9-measured-a-version :locators],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test/the-stores-locator-reaches-the-reader}
   {:wire
    [:r3-aggregate-driver
     :r7-fold-call
@@ -563,8 +601,6 @@
    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
    :note
    "Real ranker chain G read by selection-candidate into :g; typed absence and changed score altered before reader."}
-  {:wire [:r4-kernel :r9-measured-a-version :rates],
-   :status :unverified}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
    :status :witnessed-hermetically,
    :test
@@ -598,9 +634,35 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/the-writers-value-reaches-the-reader}
-  {:wire [:r6-sourced-rates :r9-measured-a-version :measurement],
-   :status :unverified}
-  {:wire [:r7-flight-call :flight-run :increment], :status :unverified}
+  {:wire
+   [:r6-sourced-rates
+    :r9-measured-a-version
+    [:measurement {:record :sourced-rates}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/the-writers-measurement-reaches-the-reader}
+  {:wire
+   [:r6-sourced-rates
+    :r9-measured-a-version
+    [:rates {:record :sourced-rates}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/the-sourced-rates-reach-measured-a-version,
+   :note
+   "Writer: observation_rates.clj sourced-rates (:rates {token {:false-neg r :false-pos r}}). Reader: war_machine.clj measured-a-version qualifies them to [target token] on the measured-A record. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a."}
+  {:wire
+   [:r6-sourced-rates
+    :r9-measured-a-version
+    [:status {:record :sourced-rates}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test/the-sourced-status-reaches-measured-a-version,
+   :note
+   "Writer: observation_rates.clj sourced-rates (:status :sourced). Reader: war_machine.clj measured-a-version (:6361): a :sourced status produces the measured-A record, anything else {:status :absent :reason :sourcing-refused}. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a."}
+  {:wire [:r7-flight-call :flight-run :increment],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/the-writers-increment-reaches-the-enactments-entry}
   {:wire [:r7-flight-call :r7-call-test :wc],
    :status :witnessed-hermetically,
    :test
@@ -610,7 +672,11 @@
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-increment-test/the-increment-receipt-reaches-the-fold-source}
   {:wire [:r7-fold :r1-outer-cascade :enactment-records],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test/the-produced-input-is-received,
+   :note
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r7-fold :r7-selection :enactment-records],
    :status :witnessed-hermetically,
    :test
@@ -675,9 +741,11 @@
    :test
    futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/the-weighted-error-reaches-the-driver-aggregation}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-wire-is-unverified-because-the-reader-reads-no-pair-overlap}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-produced-input-is-received,
+   :note
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r8-overlap :r8-test :pair-overlap],
    :status :witnessed-hermetically,
    :test
@@ -734,11 +802,11 @@
     :why
     "Same click, :universe-not-admitted at both ends; neither has [:decision :kind]. Two records do not meet the one-record VERIFIED definition."}}
   {:wire [:r9-decision :gate-refusal-test :kind],
-   :status :unverified,
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/the-gate-refusal-kind-reaches-the-box,
    :note
-   "gate_refusal_abstention_test/run installs judge-fn throwing a supplied exception. Gate reason/failure-data is hand-built or replayed, not produced by the decision writer.",
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/the-named-test-does-not-drive-this-writer}
+   "Writer: war_machine.clj cascade-decision-admitted -> decision-gate/emit! (\"Inadmissible decision\", :reason). Reader: futon2 gate-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
    :record
@@ -755,11 +823,11 @@
    :note
    "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind."}
   {:wire [:r9-decision :r9-judge-refusal-test :kind],
-   :status :unverified,
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/the-judge-refusal-kind-reaches-the-box,
    :note
-   "judge_refusal_abstention_test/run installs judge-fn throwing a supplied exception. The tests build ex-info or replay fixture failure-data, not cascade-decision-admitted output.",
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/the-named-test-does-not-drive-this-writer}
+   "Writer: war_machine.clj cascade-decision-admitted's :live-c guard (\"cascade decision refused\", :kind). Reader: futon2 judge-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
    :status :verified,
    :record
@@ -823,12 +891,6 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
-  {:wire [:r9-selection-law :r0-enact-step :enacted-steps],
-   :status :unverified,
-   :note
-   "enact-fn reads chosen :precedence, not selection-law :enacted-steps. Tampering enacted-steps does not change dispatched patterns; missing positional handoff is a map finding.",
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test/the-real-reader-handoff}
   {:wire [:r9-selection-law :r7-increment :candidate],
    :status :witnessed-hermetically,
    :test
@@ -852,16 +914,27 @@
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
-   :status :unverified,
+   :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/the-real-reader-handoff,
    :note
-   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
+   "WIRE-23-C1 declares the executable checker site. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
+  {:wire
+   [:run-chosen-summary
+    :r0-enact-step
+    [:precedence {:record :chosen}]],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/the-chosen-precedence-reaches-enact-fn,
+   :note
+   "Writer: full_loop_runner.clj chosen-summary (:precedence of the chosen action). Reader: flight_runner.clj enact-fn (precedence drives the dispatch order and :attempts). Hermetic: no live record carries enact-fn's :attempts."}
   {:wire
    [:run-record-publication
     :r10-observe-publication
     :repair/publication],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/the-run-records-publication-reaches-the-reader}
   {:wire [:tick-flight-assembly :construction-assemble-one :universes],
    :status :witnessed-hermetically,
    :test
@@ -880,14 +953,14 @@
    :note
    "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
   {:wire [:wc-checker :r7-increment :wc-verdict],
-   :status :unverified,
+   :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/the-real-reader-handoff,
    :note
-   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
+   "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
   {:wire [:wc-checker :r7-test :wc-verdict],
-   :status :unverified,
+   :status :witnessed-hermetically,
+   :test
+   futon2.aif.selection-reads-fold-test/real-checker-verdict-into-increment,
    :note
-   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker.",
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test/the-named-test-does-not-drive-this-writer}]}
+   "WIRE-23-C3: the named futon2 test runs bb proof2a_check.clj --wc --edn, passes its parsed verdict through enactment-receipts to the real increment and asserts the fold count. Capture wraps the real checker call and increment; bad controls alter the verdict only at increment's door."}]}
