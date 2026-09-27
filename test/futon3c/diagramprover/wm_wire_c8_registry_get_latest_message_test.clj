@@ -12,7 +12,8 @@
   captured mid-call; the writer's value is the :message
   registry-get returned, the reader's the :message of the refusal's :data
   (merged by select-keys at observation_checks.clj:259)."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-c8-products-support :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.observation-checks :as oc]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test :as msg-wire]))
@@ -44,7 +45,9 @@
 (def live-records-read (:live-records-read msg-wire/wire))
 
 (def wire
-  {:wire [:c8-registry-get :c8-latest :message]
+  {:second-layer {:test `diagnostic-is-recorded-without-changing-refusal
+                  :kind :record :product [:data :message] :intervention :before-reader}
+   :wire [:c8-registry-get :c8-latest :message]
    :kind :witnessed-hermetically
    :test `the-exception-message-reaches-the-latest-refusal
    :check check
@@ -67,3 +70,8 @@
     (is (some? (:reader o)))
     (is (not= (:writer o) (:reader o)))
     (is (not (w/received? o)))))
+
+(deftest diagnostic-is-recorded-without-changing-refusal
+  ;; observation_checks.clj:233-236,262-269 select and merge diagnostics;
+  ;; status determines the refusal, not the message or timeout value.
+  (products/assert-record :latest :message))
