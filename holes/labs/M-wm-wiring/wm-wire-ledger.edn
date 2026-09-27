@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 34, :refusal 20, :record 2, :absent 124},
+ {:value-varying 38, :refusal 20, :record 6, :absent 116},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -487,11 +487,23 @@
     :r7-fold-call
     [:belief {:record :morning-brief-fold}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/same-observation-changes-the-updated-posterior,
+     :kind :value-varying,
+     :product [:posterior],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-39fdfc3bd7ea79aa7245708a4d4c3a43c0bb33489cea75f15e8dab445190e175",
+     :git-head "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :test-revision "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :ran-at "2026-09-27T14:56:32.238381495Z"}},
    :test
    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value,
    :note
-   "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps currently throw IllegalArgumentException; negative records it, source unfixed."}
+   "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -657,7 +669,19 @@
     :r1-token-temporal
     [:continuation-belief {:record :initialized-token-belief-input}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/changed-continuation-product,
+     :kind :record,
+     :product [:belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-66e1b79a809fcb0c74282c17247ba891c9c6d4b17d7d3fa13fa21c1be975dced",
+     :git-head "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :test-revision "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :ran-at "2026-09-27T14:51:32.491412230Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
@@ -667,7 +691,19 @@
     :r1-token-initialization
     [:continuation-belief {:record :legacy-token-belief-input}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test/changed-continuation-product,
+     :kind :record,
+     :product [:belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-d6b88579ba5b0f0ad79af2ee531c8a844f4daaa384612bbebbeb2a7ad340a449",
+     :git-head "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :test-revision "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :ran-at "2026-09-27T14:51:12.967617082Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
@@ -677,7 +713,19 @@
     :r9-decision
     [:continuation-belief {:record :token-belief-input}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/changed-continuation-product,
+     :kind :value-varying,
+     :product [:calls 0 :scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e68f505affdbf6e0ae28014b9309f53b91c0e86296fbf37f423465f8687fbcf6",
+     :git-head "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :test-revision "631c440e79afac045b3272bbd99469c0d1d20b4d",
+     :ran-at "2026-09-27T14:51:53.764188056Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
@@ -1296,7 +1344,19 @@
    futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
   {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/reconciliation-retains-each-intervened-posterior,
+     :kind :record,
+     :product [:reader],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-307351d118bf3331f0e80d2235db24f46ef441b2a85489bcf35321c7a3e1a083",
+     :git-head "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :test-revision "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :ran-at "2026-09-27T14:53:34.703680028Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/the-real-reader-produces-the-received-value,
    :note
@@ -1570,7 +1630,19 @@
   {:wire
    [:r9-decision :r4-kernel [:cascade-belief {:record :rank-state}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test/belief-intervention-changes-reader-product,
+     :kind :value-varying,
+     :product [:G],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-6512e28c2156cd12b885849701994e301ad72267d4efc43f93ca36913644928b",
+     :git-head "26568759814c33a9083033e4319a0e1cffacd61a",
+     :test-revision "26568759814c33a9083033e4319a0e1cffacd61a",
+     :ran-at "2026-09-27T14:50:14.778725627Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test/the-real-reader-produces-the-writers-belief,
    :note
@@ -1580,7 +1652,19 @@
     :r4-rank-dispatch
     [:cascade-belief {:record :rank-state}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test/belief-intervention-changes-reader-product,
+     :kind :record,
+     :product [:incoming],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-c16516d7021cdfda0d18d372c1025db641af40869252eb743d1d3e03d279f9cc",
+     :git-head "26568759814c33a9083033e4319a0e1cffacd61a",
+     :test-revision "26568759814c33a9083033e4319a0e1cffacd61a",
+     :ran-at "2026-09-27T14:50:35.135310739Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test/the-real-reader-produces-the-writers-belief,
    :note
@@ -1850,7 +1934,19 @@
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/same-observation-changes-the-updated-posterior,
+     :kind :value-varying,
+     :product [:posterior],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-63cc6656b02eba56523ff074afc6610e8e04ef2d73664f9587496ba87bcda7e0",
+     :git-head "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :test-revision "21150aa30da1b3865ff93de520832e3a49daa82d",
+     :ran-at "2026-09-27T14:53:10.677748333Z"}},
    :test
    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value,
    :note
