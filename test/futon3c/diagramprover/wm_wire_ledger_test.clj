@@ -401,9 +401,9 @@
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test])
 
-(def adjacency-rev "2ba350a3")
+(def adjacency-rev "cd408b75")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "775aaa6d")
+(def map-rev "da64df45")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
