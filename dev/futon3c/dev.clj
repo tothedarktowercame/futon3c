@@ -70,6 +70,7 @@
             [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
             [futon3c.runtime.incidents :as incidents]
@@ -969,6 +970,8 @@
                              "query" (subs query-text 0 (min 100 (count query-text)))
                              "results" result-map}
                       :tags [:invoke :dev :context-retrieval :futon3a]})]
+        (when (:ok result)
+          (pattern-card-provider/observe-entry! (:entry result)))
         (get-in result [:entry :evidence/id])))
     (catch Throwable _ nil)))
 
