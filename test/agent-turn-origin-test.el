@@ -114,8 +114,8 @@
            (execution-id . "wm-run-7")))
          ((:kind "agent" :actor "wm-full-loop" :delivery bell :job-id "invoke-plain")
           "assistant"
-          ((kind . "none") (basis . "producer-context")
-           (source-ref . "invoke-plain")))
+          ((kind . "unknown") (basis . "producer-context")
+           (reason . "Agency job invoke-plain carries no harness")))
          ((:kind "agent" :actor "dispatcher" :delivery bell)
           "assistant"
           ((kind . "unknown") (basis . "producer-context")
@@ -136,7 +136,7 @@
                 '(:kind "agent" :actor "wm-full-loop" :delivery bell
                   :job-id "invoke-without-harness")
                 "p3-session")))
-    (should (equal (alist-get 'kind stamp) "none"))
+    (should (equal (alist-get 'kind stamp) "unknown"))
     (should-not (equal (alist-get 'kind stamp) "war-machine"))))
 
 (ert-deftest p3-3c-old-loaded-origin-omits-harness-safely ()

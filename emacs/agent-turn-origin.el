@@ -31,9 +31,11 @@ are deliberately ignored."
        ((and (stringp job-id) (not (string-empty-p job-id))
              (consp job-harness))
         (copy-tree job-harness))
+       ;; A job without harness is not evidence of a plain session: a War
+       ;; Machine runner started before P3-3b-4 dispatches without one.
        ((and (stringp job-id) (not (string-empty-p job-id)))
-        `((kind . "none") (basis . "producer-context")
-          (source-ref . ,job-id)))
+        `((kind . "unknown") (basis . "producer-context")
+          (reason . ,(concat "Agency job " job-id " carries no harness"))))
        (t
         '((kind . "unknown") (basis . "producer-context")
           (reason . "bell turn has no bound Agency job id")))))
