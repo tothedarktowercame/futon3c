@@ -51,10 +51,16 @@
     (println :chosen-target :plans
              (mapv #(select-keys % [:requisition :want-source :wants]) [pa pb]))))
 
-(deftest target-outside-field-passes-nil-location-to-plan
+;; Until futon2 6c153ce11 the plan step handed a nil repo and path to the
+;; planner for a chosen target the field did not list, and the planner
+;; returned a plan with no wants. It now records a typed absence and does not
+;; call the planner (LOOP-PLAN-ABSENT-I).
+(deftest target-outside-field-is-a-typed-absence-and-is-not-planned
   (let [[_ b] (products/products :missing)]
-    (is (= "M-not-in-field" (get-in b [:handed :chosen-target])))
-    (is (nil? (get-in b [:handed :repo])))
-    (is (nil? (get-in b [:handed :path])))
+    (is (= {} (:handed b)) "the planner was not called")
+    (is (= {:absent :chosen-target-not-in-field :chosen-target "M-not-in-field"
+            :missing [:considered-entry]}
+           (get-in b [:result :plan])))
+    (is (some? (get-in b [:result :target-selection])) "the selection record is kept")
     (println :missing-target :handed (:handed b)
              :plan (select-keys (get-in b [:result :plan]) [:requisition :want-source :wants]))))
