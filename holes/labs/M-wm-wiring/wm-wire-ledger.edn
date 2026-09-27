@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 26, :refusal 20, :record 0, :absent 134},
+ {:value-varying 34, :refusal 20, :record 2, :absent 124},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -104,7 +104,19 @@
     :r13-family-parameters
     [:beta {:record :cascade-problem}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test/beta-changes-the-joint-posterior,
+     :kind :value-varying,
+     :product [:posterior],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-3eefc971f60b825f8fbb29c8d0591a992ff6c107d891e4ba8b03107ec529ea9d",
+     :git-head "96b2c5857993665159948e579f17972c2335bd58",
+     :test-revision "96b2c5857993665159948e579f17972c2335bd58",
+     :ran-at "2026-09-27T14:24:14.466527303Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test/the-observed-handoff}
   {:wire
@@ -112,7 +124,19 @@
     :r13-family-parameters
     [:horizon-steps {:record :cascade-problem}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/changed-carrier-changes-the-derived-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-3448ea487875a18479c1b44ca90d5bf5bc1b4d5c0c6f983ca935153af87cd328",
+     :git-head "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :test-revision "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :ran-at "2026-09-27T11:21:03.604777722Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/the-observed-handoff}
   {:wire [:construction-assemble-one :r4-kernel :cascade-spec],
@@ -120,17 +144,16 @@
    :second-layer
    {:declared
     {:test
-     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/bad-carriers-before-the-real-reader,
-     :kind :refusal,
-     :product [:ranked :kind],
-     :intervention :before-reader,
-     :expected :missing-cascade-want},
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/changed-carrier-changes-the-derived-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-35d0996b4dc0695ff54b379d16f80e20fa6cffbab32083acc083e9515dff17e0",
-     :git-head "a55dbe2d17ea62ba321ccbe9199603e84dd6ff53",
-     :test-revision "a55dbe2d17ea62ba321ccbe9199603e84dd6ff53",
-     :ran-at "2026-09-27T04:47:45.662096577Z"}},
+     "test-registry-f7ce3db42547343ddbb91e7318b79cf7b11f5863bc0d5d971a1a5bdd1e2618a0",
+     :git-head "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :test-revision "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :ran-at "2026-09-27T11:21:14.036460036Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/the-observed-handoff,
    :note
@@ -140,7 +163,19 @@
     :r4-kernel
     [:want {:record :cascade-spec}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/changed-carrier-changes-the-derived-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-dea732dd29cbb17590e56aed352d6199a032f19e3c7d6524248ffa9b34c0495f",
+     :git-head "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :test-revision "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :ran-at "2026-09-27T11:21:24.328941782Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/the-observed-handoff}
   {:wire
@@ -148,7 +183,19 @@
     :r9-decision
     [:want {:record :cascade-problem}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test/changed-carrier-changes-the-derived-product,
+     :kind :value-varying,
+     :product [:scores],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-7d5315a07c91cf65632dff7fb158b08f2dcbb25a1aa98e4be2a207ee4b33725f",
+     :git-head "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :test-revision "eae9d9486184ed98a68192eff0569f30b6cbb486",
+     :ran-at "2026-09-27T11:21:34.767624668Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test/the-observed-handoff}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
@@ -1054,12 +1101,36 @@
    futon3c.diagramprover.wm-wire-r5-test-grain-test/the-candidates-grain-reaches-the-grain-gate-test}
   {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test/reader-product-changes-at-the-carrier,
+     :kind :value-varying,
+     :product [:G-efe],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-9981f62d64adf053c056514be469c1db003aa0d59678afd12c30832e2b7ebcb6",
+     :git-head "96b2c5857993665159948e579f17972c2335bd58",
+     :test-revision "0ed1a6345b1db7f29a4c2178cf8ffba7144bc807",
+     :ran-at "2026-09-27T14:29:35.183314786Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/reader-record-retains-the-intervened-carrier,
+     :kind :record,
+     :product [:cascade-scoring :rates-provenance :measurement],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-ee78be931729f6300bf626698affceed6bd03a843ae149311ab43029b0dcaec8",
+     :git-head "3dd2b80ae41ad610976f176ba56468857a4a9c39",
+     :test-revision "3dd2b80ae41ad610976f176ba56468857a4a9c39",
+     :ran-at "2026-09-27T14:23:55.413225347Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -1067,12 +1138,36 @@
     :r6-cascade-lane
     [:rates {:record :sourced-rates}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test/reader-product-changes-at-the-carrier,
+     :kind :value-varying,
+     :product [:G-efe],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-9917c59013e949d6c674820887e5123253a0b133bb2c756b4243c6e10ee0e770",
+     :git-head "96b2c5857993665159948e579f17972c2335bd58",
+     :test-revision "0ed1a6345b1db7f29a4c2178cf8ffba7144bc807",
+     :ran-at "2026-09-27T14:29:53.922588065Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-test :measurement],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/reader-product-changes-at-the-carrier,
+     :kind :value-varying,
+     :product [:reports],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a468fbb830e7e52a93852d648561f27a038eb1593d08e14dd9463a52bf8d6903",
+     :git-head "96b2c5857993665159948e579f17972c2335bd58",
+     :test-revision "0ed1a6345b1db7f29a4c2178cf8ffba7144bc807",
+     :ran-at "2026-09-27T14:30:16.652296882Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -1080,7 +1175,20 @@
     :r9-measured-a-version
     [:measurement {:record :sourced-rates}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/reader-product-changes-at-the-carrier,
+     :kind :refusal,
+     :product [:reason],
+     :intervention :before-reader,
+     :expected :no-measured-rates},
+    :evidence
+    {:warrant-id
+     "test-registry-4bcc6c6bbc5537f7cf122d78eb083af527c4c46fa545872f3934248b50418b13",
+     :git-head "96b2c5857993665159948e579f17972c2335bd58",
+     :test-revision "0ed1a6345b1db7f29a4c2178cf8ffba7144bc807",
+     :ran-at "2026-09-27T14:30:45.404226174Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/the-writers-measurement-reaches-the-reader}
   {:wire
@@ -1088,7 +1196,19 @@
     :r9-measured-a-version
     [:rates {:record :sourced-rates}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/reader-record-retains-the-intervened-carrier,
+     :kind :record,
+     :product [:rates],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-e26d1dfbfb6104fa8e23cd29c798666701aec75ca5ffeb4e46ce1db4745afdbf",
+     :git-head "3dd2b80ae41ad610976f176ba56468857a4a9c39",
+     :test-revision "3dd2b80ae41ad610976f176ba56468857a4a9c39",
+     :ran-at "2026-09-27T14:24:06.540324277Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/the-sourced-rates-reach-measured-a-version,
    :note
