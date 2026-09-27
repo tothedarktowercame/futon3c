@@ -3,7 +3,7 @@
   :rev "4e447b4f",
   :map "8dfdde3c"},
  :second-layer
- {:value-varying 63, :refusal 23, :record 41, :absent 67},
+ {:value-varying 65, :refusal 23, :record 50, :absent 56},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -146,7 +146,7 @@
    :test
    futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire
    [:construction-assemble-one
     :r13-family-parameters
@@ -1053,11 +1053,23 @@
    futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/recorded-input-does-not-change-mixed-selection,
+     :kind :record,
+     :product [:target-selection :inputs :next-step],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-9c7150ab528bd18c425670a00e61149bfcf4e3d03bdac065b7654be609447ac7",
+     :git-head "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :test-revision "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :ran-at "2026-09-27T18:00:40.187272644Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire
    [:r1-token-initialization
     :r1-token-temporal
@@ -1152,11 +1164,23 @@
   {:wire
    [:r10-observe-publication :r1-outer-cascade :publication-observed],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test/recorded-input-does-not-change-mixed-selection,
+     :kind :record,
+     :product [:target-selection :inputs :publication-observed],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-7973bfce5cddd8b4409ddca06ccf10d9d35eb4db9fe9bd2e919e0b0d8f381724",
+     :git-head "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :test-revision "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :ran-at "2026-09-27T18:01:26.645939514Z"}},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r10-observe-publication :r10-test :publication-observed],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1351,7 +1375,19 @@
     :r2-flight-read
     [:text-sha256 {:record :served-by}]],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/read-step-records-served-text-hash,
+     :kind :record,
+     :product [:text-sha256],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-2c57e1bcbd9703608cdc5358780909cb0de95c5a8ed12b277e84dd56e316da5f",
+     :git-head "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :test-revision "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :ran-at "2026-09-27T18:00:14.312042126Z"}},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
     :sha256
@@ -1867,11 +1903,23 @@
    futon3c.diagramprover.wm-wire-r7-flight-call-increment-test/the-increment-receipt-reaches-the-fold-source}
   {:wire [:r7-fold :r1-outer-cascade :enactment-records],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test/recorded-input-does-not-change-mixed-selection,
+     :kind :record,
+     :product [:target-selection :inputs :enactment-records],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-119263ceed94108e3ea0a492062dc0cef57664f660008dd65582b991885be5cf",
+     :git-head "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :test-revision "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :ran-at "2026-09-27T18:01:08.349654721Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r7-fold :r7-selection :enactment-records],
    :status :witnessed-hermetically,
    :second-layer
@@ -2105,11 +2153,23 @@
    futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/the-weighted-error-reaches-the-driver-aggregation}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/recorded-input-does-not-change-mixed-selection,
+     :kind :record,
+     :product [:target-selection :inputs :pair-overlap],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-f762db95f15fbea9434a3e6dde8bf5acb0aa434966651fcad7cdaf387ac68112",
+     :git-head "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :test-revision "8a8273fc503c515e012c443531252d617ce2b7e4",
+     :ran-at "2026-09-27T18:00:55.103539245Z"}},
    :test
    futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
   {:wire [:r8-overlap :r8-test :pair-overlap],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -2149,12 +2209,36 @@
    futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test/the-close-cause-reaches-the-components-test}
   {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/changed-cause-is-preserved,
+     :kind :record,
+     :product [:read],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-8c68446e1111e6811f0a2607444b053eb3c97d3a2d155e481de93ce057b9a271",
+     :git-head "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :test-revision "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :ran-at "2026-09-27T17:59:44.177107777Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/the-close-cause-reaches-finding-failure-cause}
   {:wire [:r9-close-cause :r9-finding-store :failure-cause],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/changed-cause-is-preserved,
+     :kind :record,
+     :product [:stored],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-948a1984d85d514852127a9279438c271cda0918da21923f96a5ee21a2e4cbaf",
+     :git-head "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :test-revision "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :ran-at "2026-09-27T17:59:26.268102345Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
   {:wire [:r9-decision :flight-conditioning-step :measured-a],
@@ -2381,7 +2465,19 @@
   {:wire
    [:r9-judge-refusal-abstention :r9-failure-classifier :outcome],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/typed-precedence-is-preserved,
+     :kind :record,
+     :product [:classification],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-58bf3090ef26e51cd9dbdff9b92d72db1a50969f96ee32cfe305afed4e3c13f5",
+     :git-head "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :test-revision "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :ran-at "2026-09-27T17:58:37.760402554Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/the-abstentions-outcome-reaches-the-failure-classifier}
   {:wire
@@ -2422,7 +2518,19 @@
    futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test/the-phase-kind-reaches-the-components-test}
   {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/typed-precedence-is-preserved,
+     :kind :record,
+     :product [:classification],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-06a902b23e27bd07b78d02f6eab60b2a332e0ce1dbe66aff42bcb37ce9a416d5",
+     :git-head "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :test-revision "536b102c8bc802ec43960be3d4bae6bc3d2c161e",
+     :ran-at "2026-09-27T17:58:20.984696436Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/the-phase-kind-reaches-the-failure-classifier}
   {:wire [:r9-selection-law :r0-enact-step :candidate],
@@ -2813,7 +2921,19 @@
     :r1-token-initialization
     [:initialization {:record :token-belief-stage}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test/initialization-changes-observation-fold,
+     :kind :value-varying,
+     :product [:continuation-belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-feda05eeb9780977bd4edc524d75bd22b64858f41c2fe8e814d3d1940e1da89b",
+     :git-head "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :test-revision "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :ran-at "2026-09-27T17:59:27.423188877Z"}},
    :test
    futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test/real-courier-reaches-reader,
    :note
@@ -2823,7 +2943,19 @@
     :token-initialization-observations
     [:initialization {:record :token-belief-stage}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test/initialization-changes-observation-fold,
+     :kind :value-varying,
+     :product [:continuation-belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-7e84916a1664be000555d0b84ef3bb23a27defa3a2b5b1fe5d40eb1e39dfa51e",
+     :git-head "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :test-revision "7b090a740a478f2a2df13658274cb4d449a491b3",
+     :ran-at "2026-09-27T17:59:51.510780827Z"}},
    :test
    futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test/real-courier-reaches-reader,
    :note
