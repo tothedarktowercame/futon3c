@@ -9121,6 +9121,26 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :get method) (= "/api/alpha/prompt-line" uri))
+      (let [params (parse-query-params request)
+            agent (get params "agent")
+            session (get params "session")]
+        (if (or (str/blank? agent) (str/blank? session))
+          (json-response 400 {:error "missing-agent-or-session"})
+          (json-response 200 (prompt-line/render!
+                              {:agent-id agent :session-id session
+                               :surface :http}))))
+
+      (and (= :get method) (= "/api/alpha/prompt-line/last" uri))
+      (let [params (parse-query-params request)
+            agent (get params "agent")
+            session (get params "session")]
+        (if (or (str/blank? agent) (str/blank? session))
+          (json-response 400 {:error "missing-agent-or-session"})
+          (if-let [last-render (prompt-line/last-render agent session)]
+            (json-response 200 last-render)
+            (json-response 404 {:error "prompt-line-render-not-found"}))))
+
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)
 
@@ -9585,26 +9605,6 @@
 
           (and (= :get method) (= "/api/alpha/evidence/count" uri))
           (handle-evidence-count request config)
-
-          (and (= :get method) (= "/api/alpha/prompt-line" uri))
-          (let [params (parse-query-params request)
-                agent (get params "agent")
-                session (get params "session")]
-            (if (or (str/blank? agent) (str/blank? session))
-              (json-response 400 {:error "missing-agent-or-session"})
-              (json-response 200 (prompt-line/render!
-                                  {:agent-id agent :session-id session
-                                   :surface :http}))))
-
-          (and (= :get method) (= "/api/alpha/prompt-line/last" uri))
-          (let [params (parse-query-params request)
-                agent (get params "agent")
-                session (get params "session")]
-            (if (or (str/blank? agent) (str/blank? session))
-              (json-response 400 {:error "missing-agent-or-session"})
-              (if-let [last-render (prompt-line/last-render agent session)]
-                (json-response 200 last-render)
-                (json-response 404 {:error "prompt-line-render-not-found"}))))
 
           (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)
