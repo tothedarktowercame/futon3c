@@ -4,11 +4,14 @@
    currently assigns valid/system time at insertion (P6). An ordered background
    writer prevents evidence outages from blocking parking or waking. Failed or
    process-lost writes leave history incomplete; authority/recovery is P2c's task."
-  (:require [futon3c.agency.promise-record :as promise]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [futon3c.agency.promise-capture :as capture]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend])
   (:import [futon3c.evidence.futon1b_backend Futon1bBackend]
            [java.time Instant]
+           [java.nio.file Files StandardCopyOption CopyOption]
            [java.util UUID]
            [java.util.concurrent ThreadPoolExecutor TimeUnit LinkedBlockingQueue ThreadFactory]))
 
@@ -35,6 +38,40 @@
           (when (instance? Futon1bBackend candidate) candidate)))
       (throw (ex-info "Evidence backend unavailable" {}))))
 
+(def ^:dynamic *heads* nil)
+(defonce ^:private !chain-cache (atom nil))
+
+(defn- chain-path []
+  (or (System/getenv "FUTON3C_PROMISE_HISTORY_CHAINS_PATH")
+      "/tmp/futon3c-promise-history-chains.edn"))
+
+(defn- next-link! [promise-id eid type]
+  ;; This sidecar is sequence allocation metadata only, never park authority.
+  ;; Persist before enqueue. Failed writes therefore leave detectable gaps. It is
+  ;; not an atomic commit with either /tmp store or XTDB; that protocol is P2c.
+  (locking !chain-cache
+    (let [path (chain-path)
+          heads (or *heads*
+                    (do (when (nil? @!chain-cache)
+                          (reset! !chain-cache
+                                  (if (.exists (io/file path))
+                                    (edn/read-string (slurp path)) {})))
+                        !chain-cache))
+          previous (get @heads promise-id)
+          head {:sequence (inc (or (:sequence previous) 0)) :id eid :type type}]
+      (swap! heads assoc promise-id head)
+      (when-not *heads*
+        (let [target (.toAbsolutePath (.toPath (io/file path)))
+              tmp (Files/createTempFile (.getParent target) "promise-chains-" ".edn"
+                                        (make-array java.nio.file.attribute.FileAttribute 0))]
+          (try
+            (spit (.toFile tmp) (pr-str @heads))
+            (Files/move tmp target (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                                          StandardCopyOption/REPLACE_EXISTING]))
+            (finally (Files/deleteIfExists tmp)))))
+      {:history/promise-id promise-id :history/promise-sequence (:sequence head)
+       :history/predecessor previous})))
+
 (defn record!
   "Submit exactly one uniquely identified transition. NOW-MS belongs to the
    transition, even if the writer runs much later. Writer id + sequence preserve
@@ -43,19 +80,24 @@
   ([type rec now-ms details]
    (let [sequence-number (:submitted (swap! !counts update :submitted inc))]
     (try
-     (let [entry (cond->
-                  {:evidence/id (str "e-" (UUID/randomUUID))
+     (let [eid (str "e-" (UUID/randomUUID))
+           promise-id (or (:id rec) (:followup-id rec) (:park-id rec))
+           changes (capture/drain!)
+           link (next-link! promise-id eid type)
+           entry (cond->
+                  {:evidence/id eid
                    :evidence/type type :evidence/claim-type :step
                    :evidence/subject {:ref/type :agent :ref/id (str (:agent rec))}
                    :evidence/author (str (:agent rec))
                    :evidence/at (str (Instant/ofEpochMilli now-ms))
                    :evidence/tags [:promise-history]
-                   :evidence/body (merge (select-keys rec (into [:id :followup-id :agent :session]
-                                                               promise/field-keys))
-                                         {:history/writer-id writer-id :history/sequence sequence-number
+                   :evidence/body (merge rec
+                                         {:history/format 2 :history/record rec
+                                          :history/changes changes
+                                          :history/writer-id writer-id :history/sequence sequence-number
                                           :awaiting (vec (sort (into (set (:awaiting rec))
                                                                     (keys (:arrived rec)))))}
-                                         details)}
+                                         details link)}
                    (:session rec) (assoc :evidence/session-id (:session rec)))]
        (.execute writer
                  ^Runnable
@@ -74,3 +116,59 @@
   (let [done (promise)]
     (.execute writer ^Runnable #(deliver done true))
     (= true (deref done timeout-ms false))))
+
+
+(defn capture!
+  "Observe authoritative mutations; nested same-store calls share an ordered edit
+   buffer. A semantic record consumes edits since its predecessor. Remaining edits
+   get an explicit maintenance record (load/clear), never silently disappear."
+  [store f]
+  (if (= store (:store capture/*capture*))
+    (f)
+    (binding [capture/*capture* {:store store :changes (atom [])}]
+      (try (f)
+           (finally
+             (when (seq @(:changes capture/*capture*))
+               (record! (case store :parked :promise/park-store-changed
+                                   :followup :promise/followup-store-changed)
+                        {:id (str "store:" (name store)) :agent "promise-history"}
+                        (System/currentTimeMillis))))))))
+
+(defn check-chains
+  "Pure reader gate. Pre-repair rows are incomplete, never upgraded by inference.
+   Predecessors name missing transitions even when timestamps are identical."
+  [entries]
+  (vec
+   (mapcat
+    (fn [[pid rows]]
+      (let [by-id (into {} (map (juxt :evidence/id identity)) rows)]
+        (mapcat
+         (fn [row]
+           (let [b (:evidence/body row)
+                 n (:history/promise-sequence b)
+                 prev (:history/predecessor b)]
+             (cond
+               (or (not= 2 (:history/format b)) (not (pos-int? n)))
+               [{:promise-id pid :reason :incomplete-pre-repair-history :id (:evidence/id row)}]
+               (and (= n 1) (not (contains? #{:promise/park-made :promise/followup-enqueued
+                                                          :promise/park-store-changed :promise/followup-store-changed}
+                                                        (:evidence/type row))))
+               [{:promise-id pid :reason :missing-origin :sequence 1}]
+               (and (= n 1) prev)
+               [{:promise-id pid :reason :invalid-predecessor :sequence n}]
+               (> n 1)
+               (let [prior (get by-id (:id prev))]
+                 (cond
+                   (not= (dec n) (:sequence prev))
+                   [{:promise-id pid :reason :invalid-predecessor :sequence n}]
+                   (nil? prior)
+                   [{:promise-id pid :reason :missing-transition :sequence (:sequence prev)
+                     :predecessor-id (:id prev) :predecessor-type (:type prev)}]
+                   (or (not= (:type prev) (:evidence/type prior))
+                       (not= (:sequence prev) (get-in prior [:evidence/body :history/promise-sequence])))
+                   [{:promise-id pid :reason :predecessor-mismatch :sequence n}]
+                   :else []))
+               :else []))) rows)))
+    (group-by #(or (get-in % [:evidence/body :history/promise-id])
+                   (get-in % [:evidence/body :id])
+                   (get-in % [:evidence/body :followup-id])) entries))))

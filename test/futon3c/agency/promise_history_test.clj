@@ -12,8 +12,11 @@
           q (java.io.File/createTempFile "p2a-followup" ".edn")
           store (atom {:entries {} :order []})]
       (with-redefs-fn {#'park/store-path (constantly (str p))}
-        #(binding [queue/*path-override* (str q) history/*backend* store *evidence* store]
-           (try (park/clear!) (queue/clear!) (f)
+        #(binding [queue/*path-override* (str q) history/*backend* store history/*heads* (atom {}) *evidence* store]
+           (try (park/clear!) (queue/clear!)
+                (history/await-writes! 5000)
+                (reset! store {:entries {} :order []})
+                (f)
                 (finally (history/await-writes! 5000)
                          (.delete p) (.delete q)
                          (reset! @#'park/!parked nil)

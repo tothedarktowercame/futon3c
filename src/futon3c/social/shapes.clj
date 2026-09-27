@@ -317,7 +317,9 @@
    :promise/park-made :promise/dependency-terminated :promise/woken
    :promise/released :promise/budget-exhausted :promise/deadline-expired
    :promise/followup-enqueued :promise/followup-dequeued
-   :promise/followup-terminal :promise/followup-requeued])
+   :promise/followup-terminal :promise/followup-requeued
+   :promise/ready-enqueued :promise/ready-leased :promise/ready-acked :promise/ready-requeued
+   :promise/park-store-changed :promise/followup-store-changed])
 
 (def EvidenceEntry
   "Primary evidence shape — all other evidence projections are derived from this.

@@ -5,7 +5,8 @@
             [clojure.string :as str]
             [futon3c.dev.config :as config]
             [futon3c.agency.promise-record :as promise-record]
-            [futon3c.agency.promise-history :as history])
+            [futon3c.agency.promise-history :as history]
+            [futon3c.agency.promise-capture :as capture])
   (:import [java.util UUID]))
 
 (def ^:private default-path "/tmp/futon3c-followups.edn")
@@ -27,10 +28,12 @@
       (empty-state))))
 (defn- persist! [s] (spit (path) (pr-str s)) s)
 (defn- ensure! []
+  (history/capture! :followup (fn []
   (when-not @!state
-    (reset! !state (persist! (load-state))))
-  @!state)
-(defn clear! [] (reset! !state (empty-state)) (persist! @!state))
+    (capture/reset-state! :followup !state (persist! (load-state))))
+  @!state)))
+(defn clear! []
+  (history/capture! :followup (fn [] (capture/reset-state! :followup !state (empty-state)) (persist! @!state))))
 (defn snapshot [] (ensure!) @!state)
 (defn- seat-key [agent session] [(str agent) (str session)])
 (defn- release-dedupe [s item]
@@ -43,7 +46,7 @@
                    (for [[id item] (:terminal state)] [id [:terminal item]]))))
 
 (defn- update-state! [f & [requeue-at]]
-  (let [[old new] (swap-vals! !state f)
+  (let [[old new] (capture/swap-vals-state! :followup !state f)
         now (System/currentTimeMillis)
         before (history-items old)
         requeued (into {} (filter (fn [[_ item]]
@@ -70,6 +73,7 @@
   "Queue a followup with optional validated :beneficiary, :deadline and
    :fulfilment-criterion promise metadata; these do not affect delivery."
   [{:keys [agent session type dedupe-key prompt metadata] :as request}]
+  (history/capture! :followup (fn []
   (ensure!)
   (when-not (contains? #{:inbox-zero :apm-store-repair :kimi-work-target} type)
     (throw (ex-info "Unsupported followup type" {:type type})))
@@ -89,9 +93,10 @@
         (update-state! #(-> %
                            (update-in [:queued (seat-key agent session)] (fnil conj []) item)
                            (assoc-in [:dedupe dedupe-key] id)))
-        {:id id :status :queued}))))
+        {:id id :status :queued}))))))
 
 (defn cancel! [id reason]
+  (history/capture! :followup (fn []
   (ensure!)
   (let [found (atom nil)]
     (update-state!
@@ -113,7 +118,7 @@
                      (release-dedupe item)
                      (assoc-in [:terminal id] (assoc item :state :cancelled :reason reason)))
                  s))))
-    (boolean @found)))
+    (boolean @found)))))
 
 (defn- requeue-expired [s now]
   (reduce (fn [acc [id item]]
@@ -129,6 +134,7 @@
   "Lease one item. VALID? revalidates exact identity immediately before lease;
   invalid items become terminal cancelled records."
   [agent session valid?]
+  (history/capture! :followup (fn []
   (ensure!)
   (let [now (System/currentTimeMillis)
         key (seat-key agent session)
@@ -152,13 +158,14 @@
                                                                validity
                                                                :revalidation-failed)))))))
                  s))) now)
-    @leased))
+    @leased))))
 
 (defn ack! [id]
+  (history/capture! :followup (fn []
   (ensure!)
   (let [item (get-in @!state [:leased id])]
     (when item
       (update-state! #(-> % (update :leased dissoc id)
                            (release-dedupe item)
                            (assoc-in [:terminal id] (assoc item :state :acked))))
-      true)))
+      true)))))

@@ -29,7 +29,8 @@
             [clojure.string :as str]
             [futon3c.dev.config :as config]
             [futon3c.agency.promise-record :as promise-record]
-            [futon3c.agency.promise-history :as history])
+            [futon3c.agency.promise-history :as history]
+            [futon3c.agency.promise-capture :as capture])
   (:import [java.util UUID]))
 
 (def ^:private default-store "/tmp/futon3c-parked-on.edn")
@@ -96,13 +97,15 @@
       (println (str "[parked-on] persist failed: " (.getMessage e)))))
   state)
 
-(defn- ensure! [] (when (nil? @!parked) (reset! !parked (load-state))) @!parked)
+(defn- ensure! []
+  (history/capture! :parked (fn [] (when (nil? @!parked) (capture/reset-state! :parked !parked (load-state))) @!parked)))
 
 (defn clear!
   "Reset the store (tests/dev)."
   []
-  (reset! !parked (empty-state))
-  (persist! (empty-state)))
+  (history/capture! :parked (fn []
+  (capture/reset-state! :parked !parked (empty-state))
+  (persist! (empty-state)))))
 
 (defn snapshot [] (ensure!) (dissoc @!parked :just-released))
 
@@ -118,10 +121,12 @@
   "Push an assembled resume prompt for [AGENT SESSION] into the durable
    ready-inbox (FIFO). Called when a buffer-surfaced park's join completes."
   ([agent session park-id prompt]
-   (ready-push! agent session park-id prompt :within-turn))
+  (history/capture! :parked (fn []
+   (ready-push! agent session park-id prompt :within-turn))))
   ([agent session park-id prompt mode]
+  (history/capture! :parked (fn []
    (ensure!)
-   (swap! !parked
+   (capture/swap-state! :parked !parked
           (fn [st]
             (let [already-queued?
                   (some #(= park-id (:park-id %))
@@ -133,7 +138,12 @@
                       item {:park-id park-id :prompt prompt
                             :mode (or mode :within-turn)}]
                   (update-in st [:ready-inbox k] (fnil conj []) item))))))
-   (persist! @!parked)))
+   (let [persisted (persist! @!parked)]
+   (when (seq @(:changes capture/*capture*))
+     (history/record! :promise/ready-enqueued
+                      {:id park-id :agent (str agent) :session (str session)
+                       :prompt prompt :mode mode} (System/currentTimeMillis)))
+   persisted)))))
 
 (defn- ready-key [agent session] [(str agent) (str session)])
 
@@ -143,12 +153,14 @@
    Returns the leased item {:park-id :prompt :lease-deadline-ms} or nil if the
    queue is empty. The item stays in :leased until ready-ack! confirms delivery
    (sweep-leased! returns expired unacked leases for redelivery)."
-  ([agent session] (ready-lease-one! agent session (System/currentTimeMillis) default-lease-ms))
+  ([agent session]
+  (history/capture! :parked (fn [] (ready-lease-one! agent session (System/currentTimeMillis) default-lease-ms))))
   ([agent session now-ms lease-ms]
+  (history/capture! :parked (fn []
    (ensure!)
    (let [k (ready-key agent session)
          leased-item (atom nil)]
-     (swap! !parked
+     (capture/swap-state! :parked !parked
             (fn [st]
               (let [items (get-in st [:ready-inbox k])]
                 (if (seq items)
@@ -164,15 +176,20 @@
                         (assoc-in [:ready-inbox k] (subvec items 1))))
                   st))))
      (persist! @!parked)
-     @leased-item)))
+     (when-let [item @leased-item]
+       (history/record! :promise/ready-leased
+                        (assoc item :id (:park-id item) :agent (str agent) :session (str session)) now-ms))
+     @leased-item)))))
 
 (defn ready-ack!
   "Confirm delivery of a leased ready item (clear its lease). Returns true if the
    item was found and cleared, false if unknown (already acked or expired+requeued)."
   [park-id]
+  (history/capture! :parked (fn []
   (ensure!)
-  (let [found? (atom false)]
-    (swap! !parked
+  (let [found? (atom false)
+        prior (get-in @!parked [:leased park-id])]
+    (capture/swap-state! :parked !parked
            (fn [st]
              (if (contains? (:leased st) park-id)
                (do (reset! found? true)
@@ -185,16 +202,20 @@
                                        entries)))))
                st)))
     (persist! @!parked)
-    @found?))
+    (when @found?
+      (history/record! :promise/ready-acked (assoc prior :id park-id) (System/currentTimeMillis)))
+    @found?))))
 
 (defn sweep-leased!
   "Return expired unacked leases to the FRONT of their ready-inbox queue for
    redelivery. ON-EXPIRE (optional) is called per expired item for observability.
    Returns {:requeued [park-id ...]}."
   ([{:keys [now-ms on-expire] :or {now-ms (System/currentTimeMillis)}}]
+  (history/capture! :parked (fn []
    (ensure!)
-   (let [expired (atom [])]
-     (swap! !parked
+   (let [expired (atom [])
+         prior (:leased @!parked)]
+     (capture/swap-state! :parked !parked
             (fn [st]
               (let [expired-entries (for [[_pid entry] (:leased st)
                                           :when (>= now-ms (:lease-deadline-ms entry))]
@@ -224,8 +245,10 @@
                           (for [e expired-entries] [(:agent e) (:session e)]))))))
      (persist! @!parked)
      (doseq [pid @expired]
+       (history/record! :promise/ready-requeued (assoc (get prior pid) :id pid) now-ms
+                        {:reason :lease-expired})
        (when on-expire (on-expire pid)))
-     {:requeued (vec @expired)})))
+     {:requeued (vec @expired)})))))
 
 (defn ready-inbox-pending?
   "True when [AGENT SESSION] has ready items OR leased items pending (for the
@@ -317,13 +340,14 @@
    permitting); budget-exhausted records are retracted and recorded. Returns
    {:released [rid ...] :released-records [rec ...]}."
   [dep-id result {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
+  (history/capture! :parked (fn []
   (ensure!)
   (if-not (contains? (:index @!parked) dep-id)
     {:released [] :released-records []} ; nothing parked on this dep — cheap no-op, no swap/disk write
-    (let [[old new] (swap-vals! !parked #(apply-completion % dep-id result now-ms))
+    (let [[old new] (capture/swap-vals-state! :parked !parked #(apply-completion % dep-id result now-ms))
           fired (:just-released new)]
       (when (seq fired)
-        (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
+        (capture/swap-state! :parked !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
       (persist! @!parked)
       (doseq [rid (get-in old [:index dep-id])
               :let [rec (get-in old [:records rid])]
@@ -334,7 +358,7 @@
           (history/record! :promise/budget-exhausted rec now-ms)))
       (doseq [rec fired] (wake-and-release! rec resume! now-ms))
       {:released (mapv :id fired)
-       :released-records (mapv #(dissoc % :just-released) fired)})))
+       :released-records (mapv #(dissoc % :just-released) fired)})))))
 
 ;; ---------------------------------------------------------------------------
 ;; park! — register a continuation (§3.2) + reconcile-on-park (case 1)
@@ -355,6 +379,7 @@
    Returns {:id rid :status :parked|:released|:released-immediately}."
   [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget mode] :as request}
    {:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
+  (history/capture! :parked (fn []
   (ensure!)
   (when-not (valid-epoch-ms? timer-due-ms)
     (throw (ex-info "timer-due-ms must be a canonical non-negative integer"
@@ -383,7 +408,7 @@
       :else
       (let [chosen-id (atom nil)
             active? (atom false)]
-        (swap! !parked
+        (capture/swap-state! :parked !parked
                (fn [st]
                  (if-let [existing-id (and coalesce-key
                                            (get-in st [:coalesced coalesce-key]))]
@@ -415,7 +440,7 @@
                                   {:resume! resume! :now-ms now-ms})))))
         (if (get-in @!parked [:records @chosen-id])
           {:id @chosen-id :status :parked}
-          {:id @chosen-id :status :released})))))
+          {:id @chosen-id :status :released})))))))
 
 ;; ---------------------------------------------------------------------------
 ;; rehydrate! (R3, boot) + sweep-deadlines! (R4, the required timer)
@@ -431,12 +456,13 @@
    :leased / :ready-inbox keys are tolerated (merge with empty-state). Returns
    {:loaded n :released [...] :requeued-leases n}."
   [{:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
-  (reset! !parked (load-state))
+  (history/capture! :parked (fn []
+  (capture/reset-state! :parked !parked (load-state))
   ;; Return stale leased items to the FRONT of their ready-inbox for redelivery.
   (let [stale-leased (-> @!parked :leased vals vec)
         requeued (atom 0)]
     (when (seq stale-leased)
-      (swap! !parked
+      (capture/swap-state! :parked !parked
              (fn [st]
                ;; Reverse to preserve FIFO order (first leased → front of queue).
                (reduce (fn [s entry]
@@ -450,7 +476,10 @@
                        (assoc st :leased {})
                        (reverse stale-leased))))
       (reset! requeued (count stale-leased))
-      (persist! @!parked))
+      (persist! @!parked)
+      (doseq [entry stale-leased]
+        (history/record! :promise/ready-requeued (assoc entry :id (:park-id entry)) now-ms
+                         {:reason :boot-recovery})))
     (let [recs (vals (:records @!parked))
           released (atom [])]
       (doseq [rec recs
@@ -461,13 +490,14 @@
               (let [r (note-completion! dep (completion-result j)
                                         {:resume! resume! :now-ms now-ms})]
                 (swap! released into (:released r)))))))
-      {:loaded (count recs) :released @released :requeued-leases @requeued})))
+      {:loaded (count recs) :released @released :requeued-leases @requeued})))))
 
 (defn sweep-deadlines!
   "Force-terminate records past :deadline-ms (the liveness backstop) and fire due
    no-dep :timer-due-ms parks. ON-EXPIRE is called per expired record; RESUME! fires
    due timers. Returns {:expired [rid ...] :timer-fired [rid ...]}."
   [{:keys [now-ms resume! on-expire] :or {now-ms (System/currentTimeMillis)}}]
+  (history/capture! :parked (fn []
   (ensure!)
   (let [recs (vals (:records @!parked))
         expired (filterv (fn [r] (and (not (:released? r)) (:deadline-ms r)
@@ -476,7 +506,7 @@
                                       (:timer-due-ms r) (>= now-ms (:timer-due-ms r))
                                       (not (some #{(:id r)} (map :id expired))))) recs)]
     (when (or (seq expired) (seq timers))
-      (swap! !parked (fn [st]
+      (capture/swap-state! :parked !parked (fn [st]
                        (reduce (fn [s r] (forget-record s (:id r)))
                                st (concat expired timers))))
       (persist! @!parked))
@@ -491,4 +521,4 @@
       ;; failure the protocol exists to close — semantics changed 2026-07-13.
       (wake-and-release! (assoc r :deadline-expired? true) resume! now-ms))
     (doseq [r timers] (wake-and-release! r resume! now-ms))
-    {:expired (mapv :id expired) :timer-fired (mapv :id timers)}))
+    {:expired (mapv :id expired) :timer-fired (mapv :id timers)}))))
