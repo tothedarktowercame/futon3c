@@ -456,7 +456,8 @@ v2: "resolved, and its measures can safely end", plus a list of effects that nee
 counterfactual needs a world model, now its own hole (<span class="zh">反事实世界模型</span>).</li>
 <li><b>Of your {len(decided)} decisions, {len(crit_dec)} block the acceptance case:</b>
 {", ".join(crit_dec)}. The rest can wait. Details and grouping below.</li>
-<li><b>A gap no packet covers:</b> {esc(bp["findings"][1])}</li>
+<li><b>VERIFY-2, claude-8's review:</b> {esc(bp["findings"][1])}</li>
+<li><b>VERIFY-2 on the War Machine:</b> {esc(bp["findings"][2])}</li>
 </ol>""")
 
     H.append(f"""<p class="muted">What I checked: <code>cascade_check.py</code> and <code>wiring_check.py</code> pass on v2
