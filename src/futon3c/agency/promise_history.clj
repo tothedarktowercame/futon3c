@@ -92,8 +92,12 @@
                    :evidence/at (str (Instant/ofEpochMilli now-ms))
                    :evidence/tags [:promise-history]
                    :evidence/body (merge rec
-                                         {:history/format 2 :history/record rec
-                                          :history/changes changes
+                                         {:history/format 3
+                                          ;; XTDB's document representation elides nil map
+                                          ;; values. The EDN wire payload preserves absence
+                                          ;; versus explicit nil and arbitrary snapshot keys.
+                                          :history/payload-edn (pr-str {:record rec :changes changes
+                                                                       :predecessor (:history/predecessor link)})
                                           :history/writer-id writer-id :history/sequence sequence-number
                                           :awaiting (vec (sort (into (set (:awaiting rec))
                                                                     (keys (:arrived rec)))))}
@@ -134,6 +138,17 @@
                         {:id (str "store:" (name store)) :agent "promise-history"}
                         (System/currentTimeMillis))))))))
 
+(defn payload
+  "Decode the lossless replay payload. Top-level body fields are a query projection,
+   not replay input: XTDB elides nil map entries there, even over the EDN API.
+   Formats before 3 cannot prove exact snapshot coverage and are refused."
+  [entry]
+  (let [b (:evidence/body entry)]
+    (when-not (and (= 3 (:history/format b)) (string? (:history/payload-edn b)))
+      (throw (ex-info "Incomplete pre-repair history" {:reason :incomplete-pre-repair-history
+                                                       :id (:evidence/id entry)})))
+    (edn/read-string (:history/payload-edn b))))
+
 (defn check-chains
   "Pure reader gate. Pre-repair rows are incomplete, never upgraded by inference.
    Predecessors name missing transitions even when timestamps are identical."
@@ -148,7 +163,7 @@
                  n (:history/promise-sequence b)
                  prev (:history/predecessor b)]
              (cond
-               (or (not= 2 (:history/format b)) (not (pos-int? n)))
+               (or (not= 3 (:history/format b)) (not (pos-int? n)))
                [{:promise-id pid :reason :incomplete-pre-repair-history :id (:evidence/id row)}]
                (and (= n 1) (not (contains? #{:promise/park-made :promise/followup-enqueued
                                                           :promise/park-store-changed :promise/followup-store-changed}

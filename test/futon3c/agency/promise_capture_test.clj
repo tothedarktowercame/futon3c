@@ -1,5 +1,6 @@
 (ns futon3c.agency.promise-capture-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.walk :as walk]
             [futon3c.agency.promise-capture :as capture]
             [futon3c.agency.promise-history :as history]
             [futon3c.agency.parked-on :as park]
@@ -29,7 +30,7 @@
 
 (defn replay-edits [store entries]
   (reduce capture/apply-edits nil
-          (for [entry entries change (get-in entry [:evidence/body :history/changes])
+          (for [entry entries change (:changes (history/payload entry))
                 :when (= store (:store change))]
             (:edits change))))
 
@@ -168,3 +169,16 @@
              (is (= (:evidence/id (first entries))
                     (get-in (second entries) [:evidence/body :history/predecessor :id]))))
            (finally (reset! cache saved) (.delete file)))))))
+
+
+(deftest wire-payload-survives-xtdb-nil-elision
+  ;; Observed on the real :7073 EDN read during the first live repair probe:
+  ;; nested nil map entries disappear. Replay must use the explicit wire payload.
+  (park/park! (assoc rich-park :payload {:nil-value nil :empty {} :set #{nil :x}}) {})
+  (let [entries (rows)
+        elide (fn [x] (if (map? x) (into (empty x) (remove (comp nil? val)) x) x))
+        readback (walk/postwalk elide entries)]
+    (is (not= entries readback))
+    (is (= (park/snapshot) (replay-edits :parked readback)))
+    (is (= (mapv history/payload entries) (mapv history/payload readback)))
+    (is (empty? (history/check-chains readback)))))
