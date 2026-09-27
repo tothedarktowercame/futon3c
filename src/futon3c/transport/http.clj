@@ -1394,6 +1394,13 @@
                  result))
      :result-summary (:result-summary job)}))
 
+(defn promise-job-lookup
+  "P5 criterion evidence from the durable invoke ledger, not a wake payload.
+   Missing/pruned jobs are unknown; never turn absence into a failed criterion."
+  [job-id]
+  (some-> (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+          (select-keys [:state :finished-at :terminal-code])))
+
 (defn parked-on-notify!
   "Hot-path hook (flag-gated): job JOB-ID reached terminal state -> fold it into
    any parked-on join awaiting it. Returns the records that actually released so

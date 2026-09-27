@@ -6,7 +6,8 @@
    heads may interleave; conflicting heads are reported rather than guessed."
   (:require [clojure.set :as set]
             [futon3c.agency.promise-capture :as capture]
-            [futon3c.agency.promise-history :as history]))
+            [futon3c.agency.promise-history :as history]
+            [futon3c.agency.promise-outcome :as outcome]))
 
 (def empty-states
   {:parked {:records {} :index {} :coalesced {} :ready-inbox {} :leased {}}
@@ -87,7 +88,7 @@
    with any invalid/legacy/gapped row is excluded entirely, including its good rows.
    Initial empty containers are the store schema, never a source of promise data."
   [entries]
-  (let [entries (vec entries)
+  (let [entries (vec (remove #(contains? outcome/types (:evidence/type %)) entries))
         issues (exclude-dependent-batches entries (row-issues entries))
         excluded (set (map :promise-id issues))
         valid (remove #(contains? excluded (promise-id %)) entries)
@@ -140,7 +141,8 @@
   "Compare complete snapshots, not a selected-field projection. Diagnostics keep
    payload contents out of the report; callers can inspect rebuild's :states."
   [entries live]
-  (let [{:keys [states issues replayed excluded-promises]} (rebuild entries)
+  (let [entries (vec (remove #(contains? outcome/types (:evidence/type %)) entries))
+        {:keys [states issues replayed excluded-promises]} (rebuild entries)
         known (set (map promise-id entries))
         no-history (sort (set/difference (live-ids live) known))
         differences (vec (for [[store snapshot] live

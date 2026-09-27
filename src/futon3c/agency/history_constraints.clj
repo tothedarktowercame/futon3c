@@ -79,7 +79,10 @@
        :surface (get header "Surface") :caller caller})))
 
 (defn normalize-history [rows]
-  (let [promises (filter #(= "promise" (namespace (:evidence/type %))) rows)
+  (let [promises (filter #(and (= "promise" (namespace (:evidence/type %)))
+                               ;; Outcomes observe criteria; they are not snapshot-edit chains.
+                               (not (contains? #{:promise/fulfilled :promise/lapsed}
+                                               (:evidence/type %)))) rows)
         issues (history/check-chains promises)
         malformed (keep (fn [row]
                           (try

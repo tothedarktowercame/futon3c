@@ -7,6 +7,7 @@
   (:require [futon3c.evidence.origin :as origin] [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.agency.promise-capture :as capture]
+            [futon3c.agency.promise-outcome :as outcome]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend])
   (:import [futon3c.evidence.futon1b_backend Futon1bBackend]
@@ -24,7 +25,8 @@
                          (newThread [_ task]
                            (doto (Thread. task "promise-history") (.setDaemon true))))))
 
-(defn stats "Observable process-local write/failure counts (not durable)." [] @!counts)
+(defn stats "Observable process-local write/failure counts (not durable)." []
+  (assoc @!counts :outcomes (outcome/stats)))
 
 (defn- failed! [type detail]
   (swap! !counts update :failed inc)
@@ -112,7 +114,11 @@
                                                        (origin/harness "promise-history" promise-id)
                                                        "futon3c.agency.promise-history"))]
                        (if (:ok result)
-                         (swap! !counts update :written inc)
+                         (do (swap! !counts update :written inc)
+                             ;; Criterion observations do not consume snapshot edits or
+                             ;; promise-chain sequence numbers. Failure stays best-effort.
+                             (try (outcome/evaluate! (backend) eid rec (System/currentTimeMillis))
+                                  (catch Throwable e (outcome/failed! e))))
                          (failed! type (:error/code result))))
                      (catch Throwable e (failed! type (.getMessage e)))))))
      (catch Throwable e (failed! type (.getMessage e)))))))
@@ -190,3 +196,19 @@
     (group-by #(or (get-in % [:evidence/body :history/promise-id])
                    (get-in % [:evidence/body :id])
                    (get-in % [:evidence/body :followup-id])) entries))))
+
+(defonce ^:private !outcome-sweep-pending (atom false))
+(defn sweep-outcomes!
+  "Queue at most one deadline scan on the ordered background writer. Never block
+   the park timer on evidence IO; history remains the source after cache deletion."
+  []
+  (when (compare-and-set! !outcome-sweep-pending false true)
+    (try
+      (.execute writer ^Runnable
+                (bound-fn []
+                  (try (outcome/sweep! (backend) (System/currentTimeMillis))
+                       (catch Throwable e (outcome/failed! e))
+                       (finally (reset! !outcome-sweep-pending false)))))
+      (catch Throwable e
+        (reset! !outcome-sweep-pending false)
+        (outcome/failed! e)))))

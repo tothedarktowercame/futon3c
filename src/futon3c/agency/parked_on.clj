@@ -497,6 +497,7 @@
    no-dep :timer-due-ms parks. ON-EXPIRE is called per expired record; RESUME! fires
    due timers. Returns {:expired [rid ...] :timer-fired [rid ...]}."
   [{:keys [now-ms resume! on-expire] :or {now-ms (System/currentTimeMillis)}}]
+  (history/sweep-outcomes!)
   (history/capture! :parked (fn []
   (ensure!)
   (let [recs (vals (:records @!parked))
