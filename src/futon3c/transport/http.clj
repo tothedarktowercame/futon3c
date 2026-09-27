@@ -55,7 +55,8 @@
      failures (port in use, permission denied).
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
-  (:require [futon3c.evidence.origin :as origin]
+  (:require [futon1b-harness :as harness]
+            [futon3c.evidence.origin :as origin]
             [futon3c.transport.protocol :as proto]
             [futon3c.apm.conductor-binding :as conductor-binding]
             [futon3c.apm.conductor-open :as conductor-open]
@@ -468,7 +469,7 @@
                              (select-keys [:seq :type :at :code :message])
                              (update :message #(when % (subs (str %) 0 (min 220 (count (str %))))))))
         events (:events job)]
-    (-> (select-keys job [:job-id :agent-id :caller :surface :request-digest
+    (-> (select-keys job [:job-id :agent-id :caller :surface :harness :request-digest
                           :request-commission
                           :bellback-of :mode :state :created-at :started-at :finished-at
                           :terminal-code :terminal-message :session-id :trace-id
@@ -1583,7 +1584,7 @@
 
 (defn- create-invoke-job-ledger!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
-           model inherited-clock]}]
+           model inherited-clock] :as request}]
   (let [created-id (atom nil)]
     (try
       (update-invoke-jobs-ledger!
@@ -1602,7 +1603,11 @@
                          (#{"queued" "activating" "running" "delivered"}
                           (str (:state existing))))]
          (if reuse?
-           (do (reset! created-id requested)
+           (do
+               (when-not (= (select-keys existing [:harness]) (select-keys request [:harness]))
+                 (throw (ex-info "Existing job has different harness context"
+                                 {:error :harness-conflict :job-id requested})))
+               (reset! created-id requested)
                ledger)  ;; no mutation — return existing job
            (let [[auto-id next-seq] (next-invoke-job-id ledger)
                  usable-requested (and (seq requested)
@@ -1638,6 +1643,7 @@
                                :delivery {:status "pending"}
                                :event-seq 0
                                :events []}
+                        (contains? request :harness) (assoc :harness (:harness request))
                         bell-type (assoc :bell-type bell-type)
                         (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
@@ -1694,6 +1700,7 @@
          ;; Warrant rides the handoff: the durable edge carries the handoff's
          ;; warrant status and entry ids, so the ledger answers "which handoffs
          ;; were warranted" without opening the registry.
+         (contains? request :harness) (assoc :harness (:harness request))
          (some? warrants) (assoc :warrant-status (:handoff/warrant-status warrants)
                                  :warrant-entry-ids (mapv :entry-id (:warrants warrants)))))
       (catch Throwable _))
@@ -2157,7 +2164,7 @@
   ;; whitespace-collapsed list-view digest and truncates structured payloads
   ;; (attempt-051 feature-card incident, 2026-07-25).
   (let [view
-        (select-keys job [:job-id :agent-id :caller :surface :mode :state
+        (select-keys job [:job-id :agent-id :caller :surface :harness :mode :state
                           :created-at :started-at :finished-at
                           :terminal-code :terminal-message
                           :session-id :trace-id :invocation/model
@@ -5591,6 +5598,9 @@
                         "bell")
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))
+            harness-present? (contains? payload :harness)
+            harness-value (:harness payload)
+            harness-error (when harness-present? (harness/refusal harness-value))
             raw-mode (or (:mode payload) (get payload "mode"))
             mode (normalize-invoke-job-mode raw-mode)
             mission-id (or (:mission-id payload) (get payload "mission-id"))
@@ -5622,6 +5632,9 @@
                     str str/trim not-empty)
             evidence-store (evidence-store-for-config config)]
         (cond
+          harness-error
+          (json-response 400 {:ok false :err "invalid-harness" :reason harness-error})
+
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
                               :message "agent-id is required"})
@@ -5654,6 +5667,14 @@
                               :field (name (:field warrant-normalized))
                               :value (:value warrant-normalized)})
 
+          (and (nonblank-str requested-job-id)
+               (let [existing (get-in (ensure-invoke-jobs-ledger!) [:jobs (nonblank-str requested-job-id)])]
+                 (and existing
+                      (not= (select-keys existing [:harness])
+                            (cond-> {} harness-present?
+                              (assoc :harness (harness/normalize harness-value)))))))
+          (json-response 409 {:ok false :err "harness-conflict"})
+
           :else
           (if-let [existing-job (when (and typed? (nonblank-str requested-job-id))
                                   (get-in (ensure-invoke-jobs-ledger!)
@@ -5677,7 +5698,7 @@
               (if-not (:ok bridge)
                 (json-response (or (:status bridge) 400)
                                (select-keys bridge [:ok :err :message :thread-id :evidence-id]))
-                (let [job-id (create-invoke-job! {:evidence-store evidence-store
+                (let [job-id (create-invoke-job! (cond-> {:evidence-store evidence-store
                                                   :requested-job-id requested-job-id
                                                   :agent-id agent-id
                                                   :prompt prompt
@@ -5687,7 +5708,8 @@
                                                   :bellback-of (when (bell-router-enabled?) in-reply-to)
                                                   :bell-type (when typed? bell-type)
                                                   :ref (when typed? ref')
-                                                  :warrants warrant-normalized})
+                                                  :warrants warrant-normalized}
+                                                 harness-present? (assoc :harness (harness/normalize harness-value))))
                       run-job (fn []
                                 (run-invoke-job! {:job-id job-id
                                                   :agent-id agent-id

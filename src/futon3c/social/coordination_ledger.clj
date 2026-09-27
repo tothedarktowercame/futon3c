@@ -85,14 +85,14 @@
   "Build the social-layer mesh-edge evidence entry. Mirrors
    futon3c.social.bells/make-bell-evidence but uses :mesh-edge tags and typed
    edge fields consumed by /api/alpha/coordination/edges and mesh_trace.py."
-  [{:keys [from to surface kind ok? error at session-id edge-id]}]
+  [{:keys [from to surface kind ok? error at session-id edge-id] :as edge}]
   (let [from* (normalize-from from)
         to* (or (normalize-agent-id to) "unknown")
         surface* (normalize-surface surface)
         kind* (event-kind kind)
         at* (or at (now-str))
         edge-id* (or edge-id session-id (str "mesh-edge-" (UUID/randomUUID)))]
-    {:evidence/id (str "e-" (UUID/randomUUID))
+    (cond-> {:evidence/id (str "e-" (UUID/randomUUID))
      :evidence/subject {:ref/type :agent :ref/id to*}
      :evidence/type :coordination
      :evidence/claim-type :step
@@ -107,7 +107,8 @@
                       (some? ok?) (assoc :edge/ok? (boolean ok?))
                       error (assoc :edge/error (str error)))
      :evidence/tags [:coordination :mesh-edge]
-     :evidence/session-id edge-id*}))
+     :evidence/session-id edge-id*}
+      (contains? edge :harness) (assoc :evidence/harness (:harness edge)))))
 
 (defn record-invoke-edge!
   "Append a mesh edge to the explicit or boot-configured durable backend."
