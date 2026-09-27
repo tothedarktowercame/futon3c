@@ -3,7 +3,7 @@
   :rev "4e447b4f",
   :map "8dfdde3c"},
  :second-layer
- {:value-varying 59, :refusal 21, :record 35, :absent 79},
+ {:value-varying 62, :refusal 21, :record 38, :absent 73},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -609,7 +609,19 @@
     :temporal-inspect
     [:temporal-previous {:record :flight}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test/temporal-previous-reader-product,
+     :kind :record,
+     :product [:temporal-previous],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-0221562067305fc436c1705a00aeed05b095e933f6520960bc81b6a5dc1d3169",
+     :git-head "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :test-revision "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :ran-at "2026-09-27T17:33:04.419609156Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test/real-courier-reaches-reader,
    :note
@@ -2548,7 +2560,19 @@
     :temporal-envelope
     [:temporal-cursor {:record :enactment}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test/envelope-product-under-intervention,
+     :kind :record,
+     :product [:envelope],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a1d862cfc3800471670ea963bfc4ab39566a823ae072cb014666ece63fd4e9fa",
+     :git-head "193b06311c45041e3caa7fd81762821d22d21115",
+     :test-revision "193b06311c45041e3caa7fd81762821d22d21115",
+     :ran-at "2026-09-27T17:33:31.175667110Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test/real-courier-reaches-reader,
    :note
@@ -2558,7 +2582,19 @@
     :temporal-envelope
     [:temporal-posterior {:record :enactment}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test/envelope-product-under-intervention,
+     :kind :record,
+     :product [:envelope],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-c68ea65c91e646ed64ea9fd0aa66c8275b633d2c73c08f53bfe7cae76536063c",
+     :git-head "193b06311c45041e3caa7fd81762821d22d21115",
+     :test-revision "193b06311c45041e3caa7fd81762821d22d21115",
+     :ran-at "2026-09-27T17:33:16.886184816Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test/real-courier-reaches-reader,
    :note
@@ -2568,7 +2604,19 @@
     :temporal-envelope
     [:temporal-receipt {:record :enactment}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test/envelope-product-under-intervention,
+     :kind :value-varying,
+     :product [:envelope],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-4e9f7b5cdc7aa0467a56ed99608fa774ded883c69a0f4d2debf27e68d4aeca07",
+     :git-head "193b06311c45041e3caa7fd81762821d22d21115",
+     :test-revision "193b06311c45041e3caa7fd81762821d22d21115",
+     :ran-at "2026-09-27T17:33:49.057654961Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test/real-courier-reaches-reader,
    :note
@@ -2588,7 +2636,19 @@
     :r1-token-input
     [:temporal-previous {:record :temporal-inspection}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test/temporal-previous-reader-product,
+     :kind :value-varying,
+     :product [:continuation-belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-59e001a65c69f7dd75d1c8a1fade1831ced7ccf31ae302e4c40a1d4cff897180",
+     :git-head "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :test-revision "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :ran-at "2026-09-27T17:34:03.031953313Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test/real-courier-reaches-reader,
    :note
@@ -2598,7 +2658,19 @@
     :r1-token-temporal
     [:temporal-previous {:record :temporal-inspection}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test/temporal-previous-reader-product,
+     :kind :value-varying,
+     :product [:continuation-belief],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a995ad6acfdf13c9e6d577f5d3976848bd6c5d90ca4745c82aa787981a2da503",
+     :git-head "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :test-revision "8c810dcd85d98f789658e1c01c21ad867ceb8ba0",
+     :ran-at "2026-09-27T17:33:34.795397353Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test/real-courier-reaches-reader,
    :note
