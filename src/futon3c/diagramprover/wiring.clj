@@ -680,6 +680,43 @@
       (and (= :list (:kind node))
            (#{"quote" "clojure.core/quote"} (head-text node)))))
 
+(defn- keyed-path-reads
+  "Literal get-in paths and keyword-only ->/some-> chains. Each step changes
+  the record scope only when that key is itself a declared record scope.
+  The optional get-in default is not a receiver and creates no attribution."
+  [forms field cfg]
+  (let [found (volatile! {})
+        scopes (:scoped cfg)
+        records (set (concat scopes (keys (:aliases cfg)) (:returns cfg)))
+        receiver (fn [x] (set (filter #(contains? (conj (get-in cfg [:aliases %] #{}) (name %))
+                                                  (token-text x)) records)))]
+    (letfn [(path! [base keys]
+              (when (and (seq keys) (every? key->record keys))
+                (loop [owners (receiver base) [k & ks] keys]
+                  (when (and k (seq owners))
+                    (when (= field (key->record k))
+                      (vswap! found update (:start k) (fnil into #{}) owners))
+                    (let [next-record (key->record k)]
+                      (recur (if (contains? scopes next-record) #{next-record} #{}) ks))))))
+            (walk [node]
+              (when-not (quoted-form? node)
+                (let [kids (:children node) h (head-text node)]
+                  (cond
+                    (and (= "get-in" h) (#{3 4} (count kids))
+                         (= :vector (:kind (nth kids 2))))
+                    (path! (second kids) (:children (nth kids 2)))
+                    (and (= "get" h) (#{3 4} (count kids)))
+                    (path! (second kids) [(nth kids 2)])
+                    (#{"->" "some->"} h)
+                    (let [keys (map (fn [step]
+                                      (if (and (= :list (:kind step)) (= 1 (count (:children step))))
+                                        (first (:children step)) step)) (drop 2 kids))]
+                      ;; Only the keyword prefix is known; never jump over a transformation.
+                      (path! (second kids) (take-while key->record keys))))
+                  (doseq [child kids] (walk child)))))]
+      (doseq [form forms] (walk form))
+      @found)))
+
 (defn- binding-reads
   "Positions reading FIELD in actual binding patterns, with their record
   attribution. Data maps with a :keys entry are not bindings. Supports
@@ -776,7 +813,8 @@
         conditional-writes (if (and only-record (:var cfg))
                              (into {} (map (juxt :key-start identity)
                                            (conditional-return-analysis text (:var cfg) field cfg))) {})
-        binding-uses (binding-reads forms field (cands) cfg)
+        binding-uses (merge-with into (binding-reads forms field (cands) cfg)
+                                 (keyed-path-reads forms field cfg))
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
                                  :else true))]
