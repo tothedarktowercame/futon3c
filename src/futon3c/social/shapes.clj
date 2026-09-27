@@ -313,7 +313,7 @@
   "Typed evidence event category (distinguishes timescale/function provenance)."
   [:enum :coordination :gate-traversal :pattern-selection :pattern-outcome
    :reflection :forum-post :mode-transition :presence-event :correction :conjecture
-   :arse-qa :memory
+   :arse-qa :memory :constraint/violation
    :promise/park-made :promise/dependency-terminated :promise/woken
    :promise/released :promise/budget-exhausted :promise/deadline-expired
    :promise/followup-enqueued :promise/followup-dequeued
