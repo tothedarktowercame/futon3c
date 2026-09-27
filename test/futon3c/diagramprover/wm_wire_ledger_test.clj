@@ -441,7 +441,16 @@
 
 (defn second-layer-context [model]
   (let [backend (http-backend/make-http-backend "http://localhost:7070")
-        todos (filter #(= :to-do (:kind %)) (:expected-findings model))
+        ;; A :to-do read finding makes a wire record-only when the map says the
+        ;; reader does not make the read yet (a design intention). A :to-do that
+        ;; carries :heuristic true is an ATTRIBUTION limit (the read is made
+        ;; through a helper the occurrence heuristic cannot see; MAP-2B-P5 pin
+        ;; advance, 47 such findings at futon2 46191890f): the code uses the
+        ;; value, the prover cannot say so, and a second-layer test that varies
+        ;; the value and watches the product is exactly the evidence the
+        ;; heuristic lacks — so it does not make the wire record-only.
+        todos (filter #(and (= :to-do (:kind %)) (not (true? (:heuristic %))))
+                      (:expected-findings model))
         explicit (set (for [b (:boxes model) f (:attribution-findings b)
                             :when (= :to-do (:kind f))] (:wire f)))]
     {:allowed-nses (set wire-test-nses)
@@ -567,4 +576,11 @@
                   (catch clojure.lang.ExceptionInfo e (select-keys (ex-data e) [:wire :reason]))))))
     (is (= :computational-use-still-to-do
            (try (w/second-layer r (assoc opts :record-only? (constantly true)))
-                (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))))
+                (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+    (testing "a :to-do read finding blocks a computational claim only when it is not a heuristic attribution limit"
+      (let [ctx (fn [findings] (:record-only? (second-layer-context {:expected-findings findings :boxes []})))
+            wire [:eligibility :r1-outer-cascade :eligible]
+            f {:role :reads :box/id :r1-outer-cascade :field :eligible :kind :to-do :finding :declared-read-not-found}]
+        (is (true? ((ctx [f]) wire)) "a plain :to-do read makes the wire record-only")
+        (is (not ((ctx [(assoc f :heuristic true)]) wire)) "a heuristic attribution limit does not")
+        (is (not ((ctx [(assoc f :field :clock-lineage)]) wire)) "another field's finding does not touch this wire")))))
