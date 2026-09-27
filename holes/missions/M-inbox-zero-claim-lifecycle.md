@@ -363,3 +363,27 @@ it; no code or runtime change is authorized merely by this estimate.
 Validation: reviewed source and Agency results, streamed live snapshot,
 checked mission phase markers and relative links. No implementation, extra
 helper dispatch, reload, restart, watcher tick or state mutation in this review.
+
+### Checkpoint 2026-09-27 18:43Z — continuation authorized; D1 dispatched
+
+Joe: “I'm happy for you to continue through the mission using parks and asking
+kimi-9 for the packets work.” codex-5 continues as mission owner/reviewer;
+kimi-9 authors bounded packets through Agency. Phase exits remain reviewed
+judgments, not automatic consequences of helper completion.
+
+Dispatched D1 DERIVE as job **invoke-1790534585660-25569-f17111ce**.
+Expected artifact: `holes/labs/M-inbox-zero-claim-lifecycle/D1-derive.md`, plus
+checker-grounded wiring if appropriate. Scope: enforceable edit authority,
+consumption/replay, Git object and shared-index semantics, shared eligibility,
+operating interfaces, fidelity matrix, invariants, source changes and test
+mapping. Helper may commit only those design artifacts; no production code or
+runtime mutation. If existing hooks cannot enforce an invariant, name the
+required structural change and unresolved issue rather than bypassing it.
+
+Next continuation: review D1 against C1–C7 and the four counterexamples;
+return a bounded revision if necessary, otherwise record DERIVE and dispatch
+ARGUE/VERIFY work in lifecycle order. Recheck release ingestion as part of
+operational follow-through. Continue implementation/review/documentation only
+when preceding obligations are met, retaining the no-restart and canonical
+shared-checkout constraints. Parks on actual job IDs carry this continuation
+through the Emacs REPL; no internal Codex collaborators are used.
