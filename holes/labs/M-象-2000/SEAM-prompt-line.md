@@ -106,3 +106,21 @@ them here. Nothing below is built yet; the registry lands as packet **P7a-1**.
    (`futon3c.agency.prompt-line-test`). codex-5's provider is written against it once
    P7a-1 lands; its `*` authority waits on codex-5's claim-lifecycle proof, as they
    stated, and until then it emits only `?` from a fresh observation.
+
+## The `:pattern` provider's source, concretely (2026-09-27, Joe)
+
+The per-turn embedding retrieval already exists: every turn writes a
+`context-retrieval` evidence record (futon3a embeddings, top 3 with scores). Example,
+claude-17 turn 76 (evidence e-76cf557a…): 1 `control/agential-pattern-hygiene` 0.4496,
+2 `forward-model/the-forward-model-is-a-pattern-cascade` 0.4352, 3
+`fulab/pattern-propose` 0.4298. The provider reads the latest such record for the exact
+(agent, session) and takes rank 1. No new retrieval.
+
+**Retrieved is not applied** (象/两种规格). The prompt shows which it is:
+- `$~control/agential-pattern-hygiene> `: rank 1 of the last retrieval, **retrieved**
+  only; the header gives the score and the other two ids;
+- `$象/诺必践> `: an **active pattern card** the agent has set (P10: set or swapped at
+  will), which makes the claim "I am working to this pattern";
+- a card set by the agent always wins over retrieval.
+By P21 neither is an attestation: attestation happens at use, and a card is a claim of
+intended use that the work then bears out or not.
