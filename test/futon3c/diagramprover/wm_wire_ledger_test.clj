@@ -36,7 +36,21 @@
   generated from the map at map-rev), checks each wire against the map at
   map-rev, writes holes/labs/M-wm-wiring/wm-wire-ledger.edn, and asserts the
   ledger's counts equal what the checks found."
-  (:require [futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test]
+  (:require [futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test]
+            [futon3c.diagramprover.wm-wire-flight-run-flight-judge-opts-temporal-receipt-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-record-path-test]
+            [futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-temporal-receipt-test]
+            [futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test]
+            [futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test]
+            [futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test]
+            [futon3c.diagramprover.wm-wire-temporal-finalize-temporal-write-once-temporal-receipt-test]
+            [futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test]
+            [futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test]
+            [futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-digest-test]
+            [futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-record-path-test]
+            [futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test]
+            [futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test]
+            [futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test]
             [futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test]
             [futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test]
             [futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test]
@@ -227,7 +241,21 @@
             [futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test]))
 
 (def wire-test-nses
-  '[
+  '[futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test
+    futon3c.diagramprover.wm-wire-flight-run-flight-judge-opts-temporal-receipt-test
+    futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-record-path-test
+    futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-temporal-receipt-test
+    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test
+    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test
+    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test
+    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-write-once-temporal-receipt-test
+    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test
+    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test
+    futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-digest-test
+    futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-record-path-test
+    futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test
+    futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test
+
     futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test
     futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test
     futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test

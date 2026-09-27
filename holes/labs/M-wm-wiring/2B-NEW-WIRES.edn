@@ -110,4 +110,203 @@
   :writer {:file "futon2/src/futon2/aif/served_by_reading.clj" :var "reading" :line 125}
   :reader {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn" :line 682}
   :reader-is-test-box? false :packet "MAP-FIX-SBR"
-  :note "Re-sited existing courier, not a new runtime hop. claude-8 re-points its first-layer test; proposal retains its separate verifier digest."}]
+  :note "Re-sited existing courier, not a new runtime hop. claude-8 re-points its first-layer test; proposal retains its separate verifier digest."}
+{:map-commit "8dfdde3c",
+ :edge
+ [:flight-judge-opts
+  :temporal-inspect
+  [:temporal-previous {:record :flight}]],
+ :writer
+ {:file "futon2/src/futon2/aif/flight.clj",
+  :var "judge-opts",
+  :line 195},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "inspect-trace",
+  :line 16},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:flight-run
+  :flight-judge-opts
+  [:temporal-receipt {:record :enactment-entry}]],
+ :writer
+ {:file "futon2/src/futon2/aif/flight.clj", :var "run!", :line 468},
+ :reader
+ {:file "futon2/src/futon2/aif/flight.clj",
+  :var "judge-opts",
+  :line 195},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge [:r0-enact-step :flight-run :record-path],
+ :writer
+ {:file "futon2/src/futon2/aif/flight_runner.clj",
+  :var "enact-fn",
+  :line 780},
+ :reader
+ {:file "futon2/src/futon2/aif/flight.clj", :var "run!", :line 468},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge [:r0-enact-step :flight-run :temporal-receipt],
+ :writer
+ {:file "futon2/src/futon2/aif/flight_runner.clj",
+  :var "enact-fn",
+  :line 780},
+ :reader
+ {:file "futon2/src/futon2/aif/flight.clj", :var "run!", :line 468},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-finalize
+  :temporal-envelope
+  [:temporal-cursor {:record :enactment}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record",
+  :line 109},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "envelope",
+  :line 45},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-finalize
+  :temporal-envelope
+  [:temporal-posterior {:record :enactment}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record",
+  :line 109},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "envelope",
+  :line 45},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-finalize
+  :temporal-envelope
+  [:temporal-receipt {:record :enactment}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record",
+  :line 109},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "envelope",
+  :line 45},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-finalize
+  :temporal-write-once
+  [:temporal-receipt {:record :enactment}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "finalize-record",
+  :line 109},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "write-once!",
+  :line 146},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-inspect
+  :r1-token-input
+  [:temporal-previous {:record :temporal-inspection}]],
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "inspect-trace",
+  :line 16},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "input-receipt",
+  :line 180},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-inspect
+  :r1-token-temporal
+  [:temporal-previous {:record :temporal-inspection}]],
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "inspect-trace",
+  :line 16},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "consume-temporal",
+  :line 143},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-write-once
+  :temporal-read-receipt
+  [:digest {:record :temporal-publication}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "write-once!",
+  :line 146},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt",
+  :line 56},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:temporal-write-once
+  :temporal-read-receipt
+  [:record-path {:record :temporal-publication}]],
+ :writer
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "write-once!",
+  :line 146},
+ :reader
+ {:file "futon2/src/futon2/aif/temporal_update.clj",
+  :var "read-receipt",
+  :line 56},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:token-belief-stage
+  :r1-token-initialization
+  [:initialization {:record :token-belief-stage}]],
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_carry.clj",
+  :var "legacy-stage",
+  :line 22},
+ :reader
+ {:file "futon2/src/futon2/aif/token_belief_predecessor.clj",
+  :var "initialization-input-receipt",
+  :line 118},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+{:map-commit "8dfdde3c",
+ :edge
+ [:token-belief-stage
+  :token-initialization-observations
+  [:initialization {:record :token-belief-stage}]],
+ :writer
+ {:file "futon2/src/futon2/aif/token_belief_carry.clj",
+  :var "legacy-stage",
+  :line 22},
+ :reader
+ {:file "futon2/src/futon2/aif/token_initialization_policy.clj",
+  :var "apply-observations",
+  :line 62},
+ :reader-is-test-box? false,
+ :packet "MAP-2B-TEMPORAL-r6"}
+]
