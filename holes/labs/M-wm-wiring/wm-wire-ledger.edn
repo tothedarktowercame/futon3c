@@ -3,7 +3,7 @@
   :rev "79a8988d",
   :map "b58e8df1"},
  :second-layer
- {:value-varying 51, :refusal 21, :record 23, :absent 85},
+ {:value-varying 51, :refusal 21, :record 29, :absent 79},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -355,7 +355,19 @@
    futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test/the-cast-reaches-the-components-own-test}
   {:wire [:flight-click :flight-record-click :cast],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test/click-field-is-recorded-without-changing-stop-rule,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-fc75fad6da6e7325164c8fbe67bceba0f4657c4b7c46fc216e456e68f5c5b5a9",
+     :git-head "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :test-revision "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :ran-at "2026-09-27T16:29:51.729313605Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/flight-ada87008/flight-ada87008.edn",
@@ -365,12 +377,36 @@
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test/the-clicks-cast-reaches-the-flight-records-click-entry}
   {:wire [:flight-click :flight-record-click :detail],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/click-field-is-recorded-without-changing-stop-rule,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-758af72f684547e8ce6c4a4f72c155b4a4837ab393d55a0e77a3ac0aea89c6db",
+     :git-head "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :test-revision "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :ran-at "2026-09-27T16:29:39.099112869Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/the-refused-clicks-detail-reaches-the-click-entry}
   {:wire [:flight-click :flight-record-click :status],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/click-field-is-recorded-without-changing-stop-rule,
+     :kind :record,
+     :product [:products],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a193c30d725fda8cc465ba6fd9d3d5506ecb6395680f27c5b4eae351cfe0b157",
+     :git-head "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :test-revision "9a3bf17a7646d73358819bf6fc808be66fd4de04",
+     :ran-at "2026-09-27T16:29:26.398613753Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
   {:wire [:flight-click-wants :click-start :wants],
@@ -532,17 +568,53 @@
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test/the-clicks-selection-reaches-the-components-own-test}
   {:wire [:flight-record-summary :flight-record-click :chosen],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/summary-field-is-recorded-without-changing-progress,
+     :kind :record,
+     :product [:clicks 0 :chosen],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-fae211bafc9974dcf969a8ee727b340aa3fcda0e6aad4a0b2f70c6fd1e07878b",
+     :git-head "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :test-revision "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :ran-at "2026-09-27T16:31:56.028302869Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/the-clicks-selection-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-record-click :failure],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/summary-field-is-recorded-without-changing-progress,
+     :kind :record,
+     :product [:clicks 0 :failure],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-a61f3c3e077796d8da1ce11eedf5fe28dac098dcb3a1fc57cf238195907b355a",
+     :git-head "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :test-revision "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :ran-at "2026-09-27T16:32:23.087279973Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-run :chosen],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/summary-field-is-recorded-without-changing-progress,
+     :kind :record,
+     :product [:clicks 0 :chosen],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-626f2b2a7862d5a5dc2a4d007ddd852f0ed59087ad1ea006d9f23749792c1626",
+     :git-head "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :test-revision "819a2bcece6db1f43c6238cd383515b3b4b29880",
+     :ran-at "2026-09-27T16:32:52.513184315Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/the-writer-reaches-the-reader}
   {:wire [:flight-run :flight-driver-summary :needs],
