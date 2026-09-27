@@ -17,8 +17,11 @@
                  :load-closure [{:ns "fixture" :path "source.clj" :sha256 (registry/file-sha file)}]}]
         (is (= :current (:class (classify (str dir) run))))
         (spit file "changed")
-        (is (= {:class :stale-closure :changed-paths ["source.clj"] :changed-count 1}
-               (classify (str dir) run)))
+        (let [result (classify (str dir) run)]
+          (is (= {:class :stale-closure :changed-paths ["source.clj"] :changed-count 1
+                  :reason :old-content-unavailable}
+                 (select-keys result [:class :changed-paths :changed-count :reason])))
+          (is (= :old-content-unavailable (get-in result [:form-check 0 :reason]))))
         (is (= :not-passing (:class (classify (str dir) (assoc-in run [:results :failures] 1)))))
         (is (= :no-warrant (:class (classify (str dir) nil))))
         (is (= :no-warrant (:class (classify (str dir) (assoc run :load-closure []))))))
