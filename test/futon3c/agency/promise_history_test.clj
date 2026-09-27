@@ -1,6 +1,7 @@
 (ns futon3c.agency.promise-history-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.promise-history :as history]
+            [futon3c.agency.promise-outcome]
             [futon3c.agency.parked-on :as park]
             [futon3c.agency.followup-queue :as queue]
             [futon3c.evidence.futon1b-backend :as f1b]))
