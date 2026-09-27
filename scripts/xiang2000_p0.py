@@ -25,7 +25,7 @@ REPO = Path(__file__).resolve().parents[1]
 ROOT = REPO.parent
 BASE = 'http://localhost:7073/api/alpha/'
 EXPECTED = REPO / 'holes/labs/M-象-2000/p0-expected.edn'
-COMMITS = ('5146606d', '2ef7a010', '626df9fa', '80428193')
+COMMITS = ('5146606d', '2ef7a010', '626df9fa', '80428193', 'd5e3147e')
 TURNS = ('claude-10-turn-30', 'claude-11-turn-2', 'claude-11-turn-3', 'claude-11-turn-6')
 WINDOW = 'storage/operator-turns/window-0922/operator-turns-joe.jsonl'
 NOTICE_START = '2026-09-24T19:04:00Z'
@@ -193,6 +193,11 @@ def capture():
     require(not rules.get('next-cursor') and not rules.get('incomplete')
             and len(rules.get('hyperedges', [])) < 1000, 'incomplete rule scan')
     files['rules.json'] = js(rules).encode()
+    clearance = get('hyperedges', {'type': 'incident/clearance', 'limit': 1000,
+                                   'system-as-of': pin, 'valid-as-of': pin})
+    require(not clearance.get('next-cursor') and not clearance.get('incomplete')
+            and len(clearance.get('hyperedges', [])) < 1000, 'incomplete clearance scan')
+    files['clearance.json'] = js(clearance).encode()
     sources = [ROOT / WINDOW]
     for turn in TURNS:
         sources.append(one((ROOT / 'storage/operator-turns/batches').glob(
@@ -234,14 +239,14 @@ def read_snapshot(directory):
     actual = {p.relative_to(directory).as_posix() for p in directory.rglob('*') if p.is_file()}
     require(actual == set(files) | {'manifest.json'}, 'snapshot contains unmanifested files')
     required = {'pins.json', 'git.json', 'hyperedges.json', 'evidence.jsonl',
-                'notice-turns.jsonl', 'origin-backfills.jsonl', 'rules.json', WINDOW}
+                'notice-turns.jsonl', 'origin-backfills.jsonl', 'rules.json', 'clearance.json', WINDOW}
     require(required <= files.keys(),
             'snapshot manifest missing required files')
     return files
 
 
-def notice_count(files):
-    """Count distinct source turns, never interpretation records. Known write-time
+def notice_ids(files):
+    """Return distinct source turn IDs, never interpretation records. Known write-time
     origins take precedence; unknown/absent stamps may use inferred backfills.
     The kimi-notice rule is the reviewed reconstructed P6o-3 producer template.
     """
@@ -262,7 +267,10 @@ def notice_count(files):
         kind = (r.get('evidence/origin') or {}).get('kind')
         if kind == 'harness' or (kind in (None, 'unknown') and eid(r) in inferred):
             ids.add(eid(r))
-    return len(ids)
+    return ids
+
+def notice_count(files):
+    return len(notice_ids(files))
 
 
 def rule_asof(files, time):
@@ -297,6 +305,59 @@ def rule_asof(files, time):
     if any(instant(c['at']) <= instant(time) for t in timelines for c in t['committed']):
         return 'committed, not yet live'
     return 'no committed rule observed'
+
+
+INCIDENT = 'emacs-dc5468d1618eff5070b598904b9b0d84'
+RESOLUTION = 'emacs-40abad9cad76117c720c8c22a8d7dd25'
+RECOGNITION = 'this rule recognises this recorded sequence'
+CLEARANCE_SOURCE = 'incident/clearance; explained, measures may end, compensation unsettled; no withdrawal or settlement implied'
+
+
+def clearance_context(files):
+    """The writer shares P0's exact notice-set authority, not a hand count.
+    All inputs are captured at one system-time pin; this path does not reconstruct
+    clearance and therefore works before the first clearance record is written.
+    """
+    evidence = [json.loads(line) for line in files['evidence.jsonl'].splitlines()]
+    return {'notice-ids': sorted(notice_ids(files)),
+            'rules': json.loads(files['rules.json'])['hyperedges'],
+            'evidence': [r for r in evidence if eid(r) in (INCIDENT, RESOLUTION)],
+            'resolution-commit': json.loads(files['git.json'])['commits']['d5e3147e'],
+            'system-as-of': json.loads(files['pins.json'])['evidence-system-as-of']}
+
+
+def clearance_answer(files):
+    """Validate membership, references and narrow claims before rendering row 12."""
+    prefix = 'row 12 (clearance): '
+    context = clearance_context(files)
+    rows = json.loads(files['clearance.json'])['hyperedges']
+    matches = [r['hx/props'] for r in rows if r.get('hx/type') == 'incident/clearance'
+               and r.get('hx/props', {}).get('clearance/incident') == INCIDENT]
+    require(len(matches) == 1, prefix + 'expected one incident clearance')
+    r = matches[0]
+    incident = one((e for e in context['evidence'] if eid(e) == INCIDENT), prefix + 'incident source')
+    resolved = r['clearance/resolved']
+    source = one((e for e in context['evidence'] if eid(e) == resolved.get('source-id')), prefix + 'resolution source')
+    require(resolved.get('meaning') == 'explained' and resolved.get('at') == at(source)
+            and resolved.get('commit') == context['resolution-commit']['sha']
+            and resolved['commit'][:8] in body(source).get('text', ''), prefix + 'resolution source mismatch')
+    measures = r['clearance/measures-can-end']
+    rules = {h['hx/id']: h for h in context['rules']}
+    require(measures.get('meaning') == 'permission-only' and measures.get('ids')
+            and all(mid in rules and rules[mid]['hx/type'] == 'rule/record'
+                    and rules[mid]['hx/props']['rule/incident']['ref/id'] == INCIDENT
+                    for mid in measures['ids']), prefix + 'invalid measures')
+    comp = r['clearance/compensation']
+    ids = [c['evidence-id'] for c in comp]
+    require(len(ids) == len(set(ids)) and set(ids) == set(context['notice-ids']),
+            prefix + f'compensation set differs from notice set ({len(ids)} vs {len(context["notice-ids"])})')
+    require(all(c.get('status') == 'owed-unsettled' for c in comp), prefix + 'unsupported settlement claim')
+    require(r.get('clearance/recognition') == {'claim': RECOGNITION, 'rule-ids': measures['ids']},
+            prefix + 'recognition broader than recorded sequence')
+    require(r['clearance/provenance']['basis'] == 'historical-reconstruction'
+            and r['clearance/provenance']['grant-status'] == 'unrecorded', prefix + 'invalid provenance')
+    return (f'{at(incident)[11:16]} incident explained by {at(source)[11:16]} ({resolved["commit"][:8]}); '
+            f'measures may end (permission only); {len(comp)} notices owed/unsettled')
 
 
 def reconstruct(files):
@@ -422,8 +483,7 @@ def reconstruct(files):
         row('as of 09-25 21:00', rule_asof(files, '2026-09-25T21:00:00Z'), 'query', RULE_SOURCE),
         row('derivation', 'from 5146606d back to the four operator acts', 'query',
             eid(landed) + ' -> session ' + session + ' -> ' + ', '.join(eid(r) for r in acts)),
-        row('clearance', '15:48 incident explained by 15:54 (d5e3147e); the rule was put up after that as its measure; 42 notices need compensation',
-            'query', 'hand-filled IDENTIFY; incident/measure/compensation records pending P13a/P14', 'STUB')]
+        row('clearance', clearance_answer(files), 'query', CLEARANCE_SOURCE)]
     details = [
         '15:48 route: Joe -> claude-10; explicit delegation to claude-11; bell ' + eid(bridge),
         'Ordered user/assistant pairs: ' + '; '.join(pairs),
@@ -455,8 +515,15 @@ def main():
     modes.add_argument('--from-snapshot', type=Path)
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--expected', type=Path, default=EXPECTED)
+    parser.add_argument('--clearance-context', action='store_true', help='print pinned JSON inputs for P14 validation')
     args = parser.parse_args()
     files = read_snapshot(args.from_snapshot) if args.from_snapshot else capture()
+    if args.clearance_context:
+        require(not args.check, '--clearance-context cannot be combined with --check')
+        if args.snapshot:
+            write_snapshot(args.snapshot, files)
+        print(js(clearance_context(files)))
+        return
     report, pins = reconstruct(files)
     if args.check:
         check(report, args.expected)

@@ -1,0 +1,117 @@
+{:valid-from "2026-09-27T20:30:05.889613297Z",
+ :idempotency-key "M-象-2000/P14/clearance-20260924/v1",
+ :record
+ {:clearance/incident "emacs-dc5468d1618eff5070b598904b9b0d84",
+  :clearance/resolved
+  {:meaning :explained,
+   :at "2026-09-24T15:54:29.765197427Z",
+   :source-id "emacs-40abad9cad76117c720c8c22a8d7dd25",
+   :commit "d5e3147e77710149c1915416c5848564469d63ba"},
+  :clearance/measures-can-end
+  {:meaning :permission-only,
+   :ids
+   ["act:8f827fa4-b3de-46a3-a9cb-f3262f7a94ff"
+    "act:4b526112-dd5d-4765-a8a6-ed8701d0089c"
+    "act:9bb67b13-caf7-4f96-9232-52bacf99fd8e"]},
+  :clearance/compensation
+  [{:evidence-id "emacs-06bbfc97e13375cdd606ab0501797ab5",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-0fd8c9cd952ffda46d0ea08c2420118a",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-19321d366746b4aecdfcf35810eee585",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-1d91a566e556f9f035d5f3fe66474d56",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-249d5a1d488f89c37e01838838cec976",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-24be47c7ebc2d4f8dccb3eabb085848a",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-3c48761c4f5957abb51c516652b585d1",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-3dd4507debeabbea234d5335f944bd00",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-477a12c489400452508659eec2c862ca",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-4f7c28fdfb49b90638bc29fb3084ec7b",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-568803f18f5127f85b0bae119cdcad2f",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-5bc581b5531e1345f2ae3c60061ea9d1",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-5d5aa66d571ce9d746f9a31b9edd9699",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-613a51dab7e30bb071d00609ea383a1d",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-64a8377d8778d5a38c1cbefd38f58a64",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-664a1edbe6e1054621096cf0b9f41cbe",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-6decf7c0177fd231b9a7309c43399de0",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-6ed226e569efc75a9c0db586587ef21f",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-749a1c866a4547c7ebba2cf63fbcad5c",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-79c65e9bbdf4419311a43e64d465f859",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-7a920076273f9e50c6a72fe5db556d84",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-7c13636d352a373fe1a4c552b0cabc45",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-803dc974166539548bc09e8ec1ac8fe0",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-818718f0676aaa2d484bf23e55ec32e0",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-86e3fafccf796326b717241caa5526e6",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-8d899985b2caf8fb81f043c2d81d692b",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-90443f7f28f3b1291dbbe0a5e148ed59",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-90c025be80d885506208da770ece1fc8",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-9201ac8df384ac6e0da648ddf903a1c0",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-a8dcd46975c023a30d32a625fc52b6c3",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-b52012dcd45ce37bb5866c59134d4656",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-bb70db1af9848b7f75941ac56cf912aa",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-bf6f333b0bdd7935aeaf9b9e0ca634fc",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-bf8e29bc981329ed0a0d4addb5c20c05",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-c193ae65f79b01da4fec7d90d5262dde",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-c24e679780af8a470babcce84e629a4b",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-c69eedfb3f5e7c75a08a4a77a085e130",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-c6af98eeac270ae212658aea274e4cec",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-da519d355e12f516ef45b9917cd4a552",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-da60eac255ce821f5e1bffc055b2f316",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-e3403a6fca3929dd24b2a56ea925026b",
+    :status :owed-unsettled}
+   {:evidence-id "emacs-ed82d6156d99e5df997778a36203789e",
+    :status :owed-unsettled}],
+  :clearance/recognition
+  {:claim "this rule recognises this recorded sequence",
+   :rule-ids
+   ["act:8f827fa4-b3de-46a3-a9cb-f3262f7a94ff"
+    "act:4b526112-dd5d-4765-a8a6-ed8701d0089c"
+    "act:9bb67b13-caf7-4f96-9232-52bacf99fd8e"]},
+  :clearance/provenance
+  {:author "codex-4",
+   :recorded-at "2026-09-27T20:30:05.889613297Z",
+   :basis :historical-reconstruction,
+   :grant-status :unrecorded,
+   :sources
+   ["evidence:emacs-dc5468d1618eff5070b598904b9b0d84"
+    "evidence:emacs-40abad9cad76117c720c8c22a8d7dd25"
+    "git:futon3c:d5e3147e77710149c1915416c5848564469d63ba"
+    "M-象-2000 P14 owner instruction: explanation, permission only, no invented settlement"
+    "P0 notice-set query; system-as-of=2026-09-27T20:28:23.494734Z"]}}}

@@ -1,6 +1,6 @@
 ;; P0 semantic acceptance fixture. Capture pins are checked separately.
 ;; Sources: IDENTIFY and build-plan-象2000-v2.edn :acceptance.
-;; One row STUB remains; retrieval timing is an additional subclaim STUB.
+;; No row STUBs remain; retrieval timing is an additional subclaim STUB.
 ;; The 15:48 act delegates via claude-10 (see :details).
 {:rows [
    {:when "09-24 15:48"
@@ -59,10 +59,10 @@
     :source "emacs-b0cad1c7e4e91e3ef419784988978835 -> session 85fc3016-f51c-4083-bcc6-5a0f8e22cb11 -> emacs-dc5468d1618eff5070b598904b9b0d84, emacs-d120721d051f3e879ca067d3a0b4c982, emacs-46e69c9bcb4fad45e86fd6a63e649a84, emacs-b8292f5d0dd1a1d808cc859285150956"
     :status "QUERY"}
    {:when "clearance"
-    :act "15:48 incident explained by 15:54 (d5e3147e); the rule was put up after that as its measure; 42 notices need compensation"
+    :act "15:48 incident explained by 15:54 (d5e3147e); measures may end (permission only); 42 notices owed/unsettled"
     :who "query"
-    :source "hand-filled IDENTIFY; incident/measure/compensation records pending P13a/P14"
-    :status "STUB"}
+    :source "incident/clearance; explained, measures may end, compensation unsettled; no withdrawal or settlement implied"
+    :status "QUERY"}
  ]
  :details [
    "15:48 route: Joe -> claude-10; explicit delegation to claude-11; bell e-f6578f67-2f3e-44f7-bb6c-dc518ee320c6"
