@@ -523,6 +523,94 @@
                    :else [])))]
        (vec (returns (last (:children form)) {}))))))
 
+(defn- conditional-return-analysis
+  "Keyed writes on an attributed return, with per-occurrence conditional metadata.
+  CFG uses existing :returns/:aliases and optional :return-paths {record [key]}.
+  Unknown transformations, computed keys and later removals invalidate the path."
+  [source var field cfg]
+  (let [form (some-> (var-form source var) :text parse-forms :forms first)]
+    (letfn [(keyed [pairs conditional]
+              (when (every? #(key->record (first %)) pairs)
+                (into {} (map (fn [[k _]] [(key->record k)
+                                          {:key-start (:start k) :field (key->record k) :conditional conditional}]) pairs))))
+            (step [state node conditional]
+              (when state
+                (let [args (rest (:children node)) h (head-text node)]
+                  (case h
+                    "assoc" (when (even? (count args))
+                              (when-let [added (keyed (partition 2 args) conditional)]
+                                (merge state added)))
+                    "assoc-in" (let [[path _] args ks (:children path)]
+                                 (when (and (= 2 (count args)) (= :vector (:kind path))
+                                            (= 1 (count ks)) (key->record (first ks)))
+                                   (merge state (keyed [[(first ks) nil]] conditional))))
+                    "merge" (when (every? #(= :map (:kind %)) args)
+                              (when-let [added (keyed (mapcat pairs-of args) conditional)]
+                                (merge state added)))
+                    "dissoc" (when (every? key->record args)
+                               (let [keys (map key->record args)
+                                     removed (keep #(get state %) keys)]
+                                 (vary-meta (apply dissoc state keys) update :removed
+                                            (fnil into []) removed)))
+                    "->" (reduce #(step %1 %2 conditional) state args)
+                    nil))))
+            (value [node env record]
+              (let [kids (:children node) h (head-text node)]
+                (cond
+                  (= :map (:kind node)) (keyed (pairs-of node) false)
+                  (= :token (:kind node))
+                  (if (contains? env (:text node))
+                    (get env (:text node))
+                    (when (contains? (conj (get-in cfg [:aliases record] #{}) (name record))
+                                     (:text node)) {}))
+                  (#{"->" "cond->"} h)
+                  (let [base (value (second kids) env record)
+                        steps (if (= h "cond->") (map second (partition 2 (drop 2 kids))) (drop 2 kids))]
+                    (when (or (= h "->") (even? (count (drop 2 kids))))
+                      (reduce #(step %1 %2 (= h "cond->")) base steps)))
+                  (#{"assoc" "assoc-in" "merge" "dissoc"} h)
+                  (let [base (value (second kids) env record)
+                        ;; Existing return-maps attributes a returned assoc's explicit keys.
+                        base (or base (when (and (= h "assoc") (seq (return-maps node {}))) {}))]
+                    (step base (assoc node :children (vec (cons (first kids) (drop 2 kids)))) false))
+                  :else nil)))
+            (returns [node env record path]
+              (let [kids (:children node) h (head-text node)]
+                (cond
+                  (nil? node) []
+                  (#{"let" "let*" "loop"} h)
+                  (let [e (reduce (fn [e [k v]] (if-let [n (token-text k)]
+                                                (assoc e n (value v e record)) e))
+                                  env (partition 2 (:children (second kids))))]
+                    (returns (last kids) e record path))
+                  (#{"if" "if-not" "if-let" "if-some"} h)
+                  (mapcat #(returns % env record path) (drop 2 kids))
+                  (= "cond" h) (mapcat #(returns % env record path) (map second (partition 2 (rest kids))))
+                  (= "try" h)
+                  (mapcat #(returns % env record path)
+                          (concat (take-last 1 (remove #(#{"catch" "finally"} (head-text %)) (rest kids)))
+                                  (map #(last (:children %)) (filter #(= "catch" (head-text %)) (rest kids)))))
+                  (#{"do" "when" "when-not"} h) (returns (last kids) env record path)
+                  (seq path)
+                  (when (and (= 1 (count path)) (= :map (:kind node)))
+                    (mapcat (fn [[k v]] (when (= (first path) (key->record k))
+                                         (returns v env record []))) (pairs-of node)))
+                  :else (let [v (value node env record)]
+                          (concat (when-let [a (get v field)] [(assoc a :record record :field field)])
+                                  (map #(assoc % :record record :field field :removed? true)
+                                       (filter #(= field (:field %)) (:removed (meta v)))))))))]
+      (let [kids (drop 2 (:children form))
+            arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)
+            bodies (if (seq arities) (map #(last (:children %)) arities) [(last kids)])
+            destinations (concat (map #(vector % []) (:returns cfg)) (:return-paths cfg))]
+        (vec (mapcat (fn [[r path]] (mapcat #(returns % {} r path) bodies)) destinations))))))
+
+(defn conditional-return-attributions
+  "Accepted keyed return writes. Each result names the record, field, source
+  key offset and whether the write is conditional; removed writes are excluded."
+  [source var field cfg]
+  (filterv (complement :removed?) (conditional-return-analysis source var field cfg)))
+
 (defn- owner-map
   "start offset -> #{records} for every map literal whose keys count as writes
   of a record: the literals in return position (owned by the site's
@@ -546,6 +634,7 @@
                       (reduce (fn [m [r names]] (update m r (fnil into #{}) names))
                               m (:record-aliases b)))
                     {} boxes)
+   :return-paths (apply merge (map :return-paths boxes))
    :returns (set (keep :returns-record boxes))
    :scoped (set (keep vertex-record (mapcat #(concat (entries % :reads) (entries % :writes)) boxes)))})
 
@@ -684,6 +773,9 @@
         forms (:forms (parse-forms text))
         cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms (assoc cfg :field field))))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
+        conditional-writes (if (and only-record (:var cfg))
+                             (into {} (map (juxt :key-start identity)
+                                           (conditional-return-analysis text (:var cfg) field cfg))) {})
         binding-uses (binding-reads forms field (cands) cfg)
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
@@ -693,6 +785,11 @@
                 (quoted-form? node) nil
                 (= :token (:kind node))
                 (cond
+                  (and only-record (= only-record (:record (get conditional-writes (:start node)))))
+                  (when (contains? conditional-writes (:start node))
+                    (vswap! token-hits inc)
+                    (when-not (:removed? (get conditional-writes (:start node)))
+                      (vswap! uses conj :writes)))
                   (contains? binding-uses (:start node))
                   (do (when (= fstr (:text node)) (vswap! token-hits inc))
                       (when (counts? (get binding-uses (:start node)))
