@@ -56,3 +56,14 @@ None of these writers changed in this packet.
 - Followup-queue tests: 6 tests, 24 assertions.
 - Promise-history tests: 8 tests, 46 assertions.
 - clj-kondo clean; check-parens OK.
+
+## Live load
+
+After commit `4a4b2cd3`, the canonical master namespaces were reloaded in this
+order: `atomic-file`, `parked-on`, `followup-queue`, then `transport.http` for
+the health field. A bounded in-JVM check parsed the live park file immediately
+before and after a second parked/followup reload: both roots were maps and both
+contained 72 records. `GET /api/alpha/parked` returned 200 with 72 parks.
+`GET /health` returned `agency-file-corruption` with total 0, empty per-store
+counts, and no last event. No live file was corrupted or otherwise modified by
+the verification.
