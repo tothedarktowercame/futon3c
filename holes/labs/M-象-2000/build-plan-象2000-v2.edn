@@ -100,7 +100,7 @@
    :deps [] :decision nil :v2 :new :status "first pass done in typed-hole-象2000-v2.edn"
    :patterns [:象/引非读]}
   {:id :P21  :title "Structural matching; attestations one by one" :segment :process
-   :deps [] :decision {:theme :scope :question "How attestation levels are computed?"} :v2 :new
+   :deps [] :decision nil :decided "Joe 2026-09-27: per-attestation records, self and echo excluded; attestation at point of use, never link in-degree (no @how SEO); reopen later; attested patterns become gateways at the top of the cascade" :v2 :new
    :patterns [:象/同构方为同]}
   {:id :P22  :title "DERIVE-1 declares what each translation dropped" :segment :process
    :deps [] :decision nil :v2 :new
