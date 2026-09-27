@@ -7,9 +7,11 @@
            (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
            (java.time Instant)))
 
-(def ^:private default-futon1a-url
+(defn substrate-url
+  "Resolve the same substrate endpoint used by mission ingestion."
+  []
   (or (System/getenv "FUTON_SUBSTRATE_URL")
-      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+      (System/getenv "FUTON1A_URL") "http://localhost:7073"))
 
 (def structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
@@ -32,14 +34,26 @@
     (when (seq body)
       (edn/read-string body))))
 
-(defn- hyperedges-by-type [client base-url binder]
+(defn- hyperedges-by-type [client base-url binder mission]
   (let [hx-type (str "mission-scope/" binder)
         url (str (str/replace base-url #"/$" "")
                  "/api/alpha/hyperedges?type=" (url-encode hx-type)
-                 "&limit=5000&include-total=false")]
-    (-> (http-edn client url)
-        :hyperedges
-        (or []))))
+                 "&mission=" (url-encode mission)
+                 "&limit=1000&include-total=false")]
+    (loop [after nil seen #{} rows []]
+      (let [response (http-edn client (str url (when after
+                                               (str "&after=" (url-encode after)))))
+            page (or (:hyperedges response) [])
+            cursor (:next-cursor response)
+            rows (into rows page)]
+        (cond
+          (and cursor (contains? seen cursor))
+          (throw (ex-info "mission scope pagination repeated a cursor"
+                          {:url url :cursor cursor}))
+          cursor (recur cursor (conj seen cursor) rows)
+          (= 1000 (count page))
+          (throw (ex-info "mission scope page full without a cursor" {:url url}))
+          :else rows)))))
 
 (defn- first-line [s]
   (when (seq (str/trim (str s)))
@@ -97,12 +111,21 @@
                        vec)
      :scopes rows}))
 
+(defn fetch-view
+  "Fetch a complete mission projection; shared by Drawbridge and the CLI."
+  ([mission] (fetch-view mission (substrate-url)))
+  ([mission base-url]
+   (let [client (HttpClient/newHttpClient)
+         hyperedges (mapcat #(hyperedges-by-type client base-url % mission)
+                            structural-binders)]
+     (assoc (project-hyperedges mission hyperedges) :base_url base-url))))
+
 (defn- usage []
   (str "Usage: clojure -M -m futon3c.scripts.mission-scope-view"
-       " --mission M-id [--base-url http://localhost:7071]\n"))
+       " --mission M-id [--base-url http://localhost:7073]\n"))
 
 (defn- parse-args [args]
-  (loop [opts {:base-url default-futon1a-url}
+  (loop [opts {:base-url (substrate-url)}
          xs args]
     (case (first xs)
       nil opts
@@ -121,8 +144,4 @@
       (binding [*out* *err*]
         (print (usage)))
       (System/exit 2))
-    (let [client (HttpClient/newHttpClient)
-          hyperedges (mapcat #(hyperedges-by-type client base-url %) structural-binders)]
-      (println (json/generate-string
-                (assoc (project-hyperedges mission hyperedges)
-                       :base_url base-url))))))
+    (println (json/generate-string (fetch-view mission base-url)))))

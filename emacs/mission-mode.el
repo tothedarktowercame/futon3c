@@ -9,11 +9,11 @@
 ;;
 ;;   futon6/scripts/mission_scope_detect.py        md -> scope-tree JSON
 ;;   futon3c/src/futon3c/scripts/mission_scope_ingest.clj
-;;                                                 tree -> substrate-2 (7071)
+;;                                                 tree -> futon1b substrate (7073)
 ;;   futon3c/scripts/mission-scope-reingest.sh     fast loop (per-binder; a
 ;;       plain full-run SKIPS enrichments -- W2' -- so always reingest
 ;;       binder-by-binder, which this script does)
-;;   futon3c/scripts/mission-scope-view-fast.sh    substrate-2 -> view JSON
+;;   futon3c/scripts/mission-scope-view-fast.sh    substrate -> view JSON
 ;;   mission-mode.el                               the panel (this file)
 ;;
 ;; BINDER VOCABULARY (the scope types the detector emits and the ingest
@@ -329,8 +329,13 @@ build up live as a greenfield mission grows."
     'mission-mode-meta-face))
 
 (defun mission-mode--clear-overlays ()
-  "Remove mission-mode overlays from the current buffer."
-  (mapc #'delete-overlay mission-mode--overlays)
+  "Remove all overlays owned by mission-mode from the current buffer.
+The buffer's overlays are authoritative even if the tracking list was lost.
+Use `overlay-lists' so narrowing and zero-width end badges cannot hide them."
+  (let ((overlays (overlay-lists)))
+    (dolist (ov (append (car overlays) (cdr overlays)))
+      (when (overlay-get ov 'mission-mode)
+        (delete-overlay ov))))
   (setq mission-mode--overlays nil))
 
 (defun mission-mode--find-passage-start (passage)
@@ -420,12 +425,13 @@ nested scopes, plus a colored scope-label chip at each anchor line."
   (let* ((raw-scopes (mission-mode--as-list (mission-mode--field data :scopes)))
          ;; The store can hold several id-generations of the same scope
          ;; (canonical + raw ids; no ingest-side GC yet) — dedupe by
-         ;; (binder-type . anchor-passage) so unchanged headings don't
+         ;; (binder-type title anchor-passage) so unchanged headings don't
          ;; double-chip. Proper fix is ingest-side retraction.
          (seen (make-hash-table :test #'equal))
          (scopes (seq-filter
                   (lambda (scope)
-                    (let ((key (cons (mission-mode--string (mission-mode--field scope :type))
+                    (let ((key (list (mission-mode--string (mission-mode--field scope :type))
+                                     (mission-mode--string (mission-mode--field scope :title))
                                      (mission-mode--string (mission-mode--field scope :passage)))))
                       (unless (gethash key seen)
                         (puthash key t seen))))

@@ -57,10 +57,52 @@
                        (or (overlay-get ov 'after-string) ""))
                      mission-mode--overlays
                      "\n")))
-        (should (string-match-p "@scope eightfold-phase demo/identify" labels))
+        (should (string-match-p "eightfold-phase·identify" labels))
         (should (string-match-p "@shown 1"
                                 (substring-no-properties header-line-format))))
       (mission-mode--clear-overlays)
       (should (null mission-mode--overlays)))))
+
+
+(ert-deftest mission-mode-keeps-distinct-patterns-on-the-same-table-row ()
+  (with-temp-buffer
+    (insert "## ARGUE\n| `aif/admissibility` · `aif/no-self-certification` | eval |\n")
+    (let* ((passage "| `aif/admissibility` · `aif/no-self-certification` | eval |")
+           (a `((id . "a") (type . "pattern") (title . "aif/admissibility")
+                (passage . ,passage)))
+           (b `((id . "b") (type . "pattern") (title . "aif/no-self-certification")
+                (passage . ,passage)))
+           (old `((id . "old-a") (type . "pattern") (title . "aif/admissibility")
+                  (passage . ,passage))))
+      (should (= 2 (mission-mode--annotate-current-buffer
+                    `((mission . "M-table") (scope_count . 3)
+                      (scopes . (,a ,b ,old))))))
+      (should (= 2 (length (mission-mode--region-overlays)))))))
+
+(ert-deftest mission-mode-disable-clears-owned-overlays-with-lost-tracking ()
+  (with-temp-buffer
+    (insert "## IDENTIFY\nbody\n")
+    (let ((foreign (make-overlay (point-min) (point-max)))
+          (base-header "Original header"))
+      (mission-mode--annotate-current-buffer
+       '((mission . "M-demo") (scope_count . 1)
+         (scopes . (((id . "demo/identify") (type . "eightfold-phase")
+                     (title . "IDENTIFY") (passage . "## IDENTIFY"))))))
+      ;; Reproduce the live failure: owned overlays survive, but their
+      ;; buffer-local tracking list has already been cleared.
+      (setq mission-mode--overlays nil
+            mission-mode-minor-mode t
+            mission-mode--base-header-line base-header)
+      (let ((badge (make-overlay (point-max) (point-max))))
+        (overlay-put badge 'mission-mode t)
+        (overlay-put badge 'after-string "badge"))
+      (narrow-to-region 3 5)
+      (mission-mode-minor-mode -1)
+      (should-not mission-mode-minor-mode)
+      (should-not mission-mode--overlays)
+      (should (equal header-line-format base-header))
+      (should (eq (overlay-buffer foreign) (current-buffer)))
+      (let ((remaining (append (car (overlay-lists)) (cdr (overlay-lists)))))
+        (should (equal remaining (list foreign)))))))
 
 ;;; mission-mode-test.el ends here
