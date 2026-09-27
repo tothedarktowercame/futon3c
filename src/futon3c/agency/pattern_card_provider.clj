@@ -98,7 +98,8 @@
             cached (get @!retrievals key)]
         (if-not cached
           (do (refresh-async! agent-id session-id) nil)
-          (when (fresh? (str render-at) (:observed-at cached))
+          (if-not (fresh? (str render-at) (:observed-at cached))
+            (do (refresh-async! agent-id session-id) nil)
             (let [ranked (sort-by #(long (or (result-field % :rank) Long/MAX_VALUE))
                                   (:results cached))
                   top (first ranked)
