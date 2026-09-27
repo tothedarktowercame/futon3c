@@ -772,6 +772,7 @@
 ;;                                  ;   {:returns-of "ns/fn"}         a call to fn, or a local bound to one
 ;;                                  ;   {:literal-arg-key :k}         a map literal (under assoc/merge/
 ;;                                  ;      update/->/cond->, or let-bound) that has key :k
+;;                                  ;   {:param p :via caller-box-or-pass-id} unchanged inbound parameter
 ;;                                  ;   {:element-of F'}              (get local expr) where local is F'
 ;;    :to    {:call "ns/fn" :arg n :callee-box id}}   ; n is 1-based
 ;; and it is EVIDENCE OF OCCURRENCE, for the declaring box and the callee box, only
@@ -1214,7 +1215,8 @@
             {:ok? false :why :param-not-a-plain-symbol}
             (not (some (fn [b] (some (fn [[nn _]] (= sym (token-text nn))) (walk-nodes b []))) body))
             {:ok? false :why :param-unused :local sym :used? false}
-            :else {:ok? true :local sym :used? true}))))))
+            :else {:ok? true :local sym :used? true
+                   :parameter-arity (count (:children pv)) :parameter-position n}))))))
 
 (defn- supplied-field? [node chain path]
   (when-let [literal (literal-node node chain)]
@@ -1241,6 +1243,65 @@
                 :when (and (:ok? r) (:self-recurrent? r))]
             [(get-in p [:to :call]) (get-in p [:to :arg])]))))
 
+(def ^:dynamic *forward-path* #{})
+
+(defn- forward-provenance
+  "Compose only a named, independently accepted inbound pass. This is a path
+  witness, not an assertion about every caller of the forwarding function.
+  Unknown binding contexts are refused rather than treated as transparent."
+  [repo-root by-id box pass forms argument chain]
+  (let [{:keys [param via]} (:from pass)
+        local (str param)
+        form (first forms)
+        kids (drop 2 (:children form))
+        arities (filter #(and (= :list (:kind %))
+                              (= :vector (:kind (first (:children %))))) kids)
+        bodies (if (seq arities)
+                 (map #(vector (first (:children %)) (rest (:children %))) arities)
+                 (let [pv (first (filter #(= :vector (:kind %)) kids))]
+                   [[pv (rest (drop-while #(not (identical? pv %)) kids))]]))
+        [pv _] (first (filter (fn [[_ bs]] (some #(contains-node? % argument) bs)) bodies))
+        position (some (fn [[i p]] (when (= local (token-text p)) (inc i)))
+                       (map-indexed vector (:children pv)))
+        contexts (remove #(or (identical? % form)
+                              (some (fn [a] (identical? a %)) arities))
+                         chain)
+        inbound (for [[id caller] by-id
+                      p (:passes caller)
+                      :when (and (or (= via id) (= via (:id p)))
+                                 (= (:box/id box) (get-in p [:to :callee-box]))
+                                 (= (:value pass) (:value p)))]
+                  [caller p])]
+    (cond
+      (not (and param via)) {:ok? false :why :forward-source-incomplete}
+      (not= local (token-text argument)) {:ok? false :why :forward-value-transformed}
+      (not (and (#{"defn" "defn-"} (head-text form)) position))
+      {:ok? false :why :forward-not-own-parameter}
+      (or (sym-sources local argument chain)
+          (sym-sources (get-in pass [:to :call]) argument chain)
+          (some #(and (= :list (:kind %))
+                      (not (contains? #{"let" "let*" "if" "if-not" "when" "when-not"
+                                        "cond" "case" "do"} (head-text %))))
+                contexts))
+      {:ok? false :why :forward-binding-context}
+      (not= 1 (count inbound)) {:ok? false :why :forward-inbound-not-unique}
+      :else
+      (let [[caller p] (first inbound)
+            key [(:box/id caller) p]]
+        (if (contains? *forward-path* key)
+          {:ok? false :why :forward-cycle}
+          (let [r (binding [*forward-path* (conj *forward-path* key)]
+                    (check-pass repo-root by-id
+                                (:aliases (site-cfg [caller])) caller p))]
+            (cond
+              (not (:ok? r)) {:ok? false :why :forward-inbound-refused}
+              (not (and (= local (:local r))
+                        (= position (:parameter-position r))
+                        (= (count (:children pv)) (:parameter-arity r))
+                        (not-any? #(= "&" (token-text %)) (:children pv))))
+              {:ok? false :why :forward-inbound-parameter-mismatch}
+              :else {:ok? true :real? true :self? false})))))))
+
 (defn- check-pass
   "Conditions (a)-(c) for PASS carried by BOX. Returns {:ok? bool :why kw :self-recurrent? bool}."
   [repo-root by-id aliases box pass]
@@ -1264,10 +1325,24 @@
                               :let [a (nth (:children n) (+ arg shift) nil)]]
                           (assoc (if-not a
                                    {:ok? false :why :call-has-too-few-arguments}
-                                   (prov from a (conj chain n) {:aliases aliases :call call :visited #{} :checked-updates updates} 0))
+                                   (if (:param from)
+                                     (forward-provenance repo-root by-id box pass forms a chain)
+                                     (prov from a (conj chain n) {:aliases aliases :call call :visited #{} :checked-updates updates} 0)))
                                  :argc (dec (count (:children n))) :partial? (pos? shift)
                                  :argument a :ancestors (conj chain n)))
-                good (first (filter #(and (:ok? %) (:real? %)) results))]
+                results (if (:param from)
+                          (map (fn [r]
+                                 (if-not (:ok? r) r
+                                   (let [c (callee-check (:text callee-scope) call
+                                                         (:var (:site callee)) arg
+                                                         (:argc r) (:partial? r)
+                                                         (or (:field-path to)
+                                                             [(vertex-field (vertex-key value))]))]
+                                     (if (:ok? c) r (merge r c)))))
+                               results)
+                          results)
+                good (when (or (not (:param from)) (every? :ok? results))
+                       (first (filter #(and (:ok? %) (:real? %)) results)))]
             (if-not good
               (let [bad (first (remove :ok? results))]
                 (cond-> {:ok? false :why (or (:why bad) :argument-has-no-real-source)}
