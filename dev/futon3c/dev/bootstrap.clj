@@ -22,6 +22,7 @@
             [futon3c.apm.library-lane-coordinator]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
+            [futon3c.test-registry.local-port]
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
             [futon3c.wm.run4-boot :as run4-boot]
@@ -198,7 +199,19 @@
             app (http/compose-http-websocket-handler http-handler handler)
             restore-report (roster-store/restore-on-boot!
                             #(restore-agent-via-handler! http-handler %))
-            clock-restore (clock-decision/restore-registered! evidence-store)
+            ;; One futon1b evidence read per registered agent, each 8-40 s under
+            ;; load: run it off the boot path, or :7070 binds after
+            ;; bootstrap-local-agents' 120 s wait and systemd restart-loops
+            ;; (2026-09-21). dispatch-inheritance restores lazily meanwhile.
+            clock-restore (future
+                            (try
+                              (let [n (clock-decision/restore-registered! evidence-store)]
+                                (println (str "[dev] session clock restore: restored=" n))
+                                n)
+                              (catch Throwable t
+                                (println (str "[dev] session clock restore threw: "
+                                              (.getName (class t)) ": " (.getMessage t)))
+                                nil)))
             coordinator-recovery (jit-coordinator/recover!)
             result (http/start-server! app port)]
         ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!

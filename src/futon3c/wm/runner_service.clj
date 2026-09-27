@@ -9,6 +9,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.agency.registry :as reg]
+            [futon3c.test-registry.local-port]
             [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
             [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
