@@ -2974,6 +2974,25 @@ long a `reply-not-found' 409 keeps being retried."
     (when (file-directory-p directory)
       (directory-files directory t "\\.json\\'" t))))
 
+(defcustom agent-chat-evidence-failed-retention-seconds 86400
+  "Delete a terminally failed outbox record once it is this many seconds old.
+A failed record is one the server refused permanently; it will never be
+delivered, so keeping it only keeps a stale \"evidence: N failed\" in every
+chat header.  On 2026-09-27 that header reported 31 failures, the oldest from
+2026-08-29 (Joe: \"I don't need to see reports on a month-old failure when
+starting a new REPL\").  A day leaves time to inspect a fresh failure."
+  :type 'integer
+  :group 'agent-chat)
+
+(defun agent-chat-evidence--prune-failed! ()
+  "Delete failed outbox records older than the retention window."
+  (let ((cutoff (- (float-time) agent-chat-evidence-failed-retention-seconds)))
+    (dolist (path (agent-chat-evidence--failed-files))
+      (when (< (float-time (file-attribute-modification-time
+                            (file-attributes path)))
+               cutoff)
+        (ignore-errors (delete-file path))))))
+
 (defun agent-chat-evidence--drain-lease-path ()
   "Return the cross-Emacs singleton drain lease directory."
   (expand-file-name ".drain-lease" agent-chat-evidence-outbox-directory))
@@ -3109,6 +3128,7 @@ sentinel runs, so the status is not necessarily the final text."
 
 (defun agent-chat-evidence--refresh-delivery-status ()
   "Expose global outbox state in every live chat buffer header."
+  (agent-chat-evidence--prune-failed!)
   (let ((pending (length (agent-chat-evidence--queue-files)))
         (failed (length (agent-chat-evidence--failed-files))))
     (dolist (buffer (buffer-list))

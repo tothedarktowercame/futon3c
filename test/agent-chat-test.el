@@ -706,3 +706,23 @@ DELAY nil means never answer.  Return the server process."
       ;; Give the server time to send its late answer.
       (agent-chat-test--settle 1.0)
       (should (equal '(:connections 0 :buffers 0) (agent-chat-test--leftovers port))))))
+
+(ert-deftest agent-chat-evidence-prunes-failed-records-past-retention ()
+  "A failed record older than the retention window is deleted and no longer
+counted; a fresh one is kept for inspection."
+  (let* ((agent-chat-evidence-outbox-directory (make-temp-file "outbox" t))
+         (agent-chat-evidence-failed-retention-seconds 86400)
+         (failed (expand-file-name "failed" agent-chat-evidence-outbox-directory))
+         (old (expand-file-name "old.json" failed))
+         (fresh (expand-file-name "fresh.json" failed)))
+    (unwind-protect
+        (progn
+          (make-directory failed t)
+          (with-temp-file old (insert "{}"))
+          (with-temp-file fresh (insert "{}"))
+          (set-file-times old (time-subtract nil (* 29 86400)))
+          (agent-chat-evidence--refresh-delivery-status)
+          (should-not (file-exists-p old))
+          (should (file-exists-p fresh))
+          (should (equal (list fresh) (agent-chat-evidence--failed-files))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
