@@ -12,17 +12,25 @@
 
 (defn lane-product [seam mutate]
   (let [source rates/sourced-rates kernel efe/rank-cascade-actions
+        writer (atom nil) carrier (atom nil)
         result (with-redefs [rates/sourced-rates
                              (fn [& args]
                                (let [r (apply source args)]
-                                 (if (= seam :rates) (update r :rates mutate) r)))
+                                 (if (#{:rates :measurement} seam)
+                                   (let [v (get r seam) changed (mutate v)]
+                                     (reset! writer v)
+                                     (reset! carrier changed)
+                                     (assoc r seam changed))
+                                   r)))
                              efe/rank-cascade-actions
                              (fn [state candidates opts]
                                (kernel state candidates
                                        (if (= seam :adjudication-rates)
                                          (update opts :adjudication-rates mutate) opts)))]
                  (fixture/lane))]
-    {:G-efe (mapv :G-efe (:ranked result))}))
+    {:G-efe (mapv :G-efe (:ranked result))
+     :writer @writer :carrier @carrier
+     :cascade-scoring (:cascade-scoring (meta (:ranked result)))}))
 
 (defn measured-product [field mutate]
   (let [source rates/sourced-rates]
@@ -41,3 +49,13 @@
                   t/report #(swap! reports conj %)]
       (click/one-admitted-class-is-measured-the-others-absent))
     {:calls @calls :reports @reports}))
+
+(defn measured-record [mutate]
+  (let [writer (atom nil) carrier (atom nil)
+        record (measured-product :rates
+                                 (fn [v]
+                                   (let [changed (mutate v)]
+                                     (reset! writer v)
+                                     (reset! carrier changed)
+                                     changed)))]
+    {:writer @writer :carrier @carrier :record record}))

@@ -4,14 +4,18 @@
   target-qualified rate [:rates [target :t]] on the measured-A record.
   WITNESSED-HERMETICALLY: no live record carries either end
   (support/measured-live-records-read)."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-rates-products-support :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-c2-support :as support]))
 
 (def positive (delay (support/measured :rates :none)))
 (defn check [] (let [o @positive] {:writer (:writer o) :reader (:reader o)}))
 
-(def wire {:wire [:r6-sourced-rates :r9-measured-a-version [:rates {:record :sourced-rates}]]
+(def wire {:second-layer {:test 'futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/reader-record-retains-the-intervened-carrier
+                         :kind :record :product [:rates]
+                         :intervention :before-reader}
+           :wire [:r6-sourced-rates :r9-measured-a-version [:rates {:record :sourced-rates}]]
            :kind :witnessed-hermetically :test `the-sourced-rates-reach-measured-a-version
            :check check
            :live-records-read support/measured-live-records-read
@@ -39,3 +43,19 @@
 
 (deftest live-records-lack-both-ends
   (support/assert-live-records support/measured-live-records-read :measured-a))
+
+(deftest reader-record-retains-the-intervened-carrier
+  (let [before (products/measured-record identity)
+        after (products/measured-record products/changed-rates)
+        qualify #(into {} (map (fn [[token rates]] [["rates-wire" token] rates])) %)]
+    (is (seq (:writer before)))
+    (is (= (:writer before) (:writer after)))
+    (is (= (qualify (:writer before)) (get-in before [:record :rates])))
+    (is (= (qualify (:carrier after)) (get-in after [:record :rates])))
+    (is (= {:false-neg 5/12 :false-pos 5/12}
+           (get-in after [:record :rates ["rates-wire" :t/wanted]])))
+    (is (not= (get-in before [:record :rates]) (get-in after [:record :rates])))
+    (is (every? #(string? (get-in % [:record :rates-sha])) [before after]))
+    (is (not= (get-in before [:record :rates-sha]) (get-in after [:record :rates-sha])))
+    (println :rates-digest (get-in before [:record :rates-sha])
+             :after (get-in after [:record :rates-sha]))))

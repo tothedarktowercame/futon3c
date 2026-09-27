@@ -1,12 +1,16 @@
 (ns futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test
   "Rates wire, witnessed by real calls using ten real subjects admitted through the store and reader.
   See support/live-records-read for the live records lacking both ends."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-rates-products-support :as products]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-rates-support :as support]))
 
 (defn check [] (support/observe :measurement identity))
-(def wire {:wire [:r6-sourced-rates :r6-cascade-lane :measurement] :kind :witnessed-hermetically
+(def wire {:second-layer {:test 'futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/reader-record-retains-the-intervened-carrier
+                         :kind :record :product [:cascade-scoring :rates-provenance :measurement]
+                         :intervention :before-reader}
+           :wire [:r6-sourced-rates :r6-cascade-lane :measurement] :kind :witnessed-hermetically
            :test `the-writers-value-reaches-the-reader :check check
            :live-records-read support/live-records-read})
 
@@ -46,3 +50,20 @@
     (is (empty? (:labels view)))
     (is (not (contains? (:subjects view) :C3)))
     (is (= :absent (get (support/measurement lane) :t/wanted)))))
+
+(deftest reader-record-retains-the-intervened-carrier
+  (let [before (products/lane-product :measurement identity)
+        after (products/lane-product :measurement
+                                     #(assoc-in % [:t/wanted :false-neg :numerator] 2))
+        recorded #(get-in % [:cascade-scoring :rates-provenance :measurement])]
+    (is (seq (:writer before)))
+    (is (= (:writer before) (:writer after)))
+    (is (= (:writer before) (:carrier before) (recorded before)))
+    (is (= (:carrier after) (recorded after)))
+    (is (= 2 (get-in (recorded after) [:t/wanted :false-neg :numerator])))
+    (is (not= (recorded before) (recorded after)))
+    (is (seq (:G-efe before)))
+    (is (every? number? (:G-efe before)))
+    (is (= (:G-efe before) (:G-efe after)))
+    (println :recorded-measurement (recorded before) :after (recorded after)
+             :unchanged-G (:G-efe before))))
