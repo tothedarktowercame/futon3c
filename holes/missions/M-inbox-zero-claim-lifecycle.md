@@ -505,3 +505,60 @@ spike is targeted risk reduction inside an unresolved design, not a claim that
 the mission has skipped ARGUE or completed VERIFY. Helper returns actual
 commands, assertions, transcripts and go/no-go judgments; owner independently
 checks the decisive cases. Continuation uses a park on the real S0 job ID.
+
+### Checkpoint 2026-09-27 19:16Z — S0 independently rerun; S1 dispatched
+
+S0 **727518e6** artifacts:
+[report](../labs/M-inbox-zero-claim-lifecycle/S0-report.md),
+[harness](../labs/M-inbox-zero-claim-lifecycle/s0-git-transaction.py),
+[transcript](../labs/M-inbox-zero-claim-lifecycle/s0-transcript.txt).
+codex-5 read the harness and independently ran it under `timeout 60`:
+**6/6 defect reproductions, 26/26 candidate assertions**, exit 0. These
+counts validate the stated scenarios, not the whole promotion contract.
+
+S0 establishes useful facts: native Git honors index.lock; a byte-CAS refresh
+can preserve foreign staged entries in tested interleavings; prepared intent
+can exclude retries independently of Git history; hook mutation requires a
+post-hook tree check; clean filters can return different OIDs on the same raw
+input. The final authority/journal protocol is not yet accepted.
+
+Two additional owner tests imported the actual S0 functions into a disposable
+real Git repo (`timeout 25`, `cleanup()` in `finally`):
+
+1. Baseline X; worktree H; `candidate_commit(..., crash_at="after-cas")`;
+   native `git commit -qm 'ordinary concurrent commit during index gap'`.
+   The native commit succeeds with HEAD:f = X, reverting the promotion.
+   Thus the unlocked ref-CAS → index-refresh interval remains unsafe.
+   Index reconciliation is not cosmetic; later native commits can consume
+   the stale index. An interoperable lock or another enforced ownership
+   mechanism must cover the dangerous interval, including crash recovery.
+2. Calling S0 `recover()` after that descendant commit writes its outcome
+   using the new HEAD, not the actual promotion commit. In the owner run,
+   actual promotion = `4c703468c35dc55e27e0eea7b9314f6249a43003`, incorrectly
+   recorded descendant = `e6d9e8d01accd423876ba692a03361b5e3c04f39`.
+   Recovery must find and verify the exact claim commit, parent, tree and
+   path objects; a boolean trailer match plus current HEAD is insufficient.
+   Old receipts must not use current HEAD:path as historical evidence.
+
+Source-review limits: S0 journal rename overwrites and does not fsync; it is
+an experiment, not a durable immutable single-winner acquisition protocol.
+Crash tests are controlled returns, not process-kill or power-loss tests.
+Its filter test proves stage == returned OID, not stage == authorized OID.
+I1/I8 are not demonstrated by an actual planner/link predicate test and cannot
+be graded “go” on the strength of the trailer experiment. Capture still needs
+raw-baseline and alias/mode evidence; normalized `git diff` is not raw trust.
+
+Dispatched **S1**, job **invoke-1790536534131-25612-606cc6e9**, to kimi-9.
+Scope is deliberately transaction-only: close/refuse native-writer access
+through the ref/index interval, make lock ownership and crash recovery explicit,
+pin immutable receipt identities, demonstrate single-winner claim preparation,
+and refuse persisted-object mismatch. Use actual native Git interleavings,
+retain ordinary clean success and foreign same/other-path preservation, label
+fault models honestly, and surface any structural blocker. Do not remove an
+unexplained native lock or reinterpret an authorization mismatch as new authority.
+
+No implementation or production/state/config changes authorized in S1; only
+separate lab script/report/transcript with explicit-path commits. Existing S0
+remains historical evidence. Owner parks and reviews S1 before settling DERIVE;
+capture is a later bounded packet rather than being mixed into this one.
+C1–C7 unchanged, C6 complete, DERIVE still pending.
