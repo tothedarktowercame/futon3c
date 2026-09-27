@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
