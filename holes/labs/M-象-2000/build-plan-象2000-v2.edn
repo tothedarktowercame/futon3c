@@ -1,0 +1,137 @@
+;; M-象-2000 — build plan v2 as data. The prose is BUILD-PLAN-象2000.md (v2);
+;; this file carries what the prose carries in sentences and the page needs as
+;; structure: each packet's hard dependencies, whether it waits on Joe, the
+;; patterns it owes a bad-case test for, and which rows of the acceptance case
+;; (P0) it turns from a hand-filled stub into a query.
+;; claude-17, 2026-09-27. If this file and the markdown disagree, the markdown
+;; is what was argued; fix this file.
+{:schema :m-elephant-2000/build-plan-v2
+ :plan "futon3c/holes/labs/M-象-2000/BUILD-PLAN-象2000.md"
+ :decision-themes
+ {:semantics {:label "Changes what existing code does"
+              :gloss "Today's behaviour is replaced, so something that works now behaves differently."}
+  :new-type  {:label "Adds a record or act type"
+              :gloss "A new kind of thing in the store; nothing existing changes."}
+  :format    {:label "Changes a format people read"
+              :gloss "What an agent or Joe sees each turn or in each report."}
+  :scope     {:label "Scope or cost"
+              :gloss "How far the design reaches, and what it spends."}}
+
+ :packets
+ [{:id :P0   :title "Executable reconstruction of the red-tape incident" :segment :acceptance
+   :deps [] :decision nil :v2 :new
+   :patterns [:象/每段自验 :象/双时并记]}
+  {:id :P1   :title "Promise records: beneficiary, deadline, criterion" :segment :supply
+   :deps [] :decision nil :v2 :same
+   :patterns [:象/诺必践]}
+  {:id :P2a  :title "Promise transitions write records" :segment :supply
+   :deps [:P1] :decision nil :v2 :split
+   :patterns [:象/双时并记 :象/诺必践]}
+  {:id :P2b  :title "Rebuild parked state from records; compare only" :segment :supply
+   :deps [:P2a] :decision nil :v2 :split
+   :patterns [:象/视图出于史]}
+  {:id :P2c  :title "Crash tests, then demote /tmp to a cache" :segment :supply
+   :deps [:P2b] :decision {:theme :semantics :question "Should parked state's authority move from the /tmp file to the record?"} :v2 :new
+   :patterns [:agency/state-atomicity :social/idempotent-handoff]}
+  {:id :P3   :title "Grant record type (scope, interval, parent grant)" :segment :supply
+   :deps [:P6b] :decision {:theme :new-type :question "A new record type for grants of authority?"} :v2 :changed
+   :patterns [:象/名分有据]}
+  {:id :P4   :title "After-the-fact report of acts without authority" :segment :supply
+   :deps [:P3] :decision nil :v2 :changed
+   :patterns [:象/名分有据 :象/释义非授]}
+  {:id :P5   :title "Five promise outcomes; release no longer deletes" :segment :supply
+   :deps [:P2a] :decision {:theme :semantics :question "Stop deleting a park on release, and stop counting a wake as fulfilment?"} :v2 :rewritten
+   :patterns [:象/诺必践 :象/两种规格]}
+  {:id :P6   :title "Evidence as-of on both time axes" :segment :supply
+   :deps [] :decision nil :v2 :changed
+   :patterns [:象/双时并记]}
+  {:id :P6b  :title "Minted act ids" :segment :supply
+   :deps [] :decision nil :v2 :new
+   :patterns [:象/行有定名]}
+  {:id :P7a  :title "Last turn's retrieval shown at the next turn" :segment :rehearsal
+   :deps [] :decision {:theme :format :question "Change what every turn shows at its start?"} :v2 :same
+   :patterns [:象/双时并记]}
+  {:id :P7b  :title "Retrieval run over artefacts as they are written" :segment :rehearsal
+   :deps [] :decision nil :v2 :new
+   :patterns [:象/限定随论]}
+  {:id :P8   :title "Fulfilment-check generator v1" :segment :generator
+   :deps [:P1 :P2a :P5] :decision nil :v2 :changed
+   :patterns [:象/两种规格]}
+  {:id :P9   :title "Owed and owing, as of T" :segment :generator
+   :deps [:P1 :P2a :P5 :P6 :P8] :decision nil :v2 :same
+   :patterns [:象/欠与被欠]}
+  {:id :P10  :title "withdraw: interpretation separate from effect" :segment :acts
+   :deps [:P5 :P6b] :decision {:theme :new-type :question "Add the withdraw intent, and who may confirm its effect?"} :v2 :rewritten
+   :patterns [:象/释义非授 :象/收回亦是行]}
+  {:id :P11  :title "Agreement records (offer + accept)" :segment :acts
+   :deps [:P3 :P9] :decision {:theme :new-type :question "A new pair of act types, offer and accept?"} :v2 :same
+   :patterns [:象/要约与接受]}
+  {:id :P12  :title "Assumption lists and the negation channel" :segment :acts
+   :deps [:P10] :decision {:theme :format :question "A report format ending with 'unstated X, took Y' lines?"} :v2 :changed
+   :patterns [:象/明言假设]}
+  {:id :P13a :title "Rule records: three layers, HOWEVER, owning incident" :segment :institutions
+   :deps [:P5] :decision {:theme :new-type :question "A rule record format that refuses rules without a HOWEVER?"} :v2 :changed
+   :patterns [:象/三层规格 :象/裁亦有失 :象/措施随案]}
+  {:id :P13b :title "Adopted, committed, live; versions by live time" :segment :institutions
+   :deps [:P13a] :decision {:theme :semantics :question "Answer 'in force at T' from runtime evidence rather than commit time?"} :v2 :changed
+   :patterns [:象/提交非生效]}
+  {:id :P14  :title "Incident clearance: resolved, measures can end, compensation list" :segment :institutions
+   :deps [:P6 :P13a :P5] :decision nil :v2 :narrowed
+   :patterns [:象/措施随案 :象/覆水难收]}
+  {:id :P15  :title "Received and understood recorded apart" :segment :acts
+   :deps [:P2a] :decision {:theme :new-type :question "A new record type, 'understood'?"} :v2 :same
+   :patterns [:象/两种规格]}
+  {:id :P16  :title "Asker confirms the answer was known" :segment :acts
+   :deps [:P15] :decision {:theme :new-type :question "A new act type for the asker's confirmation?"} :v2 :same
+   :patterns [:象/答必真且中的]}
+  {:id :P17  :title "Constraints as relations over history" :segment :institutions
+   :deps [:P2a :P6] :decision nil :v2 :same
+   :patterns [:象/以史为据]}
+  {:id :P18  :title "Answers state their population and time" :segment :institutions
+   :deps [:P6 :P9] :decision nil :v2 :same
+   :patterns [:象/答必真且中的]}
+  {:id :P19  :title "Agent turns and design claims on the record" :segment :process
+   :deps [:P6b] :decision {:theme :scope :question "Should 象 interpret agent turns as well as operator turns (usage)?"} :v2 :new
+   :patterns [:象/限定随论]}
+  {:id :P20  :title "Evidence rungs on the typed hole" :segment :process
+   :deps [] :decision nil :v2 :new :status "first pass done in typed-hole-象2000-v2.edn"
+   :patterns [:象/引非读]}
+  {:id :P21  :title "Structural matching; attestations one by one" :segment :process
+   :deps [] :decision {:theme :scope :question "How attestation levels are computed?"} :v2 :new
+   :patterns [:象/同构方为同]}
+  {:id :P22  :title "DERIVE-1 declares what each translation dropped" :segment :process
+   :deps [] :decision nil :v2 :new
+   :patterns [:translation/declare-what-is-lost]}]
+
+ ;; The acceptance case, row by row: what P0 can answer from stores that exist
+ ;; today (:query), and what stays a hand-filled stub until a packet lands.
+ :acceptance
+ [{:when "09-24 15:48" :row "report-problem: Kimi 5-hour limit on a light morning" :who "Joe → claude-11"
+   :today :query :how "intent from the 象/batch analysis of the turn; turn from the evidence store"}
+  {:when "09-24 16:03" :row "constrain: a Kimi job must name its mission" :who "Joe"
+   :today :query :how "as above"}
+  {:when "09-24 16:20" :row "propose: an enforcement rule like the inbox-zero followup" :who "Joe"
+   :today :query :how "as above; the retrieval that ranked gate-fails-loudly 3rd is a context-retrieval entry"
+   :also {:stub "retrieval arrived 6 s AFTER the commit" :until [:P6] :why "needs the system-time axis on evidence"}}
+  {:when "09-24 16:28" :row "propose: a one-line requisition naming the mission" :who "Joe"
+   :today :query :how "as above"}
+  {:when "09-24 16:34" :row "commit 5146606d: each Kimi call carries a requisition" :who "claude-11"
+   :today :query :how "turn-commits evidence; git"}
+  {:when "09-24 19:04 → 09-25 19:59" :row "42 notices delivered as turns under Joe's name" :who "harness"
+   :today :stub :until [:P3 :P4] :how "the store records them as Joe's :question; only a grant check can say Joe never authorised them"}
+  {:when "09-25" :row "followups removed (2ef7a010, 626df9fa)" :who "Joe, claude-14"
+   :today :query :how "turn-commits evidence; git"}
+  {:when "as of 09-24 16:00" :row "requisition rule absent" :who "query"
+   :today :query :how "hyperedge as-of on the commit (MAP Q2 ran this live)"}
+  {:when "as of 09-24 17:00" :row "v1 said 'present'; v2 says 'committed, not yet live'" :who "query"
+   :today :stub :until [:P13a :P13b] :how "needs a rule record with adopted / committed / live times"}
+  {:when "as of 09-25 21:00" :row "followup half withdrawn" :who "query"
+   :today :stub :until [:P13a :P13b] :how "needs rule versions with intervals"}
+  {:when "derivation" :row "from 5146606d back to the four operator acts" :who "query"
+   :today :query :how "turn-commits → session → preceding operator turns, with the MAP join hygiene (filter by authoring seat; user/assistant ids offset by one)"}
+  {:when "clearance" :row "15:48 incident explained by 15:54 (d5e3147e); the rule was put up after that as its measure; 42 notices need compensation" :who "query"
+   :today :stub :until [:P13a :P14] :how "needs incidents, measure ownership and a compensation list"}]
+
+ :findings
+ ["Only three of the thirteen decisions sit on the path to a fully query-answered acceptance case: P5, P13a, P13b. P3 is a fourth if the 42 notices are to be answered by query rather than by hand."
+  "MAP exit item 1 asked for origin on every act (operator / agent / harness). No packet builds it directly; P3+P4 catch the harness notices only after the fact, as acts in Joe's name without a grant."]}

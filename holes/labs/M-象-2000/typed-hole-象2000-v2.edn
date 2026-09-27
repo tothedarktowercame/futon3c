@@ -1,0 +1,371 @@
+;; M-象-2000 — 类型化的洞，第 2 版（v2）。
+;; v1：kimi-3，2026-09-26（typed-hole-象2000.edn，保留不动以便对照）。
+;; v2：claude-17，2026-09-27。级联：cascade-象2000-v2.edn（instance 2）。
+;;
+;; v2 做了两件事：
+;; 1. 每条填充加 :rung（象/引非读，ARGUE-1 U4 / 建造包 P20）：
+;;      :named     指针能解析，没有读过所引代码的行为
+;;      :read      读过所引代码，:read-note 写出它做什么（引用其中的判断）
+;;      :witnessed 有测试或运行痕迹证明所述行为
+;;    规则：:partial 至少要 :read；:full 须 :witnessed。v1 的 48 个指针在
+;;    2026-09-27 由 claude-17 在 HEAD 逐一读过（脚本打印各行，再读上下文）；
+;;    :read-note 就是读的结果。读过之后两条填充降档，四条填充的指针指错或只指到注释
+;;    而被重指，一条的「优点」改记为缺陷（见 :regrades）。
+;; 2. 为 v2 级联新增的 16 个令牌补填充；:want 多了 :建造可自验。
+;;
+;; 满足度的判据（v2 明写，v1 未写）：:partial = 令牌陈述中至少有一款由一个正在
+;; 运行的组件提供，且已读过；:hungry = 没有，或只有陈述的反面。
+{:schema :m-elephant-2000/typed-hole-v2
+ :mission "M-象-2000"
+ :author "claude-17"
+ :date "2026-09-27"
+ :cascade "futon3c/holes/labs/M-象-2000/cascade-象2000-v2.edn"
+ :supersedes "futon3c/holes/labs/M-象-2000/typed-hole-象2000.edn"
+ :rung-order [:named :read :witnessed]
+ :rung-source "futon3/library/象/引非读.flexiarg；等级取自 futon2/holes/labs/wm-contract/CONVERGENCE.edn 的 :rung-order 前段（:named … :witnessed），中间的 :type-transcribed/:formula-transcribed 并为 :read。"
+
+ :note-on-want
+ "v1 的上限照旧：:正确性条件生成 未填之前，:want 各令牌只到「可陈述」。v2 另有两点：
+  (1) :行权有据 由 :partial 降为 :hungry——v2 级联要求解读与效力分开（释义非授），而证据库
+  把 Joe 的每一条回合、包括 42 条以他名义投递的提醒，记为 claim-type :question：以他人
+  名义的话正在让他承担他未授予的东西，陈述的反面在运行。(2) 新 :want 令牌 :建造可自验
+  为 :hungry：栈里现有的检查（cascade_check、wiring_check、xlate lint）正是 ARGUE-0 机制 D
+  所说的形式检查，没有一个重跑验收案。"
+
+ :hole
+ {:id :象2000/忠实的系统
+  :hungry-for [:类型化退回 :行为类型 :引用 :投递回执 :显式退出承诺 :闸门响亮 :行为定名 :双时
+               :承诺落记 :承诺终局分记 :送达与办成分记 :撤销类型 :存续可查
+               :授权来源 :解读效力分记 :协议记录
+               :状态转换原子 :交接幂等 :历史完备 :约束即关系 :假设明言 :所弃成文 :级联可判错
+               :三分回溯 :补救清单
+               :三层规格成文 :规则带失败方式 :三时分记 :制度版本生效区间 :清结证明
+               :回答声明总体 :回答真实切题 :承诺可追讨 :行权有据 :成效可验 :建造可自验
+               :限定随附 :引用分等 :证实可分
+               :正确性条件生成 :答后知 :输入侧学会记录 :反事实世界模型]
+  :want #{:回答真实切题 :承诺可追讨 :行权有据 :成效可验 :建造可自验}}
+
+ ;; —— 读过之后改了什么 ——
+ :regrades
+ [{:token :显式退出承诺 :v1 :partial :v2 :hungry
+   :why "v1 以 parked_on 的 terminal-state? 为「显式退出」。读 parked_on.clj:273-319：terminal 指所等的作业终止，不是承诺方的退出；join 完成即 release、随即 drop-record 删除；预算耗尽者「retract silently」（273-285 行 docstring 原话）。这是令牌陈述的反面：静默终止、删除式终止。"
+   :why-en "v1 cited parked_on's terminal-state? as an explicit exit. Read at parked_on.clj:273-319, 'terminal' means the awaited job finished, not that the promiser exited; a completed join is released and then deleted (drop-record), and an exhausted budget is 'retract[ed] silently' (the docstring's words). That is the opposite of the token: silent, deleting termination."}
+  {:token :行权有据 :v1 :partial :v2 :hungry
+   :why "v2 级联要求解读与效力分开；证据库给 Joe 的每条回合（含 42 条以他名义的提醒）打 claim-type :question（MAP Q2）。归因（--from）仍在，但陈述的后半「以他人名义的话不会让那人承担……」在运行中被违反。"
+   :why-en "v2 requires interpretation and effect to be separate. The evidence store gives every turn under Joe's name, the 42 notices included, claim-type :question (MAP Q2). Attribution via --from is still there, but the second half of the token (words in someone's name do not bind them) is violated in the running system."}
+  {:token :闸门响亮 :v1 :partial :v2 :partial
+   :why "两个指针读过后都不支持所述：followup_queue.clj:14-32 是状态文件读写与去重；invariants.clj:22-52 是三个特性开关的汇总。已重指到 http.clj:5335-5350（跟进按 agent+session 精确入队）。满足度不变，依据换了。"
+   :why-en "Neither v1 pointer supports the claim: followup_queue.clj:14-32 reads and writes a state file; invariants.clj:22-52 summarises three feature flags. Re-pointed to http.clj:5335-5350 (followups enqueued to an exact agent+session). Satiety unchanged, basis replaced."}
+  {:token :投递回执 :v1 :partial :v2 :partial
+   :why "v1 三个指针两处是注释、一处是开关函数；已重指到 handle-bell 与它的 202 回执（http.clj:5550-5553、5636）。"
+   :why-en "Two of v1's three pointers were comments and one a flag function. Re-pointed to handle-bell and its 202 receipt (http.clj:5550-5553, 5636)."}
+  {:token :历史完备 :v1 :partial :v2 :partial
+   :why "v1 的 http.clj:260 只是一个 atom 的定义、zai_api.clj:1496 是注释；已重指到 turn-commits 的实际写入（zai_api.clj:1568-1580）。"
+   :why-en "v1's http.clj:260 is only an atom definition and zai_api.clj:1496 a comment. Re-pointed to the actual turn-commits write (zai_api.clj:1568-1580)."}
+  {:token :行为类型 :v1 :partial :v2 :partial
+   :why "指错一处：v1 以 futon1b_evidence.clj:66-67 为 :claim-type 词表，这两行是 in-reply-to。正确的位置是 futon1b_evidence.clj:41-45（claim-type 必填，否则拒绝）。已改指针。"
+   :why-en "Wrong pointer: v1 cited futon1b_evidence.clj:66-67 as the :claim-type vocabulary; those lines are in-reply-to. The right place is futon1b_evidence.clj:41-45 (claim-type required, else refused)."}
+  {:token :撤销类型 :v1 :partial :v2 :partial
+   :why "v1 的 :missing 把「幂等 id 由 type+endpoints 稳定推出」写成优点。读 futon1b_server.clj:69-75：id 确由类型与端点拼成，同类同端点的两次行为会合成一条（codex 点 4）。retract 的语义本身有测试（:witnessed），但这句话移到 :行为定名 作为缺陷。另：test_temporal.clj:116-129 用的是显式 :hx/id，没有测到推出的 id。"
+   :why-en "v1's :missing called 'idempotent ids derived from type+endpoints' a strength. Read at futon1b_server.clj:69-75: the id is type plus endpoints, so two acts of the same type between the same endpoints collapse into one (codex point 4). Retract itself is tested (:witnessed); the defect moves to :行为定名. Also: test_temporal.clj:116-129 passes an explicit :hx/id, so it never exercises the derived id."}]
+
+ :fills
+ {;; —— 基础层 ——
+  :类型化退回
+  {:filler {:component "futon1b 证据/超边写入的带类型拒绝"
+            :pointers ["futon1b/futon1b_evidence.clj:158-161" "futon1b/futon1b_server.clj:193-198"]}
+   :satiety :partial :rung :read
+   :read-note "158-161：重复的 evidence id 返回 409 与 {:error \"duplicate evidence id\"}；193-198：缺 :evidence 或 :hyperedge 抛 layered-error 4 :missing-required。写入侧的拒绝确实带类型。"
+   :missing "路由给能行动的一方与按成因计数只在单点发生；代理回合内译不出的输入没有统一的退回通道。"}
+
+  :行为类型
+  {:filler {:component "证据的 :claim-type（必填）+ 类型化 bell（--type）+ 操作者回合标注的 19 种意图"
+            :pointers ["futon1b/futon1b_evidence.clj:41-45" "futon3c/scripts/agency_send.py:29-30"
+                       "storage/operator-turns/batches/2026-09-22_2026-09-26_block002/claude-5-turn-44.json.analysis.json:20"]}
+   :satiety :partial :rung :read
+   :read-note "evidence.clj:41-45：claim-type 规范化，缺则 {:invalid {:error \"evidence/claim-type required\"}}；agency_send.py:29-30：--type 仅在 FUTON3C_TYPED_BELLS 开启时被接受；analysis.json:20 的 intent 是事后标注。"
+   :missing "操作者回合的类型是事后由标注代理补的（human_approved=false），说话时信封上没有类型。"}
+
+  :引用
+  {:filler {:component "证据的 in-reply-to（写入时校验所指存在）与 chain；bellback 的 :bellback-of"
+            :pointers ["futon1b/futon1b_evidence.clj:142-148" "futon1b/futon1b_evidence.clj:635-638"
+                       "futon3c/src/futon3c/transport/http.clj:1027-1031"]}
+   :satiety :partial :rung :read
+   :read-note "142-148：in-reply-to 所指不存在则 409 :reply-not-found；635-638：chain 沿 in-reply-to 走到根、防环；http.clj:1027-1031 是 bell-router 的 docstring，说明 bellback 带 :bellback-of（读的是说明，不是实现）。"
+   :missing "按 as-of 时刻取回所指之物的历史形态，只有超边能做到；证据按 id 取回是非时间的。"}
+
+  :投递回执
+  {:filler {:component "bell 入队回执（202 + job-id）、inbox ack 端点、auto-bellback"
+            :pointers ["futon3c/src/futon3c/transport/http.clj:5550-5553" "futon3c/src/futon3c/transport/http.clj:5636"]}
+   :satiety :partial :rung :read
+   :read-note "【v2 重指】v1 的三处中两处是注释、一处是开关函数。实际的回执：handle-bell（5550-5553）「Returns immediately with accepted job-id」，5636 行 json-response 202 {:ok true …}。"
+   :missing "202+job-id 只证明入队；ack 靠接收方自觉；投递失败没有显式的失败记录类型。"}
+
+  :显式退出承诺
+  {:filler {:component "parked_on 的终态转换——读过之后是反例"
+            :pointers ["futon3c/src/futon3c/agency/parked_on.clj:255-319"]}
+   :satiety :hungry :rung :read
+   :read-note "drop-record「Remove record RID … (release/expire/exhaust)」；release-or-retract：join 完成则标 :released? 并入 :just-released，随后 note-completion! 对每条 fired 调 drop-record；预算耗尽则 forget-record，docstring 原话「retract silently」。"
+   :missing "没有承诺方的显式退出记录；终止是删除，耗尽是静默撤回。"}
+
+  :闸门响亮
+  {:filler {:component "跟进队列的入队端点（路由到代理与会话）"
+            :pointers ["futon3c/src/futon3c/transport/http.clj:5335-5350"
+                       "futon3c/holes/labs/M-象-2000/MAP-Q5-1620-reconstruction.md:19-27"]}
+   :satiety :partial :rung :read
+   :read-note "【v2 重指】v1 的 followup_queue.clj:14-32 是状态文件读写、invariants.clj:22-52 是开关汇总，都不是闸门。http.clj:5335-5350：跟进按 agent+session 精确入队（不符则 409 agent-session-mismatch）——「路由到能行动的人」一款在运行。自行触发的申领闸门已于 09-25 撤下（2ef7a010）。"
+   :missing "按变化而非按状态报告未成立：MAP-Q5 记录同一通知 42 次重复。"}
+
+  :行为定名
+  {:filler {:component "证据 id（重复即 409，事实上每条记录一个 id）；超边 id 由类型与端点推出（反例）"
+            :pointers ["futon1b/futon1b_evidence.clj:158-161" "futon1b/futon1b_server.clj:69-75"]}
+   :satiety :partial :rung :read
+   :read-note "证据：:xt/id 由写入方给出，重复则 409——证据记录各有其名。超边：stable-hyperedge-id 为 \"hx:\" + 类型 + 端点，同类同端点的两次行为得到同一 id。"
+   :missing "行为若存为超边（MAP 出口第 1 条的设计），就没有铸出的 id；撤回与限定的所指不定。"}
+
+  :双时
+  {:filler {:component "XTDB 的有效时间与系统时间；超边 GET 两个参数都读"
+            :pointers ["futon1b/futon1b_server.clj:905-910" "futon1b/futon1b_graph.clj:964-967"]}
+   :satiety :partial :rung :read
+   :read-note "905-910：valid-as-of（或 as-of）与 system-as-of 分别解析；graph.clj:964-967：分别设 :for-valid-time 与 :for-system-time。两轴在超边上都可读。"
+   :missing "证据 API 的 as-of 只是对 :evidence/at 的字符串比较（MAP Q2），不分轴；test_temporal 只测了有效时间一轴。"}
+
+  ;; —— 承诺与验收 ——
+  :承诺落记
+  {:filler {:component "parked_on + followup_queue + clock_store"
+            :pointers ["futon3c/src/futon3c/agency/parked_on.clj:33-35" "futon3c/src/futon3c/agency/followup_queue.clj:14-15"
+                       "futon3c/src/futon3c/agency/clock_store.clj:35-44"]}
+   :satiety :partial :rung :read
+   :read-note "parked_on 存于 /tmp/futon3c-parked-on.edn；followup_queue 状态 {:queued :leased :terminal :dedupe}；clock_store 的空时钟只有 campaign/mission/excursion。"
+   :missing "没有受益方与兑现判据字段；全部在 /tmp 文件，不在历史层。"}
+
+  :承诺终局分记
+  {:filler {:component "无；parked_on 只有「已释放」一种终局，且随即删除"
+            :pointers ["futon3c/src/futon3c/agency/parked_on.clj:273-319"]}
+   :satiety :hungry :rung :read
+   :read-note "见 :显式退出承诺。唤醒（resume!）在 join 完成时发生，与兑现判据无关；Joe 名下的「resumed: parked dependencies complete」约 3,540 次，被 MAP Q4 计作「已兑现」——这是 P5 v1 的错误来源。"
+   :missing "五种终局都没有各自的记录。"}
+
+  :送达与办成分记
+  {:filler {:component "入队回执与 invoke 作业的 execution 记录"
+            :pointers ["futon3c/scripts/agency_send.py:13-14" "futon3c/src/futon3c/transport/http.clj:1027-1031"]}
+   :satiety :partial :rung :read
+   :read-note "作业记录带 execution {:executed … :tool-events …}（2026-09-23 的 brief 委托 :executed false 而 state done，见 象/两种规格 的 evidence）；bellback 的说明见 1027-1031。"
+   :missing "state 仍报 done；「已送达，未执行」不是一个可查询的状态。"}
+
+  :撤销类型
+  {:filler {:component "超边 retract → delete-docs {:valid-from T}"
+            :pointers ["futon1b/futon1b_server.clj:127-148" "futon1b/test_temporal.clj:116-129"]}
+   :satiety :partial :rung :witnessed
+   :read-note "127-141：hx/op \"retract\" 走 delete-docs 并带 valid-from；test_temporal 116-129：t1 写入、t2 撤回，此刻为 nil、t1+1s 仍为 :current。"
+   :missing "证据库 append-only 不可撤；承诺的撤销在 parked_on 里是删除。"}
+
+  :存续可查
+  {:filler {:component "超边的 valid-as-of / system-as-of 查询"
+            :pointers ["futon1b/futon1b_server.clj:905-910" "futon1b/test_temporal.clj:116-129"
+                       "futon3c/holes/labs/M-象-2000/MAP-Q2-xtdb-vs-elephant.md:44-47"]}
+   :satiety :partial :rung :witnessed
+   :read-note "同上测试；MAP-Q2 另有一次实跑：5146606d 在 valid-as-of 16:00 缺席、17:00 在场。"
+   :missing "证据 API 不读 as-of；承诺与队列不在时间查询范围内。"}
+
+  ;; —— 授权与协议 ——
+  :授权来源
+  {:filler {:component "bell 的 --from 归属与 invoke warrant（warrant 证明验收，不是授权）"
+            :pointers ["futon3c/scripts/agency_send.py:172-175" "futon3c/src/futon3c/agency/warrant.clj:32-44"]}
+   :satiety :partial :rung :read
+   :read-note "172-175：无 --from 只打印警告（不拒绝）；warrant.clj:32-44：畸形 warrant 带类型拒绝、不静默丢元素。"
+   :missing "没有授予记录；范围、时间、委托链三项都无从查。"}
+
+  :解读效力分记
+  {:filler {:component "解读文件与回合记录分开存放（事实上的分开）；证据库的默认 claim-type（反例）"
+            :pointers ["storage/operator-turns/batches/2026-09-22_2026-09-26_block002/claude-5-turn-44.json.analysis.json:2-6"]}
+   :satiety :hungry :rung :read
+   :read-note "analysis.json：method agent-interpretation、human_approved false、labeller claude-15——解读是独立文件，今天不驱动任何效力。但证据库给回合的 claim-type :question 是存储层自带的一个解读，并且被当作事实使用（MAP Q2）。"
+   :missing "效力记录不存在；解读更新时无从列出依赖它的东西。"}
+
+  :协议记录
+  {:filler {:component "最近的是类型化 bell 的 query/answer --ref 对"
+            :pointers ["futon3c/scripts/agency_send.py:29-30"]}
+   :satiety :hungry :rung :read
+   :read-note "--ref 是 answer 指向 ArSE 线程的参数；要约与接受仍是两条互不相连的记录。"
+   :missing "没有合成一条协议记录。"}
+
+  ;; —— 历史层 ——
+  :状态转换原子
+  {:filler {:component "parked_on / followup_queue 的 persist!——读过之后是反例"
+            :pointers ["futon3c/src/futon3c/agency/parked_on.clj:90-95" "futon3c/src/futon3c/agency/followup_queue.clj:26"]}
+   :satiety :hungry :rung :read
+   :read-note "parked_on persist!：先 swap! 内存，再 spit 整个文件；spit 失败只 println，不回退内存。followup_queue persist! 同为直接 spit，无临时文件加改名。崩溃在写文件中途会留半个文件。"
+   :missing "没有全有或全无的转换；这是 P2c 要先补的。"}
+
+  :交接幂等
+  {:filler {:component "followup_queue 的 :dedupe 与 parked_on 的 :coalesce-key"
+            :pointers ["futon3c/src/futon3c/agency/followup_queue.clj:15-19" "futon3c/src/futon3c/agency/parked_on.clj:261-266"]}
+   :satiety :partial :rung :read
+   :read-note "followup_queue：:dedupe 映射只保留仍在排队或租出的项；parked_on：forget-record 同时清掉 coalescing key。两处都按键合一。"
+   :missing "bell 本身的重发没有幂等键；由记录重放状态时的去重尚无设计。"}
+
+  :历史完备
+  {:filler {:component "证据库 append-only + invoke 台账 + turn-commits"
+            :pointers ["futon1b/futon1b_evidence.clj:158-161" "futon3c/src/futon3c/agents/zai_api.clj:1568-1580"
+                       "futon3c/src/futon3c/agency/parked_on.clj:33"]}
+   :satiety :partial :rung :read
+   :read-note "【v2 重指】v1 的 http.clj:260 只是台账原子的定义、zai_api.clj:1496 是注释。实际写入：zai_api.clj:1568-1580 把一轮 git commit 的提交以 :event :turn-commits 经 persist-transcript-safely! 写入证据库；证据 409 使历史只增不改。"
+   :missing "停泊与提醒队列存 /tmp；载入代码、入队、释放不入史。"}
+
+  :约束即关系
+  {:filler {:component "最近的是 invariants.clj 的状态汇总" :pointers ["futon3c/src/futon3c/agency/invariants.clj:22-52"]}
+   :satiety :hungry :rung :read
+   :read-note "queue-hardening-status 汇总三个开关的开闭，不是对行为历史的关系。"
+   :missing "没有约束的记录形式，也没有匹配器。"}
+
+  :假设明言
+  {:filler {:component "无现成组件"}
+   :satiety :hungry :rung :none
+   :missing "实现报告没有「未说明 X，取 Y」的格式。"}
+
+  :所弃成文
+  {:filler {:component "模式在库（translation/declare-what-is-lost），实践未跟上"
+            :pointers ["futon3c/holes/labs/M-象-2000/DERIVE-1-mccarthy-requirements.md"]}
+   :satiety :hungry :rung :read
+   :read-note "DERIVE-1 的 32 行需求表没有「舍弃了什么」一栏（建造包 P22 要补）。"
+   :missing "声明所弃在任务工件里没有格式。"}
+
+  :级联可判错
+  {:filler {:component "xlate.py lint：id 可解析、括号平衡、给出源回合时查片段覆盖"
+            :pointers ["futon3c/scripts/xlate.py:143-170" "futon3c/scripts/xlate.py:202-207"]}
+   :satiety :partial :rung :read
+   :read-note "lint_text：候选 id 单列，其余 id 须在库中；括号计数；src 给出时计算覆盖。六款中只有「源绑定」可机械反驳。"
+   :missing "单位、所保、所弃、等价判据四款仍靠读者。"}
+
+  :三分回溯
+  {:filler {:component "重建一种有：超边 as-of 读；重演与补救没有"
+            :pointers ["futon1b/futon1b_graph.clj:964-967" "futon1b/test_temporal.clj:116-129"]}
+   :satiety :partial :rung :witnessed
+   :read-note "as-of 读在超边上有测试。三种操作的区分本身不存在于任何组件；partial 只指「重建」一款。"
+   :missing "重演（明言假设下的推演）与补救（对已记录效果的更正）都没有组件，也没有各自的失败条件。"}
+
+  :补救清单
+  {:filler {:component "无现成组件"}
+   :satiety :hungry :rung :none
+   :missing "外部效果（通知、重载、入队）不作为可列出的效果入史；42 条提醒只在各会话的记录里。"}
+
+  ;; —— 规格与制度 ——
+  :三层规格成文
+  {:filler {:component "最近的是 M-wm-wiring 的地图" :pointers ["futon3c/holes/labs/M-wm-wiring/wm-flight-wiring.edn"]}
+   :satiety :hungry :rung :named
+   :missing "没有规则记录要求写成效层与世界假设。"}
+
+  :规则带失败方式
+  {:filler {:component "模式有 HOWEVER，规则没有"
+            :pointers ["futon3/library/象/裁亦有失.flexiarg"]}
+   :satiety :hungry :rung :none
+   :missing "规则与裁定采纳时不写失败方式。"}
+
+  :三时分记
+  {:filler {:component "提交时刻入史（turn-commits 与超边）；采纳与生效不入史"
+            :pointers ["futon3c/holes/labs/M-象-2000/MAP-Q2-xtdb-vs-elephant.md:44-47"]}
+   :satiety :partial :rung :witnessed
+   :read-note "MAP-Q2 的实跑：5146606d 的 :prop/timestamp 为 16:34:08Z，as-of 可查。三时中只有「提交」一款。"
+   :missing "采纳（授权行为）与生效（加载或首次执行的痕迹）没有记录；验收案 19:04 的首次生效只能从会话里手工找。"}
+
+  :制度版本生效区间
+  {:filler {:component "机制原料在超边有效时间里，制度本身无版本" :pointers ["futon1b/futon1b_server.clj:132-140"]}
+   :satiety :hungry :rung :read
+   :read-note "132-140：写入可带 valid-time；没有任何规则以版本入史。"
+   :missing "规则不带版本与生效区间。"}
+
+  :清结证明
+  {:filler {:component "无现成组件"}
+   :satiety :hungry :rung :none
+   :missing "没有事故实体、措施归属与清结动作。"}
+
+  ;; —— :want 层 ——
+  :回答声明总体
+  {:filler {:component "证据查询的过滤参数" :pointers ["futon1b/futon1b_evidence.clj:528-530"]}
+   :satiety :hungry :rung :named
+   :missing "回答不声明总体与取数时刻。"}
+
+  :回答真实切题
+  {:filler {:component "无现成组件"}
+   :satiety :hungry :rung :none
+   :missing "真与切题两关都没有检查器。"}
+
+  :承诺可追讨
+  {:filler {:component "parked_on 与 followup_queue 的 snapshot"
+            :pointers ["futon3c/src/futon3c/agency/parked_on.clj:105" "futon3c/src/futon3c/agency/followup_queue.clj:32"]}
+   :satiety :partial :rung :read
+   :read-note "两个 snapshot 都返回整个状态映射（parked_on 去掉 :just-released），可按代理筛出当前停泊与排队项。"
+   :missing "无受益方与期限；已释放者已被删除，逾期无从判定；应收没有按代理的查询。"}
+
+  :行权有据
+  {:filler {:component "归因（--from）；证据库的默认 claim-type（反例）"
+            :pointers ["futon3c/scripts/agency_send.py:172-175" "futon1b/futon1b_evidence.clj:41-45"]}
+   :satiety :hungry :rung :read
+   :read-note "见 :regrades。"
+   :missing "授予记录、范围检查、解读与效力之分，都不存在。"}
+
+  :成效可验
+  {:filler {:component "无现成组件"}
+   :satiety :hungry :rung :none
+   :missing "成效层不成文，清结不存在。"}
+
+  :建造可自验
+  {:filler {:component "现有的检查全部是形式检查（反例）"
+            :pointers ["futon3c/scripts/cascade_check.py" "futon3c/scripts/wiring_check.py" "futon3c/scripts/xlate.py:143-170"]}
+   :satiety :hungry :rung :read
+   :read-note "cascade_check：id 可解析、sha 相符、令牌已声明；wiring_check：边上的令牌在两端端口里。两者都通过了 v1，而 v1 的验收案没有一次被重跑。"
+   :missing "没有验收案的可执行形式（建造包 P0）。"}
+
+  ;; —— 过程层 ——
+  :限定随附
+  {:filler {:component "无；象 只解读操作者回合"}
+   :satiety :hungry :rung :none
+   :missing "代理回合与设计主张不入史（R29，建造包 P19）。"}
+
+  :引用分等
+  {:filler {:component "War Machine 收敛账本的等级尺度（用在 WM 条目上，未用在洞上）"
+            :pointers ["futon2/holes/labs/wm-contract/CONVERGENCE.edn:4-6"]}
+   :satiety :partial :rung :read
+   :read-note ":rung-order [:named :type-transcribed :formula-transcribed :witnessed …]；:witnessed 以上要求带运行身份的机器记录（:rung-rule）。本文件 v2 首次把它用到洞上。"
+   :missing "没有检查器强制「:partial 至少 :read」；本文件的等级是人工判定。"}
+
+  ;; —— 模式库一侧 ——
+  :证实可分
+  {:filler {:component "xlate census：数提案出现的回合数（按次数，不按结构）"
+            :pointers ["futon3c/scripts/xlate.py:224-235"]}
+   :satiety :hungry :rung :read
+   :read-note "census 汇总所有 analysis.json 的引用与提案，≥3 次为「成熟」——正是按次数计证实，象/同构方为同 所说的回声问题。"
+   :missing "没有结构比对，没有逐条的证实记录。"}
+
+  ;; —— 洞 ——
+  :正确性条件生成 {:filler {:component "无现成组件（级联 :holes 已声明）"} :satiety :hungry :rung :none
+                   :missing "每条检查都要有人想起来去写。"}
+  :答后知 {:filler {:component "无现成组件"} :satiety :hungry :rung :none :missing "没有问者侧的确认行为。"}
+  :输入侧学会记录 {:filler {:component "最远亲是 analysis.json 的事后标注"} :satiety :hungry :rung :none
+                   :missing "理解不作为一条行为入史。"}
+  :反事实世界模型 {:filler {:component "无；MAP 的前瞻推断（标签流上的模型）是候选"} :satiety :hungry :rung :none
+                   :missing "「若 P 在 T0 则如何」无从回答。"}}
+
+ :wiring-points
+ [{:name :承诺层入口 :at "Agency 的 park/followup/clock"
+   :pointers ["futon3c/src/futon3c/agency/parked_on.clj:255-319" "futon3c/src/futon3c/agency/followup_queue.clj:14-32"]
+   :note "v2：终局分记、崩溃一致、显式退出都从这里进；读过之后，这里今天是删除式终止。"}
+  {:name :历史层入口 :at "futon1b 超边 API（写/撤/双轴 as-of 读）"
+   :pointers ["futon1b/futon1b_server.clj:127-148" "futon1b/futon1b_server.clj:905-910" "futon1b/futon1b_server.clj:69-75"]
+   :note "v2：撤销与双轴读在此；行为定名的缺陷也在此（69-75）。"}
+  {:name :证据与引用层入口 :at "futon1b 证据 API"
+   :pointers ["futon1b/futon1b_evidence.clj:41-45" "futon1b/futon1b_evidence.clj:142-148"]
+   :note "v2：claim-type 默认值是 释义非授 的反例所在。"}
+  {:name :行为类型入口 :at "xlate/象 标注与类型化 bell"
+   :pointers ["futon3c/scripts/xlate.py:143-170" "futon3c/scripts/agency_send.py:29-30"]
+   :note "不变。"}
+  {:name :检索层入口 :at "futon3a → context-retrieval 证据"
+   :pointers ["futon3c/src/futon3c/transport/http.clj:7992" "futon3c/emacs/session-mode.el:183"]
+   :note "v2：P7a 用于回合，P7b 用于工件。"}
+  {:name :授权层入口 :at "bell --from 与 invoke warrant"
+   :pointers ["futon3c/scripts/agency_send.py:172-175" "futon3c/src/futon3c/agency/warrant.clj:32-44"]
+   :note "不变；授予记录从零开始。"}
+  {:name :建造层入口 :at "任务的检查脚本与验收案（v2 新增）"
+   :pointers ["futon3c/scripts/cascade_check.py" "futon3c/scripts/wiring_check.py"]
+   :note "v2：P0 的验收案脚本应在这里，与形式检查并列；每段自验 从这里进入。"}]}

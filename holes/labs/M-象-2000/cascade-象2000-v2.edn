@@ -1,0 +1,644 @@
+;; M-象-2000 — 象2000 语族的级联，第 2 版（v2）。
+;; v1：kimi-3，2026-09-26（cascade-象2000.edn，保留不动以便对照）。
+;; v2：claude-17，2026-09-27，据 ARGUE-0 / ARGUE-1 与 futon3 827b1f9 的新模式修订。
+;; 格式同 v1（M-futon-seams/proto/instance-5.edn）。未改动的模式块从 v1 逐字搬来，
+;; 只刷新了 sha256；改动的块 :author 记为 claude-17。
+;;
+;; v2 相对 v1 的结构改动（每条都对应 ARGUE 的一处缺漏）：
+;;  - 承诺：诺必践 另产出 :承诺终局分记（唤醒≠兑现，codex 点 2），欠与被欠 需要它。
+;;  - 授权：名分有据 只产出 :授权来源；:行权有据 改由 释义非授 产出——解读与效力
+;;    分开之后，「行权有据」才成立（codex 点 3）。
+;;  - 时间与身份：新令牌 :双时（双时并记）与 :行为定名（行有定名）；收回亦是行 需要
+;;    :行为定名（撤回要指向确定的一次行为），视图出于史 需要 :双时（codex 点 4）。
+;;  - 历史：视图出于史 需要 :状态转换原子 与 :交接幂等（agency/state-atomicity、
+;;    social/idempotent-handoff，codex 点 5——库中本有，v1 没有检索到）。
+;;  - 制度：制度有时 需要 :三时分记（提交非生效）、:规则带失败方式（裁亦有失）、
+;;    :三分回溯（覆水难收）；:清结证明 与 :成效可验 改由 措施随案 产出，陈述收窄
+;;    为「已解决、措施可撤」（codex 点 1、6）。
+;;  - 匹配：同构方为同 产出 :证实可分（codex 点 7）。它不在 :want 的路径上，是
+;;    一个悬空产出——模式库的增长不属于「忠实的系统」，如实记为发现。
+;;  - 过程：新增 :want 令牌 :建造可自验，由 每段自验 产出，需要 限定随论 与 引非读
+;;    （ARGUE-1 U1、U4、U5）。这是 v2 最大的一处主张：设计必须对它自己的建造也成立。
+;;    **需 Joe 验证：是否接受把 :建造可自验 加进 :want。**
+;;  - 新洞 :反事实世界模型：覆水难收 把「若 P 在 T0 则不会出事」推迟到有世界模型之时。
+{:schema :m-elephant-2000/cascade-v1
+ :mission "M-象-2000"
+ :instance 2
+ :date "2026-09-27"
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
+ :supersedes {:path "futon3c/holes/labs/M-象-2000/cascade-象2000.edn" :instance 1}
+
+ :tokens
+ {;; —— 基础层：类型与引用 ——
+  :类型化退回
+  {:statement "无法翻译或无法行动的输入被带类型退回给能行动的一方并按成因计数，而不是被猜测执行。"}
+  :行为类型
+  {:statement "每一条消息或行为记录都携带言语行为类型与来源（操作者/代理/调度层），类型可由记录直接读出，而不必从散文里猜。"}
+  :引用
+  {:statement "承诺、答复与更正都带 ref 指向一条可按 as-of 时刻取回的记录，不复述内容。"}
+  :投递回执
+  {:statement "每次投递产生一条只证明送达的回执，或一条显式的失败记录；回执不声称工作完成。"}
+  :显式退出承诺
+  {:statement "无法兑现的承诺以一条显式退出记录终止并说明原因，而不是静默超时或任其漂移。"}
+  :闸门响亮
+  {:statement "检查由系统自行触发，按变化而非按状态报告，并把每个变化路由到能行动的人——常红的灯与没人启动的清扫同样不报告失败。"}
+  :行为定名
+  {:statement "【v2】每个行为在写入时铸出一个不透明 id，终身不变；类型与端点相同的两次行为是两个行为；ref 一律指这个 id，去重另用幂等键。"}
+  :双时
+  {:statement "【v2】每条行为记录带有效时间（事在世界里发生之时）与系统时间（记录得知之时）；每次连接与 as-of 查询声明读哪一轴。"}
+
+  ;; —— 承诺与验收 ——
+  :承诺落记
+  {:statement "每个说出的承诺落成一条带受益方、内容、期限与兑现判据的记录，到期由系统按判据检查而非询问承诺方。"}
+  :承诺终局分记
+  {:statement "【v2】承诺的五种终局各记一条行为、互不代替：所等依赖终止、唤醒送达、兑现（判据成立）、释放、逾期；唤醒不是兑现。"}
+  :送达与办成分记
+  {:statement "投递回执与完成断言是两条独立记录；验收读工作留下的痕迹，痕迹为空时状态为「已送达，未执行」。"}
+  :撤销类型
+  {:statement "撤销是一等行为，带 ref 指向所撤之物，表现为该物有效时间的终止而非删除。"}
+  :存续可查
+  {:statement "「截至时刻 T 仍有效」是历史上的一个查询：arises 于 T 之前且 T 之前无撤销的承诺被返回。"}
+
+  ;; —— 授权与协议 ——
+  :授权来源
+  {:statement "【v2 改】每个行为记录执行者、署名者与授权来源（ref 指回一次授予）；对每个行为按授予查范围、时间与委托链——署名者与执行者相同时也查。"}
+  :解读效力分记
+  {:statement "【v2】原事件、对它的解读（带版本、可驳回）、经授权而生的效力是三条记录；解读本身不创造、终止或转移任何承诺，改标时依赖旧版本的效力被列出待复核。"}
+  :协议记录
+  {:statement "要约与接受合成一条协议记录，含内容、双方、时刻与授权范围；分不清谁先提出时只记双方与内容。"}
+
+  ;; —— 历史层 ——
+  :状态转换原子
+  {:statement "【v2】状态转换要么完整完成并持久化，要么退回原态并给出显式错误；不留半新半旧的状态。"}
+  :交接幂等
+  {:statement "【v2】异步交接重发两次、收到两次都只产生一个效果；以稳定的幂等键对账而不是重做。"}
+  :历史完备
+  {:statement "系统自身的每个行为（载入代码、入队、停泊、释放）在发生时入史；任何缓存或队列都可由历史重建并定期比对。"}
+  :约束即关系
+  {:statement "约束写成对行为历史的关系（谁、何时、哪种行为、指向什么），由匹配器在每个新行为到来时对历史求值，违反即生成记录。"}
+  :假设明言
+  {:statement "实现报告末尾列出会改变外部可见行为的假设，每条一行「未说明 X，取 Y」；操作者对一条的否定记为一次撤销并迫使实现覆盖该可能。"}
+  :所弃成文
+  {:statement "【v2】翻译与改写声明它舍弃了什么，与它保留了什么并列，使评审有一条可以核对的主张。"}
+  :级联可判错
+  {:statement "操作者回合到模式级联的翻译按六款契约逐款可被反驳：单位、所保、所弃、源绑定、等价判据、译不出的带类型退回。"}
+  :三分回溯
+  {:statement "【v2】重建（某时刻的记录）、重演（明言假设下的干预推演）、补救（对已记录效果的更正行为）是三种操作，各有结果与失败条件，不以一种的成功冒充另一种。"}
+  :补救清单
+  {:statement "【v2】事故期间已离开记录、进入世界的效果（已发出的通知、已重载的代码、已排队的作业）逐条列出，每条配一个更正行为或「无法补救」的说明。"}
+
+  ;; —— 规格与制度 ——
+  :三层规格成文
+  {:statement "每条规则写明内部（装上了什么）、收发（拒绝或放行什么）、成效（要让世界变成什么样）三层规格，以及连接收发与成效的那条世界假设。"}
+  :规则带失败方式
+  {:statement "【v2】每条被采纳的规则——包括操作者的裁定——带一句 HOWEVER：它最可能的失败方式与观察到它时的信号；写不出时记「失败方式未知」并设复查点。"}
+  :三时分记
+  {:statement "【v2】规则的采纳（授权行为）、提交（sha）、生效（运行时证据）是三个时刻；「当时生效」只以第三个为准，缺它时答「已提交，未见生效」。"}
+  :制度版本生效区间
+  {:statement "【v2 改】每条协议、闸门与常规带版本与生效区间，区间以生效时刻（非提交时刻）为准；一个行为按它发生时有效的制度评判。"}
+  :清结证明
+  {:statement "【v2 改】事故清结证两件事：事故已解决；它名下每条措施（按立措施时所记的事故 ref，不按时间推断）或随清结撤下，或经一次独立采纳转为常设。附补救清单。不证「若 P 在 T0 则不会发生」。"}
+
+  ;; —— :want 层的令牌 ——
+  :回答声明总体
+  {:statement "回答声明所依据的总体与取数时刻，并指出该总体与问题所指是否同一；不同一先说不同一，再给数字。"}
+  :回答真实切题
+  {:statement "回答既为真又答在问处；两关任缺其一，按无法回答退回，而不是以另一关的成绩冒充通过。"}
+  :承诺可追讨
+  {:statement "任意时刻 T 可列出每个代理的应付（承诺、停泊、所装规则，各带受益方与期限）与应收（等待中的回铃）；逾期未兑现的承诺可见、可归责、可撤销。"}
+  :行权有据
+  {:statement "任何行为都可沿授权树追溯到一次记录在案的授予；没有授予的行为被退回，且以他人名义发出的话不会让那人承担他未授予的义务。"}
+  :成效可验
+  {:statement "【v2 改】规则的成效在清结时被检验：成效落空时可定位于内部、收发、成效三层中哪一层失效；关于规则的主张限于「这条可执行规则能认出这段已记录的序列」，反事实待世界模型。"}
+  :建造可自验
+  {:statement "【v2】本设计对它自己的建造同样成立：每一阶段以重跑验收案检查成效；阶段交接带着所依主张的未解除限定；对代码的引用分等（点名/读过/测过），只点名者不计为满足。"}
+
+  ;; —— 过程层的中间令牌 ——
+  :限定随附
+  {:statement "【v2】设计主张记为行为，限定与撤回以 ref 挂在主张上；阶段交接可查「本工件所依主张中未解除的限定」。"}
+  :引用分等
+  {:statement "【v2】对代码的引用分等：named（指针可解析）、read（写出所引代码做什么）、witnessed（测试或运行痕迹）；部分满足至少 read。"}
+
+  ;; —— 模式库一侧（不在 :want 的路径上）——
+  :证实可分
+  {:statement "【v2】两条提案是否同一，逐项比对 IF/HOWEVER/THEN/BECAUSE 与范围；证实逐条记录作者与依赖，提案者自证与同一目录的回声不计为独立证实。"}
+
+  ;; —— 洞（没有任何模式产出，见 :holes）——
+  :正确性条件生成
+  {:statement "从行为类型流机械地生成正确性条件：每个承诺生成一条兑现检查，每个回答生成一条真实且中的检查，每个命令生成一条授权检查（R3，elephant.tex l.172–178、1880–1886）。"}
+  :答后知
+  {:statement "回答使问者随后知道所问之值——elephant.tex l.838–893 的 knows-what 判据，「切题」的形式化（R5）。"}
+  :输入侧学会记录
+  {:statement "输入侧的「听到」与「学会」分记（R8 输入侧，elephant.tex l.2172–2180）：收到一条消息不等于理解它，理解本身是一条记录。"}
+  :反事实世界模型
+  {:statement "【v2】一个足以回答「若 P 在 T0 已生效，事故会不会发生」的世界模型：代理会如何回应 P、P 会拦下什么、被拦下的会转向何处。"}}
+
+ :initial #{}
+ :want #{:回答真实切题 :承诺可追讨 :行权有据 :成效可验 :建造可自验}
+
+ :holes
+ [{:status :open
+   :token :正确性条件生成
+   :wanted "麦卡锡的 R3 是「由程序文本生成」正确性条件（l.1880–1886：generated from the program text）。语族各模式各陈述一条条件（答真、践诺、行权有据），但没有模式说这些检查如何被生成出来——今天每条检查都要有人想起来去写。"
+   :nearest "象/欠与被欠（能列出承诺，但不生成检查）与 象/三层规格（能说出成效层，但不生成对它的检查）"
+   :nearest-sha256 "7db1b6fd9cb63452da63012403c34f0a5c88ead67230bf98cddeddf66da0cbb3"
+   :consequence ":want 的令牌都依赖各自模式被遵守，而遵守本身没有机制保证；生成器缺位是语族从「主张」到「系统」之间最大的缝。v2 的 每段自验 在建造一侧给出了一个手工的替身（重跑验收案），在运行一侧没有。"}
+  {:status :open
+   :token :答后知
+   :wanted "R5 的 knows-what 判据（l.882 一带）：responsive 的判据是问者随后知道所问之值。象/答必真且中的 只到「真」与「答在问处」，没有陈述问者侧的检验。"
+   :nearest "象/答必真且中的"
+   :nearest-sha256 "2dc7ab95fd1c304c2fd921f50463e832bca80b764d31ad7a77181f43f3a2f0d2"
+   :consequence ":回答真实切题 仍可产出（答方记录可判），但「切题」缺了麦卡锡自己的形式化判据；补上它可能需要一次提问方的确认行为。"}
+  {:status :open
+   :token :输入侧学会记录
+   :wanted "R8 的输入侧：delivered vs done 已有（两种规格），received vs understood 没有对应的模式——象的标注被 DERIVE-1 称为「learning that」的记录，但语族没有模式陈述它。"
+   :nearest "象/两种规格（只写输出侧）"
+   :nearest-sha256 "f673cdd04357ce550a140ade44637593668e1ec8d8409c6ccd860f9dc9ff73a6"
+   :consequence "「收到级联者做了收到原回合者所做之事」（翻译契约的等价判据）预设了理解可判，而理解本身无记录；输入侧的缝使翻译契约的检验建立在一个未入史的事件上。"}
+  {:status :open
+   :token :反事实世界模型
+   :wanted "【v2】v1 的 :清结证明 要证「若 P 在 T0 已生效，事故不会发生」。这是反事实，重建历史不提供它（象/覆水难收）。v2 把清结证明收窄为「已解决、措施可撤」，把反事实留在这里。"
+   :nearest "象/覆水难收（区分了重演与重建，但只要求重演「明言假设」，不提供模型）"
+   :nearest-sha256 "64d137574e3f90ca7a423a41fe4c0d7824859d409de7b6a95ec2a4c9fef4b8f6"
+   :consequence ":成效可验 只到「可执行规则能认出已记录的序列」；「这条规则当时能否防止」在有世界模型之前不可验。MAP 的前瞻推断（标签流上的 MCMC）是这个模型最便宜的候选。"}]
+
+ :patterns
+ {;; —— 基础层 ——
+  :translation/route-the-untranslatable
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:类型化退回}
+   :receipt {:source {:path "futon3/library/translation/route-the-untranslatable.flexiarg"
+                      :sha256 "0717bab5a1ff89f6055c45dc4945ee62ddd6035523c987e0b427c4ef88bdd10c"}
+             :reading "译不出的单位带类型退回、交给能行动的人、按成因计数——这正是 言即行「不猜，带类型退回」与 翻译契约 第六款所引的机制，也是 R24（不匹配任何语句的输入由运行时拒绝）在栈里的既有回答。"
+             :scope "退回的路由与计数；不退还翻译本身的质量。"
+             :author "kimi-3"}
+   :forces "就近取一个近似的模式永远比承认空缺容易，所以退回必须比猜测更便宜。"}
+
+  :agency/delivery-receipt
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:投递回执}
+   :receipt {:source {:path "futon3/library/agency/delivery-receipt.flexiarg"
+                      :sha256 "151bdb1dba3b0b6f5c0d08d7c0f3b17b4a8a4cb0461c1ce37f6ebfad8a2319d0"}
+             :reading "每次发送产生送达回执或显式失败，回执不声称工作完成——它供给 两种规格 的「送达」那一半，使「办成」有独立的东西可对照。"
+             :scope "仅送达语义；完成的断言属于 两种规格 与执行层。"
+             :author "kimi-3"}
+   :forces "发送方需要知道结果，而它手里通常只有一条投递记录；让回执冒充完成是最省事的谎。"}
+
+  :social/explicit-exit-over-abandonment
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:显式退出承诺}
+   :receipt {:source {:path "futon3/library/social/explicit-exit-over-abandonment.flexiarg"
+                      :sha256 "5e6c7c6632fcca362b8ca0151802bdf2d668554334983cd72f870aa549dc96ad"}
+             :reading "以显式的生命周期转换终止，而不是让注意力漂走——诺必践 的 THEN 明引它作为无法兑现时的退出方式；承诺层面的「显式退出」正是使命层面 :active→:blocked 的同构。"
+             :scope "原模式说的是子系统与使命；此处取它的退出纪律一层，移到单个承诺上。"
+             :author "kimi-3"}
+   :forces "放弃不报错，它只是安静地不发生；而等待的成本由被承诺的一方承担。"}
+
+  :inbox-zero/gate-fails-loudly
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:闸门响亮}
+   :receipt {:source {:path "futon3/library/inbox-zero/gate-fails-loudly.flexiarg"
+                      :sha256 "ad5cb62b1f43ae9c196e3b69c51a43a2d089c476014a20a3e4e75382bcb1c4b1"}
+             :reading "检查自行触发、按变化报告、路由到能行动的人——制度有时 明引它解决「未清结的事故不在每个回合重复报告」；制度失效若按状态重复报告，三周后就变成背景噪音。"
+             :scope "报告纪律；不管制度的内容与版本。"
+             :author "kimi-3"}
+   :forces "没人启动的清扫与常红的灯同样不报告失败；但每个回合都重复的报告也会因习惯化而隐形。"}
+
+  :象/言即行
+  {:guard {:needs #{:类型化退回} :forbids #{}}
+   :produces #{:行为类型}
+   :receipt {:source {:path "futon3/library/象/言即行.flexiarg"
+                      :sha256 "03e3051aaef51dbdab32aae2fed1ddb440d49852b7bc4c8870400050c6696a4a"}
+             :reading "类型在信封上、级联在正文里、力由词承担——语族的第一块基石：R1（行为类型）与 R29（代理之间的消息同样是行为）都落在这一枚令牌上，此后每个模式都以「某类型的行为」为词汇。"
+             :scope "消息与行为的类型化；不管类型之后是否被遵守。"
+             :author "kimi-3"}
+   :forces "类型决定接收者欠下什么；类型若只存在于语气里，欠债就无法被记录。"}
+
+  :象/象不忘
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:引用}
+   :receipt {:source {:path "futon3/library/象/象不忘.flexiarg"
+                      :sha256 "fc22c8df9a6fad61c3ead1f584b17345636333ed2f7b07321a34d62acd84818d"}
+             :reading "过去不必复述，只需引用——R17/R18 的核心：ref、as-of、读取时刻。撤销、协议、授权三者的 ref 都靠这枚令牌才有所指。"
+             :scope "引用的纪律与 as-of 读取；不保证历史里什么都有（那是 视图出于史 的事）。"
+             :author "kimi-3"}
+   :forces "复述与原件分家，而两者不一致时无人知道哪一份为准；摘要尤其危险，因为它看起来忠实。"}
+
+  :象/行有定名
+  {:guard {:needs #{:行为类型} :forbids #{}}
+   :produces #{:行为定名}
+   :receipt {:source {:path "futon3/library/象/行有定名.flexiarg"
+                      :sha256 "d872c6cd00cfe72c4018fc2a8701e5c0e9227a7b58a8d2e046185e931d2bdcf4"}
+             :reading "行为的身份在发生时铸出，不由内容推出——codex 点 4。撤回、限定、授予都要指向确定的一次行为；futon1b_server.clj:68 由类型与端点推出 id，会把同一人对同一规则的两次 constrain 合成一条。"
+             :scope "行为超边的身份；投递层的幂等键另由 social/idempotent-handoff 管。"
+             :author "claude-17"}
+   :forces "幂等是投递层的性质，被借来当成行为的身份，就把「重发」与「再说一遍」混为一谈。"}
+
+  :象/双时并记
+  {:guard {:needs #{:行为类型} :forbids #{}}
+   :produces #{:双时}
+   :receipt {:source {:path "futon3/library/象/双时并记.flexiarg"
+                      :sha256 "e19c167a771d4069140a5ef4600d8d8e0c4ad8bfc981be9f2ef3a81e0c76766e"}
+             :reading "事发之时与得知之时分记——codex 点 4，MAP Q2。验收案里 16:20 的检索晚于提交六秒：单轴读不出这一点，而「当时知道吗」正是清结要问的。"
+             :scope "记录与查询的时间轴；不管时钟本身的准确。"
+             :author "claude-17"}
+   :forces "事后挖掘的标签会显得像当时就有；晚到的检索会显得像当时就摆在代理面前。"}
+
+  ;; —— 承诺与验收 ——
+  :象/诺必践
+  {:guard {:needs #{:行为类型 :显式退出承诺 :送达与办成分记} :forbids #{}}
+   :produces #{:承诺落记 :承诺终局分记}
+   :receipt {:source {:path "futon3/library/象/诺必践.flexiarg"
+                      :sha256 "ad1d8a1548ddadb07e0f8887f65faedd9ba7ebbe16dde3628cc78afca28241ba"}
+             :reading "【v2】承诺落成带期限、受益方与兑现判据的记录——R6/R28；v2 另要求五种终局分记（827b1f9 修订）。唤醒不是兑现，这一区分要 两种规格 在先，故 v2 的 guard 加了 :送达与办成分记。v1 的 MAP Q4 与建造包 P5 正是在这里出错。"
+             :scope "口头承诺及其终局；未说出口的内部承诺由 欠与被欠 补足。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "等待的成本由被承诺的一方承担，而承诺的一方感觉不到它。"}
+
+  :象/两种规格
+  {:guard {:needs #{:行为类型 :投递回执} :forbids #{}}
+   :produces #{:送达与办成分记}
+   :receipt {:source {:path "futon3/library/象/两种规格.flexiarg"
+                      :sha256 "f673cdd04357ce550a140ade44637593668e1ec8d8409c6ccd860f9dc9ff73a6"}
+             :reading "话是否送到、事是否办成，分开验收——R8 的输出侧。投递回执只证明送达（agency/delivery-receipt 供给），完成断言必须引用工作痕迹；这是「践诺」可判的前提：先有「办成」的独立记录，才谈得上兑现。"
+             :scope "输出侧的以言行事/以言取效之分；输入侧（收到 vs 学会）无人陈述，见 :holes。"
+             :author "kimi-3"}
+   :forces "一个只能观测以言行事的系统，对以言取效一无所知，却照样给出绿灯。"}
+
+  :象/收回亦是行
+  {:guard {:needs #{:行为类型 :引用 :行为定名} :forbids #{}}
+   :produces #{:撤销类型 :存续可查}
+   :receipt {:source {:path "futon3/library/象/收回亦是行.flexiarg"
+                      :sha256 "641e3ac9a036fb755b65c56d2b0ac2bc2f7709007446c2c010323883b7fb4574"}
+             :reading "撤销是一等行为、带 ref、入史而不删除——R14/R19，供给麦卡锡的 exists。【v2】guard 加 :行为定名：撤销要指向确定的一次行为，身份由内容推出时，撤销的所指不定。"
+             :scope "终止的语义；不评判撤销是否恰当。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "若撤销没有自己的类型，原约束在记录里永远有效；若撤销被实现为删除，历史就失去了「它曾经有效」。"}
+
+  ;; —— 授权与协议 ——
+  :象/名分有据
+  {:guard {:needs #{:行为类型 :引用} :forbids #{}}
+   :produces #{:授权来源}
+   :receipt {:source {:path "futon3/library/象/名分有据.flexiarg"
+                      :sha256 "e9ab20d299c4924f76d5da6a88c47d3ae3f0e105a2b71a204241278c641fb14a"}
+             :reading "每个行为记明凭谁的授权而做，授权沿派工链成树——R7/R10/R11。【v2】827b1f9 修订：即使执行者就是署名者，也按范围、时间、委托链查（codex 点 3：v1 窄于麦卡锡 l.1784–1788）。v2 不再让它直接产出 :行权有据——解读与效力未分开之前，行权有据不成立，见 释义非授。"
+             :scope "授权的记录与检查；授权是否明智不在其内。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "以某人名义发出的话会让那人承担义务；只存署名不存授权，系统的话就被算作那人的话。"}
+
+  :象/释义非授
+  {:guard {:needs #{:行为类型 :授权来源 :级联可判错} :forbids #{}}
+   :produces #{:解读效力分记 :行权有据}
+   :receipt {:source {:path "futon3/library/象/释义非授.flexiarg"
+                      :sha256 "82c47e3c3b38e0539866cc0f428449a98531635f0b061ce8bbb479fa238a963b"}
+             :reading "解读可驳（翻译契约，故需 :级联可判错），所以解读不得自带效力；效力只来自有权者的确认（故需 :授权来源）。两者都在，:行权有据 才成立——v1 的 P10 让 withdraw 标签直接终止所指，正是解读握有了授权者的权力。"
+             :scope "解读与制度效力的界线；解读的质量由 翻译契约 管。"
+             :author "claude-17"}
+   :forces "一次误读若直接生效，就改动了操作者从未改动的承诺，而且记在他名下。"}
+
+  :象/要约与接受
+  {:guard {:needs #{:引用 :授权来源} :forbids #{}}
+   :produces #{:协议记录}
+   :receipt {:source {:path "futon3/library/象/要约与接受.flexiarg"
+                      :sha256 "b6bd3f4593d2a78af597ac938a3e0713ba49856da8977dffe985687d6343f8ce"}
+             :reading "要约与接受合成一次共同行为入史——R12。操作者的「好」是最常见的接受，而它脱离了所接受的内容就几乎没有意义；协议记录把「当时同意的是哪一条」变成可查的，并作为承诺列入 欠与被欠 的应付。"
+             :scope "双方认可的交换；强行推进的单方行为不在其内。"
+             :author "kimi-3"}
+   :forces "把共同行为拆成两句互不相连的话，就丢掉了唯一有约束力的那个对象。"}
+
+  ;; —— 历史层 ——
+  :agency/state-atomicity
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:状态转换原子}
+   :receipt {:source {:path "futon3/library/agency/state-atomicity.flexiarg"
+                      :sha256 "98e0cd20486c735aca868acce3a912db37d58711f5680ae9b3d6fcf4b23beab7"}
+             :reading "状态转换全有或全无——codex 点 5 所缺的一半。v1 要把 /tmp 降为历史的缓存，却没有问「写记录后、改文件前崩溃」会怎样；库中本有此模式，v1 的级联没有检索到（ARGUE-0 机制 B）。"
+             :scope "单次转换的原子性；多次转换之间的顺序由 历史 本身承担。"
+             :author "claude-17"}
+   :forces "部分完成的转换不报错，它只是让下一次读取得到一个从未存在过的状态。"}
+
+  :social/idempotent-handoff
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:交接幂等}
+   :receipt {:source {:path "futon3/library/social/idempotent-handoff.flexiarg"
+                      :sha256 "ce9a7a8e29fe6f4fb80031ddea4637fc812b271fe50497d2d947184caa6a8ed7"}
+             :reading "重发与交叉的交接只产生一个效果——codex 点 5 的另一半：由记录重建状态时，重放同一转换不得产生第二个效果。它也是 行有定名 所说「投递层另带幂等键」的出处。"
+             :scope "投递层的去重；行为的身份见 行有定名。"
+             :author "claude-17"}
+   :forces "假设恰好一次投递的协调，在传输做不到恰好一次的那一刻就坏了。"}
+
+  :象/视图出于史
+  {:guard {:needs #{:行为类型 :双时 :状态转换原子 :交接幂等} :forbids #{}}
+   :produces #{:历史完备}
+   :receipt {:source {:path "futon3/library/象/视图出于史.flexiarg"
+                      :sha256 "ba2cd67917ab0b95b49896081a63b8917b7213ba7c6370718d6cbcae5f1fe89e"}
+             :reading "历史是唯一的真相，缓存与队列是它的编译形式，必须可重建——R17/R23/R25。【v2】guard 加三样：:双时（重建某时刻的视图要知道读哪一轴）、:状态转换原子 与 :交接幂等（缓存降级之前要有崩溃一致的转换协议，codex 点 5）。"
+             :scope "完备性与可重建性；不管重建出的视图长什么样。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "缓存丢失时不报错，回放与「截至 T」的查询都会给出错误的答案，而且不会报错。"}
+
+  :象/以史为据
+  {:guard {:needs #{:行为类型 :历史完备} :forbids #{}}
+   :produces #{:约束即关系}
+   :receipt {:source {:path "futon3/library/象/以史为据.flexiarg"
+                      :sha256 "5dc65f75b5c0e093502aae8d56367fe38b78ae438a93c4bbbd2f6d944d70963a"}
+             :reading "约束写成对行为历史的关系，操作者不必懂数据结构——R20/R21/R22，论文里对这套栈最实际的一条。历史不完备时关系会在缺史上静默地真，故它需要 历史完备 在先。"
+             :scope "约束的陈述与求值；匹配器的效率不在其内。"
+             :author "kimi-3"}
+   :forces "操作者的意思与实现之间隔着对数据结构的理解；约束写在行为的层次上，才不随实现的更换而失效。"}
+
+  :象/明言假设
+  {:guard {:needs #{:撤销类型} :forbids #{}}
+   :produces #{:假设明言}
+   :receipt {:source {:path "futon3/library/象/明言假设.flexiarg"
+                      :sha256 "7090f6a8603939d760628d6a170e5284bd681a92e3728d329467eacf4e964fb4"}
+             :reading "实现时补上的假设要说出来，操作者的否定是一次入史的撤销——R27，并以 R31（不对交互方要求过多）约束报告的篇幅。更正既是一次撤销，撤销类型须先在。"
+             :scope "实现报告的假设清单；不覆盖设计阶段的假设。"
+             :author "kimi-3"}
+   :forces "这些决定写进代码就不再可见；等后果出现时，已分不清是请求的本意还是实现的补充。"}
+
+  :translation/declare-what-is-lost
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:所弃成文}
+   :receipt {:source {:path "futon3/library/translation/declare-what-is-lost.flexiarg"
+                      :sha256 "4d076f3ea837c347c28364d531257c04e62bbad00c9c9a8776541bd2130bb7e6"}
+             :reading "译文声明所弃——ARGUE-1 U6。DERIVE-1 把麦卡锡 l.1784–1788 译成 名分有据 时收窄了授权，而译文没有一栏说它舍弃了什么，于是评审（kimi-3 逐条打勾）无可核对。"
+             :scope "声明的义务；声明是否完整仍由评审判断。"
+             :author "claude-17"}
+   :forces "没有舍弃清单，读者会慷慨地推断译文保留了一切。"}
+
+  :象/翻译契约
+  {:guard {:needs #{:行为类型 :引用 :类型化退回 :所弃成文} :forbids #{}}
+   :produces #{:级联可判错}
+   :receipt {:source {:path "futon3/library/象/翻译契约.flexiarg"
+                      :sha256 "95eb70caa6969a6ca927416bca41b933197dc679ea64adda3d53e7bb12034f80"}
+             :reading "六款契约使回合到级联的翻译可被反驳——R16/R24/R30。【v2】guard 加 :所弃成文：六款中的「所弃」一款要有 translation/declare-what-is-lost 在先才可反驳。"
+             :scope "翻译的可判错性；翻译的质量仍由行为检验承担。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "译者同时是唯一读懂原文的人与唯一写出译文的人，于是「像那么回事」成了唯一的判据。"}
+
+  :象/覆水难收
+  {:guard {:needs #{:历史完备 :双时 :撤销类型} :forbids #{}}
+   :produces #{:三分回溯 :补救清单}
+   :receipt {:source {:path "futon3/library/象/覆水难收.flexiarg"
+                      :sha256 "64d137574e3f90ca7a423a41fe4c0d7824859d409de7b6a95ec2a4c9fef4b8f6"}
+             :reading "重建、重演、补救三分——codex 点 1。重建要完备的历史与两轴时间；补救要撤销类型（更正是一次行为）。它把反事实推到新洞 :反事实世界模型，并产出 :补救清单 供清结使用：42 条已送达的提醒是它的例子。"
+             :scope "回溯操作的区分；世界模型本身不在其内（见 :holes）。"
+             :author "claude-17"}
+   :forces "最便宜的那件（读历史）会被当成最贵的那件（撤销效果）已经做成。"}
+
+  ;; —— 规格与制度 ——
+  :象/三层规格
+  {:guard {:needs #{:送达与办成分记} :forbids #{}}
+   :produces #{:三层规格成文}
+   :receipt {:source {:path "futon3/library/象/三层规格.flexiarg"
+                      :sha256 "1e292613c821783e5ac308d17336e93c5dbadceeb2977132e0743757cb1abb69"}
+             :reading "内部、收发、成效三层各自成文，外加连接后两层的世界假设——R8/R9。两种规格 供给前两层之分；成效层不写，规则只剩「在拒绝东西」作为它的成绩，而清结时没有可证的那一句。"
+             :scope "规则的记录格式；成效是否在世界上成立，由 制度有时 的清结证明检验。"
+             :author "kimi-3"}
+   :forces "成效落空时说不清是规则错了还是世界没按假设走，于是拒绝本身成了规则的成绩。"}
+
+  :象/裁亦有失
+  {:guard {:needs #{:三层规格成文} :forbids #{}}
+   :produces #{:规则带失败方式}
+   :receipt {:source {:path "futon3/library/象/裁亦有失.flexiarg"
+                      :sha256 "7d103dc42cc8c052151c5f45da2b780d87185d4aa9e06f10cf0ab59859682e16"}
+             :reading "规则采纳时写它的 HOWEVER——ARGUE-1 U7。三层规格写规则要什么，本模式写规则怎样坏；09-24 的申领规则与「报告廉价、清结须证」的裁定都缺这一句。"
+             :scope "失败方式的陈述；不判规则的去留。"
+             :author "claude-17"}
+   :forces "理由说明规则为什么好，不说明它什么时候坏；来自有权者的裁定尤其容易被原样照搬。"}
+
+  :象/提交非生效
+  {:guard {:needs #{:送达与办成分记 :双时} :forbids #{}}
+   :produces #{:三时分记}
+   :receipt {:source {:path "futon3/library/象/提交非生效.flexiarg"
+                      :sha256 "12799edd161ed712d26439e23209a422884a6a37862cdfead143949f5c239d7e"}
+             :reading "采纳、提交、生效三时分记——codex 点 4，两种规格 在规则上的推广。验收案：申领规则 16:34 提交，19:04 才首次生效；as-of 17:00 的正确答案是「已提交，未见生效」。"
+             :scope "规则生命周期的时刻；规则的内容不在其内。"
+             :author "claude-17"}
+   :forces "以提交代替生效，就是以「我写了」代替「它做了」。"}
+
+  :象/制度有时
+  {:guard {:needs #{:撤销类型 :三层规格成文 :闸门响亮 :历史完备 :三时分记 :规则带失败方式} :forbids #{}}
+   :produces #{:制度版本生效区间}
+   :receipt {:source {:path "futon3/library/象/制度有时.flexiarg"
+                      :sha256 "5fbc674edc420e77b965405b53a1bbed599e66d8a269e3c10b5b504dd2c0d03b"}
+             :reading "协议与规则是制度：带版本与生效区间，按行为发生时的制度评判——R13。【v2】区间以生效时刻为准（需 :三时分记）；每版带失败方式（需 :规则带失败方式）。清结与成效移交 措施随案：v1 让本模式按时间把措施挂在事故下，codex 点 6 指出这会误撤不相干的措施。"
+             :scope "制度的时间性；事故措施的生死见 措施随案。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "制度一旦立下就只凭惯性延续；为一次事故拉起的警戒线没有拆除条件，就变成对所有人的常设关卡——红线原是黄线。"}
+
+  :象/措施随案
+  {:guard {:needs #{:制度版本生效区间 :撤销类型 :引用 :补救清单 :三分回溯 :规则带失败方式} :forbids #{}}
+   :produces #{:清结证明 :成效可验}
+   :receipt {:source {:path "futon3/library/象/措施随案.flexiarg"
+                      :sha256 "5d70605115d817a355fb539071cc89dcdb7fd46be78f571174b2095a42953084"}
+             :reading "措施记明所属事故，清结证「已解决、措施可撤」，留用须另行采纳——codex 点 6。它产出 :want 的 :成效可验，但陈述已收窄：清结时检验的是可执行规则能否认出已记录的序列，不是反事实（见 :反事实世界模型）。"
+             :scope "事故措施的归属与撤下；常设规则的采纳走 制度有时 与 裁亦有失。"
+             :author "claude-17"}
+   :forces "临时措施的成本由此后每一个行为分摊，而好处只在事故期间。"}
+
+  ;; —— 回答与清单（:want 的直接生产者）——
+  :象/答必真且中的
+  {:guard {:needs #{:引用} :forbids #{}}
+   :produces #{:回答声明总体 :回答真实切题}
+   :receipt {:source {:path "futon3/library/象/答必真且中的.flexiarg"
+                      :sha256 "2dc7ab95fd1c304c2fd921f50463e832bca80b764d31ad7a77181f43f3a2f0d2"}
+             :reading "回答过两关：所断言的为真、所回答的正是所问——R4/R5 的主体，:want 的第一条腿。声明总体与取数时刻使偷换总体可被指认；knows-what 判据（l.882）它未陈述，留在 :holes。"
+             :scope "答方可判的两关；问者是否随后知道，见 :holes 的 答后知。"
+             :author "kimi-3"}
+   :forces "容易取得的测量往往量的是另一个总体；错的不是算术，而是所答非所问，且更难被发现。"}
+
+  :象/欠与被欠
+  {:guard {:needs #{:承诺落记 :承诺终局分记 :存续可查 :历史完备 :协议记录} :forbids #{}}
+   :produces #{:承诺可追讨}
+   :receipt {:source {:path "futon3/library/象/欠与被欠.flexiarg"
+                      :sha256 "7db1b6fd9cb63452da63012403c34f0a5c88ead67230bf98cddeddf66da0cbb3"}
+             :reading "任意时刻 T 答出欠谁什么、谁欠自己什么——R2/R26/R32。【v2】guard 加 :承诺终局分记：清单若把唤醒当兑现，逾期者会从应付里消失。"
+             :scope "清单的可查性；追讨的礼节不在其内。"
+             :author "claude-17（改自 kimi-3）"}
+   :forces "承诺只有能被列出，才能被追讨、被撤销、被清结。"}
+
+  ;; —— 过程层（建造一侧，ARGUE-1）——
+  :象/限定随论
+  {:guard {:needs #{:行为定名 :撤销类型} :forbids #{}}
+   :produces #{:限定随附}
+   :receipt {:source {:path "futon3/library/象/限定随论.flexiarg"
+                      :sha256 "73d40d345d92cca6eb02df3b322496f4d75b2a506d7a72fc725dcf12dee0a586"}
+             :reading "限定与撤回挂在主张上跨过阶段——ARGUE-1 U1，ARGUE-0 机制 A。主张要有定名才可被挂（:行为定名），撤回是一次撤销（:撤销类型）。codex 点 1、4、7 都在 MAP 的对话里说过，随后被摘要掉。"
+             :scope "设计主张的限定；运行时行为的撤回由 收回亦是行 管。"
+             :author "claude-17"}
+   :forces "阶段的边界是信息丢失最便宜的地方：摘要的人不必说明舍弃了什么。"}
+
+  :象/引非读
+  {:guard {:needs #{:引用} :forbids #{}}
+   :produces #{:引用分等}
+   :receipt {:source {:path "futon3/library/象/引非读.flexiarg"
+                      :sha256 "f5bab55dba87dc667abc8496acb93ed6fa8c09a3284764c92b6b6b62e201b301"}
+             :reading "指针能解析不等于读过——ARGUE-1 U4，ARGUE-0 机制 C。v1 的洞 88 个指针全部解析、没有一个读过行为；v2 的洞按本模式给每条填充标等级。"
+             :scope "引用的证据等级；读得对不对由抽查判断。"
+             :author "claude-17"}
+   :forces "引用的成本几乎为零，阅读的成本才是证据。"}
+
+  :象/每段自验
+  {:guard {:needs #{:限定随附 :引用分等 :三层规格成文} :forbids #{}}
+   :produces #{:建造可自验}
+   :receipt {:source {:path "futon3/library/象/每段自验.flexiarg"
+                      :sha256 "eb86b8c598f3ab91e0004cc03532ff6ab645e5a20425c0e46a80d3cae25ce6d9"}
+             :reading "每一阶段以重跑验收案为成效检查——ARGUE-1 U5，是 三层规格 用在阶段上（成效层 = 验收案前进了多少）。它需要 限定随附 与 引用分等，才能让阶段交接与填充等级成为检查的一部分，而不只查形式。"
+             :scope "建造阶段的成效检查；运行时的正确性条件仍是 :holes 的 :正确性条件生成。"
+             :author "claude-17"}
+   :forces "形式检查全绿与任务前进是两件事；验收案是任务唯一不由作者自己定义的检查。"}
+
+  ;; —— 模式库一侧 ——
+  :象/同构方为同
+  {:guard {:needs #{:级联可判错 :引用} :forbids #{}}
+   :produces #{:证实可分}
+   :receipt {:source {:path "futon3/library/象/同构方为同.flexiarg"
+                      :sha256 "a226fa10c897e97c4495fd3476dfe07cdc46d00bc5966772157cf93c08cb6400"}
+             :reading "按结构匹配、逐条证实——codex 点 7。它的产出不在「忠实的系统」的 :want 路径上：它服务于模式库的增长（任务的 Enables 一栏）。wiring 会把 :证实可分 记为悬空产出——这是如实的，不是遗漏。"
+             :scope "候选模式的匹配与证实等级；采纳进库仍是一次授权行为。"
+             :author "claude-17"}
+   :forces "按名字合并，库会把分歧合成共识；按次数计证实，回声会显得像独立。"}}
+
+ :above
+ [{:context :象/言即行
+   :pattern :象/诺必践
+   :kind :differentiates
+   :via "类型落到信封上之后，承诺才从散文里被认出来成为一种行为；诺必践在言即行打开的空间里分出「承诺」这一格。"}
+  {:context :象/言即行
+   :pattern :象/收回亦是行
+   :kind :differentiates
+   :via "撤销成为一等类型，是行为类型空间里新分的一格；类型不立，撤销按表面形式落进别的标签。"}
+  {:context :象/象不忘
+   :pattern :象/收回亦是行
+   :kind :jointly-with
+   :via "撤销要带 ref 指回所撤之物；引用与撤销类型共同给出 exists 的定义。"}
+  {:context :象/两种规格
+   :pattern :象/三层规格
+   :kind :differentiates
+   :via "送达与办成之外再分一层成效；两层规格判得了「办成」，判不了「值得办」。"}
+  {:context :象/三层规格
+   :pattern :象/制度有时
+   :kind :jointly-with
+   :via "成效层就是事故清结时要证明的那一句；规格的第三层与制度的生死互为表里。"}
+  {:context :象/收回亦是行
+   :pattern :象/制度有时
+   :kind :differentiates
+   :via "制度失效即一次撤销或一次采纳；撤销类型供给制度生死所需的行为。"}
+  {:context :象/收回亦是行
+   :pattern :象/明言假设
+   :kind :differentiates
+   :via "操作者对假设的否定记为一次撤销；更正之所以可入史，是因为撤销已是一等行为。"}
+  {:context :象/视图出于史
+   :pattern :象/欠与被欠
+   :kind :jointly-with
+   :via "清单的数据全部来自历史；历史不完备，应付应收就在缺史上静默地失真。"}
+  {:context :象/视图出于史
+   :pattern :象/以史为据
+   :kind :differentiates
+   :via "历史完备之后，约束才能只对历史求值；否则匹配器在缺史上静默地真。"}
+  {:context :象/名分有据
+   :pattern :象/要约与接受
+   :kind :jointly-with
+   :via "协议记录含授权范围；操作者的同意既是一次接受也是一次授予。"}
+  {:context :象/要约与接受
+   :pattern :象/欠与被欠
+   :kind :jointly-with
+   :via "协议即一项承诺，列入执行方的应付；共同行为由此进入欠账。"}
+  {:context :translation/route-the-untranslatable
+   :pattern :象/言即行
+   :kind :jointly-with
+   :via "「不猜，带类型退回」需要退回的机制先在；言即行的退回条款站在 route-the-untranslatable 上。"}
+  {:context :agency/delivery-receipt
+   :pattern :象/两种规格
+   :kind :jointly-with
+   :via "「送达」那一半由投递回执供给，「办成」才有独立的东西可对照。"}
+  {:context :social/explicit-exit-over-abandonment
+   :pattern :象/诺必践
+   :kind :jointly-with
+   :via "无法兑现时显式退出而非超时；退出纪律从使命层移到单个承诺上。"}
+  {:context :inbox-zero/gate-fails-loudly
+   :pattern :象/制度有时
+   :kind :jointly-with
+   :via "未清结的事故只在清单变化时报告；制度的可见性按变化而非按状态维持。"}
+  {:context :象/言即行
+   :pattern :象/行有定名
+   :kind :differentiates
+   :via "【v2】类型在信封上之后，每个行为还要有自己的名字；同类同端点的两次行为靠名字才分得开。"}
+  {:context :象/象不忘
+   :pattern :象/行有定名
+   :kind :jointly-with
+   :via "【v2】引用只有指向确定的行为才有所指；ref 与铸出的 id 共同给出「指的是哪一次」。"}
+  {:context :象/视图出于史
+   :pattern :象/双时并记
+   :kind :jointly-with
+   :via "【v2】由历史重建某时刻的视图，要说明读的是事发时间还是得知时间。"}
+  {:context :象/两种规格
+   :pattern :象/提交非生效
+   :kind :differentiates
+   :via "【v2】送达非办成，推到规则上：提交非生效。"}
+  {:context :象/双时并记
+   :pattern :象/提交非生效
+   :kind :jointly-with
+   :via "【v2】生效时刻是有效时间轴上的事实，提交时刻常常只是系统得知的时刻。"}
+  {:context :象/翻译契约
+   :pattern :象/释义非授
+   :kind :differentiates
+   :via "【v2】译文可驳，所以译文不自带效力；驳回它才不需要撤销世界。"}
+  {:context :象/名分有据
+   :pattern :象/释义非授
+   :kind :jointly-with
+   :via "【v2】效力只来自有权者；解读从来不是授予。"}
+  {:context :象/收回亦是行
+   :pattern :象/覆水难收
+   :kind :differentiates
+   :via "【v2】撤销终止的是记录的有效时间，不是已进入世界的效果；回溯由此分成三种。"}
+  {:context :象/制度有时
+   :pattern :象/措施随案
+   :kind :differentiates
+   :via "【v2】事故所立制度的生死，从「按时间挂在事故下」改为「按立时所记的归属」。"}
+  {:context :象/覆水难收
+   :pattern :象/措施随案
+   :kind :jointly-with
+   :via "【v2】清结附补救清单：撤下措施之外，已发生的效果逐条更正。"}
+  {:context :象/三层规格
+   :pattern :象/裁亦有失
+   :kind :jointly-with
+   :via "【v2】三层写规则要什么，HOWEVER 写规则怎样坏；两者一起才是一条可评判的规则。"}
+  {:context :象/翻译契约
+   :pattern :象/同构方为同
+   :kind :differentiates
+   :via "【v2】等价判据用在两条提案之间：比结构，不比措辞。"}
+  {:context :象/收回亦是行
+   :pattern :象/限定随论
+   :kind :differentiates
+   :via "【v2】撤回与限定从运行时的行为推广到设计主张上。"}
+  {:context :象/两种规格
+   :pattern :象/引非读
+   :kind :differentiates
+   :via "【v2】送达非办成，推到引用上：指针可解析非读过。"}
+  {:context :象/三层规格
+   :pattern :象/每段自验
+   :kind :differentiates
+   :via "【v2】成效层用在建造阶段上：每一阶段的成效就是验收案前进了多少。"}
+  {:context :象/限定随论
+   :pattern :象/每段自验
+   :kind :jointly-with
+   :via "【v2】阶段交接的检查包括所依主张的未解除限定。"}
+  {:context :象/引非读
+   :pattern :象/每段自验
+   :kind :jointly-with
+   :via "【v2】阶段的检查包括填充的证据等级，不只查指针是否解析。"}
+  {:context :agency/state-atomicity
+   :pattern :象/视图出于史
+   :kind :jointly-with
+   :via "【v2】缓存可由历史重建之前，每次转换要么全成要么全退。"}
+  {:context :social/idempotent-handoff
+   :pattern :象/视图出于史
+   :kind :jointly-with
+   :via "【v2】重放历史重建状态时，同一转换重放两次只有一个效果。"}
+  {:context :translation/declare-what-is-lost
+   :pattern :象/翻译契约
+   :kind :jointly-with
+   :via "【v2】六款中的「所弃」要有声明在先才可反驳。"}]}
