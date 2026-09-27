@@ -9,12 +9,31 @@
 ;; row table (row 2 = C, row 6 = A, row 7 = E). Then each theory edge is one
 ;; of: :declared (a map field from a box of Ra to a box of Rb), :boxed-no-field
 ;; (both ends have boxes, no field between them), :unboxed (an end has no box).
-;;   bb wm_vs_equation_dag.bb [map-rev] > out.edn
+;;   bb wm_vs_equation_dag.bb [map-rev] [registry-rev] > out.edn
+;; registry-rev (or env REGISTRY_REV) reads the registry from that futon2
+;; revision, like the map; publication runs pass it so another lane's
+;; uncommitted registry edit is not read. Each edge also carries :inventory,
+;; its <2>2b class: :declared (by-var :declared) wins over :hole (named in the
+;; registry's top-level :holes under :edge or :edges; the entry's :status is
+;; carried as :hole-status) wins over :code-path-note (an equation row's :code
+;; records a "CODE-PATH NOTE for [<a> <b>]..." marker for the edge, the shape
+;; RC7+RC8 used on :belief-state, futon2 9c4cc59a) else :none. Fixture env
+;; overrides WM_VS_DAG_MAP_FILE / WM_VS_DAG_REGISTRY_FILE are for the test.
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.set :as set] '[clojure.java.shell :as sh])
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
+(def registry-path "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")
 (def map-rev (first *command-line-args*))
-(def m (edn/read-string {:default tagged-literal} (if map-rev (:out (sh/sh "git" "show" (str map-rev ":" map-path))) (slurp map-path))))
-(def reg (edn/read-string {:default (fn [_ v] v)} (slurp "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")))
+(def registry-rev (or (second *command-line-args*) (System/getenv "REGISTRY_REV")))
+(def map-file (System/getenv "WM_VS_DAG_MAP_FILE"))
+(def registry-file (System/getenv "WM_VS_DAG_REGISTRY_FILE"))
+(def m (edn/read-string {:default tagged-literal}
+         (if map-file (slurp map-file)
+             (if map-rev (:out (sh/sh "git" "show" (str map-rev ":" map-path))) (slurp map-path)))))
+(def reg (edn/read-string {:default (fn [_ v] v)}
+           (if registry-file (slurp registry-file)
+               (if registry-rev
+                 (:out (sh/sh "git" "-C" "/home/joe/code/futon2" "show" (str registry-rev ":holes/labs/wm-contract/aif-equations.edn")))
+                 (slurp registry-path)))))
 (def eqs (remove #(= :retired (:status %)) (:equations reg)))
 (def defs (into {} (map (fn [e] [(:defines e) e]) eqs)))
 (def exo (into {} (map (fn [x] [(:symbol x) x]) (:exogenous reg))))
@@ -53,14 +72,45 @@
   (concat (for [[f w] writers :when (from-boxes w) r (readers f) :when (to-boxes r)] [f w r])
           (for [[f w r] passes-edges :when (and (from-boxes w) (to-boxes r))] [f w r])))
 (defn edge-status [ba bb] (let [fs (fields-between ba bb)] [(cond (seq fs) :declared (and (seq ba) (seq bb)) :boxed-no-field :else :unboxed) (vec fs)]))
+;; <2>2b inventory classes (JOIN-2B-I). Hole edges: the registry's top-level
+;; :holes entries name edges under :edge (one) or :edges (several); entries
+;; about a bare :symbol are not edges and are ignored.
+(def hole-edges
+  (into {} (for [h (:holes reg)
+                 e (if (:edge h) [(:edge h)] (:edges h))]
+             [(vec e) (:status h)])))
+;; Code-path-note edges: an equation row's :code records that some of its
+;; imported terms reach it through another row's update with the marker
+;; "CODE-PATH NOTE for [<a> <b>], ..." (RC7+RC8, futon2 9c4cc59a, on
+;; :belief-state for [:R2 :R1] [:R16 :R1] [:R4 :R1]). Match exactly that
+;; marker in the :code field -- no other prose -- and take the edge literals
+;; of the sentence it introduces (up to the first "(").
+(def code-path-note-edges
+  (into #{} (for [e (:equations reg)
+                  :let [c (str (:code e))]
+                  :when (str/includes? c "CODE-PATH NOTE for")
+                  :let [after (subs c (+ (.indexOf c "CODE-PATH NOTE for") (count "CODE-PATH NOTE for")))
+                        mention (first (str/split after #"\(" 2))
+                        edges (map (fn [s] (edn/read-string s)) (re-seq #"\[:R[0-9A-Za-z]+ :R[0-9A-Za-z]+\]" mention))]
+                  :when (seq edges)
+                  edge edges]
+              edge)))
+(defn inventory [edge by-var]
+  (cond (= :declared by-var) :declared
+        (contains? hole-edges edge) :hole
+        (contains? code-path-note-edges edge) :code-path-note
+        :else :none))
 (def edge-report
   (for [[[a b] syms] (sort-by (comp str key) theory)
         :let [[st-file fs-file] (edge-status (node-boxes a) (node-boxes b))
-              [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))]]
-    {:edge [a b] :symbols syms
-     :by-file st-file :by-var st-var
-     :fields-by-file fs-file :fields-by-var fs-var
-     :registry-no-site (vec (filter (set no-site-nodes) [a b]))}))
+              [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))
+              inv (inventory [a b] st-var)]]
+    (cond-> {:edge [a b] :symbols syms
+             :by-file st-file :by-var st-var
+             :fields-by-file fs-file :fields-by-var fs-var
+             :inventory inv
+             :registry-no-site (vec (filter (set no-site-nodes) [a b]))}
+      (= :hole inv) (assoc :hole-status (hole-edges [a b])))))
 ;; the flight's producers of the registry's exogenous symbols, by the mission's row table
 (def producer-report
   (for [[s r] (sort exo-rows)
@@ -73,11 +123,15 @@
      :fields-leaving-the-row (vec (for [[f w rd] fs] [f w rd (to-nodes rd)]))}))
 (def node-report (for [n (sort-by str (set (concat (map :node eqs) (keep :node (vals exo)))))]
                    {:node n :files (vec (sort (node-files n))) :boxes (vec (sort (node-boxes n)))}))
-(prn {:map (or map-rev "working tree") :registry (:as-of reg)
+(prn {:map (or map-rev map-file "working tree") :registry (:as-of reg)
+      :registry-rev (or registry-rev registry-file "working tree")
       :theory-edges (count theory)
       :registry-names-no-site no-site-nodes
       :summary-by-file (frequencies (map :by-file edge-report))
       :summary-by-var (frequencies (map :by-var edge-report))
+      :summary-inventory (frequencies (map :inventory edge-report))
+      :inventory-none (vec (sort-by str (map :edge (filter #(= :none (:inventory %)) edge-report))))
+      :holes-not-in-dag (vec (sort-by str (remove (set (map :edge edge-report)) (keys hole-edges))))
       :nodes (for [n node-report] (assoc n :vars (vec (sort (node-vars (:node n)))) :boxes-by-var (vec (sort (node-boxes-by-var (:node n))))))
       :edges edge-report
       :producers producer-report})
