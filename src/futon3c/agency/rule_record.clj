@@ -4,7 +4,8 @@
    this record's validity, NOT proof of historical runtime activation (P13b).
    CLI defaults to validation only; --write appends and verifies the returned id."
   (:require [clojure.edn :as edn]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.agency.rule-timeline :as timeline])
   (:import [java.net URI URLEncoder]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
            [java.time Instant Duration LocalDate]))
@@ -22,7 +23,7 @@
 (def record-keys
   #{:rule/key :rule/name :rule/kind :rule/internal :rule/input-output
     :rule/accomplishment :rule/world-assumption :rule/however :rule/incident
-    :rule/withdrawal-condition :rule/provenance})
+    :rule/withdrawal-condition :rule/provenance :rule/timeline :rule/description-ref})
 
 (defn validate!
   "Return RECORD or throw typed refusal. A known HOWEVER needs failure mode AND
@@ -62,6 +63,7 @@
     (when-not (and (vector? (:sources p)) (seq (:sources p)))
       (refuse! :rule/provenance "Rule provenance needs source references"))
     (doseq [source (:sources p)] (text! [:rule/provenance :sources] source)))
+  (when-let [t (:rule/timeline record)] (timeline/validate! t))
   record)
 
 (defn payload

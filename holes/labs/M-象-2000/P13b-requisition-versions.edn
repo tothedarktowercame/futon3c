@@ -1,0 +1,248 @@
+[{:valid-from "2026-09-27T20:18:07.723568842Z",
+  :idempotency-key "M-象-2000/P13b/kimi-rule-version-1/v1",
+  :record
+  #:rule{:internal
+         {:description
+          "5146606d installs parse-requisition/requisition-decision/context-carry-decision in zai-api, enabled by kimi-api context-policy. It replaces 80428193's inherited caller-clock default with a prompt requisition; queues kimi-work-target followups on refusals or off-clock targets. Target change clears conversation; same target keeps it until the 512k cap. No code-load timestamp is claimed; first observed application is sourced in the timeline.",
+          :repo "futon3c",
+          :commit "5146606dcc4746ce3ade88d56dca29ddbe6d3af7",
+          :predecessor-commit
+          "80428193c9f221276dc6769ab2d539120561af73",
+          :committed-at "2026-09-24T16:34:08Z",
+          :runtime-evidence-status :first-execution-observed},
+         :accomplishment
+         {:description
+          "Reconstructed intended effect: keep unrelated work from accumulating in persistent Kimi seat contexts, reducing avoidable quota consumption and recurrence of five-hour limit exhaustion. This is an intended outcome, not a claim the gate achieved it.",
+          :observable
+          "Compare per-seat prompt/context token counts, target-change clear events and quota-exhaustion events per five-hour window; refusal or reminder counts alone do not demonstrate the intended effect.",
+          :basis :reconstructed-intent},
+         :kind :temporary,
+         :key "kimi-requisition-20260924-5146606d",
+         :input-output
+         {:description
+          "Before a new Kimi model call, require a Requisition line naming a resolvable M-/E-/T- target and nonempty purpose. Refuse absent, unresolved or conflicting targets; accept repeated same-target lines. Auto-bellbacks and park resumes are continuations exempt from a new requisition. Refusal sends a caller-session followup; a target differing from the caller clock sends a reminder.",
+          :refusal-example
+          "A new Kimi call containing only 'Please solve this' and no Requisition line must be refused before the model call.",
+          :acceptance-example
+          "Requisition: M-futon-seams — prototype PROOF-2a examples (provided that target resolves)."},
+         :description-ref "act:8f827fa4-b3de-46a3-a9cb-f3262f7a94ff",
+         :incident
+         #:ref{:type :evidence,
+               :id "emacs-dc5468d1618eff5070b598904b9b0d84"},
+         :provenance
+         {:author "codex-4",
+          :basis :historical-reconstruction,
+          :incident-link-basis
+          "Explicit P13a owner instruction, not inferred from time overlap. The ref names Joe's original 15:48 incident report; it does not invent a separate incident record.",
+          :sources
+          ["git:futon3c:5146606dcc4746ce3ade88d56dca29ddbe6d3af7"
+           "git:futon3c:80428193c9f221276dc6769ab2d539120561af73"
+           "git:futon3c:d5e3147e77710149c1915416c5848564469d63ba"
+           "futon3c/holes/labs/M-象-2000/MAP-Q5-1620-reconstruction.md"
+           "evidence:emacs-dc5468d1618eff5070b598904b9b0d84"
+           "evidence:emacs-46e69c9bcb4fad45e86fd6a63e649a84"
+           "futon3/library/inbox-zero/gate-fails-loudly.flexiarg"],
+          :limitations
+          "The accomplishment layer, world assumption and withdrawal condition are written retrospectively, not attributed as a contemporaneous adoption. Valid-from is this description's recording time, not runtime rule activation. P13b establishes activation; P14 establishes clearance. MAP-Q5's six-second comparison uses invoke completion; git records 80428193 at 16:22:34, not 16:22:42.",
+          :temporal-basis
+          "Sourced retrospective observations. No P3 grant record exists. Domain application intervals use runtime witnesses, never the storage valid-from or commit time."},
+         :name "Each Kimi call carries a one-line requisition",
+         :withdrawal-condition
+         "Review removal when the owning 09-24 15:48 Kimi-limit incident is explained and its measures can be safely withdrawn; retain any permanent replacement only through a separate adoption. The explanation d5e3147e was committed at 15:53:44, before this rule. This record performs no clearance or withdrawal.",
+         :world-assumption
+         "Callers name the work they actually do, target changes track topic changes, clearing context reduces repeated input tokens, and accumulated context is a material cause of quota exhaustion. A syntactically valid requisition or a stale clock does not establish these assumptions.",
+         :timeline
+         {:family "kimi-requisition-20260924",
+          :version 1,
+          :kind :dispatcher-run,
+          :effect :requisition-with-followups,
+          :adopted
+          [{:at "2026-09-24T16:03:24.319201750Z",
+            :basis :operator-act-reconstruction,
+            :grant-status :unrecorded,
+            :source
+            {:kind :operator-act,
+             :ref "evidence:emacs-d120721d051f3e879ca067d3a0b4c982",
+             :author "joe"}}
+           {:at "2026-09-24T16:20:01.051116340Z",
+            :basis :operator-act-reconstruction,
+            :grant-status :unrecorded,
+            :source
+            {:kind :operator-act,
+             :ref "evidence:emacs-46e69c9bcb4fad45e86fd6a63e649a84",
+             :author "joe"}}
+           {:at "2026-09-24T16:28:10.181607946Z",
+            :basis :operator-act-reconstruction,
+            :grant-status :unrecorded,
+            :source
+            {:kind :operator-act,
+             :ref "evidence:emacs-b8292f5d0dd1a1d808cc859285150956",
+             :author "joe"}}],
+          :committed
+          [{:at "2026-09-24T16:22:34Z",
+            :repo "futon3c",
+            :sha "80428193c9f221276dc6769ab2d539120561af73",
+            :role :precursor,
+            :source
+            {:kind :git-commit,
+             :ref
+             "git:futon3c:80428193c9f221276dc6769ab2d539120561af73"}}
+           {:at "2026-09-24T16:34:08Z",
+            :repo "futon3c",
+            :sha "5146606dcc4746ce3ade88d56dca29ddbe6d3af7",
+            :role :definition,
+            :source
+            {:kind :git-commit,
+             :ref
+             "git:futon3c:5146606dcc4746ce3ade88d56dca29ddbe6d3af7"}}],
+          :live
+          {:at "2026-09-24T19:04:24.252395403Z",
+           :status :applied,
+           :source
+           {:kind :execution,
+            :ref "evidence:emacs-da519d355e12f516ef45b9917cd4a552",
+            :origin-ref
+            "origin-backfill:12bddfaac65ec3a36077dfe0ebc65b9c85ff93180ee9d0550223a1dcfbce63fd",
+            :rule :kimi-notice,
+            :description
+            "First observed harness requisition refusal delivery; proves application, not the code-load time."}}},
+         :however
+         {:status :known,
+          :failure-mode
+          "Reminders repeat to caller sessions across seats without resolving stale clocks or changing work; delivered notices become steady red that recipients ignore. The enforcement burden outlives the investigated quota incident.",
+          :signal
+          "42 harness requisition/refusal notices under Joe's name from 2026-09-24 19:04 through 2026-09-25 19:59; MAP-Q5 identifies inbox-zero/gate-fails-loudly's violation signature: a consumer that repeats steady red until it is ignored.",
+          :basis :observed-retrospectively}}}
+ {:valid-from "2026-09-27T20:18:07.724708225Z",
+  :idempotency-key "M-象-2000/P13b/kimi-rule-version-2/v1",
+  :record
+  #:rule{:internal
+         {:description
+          "626df9fa removes both clock reminders and refusal followups; enqueue-caller-followup! remains a no-op for older seat closures. Requisition checking and context clearing remain installed.",
+          :repo "futon3c",
+          :commit "626df9fa9cc2e0c7d8b2b4ddea3f96ef5bd5bca3",
+          :predecessor-commit
+          "5146606dcc4746ce3ade88d56dca29ddbe6d3af7",
+          :committed-at "2026-09-25T20:05:50Z",
+          :runtime-evidence-status :applied},
+         :accomplishment
+         {:description
+          "Stop redundant caller turns while preserving the returned refusal and context controls.",
+          :observable
+          "No kimi-work-target followup is queued by these call paths; errors remain available in job results.",
+          :basis :reconstructed-intent},
+         :kind :temporary,
+         :key "kimi-requisition-20260924-5146606d",
+         :input-output
+         {:description
+          "Calls without requisitions still return the refusal as their job error; no additional caller followup is queued, including for off-clock requisitions. Target-change and token-cap clearing remain.",
+          :refusal-example
+          "A new Kimi call containing only 'Please solve this' and no Requisition line must be refused before the model call.",
+          :acceptance-example
+          "Requisition: M-futon-seams — prototype PROOF-2a examples (provided that target resolves)."},
+         :description-ref "act:8f827fa4-b3de-46a3-a9cb-f3262f7a94ff",
+         :incident
+         #:ref{:type :evidence,
+               :id "emacs-dc5468d1618eff5070b598904b9b0d84"},
+         :provenance
+         {:author "codex-4",
+          :basis :historical-reconstruction,
+          :incident-link-basis
+          "Explicit P13a owner instruction, not inferred from time overlap. The ref names Joe's original 15:48 incident report; it does not invent a separate incident record.",
+          :sources
+          ["git:futon3c:5146606dcc4746ce3ade88d56dca29ddbe6d3af7"
+           "git:futon3c:80428193c9f221276dc6769ab2d539120561af73"
+           "git:futon3c:d5e3147e77710149c1915416c5848564469d63ba"
+           "futon3c/holes/labs/M-象-2000/MAP-Q5-1620-reconstruction.md"
+           "evidence:emacs-dc5468d1618eff5070b598904b9b0d84"
+           "evidence:emacs-46e69c9bcb4fad45e86fd6a63e649a84"
+           "futon3/library/inbox-zero/gate-fails-loudly.flexiarg"],
+          :limitations
+          "The accomplishment layer, world assumption and withdrawal condition are written retrospectively, not attributed as a contemporaneous adoption. Valid-from is this description's recording time, not runtime rule activation. P13b establishes activation; P14 establishes clearance. MAP-Q5's six-second comparison uses invoke completion; git records 80428193 at 16:22:34, not 16:22:42.",
+          :temporal-basis
+          "Sourced retrospective observations. No P3 grant record exists. Domain application intervals use runtime witnesses, never the storage valid-from or commit time."},
+         :name "Kimi requisition retained; caller followups removed",
+         :withdrawal-condition
+         "Review removal when the owning 09-24 15:48 Kimi-limit incident is explained and its measures can be safely withdrawn; retain any permanent replacement only through a separate adoption. The explanation d5e3147e was committed at 15:53:44, before this rule. This record performs no clearance or withdrawal.",
+         :world-assumption
+         "Callers consume job errors; a second unsolicited turn adds cost without actionable information.",
+         :timeline
+         {:intermediate-load
+          {:at "2026-09-25T19:37:18.013Z",
+           :status :applied,
+           :source
+           {:path
+            "/home/joe/.claude/projects/-home-joe-code/e070e50d-4406-42b4-b7ee-65335695ff8d.jsonl.pre-compact-1790375534",
+            :file-sha256
+            "a79868dc16f945063b35d155339c285d6425cd9168c5514539077cf2e35be4b9",
+            :ref "transcript:bcbdd73b-4e07-4f9f-a29b-62490b535f75",
+            :basis :retrospective-tool-receipt,
+            :command
+            "git branch --show-current && git add src/futon3c/agents/zai_api.clj test/futon3c/agents/zai_api_test.clj && git commit -q -m \"Kimi requisition: one clock reminder per caller and target, not one per job\n\nThe followup queue releases its dedupe key on delivery, so every job under\none requisition re-armed the reminder; claude-12 got about 30 as kimi-1's\nqueue drained. Gate lives in enqueue-caller-followup!, which older seat\nclosures still reach through its var. Refusal followups are not gated.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\" && git log -1 --format='%h %s' && scripts/proof-eval.sh \"(do (require 'futon3c.agents.zai-api :reload) (count @futon3c.agents.zai-api/!clock-reminded))\" 2>&1 | tail -3",
+            :line 111,
+            :result
+            "master\n2ef7a010 Kimi requisition: one clock reminder per caller and target, not one per job\n{:ok true, :value 0}",
+            :kind :load,
+            :tool-use-id "toolu_01VNh1bwjoCPCn6W9hN5iABp"}},
+          :family "kimi-requisition-20260924",
+          :committed
+          [{:at "2026-09-25T19:37:17Z",
+            :repo "futon3c",
+            :sha "2ef7a0102cb37969e614e51ec22542dbfbbc6784",
+            :role :intermediate-deduplication,
+            :source
+            {:kind :git-commit,
+             :ref
+             "git:futon3c:2ef7a0102cb37969e614e51ec22542dbfbbc6784"}}
+           {:at "2026-09-25T20:05:50Z",
+            :repo "futon3c",
+            :sha "626df9fa9cc2e0c7d8b2b4ddea3f96ef5bd5bca3",
+            :role :definition,
+            :source
+            {:kind :git-commit,
+             :ref
+             "git:futon3c:626df9fa9cc2e0c7d8b2b4ddea3f96ef5bd5bca3"}}],
+          :kind :dispatcher-run,
+          :last-notice
+          {:at "2026-09-25T19:59:53.408044206Z",
+           :source
+           {:kind :delivery,
+            :ref "evidence:emacs-c193ae65f79b01da4fec7d90d5262dde"},
+           :meaning
+           "Delivery evidence only; not used as withdrawal time."},
+          :intermediate-load-scope
+          "2ef7a010 reduces repeated reminders, not withdrawal; followups remain possible.",
+          :effect :followup-half-withdrawn,
+          :live
+          {:at "2026-09-25T20:05:51.002Z",
+           :status :applied,
+           :source
+           {:path
+            "/home/joe/.claude/projects/-home-joe-code/e070e50d-4406-42b4-b7ee-65335695ff8d.jsonl.pre-compact-1790392448",
+            :file-sha256
+            "4d2c7b3a07593efd18e2ac80ab60b16f93370c96446731308a288a41df5a170a",
+            :ref "transcript:1deab4f3-89ac-44d9-8cf5-578a46f8b536",
+            :basis :retrospective-tool-receipt,
+            :command
+            "sed -i 's/^(defn- enqueue-caller-followup!/(defn enqueue-caller-followup!/' src/futon3c/agents/zai_api.clj && clj-kondo --lint src/futon3c/agents/zai_api.clj 2>&1 | tail -1 && git diff --stat src/futon3c/agents/zai_api.clj test/futon3c/agents/zai_api_test.clj test/futon3c/agents/kimi_api_test.clj && git add src/futon3c/agents/zai_api.clj test/futon3c/agents/zai_api_test.clj test/futon3c/agents/kimi_api_test.clj && git commit -q -m \"Kimi seats queue no followups for their caller\n\nRemoves the clock reminder (off-clock requisition) and the refusal copy.\nJoe: notifications along the way waste time, energy and usage. A refusal\nalready returns as the job's error. Context clearing on target change and\nat the token cap is unchanged. enqueue-caller-followup! stays as a no-op\nuntil restart, for seat closures that still call it through its var.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\" && git log -1 --format='%h %s' && scripts/proof-eval.sh \"(do (require 'futon3c.agents.zai-api :reload) (futon3c.agents.zai-api/enqueue-caller-followup! \\\"x\\\" \\\"clock:y\\\" \\\"p\\\" {}))\" 2>&1 | tail -1",
+            :line 60,
+            :result
+            "linting took 89ms, errors: 0, warnings: 0\n src/futon3c/agents/zai_api.clj        | 98 ++++-------------------------------\n test/futon3c/agents/kimi_api_test.clj | 36 +++++--------\n test/futon3c/agents/zai_api_test.clj  | 46 ----------------\n 3 files changed, 21 insertions(+), 159 deletions(-)\n626df9fa Kimi seats queue no followups for their caller\n{:ok true, :value nil}",
+            :kind :execution,
+            :tool-use-id "toolu_01PkV5GJNiGu8QvJ4erk4Cd5"}},
+          :adopted
+          [{:at "2026-09-25T20:04:54.785084132Z",
+            :basis :operator-act-reconstruction,
+            :grant-status :unrecorded,
+            :source
+            {:kind :operator-act,
+             :ref "evidence:emacs-56a59574a69eb195632a76e03e8bedef",
+             :author "joe"}}],
+          :version 2},
+         :however
+         {:status :known,
+          :failure-mode
+          "A caller that ignores its job error may miss the refusal after the duplicate reminder is removed.",
+          :signal
+          "Repeated refused jobs without error consumption or corrected requisitions.",
+          :basis :anticipated-retrospectively}}}]

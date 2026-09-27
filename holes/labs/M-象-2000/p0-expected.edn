@@ -1,6 +1,6 @@
 ;; P0 semantic acceptance fixture. Capture pins are checked separately.
 ;; Sources: IDENTIFY and build-plan-象2000-v2.edn :acceptance.
-;; Four row STUBs remain; retrieval timing is an additional subclaim STUB.
+;; One row STUB remains; retrieval timing is an additional subclaim STUB.
 ;; The 15:48 act delegates via claude-10 (see :details).
 {:rows [
    {:when "09-24 15:48"
@@ -44,15 +44,15 @@
     :source "hyperedges code/v05/commit 5146606d: absent at valid-as-of 2026-09-24T16:00:00Z"
     :status "QUERY"}
    {:when "as of 09-24 17:00"
-    :act "v1 said 'present'; v2 says 'committed, not yet live'"
+    :act "committed, not yet live"
     :who "query"
-    :source "hand-filled IDENTIFY; adopted/committed/live rule record pending P13a/P13b"
-    :status "STUB"}
+    :source "rule/record timeline; application proven by runtime evidence"
+    :status "QUERY"}
    {:when "as of 09-25 21:00"
     :act "followup half withdrawn"
     :who "query"
-    :source "hand-filled IDENTIFY; rule-version intervals pending P13a/P13b"
-    :status "STUB"}
+    :source "rule/record timeline; application proven by runtime evidence"
+    :status "QUERY"}
    {:when "derivation"
     :act "from 5146606d back to the four operator acts"
     :who "query"
@@ -73,5 +73,5 @@
    "80428193 git commit-at=2026-09-24T16:22:34+00:00; turn-commits event-at=2026-09-24T16:22:46.007027481Z"
    "STUB retrieval system-time ordering: unavailable until P6; the hand-filled six-second claim compares retrieval with invoke completion, not git commit time."
    "Commit existence query: absent at 2026-09-24T16:00:00Z; present at 2026-09-24T17:00:00Z. Commit existence does not establish runtime rule validity."
-   "STUB rule as-of 17:00 and 09-25 21:00; see rows above."
+   "Rule application queries use sourced live-time intervals; adopted/committed events remain separately queryable. Reconstructed adoption is not a P3 grant."
  ]}

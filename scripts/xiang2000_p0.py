@@ -30,6 +30,8 @@ TURNS = ('claude-10-turn-30', 'claude-11-turn-2', 'claude-11-turn-3', 'claude-11
 WINDOW = 'storage/operator-turns/window-0922/operator-turns-joe.jsonl'
 NOTICE_START = '2026-09-24T19:04:00Z'
 NOTICE_END = '2026-09-25T20:00:00Z'  # Includes the entire displayed 19:59 minute.
+RULE_SOURCE = 'rule/record timeline; application proven by runtime evidence'
+RULE_FAMILY = 'kimi-requisition-20260924'
 NOTICE_SOURCE = 'chat-turns author=joe; harness write-time origin or origin/backfill; rule=kimi-notice'
 
 
@@ -186,6 +188,11 @@ def capture():
                                         'end': records['5146606d']['sha'],
                                         'valid-as-of': time, 'limit': 100})
     files['hyperedges.json'] = js(edges).encode()
+    rules = get('hyperedges', {'type': 'rule/record', 'limit': 1000,
+                               'system-as-of': pin, 'valid-as-of': pin})
+    require(not rules.get('next-cursor') and not rules.get('incomplete')
+            and len(rules.get('hyperedges', [])) < 1000, 'incomplete rule scan')
+    files['rules.json'] = js(rules).encode()
     sources = [ROOT / WINDOW]
     for turn in TURNS:
         sources.append(one((ROOT / 'storage/operator-turns/batches').glob(
@@ -227,7 +234,7 @@ def read_snapshot(directory):
     actual = {p.relative_to(directory).as_posix() for p in directory.rglob('*') if p.is_file()}
     require(actual == set(files) | {'manifest.json'}, 'snapshot contains unmanifested files')
     required = {'pins.json', 'git.json', 'hyperedges.json', 'evidence.jsonl',
-                'notice-turns.jsonl', 'origin-backfills.jsonl', WINDOW}
+                'notice-turns.jsonl', 'origin-backfills.jsonl', 'rules.json', WINDOW}
     require(required <= files.keys(),
             'snapshot manifest missing required files')
     return files
@@ -256,6 +263,40 @@ def notice_count(files):
         if kind == 'harness' or (kind in (None, 'unknown') and eid(r) in inferred):
             ids.add(eid(r))
     return len(ids)
+
+
+def rule_asof(files, time):
+    """Application intervals use runtime evidence, never commit or storage time.
+    Old P13a descriptions without a timeline do not assert application.
+    """
+    instant = lambda t: dt.datetime.fromisoformat(t.replace('Z', '+00:00'))
+    response = json.loads(files['rules.json'])
+    require('hyperedges' in response and not response.get('next-cursor')
+            and not response.get('incomplete'), 'incomplete rule snapshot')
+    timelines = [h['hx/props']['rule/timeline'] for h in response['hyperedges']
+                 if h.get('hx/props', {}).get('rule/timeline', {}).get('family') == RULE_FAMILY]
+    require(timelines, 'missing rule timelines')
+    require(len({t['version'] for t in timelines}) == len(timelines), 'duplicate rule version')
+    applied = []
+    for t in timelines:
+        live = t.get('live')
+        if not live:
+            continue
+        require(live['status'] in ('applied', 'not-loaded'), 'invalid live status')
+        if live['status'] == 'applied':
+            require(live['source']['kind'] == {'code': 'load', 'dispatcher-run': 'execution'}[t['kind']]
+                    and live['source'].get('ref'), 'invalid runtime source')
+            applied.append(t)
+    starts = [instant(t['live']['at']) for t in applied]
+    require(len(set(starts)) == len(starts), 'ambiguous live time')
+    active = sorted((t for t in applied if instant(t['live']['at']) <= instant(time)),
+                    key=lambda t: instant(t['live']['at']))
+    if active:
+        return {'requisition-with-followups': 'requisition rule applied',
+                'followup-half-withdrawn': 'followup half withdrawn'}[active[-1]['effect']]
+    if any(instant(c['at']) <= instant(time) for t in timelines for c in t['committed']):
+        return 'committed, not yet live'
+    return 'no committed rule observed'
 
 
 def reconstruct(files):
@@ -377,10 +418,8 @@ def reconstruct(files):
             'Joe, claude-14', '; '.join(eid(r) for r in removed) + '; git 2ef7a010, 626df9fa'),
         row('as of 09-24 16:00', 'requisition rule absent', 'query',
             'hyperedges code/v05/commit 5146606d: absent at valid-as-of 2026-09-24T16:00:00Z'),
-        row('as of 09-24 17:00', "v1 said 'present'; v2 says 'committed, not yet live'", 'query',
-            'hand-filled IDENTIFY; adopted/committed/live rule record pending P13a/P13b', 'STUB'),
-        row('as of 09-25 21:00', 'followup half withdrawn', 'query',
-            'hand-filled IDENTIFY; rule-version intervals pending P13a/P13b', 'STUB'),
+        row('as of 09-24 17:00', rule_asof(files, '2026-09-24T17:00:00Z'), 'query', RULE_SOURCE),
+        row('as of 09-25 21:00', rule_asof(files, '2026-09-25T21:00:00Z'), 'query', RULE_SOURCE),
         row('derivation', 'from 5146606d back to the four operator acts', 'query',
             eid(landed) + ' -> session ' + session + ' -> ' + ', '.join(eid(r) for r in acts)),
         row('clearance', '15:48 incident explained by 15:54 (d5e3147e); the rule was put up after that as its measure; 42 notices need compensation',
@@ -395,7 +434,7 @@ def reconstruct(files):
         '80428193 git commit-at=' + commits['80428193']['commit-at'] + '; turn-commits event-at=' + at(early),
         'STUB retrieval system-time ordering: unavailable until P6; the hand-filled six-second claim compares retrieval with invoke completion, not git commit time.',
         'Commit existence query: absent at 2026-09-24T16:00:00Z; present at 2026-09-24T17:00:00Z. Commit existence does not establish runtime rule validity.',
-        'STUB rule as-of 17:00 and 09-25 21:00; see rows above.']
+        'Rule application queries use sourced live-time intervals; adopted/committed events remain separately queryable. Reconstructed adoption is not a P3 grant.']
     return {'rows': table, 'details': details}, pins
 
 
