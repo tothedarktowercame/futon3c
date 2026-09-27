@@ -1,0 +1,208 @@
+{:discovery "2B-NONE-D"
+ :date "2026-09-27"
+ :author "kimi-8 (E-kimi-task-79)"
+ :revisions {:map "futon3c 2db7d11c (wm-flight-wiring.edn, via the committed join output)"
+             :registry "futon2 ff84adad (= HEAD for aif-equations.edn; repo HEAD 202b5a026 did not touch it)"
+             :code "futon2 HEAD 202b5a026 (line numbers re-verified there 2026-09-27)"
+             :join "futon3c 9204f6ed, wm-vs-equation-dag.edn: 40 edges, {:declared 9 :hole 12 :code-path-note 3 :none 16}"}
+ :cause-vocabulary {:a "registry :code names no var the map boxes (pointer correction)"
+                    :b "map has the boxes but no declared field between them"
+                    :c "prover/join limit (a named form)"
+                    :d "no code path: belongs in :holes with a <2>2d packet"
+                    :e "the edge itself looks wrong in the registry (recorded, not decided)"}
+ :edges
+ [{:edge [:CTAU-TOKEN :R5] :symbols #{:C-tau}
+   :by-var :boxed-no-field
+   :endpoint-vars {:CTAU-TOKEN {:vars ["constructed-candidate-g" "family-schedule" "outcome-risk-pointwise" "preference-member" "preference-schedule" "rank-cascade-actions" "utility-weights"] :boxes-by-var [:r4-kernel]}
+                   :R5 {:vars ["horizon-g" "horizon-g-sparse" "horizon-g-sparse-cert" "rank-cascade-actions"] :boxes-by-var [:r4-kernel :r5-g-sparse-cert]}}
+   :fields-by-var []
+   :code-path "LIVE. assemble-one (cascade_problems.clj:152-153) reads [:preference-schedules target] (default live-c/preference-schedule, live_c.clj:325-336) and writes it as :c-schedule onto the problem's :cascade-spec (cascade_problems.clj:166-168 -- the same returned literal the map already attributes [:want {:record :cascade-spec}] from). Consumers named by the row: the per-problem lane's R5 step (war_machine.clj:5905-5935, inside cascade-lane) and constructed-candidate-g (war_machine.clj:6161); the schedule reaches the scorer through rank-cascade-actions -> horizon-g-sparse-cert (efe.clj:1087+), applied per tau via preference-member (cascade_model_manifest.clj:767) / outcome-risk-pointwise (:755)."
+   :cause :b
+   :cause-detail "The boxes exist on both sides and the write is attributable exactly like [:want {:record :cascade-spec}] (nested key of assemble-one's returned literal), but the map declares no [:c-schedule {:record :cascade-spec}] field. Var-grain noise on top: the join's var regex misses \"(assemble-one:\" (colon after the name), so construction-assemble-one is not credited to CTAU-TOKEN by var, and r5-g-sparse-cert declares no reads."
+   :packet {:id :P3-c-tau-schedule-field
+            :smallest "Map-only: construction-assemble-one :writes+ [[:c-schedule {:record :cascade-spec}]], read on the R5 side (r5-g-sparse-cert :reads+ it, or a new live_c/preference-schedule / family-schedule box -- both vars ARE named in the C-tau row). For the by-var join to see it, also re-punctuate the C-tau :code's var mentions (no colon directly after the name)."
+            :shares [:R13-CTAU-TOKEN]}}
+  {:edge [:R1 :R3] :symbols #{:mu}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R1 {:vars ["fresh" "initial-belief-state" "most-likely-status" "reconcile-belief-carry" "stage" "status-set" "uniform-prior"] :boxes-by-var [:r1-belief-carry]}
+                   :R3 {:vars ["apply-arena-belief-events" "r3d-aggregate-driver" "update-belief-batch"] :boxes-by-var [:r3-aggregate-driver :r3-apply-belief-events]}}
+   :fields-by-var []
+   :code-path "LIVE (WM-PROVER-POSITIONAL-D E1, re-read at HEAD): judge (war_machine.clj:7110) carries mu_t = reconcile-belief-carry (call :7222) through apply-morning-brief-events, reads (:belief morning-brief-fold) into the loop local, hands it positionally to apply-arena-belief-events (:7369; defn :844, forwarded to belief/update-belief-batch). The map already declares the last hop: r7-fold-call (judge's box) :passes :loop-belief from {:keyed-read [:belief :morning-brief-fold]} to apply-arena-belief-events arg 1 (callee-box r3-apply-belief-events)."
+   :cause :a
+   :cause-detail "The declared :passes wire's writer is judge's box, but judge is not joinable to R1: R1's :code cites war_machine.clj:6969-6974, a LINE SPAN, not a var (JOIN-GRAIN-D, never landed) -- and the span has DRIFTED: at HEAD :6969-6974 sits inside candidate-want-progress (defn :6959). The carry is judge :7222."
+   :packet {:id :P1-name-judge
+            :smallest "Registry-only: name the var judge in R1's :code (replacing the drifted span). The existing :passes entry then credits :loop-belief r7-fold-call -> r3-apply-belief-events and the edge is :declared. Caveat from E1-c: after the first micro-step the loop local is R3's own output; the :passes provenance should keep saying so."
+            :shares [:R3-R1 :R1-R3a]}}
+  {:edge [:R1 :R3a] :symbols #{:mu}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R1 {:vars ["reconcile-belief-carry" "stage" "initial-belief-state" "most-likely-status"] :boxes-by-var [:r1-belief-carry]}
+                   :R3a {:vars ["channel-prediction-error" "compute-prediction-error"] :boxes-by-var [:r3a-channel-prediction-error :r3a-prediction-error]}}
+   :fields-by-var []
+   :code-path "LIVE (E3, re-read at HEAD): judge hands the loop local belief positionally to belief/predict-observation (war_machine.clj:7271); (get predictions ch) -- a VARIABLE key -- is arg 3 of fe/channel-prediction-error (:7284). The map already declares the second half: r7-fold-call :passes :channel-prediction {:element-of {:returns-of \"belief/predict-observation\"}} to r3a-channel-prediction-error -- but the join resolves that :returns-of to box r3a-predict-observation, an intra-R3a field, so nothing R1-side is credited."
+   :cause :c
+   :cause-detail "A positional hop the join does not credit: judge -> predict-observation arg 1 (E3-a) has no :passes entry. (The :mean/:variance reads inside compute-prediction-error go through a keyword passed as an argument -- out of reach of any call-site rule, E3-b.)"
+   :packet {:id :P1-name-judge
+            :smallest "The P1 pointer (name judge in R1's :code) PLUS one :passes on r7-fold-call: {:value :loop-belief :from {:keyed-read [:belief :morning-brief-fold]} :to {:call \"belief/predict-observation\" :arg 1 :callee-box :r3a-predict-observation}}. With judge named, that passes-edge is R1 -> R3a by var."
+            :shares [:R1-R3 :R3-R1]}}
+  {:edge [:R1 :R4] :symbols #{:mu}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R1 {:vars ["reconcile-belief-carry" "stage" "initial-belief-state" "most-likely-status"] :boxes-by-var [:r1-belief-carry]}
+                   :R4 {:vars ["co-apply-kernel" "evaluate-state" "evaluate-co-apply" "push-forward" "predict-multi-horizon" "token-likelihood" "tempered-rates"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}}
+   :fields-by-var []
+   :code-path "LIVE but not at R1's named site (WM-SUPERSET-D finding 3, RC8.2, WM-NOPATH-RECONCILE-D; re-read at HEAD): the cascade path reads the TOKEN belief -- war_machine.clj:6605 joint-q0 = (:continuation-belief token-belief-input), handed to efe/rank-actions as {:cascade-belief joint-q0} (:6807), read as q0 = (:cascade-belief state) (efe.clj:1115; typed refusal :missing-cascade-belief :1124-1125). The producer is token_belief_carry/stage (token_belief_carry.clj:55-69), which R1's :code now names (RC8.2) -- but the map has no box for it, and R4's :code names no var of the reading box (rank-cascade-actions, box r4-kernel, joins R4 by file only)."
+   :cause :a
+   :cause-detail "Both ends are pointer/box gaps, not missing code: (i) stage is named in R1's :code but no box has it as :site :var; (ii) rank-cascade-actions appears in no R4 row's :code. R1's entity-belief site (reconcile-belief-carry) genuinely does not feed R4 -- that half is by design (RC8.2, W4's Lean side) and stays on the record."
+   :packet {:id :P5-token-belief-wire
+            :smallest "New box r1-token-belief-carry (token_belief_carry/stage) :writes [[:continuation-belief {:record :token-belief-input}]]; r9-decision (cascade-decision-admitted) :reads+ it (war_machine.clj:6605) and :writes+ [:cascade-belief {:record :rank-opts}] (the literal at :6807); r4-kernel :reads+ [:cascade-belief {:record :rank-opts}] (efe.clj:1115); name rank-cascade-actions in an R4 row's :code. The field [:cascade-belief {:record :rank-opts}] r9-decision -> r4-kernel then declares the consumer half, and with stage boxed the by-var join sees R1 -> R4."
+            :shares []}}
+  {:edge [:R13 :CTAU-CLASS] :symbols #{:T}
+   :by-var :unboxed
+   :endpoint-vars {:R13 {:vars ["default-horizon-steps" "horizon-steps" "rollout-horizon"] :boxes-by-var []}
+                   :CTAU-CLASS {:vars ["classify-target" "contains?" "get-in"] :boxes-by-var [:r9-classify-target]}}
+   :fields-by-var []
+   :code-path "LIVE: cascade-decision-admitted destructures {T :horizon-steps beta :beta} off cascade-family-parameters' return (war_machine.clj:6499), passes :horizon T into class-observation-model (:6800-6806), which builds :class-preference as a per-tau map (range 1 (inc horizon)) -- Joe's fixed class C at tau = horizon, unit mass on :ending/not-yet-evaluated before it (:6329-6330, defn :6313); the model goes to efe/rank-actions as :observation-model (:6811, selected by the (contains? opts :observation-model) branch efe.clj:1111) and the bounded scorer reads (get-in model [:class-preference tau]) for tau in (range 1 (inc (:horizon-steps opts))) (cascade_observation_scoring.clj:144-160)."
+   :cause :b
+   :cause-detail "The carrier exists end to end and every read is a plain keyword/nested-literal read the prover already attributes -- but no box sits on class-observation-model or on the class scorer (cascade_observation_scoring/rank-cascade-actions, a SECOND var of that name, distinct from efe's), and the join's var regex misses \"(class-observation-model:\" in the C-class row's :code. Upstream, T's feed into cascade-family-parameters is the P2 prover gap (the :6499 destructuring)."
+   :packet {:id :P2-T-carrier
+            :smallest "Boxes: r13-class-observation-model (war_machine/class-observation-model) :reads [:horizon-steps] :writes [[:class-preference {:record :observation-model}]]; a box on cascade_observation_scoring/rank-cascade-actions :reads+ [[:class-preference {:record :observation-model}]]. Needs P2's destructuring form (or a :passes on r9-decision) for the :horizon-steps write, the C-class :code re-punctuated so the regex matches, and P2's R13 pointer for the by-var join."
+            :shares [:R13-R4 :R13-CTAU-TOKEN]}}
+  {:edge [:R13 :CTAU-TOKEN] :symbols #{:T}
+   :by-var :unboxed
+   :endpoint-vars {:R13 {:vars ["default-horizon-steps" "horizon-steps" "rollout-horizon"] :boxes-by-var []}
+                   :CTAU-TOKEN {:vars ["preference-schedule" "family-schedule" "rank-cascade-actions" "constructed-candidate-g"] :boxes-by-var [:r4-kernel]}}
+   :fields-by-var []
+   :code-path "LIVE: the declared schedule is per-tau data (live_c/preference-schedule, live_c.clj:325-336; declared per target at cascade_sources.clj:267), assembled onto the problem WITH the horizon by assemble-one ([sources horizon target], cascade_problems.clj:144-168: :horizon-steps horizon at :164, :c-schedule schedule at :166); the scorer iterates tau to (:horizon-steps opts). The horizon itself: sources [:horizon-steps] (r13-sources-horizon -> construction-assemble, DECLARED on the map) -> assemble-one -> [:horizon-steps {:record :cascade-problem}] -> r13-family-parameters (DECLARED) -> the :6499 destructuring (prover miss) -> the rank opts."
+   :cause :c
+   :cause-detail "Two named prover/join limits on one carrier: (i) the {T :horizon-steps beta :beta} map DESTRUCTURING at war_machine.clj:6499 is not treated as a read (JOIN-GRAIN-D, recorded on the r13-family-parameters box by claude-10's R13-I: ':declaration-without-occurrence even with the right key'); (ii) policy-depth/configured (policy_depth.clj:13, the cascade-lane R13 step at war_machine.clj:5909-5915) returns a select-keys call, which the prover does not see through. Var-grain on top: R13's :code names only NON-cascade sites (forward_model/default-horizon-steps :278, rollout/rollout-horizon :474-479; its war_machine.clj:6283-6285 span has drifted into resolve-cascade-horizon's computed-rule literal), and \"(assemble-one:\" is colon-missed on the CTAU-TOKEN side."
+   :packet {:id :P2-T-carrier
+            :smallest "R13 pointer: cite the cascade-path sites in T's :code (resolve-cascade-horizon war_machine.clj:6261, policy-depth/configured and /anticipation policy_depth.clj:13/:24, assemble-one, cascade-family-parameters :6343). Prover: the JOIN-GRAIN-D destructuring-read form (or :passes entries on r9-decision for :horizon-steps). Map: r9-decision :writes+ [:horizon-steps {:record :rank-opts}], r4-kernel :reads+ it (efe.clj:1114 reads (:horizon-steps opts))."
+            :shares [:R13-R4 :R13-CTAU-CLASS :CTAU-TOKEN-R5]}}
+  {:edge [:R13 :R4] :symbols #{:T}
+   :by-var :unboxed
+   :endpoint-vars {:R13 {:vars ["default-horizon-steps" "horizon-steps" "rollout-horizon"] :boxes-by-var []}
+                   :R4 {:vars ["predict-multi-horizon" "predict" "default-horizon-steps" "evaluate-state" "push-forward"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}}
+   :fields-by-var []
+   :code-path "LIVE: T reaches R4's scorer as (:horizon-steps opts) in efe/rank-cascade-actions (efe.clj:1114; the rank opts literal at war_machine.clj:6809 carries :horizon-steps T) and bounds the push-forward rollout inside horizon-g-sparse* (trajectory at cascade_model_manifest.clj:834). RC8.4 stands: the forward_model.clj sites T's :code names are NOT on the cascade path."
+   :cause :c
+   :cause-detail "Same P2 carrier, same two limits ({T :horizon-steps} destructuring at :6499; select-keys inside policy-depth/configured). The consumer-side reads (keyword call at efe.clj:1114; the opts map literal at :6809) are forms the prover already attributes -- only the write out of cascade-family-parameters is missing. Additionally R4's :code names no var of r4-kernel (rank-cascade-actions), so even a declared :horizon-steps field to that box needs the pointer half."
+   :packet {:id :P2-T-carrier
+            :smallest "As for [:R13 :CTAU-TOKEN], plus: name rank-cascade-actions in an R4 row's :code (RC8.4 already cites efe.clj by line) so r4-kernel is R4 by var; then [:horizon-steps {:record :rank-opts}] r9-decision -> r4-kernel declares the edge once P2's destructuring form (or the equivalent :passes) lands."
+            :shares [:R13-CTAU-TOKEN :R13-CTAU-CLASS]}}
+  {:edge [:R16 :R2] :symbols #{:world :u}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R16 {:vars ["bayes-choice" "head" "law-receipt" "selection-posterior"] :boxes-by-var [:r14-selection-posterior]}
+                   :R2 {:vars ["located" "observe" "observe-fn" "observe-publication-fn"] :boxes-by-var [:r10-observe-publication :r2-tick-observe]}}
+   :fields-by-var []
+   :code-path "LIVE, two halves (E7, re-read at HEAD). (1) u: selection-posterior -> bayes-choice (cascade_selection.clj:54-176) -> select-action-cascades (policy.clj:300-566, box r9-selection-law) writes :candidate and :enacted-steps; enact-fn (flight_runner.clj, box r0-enact-step) reads :candidate -- [:candidate r9-selection-law -> r0-enact-step] is DECLARED by file. (2) world: the enactment publishes; observe-publication-fn (flight_runner.clj:702, the closure called at :881-885) is handed flight and click, NOT the enactment, and asks the store: (fetch-run-record (:click-id click)) then (:repair/publication record) -- :publication-observed comes back keyed. E7's conclusion stands: u reaches o THROUGH THE STORE, which is the equation's own shape (world exogenous), not a hop the prover misses."
+   :cause :c
+   :cause-detail "A store round-trip the join cannot credit: r10-observe-publication :reads [:repair/publication] has no writer box, because the writer is the published run record -- the world half of the edge. The u half is one pointer word away: the :u row's :code has \"(select-action-cascades:\" colon-missed by the join's var regex, so r9-selection-law is not R16 by var; re-punctuated, [:candidate r9-selection-law -> r0-enact-step] is by-var visible on the R16 end (r0-enact-step is R2 by file, and observe-fn/enactment-side boxes would still need naming for full by-var)."
+   :packet {:id :P10-u-world-attribution
+            :smallest "Two parts: (i) registry: re-punctuate the :u row so select-action-cascades matches, and record on :observe that the world half is realised through the published run record (:repair/publication), a checked attribution in the spirit of RC8.2's CODE-PATH NOTE -- not a hole. (ii) Optionally a writer box for the run-record publication so [:repair/publication {:record :run-record}] becomes a declared field into r10-observe-publication."
+            :shares []}}
+  {:edge [:R2 :R4] :symbols #{:interp}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R2 {:vars ["located" "observe" "observe-fn" "observe-publication-fn"] :boxes-by-var [:r10-observe-publication :r2-tick-observe]}
+                   :R4 {:vars ["co-apply-kernel" "evaluate-co-apply" "evaluate-state" "order-use"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}}
+   :fields-by-var []
+   :code-path "LIVE but not from R2's named sites: the cascade path reads interpretations as DECLARED SOURCE DATA -- cascade_sources.clj:290 (assoc-in [:interpretations t] ...) from the target document's :patterns and :interpretation-receipts (:265); assemble-one reads (get-in sources [:interpretations target]) (cascade_problems.clj:146, map-declared :interpretations) into the base-problem; evaluate-state dispatches on a map precedence (cascade_model_manifest.clj:412-415) and co-apply-kernel (:375-399) fires each frontier pattern's interpretation theta. The registry's placement note says interp enters as a seat's answer read by flight_runner/agency-answer-fn (box r3-flight-ask, :writes [:library-root]); the live interpreter on the sources path is want_interpretation/merge-published (want_interpretation.clj:452, box ask-merge-published, :writes [:interpretations]) -- and want_interpretation.clj is named by NO R2 row, so fields-by-file is empty."
+   :cause :e
+   :cause-detail "Two mismatches, recorded not decided: (i) the registry's own :interp note says placement at R2 is 'a choice, recorded per TN-edge-review section 1 standard 3 and movable by editing this one field', and names the flight-side answer path while the live carrier is the source document's declared receipts; (ii) whichever placement stands, R2's rows name no var on the live carrier (merge-published / cascade_sources), so the join has nothing to credit. The alternative placement (R6) would DELETE this edge and [:R2 :R6] -- the note says so itself."
+   :packet {:id :P6-interp-siting
+            :smallest "A registry decision first (the :interp note flags it as movable): either re-site :interp at R6 (removing both interp edges, theory edges 40 -> 38 by the note's own arithmetic), or keep R2 and name the live carrier's vars (want_interpretation/merge-published, cascade_sources) in an R2 row. If kept: field :interpretations ask-merge-published -> construction-assemble-one is already map-declared at both boxes; only the node join is missing."
+            :shares [:R2-R6]}}
+  {:edge [:R2 :R6] :symbols #{:interp}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R2 {:vars ["located" "observe" "observe-fn" "observe-publication-fn"] :boxes-by-var [:r10-observe-publication :r2-tick-observe]}
+                   :R6 {:vars ["bayes-choice" "containment-order" "law-receipt" "select-action-cascades" "selection-posterior" "selection-scores" "softmax-weights"] :boxes-by-var [:r14-selection-posterior :r4-constructor :r7-selection :r9-selection-law]}}
+   :fields-by-var []
+   :code-path "LIVE, same carrier as [:R2 :R4]: :r (containment-order, construction.clj:113-230, box r4-constructor -- R6 by var) derives the order 'from the interpretations' produces/consumes'; interpretation_construction/construct (box construction-construct) reads :interpretations (map-declared) and writes :construction-receipt. The interpretations enter the sources exactly as for [:R2 :R4] (cascade_sources.clj:290; merge-published)."
+   :cause :e
+   :cause-detail "Identical siting question as [:R2 :R4]: the consumer box r4-constructor IS R6 by var, so this edge is closer than its sibling -- with the R2-side carrier named, the declared [:interpretations ...] field needs only a writer joinable to R2. The registry note's own alternative (R6) makes this edge a self-edge and removes it."
+   :packet {:id :P6-interp-siting
+            :smallest "The same registry decision as [:R2 :R4]. If R2 stands: name the carrier vars in an R2 row and declare :interpretations (or a scoped record) from ask-merge-published / a cascade_sources box to r4-constructor (r4-constructor currently declares no reads; its docstring says the order is derived from the interpretations)."
+            :shares [:R2-R4]}}
+  {:edge [:R2 :R7] :symbols #{:o :ref-label}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R2 {:vars ["located" "observe" "observe-fn" "observe-publication-fn"] :boxes-by-var [:r10-observe-publication :r2-tick-observe]}
+                   :R7 {:vars ["cell" "measured-cell" "rates-by-class" "sourced-rates" "update-precision-state" "weighted-error"] :boxes-by-var [:r6-cascade-lane :r6-sourced-rates :r7-weighted-error]}}
+   :fields-by-var []
+   :code-path "LIVE, a stamped store round-trip (the second :rates row, added 2026-09-26): observation_checks/loaded-check (observation_checks.clj:551-610) stamps observe results and known refusals with the check identity; the subject copies the stamp and observation_label_reader.clj:10-61 matches the active descriptor exactly (wrong names mechanism-mismatch, older identities obsolete); observation_label_store admits; the tick reads the store through label-reader/read-rates-inputs (war_machine.clj:6147, inside observation-label-view :6143) and cascade-lane calls observation-rates/sourced-rates with those labels (:5972-5975). WM-SUPERSET-D section 3's 'to confirm' is answered at HEAD: the counts come from the label store's admitted labels, themselves stamped check verdicts against reference labels -- o and ref-label enter rates through that store, not through any var R2's :code names."
+   :cause :b
+   :cause-detail "Boxes exist by file on both sides (c8-entry / c8-latest / c8-registry-get on observation_checks.clj; r6-sourced-rates by var on the R7 end) but no declared field carries the stamped verdict or the admitted label between an R2 box and an R7 box: the map has no box for the label store's write (observation_label_store/admit) or read (read-rates-inputs), and R2's named vars (observe, observe-fn, observe-publication-fn) are not the stamping var (loaded-check)."
+   :packet {:id :P7-label-store-wire
+            :smallest "Two boxes and one field: r2-loaded-check (observation_checks/loaded-check) :writes the stamped verdict record; r7-label-store-read (observation_label_reader/read-rates-inputs, or the label store's admit) :reads it; declare the field on the label record (e.g. [:labels {:record :rates-inputs}]) into r6-sourced-rates' input. Name loaded-check in the :o row's :code so the R2 end joins by var."
+            :shares []}}
+  {:edge [:R3 :R1] :symbols #{:s-next}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R3 {:vars ["apply-arena-belief-events" "r3d-aggregate-driver" "update-belief-batch"] :boxes-by-var [:r3-aggregate-driver :r3-apply-belief-events]}
+                   :R1 {:vars ["reconcile-belief-carry" "stage" "initial-belief-state" "most-likely-status"] :boxes-by-var [:r1-belief-carry]}}
+   :fields-by-var []
+   :code-path "LIVE (E2, re-read at HEAD): belief' = apply-arena-belief-events (war_machine.clj:7369) is stored under :belief in judge's loop-terminal literal; trace/trace-record writes it as :mu-post on the trace record (map-declared [[:mu-post {:record :trace}]]); next tick judge reads (:mu-post prev-trace-record) inline and hands it to reconcile-belief-carry arg 2 (:7222). The map already declares the last hop: r7-fold-call :passes :carried-mu-post from {:keyed-read [:mu-post :trace]} to r1-belief-carry, and r7-fold-call :writes [:carried-mu-post]."
+   :cause :a
+   :cause-detail "As [:R1 :R3], mirrored: the declared passes-wire's writer is judge's box, and judge is not joinable to R3 -- R3's :code cites war_machine.clj:6147-6190, a LINE SPAN that has DRIFTED: at HEAD :6147-6190 is inside observation-label-view / observation-label-inputs (:6143/:6150), not the tick's inner step (judge :7271-7369). E2-a's caveat stands: the :belief writer is a literal in a loop's return position, which return-maps does not enter -- the map works around it with judge's declared :writes, so the pointer is the only missing piece."
+   :packet {:id :P1-name-judge
+            :smallest "Registry-only: name judge in R3's :code (replacing the drifted span). The existing :carried-mu-post write and :passes entry on r7-fold-call then credit r7-fold-call -> r1-belief-carry and the edge is :declared."
+            :shares [:R1-R3 :R1-R3a]}}
+  {:edge [:R3a :R3] :symbols #{:eps}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R3a {:vars ["channel-prediction-error" "compute-prediction-error"] :boxes-by-var [:r3a-channel-prediction-error :r3a-prediction-error]}
+                   :R3 {:vars ["apply-arena-belief-events" "r3d-aggregate-driver" "update-belief-batch"] :boxes-by-var [:r3-aggregate-driver :r3-apply-belief-events]}}
+   :fields-by-var []
+   :code-path "LIVE, and eps reaches R3 ONLY weighted (WM-SUPERSET-D section 4, re-confirmed): compute-prediction-error (free_energy.clj:203-278) returns the typed triple with a literal :error key (map-declared [[:error {:record :prediction-error}]]); precision/weighted-error (:212-233) reads (:error error-map) and overwrites the precision (map-declared [:weighted-error] r7-weighted-error -> r3-aggregate-driver); r3d-aggregate-driver (belief.clj:1122-1197) reads (:weighted-error %) -- map-declared. Both hops are declared between by-var boxes; what is missing is only that the join does not compose them."
+   :cause :c
+   :cause-detail "A join limit, not a prover limit: every hop is already declared at var grain, but the join credits single fields between the two endpoint box sets and has no composition (an :enters-through-:Pi-style attribution). eps never crosses R3a -> R3 directly, so no one-field declaration can be truthful."
+   :packet {:id :P9-eps-composition
+            :smallest "A join/registry form for checked composition -- e.g. the join accepts a two-edge path R3a -> R7 -> R3 when both fields are declared and the middle node is the edge's own equation's importer chain (eps -> Pi -> mu-next), or a registry attribution note on :mu-next that eps enters as :weighted-error through R7 (the shape RC8.2 used for :belief-state). No code or map change."
+            :shares []}}
+  {:edge [:R4 :R5] :symbols #{:A :Q-o-pi}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R4 {:vars ["evaluate-state" "push-forward" "predict-multi-horizon" "token-likelihood"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}
+                   :R5 {:vars ["horizon-g" "horizon-g-sparse" "horizon-g-sparse-cert" "rank-cascade-actions"] :boxes-by-var [:r4-kernel :r5-g-sparse-cert]}}
+   :fields-by-var []
+   :code-path "LIVE (E6, re-read at HEAD): inside horizon-g-sparse* (cascade_model_manifest.clj:808+), trajectory = (trajectory/predictive-steps push-forward precedence-fn q0 record?) (:834) -- push-forward, R4's kernel step, passed AS A FUNCTION VALUE; predictive-steps (conditioned_trajectory.clj:200-212) calls it and conses step literals {:tau tau :belief next-q ...}; horizon-g-sparse* reads q = (:belief step) (:901, :1001) and hands q positionally to outcome-risk-pointwise (:755, called :909) / marginals. WM-NODE-R4-I's record stands: 'E6, R4->R5, :via-param, the prover form that does not exist'."
+   :cause :c
+   :cause-detail "Two named prover limits in sequence: (i) a function value passed as an argument (push-forward as transition) -- no :passes form names a function-valued port; (ii) the element read off the lazy sequence's step literal (:belief, written inside conditioned_trajectory, which no R4/R5 row names) and the positional q into outcome-risk-pointwise. The declared [:kernel {:record :evaluation}] r4-evaluate-state -> r4-push-forward is intra-R4 by var."
+   :packet {:id :P8-E6-function-value
+            :smallest "Either the E6 prover form (:via-param: credit a var passed as a function value, and a destructure/keyword read off an element of its returned sequence), or a map packet: box conditioned_trajectory/predictive-steps :writes [[:belief {:record :trajectory-step}]], r5-g-sparse-cert :reads+ it -- which also needs the Q-o-pi row to name conditioned_trajectory.clj so the by-var join sees the middle box. The prover form is the honest fix; the box alone leaves the function-value hop uncredited."
+            :shares []}}
+  {:edge [:R4 :R7] :symbols #{:A}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R4 {:vars ["token-likelihood" "tempered-rates" "observation-distribution"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}
+                   :R7 {:vars ["cell" "measured-cell" "rates-by-class" "sourced-rates" "update-precision-state" "weighted-error"] :boxes-by-var [:r6-cascade-lane :r6-sourced-rates :r7-weighted-error]}}
+   :fields-by-var []
+   :code-path "LIVE but guarded to the identity (RC9's pointer, re-read at HEAD): :zeta's :code names likelihood_precision/tempered-rates (likelihood_precision.clj:143-182), called on the live cascade path inside horizon-g-sparse* (cascade_model_manifest.clj:830) -- and the call is GUARDED (:829-830): when zeta = 1 (the declared value; omission selects the default), a malformed rate token, or all-zero rates, rates pass through UNCHANGED ('byte-identical discipline'). So A reaches R7's row as the zeta-tempered rates, and at the declared zeta = 1 the wire is the identity. WM-NOPATH-RECONCILE-D's 'the wire is live and is the identity at the declared zeta = 1' stands."
+   :cause :a
+   :cause-detail "RC9's pointer landed in :zeta's :code but the join cannot see it: (i) the regex misses \"(tempered-rates:\" (colon after the name) -- so R7's var list lacks tempered-rates while R4's HAS it (the :A-tok row's \"(tempered-rates,\" with a comma); the same var is credited to the WRONG NODE by punctuation alone; (ii) no box has tempered-rates as :site :var. A sub-question for <2>2b's owner: whether a guarded-identity wire counts as realised at zeta = 1 -- that is a ruling, not a reading."
+   :packet {:id :P4-tempered-rates-box
+            :smallest "Re-punctuate :zeta's :code so tempered-rates matches on the R7 side (it is R7's row; today the var lands on R4). Box likelihood_precision/tempered-rates :reads [[:rates {:record :sourced-rates}]] :writes [:tempered-rates], read by r5-g-sparse-cert (the :830 call) -- with the guard recorded on the box. If the ruling says an identity-at-zeta-1 wire is not a realisation, this becomes a :holes entry with this discovery as the packet instead."
+            :shares [:R7-R4]}}
+  {:edge [:R7 :R4] :symbols #{:rates}
+   :by-var :boxed-no-field
+   :endpoint-vars {:R7 {:vars ["cell" "measured-cell" "rates-by-class" "sourced-rates"] :boxes-by-var [:r6-cascade-lane :r6-sourced-rates :r7-weighted-error]}
+                   :R4 {:vars ["token-likelihood" "observation-distribution" "tempered-rates"] :boxes-by-var [:r4-coapply :r4-evaluate-state :r4-order-use :r4-push-forward :r4-token-likelihood]}}
+   :fields-by-var []
+   :code-path "LIVE (E5, re-read at HEAD): cascade-lane calls sourced-rates (war_machine.clj:5974-5975) and hands :adjudication-rates to rank-cascade-actions, which reads (:adjudication-rates opts) (efe.clj:1171), builds local rates (:1172-1181: zero kernel / declared map / typed refusal) and passes {:rates rates ...} in a map literal (:1222) to horizon-g-sparse-cert; horizon-g-sparse* destructures rates in its parameter list and reads (get rates v) per token (:1030, :1053). E5's correction stands: the :A-tok row's NAMED site token-likelihood is NOT called from horizon-g-sparse* (its callers are the non-sparse horizon-g, the retired token-belief-at, and the F-pi path). The map already declares [:adjudication-rates r6-cascade-lane -> r4-kernel] and r4-kernel :writes [:rates]."
+   :cause :a
+   :cause-detail "A pure pointer correction: the live A-consumer on the sparse path (rank-cascade-actions handing rates to horizon-g-sparse*) is named in no R4 row's :code; the named site (token-likelihood, boxed as r4-token-likelihood) is not live on that path. The declared field [:adjudication-rates r6-cascade-lane -> r4-kernel] already exists -- r6-cascade-lane is R7 by var, only r4-kernel's membership in R4-by-var is missing."
+   :packet {:id :P4-A-tok-pointer
+            :smallest "Registry-only: one sentence in :A-tok's :code naming rank-cascade-actions (and/or horizon-g-sparse-cert) as the live sparse-path consumer, per E5. The existing declared field then makes the edge :declared by var. Optionally r5-g-sparse-cert :reads+ [:rates] with the cert -> sparse* positional forward recorded (E5-middle) for the deeper hop."
+            :shares [:R4-R7]}}]
+ :packets
+ [{:id :P1-name-judge :edges [[:R1 :R3] [:R3 :R1] [:R1 :R3a]] :kind :registry-pointer
+   :note "Name judge in R1's and R3's :code (both cited war_machine spans have drifted: R1's 6969-6974 is now candidate-want-progress; R3's 6147-6190 is now observation-label-view/-inputs; judge is at 7110, carry :7222, inner step :7271-7369). [:R1 :R3a] additionally needs one :passes on r7-fold-call for the predict-observation hop."}
+  {:id :P2-T-carrier :edges [[:R13 :R4] [:R13 :CTAU-TOKEN] [:R13 :CTAU-CLASS]] :kind :pointer+prover+map
+   :note "R13 :code re-cited to the cascade path (resolve-cascade-horizon, policy-depth/configured, assemble-one, cascade-family-parameters); the JOIN-GRAIN-D destructuring-read form ({T :horizon-steps} at war_machine.clj:6499) or :passes; select-keys in configured; r9-decision/r4-kernel :horizon-steps declarations; class-observation-model and class-scorer boxes for CTAU-CLASS; regex-safe punctuation in the C-class and C-tau rows."}
+  {:id :P3-c-tau-schedule-field :edges [[:CTAU-TOKEN :R5]] :kind :map-field :note "Declare [:c-schedule {:record :cascade-spec}] construction-assemble-one -> the R5 scorer box."}
+  {:id :P4-rates-pointers :edges [[:R7 :R4] [:R4 :R7]] :kind :registry-pointer+box
+   :note "[:R7 :R4]: name the live consumer in :A-tok's :code (one sentence; existing declared field flips it). [:R4 :R7]: re-punctuate :zeta's tempered-rates mention, box tempered-rates, and get the guarded-identity ruling."}
+  {:id :P5-token-belief-wire :edges [[:R1 :R4]] :kind :box+field+pointer}
+  {:id :P6-interp-siting :edges [[:R2 :R4] [:R2 :R6]] :kind :registry-decision-first}
+  {:id :P7-label-store-wire :edges [[:R2 :R7]] :kind :boxes+field}
+  {:id :P8-E6-function-value :edges [[:R4 :R5]] :kind :prover-form}
+  {:id :P9-eps-composition :edges [[:R3a :R3]] :kind :join-form-or-attribution}
+  {:id :P10-u-world-attribution :edges [[:R16 :R2]] :kind :pointer+checked-attribution}]
+ :findings
+ ["JOIN-GRAIN: the join's var regex #\"\\(([a-z][a-z0-9-]*[a-z0-9][!?]?)[,) ]\" misses a var followed by a colon. Four rows lose vars this way: :zeta (tempered-rates -- which the :A-tok row simultaneously credits to R4 via a comma; the same var lands on different nodes by punctuation), :C-tau (assemble-one), :C-class (class-observation-model), :u (select-action-cascades). horizon-g-sparse* also never matches (* is not [!?])."
+  "DRIFTED SPANS: three war_machine.clj line spans in the registry no longer land where cited: R1's 6969-6974 (now candidate-want-progress, defn :6959; the carry is judge :7222), R3's 6147-6190 (now observation-label-view/-inputs :6143/:6150; the inner step is judge :7271-7369), R13's 6283-6285 (now resolve-cascade-horizon's computed-rule literal). Line spans in :code rot; var names do not."
+  "TWO rank-cascade-actions vars exist at HEAD: efe.clj:1066 (the token scorer, box r4-kernel) and cascade_observation_scoring.clj:135 (the class scorer). The join's box-by-var is keyed on the bare var name; a box on the class scorer would collide under the current keying."
+  "WM-SUPERSET-D's two 'to confirm' items resolve at HEAD: assemble-one sets :horizon-steps from its horizon argument (cascade_problems.clj:164, from assemble's sources read -- map-declared); the R2->R7 counts come from the label store's admitted stamped labels (war_machine.clj:6147, :5972-5975), not directly from C8 registry entries (the C8 arm is one of the stamped check identities)."]}
