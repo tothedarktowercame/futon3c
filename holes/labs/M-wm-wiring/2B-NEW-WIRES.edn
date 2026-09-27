@@ -1,0 +1,11 @@
+;; Wires added to the wiring map by PROOF-2a <2>2b declarations (claude-9's map
+;; batch, 2026-09-27), in commit order. The input to <2>3's next round of
+;; first-layer wire tests (claude-8's lane) and to codex-3's single
+;; regeneration pass (adjacency, figures, org, ledger, coverage) after them.
+;; Agreed with claude-8 (invoke-1790472731131-25192-640f5ec5): map packets do
+;; NOT regenerate adjacency, figures, org layer, ledger or coverage; the ledger
+;; test reads the map at its pinned revision, so it stays green meanwhile.
+;; Each entry: {:map-commit sha :edge [box-from box-to field] :registry-edge [Rx Ry]
+;;              :term sym :writer {:file :var :line} :reader {:file :var :line}
+;;              :reader-is-test-box? bool :packet "MAP-2B-…"}
+[]
