@@ -60,6 +60,10 @@
    {:id "run-time-require" :old "(ns run-time-require) (defn called [] 1)" :new "(ns run-time-require) (defn called [] 2)"
     :test "(ns consumer) (defn check [] (require 'run-time-require) ((resolve 'called)))"
     :class :stale-closure :reason :changed-definition-reachable}
+   ;; a consumer using ::alias/key and a tagged literal is still readable
+   {:id "aliased-keyword" :old "(ns aliased-keyword) (defn called [] 1)" :new "(ns aliased-keyword) (defn called [] 2)"
+    :test "(ns consumer (:require [elsewhere :as e])) (defn check [] [::e/k #inst \"2026-01-01\" #unknown/tag {:a 1}])"
+    :class :current-by-form :reason :changed-definitions-unreachable}
    {:id "quoted" :old "(ns quoted) (defn called [] 1)" :new "(ns quoted) (defn called [] 2)"
     :test "(ns consumer) (defn check [] ((requiring-resolve 'quoted/called)))"
     :class :stale-closure :reason :changed-definition-reachable}])

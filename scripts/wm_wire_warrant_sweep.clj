@@ -58,12 +58,16 @@
                                 (when (meta %) [(meta %)])) form))))
 
 (defn parse-source [text]
-  ;; No evaluation, namespace loading or alias mutation. Unknown reader aliases
-  ;; and tags refuse the audit; source text avoids generated fn-symbol drift.
+  ;; No evaluation, namespace loading or alias mutation; source text avoids
+  ;; generated fn-symbol drift.
   (if-let [hit (get (when *parse-cache* @*parse-cache*) text)] hit
     (let [result
           (try
-            (binding [reader/*read-eval* false]
+            ;; ::alias/key and #tag are read without resolving them: an alias
+            ;; stands for itself and a tagged value keeps its tag.
+            (binding [reader/*read-eval* false
+                      reader/*alias-map* (fn [a] a)
+                      reader/*default-data-reader-fn* tagged-literal]
               (let [r (readers/source-logging-push-back-reader text)]
                 (loop [forms []]
                   (let [[f raw] (reader/read+string {:eof ::eof :read-cond :preserve} r)]
