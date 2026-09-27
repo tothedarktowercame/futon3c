@@ -47,6 +47,9 @@ def main():
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--set-job", nargs=2, metavar=("RECORD", "JOB_ID"),
                     help="record the job a dispatch created, so it can be traced later")
+    ap.add_argument("--retry", metavar="RECORD",
+                    help="put a failed/refused record back to `requested` before "
+                         "re-dispatching it to another seat; the old attempt is kept")
     a = ap.parse_args()
 
     if a.set_job:
@@ -55,6 +58,17 @@ def main():
         d.setdefault("analysis_dispatch", {})["job_id"] = jid
         json.dump(d, open(rec, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(f"{os.path.basename(rec)}: job {jid}")
+        return
+
+    if a.retry:
+        d = json.load(open(a.retry, encoding="utf-8"))
+        disp = d.setdefault("analysis_dispatch", {})
+        old = {k: disp.pop(k) for k in ("job_id", "outcome") if k in disp}
+        if old:
+            disp.setdefault("attempts", []).append(old)
+        d["analysis_status"] = "requested"
+        json.dump(d, open(a.retry, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"{os.path.basename(a.retry)}: requested again")
         return
 
     files = a.files or [f for f in sorted(glob.glob(RECORDS))

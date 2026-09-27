@@ -316,6 +316,55 @@ that no agent mistakes it for a kimi-N available for ordinary dispatch --
   :type '(choice (const :tag "The receiving agent" nil) string)
   :group 'session-mode)
 
+(defcustom session-mode-analysis-alternate "象-sonnet"
+  "Seat that takes turn analysis while `session-mode-analysis-agent' is out
+of quota, and the other way round (Joe, 2026-09-27).  象 is Kimi; this one
+is Sonnet, so a five-hour usage limit on either provider leaves the other
+working.  Reserved like 象: a claude-N id could be reclaimed by
+/agents/auto.  nil disables failover."
+  :type '(choice (const :tag "No failover" nil) string)
+  :group 'session-mode)
+
+(defcustom session-mode-analysis-bench-minutes 60
+  "How long a seat that hit its usage limit is passed over.
+After this the seat is tried again; if it is still limited the dispatch
+fails over once more, quietly."
+  :type 'integer
+  :group 'session-mode)
+
+(defvar session-mode--analysis-benched nil
+  "Alist of (AGENT . TIME): seats out of quota, not to be used before TIME.")
+
+(defun session-mode--analysis-benched-p (agent)
+  "Non-nil if AGENT hit its usage limit and its bench has not expired."
+  (let ((until (alist-get agent session-mode--analysis-benched nil nil #'equal)))
+    (and until (time-less-p nil until))))
+
+(defun session-mode--bench-analysis-seat (agent)
+  "Pass over AGENT for `session-mode-analysis-bench-minutes'."
+  (setf (alist-get agent session-mode--analysis-benched nil nil #'equal)
+        (time-add nil (* 60 session-mode-analysis-bench-minutes))))
+
+(defun session-mode--analysis-other-seat (agent)
+  "The seat that is not AGENT, among the analysis seat and its alternate."
+  (if (equal agent session-mode-analysis-agent)
+      session-mode-analysis-alternate
+    session-mode-analysis-agent))
+
+(defun session-mode--analysis-seat ()
+  "The seat to dispatch to now: the analysis agent unless it is benched."
+  (let ((primary session-mode-analysis-agent)
+        (alternate session-mode-analysis-alternate))
+    (if (and alternate
+             (session-mode--analysis-benched-p primary)
+             (not (session-mode--analysis-benched-p alternate)))
+        alternate
+      primary)))
+
+(defun session-mode--quota-failure-p (out)
+  "Non-nil if reaper output OUT says the seat ran out of usage."
+  (string-match-p "usage limit\\|quota\\|HTTP 429\\|rate.limit" out))
+
 (defcustom session-mode-analysis-reset-every 20
   "Clear the analysis seat's conversation after this many dispatches.
 Each brief carries the whole instruction, so a fresh conversation is fully
@@ -403,9 +452,11 @@ bell was accepted, not that the turn was interpreted.")
   (call-process "python3" nil nil nil
                 session-mode--dispatch-reaper "--set-job" path job-id))
 
-(defun session-mode--reap-dispatch (path)
+(defun session-mode--reap-dispatch (path &optional agent)
   "Ask what became of PATH's dispatch and write the answer onto the record.
-A refusal and a busy seat both left `requested' before this existed."
+A refusal and a busy seat both left `requested' before this existed.
+AGENT is the seat it went to: if that seat ran out of usage, bench it and
+send the turn to the other seat instead of warning."
   (let ((buf (generate-new-buffer " *session-analysis-reap*")))
     (make-process
      :name "session-analysis-reap" :buffer buf :noquery t
@@ -414,6 +465,20 @@ A refusal and a busy seat both left `requested' before this existed."
                    (with-current-buffer (process-buffer proc)
                      (let ((out (string-trim (buffer-string))))
                        (cond
+                        ((and agent
+                              (string-match-p "REFUSED\\|FAILED" out)
+                              (session-mode--quota-failure-p out)
+                              (let ((other (session-mode--analysis-other-seat agent)))
+                                (session-mode--bench-analysis-seat agent)
+                                (when (and other
+                                           (not (session-mode--analysis-benched-p other)))
+                                  (call-process "python3" nil nil nil
+                                                session-mode--dispatch-reaper
+                                                "--retry" path)
+                                  (message "象: %s is out of usage; %s now takes turn analysis"
+                                           agent other)
+                                  (session-mode--dispatch-analysis path other)
+                                  t))))
                         ((string-match-p "REFUSED\\|FAILED" out)
                          (session-mode--set-analysis-health
                           'failing (format "%s: job refused or failed"
@@ -433,12 +498,14 @@ A refusal and a busy seat both left `requested' before this existed."
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
 
-(defun session-mode--dispatch-analysis (path)
-  "Ask `session-mode-analysis-agent' to interpret the turn recorded at PATH.
+(defun session-mode--dispatch-analysis (path &optional agent)
+  "Ask AGENT to interpret the turn recorded at PATH.
+AGENT defaults to `session-mode--analysis-seat': the analysis agent, or
+its alternate while the analysis agent is out of usage.
 Fire and forget: the dispatch must not delay the conversation, and a seat
 that is busy or absent leaves the record `requested', which is the honest
 state -- never silently complete."
-  (let* ((agent session-mode-analysis-agent)
+  (let* ((agent (or agent (session-mode--analysis-seat)))
          (brief (concat
                  ;; A requisition line, because a seat may refuse work without
                  ;; one. kimi-1 began refusing on 2026-09-24 and every dispatch
@@ -559,11 +626,11 @@ state -- never silently complete."
                  (progn
                    (session-mode--set-analysis-health
                     'failing (format "dispatch to %s %s"
-                                     session-mode-analysis-agent (string-trim event)))
+                                     agent (string-trim event)))
                   (display-warning
                   'session-mode
                   (format "Analysis dispatch to %s failed (%s). The record stays `requested'.\n%s"
-                          session-mode-analysis-agent (string-trim event)
+                          agent (string-trim event)
                           (with-current-buffer (process-buffer proc)
                             (string-trim (buffer-string))))
                   :warning))
@@ -581,7 +648,7 @@ state -- never silently complete."
                    (let ((jid (match-string 1 out)))
                      (session-mode--record-dispatch-job path jid)
                      (run-at-time session-mode-analysis-reap-after nil
-                                  #'session-mode--reap-dispatch path)))))
+                                  #'session-mode--reap-dispatch path agent)))))
              (when (buffer-live-p (process-buffer proc))
                (kill-buffer (process-buffer proc)))))
          :command (list "sh" "-c"
