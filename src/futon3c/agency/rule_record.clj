@@ -5,6 +5,7 @@
    CLI defaults to validation only; --write appends and verifies the returned id."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
+            [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.rule-timeline :as timeline])
   (:import [java.net URI URLEncoder]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
@@ -69,17 +70,19 @@
 (defn payload
   "Always opt into minting. No caller can supply an existing hyperedge id or op.
    The optional delivery key is passed to P6b's durable idempotency authority."
-  [{:keys [record valid-from idempotency-key] :as request}]
-  (when-not (and (map? request) (every? #{:record :valid-from :idempotency-key} (keys request)))
-    (refuse! :request "Unknown write options (existing ids and operations are forbidden)"))
-  (validate! record)
-  (instant! :valid-from valid-from)
-  (when (contains? request :idempotency-key) (text! :idempotency-key idempotency-key))
-  (cond-> {:hx/type :rule/record :hx/mint-id true :hx/valid-time valid-from
-           :hx/endpoints (cond-> [(str "rule:" (:rule/key record))]
-                           (:rule/incident record) (conj (get-in record [:rule/incident :ref/id])))
-           :hx/props (assoc record :rule/schema 1 :rule/valid-from valid-from)}
-    idempotency-key (assoc :hx/idempotency-key idempotency-key)))
+  ([request] (payload request (act-harness/plain "cli:futon3c.agency.rule-record")))
+  ([{:keys [record valid-from idempotency-key] :as request} harness]
+   (when-not (and (map? request) (every? #{:record :valid-from :idempotency-key} (keys request)))
+     (refuse! :request "Unknown write options (existing ids and operations are forbidden)"))
+   (validate! record)
+   (instant! :valid-from valid-from)
+   (when (contains? request :idempotency-key) (text! :idempotency-key idempotency-key))
+   (cond-> {:hx/type :rule/record :hx/mint-id true :hx/valid-time valid-from
+            :hx/endpoints (cond-> [(str "rule:" (:rule/key record))]
+                            (:rule/incident record) (conj (get-in record [:rule/incident :ref/id])))
+            :hx/props (assoc record :rule/schema 1 :rule/valid-from valid-from
+                             :act/harness (act-harness/validate! harness))}
+     idempotency-key (assoc :hx/idempotency-key idempotency-key))))
 
 (defn request!
   "EDN transport preserves keyword-valued properties. Errors never look like a receipt."
@@ -100,33 +103,35 @@
 (defn write!
   "Append one validated act, then read by returned id. Existing keyed acts are
    acknowledged by P6b, never updated; conflicting keys fail in the store."
-  [base request]
-  (let [p (payload request)
-        receipt (request! base "POST" "/api/alpha/hyperedge" p)
-        id (:hx/id receipt)]
-    (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
-      (throw (ex-info "Missing minted rule receipt" receipt)))
-    (let [path (str "/api/alpha/hyperedges?type=rule%2Frecord&limit=1000&end="
-                    (URLEncoder/encode (first (:hx/endpoints p)) "UTF-8")
-                    "&valid-as-of=" (URLEncoder/encode (:valid-from request) "UTF-8"))
-          page (request! base "GET" path nil)
-          matches (filter #(= id (:hx/id %)) (:hyperedges page))
-          _ (when-not (= 1 (count matches))
-              (throw (ex-info "Minted rule not found at valid time" {:id id :valid-from (:valid-from request)})))
-          stored (first matches)]
-      (when-not (= (select-keys p [:hx/type :hx/endpoints :hx/props])
-                   (select-keys stored [:hx/type :hx/endpoints :hx/props]))
-        (throw (ex-info "Rule readback mismatch" {:id id})))
-      (assoc receipt :verified? true))))
+  ([base request]
+   (write! base request (act-harness/plain "cli:futon3c.agency.rule-record")))
+  ([base request harness]
+   (let [p (payload request harness)
+         receipt (request! base "POST" "/api/alpha/hyperedge" p)
+         id (:hx/id receipt)]
+     (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
+       (throw (ex-info "Missing minted rule receipt" receipt)))
+     (let [path (str "/api/alpha/hyperedges?type=rule%2Frecord&limit=1000&end="
+                     (URLEncoder/encode (first (:hx/endpoints p)) "UTF-8")
+                     "&valid-as-of=" (URLEncoder/encode (:valid-from request) "UTF-8"))
+           page (request! base "GET" path nil)
+           matches (filter #(= id (:hx/id %)) (:hyperedges page))
+           _ (when-not (= 1 (count matches))
+               (throw (ex-info "Minted rule not found at valid time" {:id id :valid-from (:valid-from request)})))
+           stored (first matches)]
+       (when-not (= (select-keys p [:hx/type :hx/endpoints :hx/props])
+                    (select-keys stored [:hx/type :hx/endpoints :hx/props]))
+         (throw (ex-info "Rule readback mismatch" {:id id})))
+       (assoc receipt :verified? true)))))
 
 (defn -main [& args]
   (try
-    (let [[write? file] (if (= "--write" (first args)) [true (second args)] [false (first args)])
-          _ (when-not (and file (= (count args) (if write? 2 1)))
-              (throw (ex-info "Usage: rule-record [--write] FILE.edn" {})))
+    (let [{:keys [write? file harness]}
+          (act-harness/parse-cli args "cli:futon3c.agency.rule-record"
+                                 "Usage: rule-record [--write] [--harness-kind KIND --harness-execution-id ID] FILE.edn")
           request (edn/read-string (slurp file))]
-      (prn (if write? (write! (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073") request)
-               {:ok true :dry-run? true :payload (payload request)}))
+      (prn (if write? (write! (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073") request harness)
+               {:ok true :dry-run? true :payload (payload request harness)}))
       (shutdown-agents))
     (catch Exception e
       (binding [*out* *err*] (prn {:ok false :message (.getMessage e) :detail (ex-data e)}))

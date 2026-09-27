@@ -6,6 +6,7 @@
             [clojure.data.json :as json]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.rule-record :as store])
   (:import [java.time Instant]
            [java.net URLEncoder]))
@@ -70,15 +71,19 @@
     (instant! :clearance/provenance (:recorded-at p)))
   r)
 
-(defn payload [{:keys [record valid-from idempotency-key] :as request} context]
-  (when-not (exact? request #{:record :valid-from :idempotency-key}) (refuse! :request))
-  (validate! record context)
-  (instant! :valid-from valid-from)
-  (when-not (text? idempotency-key) (refuse! :idempotency-key))
-  {:hx/type :incident/clearance :hx/mint-id true :hx/valid-time valid-from
-   :hx/idempotency-key idempotency-key
-   :hx/endpoints (into [(:clearance/incident record)] (get-in record [:clearance/measures-can-end :ids]))
-   :hx/props (assoc record :clearance/schema 1 :clearance/valid-from valid-from)})
+(defn payload
+  ([request context]
+   (payload request context (act-harness/plain "cli:futon3c.agency.incident-clearance")))
+  ([{:keys [record valid-from idempotency-key] :as request} context harness]
+   (when-not (exact? request #{:record :valid-from :idempotency-key}) (refuse! :request))
+   (validate! record context)
+   (instant! :valid-from valid-from)
+   (when-not (text? idempotency-key) (refuse! :idempotency-key))
+   {:hx/type :incident/clearance :hx/mint-id true :hx/valid-time valid-from
+    :hx/idempotency-key idempotency-key
+    :hx/endpoints (into [(:clearance/incident record)] (get-in record [:clearance/measures-can-end :ids]))
+    :hx/props (assoc record :clearance/schema 1 :clearance/valid-from valid-from
+                     :act/harness (act-harness/validate! harness))}))
 
 (defn live-context!
   "Read-only P0 capture. Shares exact origin/backfill rules and system-as-of pin.
@@ -88,31 +93,35 @@
     (when-not (zero? exit) (throw (ex-info "P0 context query failed" {:exit exit :stderr err})))
     (json/read-str out :key-fn keyword)))
 
-(defn write! [base request context]
-  (let [p (payload request context)
-        receipt (store/request! base "POST" "/api/alpha/hyperedge" p)
-        id (:hx/id receipt)]
-    (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
-      (throw (ex-info "Missing minted clearance receipt" receipt)))
-    (let [page (store/request! base "GET"
-                              (str "/api/alpha/hyperedges?type=incident%2Fclearance&limit=1000&end="
-                                   (URLEncoder/encode (:clearance/incident (:record request)) "UTF-8")
-                                   "&valid-as-of=" (URLEncoder/encode (:valid-from request) "UTF-8")) nil)
-          matches (filter #(= id (:hx/id %)) (:hyperedges page))]
-      (when-not (and (= 1 (count matches))
-                     (= (select-keys p [:hx/type :hx/endpoints :hx/props])
-                        (select-keys (first matches) [:hx/type :hx/endpoints :hx/props])))
-        (throw (ex-info "Clearance readback mismatch" {:id id})))
-      (assoc receipt :verified? true))))
+(defn write!
+  ([base request context]
+   (write! base request context (act-harness/plain "cli:futon3c.agency.incident-clearance")))
+  ([base request context harness]
+   (let [p (payload request context harness)
+         receipt (store/request! base "POST" "/api/alpha/hyperedge" p)
+         id (:hx/id receipt)]
+     (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
+       (throw (ex-info "Missing minted clearance receipt" receipt)))
+     (let [page (store/request! base "GET"
+                               (str "/api/alpha/hyperedges?type=incident%2Fclearance&limit=1000&end="
+                                    (URLEncoder/encode (:clearance/incident (:record request)) "UTF-8")
+                                    "&valid-as-of=" (URLEncoder/encode (:valid-from request) "UTF-8")) nil)
+           matches (filter #(= id (:hx/id %)) (:hyperedges page))]
+       (when-not (and (= 1 (count matches))
+                      (= (select-keys p [:hx/type :hx/endpoints :hx/props])
+                         (select-keys (first matches) [:hx/type :hx/endpoints :hx/props])))
+         (throw (ex-info "Clearance readback mismatch" {:id id})))
+       (assoc receipt :verified? true)))))
 
 (defn -main [& args]
   (try
-    (let [[write? file] (if (= "--write" (first args)) [true (second args)] [false (first args)])]
-      (when-not (and file (= (count args) (if write? 2 1)))
-        (throw (ex-info "Usage: incident-clearance [--write] FILE.edn (from futon3c checkout)" {})))
-      (let [request (edn/read-string (slurp file)) context (live-context!)]
-        (prn (if write? (write! "http://127.0.0.1:7073" request context)
-                 {:ok true :dry-run? true :payload (payload request context)}))))
+    (let [{:keys [write? file harness]}
+          (act-harness/parse-cli args "cli:futon3c.agency.incident-clearance"
+                                 "Usage: incident-clearance [--write] [--harness-kind KIND --harness-execution-id ID] FILE.edn")
+          request (edn/read-string (slurp file))
+          context (live-context!)]
+      (prn (if write? (write! "http://127.0.0.1:7073" request context harness)
+               {:ok true :dry-run? true :payload (payload request context harness)})))
     (shutdown-agents)
     (catch Exception e
       (binding [*out* *err*] (prn {:ok false :message (.getMessage e) :detail (ex-data e)}))

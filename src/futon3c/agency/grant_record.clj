@@ -6,6 +6,7 @@
   (:require [clojure.edn :as edn]
             [clojure.set :as set]
             [clojure.string :as str]
+            [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.rule-record :as store])
   (:import [java.time Instant]
            [java.net URLEncoder]))
@@ -21,7 +22,7 @@
   (let [b (:evidence/body r)]
     (if (string? b) (edn/read-string b) b)))
 (defn- field [m k] (or (get m k) (get m (name k))))
-(defn- props [r] (dissoc (:hx/props r) :grant/schema))
+(defn- props [r] (dissoc (:hx/props r) :grant/schema :act/harness))
 
 (defn- scope! [s]
   (when-not (and (map? s) (every? #{:description :act-kinds :rule-ids} (keys s))
@@ -98,10 +99,13 @@
    quote is a verbatim witness, not an NLP classifier: explicitness is reviewed
    when authoring the record. Text-only child scope is refused as unchecked."
   [r {:keys [evidence records]}]
-  (let [by-id (index! (or records []))
-        chain (chain! r by-id #{})
+  (when (contains? r :act/harness)
+    (act-harness/validate! (:act/harness r)))
+  (let [record (dissoc r :act/harness)
+        by-id (index! (or records []))
+        chain (chain! record by-id #{})
         sources (group-by :evidence/id evidence)]
-    (doseq [g (conj (mapv props chain) r)]
+    (doseq [g (conj (mapv props chain) record)]
       (let [s (:grant/source g) matches (get sources (:id s)) e (first matches)
             b (when e (body e))]
         (when-not (= 1 (count matches)) (refuse! :unsourced-grant :grant/source))
@@ -161,17 +165,22 @@
   [m]
   (into {} (keep (fn [[k v]] (when-not (nil? v) [k (if (map? v) (drop-nils v) v)]))) m))
 
-(defn payload [{:keys [idempotency-key] :as request} context]
-  (when-not (= #{:record :idempotency-key} (set (keys request))) (refuse! :invalid-request :request))
-  (when-not (text? idempotency-key) (refuse! :invalid-request :idempotency-key))
-  (let [record (drop-nils (:record request))]
-  (validate! record context)
-  {:hx/type :grant/record :hx/mint-id true :hx/idempotency-key idempotency-key
-   :hx/valid-time (get-in record [:grant/interval :from])
-   :hx/endpoints (cond-> [(get-in record [:grant/source :id])
-                          (str "agent:" (:grant/grantee record))]
-                   (:grant/parent record) (conj (:grant/parent record)))
-   :hx/props (assoc record :grant/schema 1)}))
+(defn payload
+  ([request context]
+   (payload request context (act-harness/plain "cli:futon3c.agency.grant-record")))
+  ([{:keys [idempotency-key] :as request} context harness]
+   (when-not (= #{:record :idempotency-key} (set (keys request)))
+     (refuse! :invalid-request :request))
+   (when-not (text? idempotency-key) (refuse! :invalid-request :idempotency-key))
+   (let [record (drop-nils (:record request))]
+     (validate! record context)
+     {:hx/type :grant/record :hx/mint-id true :hx/idempotency-key idempotency-key
+      :hx/valid-time (get-in record [:grant/interval :from])
+      :hx/endpoints (cond-> [(get-in record [:grant/source :id])
+                             (str "agent:" (:grant/grantee record))]
+                      (:grant/parent record) (conj (:grant/parent record)))
+      :hx/props (assoc record :grant/schema 1
+                       :act/harness (act-harness/validate! harness))})))
 
 (defn- path-id [prefix id] (str prefix (URLEncoder/encode id "UTF-8")))
 (defn live-context! [base record]
@@ -184,27 +193,30 @@
               (recur (props p) (conj records p) (conj evidence source) (conj seen parent))))
         {:records records :evidence (vec (vals (into {} (map (juxt :evidence/id identity) (conj evidence source)))))}))))
 
-(defn write! [base request]
-  (let [p (payload request (live-context! base (:record request)))
-        receipt (store/request! base "POST" "/api/alpha/hyperedge" p)
-        id (:hx/id receipt)]
-    (when-not (and (:ok receipt) (act? id)) (refuse! :missing-minted-receipt :receipt))
-    (let [stored (store/request! base "GET" (path-id "/api/alpha/hyperedge/" id) nil)]
-      (when-not (= (select-keys p [:hx/type :hx/endpoints :hx/props])
-                   (select-keys stored [:hx/type :hx/endpoints :hx/props]))
-        (refuse! :readback-mismatch :receipt))
-      (assoc receipt :verified? true))))
+(defn write!
+  ([base request]
+   (write! base request (act-harness/plain "cli:futon3c.agency.grant-record")))
+  ([base request harness]
+   (let [p (payload request (live-context! base (:record request)) harness)
+         receipt (store/request! base "POST" "/api/alpha/hyperedge" p)
+         id (:hx/id receipt)]
+     (when-not (and (:ok receipt) (act? id)) (refuse! :missing-minted-receipt :receipt))
+     (let [stored (store/request! base "GET" (path-id "/api/alpha/hyperedge/" id) nil)]
+       (when-not (= (select-keys p [:hx/type :hx/endpoints :hx/props])
+                    (select-keys stored [:hx/type :hx/endpoints :hx/props]))
+         (refuse! :readback-mismatch :receipt))
+       (assoc receipt :verified? true)))))
 
 (defn -main [& args]
   (try
-    (let [[write? file] (if (= "--write" (first args)) [true (second args)] [false (first args)])
-          base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")]
-      (when-not (and file (= (count args) (if write? 2 1)))
-        (refuse! :usage :grant-record--write-file))
-      (let [request (edn/read-string (slurp file))]
-        (prn (if write? (write! base request)
-                 {:ok true :dry-run? true
-                  :payload (payload request (live-context! base (:record request)))}))))
+    (let [{:keys [write? file harness]}
+          (act-harness/parse-cli args "cli:futon3c.agency.grant-record"
+                                 "Usage: grant-record [--write] [--harness-kind KIND --harness-execution-id ID] FILE.edn")
+          base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+          request (edn/read-string (slurp file))]
+      (prn (if write? (write! base request harness)
+               {:ok true :dry-run? true
+                :payload (payload request (live-context! base (:record request)) harness)})))
     (shutdown-agents)
     (catch Exception e
       (binding [*out* *err*] (prn {:ok false :message (.getMessage e) :detail (ex-data e)}))
