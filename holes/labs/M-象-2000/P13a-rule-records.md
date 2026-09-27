@@ -41,3 +41,12 @@ a measure or change any existing record.
 
 Gates: clj-kondo zero errors/warnings; check-parens OK for source, test and EDN;
 `futon3c.agency.rule-record-test`: 5 tests, 36 assertions, zero failures/errors.
+
+Live receipt (2026-09-27): `act:8f827fa4-b3de-46a3-a9cb-f3262f7a94ff`.
+GET `/api/alpha/hyperedges?type=rule/record` at valid-as-of
+`2026-09-27T20:11:00.759554Z` returned the minted record with all three layers,
+world assumption, known HOWEVER and original incident evidence reference.
+Exact readback passed; repeating the reviewed write returned the same id,
+`:no-op? true`, `:verified? true`. Original incident evidence and the existing
+5146606d commit hyperedge were compared before/after and are unchanged.
+Raw local readback: `/tmp/p13a-live-readback.json`. No server reload occurred.
