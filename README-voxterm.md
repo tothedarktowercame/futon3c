@@ -51,7 +51,12 @@ That is **not implemented** and is not required for the voice surface to work.
                                            └────────────────────────────────┘
 ```
 
-The page is served over an ssh tunnel (`ssh -N -L 8081:localhost:8081`), which
+**How to reach it (since 2026-08-24):** https://zone.hyperreal.enterprises/voxterm/ —
+Caddy proxies `/voxterm/` to loopback :8081 behind basic_auth (user `joe`, realm
+`voxterm`; see the comments in `/etc/caddy/Caddyfile`). HTTPS makes it a secure
+context, so the microphone works; no tunnel is needed.
+
+Original setup, before the proxy: The page is served over an ssh tunnel (`ssh -N -L 8081:localhost:8081`), which
 also satisfies the browser's secure-context requirement for microphone access —
 `localhost` counts as secure, so no TLS is needed. The server binds to loopback
 only. **mosh cannot forward ports**; this needs a plain ssh alongside it.
