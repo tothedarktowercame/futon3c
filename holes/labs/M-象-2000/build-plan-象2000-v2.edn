@@ -94,7 +94,7 @@
    :deps [:P6 :P9] :decision nil :v2 :same
    :patterns [:象/答必真且中的]}
   {:id :P19  :title "Agent turns and design claims on the record" :segment :process
-   :deps [:P6b] :decision {:theme :scope :question "Should 象 interpret agent turns as well as operator turns (usage)?"} :v2 :new
+   :deps [:P6b] :decision nil :declined "Joe 2026-09-27: 象 reads operator turns only; offers/agreements are a structured subsystem (classical, like clock-in); file changes audited from recorded tool calls; U1 by structured means" :v2 :new
    :patterns [:象/限定随论]}
   {:id :P20  :title "Evidence rungs on the typed hole" :segment :process
    :deps [] :decision nil :v2 :new :status "first pass done in typed-hole-象2000-v2.edn"
