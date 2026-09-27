@@ -42,9 +42,8 @@
    :windows-fn (fn [] [(window "codex-10" 600 0)])
    :roster-fn (fn [] {"codex-10" "session-10"})
    :now-fn (constantly now)
-   :notices-path (temp-notices-path)
    :backlog-path (temp-backlog-path)
-   :deliver! (fn [payload] (swap! calls conj payload) {:status 200})
+   :pressure-path (str (java.io.File. (temp-dir) "uncertain-pressure.edn"))
    :print-fn (fn [line] (swap! calls conj [:print line]))})
 
 (deftest a-repo-under-the-threshold-is-left-alone
@@ -52,70 +51,109 @@
         counts (sweeper/sweep-dirty-repos!
                 (base-options {"futon2-d" (dirty-repo 9)} calls))]
     (is (= 0 (:over-threshold counts)))
-    (is (= 0 (:notified counts)))
+    (is (= 0 (:uncertain counts)))
     (is (empty? (remove #(= :print (first %)) @calls)))))
 
-(deftest at-the-threshold-the-writing-agent-is-told-to-commit
+;; Joe's live example (C8): ten dirty files overlapping THREE other agents'
+;; windows must produce ZERO personal deliveries, with every file visible
+;; as uncertain-ownership pressure.
+(deftest joe-example-ten-files-three-overlaps-no-personal-delivery
+  (let [calls (atom [])
+        options (assoc (base-options {"futon3c-d" (dirty-repo 10)} calls)
+                       :windows-fn (fn [] [(window "codex-4" 600 0)
+                                           (window "kimi-9" 600 0)
+                                           (window "xiang" 600 0)])
+                       :roster-fn (fn [] {"codex-4" "s4" "kimi-9" "s9"
+                                          "xiang" "sx"}))
+        counts (sweeper/sweep-dirty-repos! options)
+        backlog (read-string (slurp (:backlog-path options)))
+        feed (read-string (slurp (:pressure-path options)))
+        row (first (:repos feed))]
+    ;; no delivery machinery exists anymore: nothing but prints in calls
+    (is (empty? (remove #(= :print (first %)) @calls)))
+    (is (= 1 (:uncertain counts)))
+    ;; all ten files represented: 5 sampled newest + remainder 5
+    (is (= 10 (:dirty-count row)))
+    (is (= 5 (count (:newest row))))
+    (is (= 5 (:remainder row)))
+    ;; overlaps are diagnostics naming all three seats, never assignment
+    (is (= 10 (count (:diagnostic-overlaps row))))
+    (is (= ["codex-4" "kimi-9" "xiang"]
+           (get (:diagnostic-overlaps row) "runs/out-0.edn")))
+    ;; backlog carries the same repo
+    (is (= 1 (count (:repos backlog))))
+    (is (= "futon3c-d" (:label (first (:repos backlog)))))))
+
+(deftest sole-overlap-is-still-not-authorship
+  ;; Exactly one live agent overlapping every write: still no delivery.
   (let [calls (atom [])
         counts (sweeper/sweep-dirty-repos!
-                (base-options {"futon2-d" (dirty-repo 10)} calls))
-        payload (first (remove #(= :print (first %)) @calls))]
-    (is (= 1 (:over-threshold counts)))
-    (is (= 1 (:notified counts)))
-    (is (= "codex-10" (:agent payload)))
-    (is (= "session-10" (:session payload)))
-    (is (= "inbox-zero" (:type payload)))
-    (is (= 10 (get-in payload [:metadata :dirty-count])))
-    (is (= 10 (get-in payload [:metadata :implicated-count])))
-    (is (str/includes? (:prompt payload) "10 dirty file(s)"))
-    (is (str/includes? (:prompt payload) "10 of them were written"))
-    (is (str/includes? (:prompt payload) "git -C /repo/futon2-d status"))
-    (is (str/includes? (:prompt payload) "Newest first: runs/out-0.edn"))))
+                (base-options {"futon2-d" (dirty-repo 11)} calls))]
+    (is (= 1 (:uncertain counts)))
+    (is (empty? (remove #(= :print (first %)) @calls)))))
 
-(deftest a-told-agent-is-not-told-again-until-the-backlog-grows
+(deftest historical-records-do-not-route-either
+  ;; A seat that historically touched a repo (old claim/confirmation
+  ;; analogue: it appears in the roster and windows) gets no cleanup
+  ;; assignment — historical records are citations, never current
+  ;; authorship, and the sweeper reads no claim state at all.
   (let [calls (atom [])
-        options (base-options {"futon2-d" (dirty-repo 11)} calls)
-        first-counts (sweeper/sweep-dirty-repos! options)
-        second-counts (sweeper/sweep-dirty-repos! options)
-        grown (sweeper/sweep-dirty-repos!
-               (assoc options :git-fn (constantly (dirty-repo 21))))]
-    (is (= 1 (:notified first-counts)))
-    (is (= 0 (:notified second-counts)))
-    (is (= 1 (:held second-counts)))
-    (is (= 1 (:notified grown)))))
-
-(deftest a-stale-notice-is-repeated
-  (let [calls (atom [])
-        options (base-options {"futon2-d" (dirty-repo 11)} calls)
-        _ (sweeper/sweep-dirty-repos! options)
-        later (Date. (+ now-ms (* 7 60 60 1000)))
-        repeated (sweeper/sweep-dirty-repos!
-                  (assoc options :now-fn (constantly later)))]
-    (is (= 1 (:notified repeated)))))
-
-(deftest dirt-nobody-live-wrote-is-named-as-operator-backlog
-  (let [calls (atom [])
-        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
-                       :roster-fn (constantly {}))
+        options (assoc (base-options {"futon2-d" (dirty-repo 12)} calls)
+                       :windows-fn (fn [] [(window "claude-10" 4000 0)])
+                       :roster-fn (fn [] {"claude-10" "session-old"}))
         counts (sweeper/sweep-dirty-repos! options)]
-    (is (= 1 (:unowned counts)))
-    (is (= 0 (:notified counts)))
-    (is (some (fn [call]
-                (and (= :print (first call))
-                     (str/includes? (second call) "operator backlog")))
-              @calls))))
+    (is (= 1 (:uncertain counts)))
+    (is (empty? (remove #(= :print (first %)) @calls)))))
 
-(deftest unowned-dirt-is-written-to-the-operator-backlog
+(deftest session-rollover-cannot-route-to-current-seat
+  ;; Whatever session a seat currently holds, nothing routes to sessions.
   (let [calls (atom [])
         options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
-                       :roster-fn (constantly {}))
-        _ (sweeper/sweep-dirty-repos! options)
+                       :roster-fn (fn [] {"codex-10" "brand-new-session"}))
+        counts (sweeper/sweep-dirty-repos! options)]
+    (is (= 1 (:uncertain counts)))
+    (is (empty? (remove #(= :print (first %)) @calls)))))
+
+(deftest mixed-repos-are-all-represented
+  ;; One repo with overlapping windows, one with none: both appear in the
+  ;; backlog AND the pressure feed (the old empty?-targets gate dropped
+  ;; the uncertain repo whenever any repo had a target).
+  (let [calls (atom [])
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)
+                                      "futon3c-d" (dirty-repo 12)}
+                                     calls)
+                       :windows-fn (fn [] [(window "codex-10" 600 0)])
+                       :roster-fn (fn [] {"codex-10" "s10"}))
+        counts (sweeper/sweep-dirty-repos! options)
         backlog (read-string (slurp (:backlog-path options)))
-        row (first (:repos backlog))]
-    (is (= 1 (count (:repos backlog))))
-    (is (= "futon2-d" (:label row)))
-    (is (= 11 (:dirty-count row)))
-    (is (seq (:newest row)))))
+        feed (read-string (slurp (:pressure-path options)))]
+    (is (= 2 (:uncertain counts)))
+    (is (= ["futon2-d" "futon3c-d"] (map :label (:repos backlog))))
+    (is (= ["futon2-d" "futon3c-d"] (map :label (:repos feed))))))
+
+(deftest repeated-passes-are-bounded-and-idempotent
+  (let [calls (atom [])
+        options (base-options {"futon2-d" (dirty-repo 11)} calls)
+        _ (sweeper/sweep-dirty-repos! options)
+        first-feed (read-string (slurp (:pressure-path options)))
+        _ (sweeper/sweep-dirty-repos! options)
+        second-feed (read-string (slurp (:pressure-path options)))]
+    (is (= (dissoc first-feed :at) (dissoc second-feed :at)))
+    (is (= 11 (:dirty-count (first (:repos second-feed)))))
+    (is (= 5 (count (:newest (first (:repos second-feed))))))
+    (is (= 6 (:remainder (first (:repos second-feed)))))))
+
+(deftest uncertain-row-canonicalizes-the-root
+  (let [dir (temp-dir)
+        link (str (temp-dir) "-link")]
+    (.delete (java.io.File. link))
+    (java.nio.file.Files/createSymbolicLink
+     (.toPath (java.io.File. link)) (.toPath dir)
+     (make-array java.nio.file.attribute.FileAttribute 0))
+    (let [row (sweeper/uncertain-row [] {} {:label "x" :root link
+                                            :entries (dirty-repo 1)})]
+      (is (= (.getCanonicalPath dir) (:root row)))
+      (is (not= link (:root row))))))
 
 (deftest a-cleaned-repo-leaves-the-backlog-without-being-acknowledged
   ;; The backlog is current state, not a queue: escalate-by-who-can-act
@@ -124,12 +162,10 @@
   (let [calls (atom [])
         backlog-path (temp-backlog-path)
         dirty (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
-                     :roster-fn (constantly {})
                      :backlog-path backlog-path)
         _ (sweeper/sweep-dirty-repos! dirty)
         _ (is (= 1 (count (:repos (read-string (slurp backlog-path))))))
         clean (assoc (base-options {"futon2-d" (dirty-repo 0)} calls)
-                     :roster-fn (constantly {})
                      :backlog-path backlog-path)]
     (sweeper/sweep-dirty-repos! clean)
     (is (= [] (:repos (read-string (slurp backlog-path)))))))
@@ -139,69 +175,26 @@
         _ (sweeper/sweep-dirty-repos! (base-options {"futon2-d" []} calls))]
     (is (some (fn [call]
                 (and (= :print (first call))
-                     (str/includes? (second call) "commit-notice pass:")))
+                     (str/includes? (second call) "uncertain-pressure pass:")))
               @calls))))
 
-(deftest attribution-is-by-write-time-not-by-tool
+(deftest diagnostic-overlaps-are-by-write-time-and-labeled
   (let [entries [(entry "a.edn" 30) (entry "b.edn" 30) (entry "c.edn" 300)]
         windows [(window "codex-10" 60 10) (window "zai-5" 400 200)]
         roster {"codex-10" "s10" "zai-5" "s5"}
-        attributed (sweeper/attribute windows roster entries)]
-    (is (= 2 (get-in attributed ["codex-10" :count])))
-    (is (= 1 (get-in attributed ["zai-5" :count])))
-    (is (= ["a.edn" "b.edn"]
-           (sort (map :path (get-in attributed ["codex-10" :entries])))))))
+        overlaps (sweeper/diagnostic-overlaps windows roster entries)]
+    (is (= ["codex-10"] (get overlaps "a.edn")))
+    (is (= ["zai-5"] (get overlaps "c.edn")))))
 
-(deftest a-file-written-outside-every-turn-implicates-nobody
-  (is (= {} (sweeper/attribute [(window "codex-10" 60 10)]
-                               {"codex-10" "s10"}
-                               [(entry "old.edn" 5000)]))))
+(deftest a-file-outside-every-turn-has-no-diagnostic
+  (is (= {} (sweeper/diagnostic-overlaps [(window "codex-10" 60 10)]
+                                         {"codex-10" "s10"}
+                                         [(entry "old.edn" 5000)]))))
 
-(deftest a-dead-seat-is-never-a-candidate
-  (is (= {} (sweeper/attribute [(window "codex-16" 60 10)]
-                               {"codex-10" "s10"}
-                               [(entry "a.edn" 30)]))))
-
-(deftest a-file-two-agents-could-have-written-goes-to-both-marked-shared
-  (let [entries [(entry "shared.edn" 30)]
-        windows [(window "codex-10" 60 10) (window "zai-5" 60 10)]
-        roster {"codex-10" "s10" "zai-5" "s5"}
-        attributed (sweeper/attribute windows roster entries)]
-    (is (= 1 (get-in attributed ["codex-10" :count])))
-    (is (= 1 (get-in attributed ["zai-5" :count])))
-    (is (= ["zai-5"] (:shared-with (first (get-in attributed ["codex-10" :entries])))))
-    (is (= ["codex-10"] (:shared-with (first (get-in attributed ["zai-5" :entries])))))))
-
-(deftest a-shared-file-is-named-with-who-else-was-running
-  (let [calls (atom [])
-        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
-                       :windows-fn (fn [] [(window "codex-10" 600 0)
-                                           (window "zai-5" 600 0)])
-                       :roster-fn (fn [] {"codex-10" "s10" "zai-5" "s5"})
-                       :max-recipients 1)
-        _ (sweeper/sweep-dirty-repos! options)
-        payload (first (remove #(= :print (first %)) @calls))]
-    (is (str/includes? (:prompt payload) "(also inside zai-5's turn)"))))
-
-(deftest the-agent-with-the-most-files-is-told-first
-  (let [attributed {"codex-10" {:count 130 :entries [{:path "a" :mtime-ms 2}]}
-                    "codex-16" {:count 121 :entries [{:path "b" :mtime-ms 3}
-                                                     {:path "c" :mtime-ms 1}]}}]
-    (is (= [["codex-10" 130] ["codex-16" 121]]
-           (mapv (juxt :agent :count) (sweeper/recipients attributed 2))))
-    (is (= ["b" "c"]
-           (mapv :path (:entries (second (sweeper/recipients attributed 2))))))))
-
-(deftest a-failed-delivery-is-counted-and-not-recorded-as-told
-  (let [calls (atom [])
-        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
-                       :deliver! (fn [_] {:status 503}))
-        counts (sweeper/sweep-dirty-repos! options)
-        retry (sweeper/sweep-dirty-repos! (assoc options :deliver!
-                                                 (fn [_] {:status 200})))]
-    (is (= 1 (:errored counts)))
-    (is (= 0 (:notified counts)))
-    (is (= 1 (:notified retry)))))
+(deftest a-dead-seat-is-never-a-diagnostic-candidate
+  (is (= {} (sweeper/diagnostic-overlaps [(window "codex-16" 60 10)]
+                                         {"codex-10" "s10"}
+                                         [(entry "a.edn" 30)]))))
 
 ;; ---------- the push lane ----------
 

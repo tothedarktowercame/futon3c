@@ -1,11 +1,19 @@
 (ns futon3c.inbox-zero.sweeper
-  "Dirty-repo commit notices: the lane that makes inbox zero act.
+  "Dirty-repo pressure reporting: the lane that keeps inbox zero visible.
 
   One bounded pass per interval. For each watched repo, read `git status`
-  and count the dirty paths. When a repo carries more than the threshold,
-  tell the agents whose turns wrote them that they need to commit.
+  and count the dirty paths. Repos over the threshold are reported as
+  UNCERTAIN-OWNERSHIP pressure to the operator surfaces (operator backlog
+  file and the uncertain-pressure feed merged into the mana snapshot),
+  with temporal window overlaps attached as labeled diagnostics.
 
-  Attribution is by file mtime against the Agency's invoke windows — a file
+  No personal cleanup assignment is made from this lane. Temporal overlap
+  and historical claim/confirmation records are not evidence of who wrote
+  the current bytes (M-inbox-zero-claim-lifecycle, C8; the stale-claim
+  incident), and no current-schema record establishes dirty-byte
+  authorship. Until the claim lifecycle provides one, authorship is
+  reported as unknown and stays visible repo-wide rather than being routed
+  to a seat. Attribution is NOT by file mtime against the Agency's invoke windows — a file
   written at T belongs to whoever was invoking at T. The agent tool stream
   plays no part: on this stack the great majority of dirt is run output
   written by processes agents launch, not by their editor tools, so a lane
@@ -28,7 +36,6 @@
   like a working one."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
-            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -40,16 +47,8 @@
 
 (def default-threshold 10)
 (def default-interval-ms 1800000)
-(def default-max-recipients 3)
-
-;; Re-notify only when the backlog has grown by a threshold's worth, or when
-;; the last notice has gone stale. A notice an agent has already had is not
-;; new information, and repeating it is how the earlier lane earned its
-;; "seats were being spammed with stale notices" refusal.
-(def default-renotify-ms (* 6 60 60 1000))
 
 (defonce ^:private !loop (atom nil))
-(defonce ^:private notices-monitor (Object.))
 
 (def ^:private sample-size 5)
 
@@ -198,84 +197,38 @@
          set)
     #{}))
 
-(defn attribute
-  "Agent → `{:count n :entries [entry ...]}` over ENTRIES, live agents only.
+(defn diagnostic-overlaps
+  "Entry path → sorted live agent ids whose windows contain its mtime.
 
-  Every entry inside an agent's turns is named to that agent, newest first.
-  Where several agents were running at once the entry goes to each of them
-  carrying `:shared-with`, rather than to none of them: the file still has
-  to be committed, and an entry named to nobody is the silent refusal this
-  lane exists to end. The recipient is told who else was running and can
-  see at a glance which files are not its own."
+  DIAGNOSTIC ONLY (C8): temporal overlap is not authorship. A sole overlap
+  says only that the agent was running when the file's mtime last changed,
+  not that it wrote the file, and the windows themselves are coarse (open
+  job windows, synthetic invoking grace). Never route work from this."
   [windows roster entries]
-  (reduce
-   (fn [acc entry]
-     (let [candidates (live-candidates windows roster entry)]
-       (reduce (fn [acc agent]
-                 (-> acc
-                     (update-in [agent :count] (fnil inc 0))
-                     (update-in [agent :entries] (fnil conj [])
-                                (assoc entry :shared-with
-                                       (vec (sort (disj candidates agent)))))))
-               acc
-               candidates)))
-   {}
-   entries))
+  (into {}
+        (keep (fn [entry]
+                (let [candidates (live-candidates windows roster entry)]
+                  (when (seq candidates)
+                    [(:path entry) (vec (sort candidates))]))))
+        entries))
 
-(defn recipients
-  "Live agents to tell, most-responsible first, capped at MAX-RECIPIENTS.
+(defn uncertain-row
+  "One repo's dirty entries as an uncertain-ownership pressure row.
 
-  Responsibility is how many dirty files were written inside that agent's
-  turns. Each recipient carries its own entries, newest first."
-  [attributed max-recipients]
-  (->> attributed
-       (sort-by (fn [[agent {:keys [count]}]] [(- count) agent]))
-       (take max-recipients)
-       (mapv (fn [[agent {:keys [count entries]}]]
-               {:agent agent
-                :count count
-                :entries (vec (sort-by :mtime-ms > entries))}))))
-
-;; ---------- the notice ----------
-
-(defn- notice-prompt
-  [{:keys [label root entries]} recipient]
-  (let [total (count entries)
-        untracked (count (filter :untracked? entries))
-        named (->> (:entries recipient)
-                   (take sample-size)
-                   (map (fn [entry]
-                          (if-let [others (seq (:shared-with entry))]
-                            (str (:path entry) " (also inside "
-                                 (str/join ", " others) "'s turn)")
-                            (:path entry)))))]
-    (str "inbox-zero: " label " is carrying " total " dirty file(s) ("
-         untracked " untracked); " (:count recipient) " of them were written "
-         "during your turns. Commit or delete what is yours and leave what is "
-         "not. Newest first: " (str/join ", " named)
-         ". Full list: git -C " root " status --porcelain")))
-
-(defn- followup-payload
-  [repo recipient]
-  (let [total (count (:entries repo))]
-    {:agent (:agent recipient)
-     :session (:session recipient)
-     :type "inbox-zero"
-     :dedupe-key ["commit-notice" (:label repo) (:agent recipient)
-                  (quot total (max 1 (:threshold repo default-threshold)))]
-     :prompt (notice-prompt repo recipient)
-     :metadata {:proposal/type :inbox-zero/commit-notice
-                :repo-id (:label repo)
-                :dirty-count total
-                :implicated-count (:count recipient)}}))
-
-(defn- default-deliver [payload]
-  (http/post (agency-url "/api/alpha/followups")
-             {:headers {"Content-Type" "application/json"}
-              :body (json/generate-string payload)
-              :throw false}))
-
-;; ---------- the "already told them" ledger ----------
+  ROOT is canonicalized so downstream joins (mana snapshot per-repo) match
+  by real worktree identity, never by label: futon3c-d and futon3c are
+  different roots. :newest is bounded; :remainder reports the rest so a
+  bounded display never silently drops files."
+  [windows roster {:keys [label root entries]}]
+  (let [sorted (vec (sort-by :mtime-ms > entries))
+        newest (mapv #(select-keys % [:path :mtime-ms]) (take sample-size sorted))]
+    {:label label
+     :root (.getCanonicalPath (io/file root))
+     :dirty-count (count entries)
+     :untracked (count (filter :untracked? entries))
+     :newest newest
+     :remainder (max 0 (- (count entries) (count newest)))
+     :diagnostic-overlaps (diagnostic-overlaps windows roster entries)}))
 
 (defn- atomic-write! [path value]
   (let [target (.toPath (io/file path))
@@ -291,37 +244,10 @@
                                  StandardCopyOption/REPLACE_EXISTING]))
         (finally (Files/deleteIfExists tmp))))))
 
-(defn- load-notices [path print-fn]
-  (locking notices-monitor
-    (try
-      (let [file (io/file path)]
-        (if-not (.exists file)
-          {}
-          (let [value (edn/read-string (slurp file))]
-            (if (map? value) value {}))))
-      (catch Throwable error
-        (print-fn (str "[inbox-zero] commit-notice ledger unreadable; "
-                       "starting empty: " (.getMessage error)))
-        {}))))
-
-(defn- record-notice! [path notices key value]
-  (locking notices-monitor
-    (let [next-value (assoc @notices key value)]
-      (atomic-write! path next-value)
-      (reset! notices next-value))))
-
-(defn due?
-  "True when this agent has not already been told this, or the backlog has
-  grown by a threshold's worth since, or the last notice has gone stale."
-  [prior total now-ms {:keys [threshold renotify-ms]}]
-  (or (nil? prior)
-      (>= (- total (:count prior 0)) threshold)
-      (>= (- now-ms (:at-ms prior 0)) renotify-ms)))
-
 ;; ---------- the pass ----------
 
 (defn- empty-counts []
-  {:repos 0 :over-threshold 0 :notified 0 :held 0 :unowned 0 :errored 0})
+  {:repos 0 :over-threshold 0 :uncertain 0 :errored 0})
 
 (def ^:private default-backlog-path
   "/home/joe/code/storage/inbox-zero/operator-backlog.edn")
@@ -344,16 +270,41 @@
   (try
     (atomic-write! path {:at now
                          :generated-by "futon3c.inbox-zero.sweeper"
-                         :note (str "Repos over the dirty-file threshold that no live "
-                                    "agent wrote. Current state, not a queue: "
-                                    "rewritten every pass.")
+                         :note (str "Repos over the dirty-file threshold; ownership of "
+                                    "the current bytes is unknown (C8). Current state, "
+                                    "not a queue: rewritten every pass.")
                          :repos (vec (sort-by :label rows))})
     (catch Throwable error
       (print-fn (str "[inbox-zero] operator backlog unwritable: "
                      (.getMessage error))))))
 
+(def ^:private default-uncertain-pressure-path
+  "/home/joe/code/storage/inbox-zero/uncertain-pressure.edn")
+
+(defn- write-uncertain-pressure!
+  "Atomically publish the uncertain-ownership pressure feed that the mana
+  snapshot (futon0) merges into the War Machine commit-hygiene queues.
+  Current state, rewritten every pass; :interval-ms lets consumers mark
+  staleness instead of trusting a silent file."
+  [path rows now backlog-path print-fn]
+  (try
+    (atomic-write! path {:at now
+                         :generated-by "futon3c.inbox-zero.sweeper"
+                         :interval-ms default-interval-ms
+                         :drilldown backlog-path
+                         :repos (vec (sort-by :label rows))})
+    (catch Throwable error
+      (print-fn (str "[inbox-zero] uncertain-pressure feed unwritable: "
+                     (.getMessage error))))))
+
 (defn sweep-dirty-repos!
-  "Run one bounded commit-notice pass. Every collaborator is injectable."
+  "Run one bounded uncertain-pressure pass. Every collaborator is injectable.
+
+  No personal cleanup notices are sent: no current-schema evidence
+  establishes who wrote the current dirty bytes (C8). Every over-threshold
+  repo becomes an uncertain-ownership row in BOTH the operator backlog and
+  the uncertain-pressure feed, with temporal overlaps attached as labeled
+  diagnostics only."
   [options]
   (let [print-fn (or (:print-fn options) println)]
     (try
@@ -361,20 +312,16 @@
                                        (some-> (System/getenv "FUTON3C_INBOX_ZERO_THRESHOLD")
                                                Long/parseLong)
                                        default-threshold)))
-            renotify-ms (long (or (:renotify-ms options) default-renotify-ms))
-            max-recipients (long (or (:max-recipients options) default-max-recipients))
             watch-roots (or (:roots options) roots/sweep-roots)
             git-fn (or (:git-fn options) git-dirty)
             windows-fn (or (:windows-fn options) default-windows)
             roster-fn (or (:roster-fn options) default-roster)
-            deliver! (or (:deliver! options) default-deliver)
             now-fn (or (:now-fn options) #(Date.))
-            notices-path (or (:notices-path options)
-                             (System/getenv "FUTON3C_INBOX_ZERO_NOTICES_PATH")
-                             "/home/joe/code/storage/inbox-zero/commit-notices.edn")
+            backlog-path (or (:backlog-path options) default-backlog-path)
+            pressure-path (or (:pressure-path options)
+                              (System/getenv "FUTON3C_INBOX_ZERO_PRESSURE_PATH")
+                              default-uncertain-pressure-path)
             now (now-fn)
-            now-ms (.getTime ^Date now)
-            notices (atom (load-notices notices-path print-fn))
             over (->> watch-roots
                       (keep (fn [{:keys [path label]}]
                               (let [entries (git-fn path)]
@@ -390,67 +337,33 @@
             (reduce
              (fn [counts repo]
                (try
-                 (let [attributed (attribute windows roster (:entries repo))
-                       targets (mapv #(assoc % :session (get roster (:agent %)))
-                                     (recipients attributed max-recipients))
-                       total (count (:entries repo))]
-                   (if (empty? targets)
-                     (do
-                       (print-fn (str "[inbox-zero] " (:label repo) " has " total
-                                      " dirty file(s) over the threshold of "
-                                      threshold " but no live agent wrote them "
-                                      "— operator backlog"))
-                       (-> counts
-                           (update :unowned inc)
-                           (update :unowned-rows conj
-                                   {:label (:label repo) :root (:root repo)
-                                    :dirty-count total :threshold threshold
-                                    :newest (mapv :path (take sample-size
-                                                              (:entries repo)))})))
-                     (reduce
-                      (fn [counts recipient]
-                        (let [key [(:label repo) (:agent recipient)]
-                              prior (get @notices key)]
-                          (if-not (due? prior total now-ms
-                                        {:threshold threshold
-                                         :renotify-ms renotify-ms})
-                            (update counts :held inc)
-                            (let [response (deliver! (followup-payload repo recipient))]
-                              (if (= 200 (:status response))
-                                (do
-                                  (record-notice! notices-path notices key
-                                                  {:count total :at-ms now-ms
-                                                   :at now
-                                                   :implicated (:count recipient)})
-                                  (print-fn (str "[inbox-zero] told " (:agent recipient)
-                                                 " to commit: " (:label repo) " has "
-                                                 total " dirty file(s), "
-                                                 (:count recipient) " written in its turns"))
-                                  (update counts :notified inc))
-                                (do
-                                  (print-fn (str "[inbox-zero] commit notice to "
-                                                 (:agent recipient) " failed: status "
-                                                 (:status response)))
-                                  (update counts :errored inc)))))))
-                      counts
-                      targets)))
+                 (let [row (uncertain-row windows roster repo)]
+                   (print-fn (str "[inbox-zero] " (:label repo) " has "
+                                  (:dirty-count row)
+                                  " dirty file(s) over the threshold of "
+                                  threshold " — ownership unknown,"
+                                  " operator backlog + pressure feed"))
+                   (-> counts
+                       (update :uncertain inc)
+                       (update :uncertain-rows conj row)))
                  (catch Throwable error
-                   (print-fn (str "[inbox-zero] commit-notice pass failed for "
+                   (print-fn (str "[inbox-zero] uncertain-pressure pass failed for "
                                   (:label repo) ": " (.getMessage error)))
                    (update counts :errored inc))))
              (assoc (empty-counts)
                     :repos (count watch-roots)
                     :over-threshold (count over)
-                    :unowned-rows [])
+                    :uncertain-rows [])
              over)]
-        (write-backlog! (or (:backlog-path options) default-backlog-path)
-                        (:unowned-rows counts) now print-fn)
-        (let [counts (dissoc counts :unowned-rows)]
-          (print-fn (str "[inbox-zero] commit-notice pass: " (pr-str counts)))
+        (write-backlog! backlog-path (:uncertain-rows counts) now print-fn)
+        (write-uncertain-pressure! pressure-path (:uncertain-rows counts)
+                                   now backlog-path print-fn)
+        (let [counts (dissoc counts :uncertain-rows)]
+          (print-fn (str "[inbox-zero] uncertain-pressure pass: " (pr-str counts)))
           counts))
       (catch Throwable error
         (try
-          (print-fn (str "[inbox-zero] commit-notice pass failed: "
+          (print-fn (str "[inbox-zero] uncertain-pressure pass failed: "
                          (.getMessage error)))
           (catch Throwable _))
         (empty-counts)))))
