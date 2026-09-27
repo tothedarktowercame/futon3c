@@ -853,3 +853,36 @@ proof. No new dispatch needed for the completed coordination job.
 
 Owner inspected N4 actual job invoke-1790538875534-25633-c905b834: **running**,
 not complete. It retains priority. No duplicate dispatch or runtime action.
+
+### Checkpoint 2026-09-27 — N4 real producer failure; N5 dispatched
+
+Owner reviewed N4 futon3c 6bc34c88, futon0 2165e90, futon2 57a9460e4.
+Complete file rows, union merge, explicit unknown counts and diagnostic-failure
+isolation improve N3. **N4 not accepted:** the actual producer crashes on the
+new union-only row. Owner invoked real `bb scripts/mana-snapshot.bb --out` with
+a disposable output and fresh valid feed containing one root outside manifest.
+Exit 1, NullPointerException at mana-snapshot.bb:212, `apply max` over nil :P;
+no output created. Timeout40 outer/30 inner, all temp files removed. Thus the
+reported projection fixture does not establish complete producer integration.
+
+Source review also finds native backend pressure sort negates nil; unknown
+pressure/age still render 0.00/0.0d; configured interval is still removed by
+start! and writer uses default; validation checks paths-vector length but not
+entry shape/uniqueness or absolute root. Completeness stays in logs/result,
+not consumer-visible when row/backlog failures coexist with successful feed.
+These need bounded corrections and actual bad-case integration tests.
+
+Owner resolves the display choice: keep eight summary rows, but render full
+detail for ALL uncertain repos, including ninth onward, plus accessible remaining
+pressure queue measurements/identity. Names and an unread backlog path do not
+satisfy full detail. No new preference question is needed.
+
+N5 dispatched to kimi-9, actual job **invoke-1790539690606-25642-e9f4745e**:
+correct producer aggregate/coverage and downstream nil consumers, complete
+overflow detail, honest unknown formatting, configured interval propagation,
+row validation and consumer-visible completeness; real producer-through-consumer
+regression with temporary outputs. Preserve N4 improvements. Local code only,
+no live runtime/state/notification actions. Owner independently reviews before
+any deployment authorization. C8/full DERIVE remain pending; C6 complete;
+S2/capture still open. Prompt coordination already settled in c1191954/a36f3dc5,
+registry P7a-1 remains external dependency, no duplicate coordination dispatch.
