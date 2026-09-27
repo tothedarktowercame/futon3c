@@ -1,7 +1,8 @@
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "c1afad170de503c246673f1bd90a18b63b08b625",
+ :map-sha
+ "sha256:0d6f1d1cab8d7d44860dd21af42bde2e58115957946db6b792aca2c1cf906d41",
  :futon5-sha "aeeee96",
- :counts {:inputs 45, :outputs 26, :components 108, :edges 224},
+ :counts {:inputs 44, :outputs 26, :components 108, :edges 224},
  :validate
  {:all-valid false,
   :checks

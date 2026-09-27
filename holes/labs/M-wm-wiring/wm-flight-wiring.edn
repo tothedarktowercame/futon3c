@@ -192,9 +192,8 @@
    :reads [:tick-observation :channel-prediction]}
   {:box/id :r3a-predict-observation :box/kind :component
    :site {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation"}
-   ;; WM-NODE-R1-I: E3's first callee (belief, arg 1); not declared, see
-   ;; :r7-fold-call
-   }
+   ;; MAP-2B-P1+: carried mu reaches the predictor as argument 1.
+   :reads [:loop-belief]}
   {:box/id :r3a-prediction-error :box/kind :component
    ;; returns the prediction-error record, (merge stamp {:status :present
    ;; ... :error err :precision ... :weighted-error ...}) in each branch of
@@ -783,12 +782,9 @@
    ;; the fold that carries reconcile-belief-carry's result through
    ;; apply-morning-brief-events;
    ;; E3 (R1 -> R3a): the same loop belief as arg 1 of
-   ;; belief/predict-observation (NOT declared: the :passes entry with the
-   ;; same :from as E1's is refused, :passes-failed :not-the-keyed-read,
-   ;; although E1's is accepted and a wrong key refuses E1 (both checked);
-   ;; the call at :7024 is in the loop body's first let, the one at :7114
-   ;; in a later let under an if: a prover case for claude-2, recorded
-   ;; here), and (get predictions ch), an element of
+   ;; belief/predict-observation, checked by PROVER-E3-I against the
+   ;; independently proved E1 update and the same loop binding;
+   ;; (get predictions ch), an element of
    ;; predict-observation's return, as arg 3 of fe/channel-prediction-error
    ;; (:channel-prediction), the Clojure counterpart of
    ;; sensoryPredictionError, at whole-value grain; the prediction's
@@ -803,6 +799,9 @@
             {:value :loop-belief
              :from {:keyed-read [:belief :morning-brief-fold]}
              :to {:call "apply-arena-belief-events" :arg 1 :callee-box :r3-apply-belief-events}}
+            {:value :loop-belief
+             :from {:keyed-read [:belief :morning-brief-fold]}
+             :to {:call "belief/predict-observation" :arg 1 :callee-box :r3a-predict-observation}}
             {:value :channel-prediction
              :from {:element-of {:returns-of "belief/predict-observation"}}
              :to {:call "fe/channel-prediction-error" :arg 3 :callee-box :r3a-channel-prediction-error}}]}

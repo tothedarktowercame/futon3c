@@ -36,4 +36,7 @@
   :provenance "codex-1: efe.clj:1171 rank-cascade-actions reads :adjudication-rates; :1221 passes those rates into cascade-model-manifest/horizon-g-sparse-cert."}
  {:edge [:CTAU-TOKEN :R5] :term :C-tau :field :cascade-spec :grain :record
   :provenance "codex-2, MAP-2B-P3: futon2 cascade_problems.clj:168-171 assemble-one writes the cascade-spec literal with want, c-schedule, lam, mu; efe.clj:1116-1150 rank-cascade-actions reads cascade-spec into spec-in, copies its preference inputs, and :1221-1230 passes the assembled spec to horizon-g-sparse-cert. Sites read at futon2 94c6d9158."
-  :identity "Record-grain correspondence: inputs for the step-indexed preference, constructed inside the scorer. The want field alone is not C_tau, and the carrier is not an already evaluated preference distribution."}]
+  :identity "Record-grain correspondence: inputs for the step-indexed preference, constructed inside the scorer. The want field alone is not C_tau, and the carrier is not an already evaluated preference distribution."}
+ {:edge [:R1 :R3a] :term :mu :field :loop-belief :grain :field
+  :provenance "codex-2, MAP-2B-P1+: war_machine.clj judge binds the carried belief through morning-brief-fold and loops with that belief, then passes it as argument 1 to belief/predict-observation (current site :7271; map source futon2 e92ae532). belief.clj:1243-1270 predict-observation consumes belief as its first parameter (sites read at futon2 8c018ffa). PROVER-E3-I checks the same loop binding and independently proved E1 update from [:belief :morning-brief-fold]; argument 2 is entity-tags and is rejected by the real-source test."
+  :identity "mu is the carried per-entity belief population, not tick-observation or channel-prediction."}]

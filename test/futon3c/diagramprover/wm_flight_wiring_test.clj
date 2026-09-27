@@ -22,7 +22,7 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "78f052f35998125a9550c855af434145b3deaf4f05301be2c0891471e88e00c8")
+(def map-sha256 "0d6f1d1cab8d7d44860dd21af42bde2e58115957946db6b792aca2c1cf906d41")
 (def repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
@@ -180,3 +180,14 @@
              (set (filter trace-sites expected-outside-closure)))))
     (is (false? (wiring/sites-resolve? root components load-closure {:closure-root (str root "/futon2")}))
         "N0 does not hold yet for the whole map: stated, not hidden")))
+
+(deftest judge-to-prediction-passes-belief-not-tags
+  (let [s (spec) root (materialise s)
+        box (first (filter #(= :r7-fold-call (:box/id %)) (:boxes s)))
+        pass (first (filter #(= "belief/predict-observation" (get-in % [:to :call])) (:passes box)))
+        accepted (wiring/pass-attribution root (:boxes s) :r7-fold-call pass)
+        wrong (wiring/pass-attribution root (:boxes s) :r7-fold-call (assoc-in pass [:to :arg] 2))]
+    (is (= :loop-belief (:value pass)))
+    (is (:ok? accepted) (pr-str accepted))
+    (is (false? (:ok? wrong)) (pr-str wrong))
+    (is (keyword? (:why wrong)) (pr-str wrong))))
