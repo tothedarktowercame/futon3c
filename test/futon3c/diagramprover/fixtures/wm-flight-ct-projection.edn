@@ -1,9 +1,9 @@
 ;; re-pinned at blob fa63adb31df4e05703df9d4c207cd71eef73742f from 9567d6bb on 2026-09-27
+;; re-pinned at 84928eb6 from 9567d6bb on 2026-09-27
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "b58e8df19ae0336ff041715628808836c6d6426f",
- :map-blob "fa63adb31df4e05703df9d4c207cd71eef73742f",
+ :map-sha "84928eb6",
  :futon5-sha "aeeee96",
- :counts {:inputs 46, :outputs 26, :components 113, :edges 231},
+ :counts {:inputs 47, :outputs 26, :components 114, :edges 232},
  :validate
  {:all-valid false,
   :checks
@@ -58,6 +58,7 @@
      :r3-store-locators
      :r4-order-use
      :r9-finding-store
+     :r2-served-by-record
      :r2-verifier
      :r9-f-prefix-supply
      :r1-belief-carry

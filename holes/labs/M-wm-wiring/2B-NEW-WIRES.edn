@@ -103,4 +103,11 @@
   :line 1432},
  :reader-is-test-box? false,
  :packet "MAP-2B-P5"}
-]
+
+ {:map-commit "84928eb606fd96488a10c94ce04b91f3d1fb4d02"
+  :edge [:r2-served-by-record :r2-flight-read [:text-sha256 {:record :served-by}]]
+  :replaces [:r2-served-by-reading :r2-flight-read :text-sha256]
+  :writer {:file "futon2/src/futon2/aif/served_by_reading.clj" :var "reading" :line 125}
+  :reader {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn" :line 682}
+  :reader-is-test-box? false :packet "MAP-FIX-SBR"
+  :note "Re-sited existing courier, not a new runtime hop. claude-8 re-points its first-layer test; proposal retains its separate verifier digest."}]
