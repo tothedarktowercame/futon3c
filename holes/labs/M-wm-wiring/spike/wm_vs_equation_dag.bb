@@ -170,6 +170,69 @@
                             :else (walk next-box (conj seen next-box) next-path)))))
                     (get hops box)))]
       (some #(walk % #{%} []) (sort-by str starts)))))
+ ;; Reviewed code paths are distinct from prover-attributed declarations.
+(def carried-path (or (System/getenv "WM_VS_DAG_CARRIED_FILE")
+                      "holes/labs/M-wm-wiring/wm-carried-unattributed.edn"))
+(def carried-text (slurp carried-path))
+(def carried-entries (edn/read-string carried-text))
+(defn short-var [v] (last (str/split (str v) #"/")))
+(defn endpoint-named? [node v]
+  (let [[file name] (str/split (str v) #"/" 2)]
+    (some #(and (= node (:node %))
+                (str/includes? (str (:code %)) (str file ".clj"))
+                (some #{name} (map second (re-seq #"\(([a-z][a-z0-9-]*[a-z0-9][!?*]?)[,) :]"
+                                               (str (:code %)))))) eqs)))
+(def site-source
+  (memoize
+    (fn [file]
+      (let [root (System/getenv "WM_VS_DAG_SOURCE_ROOT")
+            [repo path] (str/split file #"/" 2)]
+        (if root
+          (let [f (io/file root file)] (when (.isFile f) (slurp f)))
+          (when (and (= repo "futon2") registry-rev)
+            (let [r (sh/sh "git" "-C" "/home/joe/code/futon2" "show" (str registry-rev ":" path))]
+              (when (zero? (:exit r)) (:out r)))))))))
+(defn site-refusal [{:keys [site site-var from-var to-var]}]
+  (let [[_ file line-text] (re-matches #"([^:]+):(\d+)" (str site))
+        line (when line-text (parse-long line-text))
+        text (when file (site-source file))
+        owner (or site-var from-var)
+        form (when text (wiring/var-form text (short-var owner)))
+        line-at (fn [offset] (inc (count (filter #{\newline} (subs text 0 offset)))))]
+    (cond
+      (nil? file) :malformed-site
+      (nil? text) :site-file-missing
+      (not (<= 1 line (count (str/split-lines text)))) :site-line-out-of-range
+      (not (contains? #{from-var to-var} owner)) :site-var-not-on-hop
+      (not (str/ends-with? file (str (first (str/split owner #"/")) ".clj"))) :site-var-file-mismatch
+      (or (nil? form) (not (re-find #"^\(defn-?\s" (:text form)))) :site-var-not-defn
+      (not (<= (line-at (:start form)) line (line-at (dec (:end form))))) :site-outside-var
+      :else nil)))
+(defn carried-check [edge symbols]
+  (let [entries (filterv #(= edge (:edge %)) carried-entries)
+        covered (set (map :term entries))
+        bad (some (fn [e]
+                    (let [path (:path e)
+                          reason (cond
+                                   (not (and (seq path) (seq (:source e)) (seq (:missing-form e))
+                                             (seq (:unattributable-at e))
+                                             (every? #(and (integer? %) (<= 0 %)
+                                                           (< % (count path))) (:unattributable-at e)))) :incomplete-entry
+                                   (not (and (endpoint-named? (first edge) (:from-var (first path)))
+                                             (endpoint-named? (second edge) (:to-var (last path))))) :endpoint-not-named
+                                   (not (every? (fn [[a b]] (= (:to-var a) (:from-var b)))
+                                                (partition 2 1 path))) :disconnected-path
+                                   (some #(not (keyword? (:kind %))) path) :missing-hop-kind)]
+                      (or (when reason {:term (:term e) :reason reason})
+                          (some (fn [[i hop]] (when-let [r (site-refusal hop)]
+                                               {:term (:term e) :reason r :hop i :site (:site hop)}))
+                                (map-indexed vector path))))) entries)]
+    (when (seq entries)
+      (cond bad {:refused bad}
+            (not (set/subset? symbols covered)) {:refused {:reason :terms-uncovered
+                                                          :terms (set/difference symbols covered)}}
+            :else {:entries entries}))))
+
 (def edge-report
   (for [[[a b] syms] (sort-by (comp str key) theory)
         :let [[st-file fs-file] (edge-status (node-boxes a) (node-boxes b))
@@ -183,12 +246,16 @@
                                             :when path] [term path]))
               covered (set/union (or (:covered coverage) #{}) (set (keys paths)))
               path-complete? (and (seq paths) (= syms covered))
-              inv (if path-complete? :declared (inventory [a b] st-var coverage))]]
+              base-inv (if path-complete? :declared (inventory [a b] st-var coverage))
+              carried (when (#{:none :cannot-tell} base-inv) (carried-check [a b] syms))
+              inv (if (:entries carried) :carried-unattributed base-inv)]]
     (cond-> {:edge [a b] :symbols syms
              :by-file st-file :by-var st-var
              :fields-by-file fs-file :fields-by-var fs-var
              :inventory inv
              :registry-no-site (vec (filter (set no-site-nodes) [a b]))}
+      (:entries carried) (assoc :carried-by carried)
+      (:refused carried) (assoc :carried-refusal (:refused carried))
       coverage (assoc :term-coverage (dissoc coverage :status))
       path-complete? (assoc :path (val (first paths)) :paths paths
                             :term-coverage {:entries (vec (filter #(and (= [a b] (:edge %))
@@ -210,6 +277,9 @@
 (prn {:map (or map-rev map-file "working tree") :registry (:as-of reg)
       :registry-rev (or registry-rev registry-file "working tree")
       :term-fields term-fields-path :term-fields-sha256 term-fields-sha256
+      :carried-input carried-path
+      :carried-input-sha256 (format "%064x" (java.math.BigInteger. 1 (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes carried-text "UTF-8"))))
+      :inventory-carried-unattributed (mapv :edge (filter #(= :carried-unattributed (:inventory %)) edge-report))
       :theory-edges (count theory)
       :registry-names-no-site no-site-nodes
       :summary-by-file (frequencies (map :by-file edge-report))

@@ -56,13 +56,18 @@
 
 (defn generate
   ([map-file registry-file] (generate map-file registry-file fixture-correspondence))
-  ([map-file registry-file entries]
-   (let [table-file (io/file (.getParentFile (io/file map-file)) "terms.edn")]
+  ([map-file registry-file entries] (generate map-file registry-file entries []))
+  ([map-file registry-file entries carried]
+   (let [carried-file (io/file (.getParentFile (io/file map-file)) "carried.edn")
+         table-file (io/file (.getParentFile (io/file map-file)) "terms.edn")]
      (spit table-file (pr-str entries))
+     (spit carried-file (pr-str carried))
      (sh/sh "bb" generator
             :env (assoc (into {} (System/getenv))
                         "WM_VS_DAG_MAP_FILE" (str map-file)
                         "WM_VS_DAG_REGISTRY_FILE" (str registry-file)
+                        "WM_VS_DAG_CARRIED_FILE" (str carried-file)
+                        "WM_VS_DAG_SOURCE_ROOT" (str (.getParentFile (io/file map-file)))
                         "WM_VS_DAG_TERM_FIELDS_FILE" (str table-file))))))
 
 (deftest inventory-classes
@@ -187,6 +192,40 @@
                 edge (first (filter #(= [:RB :RC] (:edge %)) (:edges (edn/read-string (:out r)))))]
             (is (zero? (:exit r)) (:err r))
             (is (= (if (= n 4) :declared :hole) (:inventory edge))))))
+      (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
+
+(deftest reviewed-carried-paths
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "wm-carried-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        mf (io/file dir "map.edn") rf (io/file dir "registry.edn")
+        sf (io/file dir "futon2/a.clj")
+        entry {:edge [:RA :RB] :term :s-a
+               :path [{:from-var "a/make-a" :to-var "b/make-b"
+                       :site "futon2/a.clj:1" :kind :returned}]
+               :unattributable-at [0] :missing-form "Fixture returned value"
+               :source "reviewed fixture"}]
+    (try
+      (io/make-parents sf)
+      (spit sf "(defn make-a [] 1)\n(defn other [] 2)\n")
+      (spit mf (pr-str fixture-map))
+      (spit rf (pr-str (assoc-in fixture-registry [:equations 0 :code] "a.clj:1 (make-a)")))
+      (doseq [[label e expected reason]
+              [[:valid entry :carried-unattributed nil]
+               [:stale-line (assoc-in entry [:path 0 :site] "futon2/a.clj:99") :none :site-line-out-of-range]
+               [:wrong-owner (assoc-in entry [:path 0 :site] "futon2/a.clj:2") :none :site-outside-var]
+               [:missing-file (assoc-in entry [:path 0 :site] "futon2/missing.clj:1") :none :site-file-missing]
+               [:wrong-endpoint (assoc-in entry [:path 0 :from-var] "a/other") :none :endpoint-not-named]
+               [:missing-term (assoc entry :term :other) :none :terms-uncovered]
+               [:already-declared (assoc entry :edge [:RB :RC] :term :s-b) :declared nil]
+               [:hole (assoc entry :edge [:RA :RD]) :hole nil]
+               [:code-note (assoc entry :edge [:RA :RC]) :code-path-note nil]]]
+        (let [r (generate mf rf fixture-correspondence [e])
+              out (when (zero? (:exit r)) (edn/read-string (:out r)))
+              edge (first (filter #(= (:edge e) (:edge %)) (:edges out)))]
+          (is (zero? (:exit r)) (str label " " (:err r)))
+          (is (= expected (:inventory edge)) (str label))
+          (is (= reason (get-in edge [:carried-refusal :reason])) (str label))
+          (is (= (= expected :carried-unattributed) (boolean (:carried-by edge))) (str label))))
       (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
 
 (let [result (run-tests)]

@@ -1,0 +1,218 @@
+; Reviewed code-carried paths, not prover declarations. Sites checked against registry-rev.
+[{:term :interp,
+  :unattributable-at [3 4 8 9],
+  :missing-form
+  "Caller-scope contract for injected construct; parameter provenance; closure-captured proposed-family returned through construction/construct. CB-ELEM alone proves only collection membership.",
+  :source
+  "PROVER-CB-D.md fff484cb; storage/test-registry/prover-param-2-gap; JOIN-CARRIED-I reviewed packet",
+  :edge [:R2 :R6],
+  :path
+  [{:from-var "want_interpretation/merge-published",
+    :to-var "flight_runner/target-view",
+    :site "futon2/src/futon2/aif/want_interpretation.clj:508",
+    :kind :returned}
+   {:from-var "flight_runner/target-view",
+    :to-var "cascade_problems/assemble-one",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:209",
+    :kind :keyed,
+    :site-var "cascade_problems/assemble-one"}
+   {:from-var "cascade_problems/assemble-one",
+    :to-var "cascade_problems/constructed-from-interpretations",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:226",
+    :kind :positional}
+   {:from-var "cascade_problems/constructed-from-interpretations",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:126",
+    :kind :injected-call}
+   {:from-var "interpretation_construction/construct",
+    :to-var "interpretation_construction/support",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:203",
+    :kind :positional}
+   {:from-var "interpretation_construction/support",
+    :to-var "interpretation_construction/compile-plan",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:148",
+    :kind :callback}
+   {:from-var "interpretation_construction/compile-plan",
+    :to-var "interpretation_construction/support",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:104",
+    :kind :returned}
+   {:from-var "interpretation_construction/support",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:161",
+    :kind :returned}
+   {:from-var "interpretation_construction/construct",
+    :to-var "construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:288",
+    :kind :closure-capture}
+   {:from-var "construction/construct",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:323",
+    :kind :returned,
+    :site-var "interpretation_construction/construct"}
+   {:from-var "interpretation_construction/construct",
+    :to-var "construction/containment-order",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:338",
+    :kind :callback,
+    :attributed :CB-ELEM,
+    :limit "Collection provenance remains unproved"}]}
+ {:term :interp,
+  :unattributable-at [3 4 8 9],
+  :missing-form
+  "Caller-scope contract for injected construct; parameter provenance; closure-captured proposed-family returned through construction/construct. CB-ELEM alone proves only collection membership.",
+  :source
+  "PROVER-CB-D.md fff484cb; storage/test-registry/prover-param-2-gap; JOIN-CARRIED-I reviewed packet",
+  :edge [:R2 :R4],
+  :path
+  [{:from-var "want_interpretation/merge-published",
+    :to-var "flight_runner/target-view",
+    :site "futon2/src/futon2/aif/want_interpretation.clj:508",
+    :kind :returned}
+   {:from-var "flight_runner/target-view",
+    :to-var "cascade_problems/assemble-one",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:209",
+    :kind :keyed,
+    :site-var "cascade_problems/assemble-one"}
+   {:from-var "cascade_problems/assemble-one",
+    :to-var "cascade_problems/constructed-from-interpretations",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:226",
+    :kind :positional}
+   {:from-var "cascade_problems/constructed-from-interpretations",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:126",
+    :kind :injected-call}
+   {:from-var "interpretation_construction/construct",
+    :to-var "interpretation_construction/support",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:203",
+    :kind :positional}
+   {:from-var "interpretation_construction/support",
+    :to-var "interpretation_construction/compile-plan",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:148",
+    :kind :callback}
+   {:from-var "interpretation_construction/compile-plan",
+    :to-var "interpretation_construction/support",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:104",
+    :kind :returned}
+   {:from-var "interpretation_construction/support",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:161",
+    :kind :returned}
+   {:from-var "interpretation_construction/construct",
+    :to-var "construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:288",
+    :kind :closure-capture}
+   {:from-var "construction/construct",
+    :to-var "interpretation_construction/construct",
+    :site "futon2/src/futon2/aif/interpretation_construction.clj:323",
+    :kind :returned,
+    :site-var "interpretation_construction/construct"}
+   {:from-var "interpretation_construction/construct",
+    :to-var "cascade_problems/constructed-from-interpretations",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:133",
+    :kind :returned,
+    :site-var "cascade_problems/constructed-from-interpretations"}
+   {:from-var "cascade_problems/constructed-from-interpretations",
+    :to-var "cascade_problems/assemble-one",
+    :site "futon2/src/futon2/aif/cascade_problems.clj:226",
+    :kind :returned,
+    :site-var "cascade_problems/assemble-one"}
+   {:from-var "cascade_problems/assemble-one",
+    :to-var "war_machine/cascade-lane",
+    :site "futon2/scripts/futon2/report/war_machine.clj:5929",
+    :site-var "war_machine/cascade-lane",
+    :kind :keyed}
+   {:from-var "war_machine/cascade-lane",
+    :to-var "efe/rank-actions",
+    :site "futon2/scripts/futon2/report/war_machine.clj:6006",
+    :kind :positional}
+   {:from-var "efe/rank-actions",
+    :to-var "efe/rank-cascade-actions",
+    :site "futon2/src/futon2/aif/efe.clj:1461",
+    :kind :positional}
+   {:from-var "efe/rank-cascade-actions",
+    :to-var "efe/order-use",
+    :site "futon2/src/futon2/aif/efe.clj:1221",
+    :kind :callback}]}
+ {:edge [:R2 :R7],
+  :term :o,
+  :path
+  [{:from-var "observation_checks/observe*",
+    :to-var "observation_admission/label-record",
+    :site "futon2/src/futon2/aif/observation_admission.clj:185",
+    :kind :keyed,
+    :site-var "observation_admission/label-record"}
+   {:from-var "observation_admission/label-record",
+    :to-var "observation_label_store/record!",
+    :site "futon2/src/futon2/aif/observation_label_store.clj:118",
+    :kind :store,
+    :site-var "observation_label_store/record!"}
+   {:from-var "observation_label_store/record!",
+    :to-var "observation_label_store/snapshot",
+    :site "futon2/src/futon2/aif/observation_label_store.clj:67",
+    :kind :store,
+    :site-var "observation_label_store/snapshot"}
+   {:from-var "observation_label_store/snapshot",
+    :to-var "observation_label_reader/read-rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :returned,
+    :site-var "observation_label_reader/read-rates-inputs"}
+   {:from-var "observation_label_reader/read-rates-inputs",
+    :to-var "observation_label_reader/rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :positional}
+   {:from-var "observation_label_reader/rates-inputs",
+    :to-var "observation_label_reader/read-rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :returned,
+    :site-var "observation_label_reader/read-rates-inputs"}
+   {:from-var "observation_label_reader/read-rates-inputs",
+    :to-var "observation_rates/sourced-rates",
+    :site "futon2/src/futon2/aif/observation_rates.clj:218",
+    :kind :keyed,
+    :site-var "observation_rates/sourced-rates"}],
+  :unattributable-at [1 2 3 4 5],
+  :missing-form
+  "Label-store round trip: EDN decoding, return inside try, reduce-built population and delegated return. Endpoint observe* is not named at R2; this entry must remain refused.",
+  :source
+  "MAP-2B-P7 STOPPED, PROOF-2a-PLAN LOG; JOIN-CARRIED-I reviewed packet"}
+ {:edge [:R2 :R7],
+  :term :ref-label,
+  :path
+  [{:from-var "observation_checks/observe*",
+    :to-var "observation_admission/label-record",
+    :site "futon2/src/futon2/aif/observation_admission.clj:185",
+    :kind :keyed,
+    :site-var "observation_admission/label-record"}
+   {:from-var "observation_admission/label-record",
+    :to-var "observation_label_store/record!",
+    :site "futon2/src/futon2/aif/observation_label_store.clj:118",
+    :kind :store,
+    :site-var "observation_label_store/record!"}
+   {:from-var "observation_label_store/record!",
+    :to-var "observation_label_store/snapshot",
+    :site "futon2/src/futon2/aif/observation_label_store.clj:67",
+    :kind :store,
+    :site-var "observation_label_store/snapshot"}
+   {:from-var "observation_label_store/snapshot",
+    :to-var "observation_label_reader/read-rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :returned,
+    :site-var "observation_label_reader/read-rates-inputs"}
+   {:from-var "observation_label_reader/read-rates-inputs",
+    :to-var "observation_label_reader/rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :positional}
+   {:from-var "observation_label_reader/rates-inputs",
+    :to-var "observation_label_reader/read-rates-inputs",
+    :site "futon2/src/futon2/aif/observation_label_reader.clj:82",
+    :kind :returned,
+    :site-var "observation_label_reader/read-rates-inputs"}
+   {:from-var "observation_label_reader/read-rates-inputs",
+    :to-var "observation_rates/sourced-rates",
+    :site "futon2/src/futon2/aif/observation_rates.clj:218",
+    :kind :keyed,
+    :site-var "observation_rates/sourced-rates"}],
+  :unattributable-at [1 2 3 4 5],
+  :missing-form
+  "Label-store round trip: EDN decoding, return inside try, reduce-built population and delegated return. Endpoint observe* is not named at R2; this entry must remain refused.",
+  :source
+  "MAP-2B-P7 STOPPED, PROOF-2a-PLAN LOG; JOIN-CARRIED-I reviewed packet"}]
