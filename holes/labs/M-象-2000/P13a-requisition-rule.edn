@@ -1,0 +1,41 @@
+{:valid-from "2026-09-27T20:05:39Z"
+ :idempotency-key "M-象-2000/P13a/requisition-5146606d/v1"
+ :record
+ {:rule/key "kimi-requisition-20260924-5146606d"
+  :rule/name "Each Kimi call carries a one-line requisition"
+  :rule/kind :temporary
+  :rule/internal
+  {:description "5146606d installs parse-requisition/requisition-decision/context-carry-decision in zai-api, enabled by kimi-api context-policy. It replaces 80428193's inherited caller-clock default with a prompt requisition; queues kimi-work-target followups on refusals or off-clock targets. Target change clears conversation; same target keeps it until the 512k cap. Runtime activation time is not established by this record."
+   :repo "futon3c"
+   :commit "5146606dcc4746ce3ade88d56dca29ddbe6d3af7"
+   :predecessor-commit "80428193c9f221276dc6769ab2d539120561af73"
+   :committed-at "2026-09-24T16:34:08Z"
+   :runtime-evidence-status :unestablished}
+  :rule/input-output
+  {:description "Before a new Kimi model call, require a Requisition line naming a resolvable M-/E-/T- target and nonempty purpose. Refuse absent, unresolved or conflicting targets; accept repeated same-target lines. Auto-bellbacks and park resumes are continuations exempt from a new requisition. Refusal sends a caller-session followup; a target differing from the caller clock sends a reminder."
+   :refusal-example "A new Kimi call containing only 'Please solve this' and no Requisition line must be refused before the model call."
+   :acceptance-example "Requisition: M-futon-seams — prototype PROOF-2a examples (provided that target resolves)."}
+  :rule/accomplishment
+  {:description "Reconstructed intended effect: keep unrelated work from accumulating in persistent Kimi seat contexts, reducing avoidable quota consumption and recurrence of five-hour limit exhaustion. This is an intended outcome, not a claim the gate achieved it."
+   :observable "Compare per-seat prompt/context token counts, target-change clear events and quota-exhaustion events per five-hour window; refusal or reminder counts alone do not demonstrate the intended effect."
+   :basis :reconstructed-intent}
+  :rule/world-assumption "Callers name the work they actually do, target changes track topic changes, clearing context reduces repeated input tokens, and accumulated context is a material cause of quota exhaustion. A syntactically valid requisition or a stale clock does not establish these assumptions."
+  :rule/however
+  {:status :known
+   :failure-mode "Reminders repeat to caller sessions across seats without resolving stale clocks or changing work; delivered notices become steady red that recipients ignore. The enforcement burden outlives the investigated quota incident."
+   :signal "42 harness requisition/refusal notices under Joe's name from 2026-09-24 19:04 through 2026-09-25 19:59; MAP-Q5 identifies inbox-zero/gate-fails-loudly's violation signature: a consumer that repeats steady red until it is ignored."
+   :basis :observed-retrospectively}
+  :rule/incident {:ref/type :evidence :ref/id "emacs-dc5468d1618eff5070b598904b9b0d84"}
+  :rule/withdrawal-condition "Review removal when the owning 09-24 15:48 Kimi-limit incident is explained and its measures can be safely withdrawn; retain any permanent replacement only through a separate adoption. The explanation d5e3147e was committed at 15:53:44, before this rule. This record performs no clearance or withdrawal."
+  :rule/provenance
+  {:author "codex-4"
+   :basis :historical-reconstruction
+   :incident-link-basis "Explicit P13a owner instruction, not inferred from time overlap. The ref names Joe's original 15:48 incident report; it does not invent a separate incident record."
+   :sources ["git:futon3c:5146606dcc4746ce3ade88d56dca29ddbe6d3af7"
+             "git:futon3c:80428193c9f221276dc6769ab2d539120561af73"
+             "git:futon3c:d5e3147e77710149c1915416c5848564469d63ba"
+             "futon3c/holes/labs/M-象-2000/MAP-Q5-1620-reconstruction.md"
+             "evidence:emacs-dc5468d1618eff5070b598904b9b0d84"
+             "evidence:emacs-46e69c9bcb4fad45e86fd6a63e649a84"
+             "futon3/library/inbox-zero/gate-fails-loudly.flexiarg"]
+   :limitations "The accomplishment layer, world assumption and withdrawal condition are written retrospectively, not attributed as a contemporaneous adoption. Valid-from is this description's recording time, not runtime rule activation. P13b establishes activation; P14 establishes clearance. MAP-Q5's six-second comparison uses invoke completion; git records 80428193 at 16:22:34, not 16:22:42."}}}
