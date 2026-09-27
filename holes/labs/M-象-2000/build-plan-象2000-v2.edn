@@ -31,7 +31,7 @@
    :deps [:P2a] :decision nil :v2 :split
    :patterns [:象/视图出于史]}
   {:id :P2c  :title "Crash tests, then demote /tmp to a cache" :segment :supply
-   :deps [:P2b] :decision {:theme :semantics :question "Should parked state's authority move from the /tmp file to the record?"} :v2 :new
+   :deps [:P2b] :decision nil :decided "Joe 2026-09-27: split -- crash tests now; authority switch held until P2b compare is equal on live data for a week, then back to Joe" :v2 :new
    :patterns [:agency/state-atomicity :social/idempotent-handoff]}
   {:id :P3   :title "Grant record type (scope, interval, parent grant)" :segment :supply
    :deps [:P6b :P6o] :decision {:theme :new-type :question "A new record type for grants of authority?"} :v2 :changed
