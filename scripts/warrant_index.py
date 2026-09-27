@@ -102,15 +102,15 @@ def latest_rows(db, namespaces):
     wanted = set(namespaces)
     if not wanted: return {}
     placeholders = ','.join('?' for _ in wanted)
-    sql = f'''SELECT r.namespace,r.entry_id,r.repo_root,r.warrant,e.payload_text
+    sql = f'''SELECT r.namespace,r.entry_id,r.repo_root,r.warrant,e.payload_text,e.payload_sha
               FROM registry_runs r JOIN registry_entries e ON e.id=r.entry_id
               WHERE r.namespace IN ({placeholders})
               ORDER BY r.namespace,r.ran_order DESC,r.finished_order DESC,r.entry_id DESC'''
     found = {}
-    for namespace, entry, root, warrant, payload in db.execute(sql, tuple(sorted(wanted))):
+    for namespace, entry, root, warrant, payload, digest in db.execute(sql, tuple(sorted(wanted))):
         found.setdefault(namespace, {'namespace': namespace, 'entry-id': entry,
                                      'repo-root': root, 'warrant': bool(warrant),
-                                     'payload-text': payload})
+                                     'payload-text': payload, 'payload-sha': digest})
     return found
 
 
@@ -145,6 +145,10 @@ def classify(db, namespaces, root=None):
         if not run:
             prepared[namespace] = ('no-warrant', None, {}); continue
         try:
+            # The stored text must be the text the entry id was made from.
+            text_sha = hashlib.sha256((run['payload-text'] or '').encode()).hexdigest()
+            if text_sha != run['payload-sha'] or run['entry-id'] != 'test-registry-' + text_sha:
+                raise ValueError('payload does not match its digest')
             payload = edn(run['payload-text'])
             files = recorded_files(run, payload, root)
         except (TypeError, ValueError):

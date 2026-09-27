@@ -48,7 +48,7 @@ class IndexTest(unittest.TestCase):
 
     def insert_run(self, entry='one', namespace='test.one', when=1, passing=True,
                    files=True, payload_text=None):
-        payload = {'kind': 'run', 'repo/root': str(self.root), 'namespace': namespace,
+        payload = {'kind': 'run', 'run/id': entry, 'repo/root': str(self.root), 'namespace': namespace,
                    'command': ['clojure', '-M:test', '-n', namespace],
                    'ran-at': f'2026-09-27T01:00:{when:02d}Z',
                    'finished-at': f'2026-09-27T01:01:{when:02d}Z',
@@ -59,10 +59,14 @@ class IndexTest(unittest.TestCase):
                    'test-files': ({self.b.name: hashlib.sha256(self.b.read_bytes()).hexdigest()}
                                   if files else {})}
         text = encode(payload) if payload_text is None else payload_text
+        # As the registry makes them: the id is the digest of the stored text.
+        digest = hashlib.sha256(text.encode()).hexdigest()
+        label, entry = entry, 'test-registry-' + digest
+        self.ids = getattr(self, 'ids', {}); self.ids[label] = entry
         order = f'000000000000000000{when:02d}:000000000'
         with sqlite3.connect(self.db_path) as db:
             db.execute('INSERT INTO registry_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                       (entry, text, entry, '{}', None, None, '{}', 'test',
+                       (entry, text, digest, '{}', None, None, '{}', 'test',
                         payload['finished-at'], ':coordination', ':observation', None, 0))
             db.execute('INSERT INTO registry_runs VALUES(?,?,?,?,?,?,?,?,?,?)',
                        (entry, str(self.root), namespace, encode(payload['command']),
@@ -101,14 +105,14 @@ class IndexTest(unittest.TestCase):
     def test_newest_failure_and_later_pass(self):
         self.insert_run('pass', when=1, passing=True)
         self.insert_run('fail', when=2, passing=False)
-        self.assertEqual('fail', self.check('not-passing')['entry-id'])
+        self.assertEqual(self.ids['fail'], self.check('not-passing')['entry-id'])
         self.insert_run('pass-again', when=3, passing=True)
-        self.assertEqual('pass-again', self.check('current')['entry-id'])
+        self.assertEqual(self.ids['pass-again'], self.check('current')['entry-id'])
 
     def test_out_of_order_append_cannot_hide_newer_failure(self):
         self.insert_run('newer-fail', when=9, passing=False)
         self.insert_run('late-old-pass', when=2, passing=True)
-        self.assertEqual('newer-fail', self.check('not-passing')['entry-id'])
+        self.assertEqual(self.ids['newer-fail'], self.check('not-passing')['entry-id'])
 
     def test_unverifiable_missing_files_and_bad_payload(self):
         self.insert_run('empty', files=False)
@@ -142,12 +146,22 @@ class IndexTest(unittest.TestCase):
         self.insert_run('one', 'test.one'); self.insert_run('two', 'test.two', when=2)
         result = json.loads(self.runcli('check', '--json').stdout)
         self.assertEqual({'test.one', 'test.two'}, {row['namespace'] for row in result['namespaces']})
-        self.assertEqual('local-record', json.loads(self.runcli('put', 'one').stdout)['class'])
+        self.assertEqual('local-record', json.loads(self.runcli('put', self.ids['one']).stdout)['class'])
         self.assertEqual(2, json.loads(self.runcli('load').stdout)['runs'])
         self.assertEqual(['test.one', 'test.two'],
                          json.loads(self.runcli('affected', str(self.a)).stdout))
         refused = self.runcli('put', 'old-remote', status=1)
         self.assertIn('no local run', json.loads(refused.stderr)['error'])
+
+    def test_payload_altered_after_storage_is_unverifiable(self):
+        self.insert_run('one')
+        self.check('current')
+        with sqlite3.connect(self.db_path) as db:
+            text = db.execute('SELECT payload_text FROM registry_entries WHERE id=?',
+                              (self.ids['one'],)).fetchone()[0]
+            db.execute('UPDATE registry_entries SET payload_text=? WHERE id=?',
+                       (text + ' ', self.ids['one']))
+        self.check('unverifiable')
 
     def test_edn_refuses_ambiguous_input(self):
         self.assertEqual({'s': 'quote " inside', 'x': [True, None, 0]},
