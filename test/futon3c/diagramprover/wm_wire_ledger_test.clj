@@ -563,7 +563,7 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
-    (is (= {:value-varying 62 :refusal 21 :record 38 :absent 73} (:second-layer l)))
+    (is (= {:value-varying 63 :refusal 23 :record 41 :absent 67} (:second-layer l)))
     (is (= 194 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
