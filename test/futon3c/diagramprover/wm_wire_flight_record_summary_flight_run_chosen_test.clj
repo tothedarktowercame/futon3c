@@ -1,13 +1,14 @@
 (ns futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test
   "Real calls with IO isolated; no live record carries both ends.
   See support/live-records-read for the pinned record survey."
-  (:require [futon3c.diagramprover.wm-wire-summary-products :as products]
+  (:require [futon3c.diagramprover.wm-wire-summary-conditioning-products :as conditioning]
+            [futon3c.diagramprover.wm-wire-summary-products :as products]
             [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-small-support :as support]))
 (defn check [] (support/observe :chosen (fn [v _] v)))
-(def wire {:wire [:flight-record-summary :flight-run :chosen] :second-layer {:test `summary-field-is-recorded-without-changing-progress
-                  :kind :record :product [:clicks 0 :chosen]
+(def wire {:wire [:flight-record-summary :flight-run :chosen] :second-layer {:test `chosen-precedence-changes-conditioning-evidence
+                  :kind :value-varying :product [:enactments 0 :step :p-o]
                   :intervention :before-reader}
    :kind :witnessed-hermetically
            :test `the-writer-reaches-the-reader :check check
@@ -41,3 +42,20 @@
     (println :summary-product :run :chosen
              (pr-str [(get-in ra [:clicks 0 :chosen]) (get-in rb [:clicks 0 :chosen])])
              :status [(:status ra) (:status rb)])))
+
+(deftest chosen-precedence-changes-conditioning-evidence
+  (let [[a b] (conditioning/pair :chosen)
+        sa (get-in a [:record :enactments 0 :step])
+        sb (get-in b [:record :enactments 0 :step])]
+    (is (= (:run-record a) (:run-record b)))
+    (is (= (:increment a) (:increment b)))
+    (is (= (update (:click a) :chosen dissoc :precedence)
+           (update (:click b) :chosen dissoc :precedence)))
+    (is (= :present (:status sa) (:status sb)))
+    (is (= (select-keys sa [:o :measured-a :s-prev :policy-key])
+           (select-keys sb [:o :measured-a :s-prev :policy-key])))
+    (is (= 11/12 (:p-o sa)))
+    (is (= 1/12 (:p-o sb)))
+    (is (< (:f sa) (:f sb)))
+    (is (not= (:q sa) (:q sb)))
+    (println :precedence-conditioning (pr-str (mapv #(select-keys % [:b :q :p-o :f]) [sa sb])))))

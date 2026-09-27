@@ -11,7 +11,8 @@
   a real one-click flight/run! with the real enact-fn (the lane-8
   driver's exemplar-backed fixture) and the real wc-verdict-fn (real
   checker, real enactment-habit/increment)."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-summary-conditioning-products :as conditioning]
+            [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-publication-support :as support]))
 
@@ -25,6 +26,9 @@
 
 (def wire
   {:wire [:r7-flight-call :flight-run :increment]
+   :second-layer {:test `increment-policy-key-is-carried-into-the-step
+                  :kind :record :product [:enactments 0 :step :policy-key]
+                  :intervention :before-reader}
    :kind :witnessed-hermetically
    :test `the-writers-increment-reaches-the-enactments-entry
    :check check
@@ -57,3 +61,20 @@
     (is (not-any? #(and (map? %) (contains? % :increment))
                   (tree-seq coll? seq f))
         "no [:enactments i :increment] on the record")))
+
+(deftest increment-policy-key-is-carried-into-the-step
+  ;; run!:572 copies the key; conditioning-step:299 uses it to find a prior
+  ;; chain. With no prior enactments, both keys use the same initial belief.
+  (let [[a b] (conditioning/pair :increment)
+        sa (get-in a [:record :enactments 0 :step])
+        sb (get-in b [:record :enactments 0 :step])]
+    (is (= (:run-record a) (:run-record b)))
+    (is (= (:click a) (:click b)))
+    (is (= (dissoc (:increment a) :policy-key) (dissoc (:increment b) :policy-key)))
+    (doseq [r [a b]]
+      (is (= (:increment r) (get-in r [:record :enactments 0 :increment])))
+      (is (= (get-in r [:increment :policy-key]) (get-in r [:record :enactments 0 :step :policy-key]))))
+    (is (= :present (:status sa) (:status sb)))
+    (is (not= (:policy-key sa) (:policy-key sb)))
+    (is (= (dissoc sa :policy-key) (dissoc sb :policy-key)))
+    (println :increment-conditioning (pr-str (mapv #(select-keys % [:policy-key :q :p-o :f]) [sa sb])))))
