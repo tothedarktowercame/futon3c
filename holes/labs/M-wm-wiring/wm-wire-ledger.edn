@@ -1,9 +1,9 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "79a8988d",
-  :map "b58e8df1"},
+  :rev "63c9e093",
+  :map "84928eb6"},
  :second-layer
- {:value-varying 53, :refusal 21, :record 31, :absent 75},
+ {:value-varying 58, :refusal 21, :record 32, :absent 69},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 10,
@@ -494,7 +494,19 @@
    "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
    :status :verified,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test/target-determines-reader-product,
+     :kind :value-varying,
+     :product [:outputs],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-aa9567bd137bc2a943144b19fe29fa64a7831364f262c7e4cf9f214e20c1c0fb",
+     :git-head "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :test-revision "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :ran-at "2026-09-27T16:58:36.655997445Z"}},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-d00574c8.edn",
     :sha256
@@ -508,13 +520,37 @@
    futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-click [:target {:record :flight}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test/target-determines-reader-product,
+     :kind :value-varying,
+     :product [:outputs],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-ece30d31c372cd93d991acbb5264f1930e658fb7d2a2382ea223f75da35b422c",
+     :git-head "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :test-revision "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :ran-at "2026-09-27T17:00:10.589748592Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry :flight-judge-opts [:target {:record :flight}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test/target-determines-reader-product,
+     :kind :record,
+     :product [:outputs],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-ce9b52c46914db4f789d6d546aa8850eef1b3447e3de27729b0a231ba72aae7e",
+     :git-head "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :test-revision "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :ran-at "2026-09-27T16:58:14.398178994Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-run [:target {:record :flight}]],
@@ -553,7 +589,19 @@
   {:wire
    [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/target-determines-reader-product,
+     :kind :record,
+     :product [:outputs],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-6227ffbf77a1941be354fb31cca4972abffce1bef23eebed644d79ea476f4543",
+     :git-head "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :test-revision "0eb890847ea6724298a997dbdec0aa71f9e46841",
+     :ran-at "2026-09-27T16:58:56.809831970Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/the-target-reaches-the-reader}
   {:wire [:flight-record-summary :click-reason-test :failure],
@@ -674,12 +722,36 @@
    "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-test-attempts-test/real-enact-test-detects-field-change,
+     :kind :value-varying,
+     :product [:reports :type],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-83eda5ae69f549285922a916e6b56534412160d3b72a74786affa251bdcbd919",
+     :git-head "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :test-revision "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :ran-at "2026-09-27T16:55:18.916336422Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-test-attempts-test/the-attempts-reach-the-row-0-test}
   {:wire [:r0-enact-step :r0-test :grain-gate],
    :status :witnessed-hermetically,
-   :second-layer {:absent :no-second-layer-test},
+   :second-layer
+   {:declared
+    {:test
+     futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/real-enact-test-detects-field-change,
+     :kind :value-varying,
+     :product [:reports :type],
+     :intervention :before-reader},
+    :evidence
+    {:warrant-id
+     "test-registry-9eeecbe285b77de91e4ad9b91403de6f16e0105a9c13cfa6bbbb7fd684620b3f",
+     :git-head "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :test-revision "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :ran-at "2026-09-27T16:55:45.058097974Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/the-gate-refusal-reaches-the-row-0-test}
   {:wire [:r0-enact-step :r5-test :attempts],
@@ -1110,15 +1182,6 @@
      :ran-at "2026-09-27T04:30:02.138938393Z"}},
    :test
    futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/the-tick-observation-reaches-the-channel-prediction-error}
-  {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
-   :status :verified,
-   :second-layer {:absent :no-second-layer-test},
-   :record
-   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
-    :sha256
-    "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"},
-   :test
-   futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/the-read-steps-text-pin-reaches-the-flight-record}
   {:wire [:r2-served-by-reading :r2-test :text-sha256],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1165,6 +1228,18 @@
      :ran-at "2026-09-27T04:30:20.630360077Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/the-want-span-reaches-the-verifier}
+  {:wire
+   [:r2-served-by-record
+    :r2-flight-read
+    [:text-sha256 {:record :served-by}]],
+   :status :verified,
+   :second-layer {:absent :no-second-layer-test},
+   :record
+   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
+    :sha256
+    "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"},
+   :test
+   futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/the-read-steps-text-pin-reaches-the-flight-record}
   {:wire
    [:r2-store-constraints-read
     :r3-store-constraints-read
@@ -1650,16 +1725,16 @@
    :second-layer
    {:declared
     {:test
-     futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/increment-policy-key-is-carried-into-the-step,
-     :kind :record,
-     :product [:enactments 0 :step :policy-key],
+     futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/policy-key-selects-the-continued-posterior,
+     :kind :value-varying,
+     :product [:enactments 1 :step :p-o],
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-4977a6302eb62387105cbc973653f51cc396039a331f0c5515556fce434bf636",
-     :git-head "8b9c9da67385db3324ee5cad57e0f43ba0ffb137",
-     :test-revision "8b9c9da67385db3324ee5cad57e0f43ba0ffb137",
-     :ran-at "2026-09-27T16:42:10.548143791Z"}},
+     "test-registry-c3b1dd540c636771b3cc1b3cb1bb319a8576c9af10fe591636e558dd592ba9f5",
+     :git-head "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :test-revision "0fff52417af7ccf5a2c3a48d9569913196176da9",
+     :ran-at "2026-09-27T16:54:39.791059241Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/the-writers-increment-reaches-the-enactments-entry}
   {:wire [:r7-flight-call :r7-call-test :wc],

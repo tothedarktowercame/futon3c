@@ -1,5 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
-  "Wire [:r2-served-by-reading :r2-flight-read :text-sha256]: the read
+  "Wire [:r2-served-by-record :r2-flight-read [:text-sha256 {:record :served-by}]]
+  (re-sited on the map at futon3c 84928eb6, MAP-FIX-SBR; was
+  [:r2-served-by-reading :r2-flight-read :text-sha256]; the observation
+  below is unchanged): the read
   step's text pin reaching the flight record.
 
   The writer is served-by-reading (futon2.aif.served-by-reading, site var
@@ -34,7 +37,7 @@
      :reader (:text-sha256 rd)}))
 
 (def wire
-  {:wire [:r2-served-by-reading :r2-flight-read :text-sha256]
+  {:wire [:r2-served-by-record :r2-flight-read [:text-sha256 {:record :served-by}]]
    :kind :verified
    :test `the-read-steps-text-pin-reaches-the-flight-record
    :check check

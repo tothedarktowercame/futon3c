@@ -419,9 +419,9 @@
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-enact-step-publication-observed-test
     futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test])
 
-(def adjacency-rev "79a8988d")
+(def adjacency-rev "63c9e093")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "b58e8df1")
+(def map-rev "84928eb6")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
@@ -535,7 +535,7 @@
 (deftest the-ledger
   (let [l (ledger)
         c (:counts l)]
-    (is (= {:value-varying 53 :refusal 21 :record 31 :absent 75} (:second-layer l)))
+    (is (= {:value-varying 58 :refusal 21 :record 32 :absent 69} (:second-layer l)))
     (is (= 180 (reduce + (vals (:second-layer l)))))
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
