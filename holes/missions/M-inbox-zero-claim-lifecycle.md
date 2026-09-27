@@ -886,3 +886,39 @@ no live runtime/state/notification actions. Owner independently reviews before
 any deployment authorization. C8/full DERIVE remain pending; C6 complete;
 S2/capture still open. Prompt coordination already settled in c1191954/a36f3dc5,
 registry P7a-1 remains external dependency, no duplicate coordination dispatch.
+
+### Checkpoint 2026-09-27 — N5 producer passes; owner fixes; N6 review/cutover plan
+
+N5 reviewed: futon3c c0f3d94c, futon0 f329a67, futon2 5504633c7.
+Owner independently reran the actual bb producer with fresh union-only root,
+interval42000 and disposable output. Exit0, row preserved with unknown P,
+coverage measured19/unmeasured1, collection/publication flags propagated. No
+live output overwritten; temporary directory cleaned. This confirms the prior
+producer crash is fixed, without claiming a single-process end-to-end test.
+
+Owner made two small review fixes: **futon3c 9799eff0** includes collection
+failure in overall :complete? (was true despite failed row); **futon2
+80dcde519** renders unavailable/incomplete feed evidence even when queues empty
+(was hidden inside nonempty branch). Added exact regressions. clj-kondo zero
+errors/warnings (one preexisting info), check-parens OK on four edited files.
+Changed namespaces required fresh checks: sweeper **27 tests/86 assertions**,
+WM report **100/567**, zero failures/errors. Source changes invalidate previous
+content warrants. Other agents' dirt preserved, explicit-path commits only.
+
+N5 local producer correction accepted; owner edits await independent review.
+**C8 deployment and full DERIVE are not complete.** Dispatched **N6** to kimi-9,
+actual job **invoke-1790540290232-25645-bcf98851**: independently review owner
+commits and produce concrete cutover plan with read-only lifecycle diagnosis.
+Prove actual UI/report consumer, cache population path and Var/loop behavior;
+CLI report generation alone must not be assumed to populate scheduler cache.
+Inspect remaining all-queues/coverage consumer semantics. Exact proposed
+commands, side effects, probes and recovery need to be reviewable before any
+runtime approval. Full sweeper also pushes/removes worktrees: do not invoke it
+as a shortcut for this lane. No runtime starts/reloads/restarts, notification
+sends or live state writes authorized. Original no-reload scope still applies;
+any necessary expansion must be explicit and concrete, not inferred.
+
+C6 release complete, S2 recovery and capture open. Prompt API a36f3dc5 remains
+agreed with registry landing still unconfirmed; no duplicate dispatch. Owner
+parks for N6, then reviews precise deployment decision and resumes remaining
+mission lifecycle work. N6 is not another redesign of the notification lane.
