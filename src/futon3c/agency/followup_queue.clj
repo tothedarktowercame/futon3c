@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.dev.config :as config]
-            [futon3c.agency.promise-record :as promise-record])
+            [futon3c.agency.promise-record :as promise-record]
+            [futon3c.agency.promise-history :as history])
   (:import [java.util UUID]))
 
 (def ^:private default-path "/tmp/futon3c-followups.edn")
@@ -35,6 +36,36 @@
 (defn- release-dedupe [s item]
   (if item (update s :dedupe dissoc (:dedupe-key item)) s))
 
+(defn- history-items [state]
+  (into {} (concat (for [item (mapcat val (:queued state))]
+                     [(:followup-id item) [:queued item]])
+                   (for [[id item] (:leased state)] [id [:leased item]])
+                   (for [[id item] (:terminal state)] [id [:terminal item]]))))
+
+(defn- update-state! [f & [requeue-at]]
+  (let [[old new] (swap-vals! !state f)
+        now (System/currentTimeMillis)
+        before (history-items old)
+        requeued (into {} (filter (fn [[_ item]]
+                                   (and requeue-at (>= requeue-at (:lease-deadline-ms item))))
+                                 (:leased old)))]
+    (persist! @!state)
+    ;; Expiry can requeue and immediately lease the same item in one swap.
+    ;; Preserve that intermediate transition as well as the final committed state.
+    (doseq [[_ item] requeued]
+      (history/record! :promise/followup-requeued item requeue-at))
+    ;; Compare committed states, never emit from a retryable swap function.
+    (doseq [[id [state item]] (history-items new)
+            :let [[prior prior-item] (get before id)]
+            :when (and (or (not= prior state) (not= prior-item item))
+                       (not (and (= :queued state) (contains? requeued id))))]
+      (history/record! (case state
+                         :queued (if prior :promise/followup-requeued :promise/followup-enqueued)
+                         :leased :promise/followup-dequeued
+                         :terminal :promise/followup-terminal)
+                       item now (select-keys item [:state :reason])))
+    new))
+
 (defn enqueue!
   "Queue a followup with optional validated :beneficiary, :deadline and
    :fulfilment-criterion promise metadata; these do not affect delivery."
@@ -55,16 +86,15 @@
                         {:followup-id id :agent (str agent) :session (str session)
                   :type type :dedupe-key dedupe-key :prompt prompt
                   :metadata metadata :created-at-ms (System/currentTimeMillis)})]
-        (swap! !state #(-> %
+        (update-state! #(-> %
                            (update-in [:queued (seat-key agent session)] (fnil conj []) item)
                            (assoc-in [:dedupe dedupe-key] id)))
-        (persist! @!state)
         {:id id :status :queued}))))
 
 (defn cancel! [id reason]
   (ensure!)
   (let [found (atom nil)]
-    (swap! !state
+    (update-state!
            (fn [s]
              (let [queued (into {}
                                 (map (fn [[k xs]]
@@ -83,7 +113,6 @@
                      (release-dedupe item)
                      (assoc-in [:terminal id] (assoc item :state :cancelled :reason reason)))
                  s))))
-    (persist! @!state)
     (boolean @found)))
 
 (defn- requeue-expired [s now]
@@ -104,7 +133,7 @@
   (let [now (System/currentTimeMillis)
         key (seat-key agent session)
         leased (atom nil)]
-    (swap! !state
+    (update-state!
            (fn [s]
              (loop [s (requeue-expired s now)]
                (if-let [item (first (get-in s [:queued key]))]
@@ -122,16 +151,14 @@
                                                      :reason (if (keyword? validity)
                                                                validity
                                                                :revalidation-failed)))))))
-                 s))))
-    (persist! @!state)
+                 s))) now)
     @leased))
 
 (defn ack! [id]
   (ensure!)
   (let [item (get-in @!state [:leased id])]
     (when item
-      (swap! !state #(-> % (update :leased dissoc id)
+      (update-state! #(-> % (update :leased dissoc id)
                            (release-dedupe item)
                            (assoc-in [:terminal id] (assoc item :state :acked))))
-      (persist! @!state)
       true)))

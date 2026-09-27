@@ -28,7 +28,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.dev.config :as config]
-            [futon3c.agency.promise-record :as promise-record])
+            [futon3c.agency.promise-record :as promise-record]
+            [futon3c.agency.promise-history :as history])
   (:import [java.util UUID]))
 
 (def ^:private default-store "/tmp/futon3c-parked-on.edn")
@@ -272,7 +273,7 @@
 
 (defn- release-or-retract
   "RID's join just completed. If budget allows, mark released (it will be fired and
-   then dropped); else retract silently. Stashes released recs in :just-released."
+   then dropped); else retract (history is emitted after the committed swap). Stashes released recs in :just-released."
   [state rid now-ms]
   (let [rec (get-in state [:records rid])
         left (get-in rec [:budget :resumes-left] 1)]
@@ -303,21 +304,35 @@
      (assoc state :just-released [])
      rids)))
 
+(defn- wake-and-release! [rec resume! now-ms]
+  (try
+    (when resume!
+      (history/record! :promise/woken rec now-ms)
+      (resume! rec))
+    (finally (history/record! :promise/released rec now-ms))))
+
 (defn note-completion!
   "Fold dep DEP-ID (terminal, carrying RESULT) into every record awaiting it.
    Fires RESUME! exactly once for each record whose join just completed (budget
-   permitting); budget-exhausted records are retracted silently. Returns
+   permitting); budget-exhausted records are retracted and recorded. Returns
    {:released [rid ...] :released-records [rec ...]}."
   [dep-id result {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (if-not (contains? (:index @!parked) dep-id)
     {:released [] :released-records []} ; nothing parked on this dep — cheap no-op, no swap/disk write
-    (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result now-ms))
+    (let [[old new] (swap-vals! !parked #(apply-completion % dep-id result now-ms))
           fired (:just-released new)]
       (when (seq fired)
         (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
       (persist! @!parked)
-      (doseq [rec fired] (when resume! (resume! rec)))
+      (doseq [rid (get-in old [:index dep-id])
+              :let [rec (get-in old [:records rid])]
+              :when (and rec (not (:released? rec)))]
+        (history/record! :promise/dependency-terminated rec now-ms {:dep-id dep-id :result result})
+        (when (and (not (get-in new [:records rid]))
+                   (not (pos? (get-in rec [:budget :resumes-left] 1))))
+          (history/record! :promise/budget-exhausted rec now-ms)))
+      (doseq [rec fired] (wake-and-release! rec resume! now-ms))
       {:released (mapv :id fired)
        :released-records (mapv #(dissoc % :just-released) fired)})))
 
@@ -361,7 +376,9 @@
              :coalesce-key coalesce-key})]
     (cond
       (and (empty? awaiting) (not timer-due-ms))
-      (do (when resume! (resume! rec)) {:id rid :status :released-immediately})
+      (do (history/record! :promise/park-made rec now-ms)
+          (wake-and-release! rec resume! now-ms)
+          {:id rid :status :released-immediately})
 
       :else
       (let [chosen-id (atom nil)
@@ -386,6 +403,8 @@
                                  (update :index index-add rid awaiting))
                        coalesce-key (assoc-in [:coalesced coalesce-key] rid))))))
         (persist! @!parked)
+        (when @active?
+          (history/record! :promise/park-made (assoc rec :id @chosen-id) now-ms))
         ;; Reconcile only a live record. A duplicate whose first entry already
         ;; released shares that entry's delivery and must not queue another.
         (when (and @active? ledger-lookup)
@@ -462,6 +481,7 @@
                                st (concat expired timers))))
       (persist! @!parked))
     (doseq [r expired]
+      (history/record! :promise/deadline-expired r now-ms)
       (when on-expire (on-expire r))
       ;; Deadline BACKSTOP semantics (E-park-delivery-losses finding 6): expiry
       ;; WAKES the parked agent with its payload, marked :deadline-expired? so
@@ -469,6 +489,6 @@
       ;; case 5 specified expire-without-resume ("force-terminate"), but a
       ;; backstop that terminates silently reproduces the exact silent-wait
       ;; failure the protocol exists to close — semantics changed 2026-07-13.
-      (when resume! (resume! (assoc r :deadline-expired? true))))
-    (doseq [r timers] (when resume! (resume! r)))
+      (wake-and-release! (assoc r :deadline-expired? true) resume! now-ms))
+    (doseq [r timers] (wake-and-release! r resume! now-ms))
     {:expired (mapv :id expired) :timer-fired (mapv :id timers)}))

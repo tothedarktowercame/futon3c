@@ -82,6 +82,7 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.promise-record :as promise-record]
+            [futon3c.agency.promise-history :as promise-history]
             [futon3c.agency.followup-queue :as followup-queue]
             [futon3c.inbox-zero.followup-validity :as followup-validity]
             [futon3c.dev.config :as dev-config]
@@ -5477,6 +5478,7 @@
                                                            :within-turn))
         within-turn-pending (some #(= (:mode %) :within-turn) recs)]
     (json-response 200 {:ok true :parked (vec (or recs []))
+                        :promise-history (promise-history/stats)
                         :more-pending (boolean (or (and operator-view? (seq recs))
                                                    within-turn-pending
                                                    inbox-pending))})))
