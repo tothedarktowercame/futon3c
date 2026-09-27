@@ -45,6 +45,7 @@
             [clojure.string :as str]
             [futon3c.test-registry :as registry]
             [futon3c.evidence.http-backend :as http-backend]
+            [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
@@ -439,6 +440,23 @@
 (defn registered []
   (into {} (for [n wire-test-nses :let [wire @(ns-resolve n 'wire)]] [(:wire wire) wire])))
 
+(def ^:private repo-roots ["/home/joe/code/futon3c" "/home/joe/code/futon2"])
+
+(defn- var-repo-path
+  "The var's source file as {:root <repository root> :rel <path inside it>},
+   resolved through the classpath; nil when the file is not on the classpath
+   or not inside a git repository."
+  [v]
+  (when-let [url (some-> (:file (meta v)) io/resource)]
+    (let [f (io/file (.toURI url))
+          root (loop [d (.getParentFile f)]
+                 (cond (nil? d) nil
+                       (.exists (io/file d ".git")) d
+                       :else (recur (.getParentFile d))))]
+      (when root
+        {:root (.getPath root)
+         :rel (str (.relativize (.toPath root) (.toPath f)))}))))
+
 (defn second-layer-context [model]
   (let [backend (http-backend/make-http-backend "http://localhost:7070")
         ;; A :to-do read finding makes a wire record-only when the map says the
@@ -457,9 +475,18 @@
      :latest (memoize #(registry/latest-run-for-namespace
                         backend {:namespace % :namespace-ledger-file
                                  (registry/namespace-ledger-path {})}))
-     :last-commit (fn [v] (let [r (sh/sh "git" "log" "-1" "--format=%H" "--" (:file (meta v)))]
-                           (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
-     :ancestor? (fn [a b] (zero? (:exit (sh/sh "git" "merge-base" "--is-ancestor" a b))))
+     ;; A var's (:file (meta v)) is classpath-relative ("futon3c/diagramprover/x.clj",
+     ;; or a futon2 test path for the futon2-side wrappers); git needs the path
+     ;; inside the var's own repository. WIRE-26-C found every declared witness
+     ;; :stale-warrant with :test-revision nil because the bare path matched
+     ;; nothing at the futon3c root. Resolve the file on the classpath, walk up
+     ;; to its .git, and run git there; ancestry is checked in the same way.
+     :last-commit (fn [v]
+                    (when-let [{:keys [root rel]} (var-repo-path v)]
+                      (let [r (sh/sh "git" "-C" root "log" "-1" "--format=%H" "--" rel)]
+                        (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))))
+     :ancestor? (fn [a b] (boolean (some (fn [root] (zero? (:exit (sh/sh "git" "-C" root "merge-base" "--is-ancestor" a b))))
+                                        repo-roots)))
      :record-only? (fn [[_ reader field :as wire]]
                      (or (explicit wire)
                          (some #(and (= reader (:box/id %)) (= field (:field %))
