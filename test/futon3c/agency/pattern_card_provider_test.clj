@@ -29,3 +29,15 @@
                                  "2026-09-27T18:00:00Z" "old/pattern"))
   (is (nil? (pattern/provider {:agent-id "claude-17" :session-id "target"
                                :render-at "2026-09-27T20:00:00Z"}))))
+
+(deftest persisted-edn-string-body-is-readable
+  (pattern/observe-entry!
+   (assoc (entry "e-wire" "claude-17" "target"
+                 "2026-09-27T19:59:50Z" "wire/pattern")
+          :evidence/body
+          (pr-str {"event" "context-retrieval"
+                   "results" [{:id "wire/pattern" :score 0.8 :rank 1}]})))
+  (is (= "~wire/pattern"
+         (:segment/value
+          (pattern/provider {:agent-id "claude-17" :session-id "target"
+                             :render-at "2026-09-27T20:00:00Z"})))))

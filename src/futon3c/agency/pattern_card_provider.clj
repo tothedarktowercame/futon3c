@@ -1,6 +1,7 @@
 (ns futon3c.agency.pattern-card-provider
   "Cached prompt-line provider for the most recent exact-session retrieval."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.evidence.store :as estore]
             [futon3c.mission-control.service :as mcs])
@@ -18,9 +19,19 @@
 (defn- field [m k]
   (or (get m k) (get m (name k))))
 
+(defn- body-map [entry]
+  (let [body (:evidence/body entry)]
+    (cond
+      (map? body) body
+      (string? body) (try
+                       (let [parsed (edn/read-string body)]
+                         (when (map? parsed) parsed))
+                       (catch Throwable _ nil))
+      :else nil)))
+
 (defn- context-retrieval?
   [entry]
-  (let [body (:evidence/body entry)]
+  (let [body (body-map entry)]
     (= "context-retrieval" (field body :event))))
 
 (defn observe-entry!
@@ -29,7 +40,7 @@
   (when (context-retrieval? entry)
     (let [agent (str (:evidence/author entry))
           session (some-> (:evidence/session-id entry) str)
-          results (vec (or (field (:evidence/body entry) :results) []))]
+          results (vec (or (field (body-map entry) :results) []))]
       (when (and (not (str/blank? agent)) (not (str/blank? session)) (seq results))
         (swap! !retrievals
                (fn [cache]
