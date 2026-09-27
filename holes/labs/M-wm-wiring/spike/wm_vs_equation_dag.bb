@@ -13,12 +13,17 @@
 ;; registry-rev (or env REGISTRY_REV) reads the registry from that futon2
 ;; revision, like the map; publication runs pass it so another lane's
 ;; uncommitted registry edit is not read. Each edge also carries :inventory,
-;; its <2>2b class: :declared (by-var :declared) wins over :hole (named in the
-;; registry's top-level :holes under :edge or :edges; the entry's :status is
+;; its <2>2b class: raw by-var credit is :declared only when wm-term-fields.edn
+;; covers every symbol. Partial/wrong-term coverage is :does-not-carry; no
+;; correspondence on any credited field is :cannot-tell. This branch still
+;; wins over :hole (named in the registry's top-level :holes under :edge or
+;; :edges; the entry's :status is
 ;; carried as :hole-status) wins over :code-path-note (an equation row's :code
 ;; records a "CODE-PATH NOTE for [<a> <b>]..." marker for the edge, the shape
 ;; RC7+RC8 used on :belief-state, futon2 9c4cc59a) else :none. Fixture env
-;; overrides WM_VS_DAG_MAP_FILE / WM_VS_DAG_REGISTRY_FILE are for the test.
+;; overrides WM_VS_DAG_MAP_FILE / WM_VS_DAG_REGISTRY_FILE and
+;; WM_VS_DAG_TERM_FIELDS_FILE are for the test. The term table's bytes are
+;; independently pinned in the output by :term-fields-sha256.
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.set :as set] '[clojure.java.shell :as sh])
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def registry-path "/home/joe/code/futon2/holes/labs/wm-contract/aif-equations.edn")
@@ -34,6 +39,15 @@
                (if registry-rev
                  (:out (sh/sh "git" "-C" "/home/joe/code/futon2" "show" (str registry-rev ":holes/labs/wm-contract/aif-equations.edn")))
                  (slurp registry-path)))))
+;; The table is a separate reviewed input, never inferred from field spelling.
+(def term-fields-path (or (System/getenv "WM_VS_DAG_TERM_FIELDS_FILE")
+                         "holes/labs/M-wm-wiring/wm-term-fields.edn"))
+(def term-fields-text (slurp term-fields-path))
+(def term-fields (edn/read-string term-fields-text))
+(def term-fields-sha256
+  (format "%064x" (java.math.BigInteger.
+                   1 (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                              (.getBytes term-fields-text "UTF-8")))))
 (def eqs (remove #(= :retired (:status %)) (:equations reg)))
 (def defs (into {} (map (fn [e] [(:defines e) e]) eqs)))
 (def exo (into {} (map (fn [x] [(:symbol x) x]) (:exogenous reg))))
@@ -95,8 +109,16 @@
                   :when (seq edges)
                   edge edges]
               edge)))
-(defn inventory [edge by-var]
-  (cond (= :declared by-var) :declared
+(defn term-coverage [edge symbols fields]
+  (let [credited (set (map first fields))
+        matched (filterv #(and (= edge (:edge %)) (credited (:field %))) term-fields)
+        covered (set/intersection symbols (set (map :term matched)))]
+    {:entries matched :covered covered :uncovered (set/difference symbols covered)
+     :status (cond (= covered symbols) :declared
+                   (seq matched) :does-not-carry
+                   :else :cannot-tell)}))
+(defn inventory [edge by-var coverage]
+  (cond (= :declared by-var) (:status coverage)
         (contains? hole-edges edge) :hole
         (contains? code-path-note-edges edge) :code-path-note
         :else :none))
@@ -104,12 +126,14 @@
   (for [[[a b] syms] (sort-by (comp str key) theory)
         :let [[st-file fs-file] (edge-status (node-boxes a) (node-boxes b))
               [st-var fs-var] (edge-status (node-boxes-by-var a) (node-boxes-by-var b))
-              inv (inventory [a b] st-var)]]
+              coverage (when (= :declared st-var) (term-coverage [a b] syms fs-var))
+              inv (inventory [a b] st-var coverage)]]
     (cond-> {:edge [a b] :symbols syms
              :by-file st-file :by-var st-var
              :fields-by-file fs-file :fields-by-var fs-var
              :inventory inv
              :registry-no-site (vec (filter (set no-site-nodes) [a b]))}
+      coverage (assoc :term-coverage (dissoc coverage :status))
       (= :hole inv) (assoc :hole-status (hole-edges [a b])))))
 ;; the flight's producers of the registry's exogenous symbols, by the mission's row table
 (def producer-report
@@ -125,12 +149,15 @@
                    {:node n :files (vec (sort (node-files n))) :boxes (vec (sort (node-boxes n)))}))
 (prn {:map (or map-rev map-file "working tree") :registry (:as-of reg)
       :registry-rev (or registry-rev registry-file "working tree")
+      :term-fields term-fields-path :term-fields-sha256 term-fields-sha256
       :theory-edges (count theory)
       :registry-names-no-site no-site-nodes
       :summary-by-file (frequencies (map :by-file edge-report))
       :summary-by-var (frequencies (map :by-var edge-report))
       :summary-inventory (frequencies (map :inventory edge-report))
       :inventory-none (vec (sort-by str (map :edge (filter #(= :none (:inventory %)) edge-report))))
+      :inventory-does-not-carry (vec (sort-by str (map :edge (filter #(= :does-not-carry (:inventory %)) edge-report))))
+      :inventory-cannot-tell (vec (sort-by str (map :edge (filter #(= :cannot-tell (:inventory %)) edge-report))))
       :holes-not-in-dag (vec (sort-by str (remove (set (map :edge edge-report)) (keys hole-edges))))
       :nodes (for [n node-report] (assoc n :vars (vec (sort (node-vars (:node n)))) :boxes-by-var (vec (sort (node-boxes-by-var (:node n))))))
       :edges edge-report

@@ -50,11 +50,20 @@
             :site {:file "src/futon2/aif/c.clj" :var "make-c"}
             :writes [] :reads [:f]}]})
 
-(defn generate [map-file registry-file]
-  (sh/sh "bb" generator
-         :env (assoc (into {} (System/getenv))
-                     "WM_VS_DAG_MAP_FILE" (str map-file)
-                     "WM_VS_DAG_REGISTRY_FILE" (str registry-file))))
+(def fixture-correspondence
+  [{:edge [:RB :RC] :term :s-b :field :f :grain :field
+    :provenance "fixture writer make-b to reader make-c"}])
+
+(defn generate
+  ([map-file registry-file] (generate map-file registry-file fixture-correspondence))
+  ([map-file registry-file entries]
+   (let [table-file (io/file (.getParentFile (io/file map-file)) "terms.edn")]
+     (spit table-file (pr-str entries))
+     (sh/sh "bb" generator
+            :env (assoc (into {} (System/getenv))
+                        "WM_VS_DAG_MAP_FILE" (str map-file)
+                        "WM_VS_DAG_REGISTRY_FILE" (str registry-file)
+                        "WM_VS_DAG_TERM_FIELDS_FILE" (str table-file))))))
 
 (deftest inventory-classes
   (let [dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -87,6 +96,42 @@
           (is (= [[:RA :RB]] (:inventory-none out)))
           (is (= [[:RA :RZ] [:RB :RA]] (:holes-not-in-dag out))
               "holes naming edges not in the DAG are reported, not silently ignored")))
+      (finally
+        (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
+
+(deftest field-credit-must-cover-every-term
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "wm-term-fields-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        map-file (io/file dir "map.edn")
+        registry-file (io/file dir "registry.edn")
+        base (first fixture-correspondence)]
+    (try
+      (spit map-file (pr-str fixture-map))
+      (doseq [[label entries two-terms? expected uncovered]
+              [[:matching [base] false :declared #{}]
+               [:wrong-term [(assoc base :term :want)] false :does-not-carry #{:s-b}]
+               [:no-entry [] false :cannot-tell #{:s-b}]
+               [:record-grain [(assoc base :grain :record)] false :declared #{}]
+               [:identity [(assoc base :identity "s-b := value at f")] false :declared #{}]
+               [:partial [base] true :does-not-carry #{:s-b2}]
+               [:foreign-edge [(assoc base :edge [:RA :RC])] false :cannot-tell #{:s-b}]
+               [:uncredited-field [(assoc base :field :other)] false :cannot-tell #{:s-b}]]]
+        (let [reg (if two-terms?
+                    (-> fixture-registry
+                        (update :equations conj {:defines :s-b2 :node :RB :imports []})
+                        (update-in [:equations 2 :imports] conj :s-b2))
+                    fixture-registry)]
+          (spit registry-file (pr-str reg))
+          (let [{:keys [exit out err]} (generate map-file registry-file entries)]
+            (is (zero? exit) (str label ": " err))
+            (let [result (edn/read-string out)
+                  edge (first (filter #(= [:RB :RC] (:edge %)) (:edges result)))]
+              (is (= :declared (:by-var edge)) (str label " retains raw field credit"))
+              (is (= expected (:inventory edge)) (str label))
+              (is (= uncovered (get-in edge [:term-coverage :uncovered])) (str label))
+              (when (#{:does-not-carry :cannot-tell} expected)
+                (is (= [[:RB :RC]] (get result (keyword (str "inventory-" (name expected)))))
+                    (str label " listed independently of inventory-none")))))))
       (finally
         (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
 

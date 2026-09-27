@@ -1,0 +1,36 @@
+;; JOIN-TERM-I, codex-1, 2026-09-27.
+;; Sites read at futon2 abee3c0947808fd1ff88c6af41b2a2c4b4afd401.
+;; Positive correspondences only. Record grain names the actual shared carrier;
+;; it does not license an unrelated value elsewhere on the enclosing action.
+[{:edge [:R14 :R6] :term :tau :field [:beta {:record :precision}] :grain :field
+  :provenance "codex-1: policy_precision_carry.clj:80-99 advance writes beta and tau; cascade_selection.clj:54-75 selection-posterior reads beta."
+  :identity "Registry :temperature :formal: tau := beta, beta > 0; gamma := 1/tau. advance writes :tau beta with :tau-source :carry-beta."}
+ {:edge [:R17 :R6] :term :E :field :enactment-records :grain :record
+  :provenance "codex-1: enactment_habit.clj:99-122 fold retains counted records in the cascade-prior state; policy.clj:365-389 select-action-cascades receives that whole state under :enactment-fold and reads its counts for E."
+  :identity "E is the menu's habit mass derived from the shared fold state, not the record-id map alone."}
+ {:edge [:R2 :R3a] :term :o :field :tick-observation :grain :record
+  :provenance "codex-1: observation.clj:103-122 observe produces the channel vector; free_energy.clj:282-299 channel-prediction-error reads :value from the observation envelope via channel-source-status."}
+ {:edge [:R3a :R7] :term :eps :field [:error {:record :prediction-error}] :grain :field
+  :provenance "codex-1: free_energy.clj:203-279 compute-prediction-error writes observed minus predicted mean as :error; precision.clj:212-234 weighted-error reads :error."}
+ {:edge [:R5 :R6] :term :G :field :controller-score :grain :field
+  :provenance "codex-1: efe.clj:1094-1095 documents G-efe = G-cascade = controller-score; policy.clj:252 passes controller-score as :g to the selection posterior."
+  :identity "The scorer's :controller-score is its G value, not a separate ranking quantity."}
+ {:edge [:R6 :R17] :term :pi :field :candidate :grain :field
+  :provenance "codex-1: policy.clj:563 select-action-cascades writes (:cascade-id chosen-entry) as :candidate; enactment_habit.clj:35-54 policy-key-for reads :candidate to join the chosen policy to its derivation and replay."
+  :identity "pi is carried as the chosen cascade identity, not a posterior probability or an action-sequence record."}
+ {:edge [:R6 :R4] :term :r :field :descent :grain :field
+  :provenance "codex-1: construction.clj:113-146 containment-order declares :descent as r itself; efe.clj:1033-1051 order-use reads :descent from [:construction-receipt :order]."}
+ {:edge [:R6 :R4] :term :r :field :units :grain :record
+  :provenance "codex-1: construction.clj:123-129 returns units and descent together in the order record; efe.clj:1033-1051 consumes that same order record. The units alone are not r."}
+ {:edge [:R6 :R4] :term :r :field :precedence-violations :grain :record
+  :provenance "codex-1: construction.clj:204-230 adds precedence-violations to the order record containing descent; efe.clj:1033-1051 reads that order record. This record does not contain the action's :precedence (pi)."}
+ {:edge [:R7 :R3] :term :Pi :field :weighted-error :grain :record
+  :provenance "codex-1: precision.clj:212-234 weighted-error writes :precision alongside :weighted-error in the same error-map; belief.clj:1146-1197 r3d-aggregate-driver takes those maps and uses precision in multichannel aggregation."
+  :identity "Pi is the explicit :precision member of the shared error-map, not the product :weighted-error alone."}
+ {:edge [:R1 :R3] :term :mu :field :loop-belief :grain :field
+  :provenance "codex-1: war_machine.clj:7222 reconcile-belief-carry produces the carried entity belief; judge's inner loop at :7265-7277 threads belief into apply-arena-belief-events after attribution."}
+ {:edge [:R3 :R1] :term :s-next :field :carried-mu-post :grain :field
+  :provenance "codex-1: war_machine.clj judge writes final :belief; trace.clj:445 persists it as :mu-post; war_machine.clj:7222 reads the predecessor's :mu-post into reconcile-belief-carry."
+  :identity "s-next is the updated entity belief persisted as mu-post and carried into the next tick."}
+ {:edge [:R7 :R4] :term :rates :field :adjudication-rates :grain :field
+  :provenance "codex-1: efe.clj:1171 rank-cascade-actions reads :adjudication-rates; :1221 passes those rates into cascade-model-manifest/horizon-g-sparse-cert."}]
