@@ -817,3 +817,21 @@ represent unresolved checkout dirt. Baseline prompt must not imply clean, and
 this reporting feed cannot authorize `*`. No prompt implementation or message
 to claude-7 dispatched. C6 complete; transaction recovery S2 and capture remain
 open; full DERIVE pending. Owner parks on N4 for independent review.
+
+### Checkpoint 2026-09-27 — prompt-line collaboration authorized
+
+Joe explicitly authorized collaboration with claude-17 via
+[SEAM-prompt-line](../labs/M-象-2000/SEAM-prompt-line.md) (516377e3).
+Owner read the seam and dispatched bounded coordination job
+**invoke-1790539003417-25635-c9c4175e** to claude-17. Renderer/pattern remain
+M-象-2000's; inbox-zero owns its future provider. Requested concrete registry
+API/context, exact seat/session and canonical worktree scope, observation vs
+render time, evidence references, composition and diagnostic omission behavior.
+
+Current claims/overlap cannot authorize `*`. Initial `?` must rely on a fresh
+scoped dirty observation, not stale data or absence from the thresholded pressure
+feed. Absence never means clean. Proposed `?` precedence for mixed verified-own
+and unresolved-other dirt, retaining both in the spelled-out facts/basis; this
+is a coordination proposal pending reply. No provider/renderer implementation
+or deployment dispatched yet. N4 remains active under its existing job, not
+replaced or duplicated. Both actual jobs will be inspected on resume.
