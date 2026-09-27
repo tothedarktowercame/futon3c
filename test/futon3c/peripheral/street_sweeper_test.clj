@@ -19,7 +19,9 @@
      (require '[clojure.test :as t]
               '[futon3c.peripheral.street-sweeper-test])
      (t/run-tests 'futon3c.peripheral.street-sweeper-test)"
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [babashka.http-client]
+            [cheshire.core]
+            [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -647,3 +649,34 @@
       (is (contains? s :would-commit-count))
       (is (contains? s :deferred-count))
       (is (contains? s :defer-reason-frequencies)))))
+
+(deftest pressure-sort-tolerates-unmeasured-queues
+  ;; C8/N5: uncertain-only queue rows carry NO pressure measurement (nil,
+  ;; never an invented zero). The existing consumer sort must not throw,
+  ;; and must order measured queues ahead of unmeasured ones.
+  (let [queues [{:repo "b" :pressure 0.5} {:repo "u" :pressure nil}
+                {:repo "a" :pressure 3.0}]
+        sorted (vec (sort-by #(double (or (:pressure %) -1.0))
+                             #(compare %2 %1)
+                             queues))]
+    (is (= ["a" "b" "u"] (mapv :repo sorted))
+        "measured queues sort by pressure desc; unmeasured sort last")))
+
+(deftest list-repos-with-pressure-consumes-nil-pressure-queues
+  ;; End-to-end through the real backend fn with the network boundary
+  ;; stubbed: a war-machine payload containing an uncertain-only queue
+  ;; (nil pressure) must parse and sort without throwing.
+  (let [payload {:commit-hygiene
+                 {:queues [{:repo "futon2" :tier "high" :pressure 3.0 :count 16}
+                           {:repo "futon3c-d" :tier nil :pressure nil :count nil
+                            :uncertain-count 10}]}
+                 :metabolic-balance {:max-tier "high" :max-pressure 3.0
+                                     :stale? false}}]
+    (with-redefs [babashka.http-client/get
+                  (fn [_url _opts]
+                    {:status 200
+                     :body (cheshire.core/generate-string payload)})]
+      (let [{:keys [ok result]} (ssb/list-repos-with-pressure {})]
+        (is ok)
+        (is (= ["futon2" "futon3c-d"] (mapv :repo (:queues result)))
+            "nil-pressure queue consumed and sorted last, no NPE")))))

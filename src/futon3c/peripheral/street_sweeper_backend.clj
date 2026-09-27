@@ -188,7 +188,9 @@
           queues (or (get-in body [:commit-hygiene :queues])
                      (get-in body [:metabolic-balance :per-repo])
                      [])]
-      {:ok true :result {:queues (vec (sort-by (comp - :pressure) queues))
+      {:ok true :result {:queues (vec (sort-by #(double (or (:pressure %) -1.0))
+                                                #(compare %2 %1)
+                                                queues))
                          :max-tier (get-in body [:metabolic-balance :max-tier])
                          :max-pressure (get-in body [:metabolic-balance :max-pressure])
                          :stale? (get-in body [:metabolic-balance :stale?])

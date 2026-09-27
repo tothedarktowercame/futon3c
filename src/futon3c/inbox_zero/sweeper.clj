@@ -289,13 +289,17 @@
   snapshot (futon0) merges into the War Machine commit-hygiene queues.
   Current state, rewritten every pass; :interval-ms lets consumers mark
   staleness instead of trusting a silent file."
-  [path rows now backlog-path diagnostics-available? print-fn]
+  [path rows now backlog-path interval-ms diagnostics-available?
+   collection-complete? row-failures backlog-written? print-fn]
   (try
     (atomic-write! path {:at now
                          :generated-by "futon3c.inbox-zero.sweeper"
-                         :interval-ms default-interval-ms
+                         :interval-ms interval-ms
                          :drilldown backlog-path
                          :diagnostics-available? (boolean diagnostics-available?)
+                         :collection {:complete? (boolean collection-complete?)
+                                      :row-failures (long (or row-failures 0))}
+                         :publication {:backlog-written? (boolean backlog-written?)}
                          :repos (vec (sort-by :label rows))})
     true
     (catch Throwable error
@@ -305,17 +309,23 @@
 
 (defn- finish-pass
   "Publish both outputs and return typed completeness. A pass is :complete?
-  only when BOTH the backlog and the pressure feed were written; a write
-  failure is reported, never silently counted as success."
-  [counts backlog-path pressure-path now aux-ok? print-fn]
+  only when BOTH the backlog and the pressure feed were written AND every
+  over-threshold repo produced a row; failures are reported in counts AND
+  propagated into the feed's :collection/:publication status, never
+  silently counted as success."
+  [counts backlog-path pressure-path now interval-ms aux-ok? print-fn]
   (let [backlog-ok? (write-backlog! backlog-path (:uncertain-rows counts)
                                     now print-fn)
         feed-ok? (write-uncertain-pressure! pressure-path
                                             (:uncertain-rows counts) now
-                                            backlog-path aux-ok? print-fn)
+                                            backlog-path interval-ms aux-ok?
+                                            (zero? (:row-failures counts))
+                                            (:row-failures counts)
+                                            backlog-ok? print-fn)
         counts (-> counts
                    (dissoc :uncertain-rows)
-                   (assoc :backlog-written? (boolean backlog-ok?)
+                   (assoc :collection-complete? (zero? (:row-failures counts))
+                          :backlog-written? (boolean backlog-ok?)
                           :feed-written? (boolean feed-ok?)
                           :diagnostics-available? (boolean aux-ok?)
                           :complete? (and (boolean backlog-ok?)
@@ -351,14 +361,27 @@
             pressure-path (or (:pressure-path options)
                               (System/getenv "FUTON3C_INBOX_ZERO_PRESSURE_PATH")
                               default-uncertain-pressure-path)
+            interval-ms (long (or (:interval-ms options) default-interval-ms))
             now (now-fn)
-            over (->> watch-roots
-                      (keep (fn [{:keys [path label]}]
-                              (let [entries (git-fn path)]
-                                (when (>= (count entries) threshold)
-                                  {:label label :root path :entries entries
-                                   :threshold threshold}))))
-                      vec)
+            ;; A single repo's git failure must not kill the pass: the repo
+            ;; is recorded as a row failure and collection is incomplete,
+            ;; but every other repo's pressure is still reported.
+            scan (reduce (fn [acc {:keys [path label]}]
+                           (try
+                             (let [entries (git-fn path)]
+                               (if (>= (count entries) threshold)
+                                 (update acc :rows conj
+                                         {:label label :root path :entries entries
+                                          :threshold threshold})
+                                 acc))
+                             (catch Throwable error
+                               (print-fn (str "[inbox-zero] git status failed for "
+                                              label ": " (.getMessage error)))
+                               (update acc :failures (fnil inc 0)))))
+                         {:rows [] :failures 0}
+                         watch-roots)
+            over (:rows scan)
+            scan-failures (:failures scan)
             ;; Only pay for the roster and the job ledger when something is
             ;; over the line; a clean stack costs one git status per repo.
             ;; Their failure degrades diagnostics, never the pressure rows.
@@ -389,13 +412,18 @@
                  (catch Throwable error
                    (print-fn (str "[inbox-zero] uncertain-pressure pass failed for "
                                   (:label repo) ": " (.getMessage error)))
-                   (update counts :errored inc))))
+                   (-> counts
+                       (update :errored inc)
+                       (update :row-failures (fnil inc 0))))))
              (assoc (empty-counts)
                     :repos (count watch-roots)
                     :over-threshold (count over)
+                    :errored scan-failures
+                    :row-failures scan-failures
                     :uncertain-rows [])
              over)]
-        (finish-pass counts backlog-path pressure-path now @aux-ok? print-fn))
+        (finish-pass counts backlog-path pressure-path now interval-ms
+                     @aux-ok? print-fn))
       (catch Throwable error
         (try
           (print-fn (str "[inbox-zero] uncertain-pressure pass failed: "
@@ -728,7 +756,7 @@
            (loop []
              (Thread/sleep interval-ms)
              (try
-               (run-pass! (dissoc options :interval-ms))
+               (run-pass! options)
                (catch Throwable error
                  (print-fn (str "[inbox-zero] pass loop threw: "
                                 (.getMessage error)))))

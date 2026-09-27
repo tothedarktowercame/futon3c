@@ -353,3 +353,45 @@
         rows (:worktrees (read-string (slurp (:worktree-log-path options))))]
     (is (= 2 (count rows)))
     (is (= #{:locked :lease-owned} (set (map :outcome rows))))))
+
+(deftest configured-interval-reaches-the-feed
+  (let [calls (atom [])
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                       :interval-ms 42000)
+        _ (sweeper/sweep-dirty-repos! options)
+        feed (read-string (slurp (:pressure-path options)))]
+    (is (= 42000 (:interval-ms feed))
+        "nondefault interval is wired end-to-end, not the constant")))
+
+(deftest row-failure-propagates-as-incomplete-collection
+  ;; One repo's git-fn throws: its row is absent, and the feed must NOT
+  ;; claim complete coverage.
+  (let [calls (atom [])
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)
+                                      "futon3c-d" (dirty-repo 12)}
+                                     calls)
+                       :git-fn (fn [path]
+                                 (if (str/includes? path "futon3c-d")
+                                   (throw (ex-info "git died" {}))
+                                   (dirty-repo 11))))
+        counts (sweeper/sweep-dirty-repos! options)
+        feed (read-string (slurp (:pressure-path options)))]
+    (is (= 1 (:errored counts)))
+    (is (false? (:collection-complete? counts)))
+    (is (= 1 (get-in feed [:collection :row-failures])))
+    (is (false? (get-in feed [:collection :complete?])))
+    (is (= ["futon2-d"] (map :label (:repos feed))))))
+
+(deftest backlog-failure-is-published-inside-the-feed
+  (let [calls (atom [])
+        blocker (java.io.File. (temp-dir) "backlog-blocker")
+        _ (spit blocker "occupied")
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                       :backlog-path (str (java.io.File. blocker "b.edn")))
+        counts (sweeper/sweep-dirty-repos! options)
+        feed (read-string (slurp (:pressure-path options)))]
+    (is (false? (:backlog-written? counts)))
+    (is (true? (:feed-written? counts)))
+    (is (false? (:complete? counts)))
+    (is (false? (get-in feed [:publication :backlog-written?]))
+        "consumer can see the backlog half failed from the feed itself")))
