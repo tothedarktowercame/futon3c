@@ -835,3 +835,21 @@ and unresolved-other dirt, retaining both in the spelled-out facts/basis; this
 is a coordination proposal pending reply. No provider/renderer implementation
 or deployment dispatched yet. N4 remains active under its existing job, not
 replaced or duplicated. Both actual jobs will be inspected on resume.
+
+### Checkpoint 2026-09-27 — prompt API agreed, implementation dependency pending
+
+claude-17 coordination job invoke-1790539003417-25635-c9c4175e completed;
+owner read seam API decisions **a36f3dc5**. Registry planned namespace
+`futon3c.agency.prompt-line`, registration keyed by segment id; read-only provider
+context has exact agent/session, canonical worktree roots (absent when unknown),
+render time and budget. Provider supplies observation time and scoped evidence;
+registry adds render time. Only pattern supplies value; inbox-zero supplies
+marker/header. Mixed unresolved dirt takes `?` precedence, counts retained in
+header. Missing/stale/error means omission, never clean. Omission reasons are
+inspectable per exact session. These are agreed interfaces, not implemented
+capabilities: claude-17 will announce P7a-1 landing. Provider work waits for that
+seam and a reviewed fresh observation source; `*` still waits for attribution
+proof. No new dispatch needed for the completed coordination job.
+
+Owner inspected N4 actual job invoke-1790538875534-25633-c905b834: **running**,
+not complete. It retains priority. No duplicate dispatch or runtime action.
