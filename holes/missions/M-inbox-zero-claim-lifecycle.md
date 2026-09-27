@@ -215,3 +215,21 @@ it will be revised after packet M, not treated as a fixed commitment. The next
 useful action is to verify the release and finish the minimum-change survey.
 This checkpoint creates tracking only; it neither declares live closure nor
 starts implementation or dispatches an agent.
+
+### Checkpoint 2026-09-27 18:31Z — MAP helper dispatched
+
+At Joe's explicit request, codex-5 dispatched **kimi-9** through Agency for a
+read-only Q5/Q6 survey. Job `invoke-1790533836865-25557-ed31bba7` was accepted
+and observed running. The requisition names this mission. Deliverable: source
+sites, ready/missing inventory, unsupported/mixed-edit and concurrency cases,
+minimum sufficient next spike, and revised effort estimate. No implementation,
+shared-state mutation or further delegation is authorized in that packet.
+codex-5 will review and consolidate its result here; MAP remains open.
+
+Q4 recheck by codex-5: a streamed snapshot scan at **18:30:54.708Z** still
+finds 1,483 claim records and the original active `claim:8c7eb3879d22…`;
+the release successor is not yet ingested. Read-only watcher status reports
+cycle 557, previous cycle finished 18:24:36.087Z, current cycle started
+18:24:41.091Z, progress 18:27:27.694Z, inbox-zero phase, no last error.
+This establishes continued slow progress, not closure or a stopped watcher.
+No restart, reload, extra cycle, or competing snapshot writer was used.
