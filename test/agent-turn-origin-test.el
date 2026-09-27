@@ -100,3 +100,41 @@
     (should (equal (agent-chat-consume-pending-user-turn) "wake"))
     (should (equal (plist-get agent-turn-origin-evidence-user :kind) "harness"))
     (should (equal (agent-turn-origin-caller) "joe"))))
+
+(ert-deftest p3-3c-turn-payload-harness-is-producer-context ()
+  (dolist
+      (case
+       `(((:kind "operator" :actor "joe") "user"
+          ((kind . "none") (basis . "producer-context") (source-ref . "p3-session")))
+         ((:kind "agent" :actor "dispatcher" :delivery bell :job-id "invoke-wm"
+           :job-harness ((kind . "war-machine") (basis . "producer-context")
+                         (execution-id . "wm-run-7")))
+          "assistant"
+          ((kind . "war-machine") (basis . "producer-context")
+           (execution-id . "wm-run-7")))
+         ((:kind "agent" :actor "wm-full-loop" :delivery bell :job-id "invoke-plain")
+          "assistant"
+          ((kind . "none") (basis . "producer-context")
+           (source-ref . "invoke-plain")))
+         ((:kind "agent" :actor "dispatcher" :delivery bell)
+          "assistant"
+          ((kind . "unknown") (basis . "producer-context")
+           (reason . "bell turn has no bound Agency job id")))))
+    (with-temp-buffer
+      (let ((agent-turn-origin-current (nth 0 case)) payload)
+        (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                  ((symbol-function 'agent-chat-evidence-enabled-p) (lambda (&rest _) t))
+                  ((symbol-function 'agent-chat-evidence-post-entry-id)
+                   (lambda (_url _timeout p) (setq payload p) "p3-3c")))
+          (agent-chat-emit-turn-evidence!
+           "test" 1 t "p3-session" (nth 1 case) "text" "agent" "test" nil
+           'p6o-session 'p6o-last))
+        (should (equal (alist-get 'harness payload) (nth 2 case)))))))
+
+(ert-deftest p3-3c-caller-name-never-implies-war-machine ()
+  (let ((stamp (agent-turn-harness-stamp
+                '(:kind "agent" :actor "wm-full-loop" :delivery bell
+                  :job-id "invoke-without-harness")
+                "p3-session")))
+    (should (equal (alist-get 'kind stamp) "none"))
+    (should-not (equal (alist-get 'kind stamp) "war-machine"))))

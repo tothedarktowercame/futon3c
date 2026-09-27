@@ -3319,6 +3319,9 @@ character the operator meant to write."
            (surface (car split))
            (trimmed (cdr split))
            (is-user (string= role "user"))
+           (turn-source (if is-user
+                            (or agent-turn-origin-evidence-user agent-turn-origin-current)
+                          agent-turn-origin-current))
            (is-error (string-prefix-p "[Error" trimmed))
            (claim-type (cond
                         (is-user "question")
@@ -3336,9 +3339,9 @@ character the operator meant to write."
                       (origin . ,(agent-turn-origin-stamp
                                   author "agent-chat/turn"
                                   (if is-user
-                                      (prog1 (or agent-turn-origin-evidence-user agent-turn-origin-current)
-                                        (setq agent-turn-origin-evidence-user nil))
+                                      turn-source
                                     (list :kind "agent" :actor assistant-author))))
+                      (harness . ,(agent-turn-harness-stamp turn-source sid))
                       (session-id . ,sid)
                       (body . ,(append `((event . "chat-turn")
                                          (transport . ,transport)
@@ -3352,6 +3355,8 @@ character the operator meant to write."
                                       (append tags (list role-tag)
                                               (when surface
                                                 (list (symbol-name surface)))))))))
+      (when is-user
+        (setq agent-turn-origin-evidence-user nil))
       (when (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
         (setq payload (append payload
@@ -3389,6 +3394,7 @@ character the operator meant to write."
                           (author . ,assistant-author)
                           (origin . ,(agent-turn-origin-stamp assistant-author "agent-chat/turn-commits"
                                       (list :kind "agent" :actor assistant-author)))
+                          (harness . ,(agent-turn-harness-stamp agent-turn-origin-current sid))
                           (session-id . ,sid)
                           (body . ,body)
                           (tags . ,(apply #'vector tags)))))
