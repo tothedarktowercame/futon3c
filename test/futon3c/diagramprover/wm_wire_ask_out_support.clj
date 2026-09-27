@@ -12,6 +12,7 @@
             [futon2.aif.interpretation-construction :as ic]
             [futon2.aif.flight :as flight] [futon2.aif.flight-runner :as fr]
             [futon2.aif.full-loop-runner :as runner]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon2.report.war-machine :as wm]
             [futon2.report.cascade-decision-test :as decision-fixture]
             [futon2.report.observation-labels-consume-test :as population]
@@ -102,7 +103,7 @@
             opts (flight/judge-opts f changed)
             result (case kind
                      :opts opts
-                     :assembly (wm/flight-assembly-input (:flight opts) {:sources {}})
+                     :assembly (construction-inputs/flight-assembly-input (:flight opts) {:sources {}})
                      :http
                      (let [seen (atom nil)]
                        (with-redefs [service/cast-preflight-refusal (constantly nil)

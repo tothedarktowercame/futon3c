@@ -4,7 +4,7 @@
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-driver :as driver]
             [futon2.aif.flight-runner :as runner]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def targets ["M-first" "M-second"])
@@ -25,7 +25,7 @@
             (mapv (fn [f]
                     (case reader
                       :opts (flight/judge-opts f wants)
-                      :assembly (wm/flight-assembly-input (merge f (dissoc wants :source))
+                      :assembly (construction-inputs/flight-assembly-input (merge f (dissoc wants :source))
                                                           {:sources {}})
                       ;; ask-fn:397-410 selects the target's universe and computes
                       ;; unproduced wants. No criterion: ask-one:346-354 records it,

@@ -20,7 +20,7 @@
   value is the assembled problem's :want (the refusal when the read fails)."
   (:require [clojure.test :refer [deftest is]]
             [futon2.aif.cascade-problems :as cp]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (defn- sources []
@@ -39,7 +39,7 @@
   (the refusal when assembly refused), :problem the assembly}."
   ([] (observe identity))
   ([sources-fn]
-   (let [out (wm/flight-assembly-input flight {:targets [] :sources (sources)})
+   (let [out (construction-inputs/flight-assembly-input flight {:targets [] :sources (sources)})
          srcs (sources-fn (:sources out))
          problem (#'cp/assemble-one srcs 3 :T)]
      {:writer (get-in out [:sources :wants :T])
@@ -89,7 +89,7 @@
   ;; a second real flight-assembly-input run (a flight wanting :a and :b):
   ;; present, not absent, but not the writer's [:a]
   (let [flight2 {:target :T :wants [:a :b] :universe {:a false} :locators {}}
-        out2 (wm/flight-assembly-input flight2 {:targets [] :sources (sources)})
+        out2 (construction-inputs/flight-assembly-input flight2 {:targets [] :sources (sources)})
         problem2 (#'cp/assemble-one (:sources out2) 3 :T)
         o {:writer (:writer (observe))
            :reader (if (:kind problem2) problem2 (get-in problem2 [:cascade-problem :want]))}]

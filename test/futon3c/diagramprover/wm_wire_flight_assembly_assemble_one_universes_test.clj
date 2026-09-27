@@ -18,7 +18,7 @@
   value is the assembled problem's :facts (the refusal when the read fails)."
   (:require [clojure.test :refer [deftest is]]
             [futon2.aif.cascade-problems :as cp]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (defn- sources []
@@ -37,7 +37,7 @@
   :facts (the refusal when assembly refused), :problem the assembly}."
   ([] (observe identity))
   ([sources-fn]
-   (let [out (wm/flight-assembly-input flight {:targets [] :sources (sources)})
+   (let [out (construction-inputs/flight-assembly-input flight {:targets [] :sources (sources)})
          srcs (sources-fn (:sources out))
          problem (#'cp/assemble-one srcs 3 :T)]
      {:writer (get-in out [:sources :universes :T])
@@ -78,7 +78,7 @@
 (deftest no-flight-is-a-typed-refusal-and-fails-the-wire
   ;; with no flight the sources carry no universes for :T; the reader's
   ;; first check refuses :universe-not-admitted
-  (let [out (wm/flight-assembly-input nil {:targets [] :sources (sources)})
+  (let [out (construction-inputs/flight-assembly-input nil {:targets [] :sources (sources)})
         problem (#'cp/assemble-one (:sources out) 3 :T)
         o {:writer (:writer (observe)) :reader problem}]
     (is (= :universe-not-admitted (:kind problem)) (pr-str problem))
@@ -89,7 +89,7 @@
   ;; a second real flight-assembly-input run (a flight whose universe also
   ;; observes :c): present, not absent, but not the writer's universe
   (let [flight2 {:target :T :wants [:a] :universe {:a false :c false} :locators {}}
-        out2 (wm/flight-assembly-input flight2 {:targets [] :sources (sources)})
+        out2 (construction-inputs/flight-assembly-input flight2 {:targets [] :sources (sources)})
         problem2 (#'cp/assemble-one (:sources out2) 3 :T)
         o {:writer (:writer (observe))
            :reader (if (:kind problem2) problem2 (get-in problem2 [:cascade-problem :facts]))}]

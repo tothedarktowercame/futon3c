@@ -7,7 +7,7 @@
             [futon2.aif.efe :as efe]
             [futon2.aif.locator-fixtures :as loc]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-in-support :as fold]))
 
@@ -20,7 +20,7 @@
                              (reset! written input)
                              (let [v (update-in input [:sources :horizon-steps] change)]
                                (reset! carrier v) (assemble v)))]
-                (wm/assemble-cascade-problems-with-published
+                (construction-inputs/assemble-cascade-problems-with-published
                   root {:targets [fixture/tick-1-target]
                         :sources (loc/locate-all fixture/tick-1-sources)}))
             p (get-in a [:problems 0 :cascade-problem])

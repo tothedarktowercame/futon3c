@@ -8,7 +8,7 @@
             [futon2.aif.want-interpretation :as wi]
             [futon2.aif.cascade-model-manifest]
             [futon2.aif.cascade-problems :as problems]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.agency.clock-lineage :as clock]
             [futon3c.diagramprover.wm-wire :as w]))
 
@@ -69,7 +69,7 @@
                     (let [r (assemble (update-in input [:sources :horizon-steps] #(tamper % 3)))]
                       (reset! read-value (get-in (first (:problems r)) [:cascade-problem :horizon-steps]))
                       r))]
-      (wm/assemble-cascade-problems-with-published (w/tmp-dir "small-store-")
+      (construction-inputs/assemble-cascade-problems-with-published (w/tmp-dir "small-store-")
                                                   {:targets ["M-wire"] :sources sources}))
     {:writer @written :reader @read-value}))
 

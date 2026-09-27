@@ -6,7 +6,7 @@
   (:require [clojure.java.io :as io]
             [futon2.aif.flight :as flight]
             [futon2.aif.observation-checks :as checks]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def target "M-futon-seams")
@@ -28,7 +28,7 @@
             consume (fn [v]
                       (let [opts (flight/judge-opts f v)]
                         (if (= reader :opts) opts
-                          (wm/flight-assembly-input (:flight opts)
+                          (construction-inputs/flight-assembly-input (:flight opts)
                                                     {:targets ["other"]
                                                      :sources {:wants {"other" [:other]}
                                                                :universes {"other" {:other true}}

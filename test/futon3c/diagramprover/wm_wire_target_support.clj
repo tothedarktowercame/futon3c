@@ -8,7 +8,7 @@
             [futon2.aif.full-loop-runner :as runner]
             [futon2.aif.interpretation-request :as ireq]
             [futon2.aif.want-interpretation :as wi]
-            [futon2.report.war-machine :as wm]
+            [futon2.aif.wm.construction-inputs :as construction-inputs]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-r9-support :as r9]))
 
@@ -175,7 +175,7 @@
                  :flight-run (run-reader carrier)
                  :r2-flight-read (read-reader carrier)
                  :flight-ask-fn (ask-reader carrier)
-                 :tick-flight-assembly (first (:targets (wm/flight-assembly-input carrier {})))
+                 :tick-flight-assembly (first (:targets (construction-inputs/flight-assembly-input carrier {})))
                  :r9-close-cause (close-reader carrier)
                  :r0-enact-step (enact-reader carrier)
                  :r10-observe-publication (get-in ((fr/observe-publication-fn {}) carrier {})
