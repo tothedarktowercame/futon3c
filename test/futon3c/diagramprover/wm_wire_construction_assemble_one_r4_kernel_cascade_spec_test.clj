@@ -2,7 +2,8 @@
   "assemble/assemble-one's spec through the real ranker, following cascade-lane's
   :cascade-spec option. The reader records the input in its own metadata beside
   its derived scoring spec; no projection is used to manufacture equality."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.diagramprover.wm-wire-construction-products :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.cascade-model-manifest :as manifest]
             [futon2.aif.cascade-policy :as policy]
             [futon2.aif.efe :as efe]
@@ -39,8 +40,8 @@
 
 (def wire
   {
-   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/bad-carriers-before-the-real-reader :kind :refusal
-                  :product [:ranked :kind] :intervention :before-reader :expected :missing-cascade-want}
+   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/changed-carrier-changes-the-derived-product :kind :value-varying
+                  :product [:scores] :intervention :before-reader}
   :wire [:construction-assemble-one :r4-kernel :cascade-spec]
    :kind :witnessed-hermetically :test `the-observed-handoff :check check
    :live-records-read live-records-read
@@ -72,3 +73,13 @@
     (when (= sha256 (w/sha256-file path))
       (is (not-any? #(and (map? %) (contains? % :cascade-spec))
                     (tree-seq coll? seq (w/read-record path)))))))
+
+(deftest changed-carrier-changes-the-derived-product
+  (let [before (products/score-product :cascade-spec :none)
+        after (products/score-product :cascade-spec :different)
+        v (:scores before) v-prime (:scores after)]
+    (prn :wire-2l-3a :r4-kernel-cascade-spec :before before :after after)
+    (is (< 1 (count v)) "competing scored candidates")
+    (is (= (count v) (count v-prime)))
+    (is (every? number? (concat v v-prime)))
+    (is (not= v v-prime) "derived product changes after the carrier intervention")))
