@@ -7,7 +7,10 @@
   failing counterpart here, and each failure leaves the
   declared entries :declaration-without-occurrence with :passes-failed naming why.
   The shapes are reduced from the seven positional hops of WM-PROVER-POSITIONAL-D."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.shell :as sh]
+            [clojure.string :as str]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wiring :as wiring]))
 
@@ -254,3 +257,78 @@
       (is (= [] (wiring/conformance root {:spec/id :t :boxes [{:box/id :b :box/kind :component :reads []
                                                               :writes [:k] :site {:file "a.clj"}}]}
                                     {:heuristic? true}))))))
+
+(defn- e3-result [caller & [arg witness?]]
+  (let [p (pass {:keyed-read [:belief :fold]} "predict" (or arg 1))
+        update-pass (assoc-in (pass {:keyed-read [:belief :fold]} "apply-events" 1)
+                              [:to :callee-box] :updater)
+        bs (conj (boxes p {:passes (if (false? witness?) [] [update-pass])} "predict")
+                 {:box/id :updater :site {:file "callee.clj" :var "apply-events"}})]
+    (with-root {"caller.clj" caller
+                "callee.clj" (str e1-callee "\n(defn predict [b ev] (count b))")}
+      #(wiring/pass-attribution % bs :caller p))))
+
+(deftest updated-loop-value-into-another-call
+  (let [caller "(defn judge [fold ev]
+                  (loop [belief (:belief fold)]
+                    (predict belief ev)
+                    (recur (apply-events belief ev))))"]
+    (is (:ok? (e3-result caller)))
+    (is (:self-recurrent? (e3-result caller)))
+    (is (false? (:ok? (e3-result caller 2))))
+    (is (false? (:ok? (e3-result caller 1 false))) "requires a checked update declaration")
+    (is (:ok? (e3-result "(defn judge [fold ev]
+                            (loop [belief (:belief fold)]
+                              (let [carried belief]
+                                (predict carried ev)
+                                (recur (apply-events carried ev)))))")))
+    (doseq [bad ["(defn judge [fold ev]
+                   (loop [belief (:belief fold) unrelated ev]
+                     (predict belief ev)
+                     (recur (apply-events unrelated ev) unrelated)))"
+                 "(defn judge [fold ev]
+                   (loop [belief (:belief fold)]
+                     (predict belief ev)
+                     (let [belief ev] (recur (apply-events belief ev)))))"
+                 "(defn judge [fold ev]
+                   (loop [belief (:belief fold)]
+                     ((fn [belief] (predict belief ev)) ev)
+                     (recur (apply-events belief ev))))"
+                 "(defn judge [fold ev]
+                   (loop [belief (:belief fold)]
+                     (predict belief ev)
+                     (recur (loop [belief ev] (apply-events belief ev)))))"
+                 "(defn judge [fold ev]
+                   (loop [belief (:belief fold)]
+                     (predict belief ev)
+                     (recur (unknown-update belief ev))))"]]
+      (is (false? (:ok? (e3-result bad))) bad))))
+
+(deftest real-judge-updated-loop-handoff
+  ;; Read the real source at the map's revision: no synthetic substitute for judge.
+  (let [s (edn/read-string (slurp "holes/labs/M-wm-wiring/wm-flight-wiring.edn"))
+        bs (filterv #(#{:r7-fold-call :r3a-predict-observation
+                       :r1-apply-arena-belief-events} (:box/id %)) (:boxes s))
+        ;; Include the updater named by the existing E1 declaration, whatever its id.
+        caller (first (filter #(= :r7-fold-call (:box/id %)) (:boxes s)))
+        ids (set (map #(get-in % [:to :callee-box]) (:passes caller)))
+        bs (vec (distinct (concat bs (filter #(ids (:box/id %)) (:boxes s)))))
+        files (into {}
+                    (for [f (distinct (keep #(get-in % [:site :file]) bs))
+                          :let [[repo path] (str/split f #"/" 2)
+                                r (sh/sh "git" "-C" (str "/home/joe/code/" repo)
+                                         "show" (str (get (:repos s) repo) ":" path))]]
+                      (do (is (zero? (:exit r)) (:err r)) [f (:out r)])))
+        p {:value :loop-belief :from {:keyed-read [:belief :morning-brief-fold]}
+           :to {:call "belief/predict-observation" :arg 1
+                :callee-box :r3a-predict-observation}}]
+    (with-root {}
+      (fn [root]
+        (doseq [[f text] files]
+          (io/make-parents (io/file root f))
+          (spit (io/file root f) text))
+        (let [result (wiring/pass-attribution root bs :r7-fold-call p)]
+          (is (:ok? result) (pr-str result))
+          (is (:self-recurrent? result)))
+        (is (false? (:ok? (wiring/pass-attribution
+                           root bs :r7-fold-call (assoc-in p [:to :arg] 2)))))))))

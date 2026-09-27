@@ -913,6 +913,36 @@
             (some-> (nth (:children node) 1 nil) (literal-node (conj chain node))))
     nil))
 
+(defn- binding-key [sym source]
+  [sym (:start (:vector source)) (:pair-index source)])
+
+(defn- crosses-function-scope?
+  "This rule does not infer captured values or parameter bindings across a fn."
+  [source chain]
+  (some #(or (= :fn (:kind %))
+             (#{"fn" "fn*"} (head-text %)))
+        (drop (inc (count (:chain source))) chain)))
+
+(defn- same-loop-binding?
+  "An updater must receive THIS loop slot, possibly through let aliases.
+  Another loop slot or a shadowing binding is not a recurrence witness."
+  [node chain wanted seen]
+  (when (= :token (:kind node))
+    (let [sym (:text node) source (sym-sources sym node chain)
+          key (when source (binding-key sym source))]
+      (when (and source (not (crosses-function-scope? source chain))
+                 (not (contains? seen key)))
+        (or (= key wanted)
+            (and (not (:loop? source))
+                 (seq (:entries source))
+                 (every? (fn [entry]
+                           (and (nil? (:key entry))
+                                (same-loop-binding?
+                                 (:init entry)
+                                 (conj (:chain source) (:form source) (:vector source))
+                                 wanted (conj seen key))))
+                         (:entries source))))))))
+
 (defn- prov-leaf
   [spec node chain ctx depth]
   (let [{:keys [aliases call visited]} ctx
@@ -922,6 +952,12 @@
       (< 8 depth) (fail :provenance-too-deep)
       (and (#{:list} (:kind node)) (= call (head-text node)) (not (:returns-of spec)))
       {:ok? true :real? false :self? true}
+      (and (:loop-binding ctx) (get (:checked-updates ctx) (head-text node)))
+      (let [arg (get (:checked-updates ctx) (head-text node))
+            supplied (nth (:children node) arg nil)]
+        (if (same-loop-binding? supplied (conj chain node) (:loop-binding ctx) #{})
+          {:ok? true :real? false :self? true}
+          (fail :update-of-another-binding)))
       (:element-of spec)
       (if (and (= "get" (head-text node)) (< 2 (count (:children node))))
         (prov (:element-of spec) (nth (:children node) 1) (conj chain node) ctx (inc depth))
@@ -932,25 +968,28 @@
           (fail :not-a-symbol)
           (if-let [src (sym-sources t node chain)]
             (let [k [t (:start (:vector src)) (:pair-index src)]]
-              (if (contains? visited k)
-                no-prov
-                (let [ctx (update ctx :visited conj k)
-                      inits (for [e (:entries src)]
-                                  (if (:key e)
-                                    (if (and (:keyed-read spec)
-                                             (= (:key e) (str (first (:keyed-read spec))))
-                                             (contains? (record-names (second (:keyed-read spec)) aliases)
-                                                        (token-text (:init e))))
-                                      {:ok? true :real? true :self? false}
-                                      (fail :destructured-key-not-declared))
-                                    (prov spec (:init e) (conj (:chain src) (:form src) (:vector src)) ctx (inc depth))))
-                          recurs (when (:loop? src)
-                                   (for [[n cch] (walk-nodes (:form src) (:chain src))
-                                         :when (and (#{:list} (:kind n)) (= "recur" (head-text n)))
-                                         :let [a (nth (:children n) (inc (:pair-index src)) nil)]
-                                         :when a]
-                                     (prov spec a (conj cch n) ctx (inc depth))))]
-                  (combine (concat inits recurs)))))
+              (if (and (seq (:checked-updates ctx)) (crosses-function-scope? src chain))
+                (fail :function-scope-not-established)
+                (if (contains? visited k)
+                  no-prov
+                  (let [ctx (cond-> (update ctx :visited conj k)
+                              (:loop? src) (assoc :loop-binding k))
+                        inits (for [e (:entries src)]
+                                    (if (:key e)
+                                      (if (and (:keyed-read spec)
+                                               (= (:key e) (str (first (:keyed-read spec))))
+                                               (contains? (record-names (second (:keyed-read spec)) aliases)
+                                                          (token-text (:init e))))
+                                        {:ok? true :real? true :self? false}
+                                        (fail :destructured-key-not-declared))
+                                      (prov spec (:init e) (conj (:chain src) (:form src) (:vector src)) ctx (inc depth))))
+                            recurs (when (:loop? src)
+                                     (for [[n cch] (walk-nodes (:form src) (:chain src))
+                                           :when (and (#{:list} (:kind n)) (= "recur" (head-text n)))
+                                           :let [a (nth (:children n) (inc (:pair-index src)) nil)]
+                                           :when a]
+                                       (prov spec a (conj cch n) ctx (inc depth))))]
+                    (combine (concat inits recurs))))))
             (fail :unbound-symbol))))
       (:keyed-read spec)
       (let [[f r] (:keyed-read spec)]
@@ -1071,6 +1110,25 @@
                       (partition 2 (:children literal)))]
       (and value (or (= 1 (count path)) (supplied-field? value chain (rest path)))))))
 
+(def ^:dynamic *checking-update-witness* false)
+(declare check-pass)
+
+(defn- checked-updates
+  "Only another declared pass of this same value/from can certify an updater.
+  It must independently pass the existing recurrence check; dependencies cannot
+  certify one another recursively. This certifies dataflow, not numeric identity."
+  [repo-root by-id aliases box {:keys [value from to]}]
+  (when-not *checking-update-witness*
+    (into {}
+          (for [p (:passes box)
+                :when (and (= value (:value p)) (= from (:from p))
+                           (not= (:call to) (get-in p [:to :call]))
+                           (nil? (get-in p [:to :field-path])))
+                :let [r (binding [*checking-update-witness* true]
+                          (check-pass repo-root by-id aliases box p))]
+                :when (and (:ok? r) (:self-recurrent? r))]
+            [(get-in p [:to :call]) (get-in p [:to :arg])]))))
+
 (defn- check-pass
   "Conditions (a)-(c) for PASS carried by BOX. Returns {:ok? bool :why kw :self-recurrent? bool}."
   [repo-root by-id aliases box pass]
@@ -1086,14 +1144,15 @@
       (nil? (:text callee-scope)) {:ok? false :why :callee-site-unreadable}
       :else
       (let [forms (:forms (parse-forms caller-text))
-            sites (call-sites forms call)]
+            sites (call-sites forms call)
+            updates (checked-updates repo-root by-id aliases box pass)]
         (if (empty? sites)
           {:ok? false :why :call-not-found}
           (let [results (for [[n chain shift] sites
                               :let [a (nth (:children n) (+ arg shift) nil)]]
                           (assoc (if-not a
                                    {:ok? false :why :call-has-too-few-arguments}
-                                   (prov from a (conj chain n) {:aliases aliases :call call :visited #{}} 0))
+                                   (prov from a (conj chain n) {:aliases aliases :call call :visited #{} :checked-updates updates} 0))
                                  :argc (dec (count (:children n))) :partial? (pos? shift)
                                  :argument a :ancestors (conj chain n)))
                 good (first (filter #(and (:ok? %) (:real? %)) results))]
