@@ -70,6 +70,14 @@ is deferred. The six audited commits remain evidence, not commits to rewrite.
   is recorded, and the operating instructions explain holds, release, and
   unsupported editing surfaces. Link them from the existing inbox-zero docs.
 
+- [ ] **C8 — Relevant, honest notifications (Joe, 2026-09-27):** A dirty
+  file whose mtime merely overlaps an unrelated agent's activity must not be
+  presented to that agent as its work or assigned for commit/delete cleanup.
+  Uncertain ownership must stay visible through a documented triage route,
+  with evidence type and uncertainty explicit. Cover simultaneous agents,
+  synthetic operator windows, session rollover and notification deduplication;
+  do not hide the repository backlog or treat ambiguous overlap as authorship.
+
 ### Relationships, evidence and responsibility
 
 The existing inbox-zero implementation is the dependency being repaired;
@@ -213,6 +221,7 @@ release read-back, supported editing surfaces, and any remaining tickets.
 | M — Finish survey | Done | Reviewed Q4–Q6 answers; two proposals unproven; reduced estimate withdrawn |
 | V — Design and regression spike | Next | Resolve evidence/consumption/index requirements in DERIVE; ARGUE/VERIFY and fidelity tests follow |
 | I — Implement and review | Pending | Scoped commits, independent review, C1–C7 evidence |
+| N — Notification attribution/routing | Next after S1 review | Joe's live claude-1 example; C8; separate sweeper source and tests |
 | O — Operating documentation | Pending | Navigable instructions and final checkpoint |
 
 ### Checkpoint 2026-09-27 — mission created
@@ -562,3 +571,65 @@ separate lab script/report/transcript with explicit-path commits. Existing S0
 remains historical evidence. Owner parks and reviews S1 before settling DERIVE;
 capture is a later bounded packet rather than being mixed into this one.
 C1–C7 unchanged, C6 complete, DERIVE still pending.
+
+### Checkpoint 2026-09-27 19:22Z — Joe's live irrelevant-followup example
+
+Joe reports a followup to **claude-1** naming apparently irrelevant work:
+
+> inbox-zero: futon3c-d is carrying 10 dirty file(s) (3 untracked); 5 of them
+> were written during your turns. Commit or delete what is yours and leave
+> what is not. Newest first: holes/labs/M-inbox-zero-claim-lifecycle/s0-git-transaction.py
+> (also inside codex-4, kimi-9, 象's turn), scripts/test_xiang2000_p0_origins.py
+> (also inside codex-4, kimi-9, 象's turn), holes/labs/M-象-2000/p0-expected.edn
+> (also inside codex-4, kimi-9, 象's turn), scripts/xiang2000_p0.py
+> (also inside codex-4, kimi-9, 象's turn), emacs/session-mode.el
+> (also inside codex-4, kimi-9, 象's turn). Full list:
+> git -C /home/joe/code/futon3c status --porcelain
+
+codex-5 traced the exact wording to **a separate notification path**, not
+`promotion/plan-promotion`:
+
+- `src/futon3c/inbox_zero/sweeper.clj:65-103` reads current dirty entries and
+  filesystem mtime. An untracked directory uses the newest descendant time.
+- `sweeper.clj:155-179` collects job activity windows; missing finish times
+  extend to now. Every roster agent reported invoking also gets a synthetic
+  window from now minus 30 minutes to now. The window records do not carry
+  exact session identity, repo or mission relevance.
+- `sweeper.clj:190-223` assigns an entry to every currently reachable agent
+  whose window contains its mtime, adding `:shared-with`. This is temporal
+  overlap, not evidence of who wrote the file.
+- `sweeper.clj:225-256` ranks by overlap counts (up to three recipients by
+  default), samples five newest matching paths, then emits Joe's exact
+  “written during your turns; commit or delete” wording.
+- `sweeper.clj:393-395` resolves those agent IDs to their **current** sessions.
+  An older window can therefore be directed at a newer session of the seat.
+- `test/futon3c/inbox_zero/sweeper_test.clj:145-184` explicitly tests time
+  attribution and duplication to overlapping agents. These tests preserve
+  the current behavior; changing only the prose would leave the relevance
+  problem in routing intact.
+
+The dirty-notice lane itself does not commit/delete/mint claims
+(`sweeper.clj:15-17`), but it asks recipients to act on a list selected without
+authorship evidence. It shares the mission's attribution concern while using
+a different mechanism. S0's helper authorship is established by packet commit
+727518e6; this example does not establish ownership of the other listed files.
+Historical window reconstruction has not been performed, so the source trace
+explains the mechanism without asserting the exact window that matched claude-1.
+
+**Scope addition at Joe's steering:** C8 above, and packet N for notification
+attribution/routing. Preserve C1–C7 unchanged. A fix must keep unattributed
+backlog visible while avoiding cleanup assignments to unrelated concurrent
+seats; observed overlap may remain labeled diagnostic evidence, never authorship.
+Do not merely add “possibly” to the same noisy assignment or silence the lane.
+
+Also survey wording consumers when changing the format:
+`scripts/xiang2000_p6o3.py:28` and `scripts/test_xiang2000_p6o3.py:8` recognize
+the exact present notice pattern. Their semantics must stay coherent with any
+new structured classification/wording, rather than silently losing detection.
+
+S1 job `invoke-1790536534131-25612-606cc6e9` was checked and is still running.
+Its existing park remains the continuation; no duplicate park/dispatch was
+created. Review that result, then prioritize a bounded N survey/design packet
+with kimi-9. Owner will connect the notification contract to the authority
+contract without forcing notification repair to wait for every commit-mechanics
+implementation detail. No runtime/source behavior changed in this checkpoint.
