@@ -21,3 +21,22 @@
       (is (= (name kind) (get-in entry [:evidence/origin :kind])))
       (is (= "joe" (:evidence/author entry)))
       (is (= kind (get-in @db [:entries (:evidence/id entry) :evidence/origin :kind]))))))
+
+(deftest unattributable-user-turn-is-recorded-without-a-clock-decision
+  ;; The shape of the 31 records stranded in the Emacs outbox's failed/ until
+  ;; 2026-09-27: a REPL awaiting its session, no turn-id, no agent-id, so the
+  ;; clock cannot name an agent. The real clock/record! runs (no redef) and
+  ;; throws clock/missing-identity; the turn must still be stored.
+  (let [db (atom {:entries {} :order []})
+        request {:request-method :post :uri "/api/alpha/evidence"
+                 :body (json/generate-string
+                        {:evidence-id "emacs-unattributable-turn"
+                         :subject {:ref/type "session" :ref/id "claude-11 (awaiting session)"}
+                         :type "coordination" :claim-type "question" :author "joe"
+                         :session-id "claude-11 (awaiting session)"
+                         :body {:event "chat-turn" :transport "emacs-claude-repl"
+                                :role "user" :turn-id nil :text "hello"
+                                :mission-id "M-autoclock-in"}})}
+        result ((http/make-handler {:evidence-store db}) request)]
+    (is (= 201 (:status result)) (:body result))
+    (is (contains? (:entries @db) "emacs-unattributable-turn"))))

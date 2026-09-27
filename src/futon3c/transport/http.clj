@@ -3197,7 +3197,21 @@
                               :evidence-id evidence-id
                               :retry-after-seconds 5})
           (try
-            (let [_ (operator-clock-decision! evidence-store normalized)
+            (let [_ (try
+                      (operator-clock-decision! evidence-store normalized)
+                      ;; The clock is a projection of the turn, not a gate on
+                      ;; recording it. A user turn whose agent cannot be named
+                      ;; (a REPL still awaiting its session, or a session the
+                      ;; registry no longer holds) used to fail the whole POST
+                      ;; with clock/missing-identity -- permanently, since the
+                      ;; record never changes -- so the turn was never stored:
+                      ;; 31 turns sat in the Emacs outbox's failed/ from
+                      ;; 2026-08-29 to 2026-09-27. Record the turn, skip the
+                      ;; clock decision. Other clock errors still refuse (503).
+                      (catch clojure.lang.ExceptionInfo e
+                        (if (= :clock/missing-identity (:error/code (ex-data e)))
+                          nil
+                          (throw e))))
                   result (boundary/append! evidence-store normalized)]
               (if (:ok result)
                 (json-response 201 {:ok true
