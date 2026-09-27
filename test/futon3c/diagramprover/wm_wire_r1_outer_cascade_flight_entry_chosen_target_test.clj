@@ -18,7 +18,9 @@
   WITNESSED-HERMETICALLY: a real select chooses, and its :chosen-target is
   handed to a real resolve-target, whose :target is the reader's value
   under the field."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.set :as set]
+            [futon3c.diagramprover.wm-wire-target-identity-products-10a2 :as products]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.flight-driver :as driver]
             [futon2.aif.outer-cascade :as oc]
             [futon3c.diagramprover.wm-wire :as w]))
@@ -71,6 +73,9 @@
   {:wire [:r1-outer-cascade :flight-entry :chosen-target]
    :kind :witnessed-hermetically
    :test `the-chosen-target-reaches-the-flight-entry
+   :second-layer {:test `target-controls-token-identity-and-store-lookup
+                  :kind :value-varying :product [:clicks]
+                  :intervention :before-reader}
    :check check
    :live-records-read live-records-read})
 
@@ -111,3 +116,29 @@
       (is (not-any? #(and (map? %) (contains? % :chosen-target))
                     (tree-seq coll? seq r))
           (str path " carries no :chosen-target")))))
+
+(deftest target-controls-token-identity-and-store-lookup
+  (let [{:keys [tokens initial located criterion validated published]} (products/products)
+        [a b] (:clicks tokens)
+        [fa fb] (:flights tokens)
+        stated #(mapv :stated (vals (get-in % [:source :criteria-by-token])))
+        [la lb] (:clicks located)
+        token (:token criterion)]
+    (is (= products/targets (mapv :target (:flights tokens))))
+    (is (= (dissoc fa :target) (dissoc fb :target))
+        "Only chosen-target changed: path, text reader, store and all provenance are fixed.")
+    (is (= 6 (count (:wants a)) (count (:wants b))))
+    (is (= (set (stated a)) (set (stated b))))
+    (is (= 6 (count (stated a))))
+    (is (empty? (set/intersection (set (:wants a)) (set (:wants b)))))
+    (is (= :valid (:status validated)))
+    (is (= products/locator (get-in published [:locators token :locator])))
+    (is (every? #(empty? (:locators %)) (:clicks initial)))
+    (is (= products/locator (get-in la [:locators token])))
+    (is (empty? (:locators lb)))
+    (is (= [token] (get-in la [:source :machine-located])))
+    (is (empty? (get-in lb [:source :machine-located])))
+    (is (= (:wants (first (:clicks initial))) (:wants la)))
+    (is (= (:wants (second (:clicks initial))) (:wants lb)))
+    (println :target-tokens [(:wants a) (:wants b)]
+             :machine-locators [(:locators la) (:locators lb)])))
