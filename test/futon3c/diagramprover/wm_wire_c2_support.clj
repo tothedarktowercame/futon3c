@@ -16,12 +16,11 @@
      tick; this side wraps the writer var (tampering the thrown ex-data's
      field) and reads the value the test consumed from its clojure.test
      report, wm-wire-kernel-out-support/order-read's technique."
-  (:require [clojure.edn :as edn]
-            [clojure.java.shell :as sh]
-            [clojure.string :as str]
-            [clojure.test :as t]
+  (:require [clojure.test :as t]
             [futon2.aif.flight-runner :as fr]
             [futon2.aif.full-loop-runner :as runner]
+            [futon2.aif.gate-refusal-abstention-test :as gate-test]
+            [futon2.aif.judge-refusal-abstention-test :as judge-test]
             [futon2.aif.observation-rates :as rates]
             [futon2.report.war-machine :as wm]
             [futon3c.diagramprover.wm-wire :as w]
@@ -159,31 +158,42 @@
 ;; Wires 4/5: [:r9-decision :gate-refusal-test|:r9-judge-refusal-test :kind]
 ;; ---------------------------------------------------------------------------
 
-(def refusal-box-driver
-  "The futon2-cwd driver script for the refusal boxes: the futon2 box
-  namespaces cannot load from futon3c's cwd (their require chain reaches
-  learning-trial-test's load-time slurp of a futon2-relative fixture, and the
-  boxes' own live pins are futon2-relative), so the named futon2 test var
-  runs in futon2's own JVM, the REAL writer var wrapped there by with-redefs."
-  "/home/joe/code/futon3c/test/futon3c/diagramprover/wire_c2_refusal_box_driver.clj")
-
 (defn refusal-box
   "Run the named futon2 refusal-box test (its judge-fn calls the REAL
-  war-machine/cascade-decision, so the refusal is thrown inside the tick) in
-  futon2's JVM via wire_c2_refusal_box_driver.clj: the writer var is wrapped
-  with the thrown ex-data's field tampered per MUTATION (:kind for the judge
-  refusal, :reason for the gate's inadmissible-decision -- the abstention's
-  :kind is the runner's record of that field), and the value the box consumed
-  is read from its clojure.test report (order-read's technique). Returns
-  {:writer :reader :report-type}."
+  war-machine/cascade-decision, so the refusal is thrown inside the tick).
+  These vars formerly ran in fresh futon2-cwd JVMs because their require chain
+  read fixtures relative to the process cwd. Those test fixtures now resolve
+  as classpath resources, making it safe to run the real vars in this JVM.
+  The writer var is wrapped with the thrown ex-data's field tampered per
+  MUTATION (:kind for the judge refusal, :reason for the gate's inadmissible
+  decision -- the abstention's :kind is the runner's record of that field),
+  and the value the box consumed is read from its clojure.test report
+  (order-read's technique). Returns {:writer :reader :report-type}."
   [which mutation]
-  (let [{:keys [exit out err]} (sh/sh "clojure" "-M:test" refusal-box-driver
-                                      (name which) (name mutation)
-                                      :dir "/home/joe/code/futon2")
-        line (last (filter #(str/starts-with? % ":wire-result")
-                           (str/split-lines out)))]
-    (when-not (and (zero? exit) line)
-      (throw (ex-info "refusal-box driver failed"
-                      {:which which :mutation mutation :exit exit
-                       :err-tail (subs err (max 0 (- (count err) 2000)))})))
-    (edn/read-string (subs line (count ":wire-result ")))))
+  (let [field (if (= which :judge) :kind :reason)
+        test-var (if (= which :judge)
+                   #'judge-test/the-real-judge-refusal-is-the-ticks-typed-abstention
+                   #'gate-test/the-real-gate-refusal-is-the-ticks-typed-abstention)
+        real wm/cascade-decision
+        written (atom nil)
+        reports (atom [])]
+    (with-redefs [wm/cascade-decision
+                  (fn [& args]
+                    (try
+                      (apply real args)
+                      (catch clojure.lang.ExceptionInfo e
+                        (reset! written (get (ex-data e) field))
+                        (throw (ex-info (ex-message e)
+                                        (case mutation
+                                          :none (ex-data e)
+                                          :absent (dissoc (ex-data e) field)
+                                          :different (assoc (ex-data e) field
+                                                              :different-refusal-kind)))))))
+                  t/report (fn [m] (swap! reports conj m))]
+      (test-var))
+    (let [report (first (filter #(#{:pass :fail} (:type %)) @reports))
+          form (:actual report)
+          equality (if (= 'not (first form)) (second form) form)]
+      {:writer @written
+       :reader (last equality)
+       :report-type (:type report)})))
