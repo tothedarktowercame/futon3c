@@ -70,7 +70,7 @@
    :deps [:P3 :P9] :decision nil :decided "Joe 2026-09-27: approved; acceptance names offer + scope; an ambiguous yes gets one clarifying question, not a provisional reading" :v2 :same
    :patterns [:象/要约与接受]}
   {:id :P12  :title "Assumption lists and the negation channel" :segment :acts
-   :deps [:P10] :decision {:theme :format :question "A report format ending with 'unstated X, took Y' lines?"} :v2 :changed
+   :deps [:P10] :decision nil :decided "Joe 2026-09-27: reshaped -- (a) gap-fill disclosure, not consent; (b) out of scope/blocked: self-unblock via existing pattern first, then the orchestrator (Joe only if orchestrator), new work = P11 offer; (c) explanation -> DOCUMENT" :v2 :changed
    :patterns [:象/明言假设]}
   {:id :P13a :title "Rule records: three layers, HOWEVER, owning incident" :segment :institutions
    :deps [:P5] :decision nil :decided "Joe 2026-09-27: approved; empty HOWEVER refused, 'failure mode unknown' + review date accepted" :v2 :changed
