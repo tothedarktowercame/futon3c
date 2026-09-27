@@ -73,7 +73,7 @@
    :deps [:P10] :decision {:theme :format :question "A report format ending with 'unstated X, took Y' lines?"} :v2 :changed
    :patterns [:象/明言假设]}
   {:id :P13a :title "Rule records: three layers, HOWEVER, owning incident" :segment :institutions
-   :deps [:P5] :decision {:theme :new-type :question "A rule record format that refuses rules without a HOWEVER?"} :v2 :changed
+   :deps [:P5] :decision nil :decided "Joe 2026-09-27: approved; empty HOWEVER refused, 'failure mode unknown' + review date accepted" :v2 :changed
    :patterns [:象/三层规格 :象/裁亦有失 :象/措施随案]}
   {:id :P13b :title "Adopted, committed, live; versions by live time" :segment :institutions
    :deps [:P13a] :decision {:theme :semantics :question "Answer 'in force at T' from runtime evidence rather than commit time? (Source per rule kind: load record for code rules, first-execution trace for rules the dispatcher runs.)"} :v2 :changed
