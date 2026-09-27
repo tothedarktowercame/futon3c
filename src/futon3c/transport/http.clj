@@ -81,6 +81,7 @@
             [futon3c.agency.clock-decision :as clock-decision]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
+            [futon3c.agency.promise-record :as promise-record]
             [futon3c.agency.followup-queue :as followup-queue]
             [futon3c.inbox-zero.followup-validity :as followup-validity]
             [futon3c.dev.config :as dev-config]
@@ -5344,13 +5345,15 @@
       :else
       (try
         (json-response 200 (assoc (followup-queue/enqueue!
-                                   {:agent agent :session session :type type
+                                   (merge (promise-record/fields body)
+                                    {:agent agent :session session :type type
                                     :dedupe-key dedupe-key :prompt prompt
-                                    :metadata (or (:metadata body) (get body "metadata"))})
+                                    :metadata (or (:metadata body) (get body "metadata"))}))
                                   :ok true))
         (catch clojure.lang.ExceptionInfo e
-          (json-response 400 {:ok false :error "invalid-followup"
-                              :message (.getMessage e)}))))))
+          (json-response 400 (cond-> {:ok false :error "invalid-followup"
+                                      :message (.getMessage e)}
+                               (:reason (ex-data e)) (assoc :reason (:reason (ex-data e))))))))))
 
 (defn- handle-followup-ready [request]
   (let [agent (req-query-param request "agent")
@@ -5459,13 +5462,14 @@
                                          (or all-modes?
                                              (= (or (:mode r) :within-turn)
                                                 :within-turn)))))
-                    (mapv (fn [r] {:id (:id r)
+                    (mapv (fn [r] (merge (select-keys r promise-record/field-keys)
+                                  {:id (:id r)
                                    :agent (:agent r)
                                    :session (:session r)
                                    :surface (:surface r)
                                    :awaiting (vec (:awaiting r))
                                    :deadline-ms (:deadline-ms r)
-                                   :mode (or (:mode r) :within-turn)}))))
+                                   :mode (or (:mode r) :within-turn)})))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
         ;; also means "more is coming" — so the check is race-free even for a fast dep.
         inbox-pending (and (parked-on-enabled?) agent
@@ -5504,7 +5508,9 @@
       (json-response 400 {:ok false :error "invalid-deadline-ms"
                           :message "deadline-ms must be a non-negative integer or decimal integer string"})
       :else
-      (let [result (parked-on/park!
+      (try
+        (let [result (parked-on/park!
+                    (merge (promise-record/fields payload)
                     {:agent (str (or (:agent payload) (get payload "agent")))
                      :session (or (:session payload) (get payload "session"))
                      :surface (or (:surface payload) (get payload "surface"))
@@ -5514,12 +5520,17 @@
                                :within-turn)
                      :timer-due-ms (:value timer-result)
                      :deadline-ms (:value deadline-result)
-                     :budget (or (:budget payload) (get payload "budget"))}
+                     :budget (or (:budget payload) (get payload "budget"))})
                     {:ledger-lookup parked-job-lookup :resume! parked-resume!
                      :now-ms (System/currentTimeMillis)})]
         ;; show the new park in the *agents* pane immediately
         (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
-        (json-response 200 (assoc result :ok true))))))
+        (json-response 200 (assoc result :ok true)))
+        (catch clojure.lang.ExceptionInfo e
+          (if (:promise-record/refusal (ex-data e))
+            (json-response 400 {:ok false :error "invalid-promise-record"
+                                :reason (:reason (ex-data e)) :message (.getMessage e)})
+            (throw e)))))))
 
 (defn- handle-park-complete
   "POST /api/alpha/park/complete — mark an arbitrary parked-on dependency complete."

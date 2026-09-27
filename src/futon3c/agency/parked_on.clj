@@ -27,7 +27,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.dev.config :as config])
+            [futon3c.dev.config :as config]
+            [futon3c.agency.promise-record :as promise-record])
   (:import [java.util UUID]))
 
 (def ^:private default-store "/tmp/futon3c-parked-on.edn")
@@ -334,8 +335,10 @@
    terminal, then RESUME! once with the join. Reconciles against already-terminal
    deps via LEDGER-LOOKUP at park time (closes the lost-wakeup race). With no deps:
    resumes immediately unless a :timer-due-ms is set (then it waits for the sweep).
+   Optional :beneficiary, :deadline (absolute ISO-8601), and :fulfilment-criterion
+   are validated promise metadata, not wake conditions. See promise-record/fields.
    Returns {:id rid :status :parked|:released|:released-immediately}."
-  [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget mode]}
+  [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget mode] :as request}
    {:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (when-not (valid-epoch-ms? timer-due-ms)
@@ -350,11 +353,12 @@
                        [(str agent) (str (first awaiting))])
         budget (merge {:resumes-left 1 :max-depth 8} budget)
         mode (or mode :within-turn)
-        rec {:id rid :agent agent :session session :surface surface
+        rec (merge (promise-record/fields request)
+                   {:id rid :agent agent :session session :surface surface
              :awaiting awaiting :arrived {}
              :payload payload :timer-due-ms timer-due-ms :deadline-ms deadline-ms
              :budget budget :parked-at-ms now-ms :released? false :mode mode
-             :coalesce-key coalesce-key}]
+             :coalesce-key coalesce-key})]
     (cond
       (and (empty? awaiting) (not timer-due-ms))
       (do (when resume! (resume! rec)) {:id rid :status :released-immediately})

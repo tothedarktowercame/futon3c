@@ -3,7 +3,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.dev.config :as config])
+            [futon3c.dev.config :as config]
+            [futon3c.agency.promise-record :as promise-record])
   (:import [java.util UUID]))
 
 (def ^:private default-path "/tmp/futon3c-followups.edn")
@@ -35,7 +36,9 @@
   (if item (update s :dedupe dissoc (:dedupe-key item)) s))
 
 (defn enqueue!
-  [{:keys [agent session type dedupe-key prompt metadata]}]
+  "Queue a followup with optional validated :beneficiary, :deadline and
+   :fulfilment-criterion promise metadata; these do not affect delivery."
+  [{:keys [agent session type dedupe-key prompt metadata] :as request}]
   (ensure!)
   (when-not (contains? #{:inbox-zero :apm-store-repair :kimi-work-target} type)
     (throw (ex-info "Unsupported followup type" {:type type})))
@@ -43,13 +46,15 @@
                  (string? session) (not (str/blank? session))
                  (string? prompt) (not (str/blank? prompt)) dedupe-key)
     (throw (ex-info "Followup requires agent, session, prompt, and dedupe-key" {})))
-  (let [existing (get-in @!state [:dedupe dedupe-key])]
+  (let [promise-fields (promise-record/fields request)
+        existing (get-in @!state [:dedupe dedupe-key])]
     (if existing
       {:id existing :status :deduplicated}
       (let [id (str "followup-" (UUID/randomUUID))
-            item {:followup-id id :agent (str agent) :session (str session)
+            item (merge promise-fields
+                        {:followup-id id :agent (str agent) :session (str session)
                   :type type :dedupe-key dedupe-key :prompt prompt
-                  :metadata metadata :created-at-ms (System/currentTimeMillis)}]
+                  :metadata metadata :created-at-ms (System/currentTimeMillis)})]
         (swap! !state #(-> %
                            (update-in [:queued (seat-key agent session)] (fnil conj []) item)
                            (assoc-in [:dedupe dedupe-key] id)))
