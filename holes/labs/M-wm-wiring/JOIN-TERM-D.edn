@@ -1,0 +1,138 @@
+{:document "JOIN-TERM-D"
+ :author "kimi-8"
+ :date "2026-09-27"
+ :task "E-kimi-task-81"
+ :pinned {:join-output "futon3c 090658ae (wm-vs-equation-dag.edn)"
+          :map "futon3c 775aaa6d (wm-flight-wiring.edn, via git show)"
+          :registry "futon2 202b5a02 (aif-equations.edn, via git show)"
+          :code "futon2 HEAD at read time"}
+ :question "For each :declared edge in wm-vs-equation-dag.edn, does the crediting map field carry the edge's registry term?"
+ :summary {:declared 10 :carries 8 :does-not-carry 2 :cannot-tell 0}
+ :edges
+ [{:edge [:CTAU-TOKEN :R5]
+   :symbols #{:C-tau}
+   :crediting-fields
+   [{:field [:want {:record :cascade-spec}]
+     :writer {:box :construction-assemble-one :site "futon2 src/futon2/aif/cascade_problems.clj:142 (assemble-one); :cascade-spec built at :165-168"}
+     :reader {:box :r4-kernel :site "futon2 src/futon2/aif/efe.clj:1066 (rank-cascade-actions); want read at :1117"}
+     :carries? false
+     :how-we-know "The field is the :want slot alone -- a set of want tokens. C_tau is the step-indexed preference distribution e^{u_tau(o)}/Z_tau built from want + :c-schedule + :lam + :mu by preference-member/utility-weights inside horizon-g-sparse* (cascade_model_manifest.clj:735,:767,:809), i.e. INSIDE the reader. The registry row :preference-schedule's own :live-status :map says :declared [[:want {:record :cascade-spec}]] :not-declared [:c-schedule :lam :mu :preference-member :horizon-g-sparse*]."}]
+   :verdict :does-not-carry
+   :term-carrying-alternative "The whole :cascade-spec record (want+c-schedule+lam+mu) is written by assemble-one and consumed by rank-cascade-actions: declarable as one record-grain map field, after which all INGREDIENTS of C_tau cross. C_tau itself is reconstructed at the reader and never crosses a wire."
+   :unwired-at-map-level "Under a strict term reading yes; under an ingredients reading declarable in one edit."}
+  {:edge [:R14 :R6]
+   :symbols #{:tau}
+   :crediting-fields
+   [{:field [:beta {:record :precision}]
+     :writer {:box :r14-precision-carry :site "futon2 src/futon2/aif/policy_precision_carry.clj:80 (advance); writes :beta/:gamma/:tau at :97-99"}
+     :reader {:box :r14-selection-posterior :site "futon2 src/futon2/aif/cascade_selection.clj:54 (selection-posterior); consumes :beta, refuses non-positive at :74-75"}
+     :carries? true
+     :how-we-know "advance writes :tau beta with :tau-source :carry-beta, and the registry :precision-carry row's :formal is 'tau := beta, beta > 0' at exactly this boundary. The value on the :beta field IS tau's value under the row's own identity."}
+    {:field [:beta {:record :precision}]
+     :writer {:box :r14-precision-carry}
+     :reader {:box :r9-selection-law :site "futon2 src/futon2/aif/policy.clj:300 (select-action-cascades); requires caller-declared beta"}
+     :carries? true
+     :how-we-know "Same identity; beta is the selection temperature the posterior consumes."}]
+   :verdict :carries
+   :note "Carries only under the declared tau:=beta identity, which lives in registry prose. The map also carries an UNREAD [:tau {:record :precision}] field written by the same box -- the term flows under the beta name or not at all. A naive symbol->field-name matcher scores this wrong both ways."}
+  {:edge [:R17 :R6]
+   :symbols #{:E}
+   :crediting-fields
+   [{:field :enactment-records
+     :writer {:box :r7-fold :site "futon2 src/futon2/aif/enactment_habit.clj:99 (fold); counted W_c-passing records under :enactment-records, :115"}
+     :reader {:box :r7-selection :site "futon2 src/futon2/aif/policy.clj:300 (select-action-cascades); receives the fold state as (:enactment-fold opts), reads (:enactment-records fold-state) at :387, computes habit-masses (E)"}
+     :carries? true
+     :how-we-know "The fold state IS E's carrier (enactment_habit.clj ns docstring: 'E, the cascade habit prior, counted from Clause C enactment records'; masses at :119). The value passed at the code seam is the whole fold state; the map names one key of it."}
+    {:field [:beta {:record :precision}]
+     :writer {:box :r9-selection-law}
+     :reader {:box :r14-selection-posterior}
+     :carries? false
+     :how-we-know "A pass-through of beta between two boxes that share R6's var list; says nothing about E. by-var artifact, not evidence."}]
+   :verdict :carries}
+  {:edge [:R2 :R3a]
+   :symbols #{:o}
+   :crediting-fields
+   [{:field :tick-observation
+     :writer {:box :r2-tick-observe :site "futon2 src/futon2/aif/observation.clj:103 (observe) -- the fourteen-channel vector"}
+     :reader {:box :r3a-channel-prediction-error :site "futon2 src/futon2/aif/free_energy.clj:282 (channel-prediction-error); reads the observed value from obs's envelope via channel-source-status"}
+     :carries? true
+     :how-we-know "The channel observation vector is the :observe row's o at channel grain (registry RC8.1); the reader takes the prediction error against exactly this value."}]
+   :verdict :carries}
+  {:edge [:R3a :R7]
+   :symbols #{:eps}
+   :crediting-fields
+   [{:field [:error {:record :prediction-error}]
+     :writer {:box :r3a-prediction-error :site "futon2 src/futon2/aif/free_energy.clj:203 (compute-prediction-error); :error = observed - predicted-mean at :215"}
+     :reader {:box :r7-weighted-error :site "futon2 src/futon2/aif/precision.clj:212 (weighted-error); err = (:error error-map) at :228"}
+     :carries? true
+     :how-we-know "Same slot, same record, writer to reader."}]
+   :verdict :carries}
+  {:edge [:R5 :R6]
+   :symbols #{:G}
+   :crediting-fields
+   [{:field :controller-score
+     :writer {:box :r4-kernel :site "futon2 src/futon2/aif/efe.clj:1066 (rank-cascade-actions; var aliased to node R5); docstring :1094-1095 ':G-efe (= :G-cascade = :controller-score)'"}
+     :reader {:box :r9-selection-law :site "futon2 src/futon2/aif/policy.clj:300 (select-action-cascades); candidates carry G in :controller-score, handed to selection-posterior as :g"}
+     :carries? true
+     :how-we-know "The writer's docstring names the identity G = :controller-score; the reader consumes it as G."}]
+   :verdict :carries}
+  {:edge [:R6 :R16]
+   :symbols #{:pi :Q-pi}
+   :crediting-fields
+   [{:field [:beta {:record :precision}]
+     :writer {:box :r9-selection-law :site "futon2 src/futon2/aif/policy.clj:300; the map's :passes entry forwards literal :beta to selection-posterior arg 1"}
+     :reader {:box :r14-selection-posterior :site "futon2 src/futon2/aif/cascade_selection.clj:54"}
+     :carries? false
+     :how-we-know "beta is the selection temperature, neither the policy set pi nor the posterior Q(pi). This is claude-9's second suspected false credit; confirmed."}]
+   :verdict :does-not-carry
+   :term-carrying-alternative "pi: the :candidates argument (policy.clj:404,:445 -- the policy list with per-policy :habit/:f/:g) is pi entering the posterior; declarable as a map field (writer has it, reader destructures it), currently NOT declared. Q(pi): computed AT the reader (selection-posterior is an R16 var); needs no wire -- the join would need a produced-at-consumer convention."
+   :unwired-at-map-level "Yes for pi (declarable in one edit); not applicable for Q-pi (born at the consumer)."}
+  {:edge [:R6 :R17]
+   :symbols #{:pi}
+   :crediting-fields
+   [{:field :candidate
+     :writer {:box :r9-selection-law :site "futon2 src/futon2/aif/policy.clj:527,:563 -- ':candidate is the CHOSEN ...', (:cascade-id chosen-entry)"}
+     :reader {:box :r7-increment :site "futon2 src/futon2/aif/enactment_habit.clj:35-52 (policy-key-for) and increment; keys the E count off (:candidate enactment)"}
+     :carries? true
+     :how-we-know "The chosen policy's identity crosses and is exactly what the reader needs. Grain note: pi as a NAME (cascade-id), not the policy record."}]
+   :verdict :carries}
+  {:edge [:R6 :R4]
+   :symbols #{:pi :r}
+   :crediting-fields
+   [{:field :descent
+     :writer {:box :r4-constructor :site "futon2 src/futon2/aif/construction.clj:113 (containment-order); docstring :125 ':descent [[above below] ...] ; r itself'"}
+     :reader {:box :r4-order-use :site "futon2 src/futon2/aif/efe.clj:1006 (order-use); consumes [:construction-receipt :order] at :1035"}
+     :carries? true
+     :how-we-know ":descent IS the containment order r (writer docstring; registry: 'r (the containment order) enters R4 through the :co-application-kernel row')."}
+    {:field :units
+     :writer {:box :r4-constructor}
+     :reader {:box :r4-order-use}
+     :carries? true
+     :how-we-know "The carrier set of r (one node per pattern application); component of the same order map."}
+    {:field :precedence-violations
+     :writer {:box :r4-constructor}
+     :reader {:box :r4-order-use}
+     :carries? false
+     :how-we-know "A derived finding ABOUT r (descent edges precedence reverses), not r or pi itself; order-use uses it only to fall back to the list kernel."}]
+   :verdict :carries
+   :note "Carries for r. pi is not on the three crediting fields: the policy reaches order-use as the action argument (:precedence) inside :construction-receipt -- a declared read of r4-order-use at record grain, and the wire [:construction-construct :r4-order-use :construction-receipt] is ledger-witnessed. pi is a same-wire passenger a field-grain check would miss."}
+  {:edge [:R7 :R3]
+   :symbols #{:Pi}
+   :crediting-fields
+   [{:field :weighted-error
+     :writer {:box :r7-weighted-error :site "futon2 src/futon2/aif/precision.clj:212 (weighted-error); :weighted-error = err * adaptive-pi, :precision = adaptive-pi assoced onto the SAME record at :229-232"}
+     :reader {:box :r3-aggregate-driver :site "futon2 src/futon2/aif/belief.clj:1145 (r3d-aggregate-driver); contract at :1148 reads BOTH :weighted-error and :precision per channel"}
+     :carries? true
+     :how-we-know "The credited field is the product eps*Pi, not Pi; but the whole error-map crosses and Pi is an explicit :precision key of it that the reader also consumes. Declaring :precision as a field on this edge would make it exact."}]
+   :verdict :carries}]
+ :rule-sketch
+ {:proposal "A separate correspondence table (e.g. holes/labs/M-wm-wiring/wm-term-fields.edn): {registry-symbol -> #{map-field}}, with per-entry provenance (declarer, date, code sha). Not in the registry (futon2 theory document, different lane rhythm) and not in the map box (a box does not know which registry symbols its fields witness); registry rows may point at it, as :preference-schedule already does informally via :live-status :map."
+  :rule "Edge e with symbols S is :declared only if every s in S is covered by the correspondence of some crediting field in fields-by-var(e). A symbol with NO correspondence entry makes the edge :cannot-tell (loud table gap). Full correspondences with no matching field make a new honest class :does-not-carry. Identity declarations (tau:=beta) are explicit entries owned by the table, not by a name matcher. Record-grain entries (e.g. :construction-receipt for pi, :cascade-spec for C_tau's ingredients) must be allowed, or the rule manufactures false negatives on E, Pi and r."
+  :failure-behaviour "The edge drops out of the :declared count NAMING the uncovered symbol; the acceptance count never again conflates 'some field crosses' with 'the term crosses'."
+  :sketch-results {:pass [:R2->R3a :R3a->R7 :R5->R6 :R17->R6 :R6->R17 :R7->R3 :R14->R6-via-identity]
+                   :mixed [:R6->R4-r-passes-pi-needs-record-grain-entry]
+                   :exposed [:CTAU-TOKEN->R5 :R6->R16]}}
+ :wire-ledger {:affected? false
+               :why "wm-wire-ledger.edn is per FIELD ([writer reader field] + witnessing test). Its claim is 'this field reaches that reader', which the false credits do not falsify: [:want {:record :cascade-spec}] really does reach rank-cascade-actions (:witnessed-hermetically). The weakness lives one level up, in the join's field->edge step."
+               :caveat "24 of 173 wires are :unverified, including all three [:beta {:record :precision}] wires -- two of which credit the R14->R6 pass and the R6->R16 false credit. A term-level rule built on unverified field evidence inherits that gap."}
+ :premise-check "Premise confirmed: the join never checks term-carrying, and both named false credits reproduce. Two refinements: (a) the other 8 declared edges DO carry their terms, several only at record grain (E, Pi, r) -- a field-grain rule must allow record-grain correspondence entries; (b) R14->R6 is right only under the registry's prose tau:=beta identity, which is nowhere machine-checkable."}
