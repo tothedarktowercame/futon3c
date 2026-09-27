@@ -8,4 +8,9 @@
 ;; Each entry: {:map-commit sha :edge [box-from box-to field] :registry-edge [Rx Ry]
 ;;              :term sym :writer {:file :var :line} :reader {:file :var :line}
 ;;              :reader-is-test-box? bool :packet "MAP-2B-…"}
-[]
+[{:map-commit "c1afad170de503c246673f1bd90a18b63b08b625"
+  :edge [:construction-assemble-one :r4-kernel :cascade-spec]
+  :registry-edge [:CTAU-TOKEN :R5] :term :C-tau
+  :writer {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one" :line 168}
+  :reader {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions" :line 1116}
+  :reader-is-test-box? false :packet "MAP-2B-P3"}]
