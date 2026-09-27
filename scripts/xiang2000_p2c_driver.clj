@@ -2,6 +2,8 @@
   "Hermetic subprocess driver for P2c SIGKILL tests."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
+            [futon3c.agency.atomic-file :as atomic-file]
             [futon3c.agency.followup-queue :as followup]
             [futon3c.agency.parked-on :as park]
             [futon3c.agency.promise-history :as history]
@@ -123,6 +125,11 @@
               (throw (ex-info "Control history did not drain" {})))
             (block-at-boundary! (:ready (paths dir))))
 
+        "atomic-park-write"
+        (binding [atomic-file/*before-move*
+                  (fn [_] (block-at-boundary! (:ready (paths dir))))]
+          (park/park! park-request {:now-ms 1000}))
+
         (throw (ex-info "Unknown P2c case" {:case scenario}))))))
 
 (defn restart! [dir]
@@ -133,7 +140,14 @@
         (fn [evidence]
           (let [live {:parked (park/snapshot) :followup (followup/snapshot)}
                 entries (vec (backend/-all evidence))
-                report (assoc (replay/compare-state entries live) :readable? true)]
+                corrupt-files (->> (.listFiles (io/file dir))
+                                   (map #(.getName ^java.io.File %))
+                                   (filter #(str/includes? % ".corrupt-"))
+                                   sort vec)
+                report (assoc (replay/compare-state entries live)
+                              :readable? true
+                              :corruption-stats (atomic-file/stats)
+                              :corrupt-files corrupt-files)]
             (spit result (pr-str report)))))
       (catch Throwable error
         (spit result (pr-str {:equal? false :readable? false

@@ -103,18 +103,36 @@
     (is (= #{[:followup :queued] [:followup :dedupe]}
            (difference-roots report)) (pr-str report))))
 
-(deftest truncated-park-file-currently-disagrees
+(deftest truncated-park-is-preserved-but-currently-disagrees
   (let [report (truncated-report "control-park" "parked.edn")]
     (is (:readable? report) (pr-str report))
     (is (false? (:equal? report)) (pr-str report))
+    (is (= 1 (get-in report [:corruption-stats :by-store :parked])) (pr-str report))
+    (is (= 1 (count (:corrupt-files report))) (pr-str report))
+    (is (re-find #"^parked\.edn\.corrupt-" (first (:corrupt-files report))))
     (is (= #{[:parked :records] [:parked :index] [:parked :coalesced]}
            (difference-roots report)) (pr-str report))))
 
-(deftest truncated-followup-file-currently-disagrees
+(deftest truncated-followup-boots-and-currently-disagrees
   (let [report (truncated-report "control-followup" "followups.edn")]
-    (is (false? (:readable? report)) (pr-str report))
+    (is (:readable? report) (pr-str report))
     (is (false? (:equal? report)) (pr-str report))
-    (is (re-find #"RuntimeException|Exception" (:error-class report)) (pr-str report))))
+    (is (= 1 (get-in report [:corruption-stats :by-store :followup])) (pr-str report))
+    (is (= 1 (count (:corrupt-files report))) (pr-str report))
+    (is (re-find #"^followups\.edn\.corrupt-" (first (:corrupt-files report))))
+    (is (= #{[:followup :queued] [:followup :dedupe]}
+           (difference-roots report)) (pr-str report))))
+
+(deftest sigkill-after-temp-force-keeps-old-file-parseable
+  (let [dir (temp-dir)]
+    (try
+      (kill-at-boundary! "atomic-park-write" dir)
+      (let [old-state (edn/read-string (slurp (str dir "/parked.edn")))
+            report (restart! dir)]
+        (is (map? old-state))
+        (is (empty? (:records old-state)) (pr-str old-state))
+        (is (:equal? report) (pr-str report)))
+      (finally (delete-tree! dir)))))
 
 (deftest clean-kill-with-empty-writer-queue-agrees
   (testing "the marker is emitted only after await-writes! drains the writer"

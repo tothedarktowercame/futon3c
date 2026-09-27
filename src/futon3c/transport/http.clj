@@ -69,6 +69,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
             [futon3c.agency.inbox :as agency-inbox]
@@ -2901,6 +2902,7 @@
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
                          "queue-hardening" queue-hardening
+                         "agency-file-corruption" (agency-atomic-file/stats)
                          "jvm" jvm
                          "unconsumed-count" (:unconsumed-count inbox-health)
                          "oldest-unconsumed-age-ms" (:oldest-unconsumed-age-ms inbox-health)

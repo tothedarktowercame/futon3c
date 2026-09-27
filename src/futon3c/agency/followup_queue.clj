@@ -1,8 +1,7 @@
 (ns futon3c.agency.followup-queue
   "Durable typed external followups. This is not the parked-turn queue."
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
+            [futon3c.agency.atomic-file :as atomic-file]
             [futon3c.dev.config :as config]
             [futon3c.agency.promise-record :as promise-record]
             [futon3c.agency.promise-history :as history]
@@ -21,12 +20,10 @@
                                         (keys (:leased s))))]
     (update s :dedupe #(into {} (filter (fn [[_ id]] (contains? outstanding id)) %)))))
 (defn- load-state []
-  (let [f (io/file (path))]
-    (if (.exists f)
-      (let [x (edn/read-string (slurp f))]
-        (if (map? x) (migrate-dedupe (merge (empty-state) x)) (empty-state)))
-      (empty-state))))
-(defn- persist! [s] (spit (path) (pr-str s)) s)
+  (migrate-dedupe
+   (merge (empty-state)
+          (atomic-file/load-edn-map! :followup (path) (empty-state)))))
+(defn- persist! [s] (atomic-file/write! (path) (pr-str s)) s)
 (defn- ensure! []
   (history/capture! :followup (fn []
   (when-not @!state

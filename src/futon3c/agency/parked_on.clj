@@ -24,9 +24,8 @@
    The ns is dependency-injected: callers pass `resume!` (fn of a record),
    `ledger-lookup` (dep-id -> {:state :result :result-summary}), and `now-ms`, so the five
    hard cases are unit-testable without the live JVM."
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
+            [futon3c.agency.atomic-file :as atomic-file]
             [futon3c.dev.config :as config]
             [futon3c.agency.promise-record :as promise-record]
             [futon3c.agency.promise-history :as history]
@@ -82,19 +81,16 @@
       result)))
 
 (defn- load-state []
-  (let [f (io/file (store-path))]
-    (if (.exists f)
-      (try
-        (let [s (edn/read-string (slurp f))]
-          (if (map? s) (merge (empty-state) (dissoc s :just-released)) (empty-state)))
-        (catch Exception _ (empty-state)))
-      (empty-state))))
+  (merge (empty-state)
+         (dissoc (atomic-file/load-edn-map! :parked (store-path) (empty-state))
+                 :just-released)))
 
 (defn- persist! [state]
   (try
-    (spit (store-path) (pr-str (dissoc state :just-released)))
+    (atomic-file/write! (store-path) (pr-str (dissoc state :just-released)))
     (catch Exception e
-      (println (str "[parked-on] persist failed: " (.getMessage e)))))
+      (binding [*out* *err*]
+        (println (str "[parked-on] persist failed: " (.getMessage e))))))
   state)
 
 (defn- ensure! []
