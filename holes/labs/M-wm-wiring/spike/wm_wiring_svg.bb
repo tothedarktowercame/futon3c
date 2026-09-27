@@ -40,9 +40,9 @@
    ["3 Read step (C)" [:r2-flight-read :r2-served-by-reading :r2-verifier :r2-store-criteria :r2-store-coverage :r2-store-locators :r2-store-locator-questions :r2-store-locator-declines :r2-store-constraints-read] [:r2-test]]
    ["4 Ask step (interpretation)" [:r3-flight-ask :flight-ask-fn :r3-prompt :flight-click-wants :ask-merge-published :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
    ["5 Construction, order" [:r2-tick-observe :r2-judge-observation :r3a-predict-observation :r3a-channel-prediction-error :r3a-prediction-error :r7-weighted-error :r3-aggregate-driver :r3-apply-belief-events :morning-brief-fold :r1-belief-carry :trace-record :r13-policy-depth-anticipation :r13-sources-horizon :construction-assemble :tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply :r4-evaluate-state :r4-push-forward :r4-token-likelihood] [:r4-test :r4-coapply-test]]
-   ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-kernel :r5-g-sparse-cert :fpi-policy-free-energy] [:r6-test]]
+   ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-rank-dispatch :r4-kernel :r5-g-sparse-cert :fpi-policy-free-energy] [:r6-test]]
    ["7a Selection, decision, registry"
-    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-f-prefix-supply :r8-selection-candidate :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :r14-precision-carry :r14-selection-posterior :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
+    [:r1-token-legacy :r1-token-initialization :r1-token-input :r1-token-temporal :r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-f-prefix-supply :r8-selection-candidate :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :r14-precision-carry :r14-selection-posterior :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
     [:r9-test :r9-relation-test]]
    ["7b Selection: refusals, failure record"
     [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :run-record-publication :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]
@@ -120,6 +120,7 @@
 (def org
   (let [tmp (str (System/getProperty "java.io.tmpdir") "/wm-org-layer-" map-sha ".edn")
         r (sh/sh "bb" "holes/labs/M-wm-wiring/spike/wm_org_layer.bb" map-sha
+                 (get-in m [:repos "futon2"])
                  :env (assoc (into {} (System/getenv)) "WM_ORG_OUT" tmp))]
     (when-not (zero? (:exit r))
       (binding [*out* *err*] (println "wm_org_layer.bb refused:" (:err r))) (System/exit 2))
@@ -222,7 +223,7 @@
 ;; panels
 (doseq [[i [title comps _]] (map-indexed vector lanes)]
   (let [x (panel-x i)
-        crossing (count (filter (fn [[f _ _]] true) (concat (filter #(= :exit (second %)) (taps-in-gutter (inc i))) (filter #(= :entry (second %)) (taps-in-gutter i)))))]
+        crossing (count (filter (fn [[_f _ _]] true) (concat (filter #(= :exit (second %)) (taps-in-gutter (inc i))) (filter #(= :entry (second %)) (taps-in-gutter i)))))]
     (emit (format "<rect x='%d' y='%d' width='%d' height='%d' rx='10' fill='%s' stroke='#d9e2e1'/>" x (+ header-h strip-h) panel-w panel-h (if (even? i) "#f7fafa" "#eef4f4")))
     (emit (format "<text x='%d' y='%d' font-size='12.5' font-weight='700' fill='#274d4a'>%s</text>" (+ x 12) (+ header-h strip-h 20) (esc title)))
     (let [on-trace (sort (mapcat #(trace-numbers %) comps))]
@@ -273,7 +274,7 @@
 
 ;; the bus: one line per crossing field, taps from writer and to readers
 (doseq [f bus-order :let [y (bus-y f) w (writer-of f) lc (line-class f)
-                          xs (map (fn [[k v]] v) (filter (fn [[[ff _ _] _]] (= ff f)) track-x))
+                          xs (map (fn [[_k v]] v) (filter (fn [[[ff _ _] _]] (= ff f)) track-x))
                           x1 (apply min xs) x2 (apply max xs)]]
   (emit (format "<line x1='%d' y1='%d' x2='%d' y2='%d' stroke='%s' stroke-width='1.4' %s><title>%s: %s writes; read by %s</title></line>"
                 x1 y x2 y (colors lc) (if (= lc :declared) "stroke-dasharray='5,3'" "") (esc f) (esc w) (esc (str/join ", " (map name (distinct (readers-of f)))))))
