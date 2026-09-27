@@ -284,24 +284,25 @@
 
 ;; ---------------------------------------------------------------------------
 ;; Wire [:r10-observe-publication :r0-test :publication-observed]
-;; flight_enact_test's enact-fn has no :publication-observation override
-;; and no :repair-id-fn, so the test box DOES drive the real
-;; observe-publication-fn — but its fixture discharges no repair
-;; obligation, so the only value that ever crosses is the writer's typed
-;; absence {:absent :no-repair-obligation-for-target :target "M-t"}.
+;; flight_enact_test's a-discharged-repair-obligation-is-observed-as-published
+;; (futon2 6d98d37c): its enact-fn passes :repair-id-fn and a real
+;; persist-run-record!-written run record carrying the discharge, with no
+;; :publication-observation override, so the test box drives the real
+;; observe-publication-fn and a PRESENT value crosses.
 
 (defn r0-test-observe
-  "Run flight_enact_test's two-steps-two-attempts deftest with the real
-  observe-publication-fn wrapped (TAMPER rewrites its value) and
-  clojure.test's report captured; the reader's value is the actual value
-  the test's line-45 assertion consumed, read off the report."
+  "Run flight_enact_test's a-discharged-repair-obligation-is-observed-as-published
+  deftest with the real observe-publication-fn wrapped (TAMPER rewrites
+  its value) and clojure.test's report captured; the reader's value is
+  the actual value the test's :publication-observed assertion consumed,
+  read off the report."
   [tamper]
   (let [real fr/observe-publication-fn
         written (atom nil)
         reports (atom [])]
     (with-redefs [fr/observe-publication-fn (wrap-publication-writer real written tamper)
                   t/report #(swap! reports conj %)]
-      ((var futon2.aif.flight-enact-test/two-steps-two-attempts-each-with-its-check)))
+      ((var futon2.aif.flight-enact-test/a-discharged-repair-obligation-is-observed-as-published)))
     (let [report (first (filter #(and (#{:pass :fail} (:type %))
                                       (re-find #"publication-observed" (pr-str (:expected %))))
                                 @reports))
