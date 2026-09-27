@@ -80,12 +80,11 @@ when the ACK is lost."
           (url-request-method "POST")
           (url-request-extra-headers '(("Content-Type" . "application/json")))
           (url-request-data (format "{\"park-id\":\"%s\"}" park-id)))
-      (url-retrieve url (lambda (_status)
-                          (let ((buf (current-buffer)))
-                            (unwind-protect
-                                (ignore)
-                              (when (buffer-live-p buf) (kill-buffer buf)))))
-                    nil t t))))
+      (agent-repl-park--retrieve url (lambda (_status)
+                                       (let ((buf (current-buffer)))
+                                         (unwind-protect
+                                             (ignore)
+                                           (when (buffer-live-p buf) (kill-buffer buf)))))))))
 
 (defun agent-repl-park--resume-in-buffer (buf prompt park-id)
   "Resume the parked turn in BUF as its own unsolicited continuation turn.
@@ -198,14 +197,75 @@ when this loads heals on its next tick instead of staying stuck for good."
   (let ((age (and started (ignore-errors (float-time (time-since started))))))
     (and age (< age agent-repl-park-poll-stale-seconds))))
 
+(defcustom agent-repl-park-request-timeout 20
+  "Seconds before an unanswered ready-inbox request is aborted.
+
+`url-retrieve' has no timeout of its own: a request the server never answers
+holds its socket open for the life of Emacs.  The expiring latch above then
+starts a fresh poll every `agent-repl-park-poll-stale-seconds' while the old one
+stays open, so each stalled answer from the Agency leaks one descriptor per
+buffer per poller.  On 2026-09-27 the graph daemon reached its 1024-descriptor
+limit this way (989 idle sockets on :7070); every later connect failed and left a
+dead process behind, and at 20,000 of those Emacs spent all its time choosing
+unique process names and never answered emacsclient again.  Keep this below
+`agent-repl-park-poll-stale-seconds' so a request is gone before its latch
+expires."
+  :type 'number :group 'agent-repl-park)
+
+(defun agent-repl-park--retrieve (url callback)
+  "`url-retrieve' URL silently, calling CALLBACK once, with a deadline.
+
+If no answer arrives within `agent-repl-park-request-timeout', the connection is
+deleted and CALLBACK runs in a scratch buffer with status (:error (timeout)), so
+callers clear their latches the same way they do on any other failure.  Binds
+nothing itself: callers still set `url-request-method' and friends around it."
+  (let* ((done nil)
+         (resp-buf nil)
+         (once (lambda (status)
+                 (unless done
+                   (setq done t)
+                   (funcall callback status)))))
+    (setq resp-buf (url-retrieve url once nil t t))
+    (run-at-time
+     agent-repl-park-request-timeout nil
+     (lambda ()
+       (unless done
+         (when (buffer-live-p resp-buf)
+           (let ((proc (get-buffer-process resp-buf)))
+             (when proc
+               ;; url.el's end-of-document sentinel re-issues a request whose
+               ;; connection closed early, so detach it before deleting.
+               (set-process-sentinel proc #'ignore)
+               (delete-process proc)))
+           (kill-buffer resp-buf))
+         (with-temp-buffer
+           (funcall once (list :error (list 'timeout url)))))))
+    resp-buf))
+
+(defun agent-repl-park--reap-dead-url-processes ()
+  "Delete url.el connections that were already dead on the previous call.
+
+A connection that fails (for instance when no descriptor is free) stays in
+`process-list' once its sentinel has run.  Every new process name is checked
+against that list, so the check is quadratic in its length.  Waiting one poll
+interval before reaping guarantees the sentinel has had its turn."
+  (dolist (proc (process-list))
+    (when (and (memq (process-status proc) '(failed closed exit signal))
+               (memq (process-sentinel proc)
+                     '(url-http-async-sentinel url-http-end-of-document-sentinel
+                                               url-http-idle-sentinel)))
+      (if (process-get proc 'agent-repl-park-seen-dead)
+          (delete-process proc)
+        (process-put proc 'agent-repl-park-seen-dead t)))))
+
 (defun agent-repl-followup--ack (id api-url)
   (ignore-errors
     (let ((url-request-method "POST")
           (url-request-extra-headers '(("Content-Type" . "application/json")))
           (url-request-data (format "{\"followup-id\":\"%s\"}" id)))
-      (url-retrieve (format "%s/api/alpha/followups/ready/ack"
-                            (string-remove-suffix "/" api-url))
-                    (lambda (_status) (kill-buffer (current-buffer))) nil t t))))
+      (agent-repl-park--retrieve (format "%s/api/alpha/followups/ready/ack"
+                                         (string-remove-suffix "/" api-url))
+                                 (lambda (_status) (kill-buffer (current-buffer)))))))
 
 (defun agent-repl-followup--poll-buffer-async (buf)
   "Poll and deliver one typed external followup to BUF."
@@ -221,7 +281,7 @@ when this loads heals on its next tick instead of staying stuck for good."
                           (url-hexify-string (or agent ""))
                           (url-hexify-string (or session "")))))
         (setq agent-repl-followup--poll-inflight (current-time))
-        (url-retrieve
+        (agent-repl-park--retrieve
          url
          (lambda (status)
            (let ((response-buffer (current-buffer)))
@@ -249,8 +309,7 @@ when this loads heals on its next tick instead of staying stuck for good."
                                 (plist-get item :prompt) "followup"
                                 (agent-repl-capability :hooks))))
                            (agent-repl-followup--ack id api-url))))))
-               (when (buffer-live-p response-buffer) (kill-buffer response-buffer)))))
-         nil t t)))))
+               (when (buffer-live-p response-buffer) (kill-buffer response-buffer))))))))))
 
 (defun agent-repl-park--poll-buffer-async (buf)
   "Async-poll BUF's ready-inbox and, on a ready item, resume in place.
@@ -269,7 +328,7 @@ synchronous GET is what made you reach for C-g)."
                           (url-hexify-string (or session ""))))
              (url-request-method "GET"))
         (setq agent-repl-park--poll-inflight (current-time))
-        (url-retrieve
+        (agent-repl-park--retrieve
          url
          (lambda (status)
            (let ((resp-buf (current-buffer)))
@@ -289,8 +348,7 @@ synchronous GET is what made you reach for C-g)."
                          (let ((item (aref ready 0)))    ; one per poll; extras next tick
                            (agent-repl-park--resume-in-buffer
                             buf (plist-get item :prompt) (plist-get item :park-id)))))))
-               (when (buffer-live-p resp-buf) (kill-buffer resp-buf)))))
-         nil t t)))))
+               (when (buffer-live-p resp-buf) (kill-buffer resp-buf))))))))))
 
 (defun agent-repl-park--poll-once ()
   "Poll every participating REPL buffer's ready-inbox asynchronously.
@@ -299,6 +357,7 @@ checks the registry's :invoking status.  The old
 `agent-chat--streaming-started' gate was unreliable in pouch-driven buffers,
 so it has been removed.  The server withholds items from busy agents; the
 buffer polls unconditionally and trusts that gate."
+  (agent-repl-park--reap-dead-url-processes)
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
