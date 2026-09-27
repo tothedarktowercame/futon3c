@@ -922,3 +922,39 @@ C6 release complete, S2 recovery and capture open. Prompt API a36f3dc5 remains
 agreed with registry landing still unconfirmed; no duplicate dispatch. Owner
 parks for N6, then reviews precise deployment decision and resumes remaining
 mission lifecycle work. N6 is not another redesign of the notification lane.
+
+### Checkpoint 2026-09-27 — N6 quota failure; actual browser consumer gap
+
+N6 job invoke-1790540290232-25645-bcf98851 **failed before review**, HTTP403
+Kimi five-hour usage limit. No result or approval exists. Owner asked Joe whether
+to wait for kimi-9 or use another Agency reviewer, and continued read-only
+investigation. Independent review of owner9799eff0/80dcde519 remains outstanding.
+Do not retry the quota failure automatically or treat a failed job as review.
+
+Concrete browser source now inspected: futon2
+`web/war-machine/src/war_machine/client/core.cljs`, self-watch-dashboard
+(~1495; Commit Hygiene ~1606). It reads only :queues, not :all-queues; uses repo
+label as React key, `(name tier)` with no unknown handling, `(or count 0)`;
+displays action text but no complete path detail, uncertainty/completeness or
+coverage. Thus the markdown fixes do NOT establish actual browser visibility.
+This corrects the prior helper claim that no UI change was needed. Required
+bounded local follow-up: browser consumes full detail and status, distinct root
+identity, nil-safe tier/count, and measured coverage; test actual component with
+union-only/overflow/failure fixtures. Do not deploy before this consumer works.
+
+Live read-only GET still503, scheduler never started. Source http
+wm-scheduler-autostart? explicitly defaults OFF to prevent accidental recurring
+scans/loss-ledger floods. This is deliberate policy, not a broken scheduler to
+restart. scheduler/tick! calls generate-war-machine, belly refresh and may write
+loss evidence; refresh-one-window! populates cache. Standalone report generation
+does not populate that cache. request-tick! requires an executor; direct blocking
+tick via Drawbridge is explicitly forbidden by scheduler warning (past timeout
+cascade killed JVM). Any activation plan must respect these side effects and
+obtain explicit scope expansion from original no-runtime constraint.
+
+Sweeper run-pass! also pushes and retires worktrees; use no full-pass shortcut.
+Its long-running future resolves run-pass! Var, but old closure dropped interval
+before that call: reload alone cannot fix custom interval propagation in that
+already-created closure. Loop replacement, if needed, is a separate reviewed
+operation; no start/stop/reload performed. No deployment ready claim. N local
+producer fixes remain useful; C8/full DERIVE incomplete, C6done, S2/capture open.
