@@ -1318,6 +1318,164 @@
         acc (:passes box)))
      {:evidence {} :failed {}} boxes)))
 
+(defn- carry-return-proof
+  "All returned arms must derive from a let-bound source call. No arbitrary
+  record transformer, dynamic key, or recursive fixed point is assumed."
+  [text field source-call]
+  (let [form (first (:forms (parse-forms text)))
+        name (token-text (second (:children form)))
+        tail (drop 2 (:children form))
+        multi (filter #(and (= :list (:kind %))
+                            (= :vector (:kind (first (:children %))))) tail)
+        arities (if (seq multi)
+                  (into {} (map #(vector (count (:children (first (:children %))))
+                                         {:params (first (:children %))
+                                          :body (vec (rest (:children %)))}) multi))
+                  (let [pv (first (filter #(= :vector (:kind %)) tail))]
+                    (when pv {(count (:children pv))
+                              {:params pv :body (vec (rest (drop-while #(not= pv %) tail)))}})))
+        fail (fn [why] {:ok? false :why why})
+        parameter-env (fn [arity]
+                        (into {} (for [p (:children (:params arity))
+                                       e (pattern-entries p nil)]
+                                   [(:sym e) (fail :parameter-not-a-carried-local)])))
+        combine-arms (fn [rs]
+                       (or (first (remove :ok? rs))
+                           {:ok? true :arms (set (mapcat :arms rs))}))]
+    (letfn [(record [node env seen bound?]
+              (let [h (head-text node) kids (:children node)
+                    base #(record (second kids) env seen false)
+                    literal-keys (fn [xs] (every? #(some-> (token-text %) (str/starts-with? ":")) xs))]
+                (cond
+                  (nil? node) (fail :missing-return-arm)
+                  (quoted-form? node) (fail :quoted-data)
+                  (= :token (:kind node))
+                  (get env (token-text node) (fail :not-a-carried-local))
+                  (and (#{"assoc" "merge" "dissoc" "select-keys"} h) (contains? env h))
+                  (fail :shadowed-record-operation)
+                  (and (= :list (:kind node)) (= source-call h))
+                  (if (and bound? (not (contains? env h)))
+                    {:ok? true :arms #{:carried}}
+                    (fail :source-not-bound-or-shadowed))
+                  (#{"let" "let*"} h)
+                  (let [v (second kids)]
+                    (if-not (and (= :vector (:kind v)) (even? (count (:children v))))
+                      (fail :unsupported-carry-binding)
+                      (let [env' (reduce
+                                  (fn [e [pat init]]
+                                    (if-let [sym (token-text pat)]
+                                      (assoc e sym
+                                             (if (contains? e sym)
+                                               (fail :rebound-carried-local)
+                                               (record init e seen true)))
+                                      ;; Destructuring can shadow a carried local;
+                                      ;; reject its scope instead of guessing.
+                                      (reduced ::unsupported)))
+                                  env (partition 2 (:children v)))]
+                        (if (= ::unsupported env')
+                          (fail :unsupported-carry-binding)
+                          (record (last kids) env' seen false)))))
+                  (#{"if" "if-not"} h)
+                  (if (= 4 (count kids))
+                    (combine-arms (map #(record % env seen false) (drop 2 kids)))
+                    (fail :missing-return-arm))
+                  (= "do" h) (record (last kids) env seen false)
+                  (= "cond" h)
+                  (let [pairs (partition 2 (rest kids))]
+                    (if (and (even? (count (rest kids)))
+                             (= ":else" (token-text (first (last pairs)))))
+                      (combine-arms (map #(record (second %) env seen false) pairs))
+                      (fail :missing-return-arm)))
+                  (= "assoc" h)
+                  (let [r (base) pairs (partition 2 (drop 2 kids)) ks (map first pairs)]
+                    (cond
+                      (not (:ok? r)) r
+                      (or (empty? pairs) (odd? (count (drop 2 kids))) (not (literal-keys ks)))
+                      (fail :unproved-assoc-key)
+                      (some #(= (str field) (token-text %)) ks) {:ok? true :arms #{:overridden}}
+                      :else r))
+                  (= "merge" h)
+                  (let [r (base) operands (drop 2 kids)]
+                    (if-not (:ok? r) r
+                      (if (every? #(and (= :map (:kind %))
+                                       (literal-keys (take-nth 2 (:children %)))) operands)
+                        (if (some #(some (fn [k] (= (str field) (token-text k)))
+                                        (take-nth 2 (:children %))) operands)
+                          {:ok? true :arms #{:overridden}} r)
+                        (fail :unproved-merge-operand))))
+                  (= "dissoc" h)
+                  (let [r (base) ks (drop 2 kids)]
+                    (cond
+                      (not (:ok? r)) r
+                      (not (literal-keys ks)) (fail :unproved-dissoc-key)
+                      (some #(= (str field) (token-text %)) ks) (fail :carried-field-removed)
+                      :else r))
+                  (= "select-keys" h)
+                  (let [r (base) ks (nth kids 2 nil)]
+                    (cond
+                      (not (:ok? r)) r
+                      (not (and (= 3 (count kids)) (= :vector (:kind ks))
+                                (literal-keys (:children ks)))) (fail :unproved-selected-keys)
+                      (not (some #(= (str field) (token-text %)) (:children ks)))
+                      (fail :carried-field-removed)
+                      :else r))
+                  (= name h)
+                  (let [arity (dec (count kids))]
+                    (if (or (contains? seen arity) (not (contains? arities arity))
+                            (contains? env name))
+                      (fail :unproved-return-delegation)
+                      (record (last (:body (get arities arity)))
+                              (parameter-env (get arities arity)) (conj seen arity) false)))
+                  :else (fail :return-not-derived-from-source))))]
+      (if-not (and (#{"defn" "defn-"} (head-text form)) (seq arities))
+        (fail :carry-site-not-a-defn)
+        (combine-arms (for [[arity a] arities]
+                        (record (last (:body a)) (parameter-env a) #{arity} false)))))))
+
+(defn carry-attribution
+  "A checked read of a source record through a whole returned value. Carries
+  never erase graph writers: source and wrapper output need distinct record
+  scopes when the wrapper can override the field."
+  [repo-root boxes box-id {:keys [field from]}]
+  (let [box (first (filter #(= box-id (:box/id %)) boxes))
+        call (:returns-of from)
+        vertex (when field (vertex-key field))
+        candidates (filter #(and (= (some-> call (str/split #"/") last) (get-in % [:site :var]))
+                                  (some #{vertex} (entries % :writes))) boxes)
+        source (first candidates)
+        cfg (when source (site-cfg [source]))
+        text (when box (:text (site-scope repo-root (:site box))))
+        source-text (when source (:text (site-scope repo-root (:site source))))]
+    (cond
+      (not (and field (string? call))) {:ok? false :why :malformed-carry}
+      (not= 1 (count candidates)) {:ok? false :why :carry-source-writer-not-unique}
+      (not (and text source-text)) {:ok? false :why :carry-site-unreadable}
+      (or (not= call (get-in source [:site :var]))
+          (not= (get-in box [:site :file]) (get-in source [:site :file])))
+      {:ok? false :why :callee-identity-not-resolved}
+      (or (nil? (:returns-record source))
+          (and (vertex-record vertex) (not= (vertex-record vertex) (:returns-record source))))
+      {:ok? false :why :carry-source-record-not-declared}
+      (zero? (:writes (vertex-usage source-text [(vertex-field vertex) (:returns-record source)]
+                                    (scopes-of [[(vertex-field vertex) (:returns-record source)]]) cfg)))
+      {:ok? false :why :carry-source-write-not-proved}
+      :else (assoc (carry-return-proof text (vertex-field vertex) call)
+                   :source-box (:box/id source) :field vertex))))
+
+(defn- carries-evidence [repo-root boxes]
+  (reduce
+   (fn [acc box]
+     (reduce (fn [a carry]
+               (let [field (vertex-key (:field carry))
+                     r (carry-attribution repo-root boxes (:box/id box) carry)]
+                 (if (:ok? r)
+                   (if (contains? (:arms r) :carried)
+                     (assoc-in a [:evidence [(:box/id box) field :reads]] 1)
+                     a)
+                   (assoc-in a [:failed [(:box/id box) field]] (:why r)))))
+             acc (:carries box)))
+   {:evidence {} :failed {}} boxes))
+
 (defn conformance
   "Compare declared box reads/writes with occurrences in their named sites.
 
@@ -1355,6 +1513,9 @@
          {:keys [evidence failed]} (if (some :passes boxes)
                                      (passes-evidence repo-root boxes cfg-of)
                                      {:evidence {} :failed {}})
+         carry-evidence (carries-evidence repo-root boxes)
+         evidence (merge evidence (:evidence carry-evidence))
+         carry-failed (:failed carry-evidence)
          evidence-of (fn [box field role] (get evidence [(:box/id box) field role] 0))
          evidenced? (fn [box field role] (pos? (evidence-of box field role)))
          ;; An unreadable or malformed site is a FINDING, not an exception: the
@@ -1386,7 +1547,9 @@
                     :role role
                     :site site}
              (contains? failed [(:box/id box) field])
-             (assoc :passes-failed (get failed [(:box/id box) field]))))
+             (assoc :passes-failed (get failed [(:box/id box) field]))
+             (contains? carry-failed [(:box/id box) field])
+             (assoc :carries-failed (get carry-failed [(:box/id box) field]))))
          undeclared-occurrences
          (for [[site site-boxes] boxes-by-site
                :let [text (get-in site-text [site :text])
@@ -1420,7 +1583,10 @@
               :site site
               :usage u
               :heuristic true}))]
-     (->> (concat unreadable-sites missing-declarations undeclared-occurrences role-mismatches)
+     (->> (concat
+            (for [[[box-id field] why] carry-failed]
+              {:finding :carry-not-proved :box/id box-id :field field :reason why})
+            unreadable-sites missing-declarations undeclared-occurrences role-mismatches)
           (sort-by (juxt (comp str :finding) (comp str :field)))
           vec))))
 
