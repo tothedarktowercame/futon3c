@@ -93,6 +93,19 @@ class ReachRecordTest(unittest.TestCase):
         self.product.write_text(self.product.read_text().replace('unknown x', 'unknown y'))
         self.assertIn('whole-file-changed', self.kinds())
 
+    def test_top_level_form_acting_on_a_reached_definition_elsewhere(self):
+        other = self.src / 'other.clj'
+        other.write_text('(ns sample.other (:require [sample.core]))\n(defn unused [] 0)\n')
+        self._closure([self.product, other, self.test_file])
+        self._record()
+        self.assertEqual([], reach.check_record(self.record, self.cache))
+        other.write_text(other.read_text()
+                         + "(alter-var-root #'sample.core/reached (constantly (fn [] 7)))\n")
+        self.assertEqual({'remainder-added'}, self.kinds())
+        self._record()
+        other.write_text(other.read_text().replace('(fn [] 7)', '(fn [] 8)'))
+        self.assertEqual({'remainder-changed'}, self.kinds())
+
     def test_called_definition_is_an_additional_root(self):
         called = self.root / 'called.edn'
         called.write_text('[{:ns "sample.core" :name "spare"}]')

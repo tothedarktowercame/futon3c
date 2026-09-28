@@ -84,7 +84,8 @@ def analysis_report(loaded, cache_path=None):
                             item['filename'] = filename
             reports.append(report)
             continue
-        command = ['clj-kondo', '--lint', filename, '--config',
+        # clj-kondo's own cache is locked per process; parallel checks collide on it.
+        command = ['clj-kondo', '--cache', 'false', '--lint', filename, '--config',
                    '{:analysis {:var-definitions true :var-usages true} '
                    ':output {:format :json}}']
         process = subprocess.run(command, capture_output=True, text=True)
@@ -148,6 +149,9 @@ def analyze_files(namespace, loaded, resources, called=None, cache_path=None):
 
     edges = {key: set() for key in defs}
     top_edges = {}
+    # A top-level form can act on a definition of another namespace
+    # (alter-var-root, a bare call). target -> {(namespace, file) of the form}.
+    top_touch = {}
     resolver_calls = {}
     for usage in usages:
         source = None
@@ -162,6 +166,9 @@ def analyze_files(namespace, loaded, resources, called=None, cache_path=None):
             edges[source].add(target)
         elif source is None and usage.get('from'):
             top_edges.setdefault(usage['from'], set()).add(target)
+            if target in defs and usage.get('filename'):
+                top_touch.setdefault(target, set()).add(
+                    (usage['from'], usage['filename']))
         if source in defs and usage.get('name') in RESOLVERS and usage.get('to') == 'clojure.core':
             resolver_calls.setdefault(source, []).append(usage)
 
@@ -203,11 +210,15 @@ def analyze_files(namespace, loaded, resources, called=None, cache_path=None):
     reached = set(roots)
     queue = list(roots)
     unbounded = set()
+    top_level_files = set()
     while queue:
         key = queue.pop()
         if key in dynamic:
             unbounded.add(key)
         candidates = set(edges.get(key, ())) | set(top_edges.get(key[0], ()))
+        for touching_ns, touching_file in top_touch.get(key, ()):
+            top_level_files.add(touching_file)
+            candidates |= set(top_edges.get(touching_ns, ()))
         for target in candidates:
             if target in defs and target not in reached:
                 reached.add(target)
@@ -241,6 +252,7 @@ def analyze_files(namespace, loaded, resources, called=None, cache_path=None):
         'reached-definition-count': len(reached),
         'reached-file-count': len({defs[key]['file'] for key in reached} | set(whole_files)),
         'reached-definitions': [defs[key] for key in sorted(reached)],
+        'top-level-files': sorted(top_level_files),
         'whole-files': whole_files,
         'whole-file-inputs': whole_file_inputs,
         'clj-kondo-findings': findings}
@@ -276,11 +288,12 @@ def remainder_hash(filename, definitions):
 
 
 def qualify_record(result):
-    reached_files = {item['file'] for item in result['reached-definitions']}
-    by_file = {}
+    reached_files = ({item['file'] for item in result['reached-definitions']}
+                     | set(result.get('top-level-files', ())))
+    by_file = {filename: [] for filename in reached_files}
     for item in result['all-definitions']:
         if item['file'] in reached_files:
-            by_file.setdefault(item['file'], []).append(item)
+            by_file[item['file']].append(item)
     result['remainders'] = [
         {'file': filename, 'sha256': remainder_hash(filename, definitions)}
         for filename, definitions in sorted(by_file.items())]
@@ -332,6 +345,8 @@ def check_record(record_path, cache_path=None):
     for filename in sorted(old_remainders.keys() & new_remainders.keys()):
         if old_remainders[filename] != new_remainders[filename]:
             differences.append({'kind': 'remainder-changed', 'file': filename})
+    for filename in sorted(new_remainders.keys() - old_remainders.keys()):
+        differences.append({'kind': 'remainder-added', 'file': filename})
     for item in recorded.get('whole-file-hashes', []):
         current_hash = hashlib.sha256(Path(item['file']).read_bytes()).hexdigest()
         if current_hash != item['sha256']:
