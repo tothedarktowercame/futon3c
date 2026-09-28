@@ -785,3 +785,29 @@
       (setq session-mode--withdrawal-pending-paths nil)
       (delete-directory dir-a t)
       (delete-directory dir-b t))))
+
+(ert-deftest session-mode-command-keywords-red-vs-underline ()
+  "A whole-message command turns red; the keyword inside prose is underlined;
+agent text is left alone."
+  (with-temp-buffer
+    (insert "joe: yes 2.\n\nclaude: yes, sure\njoe: I think yes is fine, no undo\n"
+            "claude: ok\njoe: undo\n")
+    (let ((session-mode--overlays nil) (n 0))
+      (session-mode--mark-commands (lambda (_k) (setq n (1+ n))))
+      (let ((by-type (lambda (type)
+                       (sort (mapcar (lambda (o) (buffer-substring-no-properties
+                                                  (overlay-start o) (overlay-end o)))
+                                     (seq-filter (lambda (o) (equal type (overlay-get o 'session-mode-type)))
+                                                 session-mode--overlays))
+                             #'string<))))
+        (should (= 2 n))
+        (should (equal '("undo" "yes 2.") (funcall by-type "command")))
+        (should (equal '("undo" "yes") (funcall by-type "command-word")))))))
+
+(ert-deftest agent-chat-acceptance-command-mirrors-clojure-grammar ()
+  (dolist (case '(("yes" nil . nil) (" YES. " nil . nil) ("yes 2" nil . "2")
+                  ("yes act:offer-a" "act:offer-a" . nil)
+                  ("Yes act:offer-a 2." "act:offer-a" . "2")))
+    (should (equal (cdr case) (agent-chat--acceptance-command (car case)))))
+  (dolist (miss '("yes please" "yes, but" "yes 2 3" "not yes" "yes?" "yes!!"))
+    (should-not (agent-chat--acceptance-command miss))))

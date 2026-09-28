@@ -2794,6 +2794,21 @@ path) may already have recorded the delivery, so refusing would lose it."
                         normalized)
       (or (match-string 1 normalized) 'undo))))
 
+(defun agent-chat--acceptance-command (text)
+  "Return (OFFER-ID . OPTION-ID) when TEXT is a classical acceptance, else nil.
+Mirrors `futon3c.agency.agreement-record/parse-acceptance': trim, strip one
+trailing . or !, then exactly `yes', `yes N', `yes act:ID' or `yes act:ID N'.
+Only `yes' is case-insensitive; either id may be nil."
+  (let* ((trimmed (string-trim text))
+         (normalized (string-trim (replace-regexp-in-string "[.!]\\'" "" trimmed)))
+         (case-fold-search nil))
+    (when (string-match
+           (concat "\\`[Yy][Ee][Ss]\\(?:[[:space:]]+\\(?:\\(act:[^[:space:]]+\\)"
+                   "\\(?:[[:space:]]+\\([0-9]+\\)\\)?\\|\\([0-9]+\\)\\)\\)?\\'")
+           normalized)
+      (cons (match-string 1 normalized)
+            (or (match-string 2 normalized) (match-string 3 normalized))))))
+
 (defun agent-chat--insert-undo-line (text)
   "Insert one operator undo status line and redraw the prompt."
   (agent-chat-insert-message "system" text)

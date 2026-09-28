@@ -76,6 +76,15 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   '((t :inherit font-lock-comment-face :slant italic))
   "The per-turn sigil appended after a \"Cooked for …\" line." :group 'session-mode)
 
+(defface session-mode-command-word-face
+  '((t :underline t))
+  "A command keyword (yes, undo) inside operator text that is not a command."
+  :group 'session-mode)
+(defface session-mode-command-face
+  '((t :foreground "#dc2626" :weight bold))
+  "An operator message that is a whole command (`undo', `yes 2', ...) (red)."
+  :group 'session-mode)
+
 ;; --- Controlled vocabulary (loaded once, cached) ---
 (defvar session-mode--missions nil "Hash set of on-disk mission/excursion names.")
 (defvar session-mode--patterns nil "Hash set of on-disk pattern (flexiarg) names.")
@@ -249,6 +258,55 @@ instead is robust both ways.)"
     (when help (overlay-put o 'help-echo help))
     (push o session-mode--overlays)))
 
+(defconst session-mode--command-word-re "\\b\\(yes\\|undo\\)\\b"
+  "Command keywords marked inside operator text.")
+
+(defun session-mode--command-p (text)
+  "Non-nil when operator TEXT as a whole is an `undo' or acceptance command."
+  (or (and (fboundp 'agent-chat--undo-command) (agent-chat--undo-command text))
+      (and (fboundp 'agent-chat--acceptance-command)
+           (agent-chat--acceptance-command text))))
+
+(defun session-mode--operator-regions ()
+  "Return (BEG . END) for each sent operator message and the unsent input.
+A sent message starts after a line-initial \"joe: \" and ends before the next
+line that starts a speaker name, a \"Cooked for\" line or a rule line."
+  (let (regions)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "^joe: " nil t)
+        (let ((beg (point)))
+          (if (re-search-forward "^\\(?:[[:alnum:]_-]+: \\|Cooked for \\|─\\)" nil t)
+              (goto-char (match-beginning 0))
+            (goto-char (point-max)))
+          (push (cons beg (point)) regions))))
+    (when (and (boundp 'agent-chat--input-start)
+               (markerp agent-chat--input-start)
+               (marker-position agent-chat--input-start))
+      (push (cons (marker-position agent-chat--input-start) (point-max)) regions))
+    (nreverse regions)))
+
+(defun session-mode--mark-commands (tally)
+  "Mark command keywords in operator text; call TALLY with `command' per command."
+  (let ((case-fold-search t))
+    (pcase-dolist (`(,beg . ,end) (session-mode--operator-regions))
+      (let* ((text (buffer-substring-no-properties beg end))
+             (lead (progn (string-match "\\`[[:space:]]*" text) (match-end 0))))
+        (if (session-mode--command-p text)
+            (let ((b (+ beg lead))
+                  (e (save-excursion (goto-char end) (skip-chars-backward " \t\n")
+                                     (point))))
+              (session-mode--ov b e 'session-mode-command-face "command"
+                                (string-trim text) "command (read by the REPL, not sent as prose)")
+              (funcall tally 'command))
+          (save-excursion
+            (goto-char beg)
+            (while (re-search-forward session-mode--command-word-re end t)
+              (session-mode--ov (match-beginning 1) (match-end 1)
+                                'session-mode-command-word-face "command-word"
+                                (match-string-no-properties 1)
+                                "command keyword, not a command here"))))))))
+
 (defun session-mode--clocked-mission ()
   "The clocked mission = the FIRST on-disk mission token in the buffer (M-autoclock-in rule)."
   (save-excursion
@@ -316,6 +374,8 @@ instead is robust both ways.)"
               (session-mode--ov (match-beginning 1) (match-end 1) 'session-mode-reach-face
                                 "reach" (match-string-no-properties 1) "reach cue (candidate)")
               (tally 'reach)))))
+      ;; explicit: operator commands (red) vs command keywords in prose (underline)
+      (session-mode--mark-commands #'tally)
       ;; The per-turn SIGIL: append each just-cooked turn's PATTERN sigil after its
       ;; "Cooked for …" line — the top pattern the futon3a embedding retrieval surfaced
       ;; for that turn (read from XTDB context-retrieval evidence), resolved to its
