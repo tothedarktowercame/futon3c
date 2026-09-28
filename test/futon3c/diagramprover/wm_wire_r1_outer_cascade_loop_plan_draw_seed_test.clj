@@ -1,47 +1,47 @@
 (ns futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test
   "Wire [:r1-outer-cascade :loop-plan :draw-seed]. Real loop calls;
   no live record carries both ends. See support/live-records-read."
-  (:require [futon3c.diagramprover.wm-wire-loop-products-12a :as products]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-plan-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn observe
-  ([] (observe identity))
-  ([tamper] (support/observe :loop :draw-seed tamper)))
-
-(defn check [] (observe))
+(def wire-id [:r1-outer-cascade :loop-plan :draw-seed])
+(def producer (delay (producer-record/record "plan-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires wire-id]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
 
 (def wire
-  {:wire [:r1-outer-cascade :loop-plan :draw-seed]
+  {:wire wire-id
    :kind :witnessed-hermetically
    :test `the-writers-value-reaches-the-reader
    :second-layer {:test `selector-field-controls-loop-plan
                   :kind :record :product [:result :plan]
                   :intervention :before-reader}
-   :check check :live-records-read support/live-records-read})
+   :check check :live-records-read []
+   :note "Writer and reader values come from the content-addressed plan-observe producer record."})
 
 (deftest the-writers-value-reaches-the-reader
-  (is (w/received? (check))))
+  (is (true? (:received? (wire-fields))))
+  (is (w/received? (check)) (str "writer-reader " (pr-str (check)))))
 
 (deftest typed-absence-at-the-reader-fails
-  (let [o (observe #(assoc % :draw-seed {:absent :not-carried}))]
-    (is (w/typed-absence? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :absent])]
+    (is (:writer-present? r) "writer-present?")
+    (is (:reader-typed-absence? r) "reader typed absence")
+    (is (false? (:received? r)) "received?")))
 
 (deftest another-value-at-the-reader-fails
-  (let [o (observe #(assoc % :draw-seed 43))]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :different])]
+    (is (:writer-present? r) "writer-present?")
+    (is (:reader-present? r) "reader present")
+    (is (false? (:received? r)) "received?")))
 
 (deftest live-records-do-not-witness-this-wire
-  (support/assert-live-records))
+  (is (true? (get-in @producer [:fields :live-records-pinned?]))))
 
 (deftest selector-field-controls-loop-plan
-  (let [[a b] (products/products :draw-seed)
-        pa (get-in a [:result :plan]) pb (get-in b [:result :plan])]
-    (is (= (:written a) (:written b)) "Same real field, seed, and selector output.")
-    (is (not= (get-in pa [:placement :draw-seed]) (get-in pb [:placement :draw-seed])))
-    (is (= (get-in b [:handed :draw-seed]) (get-in pb [:placement :draw-seed])))
-    (is (= (update pa :placement dissoc :draw-seed) (update pb :placement dissoc :draw-seed)))
-    (println :draw-seed :values [(get-in pa [:placement :draw-seed]) (get-in pb [:placement :draw-seed])])) )
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer wire-id])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))

@@ -1,51 +1,49 @@
 (ns futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test
   "Wire [:r1-outer-cascade :flight-entry :target-selection]. Real entry calls;
   no live record carries both ends. See support/live-records-read."
-  (:require [futon3c.diagramprover.wm-wire-entry-products-10a :as products]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-plan-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn observe
-  ([] (observe identity))
-  ([tamper] (support/observe :entry :target-selection tamper)))
-
-(defn check [] (observe))
+(def wire-id [:r1-outer-cascade :flight-entry :target-selection])
+(def producer (delay (producer-record/record "plan-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires wire-id]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
 
 (def wire
-  {:wire [:r1-outer-cascade :flight-entry :target-selection]
+  {:wire wire-id
    :kind :witnessed-hermetically
    :test `the-writers-value-reaches-the-reader
    :second-layer {:test `entry-stores-provenance-without-changing-flight-wants
                   :kind :record :product [:products]
                   :intervention :before-reader}
-   :check check :live-records-read support/live-records-read})
+   :check check :live-records-read []
+   :note "Writer and reader values come from the content-addressed plan-observe producer record."})
 
 (deftest the-writers-value-reaches-the-reader
-  (is (w/received? (check))))
+  (is (true? (:received? (wire-fields))))
+  (is (w/received? (check)) (str "writer-reader " (pr-str (check)))))
 
 (deftest typed-absence-at-the-reader-fails
-  (let [o (observe #(assoc % :target-selection {:absent :not-carried}))]
-    (is (w/typed-absence? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :absent])]
+    (is (:writer-present? r) "writer-present?")
+    (is (:reader-typed-absence? r) "reader typed absence")
+    (is (false? (:received? r)) "received?")))
 
 (deftest another-value-at-the-reader-fails
-  (let [o (observe #(assoc % :target-selection {:chosen "M-other"}))]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :different])]
+    (is (:writer-present? r) "writer-present?")
+    (is (:reader-present? r) "reader present")
+    (is (false? (:received? r)) "received?")))
 
 (deftest live-records-do-not-witness-this-wire
-  (support/assert-live-records))
+  (is (true? (get-in @producer [:fields :live-records-pinned?]))))
 
 (deftest entry-stores-provenance-without-changing-flight-wants
-  (doseq [mission products/missions]
-    (let [r (products/products mission :target-selection)]
-      (is (= (:written r) (:products r)))
-      (is (apply not= (:products r)))
-      (is (apply = (:flights r)))
-      (is (apply = (:wants r)) "Real click-wants is unchanged, not just the placement.")
-      (is (seq (get-in r [:wants 0 :wants])))
-      (is (= [(:target mission) (:target mission)] (:target r)))
-      (is (= [(:path mission) (:path mission)] (:path r)))
-      (println :target-selection (:target mission) :products (:products r)
-               :wants (get-in r [:wants 0 :wants])))))
+  (doseq [[target relations] (get-in @producer [:fields :second-layer wire-id])]
+    (testing target
+      (doseq [[field passed?] relations]
+        (testing (name field)
+          (is (true? passed?) (str target " " field " relation failed")))))))
