@@ -71,3 +71,8 @@
       (is (= at (:hx/valid-time edge)))
       (is (= harness (get-in edge [:hx/props :act/harness])))
       (is (= withdrawal (record/hyperedge->record edge))))))
+
+(deftest reverses-must-name-an-act
+  (is (= :invalid-reverses
+         (reason #(record/validate-withdrawal (assoc withdrawal :reverses "")))))
+  (is (= withdrawal (record/validate-withdrawal withdrawal))))

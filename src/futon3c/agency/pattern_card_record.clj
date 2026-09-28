@@ -50,6 +50,9 @@
    (when (and (:reverses record) (not (act-id? (:target record))))
      (refuse! :reversal-missing-target :target))
    (when-not (act-id? (:target record)) (refuse! :missing-target :target))
+   (when (and (contains? record :reverses) (some? (:reverses record))
+              (not (act-id? (:reverses record))))
+     (refuse! :invalid-reverses :reverses))
    (when-not (contains? #{:effective :provisional} (:status record))
      (refuse! :invalid-status :status))
    (when-not (contains? #{:self :grant :provisional-interpretation}
