@@ -53,10 +53,11 @@ class IndexTest(unittest.TestCase):
                    'ran-at': f'2026-09-27T01:00:{when:02d}Z',
                    'finished-at': f'2026-09-27T01:01:{when:02d}Z',
                    'warrant?': passing,
-                   'load-closure': ([{'path': self.a.name,
+                   'load-closure': ([{'path': str(self.a.relative_to(self.root)),
                                       'sha256': hashlib.sha256(self.a.read_bytes()).hexdigest()}]
                                     if files else []),
-                   'test-files': ({self.b.name: hashlib.sha256(self.b.read_bytes()).hexdigest()}
+                   'test-files': ({str(self.b.relative_to(self.root)):
+                                   hashlib.sha256(self.b.read_bytes()).hexdigest()}
                                   if files else {})}
         payload.update(payload_updates or {})
         text = encode(payload) if payload_text is None else payload_text
@@ -80,13 +81,32 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(status, result.returncode, result.stdout + result.stderr)
         return result
 
-    def check(self, state, paths=(), reason='hash-mismatch', namespace='test.one'):
+    def check(self, state, paths=None, reason='hash-mismatch', namespace='test.one'):
         result = json.loads(self.runcli('check', '--ns', namespace, '--json',
+                                        '--reach-dir', str(self.root / 'reach'),
                                         status=int(state != 'current')).stdout)
         row = result['namespaces'][0]
         self.assertEqual(state, row['class'])
-        self.assertEqual([{'path': str(path), 'reason': reason} for path in paths], row['changed'])
+        if paths is not None:
+            self.assertEqual([{'path': str(path), 'reason': reason} for path in paths],
+                             row['changed'])
         return row
+
+    def dependency_run(self):
+        self.a = self.root / 'src' / 'product' / 'core.clj'
+        self.a.parent.mkdir(parents=True)
+        self.a.write_text('(ns product.core)\n(defn reached [] 1)\n(defn spare [] 2)\n')
+        self.b = self.root / 'test' / 'test_one.clj'
+        self.b.parent.mkdir()
+        self.b.write_text('(ns test.one (:require [product.core :as p]))\n'
+                          '(defn exercise [] (p/reached))\n')
+        self.insert_run()
+
+    def write_reach_record(self):
+        result = self.runcli('reach-record', '--ns', 'test.one',
+                             '--reach-dir', str(self.root / 'reach'))
+        row = json.loads(result.stdout)
+        return Path(row['path'])
 
     def test_backend_row_fixture_has_exact_schema(self):
         with sqlite3.connect(self.db_path) as db:
@@ -194,6 +214,56 @@ class IndexTest(unittest.TestCase):
                          wi.edn('{"s" "quote \\" inside" "x" [true nil 0]}'))
         for bad in ('{"x" 1 "x" 2}', '{} {}', '#=(danger)'):
             with self.assertRaises(ValueError): wi.edn(bad)
+
+    def test_unreached_edit_uses_definition_record(self):
+        self.dependency_run(); self.write_reach_record()
+        self.a.write_text(self.a.read_text().replace('spare [] 2', 'spare [] 9'))
+        row = self.check('current')
+        self.assertEqual('definitions', row['basis'])
+        self.assertEqual([{'path': str(self.a), 'reason': 'hash-mismatch'}],
+                         row['files-changed-unreached'])
+
+    def test_reached_edit_is_stale_by_definition(self):
+        self.dependency_run(); self.write_reach_record()
+        self.a.write_text(self.a.read_text().replace('reached [] 1', 'reached [] 9'))
+        row = self.check('stale')
+        self.assertEqual('definitions', row['basis'])
+        self.assertIn('definition-changed', {change['kind'] for change in row['changed']})
+
+    def test_file_stale_without_record_keeps_file_rule(self):
+        self.dependency_run()
+        self.a.write_text(self.a.read_text().replace('spare [] 2', 'spare [] 9'))
+        row = self.check('stale', [self.a])
+        self.assertEqual('files', row['basis'])
+
+    def test_reach_record_skips_stale_entry(self):
+        self.dependency_run(); self.a.write_text(self.a.read_text() + '\n')
+        result = self.runcli('reach-record', '--ns', 'test.one',
+                             '--reach-dir', str(self.root / 'reach'))
+        self.assertEqual('files differ from the run', json.loads(result.stdout)['skipped'])
+        self.assertEqual([], list((self.root / 'reach').glob('*.json')))
+
+    def test_reach_record_uses_latest_passing_entry(self):
+        self.dependency_run(); passing_id = self.ids['one']
+        self.insert_run('later-failure', when=2, passing=False)
+        path = self.write_reach_record()
+        self.assertEqual(passing_id + '.json', path.name)
+
+    def test_wrong_identity_record_is_ignored(self):
+        self.dependency_run(); path = self.write_reach_record()
+        record = json.loads(path.read_text()); record['entry-id'] = 'wrong'
+        path.write_text(json.dumps(record))
+        self.a.write_text(self.a.read_text().replace('spare [] 2', 'spare [] 9'))
+        row = self.check('stale', [self.a])
+        self.assertEqual('files', row['basis'])
+        self.assertIn('identity-mismatch', row['reach-record'])
+
+    def test_invalid_json_record_is_ignored(self):
+        self.dependency_run(); path = self.write_reach_record(); path.write_text('{bad')
+        self.a.write_text(self.a.read_text().replace('spare [] 2', 'spare [] 9'))
+        row = self.check('stale', [self.a])
+        self.assertEqual('files', row['basis'])
+        self.assertTrue(row['reach-record'].startswith('ignored:'))
 
 
 if __name__ == '__main__': unittest.main()

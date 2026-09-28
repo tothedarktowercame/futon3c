@@ -19,9 +19,20 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT.parent / 'storage/test-registry/warrant-index.sqlite'
 WIRE_LEDGER_TEST = ROOT / 'test/futon3c/diagramprover/wm_wire_ledger_test.clj'
+REACH_DIR = ROOT.parent / 'storage/test-registry/reach-records'
 TOKEN = re.compile(r'\s+|,[\s,]*|;[^\n]*|"(?:\\.|[^"\\])*"|#\{|[{}\[\]()]|[^\s,{}\[\]()]+')
 CLASSES = ('current', 'stale', 'registration-refused', 'not-passing',
            'unverifiable', 'no-warrant')
+
+
+def reach_module():
+    # warrant_reach shares this module's strict EDN reader.
+    sys.modules.setdefault('warrant_index', sys.modules[__name__])
+    try:
+        from scripts import warrant_reach as module
+    except ImportError:
+        import warrant_reach as module
+    return module
 
 
 def edn(source):
@@ -99,13 +110,14 @@ def local_namespaces(db):
         'SELECT DISTINCT namespace FROM registry_runs WHERE namespace IS NOT NULL')}
 
 
-def latest_rows(db, namespaces):
+def latest_rows(db, namespaces, passing_only=False):
     wanted = set(namespaces)
     if not wanted: return {}
     placeholders = ','.join('?' for _ in wanted)
+    warrant_clause = ' AND r.warrant=1' if passing_only else ''
     sql = f'''SELECT r.namespace,r.entry_id,r.repo_root,r.warrant,e.payload_text,e.payload_sha
               FROM registry_runs r JOIN registry_entries e ON e.id=r.entry_id
-              WHERE r.namespace IN ({placeholders})
+              WHERE r.namespace IN ({placeholders}){warrant_clause}
               ORDER BY r.namespace,r.ran_order DESC,r.finished_order DESC,r.entry_id DESC'''
     found = {}
     for namespace, entry, root, warrant, payload, digest in db.execute(sql, tuple(sorted(wanted))):
@@ -150,7 +162,20 @@ def registration_refusal(payload):
     return None
 
 
-def classify(db, namespaces, root=None):
+def read_reach_record(reach_dir, run):
+    path = Path(reach_dir) / (run['entry-id'] + '.json')
+    if not path.is_file(): return None, None
+    try:
+        record = json.loads(path.read_text())
+        if (record.get('entry-id') != run['entry-id']
+                or record.get('namespace') != run['namespace']):
+            raise ValueError('identity-mismatch')
+        return record, None
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+        return None, 'ignored: ' + str(error)
+
+
+def classify(db, namespaces, root=None, reach_dir=REACH_DIR):
     latest = latest_rows(db, namespaces)
     prepared, all_paths = {}, set()
     for namespace in namespaces:
@@ -184,17 +209,85 @@ def classify(db, namespaces, root=None):
     for namespace in sorted(namespaces):
         prepared_row = prepared[namespace]
         state, run, files = prepared_row[:3]; changed = []
+        reach_note = None
+        basis = 'files'
+        files_changed_unreached = []
         if state == 'passing':
             for path, digest in files.items():
                 if observed[path] != digest:
                     changed.append({'path': path, 'reason': 'unreadable' if observed[path] is None
                                     else 'hash-mismatch'})
             state = 'stale' if changed else 'current'
+            if changed:
+                record, reach_note = read_reach_record(reach_dir, run)
+                if record is not None:
+                    dependency_changes = reach_module().check_record(
+                        Path(reach_dir) / (run['entry-id'] + '.json'),
+                        Path(reach_dir) / '.cache')
+                    basis = 'definitions'
+                    if dependency_changes:
+                        changed = dependency_changes
+                    else:
+                        state = 'current'
+                        files_changed_unreached = changed
+                        changed = []
         rows.append({'namespace': namespace, 'class': state,
                      'entry-id': run and run['entry-id'],
+                     'basis': basis,
+                     'reach-record': reach_note,
+                     'files-changed-unreached': files_changed_unreached,
                      'reason': prepared_row[3] if len(prepared_row) > 3 else None,
-                     'changed': sorted(changed, key=lambda change: change['path'])})
+                     'changed': sorted(changed, key=lambda change:
+                                       (change.get('path', ''),
+                                        change.get('kind', ''),
+                                        str(change.get('definition', ''))))})
     return rows
+
+
+def reach_record(db, namespaces, reach_dir, root=None):
+    destination = Path(reach_dir); destination.mkdir(parents=True, exist_ok=True)
+    latest = latest_rows(db, namespaces, passing_only=True)
+    answers = []
+    for namespace in sorted(namespaces):
+        run = latest.get(namespace)
+        if not run:
+            answers.append({'namespace': namespace,
+                            'skipped': 'files differ from the run'})
+            continue
+        try:
+            text_sha = hashlib.sha256((run['payload-text'] or '').encode()).hexdigest()
+            if text_sha != run['payload-sha'] or run['entry-id'] != 'test-registry-' + text_sha:
+                raise ValueError('payload does not match its digest')
+            payload = edn(run['payload-text'])
+            files = recorded_files(run, payload, root)
+            if payload.get('warrant?') is not True or not files:
+                raise ValueError('not a passing warrant')
+        except (TypeError, ValueError):
+            answers.append({'namespace': namespace,
+                            'skipped': 'files differ from the run'})
+            continue
+        file_current = all(Path(path).is_file()
+                           and hashlib.sha256(Path(path).read_bytes()).hexdigest() == expected
+                           for path, expected in files.items())
+        if not file_current:
+            answers.append({'namespace': namespace,
+                            'skipped': 'files differ from the run'})
+            continue
+        path = destination / (run['entry-id'] + '.json')
+        if path.exists():
+            answers.append({'namespace': namespace, 'entry-id': run['entry-id'],
+                            'path': str(path), 'existing': True})
+            continue
+        loaded = [path for path in files if path.endswith(('.clj', '.cljc'))]
+        resources = [path for path in files if path not in loaded]
+        reach = reach_module()
+        record = reach.qualify_record(reach.analyze_files(
+            namespace, loaded, resources, cache_path=destination / '.cache'))
+        record['entry-id'] = run['entry-id']
+        path.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
+        answers.append({'namespace': namespace, 'entry-id': run['entry-id'],
+                        'path': str(path), 'existing': False})
+    return answers
 
 
 def put_local(db, entry_id):
@@ -226,6 +319,11 @@ def main(argv=None):
     check_parser.add_argument('--prefix', default='')
     check_parser.add_argument('--wire', action='store_true')
     check_parser.add_argument('--json', action='store_true')
+    check_parser.add_argument('--reach-dir', default=str(REACH_DIR))
+    reach_parser = sub.add_parser('reach-record')
+    reach_parser.add_argument('--ns', nargs='+', action='extend')
+    reach_parser.add_argument('--wire', action='store_true')
+    reach_parser.add_argument('--reach-dir', default=str(REACH_DIR))
     affected_parser = sub.add_parser('affected'); affected_parser.add_argument('paths', nargs='+')
     args = parser.parse_args(argv)
     with connect(args.db) as db:
@@ -238,14 +336,21 @@ def main(argv=None):
         selected = set(args.ns or ())
         if args.wire: selected.update(wire_namespaces())
         if args.ns is None and not args.wire: selected.update(local_namespaces(db))
+        if args.action == 'reach-record':
+            for row in reach_record(db, selected, args.reach_dir, args.root):
+                print(json.dumps(row, sort_keys=True))
+            return 0
         selected = {namespace for namespace in selected if namespace.startswith(args.prefix)}
-        rows = classify(db, selected, args.root)
+        rows = classify(db, selected, args.root, args.reach_dir)
         counts = {state: sum(row['class'] == state for row in rows) for state in CLASSES}
         if args.json: print(json.dumps({'namespaces': rows, 'counts': counts}))
         else:
             for row in rows:
-                detail = ''.join(' ' + change['path'] + ' (' + change['reason'] + ')'
-                                 for change in row['changed'])
+                detail = ''.join(
+                    (' ' + change['path'] + ' (' + change['reason'] + ')'
+                     if 'path' in change and 'reason' in change
+                     else ' ' + json.dumps(change, sort_keys=True))
+                    for change in row['changed'])
                 print(row['namespace'] + ': ' + row['class'] + detail)
             print(' '.join(f'{state}: {count}' for state, count in counts.items()))
         return int(any(row['class'] != 'current' for row in rows))
