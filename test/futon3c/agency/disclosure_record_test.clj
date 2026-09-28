@@ -41,6 +41,7 @@
       (is (= record (disclosure/validate-against-source! record prompt edge)))
       (let [hx (disclosure/->hyperedge record)]
         (is (some #{"job:invoke-job-1"} (:hx/endpoints hx)))
+        (is (not-any? #(re-matches #"act:.*" %) (:hx/endpoints hx)) "own id is :hx/id, not an endpoint")
         (is (= record (disclosure/hyperedge->record hx)))))
     (is (not= (:id a) (:id b)))))
 

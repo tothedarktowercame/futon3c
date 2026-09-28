@@ -146,8 +146,9 @@
     {:hx/id (:id record)
      :hx/type disclosure-type
      :hx/valid-time (:at record)
-     :hx/endpoints [(:id record)
-                    (str "job:" (:source-job record))
+     ;; The act id is :hx/id alone, as for offers, agreements and grants:
+     ;; futon1b mints it after storing endpoints, so it cannot be one.
+     :hx/endpoints [(str "job:" (:source-job record))
                     (str "agent:" (:author record))
                     (affected-endpoint (:affects record))]
      :hx/props (dissoc record :id :kind)}))
