@@ -29,7 +29,8 @@
         start (instant from)
         end (instant until)]
     (cond
-      (or (nil? t) (nil? start)) :grant-not-yet-valid
+      (nil? t) :act-time-unknown
+      (nil? start) :grant-not-yet-valid
       (.isBefore ^Instant t ^Instant start) :grant-not-yet-valid
       (and end (not (.isBefore ^Instant t ^Instant end))) :grant-expired)))
 

@@ -94,3 +94,11 @@
         (is (= :broken-delegation (:finding/reason finding)))
         (is (= :missing-parent
                (get-in finding [:finding/detail :explanation])))))))
+
+(deftest act-without-a-parseable-time-is-not-called-early
+  (is (= [:act-time-unknown]
+         (reason-for [(act "act:undated" "act:grant-root" :deploy nil "agent-a")]
+                     [root])))
+  (is (= [:act-time-unknown]
+         (reason-for [(act "act:garbled" "act:grant-root" :deploy "yesterday" "agent-a")]
+                     [root]))))
