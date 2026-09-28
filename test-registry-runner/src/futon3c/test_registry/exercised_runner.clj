@@ -8,6 +8,8 @@
 
 (defonce exercised (atom #{}))
 (defonce instrumentation (atom {}))
+(defonce called-definitions (atom {}))
+(def ^:dynamic *call-context* nil)
 
 (defn- source-url [namespace]
   (let [path (-> (str (ns-name namespace))
@@ -36,19 +38,28 @@
 
 (defn- wrap-var! [namespace ^clojure.lang.Var var]
   (let [value @var
-        kind (callable-kind var value)]
+        kind (callable-kind var value)
+        name (str (:name (meta var)))]
     (cond
       (= :function kind)
       (try
-        (alter-var-root var
-                        (fn [original]
-                          (fn [& args]
-                            (swap! exercised conj (ns-name namespace))
-                            (apply original args))))
+        (let [definition [(str (ns-name namespace)) name]]
+          (alter-var-root var
+                          (fn [original]
+                            (fn [& args]
+                              (swap! exercised conj (ns-name namespace))
+                              (swap! called-definitions
+                                     #(if (contains? % definition)
+                                        %
+                                        (assoc % definition
+                                               (or *call-context*
+                                                   (atom {:phase :unknown})))))
+                              (apply original args)))))
         nil
-        (catch Throwable _ :alter-failed))
+        (catch Throwable _ {:name name :kind :alter-failed}))
 
-      (contains? #{:multimethod :protocol :primitive-hinted-function} kind) kind
+      (contains? #{:multimethod :protocol :primitive-hinted-function} kind)
+      {:name name :kind kind}
       :else nil)))
 
 (defn- instrument-namespace! [namespace]
@@ -56,7 +67,8 @@
              (not (contains? @instrumentation (ns-name namespace))))
     (let [failures (->> (vals (ns-interns namespace))
                         (keep #(wrap-var! namespace %))
-                        frequencies)]
+                        (sort-by (juxt :kind :name))
+                        vec)]
       (swap! instrumentation assoc (ns-name namespace)
              (if (seq failures)
                {:status :exercised :reason :not-instrumentable
@@ -70,10 +82,15 @@
 
 (defn- hooked-load [original-load]
   (fn [& args]
-    (let [before (set (map ns-name (all-ns)))]
-      (try
-        (apply original-load args)
-        (finally (instrument-new-namespaces! before))))))
+    (let [before (set (map ns-name (all-ns)))
+          context (atom {:phase :load :source (str (first args))})]
+      (binding [*call-context* context]
+        (try
+          (apply original-load args)
+          (finally
+            (let [loaded (sort (remove before (map ns-name (all-ns))))]
+              (reset! context {:phase :load :namespaces (vec loaded)})
+              (instrument-new-namespaces! before))))))))
 
 (defn- test-source? [url]
   (boolean (and url (re-find #"/test/" url))))
@@ -100,9 +117,17 @@
                                (runner/resource-entries)))]
     (vec (concat namespaces resources))))
 
+(defn called-definition-entries []
+  (->> @called-definitions
+       (map (fn [[[namespace name] context]]
+              {:ns namespace :name name :first-call @context}))
+       (sort-by (juxt :ns :name))
+       vec))
+
 (defn run-and-exercised [namespace-sym var-sym]
   (reset! exercised #{})
   (reset! instrumentation {})
+  (reset! called-definitions {})
   (reset! runner/resource-lookups #{})
   (let [thread (Thread/currentThread)
         original-load @#'clojure.core/load
@@ -119,10 +144,14 @@
             {#'clojure.core/load (hooked-load original-load)}
             (fn []
               (require namespace-sym)
-              (if var-sym
-                (runner/run-var var-sym)
-                (test/run-tests namespace-sym))))]
-      {:summary summary :exercised-entries (exercised-entries namespace-sym)})))
+              (binding [*call-context*
+                        (atom {:phase :test :namespace (str namespace-sym)})]
+                (if var-sym
+                  (runner/run-var var-sym)
+                  (test/run-tests namespace-sym)))))]
+      {:summary summary
+       :exercised-entries (exercised-entries namespace-sym)
+       :called-definitions (called-definition-entries)})))
 
 (defn -main [& args]
   (let [out (last args)
@@ -134,9 +163,10 @@
       (binding [*out* *err*]
         (println "usage: -m futon3c.test-registry.exercised-runner -n <namespace> [-v <ns/var>] <output-path>"))
       (System/exit 2))
-    (let [{:keys [summary exercised-entries]}
+    (let [{:keys [summary exercised-entries called-definitions]}
           (run-and-exercised (symbol ns-arg) (some-> var-arg symbol))]
-      (spit out (pr-str exercised-entries))
+      (spit out (pr-str {:namespace-entries exercised-entries
+                         :called-definitions called-definitions}))
       (shutdown-agents)
       (System/exit (if (and (zero? (:fail summary 1))
                             (zero? (:error summary 1))) 0 1)))))
