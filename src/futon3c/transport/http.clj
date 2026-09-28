@@ -87,6 +87,7 @@
             [futon3c.agency.agreement-record-cli :as agreement-cli]
             [futon3c.agency.disclosure-record :as disclosure-record]
             [futon3c.agency.disclosure-record-cli :as disclosure-cli]
+            [futon3c.agency.disclosure-audit :as disclosure-audit]
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
             [futon3c.agency.grant-record :as grant-record]
@@ -513,7 +514,7 @@
                   :request-digest (:request-digest job)
                   :commission commission
                   :job-join (select-keys
-                             job [:agent-id :caller :surface :artifact-ref
+                             job [:agent-id :caller :surface :artifact-ref :bellback-of :result
                                   :trace-id :created-at :started-at :finished-at
                                   :state :terminal-code :execution :delivery
                                   :invocation/model])
@@ -9537,9 +9538,7 @@
                               :message (.getMessage e)}))))))
 
 (defn- disclosure-withdrawal-routing-id [withdrawal-id]
-  (str "invoke-disclosure-withdrawal-"
-       (UUID/nameUUIDFromBytes (.getBytes (str withdrawal-id)
-                                           StandardCharsets/UTF_8))))
+  (disclosure-audit/routing-job-id withdrawal-id))
 
 (defn route-disclosure-withdrawal!
   "Create one durable bell job for WITHDRAWAL. A replay sees the deterministic
@@ -9651,6 +9650,85 @@
                              (= :not-the-orchestrator reason)
                              (assoc :message
                                     "Only the source job's orchestrator may withdraw; author self-withdrawal is out of scope.")))))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
+(defn disclosure-audit-job [job-id]
+  (or (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)])
+      (some-> (read-commission-archive job-id)
+              :job-join
+              (assoc :job-id (str job-id)))))
+
+(defn disclosure-audit-routing-job [job-id]
+  (when-let [job (disclosure-audit-job job-id)]
+    (select-keys job [:job-id :agent-id :bellback-of :state])))
+
+(defn- audit-list-hyperedges [base type endpoint]
+  (:hyperedges
+   (rule-record-store/request!
+    base "GET"
+    (str "/api/alpha/hyperedges?type="
+         (java.net.URLEncoder/encode (subs (str type) 1) "UTF-8")
+         "&end=" (java.net.URLEncoder/encode endpoint "UTF-8")
+         "&limit=1000&include-total=false") nil)))
+
+(defn- cited-act-ids [text]
+  (vec (distinct (re-seq #"(?<![A-Za-z0-9:_-])act:[A-Za-z0-9][A-Za-z0-9:_-]*"
+                         (str text)))))
+
+(defn read-disclosure-audit-inputs [job-id]
+  (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+        job (disclosure-audit-job job-id)]
+    (when-not job
+      (throw (ex-info "Invoke job not found" {:reason :unknown-job})))
+    (let [report-text (or (:result job) "")
+          disclosure-edges (audit-list-hyperedges base :disclosure/choice
+                                                  (str "job:" job-id))
+          disclosures (mapv disclosure-record/hyperedge->record disclosure-edges)
+          withdrawal-edges (vec (mapcat #(audit-list-hyperedges
+                                          base :act/withdrawal (:id %))
+                                        disclosures))
+          withdrawals (into [] (keep withdrawal-record-from-edge) withdrawal-edges)
+          interpretation-page (rule-record-store/request!
+                               base "GET"
+                               "/api/alpha/evidence?type=interpretation&limit=1000" nil)
+          interpretations (vec (or (:entries interpretation-page) []))
+          routing-jobs (into []
+                             (keep (comp disclosure-audit-routing-job
+                                         disclosure-audit/routing-job-id :id))
+                             withdrawals)
+          citations (cited-act-ids report-text)
+          cited-stored (keep (fn [id]
+                               (when (disclosure-cli/read-act! base id) id))
+                             citations)
+          stored-act-ids (vec (distinct
+                               (concat (map :id disclosures)
+                                       (map :id withdrawals) cited-stored)))]
+      {:job job-id :report-text report-text :disclosures disclosures
+       :withdrawals withdrawals :interpretations interpretations
+       :routing-jobs routing-jobs :stored-act-ids stored-act-ids
+       :basis {:rows {:disclosures (count disclosures)
+                      :withdrawals (count withdrawals)
+                      :interpretations (count interpretations)
+                      :routing-jobs (count routing-jobs)
+                      :stored-acts (count stored-act-ids)}
+               :report-text-available? (contains? job :result)
+               :read-at (str (Instant/now))}})))
+
+(defn handle-disclosure-audit [request]
+  (let [job-id (get (parse-query-params request) "job")]
+    (if (str/blank? job-id)
+      (json-response 400 {:ok false :reason :missing-job})
+      (try
+        (let [inputs (read-disclosure-audit-inputs job-id)]
+          (json-response 200 (assoc (disclosure-audit/audit inputs)
+                                    :ok true :basis (:basis inputs))))
+        (catch clojure.lang.ExceptionInfo e
+          (if (= :unknown-job (:reason (ex-data e)))
+            (json-response 404 {:ok false :reason :unknown-job})
+            (json-response 500 {:ok false :reason :store-failure
+                                :message (.getMessage e)})))
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
@@ -10181,6 +10259,9 @@
                   (json-response 504 {:ok false :reason reason :source source})
                   :else
                   (json-response 500 {:ok false :reason :store-failure})))))))
+
+      (and (= :get method) (= "/api/alpha/disclosure/audit" uri))
+      (handle-disclosure-audit request)
 
       (and (= :get method) (= "/api/alpha/prompt-line" uri))
       (let [params (parse-query-params request)
