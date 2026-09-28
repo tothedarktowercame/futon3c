@@ -1,7 +1,7 @@
 (ns futon3c.diagramprover.wm-wire-producer-family-click-test
   (:require [clojure.test :as t :refer [deftest testing]]
             [futon3c.diagramprover.wm-wire-producer-r9-run-tick :as run-tick]
-            [futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-click-reason-test-failure-test :as click-reason]
+            [futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-click-reason-test-failure :as click-reason]
             [futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-flight-click-close-test-chosen :as click-close-chosen]
             [futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-flight-record-click-chosen-tes :as record-click-chosen]
             [futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-flight-record-click-failure-te :as record-click-failure]

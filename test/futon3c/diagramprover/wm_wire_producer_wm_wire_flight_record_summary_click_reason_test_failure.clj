@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-click-reason-test-failure-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-record-summary-click-reason-test-failure
   "Producer for the [:flight-record-summary :click-reason-test :failure]
   wire. Runs the real full-loop-runner/run-opportunity! in hermetic stores
   with a judge that throws (the click_reason_test box's eighth-flight
