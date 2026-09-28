@@ -78,7 +78,12 @@
   (let [o (offer "act:offer-a" [(first options)])
         cases [(evidence "e:agent" "agent-a" "session-a" "yes" "agent-a")
                (evidence "e:text" "joe" "session-a" "no" "agent-a")
-               (evidence "e:session" "joe" "session-b" "yes" "agent-a")]]
+               (evidence "e:session" "joe" "session-b" "yes" "agent-a")
+               ;; the live shape of a park resume: author joe, origin harness
+               (assoc (evidence "e:resume" "joe" "session-a" "yes" "agent-a")
+                      :evidence/origin {:kind "harness" :actor "parked-resume"})
+               (dissoc (evidence "e:no-origin" "joe" "session-a" "yes" "agent-a")
+                       :evidence/origin)]]
     (doseq [entry cases]
       (let [{:keys [request! calls]} (fake-store [o] {(:evidence/id entry) entry})]
         (with-redefs [store/request! request!]

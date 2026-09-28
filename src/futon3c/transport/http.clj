@@ -9440,7 +9440,9 @@
                    (= "chat-turn" (str (field body :event)))
                    (= "user" (str (field body :role)))
                    (= (str/trim (str text)) (str/trim (str (field body :text))))
-                   (not= "harness" (some-> (get-in entry [:evidence/origin :kind]) name)))
+                   ;; Allowlist, not "not harness": park resumes are stored with
+                   ;; author "joe" and origin kind harness, and other kinds may exist.
+                   (= "operator" (some-> (get-in entry [:evidence/origin :kind]) name)))
       (throw (ex-info "Evidence is not Joe's operator turn for this exact seat"
                       {:reason :evidence-not-operator-turn :field :evidence-id})))
     entry))
