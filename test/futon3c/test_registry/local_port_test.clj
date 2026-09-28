@@ -179,4 +179,4 @@
                  :median-ms median :maximum-ms maximum})
        ;; This packet measures rather than changing the currentness algorithm.
        (is (number? median))
-       (is (number? maximum))))))
+       (is (< maximum 50.0))))))

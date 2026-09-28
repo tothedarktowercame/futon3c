@@ -4,6 +4,7 @@
             [futon2.aif.registry-port :as port]
             [futon3c.evidence.backend :as backend]
             [futon3c.test-registry :as registry]
+            [futon3c.test-registry.currentness :as currentness]
             [futon3c.test-registry.local-store :as local-store]
             [futon3c.test-registry.sqlite-backend :as sqlite]))
 
@@ -39,26 +40,21 @@
       (if-let [entry (sqlite/latest-run-for-namespace store namespace)]
         (let [chain (registry/read-chain! store (:evidence/id entry))
               run (:payload (last chain))
-              checked (registry/check-record! store
-                        {:entry-id (:evidence/id entry)
-                         :repo-root root
-                         :changed-paths []})]
-          (cond
-            (true? (:warrant? checked))
+              classification (currentness/classify store entry root)]
+          (case (:class classification)
+            :current
             {:status :current
              :entry-id (:evidence/id entry)
              :ran-at (:ran-at run)
              :git-head (:git-head run)}
 
-            (= :not-a-warrant (:reason checked))
+            :not-passing
             {:status :missing :kind :not-passing
              :data {:namespace namespace :repo repo
                     :found-entry-id (:evidence/id entry)
-                    :reason (:reason checked)}}
+                    :reason :not-a-warrant}}
 
-            (or (= :stale-sha (:reason checked))
-                (and (= :environment-mismatch (:reason checked))
-                     (seq (get-in checked [:details :changed-files]))))
+            :stale
             (let [miss-reason :stale
                   queued (sqlite/request-rerun!
                           store {:namespace namespace :repo repo :reason miss-reason})]
@@ -71,11 +67,11 @@
                 (missing-answer namespace repo miss-reason
                                 (:evidence/id entry) queued)))
 
-            :else
+            :unverifiable
             {:status :missing :kind :unverifiable
              :data {:namespace namespace :repo repo
                     :found-entry-id (:evidence/id entry)
-                    :reason (:reason checked)}}))
+                    :reason (:reason classification)}}))
         (let [queued (sqlite/request-rerun!
                       store {:namespace namespace :repo repo :reason :absent})]
           (if (:error/code queued)
