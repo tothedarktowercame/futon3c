@@ -1,12 +1,13 @@
 (ns futon3c.agency.clock-decision-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.clock-decision :as decision]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.blackboard :as bb]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as store]
             [futon3c.transport.http :as http])
@@ -46,6 +47,37 @@
         (is (= [:unclocked :no-source 4] ((juxt :status :reason :source) first)))
         (is (= first (decision/record! (context "one"))))
         (is (= 1 (count (store/query* backend {:query/tags [:clock-decision]}))))))))
+
+(defn- thrown [f]
+  (try (f) nil (catch clojure.lang.ExceptionInfo e e)))
+
+(deftest busy-store-is-not-a-clock-decision-failure
+  ;; A busy futon1b used to surface as "Clock decision persistence failed".
+  (binding [decision/*test-store* (atom {:entries {} :order []})
+            decision/*repo-roots* {}]
+    (testing "a write the busy store did not serve"
+      (with-redefs [boundary/append! (fn [& _]
+                                       {:ok false :error/code :store-unavailable
+                                        :error/message "futon1b busy (HTTP 504): the write was not served and nothing was written"})]
+        (let [e (thrown #(decision/record! (context "busy-write")))]
+          (is (= :clock/store-busy (:error/code (ex-data e))))
+          (is (re-find #"^Turn not started: futon1b was busy while recording" (ex-message e)))
+          (is (re-find #"HTTP 504" (ex-message e))))))
+    (testing "a read the busy store did not serve"
+      (with-redefs [store/get-entry* (fn [& _]
+                                       (throw (ex-info "futon1b busy (HTTP 504): the read was not served"
+                                                       {:error/code :futon1b-read-unavailable})))]
+        (let [e (thrown #(decision/record! (context "busy-read")))]
+          (is (= :clock/store-busy (:error/code (ex-data e))))
+          (is (re-find #"^Turn not started: futon1b was busy while reading" (ex-message e))))))
+    (testing "a write the store refused is still a clock-decision failure, with its reason"
+      (with-redefs [boundary/append! (fn [& _]
+                                       {:ok false :error/code :invalid-entry
+                                        :error/message "missing :evidence/at"})]
+        (let [e (thrown #(decision/record! (context "refused")))]
+          (is (= :clock/persistence-failed (:error/code (ex-data e))))
+          (is (re-find #"^Clock decision not recorded: the evidence store refused it \(invalid-entry: missing :evidence/at\)"
+                       (ex-message e))))))))
 
 (defn- register! [invoke]
   (reg/register-agent! {:agent-id {:id/value "clock-worker" :id/type :continuity}

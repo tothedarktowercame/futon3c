@@ -252,7 +252,9 @@
                           :transport/evidence :not-obtained} error)))
        (when-not (contains? #{200 404} status)
          (let [unavailable? (contains? #{429 502 503 504} status)]
-           (throw (ex-info "futon1b read did not obtain evidence"
+           (throw (ex-info (if unavailable?
+                             (format "futon1b busy (HTTP %d): the read was not served" status)
+                             (format "futon1b refused the read (HTTP %d)" status))
                            {:url url :trace-id trace-id :http/status status
                             :error/component (if unavailable? :transport :evidence)
                             :error/code (if unavailable? :futon1b-read-unavailable
@@ -525,6 +527,16 @@
                 (= 409 status)
                 (social-error :duplicate-id "Evidence id already exists"
                               :evidence-id eid :trace-id trace-id)
+
+                ;; Load, not refusal: futon1b answers 504 when the write waited
+                ;; 5 s for a query permit. Reported as "futon1b rejected the
+                ;; append" until 2026-09-28, which read as a verdict on the entry.
+                (contains? #{429 502 503 504} status)
+                (social-error :store-unavailable
+                              (format "futon1b busy (HTTP %d): the write was not served and nothing was written"
+                                      status)
+                              :evidence-id eid :trace-id trace-id
+                              :status status :body parsed)
 
                 :else
                 (social-error :store-rejected "futon1b rejected the append"

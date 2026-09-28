@@ -245,6 +245,35 @@
        (UUID/nameUUIDFromBytes
         (.getBytes (pr-str [agent-id session-id turn-id phase event-id]) "UTF-8"))))
 
+;; futon1b being busy is not a clock-decision problem, and until 2026-09-28
+;; it surfaced in agents' buffers as "Clock decision persistence failed" or
+;; "futon1b read did not obtain evidence". Name the cause and what it means for
+;; the turn; keep the clock-decision message for a write the store refuses.
+(def ^:private busy-read-codes
+  #{:futon1b-read-timeout :futon1b-unreachable :futon1b-read-unavailable})
+
+(def ^:private busy-write-codes
+  #{:store-unavailable :store-timeout :store-unreachable})
+
+(defn- store-busy-error [what cause-message data cause]
+  (ex-info (str "Turn not started: futon1b was busy while " what
+                " (" cause-message "). Nothing was recorded, so sending the"
+                " message again is safe.")
+           (assoc data :error/code :clock/store-busy)
+           cause))
+
+(defn- busy-read
+  "Run F, which reads from the evidence store; a busy store becomes a
+  :clock/store-busy error that says the turn did not start."
+  [f]
+  (try
+    (f)
+    (catch clojure.lang.ExceptionInfo e
+      (if (busy-read-codes (:error/code (ex-data e)))
+        (throw (store-busy-error "reading this turn's clock decision"
+                                 (ex-message e) {:read (ex-data e)} e))
+        (throw e)))))
+
 (defn record!
   "Compute and durably append a decision. Stable event identity makes retries
    idempotent. Returns the persisted decision, then projects it to clock-store."
@@ -255,9 +284,9 @@
                      :agent-id agent-id :turn-id turn-id :surface surface})))
   (let [backend (evidence-store (:evidence-store context))
         _ (when-not (clock/stored-state agent-id session-id)
-            (restore! backend agent-id session-id))
+            (busy-read #(restore! backend agent-id session-id)))
         eid (decision-id context)
-        existing (store/get-entry* backend eid)
+        existing (busy-read #(store/get-entry* backend eid))
         decision (or (:evidence/body existing)
                      (merge (select-keys context [:agent-id :session-id :turn-id
                                                   :job-id :surface :phase :event-id])
@@ -273,13 +302,18 @@
                            :evidence/tags [:clock-decision]
                            :evidence/body decision}))
         duplicate (when (= :duplicate-id (:error/code result))
-                      (store/get-entry* backend eid))
+                      (busy-read #(store/get-entry* backend eid)))
         persisted (update (or (:evidence/body duplicate) decision)
                           :clock #(merge (clock/empty-clock) %))
         old-clock (clock/current-clock agent-id session-id)]
       (when (and (not existing) (not duplicate) (not (:ok result)))
-        (throw (ex-info "Clock decision persistence failed"
-                        {:error/code :clock/persistence-failed :receipt result})))
+        (if (busy-write-codes (:error/code result))
+          (throw (store-busy-error "recording this turn's clock decision"
+                                   (:error/message result) {:receipt result} nil))
+          (throw (ex-info (str "Clock decision not recorded: the evidence store refused it ("
+                               (some-> (:error/code result) name) ": "
+                               (:error/message result) ")")
+                          {:error/code :clock/persistence-failed :receipt result}))))
       (clock/set-decision! agent-id session-id persisted)
       ;; Preserve the existing mission graph projection. The decision evidence
       ;; above is authoritative; graph projection retains its canonical-node

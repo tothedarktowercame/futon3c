@@ -3074,6 +3074,7 @@
     :store-timeout 503
     :store-unreachable 503
     :store-rejected 503
+    :store-unavailable 503
     400))
 
 (defonce ^:private !evidence-appends-in-flight (atom #{}))

@@ -169,6 +169,35 @@
       (is (= :store-unreachable
              (:error/code (backend/-append store entry)))))))
 
+(deftest busy-store-is-not-reported-as-a-refusal
+  ;; futon1b answers 504 when a request waited 5 s for a query permit. That is
+  ;; load, and until 2026-09-28 it read as "futon1b rejected the append" and
+  ;; "futon1b read did not obtain evidence".
+  (let [entry {:evidence/id "e-busy"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-09-28T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")
+        get-edn (ns-resolve 'futon3c.evidence.futon1b-backend 'get-edn)
+        read-error (fn [status]
+                     (with-redefs [http/get (fn [_ _] (delay {:status status :body "{}"}))]
+                       (try (get-edn "http://store.test/api/alpha/evidence/e-1" 1000) nil
+                            (catch clojure.lang.ExceptionInfo e e))))]
+    (with-redefs [http/post (fn [_ _] (delay {:status 504 :body "{:error :timeout}"}))]
+      (let [r (backend/-append store entry)]
+        (is (= :store-unavailable (:error/code r)))
+        (is (re-find #"^futon1b busy \(HTTP 504\)" (:error/message r)))))
+    (with-redefs [http/post (fn [_ _] (delay {:status 400 :body "{:error :bad}"}))]
+      (is (= :store-rejected (:error/code (backend/-append store entry)))))
+    (let [busy (read-error 504) refused (read-error 400)]
+      (is (= :futon1b-read-unavailable (:error/code (ex-data busy))))
+      (is (re-find #"^futon1b busy \(HTTP 504\)" (ex-message busy)))
+      (is (= :futon1b-read-rejected (:error/code (ex-data refused))))
+      (is (re-find #"^futon1b refused the read \(HTTP 400\)" (ex-message refused))))))
+
 (deftest evidence-get-bounds-the-response-promise-by-wall-clock
   (let [get-edn (ns-resolve 'futon3c.evidence.futon1b-backend 'get-edn)
         never (promise)

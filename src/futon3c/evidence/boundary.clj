@@ -75,6 +75,9 @@
     :store-serialization {:kind :serialization
                           :label "persistence serialization rejected"
                           :invariant invariant/I-evidence-per-turn}
+    :store-unavailable {:kind :unavailable
+                        :label "store busy, write not served"
+                        :invariant invariant/I-evidence-per-turn}
     :store-rejected {:kind :store-rejected
                      :label "persistence rejected"
                      :invariant invariant/I-evidence-per-turn}
