@@ -18,54 +18,18 @@
   No live record carries either end (live-records-read, each pinned and
   read): every flight record's one enactment is a typed absence, so no
   enactment record was ever written live, and the hand-authored exemplar
-  enactment predates H-publish. So the wire is WITNESSED-HERMETICALLY."
-  (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight :as flight]
-            [futon2.aif.flight-runner :as fr]
-            [futon3c.diagramprover.wm-wire :as w]))
+  enactment predates H-publish. So the wire is WITNESSED-HERMETICALLY.
 
-(def run-record
-  {:repair/publication [{:status :receipt-committed :repair/id "occ-published" :repair/discharged? true}
-                        {:status :publication-refused :repair/id "occ-refused" :reason :publication-error}]})
+  Converted to read the wire ends from the content-addressed
+  wm-wire-r10-publication-observed-test-literal-fixture producer record;
+  this reader loads no product code."
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn- writer-value
-  "observe-publication-fn's value over RECORD for REPAIR-ID."
-  [repair-id record]
-  (:publication-observed
-   ((fr/observe-publication-fn {:fetch-run-record (fn [_] record)
-                                :repair-id-fn (constantly repair-id)})
-    {:target "T-repair-x"} {:click-id "run-p"})))
+(def producer (delay (producer-record/record "wm-wire-r10-publication-observed-test-literal-fixture")))
 
-(defn- enactment-record
-  "The enactment record enact-fn writes over RECORD for REPAIR-ID, through
-  a real one-click flight (publication_observed_test's one-authority run)."
-  [repair-id record]
-  (let [enact (fr/enact-fn {:dispatch-step! (fn [_] {:commit "c" :produced :t :check {:class :fixture}})
-                            :check-fn (constantly {:observed true})
-                            :interpretations (constantly {:p/a {:produces #{:t}}})
-                            :fetch-run-record (constantly record)
-                            :repair-id-fn (constantly repair-id)
-                            :record-dir (w/tmp-dir "wire-pub")})
-        f (flight/run! (flight/start {:target "T-repair-x" :chosen-because {:kind :requested}}
-                                     {:kind :a-exits :repo "futon2" :path "p" :read-text (fn [& _] "")}
-                                     {:id "flight-wire-pub"})
-                       {:click-fn (constantly {:click-id "run-p" :chosen {:candidate :cand/p :precedence [:p/a]}})
-                        :enact-fn enact
-                        :observe-fn (fn [_ _] {})
-                        :sources-fn (constantly {})
-                        :max-clicks 1})]
-    (edn/read-string (slurp (:record-path (first (:enactments f)))))))
-
-(defn observe
-  "The writer's observation over WRITER-RECORD, and the reader's read of it
-  off the enactment record written over READER-RECORD (the two differ only
-  in the bad case): {:writer :reader}."
-  [repair-id writer-record reader-record]
-  {:writer (writer-value repair-id writer-record)
-   :reader (:publication-observed (enactment-record repair-id reader-record))})
-
-(defn check [] (observe "occ-published" run-record run-record))
+(defn check [] (get-in @producer [:cases :committed]))
 
 (def live-records-read
   [{:path (str w/spike-dir "/flight-278b6988.edn")
@@ -89,15 +53,14 @@
     (is (w/received? o))))
 
 (deftest no-repair-obligation-is-a-typed-absence-and-fails-the-wire
-  (let [o (observe nil run-record run-record)]
+  (let [o (get-in @producer [:cases :no-repair])]
     (is (= :no-repair-obligation-for-target (:absent (:reader o))))
     (is (not (w/received? o)))))
 
 (deftest a-different-observation-than-the-writers-fails-the-wire
   ;; the writer observed a committed receipt; the enactment record was
   ;; written over a run record whose only entry refused publication
-  (let [refused {:repair/publication [{:status :publication-refused :repair/id "occ-published" :reason :publication-error}]}
-        o (observe "occ-published" run-record refused)]
+  (let [o (get-in @producer [:cases :refused])]
     (is (true? (get-in (:writer o) [:observed])))
     (is (false? (get-in (:reader o) [:observed])))
     (is (some? (:reader o)))
