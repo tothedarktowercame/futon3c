@@ -64,6 +64,20 @@ class WorkerTest(unittest.TestCase):
         rid=self.queue(); w.run_pass(args)  # the real step, against the fixture's reduced schema
         with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
         self.assertEqual("done",row[0]); self.assertTrue(row[1].startswith("reach: "))
+    def test_a_pass_records_the_impact_before_any_rerun(self):
+        order=[]; original=w.record_impact
+        w.record_impact=lambda db,reach,limit: order.append(("impact",limit,self.calls.exists())) or '{"causes-over-limit": 0}'
+        try:
+            args=self.args(); args.impact=True; args.limit=10; args.reach_dir=None
+            self.queue(); w.run_pass(args)
+        finally: w.record_impact=original
+        self.assertEqual([("impact",10,False)],order)
+        self.assertEqual(1,self.calls.read_text().count("start"))
+        self.assertEqual(['{"causes-over-limit": 0}'],[f.read_text().strip() for f in (self.root/"logs").glob("impact-*.json")])
+    def test_a_failing_impact_step_does_not_stop_the_pass(self):
+        args=self.args(); args.impact=True; args.limit=10; args.reach_dir=None
+        rid=self.queue(); w.run_pass(args)  # the real step, against the fixture's reduced schema
+        with w.connect(self.db) as db: self.assertEqual("done",db.execute("SELECT state FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()[0])
     def test_failure_without_run(self):
         self.runner.write_text("#!/bin/sh\nexit 1\n"); self.runner.chmod(0o755); rid=self.queue(); w.run_pass(self.args())
         with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()

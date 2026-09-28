@@ -124,6 +124,22 @@ def write_reach_record(db_path, namespace, reach_dir):
     except (OSError, subprocess.SubprocessError) as error:
         return "reach-record error: %r" % (error,)
 
+def record_impact(db_path, reach_dir, limit=10):
+    """Before any rerun: group the stale warrants by what changed, and write a
+    refactor request for each cause over LIMIT (M-warrant-limit C4). Returns
+    what warrant_index printed, or the error. It prevents no rerun."""
+    script = str(Path(__file__).resolve().parent / "warrant_index.py")
+    command = [sys.executable, script, "--db", db_path, "impact", "--record",
+               "--limit", str(limit)]
+    if reach_dir:
+        command += ["--reach-dir", reach_dir]
+    try:
+        result = subprocess.run(command, env=clean_git_env(), text=True,
+                                capture_output=True, timeout=600)
+        return (result.stdout.strip() or result.stderr.strip())
+    except (OSError, subprocess.SubprocessError) as error:
+        return "impact error: %r" % (error,)
+
 def process_one(db_path, request_id, runner, log_dir, reach_dir=None):
     with connect(db_path) as db:
         row = db.execute("SELECT namespace,repo,requested_at FROM warrant_rerun_requests WHERE request_id=?",
@@ -194,6 +210,12 @@ def guarded(db_path, request_id, runner, log_dir, reach_dir=None):
         finish(db_path, request_id, "failed", detail="worker error: %r" % (error,))
 
 def run_pass(args):
+    if getattr(args, "impact", False):
+        Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        (Path(args.log_dir) / f"impact-{stamp}.json").write_text(
+            record_impact(args.db, getattr(args, "reach_dir", None),
+                          getattr(args, "limit", 10)) + "\n")
     seen = set()
     while True:
         with connect(args.db) as db: ids = claim(db, args.parallel, seen)
@@ -209,6 +231,10 @@ def main(argv=None):
     p.add_argument("--log-dir", default="/tmp/warrant-rerun-logs")
     p.add_argument("--reach-dir", default=REACH_DIR,
                    help="where dependency records are written; empty string writes none")
+    p.add_argument("--no-impact", dest="impact", action="store_false",
+                   help="do not record refactor requests before the pass")
+    p.add_argument("--limit", type=int, default=10,
+                   help="stale warrants one cause may produce before a refactor is requested")
     mode = p.add_mutually_exclusive_group(required=True); mode.add_argument("--once", action="store_true")
     mode.add_argument("--watch", type=float)
     args = p.parse_args(argv)
