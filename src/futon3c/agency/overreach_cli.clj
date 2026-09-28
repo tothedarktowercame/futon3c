@@ -2,6 +2,7 @@
   "Read-only, bitemporally pinned overreach report for pattern-card acts."
   (:require [clojure.string :as str]
             [futon3c.agency.overreach :as overreach]
+            [futon3c.agency.disclosure-record :as disclosure-record]
             [futon3c.agency.pattern-card-record :as card-record]
             [futon3c.agency.rule-record :as store])
   (:import [java.net URLEncoder]
@@ -37,23 +38,36 @@
        (catch Throwable _
          {:unreadable {:id (:hx/id document) :reason :unreadable-record}})))
 
-(defn- adapt-acts [selections withdrawals]
-  (let [by-id (into {} (map (juxt :id identity) selections))]
-    {:acts (into (mapv overreach/record->act selections)
-                 (map (fn [withdrawal]
-                        (let [target (get by-id (:target withdrawal))
-                              signer (or (get-in target [:act/stamp :signer])
-                                         (:author target))]
-                          (overreach/record->act withdrawal signer)))
-                      withdrawals))
+(defn- read-disclosure [document]
+  (try {:record (disclosure-record/hyperedge->record document)}
+       (catch clojure.lang.ExceptionInfo e
+         {:unreadable {:id (:hx/id document)
+                       :reason (:reason (ex-data e))}})
+       (catch Throwable _
+         {:unreadable {:id (:hx/id document) :reason :unreadable-record}})))
+
+(defn- adapt-acts
+  ([selections withdrawals] (adapt-acts selections withdrawals []))
+  ([selections withdrawals disclosures]
+  ;; Disclosures are both acts in their own right and withdrawal targets; the
+  ;; target's kind decides whether dispatch-edge authority may withdraw it.
+  (let [by-id (into {} (map (juxt :id identity) (concat selections disclosures)))]
+    {:acts (-> (mapv overreach/record->act selections)
+               (into (map overreach/record->act) disclosures)
+               (into (map (fn [withdrawal]
+                            (let [target (get by-id (:target withdrawal))
+                                  signer (or (get-in target [:act/stamp :signer])
+                                             (:author target))]
+                              (overreach/record->act withdrawal signer (:kind target)))))
+                     withdrawals))
      :missing-targets
      (into [] (keep (fn [withdrawal]
                       (when-not (contains? by-id (:target withdrawal))
                         {:withdrawal-id (:id withdrawal)
-                         :target-id (:target withdrawal)}))) withdrawals)}))
+                         :target-id (:target withdrawal)}))) withdrawals)})))
 
 (defn generate-report
-  "Read three pinned LIST pages through REQUEST-FN and return the report map.
+  "Read four pinned LIST pages through REQUEST-FN and return the report map.
    REQUEST-FN has the same [base method path body] contract as store/request!."
   [base system-as-of request-fn]
   (try (Instant/parse system-as-of)
@@ -61,13 +75,18 @@
   (let [selection-page (read-page! base :pattern-card/selection system-as-of request-fn)
         withdrawal-page (read-page! base :act/withdrawal system-as-of request-fn)
         grant-page (read-page! base :grant/record system-as-of request-fn)
+        disclosure-page (read-page! base :disclosure/choice system-as-of request-fn)
         selection-reads (mapv read-card (:documents selection-page))
         withdrawal-reads (mapv read-card (:documents withdrawal-page))
+        disclosure-reads (mapv read-disclosure (:documents disclosure-page))
         selections (into [] (keep :record) selection-reads)
         withdrawals (into [] (keep :record) withdrawal-reads)
-        unreadable (into (into [] (keep :unreadable) selection-reads)
-                         (keep :unreadable) withdrawal-reads)
-        {:keys [acts missing-targets]} (adapt-acts selections withdrawals)
+        disclosures (into [] (keep :record) disclosure-reads)
+        unreadable (-> []
+                       (into (keep :unreadable) selection-reads)
+                       (into (keep :unreadable) withdrawal-reads)
+                       (into (keep :unreadable) disclosure-reads))
+        {:keys [acts missing-targets]} (adapt-acts selections withdrawals disclosures)
         grants (:documents grant-page)
         classifications (overreach/scan-report acts grants)
         counts (merge (zipmap classes (repeat 0))
@@ -83,7 +102,8 @@
      :grant-ids (mapv :hx/id grants)
      :truncated {:pattern-card/selection (:truncated selection-page)
                  :act/withdrawal (:truncated withdrawal-page)
-                 :grant/record (:truncated grant-page)}}))
+                 :grant/record (:truncated grant-page)
+                 :disclosure/choice (:truncated disclosure-page)}}))
 
 (defn- parse-args [args]
   (loop [remaining (seq args) result {}]
