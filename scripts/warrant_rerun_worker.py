@@ -151,6 +151,13 @@ def process_one(db_path, request_id, runner, log_dir):
     entry = after[0] if after and (previous is None or after[0] != previous[0]) else None
     if entry and after[2] and after[3] == head:
         finish(db_path, request_id, "done", entry=entry)
+    elif entry and not after[2] and ":scope-not-committed" in (after[4] or ""):
+        # The registration refused because a file the test loads was edited
+        # while it ran. The test result says nothing either way; the request
+        # goes back to the queue and is not tried again in this pass.
+        with connect(db_path) as db:
+            db.execute("UPDATE warrant_rerun_requests SET state='queued',entry_id=?,detail=? WHERE request_id=?",
+                       (entry, "held: a loaded file was edited during the run (scope-not-committed)", request_id))
     else:
         last = ""
         try:

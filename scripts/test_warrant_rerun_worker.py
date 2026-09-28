@@ -50,6 +50,21 @@ class WorkerTest(unittest.TestCase):
         self.runner.write_text("#!/bin/sh\nexit 1\n"); self.runner.chmod(0o755); rid=self.queue(); w.run_pass(self.args())
         with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
         self.assertEqual("failed",row[0]); self.assertIn("exit 1",row[1])
+    def test_refusal_for_a_file_edited_during_the_run_holds(self):
+        self.runner.write_text(self.runner.read_text()
+                               .replace("'warrant?':True", "'warrant?':False,'postcheck':':reason :scope-not-committed'")
+                               .replace("(eid,root,ns,'c',now,now,1,head,now,now)", "(eid,root,ns,'c',now,now,0,head,now,now)"))
+        rid=self.queue(); w.run_pass(self.args())
+        with w.connect(self.db) as db: row=db.execute("SELECT state,detail,entry_id FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
+        self.assertEqual("queued",row[0]); self.assertIn("scope-not-committed",row[1]); self.assertEqual("entry-example-test",row[2])
+        self.assertEqual(1,self.calls.read_text().count("start"))
+    def test_refusal_for_another_reason_fails(self):
+        self.runner.write_text(self.runner.read_text()
+                               .replace("'warrant?':True", "'warrant?':False,'postcheck':':reason :tests-failed'")
+                               .replace("(eid,root,ns,'c',now,now,1,head,now,now)", "(eid,root,ns,'c',now,now,0,head,now,now)"))
+        rid=self.queue(); w.run_pass(self.args())
+        with w.connect(self.db) as db: row=db.execute("SELECT state FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
+        self.assertEqual("failed",row[0])
     def test_dirty_prior_closure_holds(self):
         head=subprocess.check_output(["git","rev-parse","HEAD"],cwd=self.repo,text=True).strip()
         payload='{:load-closure [] :test-files {"test/example_test.clj" "' + '0'*64 + '"} :repo/root "' + str(self.repo) + '"}'
