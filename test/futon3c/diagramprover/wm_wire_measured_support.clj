@@ -7,7 +7,7 @@
             [futon2.aif.full-loop-runner :as runner]
             [futon2.aif.enactment-fold-source :as folds]
             [futon2.aif.observation-rates :as rates]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.report.observation-labels-consume-test :as fixture]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-r9-support :as r9]))

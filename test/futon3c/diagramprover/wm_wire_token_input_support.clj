@@ -7,7 +7,7 @@
             [futon2.aif.token-belief-predecessor :as predecessor]
             [futon2.aif.token-initialization-policy :as policy]
             [futon2.report.cascade-decision-test :as decision-fixture]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def live-records-read

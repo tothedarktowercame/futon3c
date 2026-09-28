@@ -22,7 +22,7 @@
             [futon2.aif.gate-refusal-abstention-test :as gate-test]
             [futon2.aif.judge-refusal-abstention-test :as judge-test]
             [futon2.aif.observation-rates :as rates]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-selection-out-support :as selout]))
 

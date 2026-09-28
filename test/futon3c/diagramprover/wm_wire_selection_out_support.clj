@@ -3,7 +3,7 @@
             [futon2.aif.policy :as policy] [futon2.aif.enactment-habit :as habit]
             [futon2.aif.cascade-prior :as prior] [futon2.aif.flight-runner :as fr]
             [futon2.aif.full-loop-runner :as runner] [futon2.aif.cascade-problems :as cp]
-            [futon2.aif.locator-fixtures :as loc] [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+            [futon2.aif.locator-fixtures :as loc]  [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.report.cascade-decision-test :as fixture]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-enact-driver :as driver]

@@ -10,7 +10,7 @@
             [futon2.aif.cascade-equivalence :as equivalence]
             [futon2.aif.efe :as efe]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def live-records-read
@@ -81,7 +81,7 @@
                     (assoc :candidates {})
                     (assoc :construction {:construct construction/construct
                                           :budget {:max-moves 20 :max-expansions 1000}
-                                          :move-cost 0 :evaluate-g wm/constructed-candidate-g})
+                                          :move-cost 0 :evaluate-g wm-cd/constructed-candidate-g})
                     loc/locate-all)})))
 
 (defn change [field value mutation]

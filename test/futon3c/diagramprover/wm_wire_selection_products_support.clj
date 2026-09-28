@@ -6,7 +6,7 @@
             [futon2.aif.order-kernel-test :as order]
             [futon2.aif.policy-prefix-admission :as admission]
             [futon2.aif.policy-prefix-evidence :as prefix]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-rates-support :as rates]))
 
 (def target "selection-wire")

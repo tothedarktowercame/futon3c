@@ -3,7 +3,7 @@
   (:require [clojure.edn :as edn]
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-runner :as runner]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-publication-support :as publication]
             [futon3c.diagramprover.wm-wire-rates-support :as rates]))
 

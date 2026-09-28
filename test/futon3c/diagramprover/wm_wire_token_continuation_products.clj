@@ -2,7 +2,7 @@
   "Second-layer readbacks; no changes to the first-layer shared support."
   (:require [clojure.edn :as edn]
             [futon2.aif.efe :as efe]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-token-input-support :as support]))
 
 (defn receipt-product [hop mutation]

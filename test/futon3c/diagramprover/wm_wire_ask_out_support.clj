@@ -13,7 +13,7 @@
             [futon2.aif.flight :as flight] [futon2.aif.flight-runner :as fr]
             [futon2.aif.full-loop-runner :as runner]
             [futon2.aif.wm.construction-inputs :as construction-inputs]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.report.cascade-decision-test :as decision-fixture]
             [futon2.report.observation-labels-consume-test :as population]
             [futon3c.transport.http :as http]
@@ -47,7 +47,7 @@
                  :interpretations {target-id {:patterns {} :receipts {}}}
                  :horizon-steps 4 :beta-by-context {:WM {:beta 1}} :context-of (constantly :WM)
                  :construction {:construct ic/construct :budget {:max-moves 4 :max-expansions 20000}
-                                :move-cost 0 :evaluate-g wm/constructed-candidate-g}}
+                                :move-cost 0 :evaluate-g wm-cd/constructed-candidate-g}}
         proposals (edn/read-string (slurp (io/file fixture-root "want-interp-library/M-futon-seams-interpretations@futon2-78439f58.edn")))
         response (assoc (get-in proposals [:patterns pattern-id]) :pattern pattern-id
                         :receipt (get-in proposals [:interpretation-receipts pattern-id]))

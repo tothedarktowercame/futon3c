@@ -4,7 +4,7 @@
             [futon2.aif.click-measurement-test :as click]
             [futon2.aif.observation-rates :as rates]
             [futon2.aif.efe :as efe]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-rates-support :as fixture]))
 
 (defn changed-rates [rs]

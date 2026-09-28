@@ -5,7 +5,7 @@
             [futon2.aif.focus-receipt :as focus]
             [futon2.aif.efe :as efe]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
+             [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (defn class-product [hop changed?]

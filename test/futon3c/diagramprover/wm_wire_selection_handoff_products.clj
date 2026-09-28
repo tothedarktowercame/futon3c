@@ -6,7 +6,7 @@
             [futon2.aif.enactment-habit :as habit]
             [futon2.aif.selection-reads-fold-test :as fold-test]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]))
+             [futon2.aif.wm.cascade-decision :as wm-cd]))
 
 (defn decision-product [reverse?]
   (let [select policy/select-action-cascades written (atom nil) scores (atom nil)
