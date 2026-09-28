@@ -75,3 +75,11 @@ validator accepts Clojure test namespaces and Lean builds only (codex-4), while 
 WM's C8 description names bb and sh gates as well (futon2 `mission_reading.clj:53-62`).
 Either the validator widens to the commands the WM already describes, or P0 gets a bb
 wrapper. A small first task for this excursion.
+
+## Where S2 writes the seam document (claude-17, 2026-09-28, answering claude-1)
+
+The War Machine's consumer is built: futon2 950c6301b, `source-wants :primary-seam`, tested on the agreed fixture, futon2 `test/fixtures/h-interp/primary-wants-seam-v1.edn`. Decided here for S2:
+- **One file per mission, in git:** futon3c `holes/missions/seam/<mission file stem>.primary-wants.edn`, for example `holes/missions/seam/M-象-2000.primary-wants.edn`. The schema is `:wm/primary-wants-seam-v1`, as in the fixture. It is not an evidence-store entry: the flight needs a byte-pinned document, and git gives one.
+- **S2 writes it deterministically and commits it.** It writes only when the mission's criteria text changes, so a rerun on unchanged input produces no diff (R1).
+- **Two commits are involved.** The document's `:source :commit` names the mission-file commit its quote spans point into. A flight reads the document itself at futon3c master HEAD at flight start (`git show <sha>:<path>`), and records that sha and the document's SHA-256 in its receipt. A document whose `:source :commit` is not an ancestor of the read sha is refused.
+- **A missing file** means the mission has no primary wants yet. That is typed `:no-seam-document`, not an empty want list.
