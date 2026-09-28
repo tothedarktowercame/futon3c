@@ -5,7 +5,8 @@
             [futon3c.agency.pattern-card-provider :as provider]
             [futon3c.agency.rule-record :as store]
             [futon3c.social.test-fixtures :as fix]
-            [futon3c.transport.http :as http]))
+            [futon3c.transport.http :as http])
+  (:import [java.time Instant]))
 
 (defn handler []
   (http/make-handler {:registry (fix/mock-registry) :patterns (fix/mock-patterns)}))
@@ -17,8 +18,19 @@
 (defn response-body [response]
   (json/parse-string (:body response) true))
 
+(defn own-grant []
+  {:hx/id http/own-acts-grant-id :hx/type :grant/record
+   :hx/props
+   {:grant/grantor "joe" :grant/grantee "*" :grant/basis :explicit
+    :grant/scope {:description "own acts"
+                  :act-kinds [:pattern-card/selection :act/withdrawal]
+                  :own-acts-only true}
+    :grant/interval {:from "2026-09-28T10:00:00Z"}
+    :grant/source {:id "e:joe" :author "joe" :at "2026-09-28T10:00:00Z"
+                   :quote "own acts"}}})
+
 (defn fake-store []
-  (let [docs (atom {})
+  (let [docs (atom {http/own-acts-grant-id (own-grant)})
         keys (atom {})
         next-id (atom 0)]
     {:docs docs
@@ -57,12 +69,15 @@
 (deftest select-and-withdraw-update-the-next-render
   (let [{:keys [request!]} (fake-store)
         h (handler)
+        start (Instant/now)
+        selected-at (str start)
+        withdrawn-at (str (.plusSeconds start 2))
         select-body {:caller "agent-a" :agent "agent-a" :session "session-a"
-                     :pattern-id "card/chosen" :at "2026-09-28T13:00:00Z"
+                     :pattern-id "card/chosen" :at selected-at
                      :idempotency-key "route-select"}]
     (provider/observe-results! "agent-a" "session-a"
                                [{:id "retrieved/fallback" :score 0.8 :rank 1}]
-                               "2026-09-28T12:59:59Z" "e:retrieval" :persisted)
+                               selected-at "e:retrieval" :persisted)
     (with-redefs [store/request! request!
                   provider/refresh-async! (fn [& _])
                   provider/refresh-cards-async! (fn [& _])]
@@ -70,20 +85,25 @@
             selected-body (response-body selected)
             target (get-in selected-body [:record :id])]
         (is (= 200 (:status selected)))
+        (is (= "agent-a" (get-in selected-body [:record :act/stamp :signer])))
+        (is (= http/own-acts-grant-id
+               (get-in selected-body [:record :act/stamp :authority :grant])))
         (is (= "~card/chosen"
                (:segment/value
                 (provider/provider {:agent-id "agent-a" :session-id "session-a"
-                                    :render-at "2026-09-28T13:00:01Z"}))))
+                                    :render-at (get-in selected-body
+                                                       [:receipt :system-as-of])}))))
         (let [withdrawn
               (h (request "/api/alpha/pattern-card/withdraw"
-                          {:caller "agent-a" :target target :status "effective"
-                           :basis "self" :at "2026-09-28T13:00:02Z"
+                           {:caller "agent-a" :target target :status "effective"
+                           :basis "self" :at withdrawn-at
                            :idempotency-key "route-withdraw"}))]
           (is (= 200 (:status withdrawn)))
           (is (= "~retrieved/fallback"
                  (:segment/value
                   (provider/provider {:agent-id "agent-a" :session-id "session-a"
-                                      :render-at "2026-09-28T13:00:03Z"})))))))))
+                                      :render-at (get-in (response-body withdrawn)
+                                                         [:receipt :system-as-of])})))))))))
 
 (deftest non-author-withdrawal-is-forbidden
   (let [{:keys [request!]} (fake-store)
@@ -112,7 +132,7 @@
         (is (= "idempotency-conflict" (:reason (response-body response))))))))
 
 (deftest selection-on-another-agents-seat-is-forbidden
-  (let [{:keys [request!]} (fake-store)
+  (let [{:keys [request! docs]} (fake-store)
         h (handler)]
     (with-redefs [store/request! request!]
       (let [response (h (request "/api/alpha/pattern-card/select"
@@ -120,6 +140,42 @@
                                   :pattern-id "card/a" :idempotency-key "select-b"}))]
         (is (= 403 (:status response)))
         (is (= "not-seat-owner" (:reason (response-body response)))))
+      ;; Joe's operator authority is self-authenticating and performs no grant
+      ;; read; remove the standing grant to prove the route does not need it.
+      (swap! docs dissoc http/own-acts-grant-id)
       (is (= 200 (:status (h (request "/api/alpha/pattern-card/select"
                                       {:caller "joe" :agent "agent-a" :session "s"
                                        :pattern-id "card/a" :idempotency-key "select-joe"}))))))))
+
+(deftest missing-grant-refuses-non-joe-write
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)]
+    (swap! docs dissoc http/own-acts-grant-id)
+    (with-redefs [store/request! request!]
+      (let [response (h (request "/api/alpha/pattern-card/select"
+                                 {:caller "agent-a" :agent "agent-a" :session "s"
+                                  :pattern-id "card/a" :idempotency-key "no-grant"}))]
+        (is (= 403 (:status response)))
+        (is (= "no-grant" (:reason (response-body response))))))))
+
+(deftest legacy-selection-author-is-the-withdrawal-target-signer
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)
+        legacy-id "act:legacy"
+        legacy {:hx/id legacy-id :hx/type :pattern-card/selection
+                :hx/endpoints ["agent:agent-a" "session:s" "pattern:card/a"]
+                :hx/props {:author "agent-a" :agent "agent-a" :session "s"
+                           :pattern-id "card/a" :at "2026-09-28T12:00:00Z"
+                           :act/harness {:kind :none :basis :producer-context
+                                         :source-ref "legacy"}
+                           :pattern-card/schema 1}}]
+    (swap! docs assoc legacy-id legacy)
+    (with-redefs [store/request! request!]
+      (let [response (h (request "/api/alpha/pattern-card/withdraw"
+                                 {:caller "agent-a" :target legacy-id
+                                  :status "effective" :basis "self"
+                                  :at "2026-09-28T13:00:00Z"
+                                  :idempotency-key "legacy-withdraw"}))]
+        (is (= 200 (:status response)))
+        (is (= "agent-a" (get-in (response-body response)
+                                  [:record :act/stamp :signer])))))))

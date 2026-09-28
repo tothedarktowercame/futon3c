@@ -74,6 +74,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.act-harness :as act-harness]
+            [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
             [futon3c.agency.atomic-file :as agency-atomic-file]
@@ -9207,6 +9208,7 @@
                           (= :not-author reason) 403
                           (= :author-mismatch reason) 403
                           (= :not-seat-owner reason) 403
+                          (= :no-grant reason) 403
                           (= :target-absent reason) 404
                           (= :idempotency-conflict reason) 409
                           (and status (>= status 500)) 502
@@ -9231,6 +9233,17 @@
 
 (defn- pattern-card-idempotency-key [payload]
   (or (:idempotency-key payload) (get payload "idempotency-key")))
+
+(def own-acts-grant-id
+  (or (System/getenv "FUTON3C_PATTERN_CARD_OWN_ACTS_GRANT_ID")
+      "act:32d338a3-ef31-49d9-b12c-1a17bb486ae2"))
+
+(defn- pattern-card-stamp [caller]
+  (act-stamp/stamp caller caller
+                   (if (= "joe" caller)
+                     {:operator true}
+                     {:grant own-acts-grant-id})
+                   :declared))
 
 (defn- publish-pattern-card-write! [result]
   (let [{:keys [agent session]} (:seat result)]
@@ -9264,7 +9277,8 @@
                        :idempotency-key (pattern-card-idempotency-key payload)}
               result (pattern-card-cli/write-selection!
                       (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
-                      request (act-harness/plain "route:futon3c.pattern-card/select"))]
+                      request (act-harness/plain "route:futon3c.pattern-card/select")
+                      (pattern-card-stamp author))]
           (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
         (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
         (catch Throwable e
@@ -9299,7 +9313,8 @@
                        :idempotency-key (pattern-card-idempotency-key payload)}
               result (pattern-card-cli/write-withdrawal!
                       (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
-                      request (act-harness/plain "route:futon3c.pattern-card/withdraw"))]
+                      request (act-harness/plain "route:futon3c.pattern-card/withdraw")
+                      (pattern-card-stamp author))]
           (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
         (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
         (catch Throwable e

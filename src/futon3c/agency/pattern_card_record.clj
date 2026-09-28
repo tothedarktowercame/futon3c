@@ -1,7 +1,8 @@
 (ns futon3c.agency.pattern-card-record
   "Validation and lossless hyperedge mapping for pattern-card acts."
   (:require [clojure.string :as str]
-            [futon3c.agency.act-harness :as act-harness])
+            [futon3c.agency.act-harness :as act-harness]
+            [futon3c.agency.act-stamp :as act-stamp])
   (:import [java.time Instant]))
 
 (def selection-type :pattern-card/selection)
@@ -28,6 +29,10 @@
   (when-not (text? (:author record)) (refuse! :missing-author :author))
   (when (contains? record :act/harness)
     (act-harness/validate! (:act/harness record)))
+  ;; Historical records predate P4's act stamp and remain readable. New write
+  ;; paths require the stamp before minting.
+  (when (contains? record :act/stamp)
+    (act-stamp/validate! (:act/stamp record)))
   record)
 
 (defn validate-selection

@@ -4,14 +4,16 @@
 
 (def at "2026-09-28T11:00:00Z")
 (def harness {:kind :none :basis :producer-context :source-ref "test:p10-2a-2"})
+(def stamp {:executor "agent-a" :signer "agent-a"
+            :authority {:grant "act:grant"} :executor-basis :declared})
 (def selection
   {:id "act:card-a" :kind :pattern-card/selection :author "agent-a"
    :agent "agent-a" :session "session-1" :at at :pattern-id "pattern/a"
-   :act/harness harness})
+   :act/harness harness :act/stamp stamp})
 (def withdrawal
   {:id "act:withdraw-a" :kind :act/withdrawal :author "agent-a" :at at
    :target "act:card-a" :status :effective :basis {:kind :self}
-   :reverses nil :act/harness harness})
+   :reverses nil :act/harness harness :act/stamp stamp})
 
 (defn refusal [f]
   (try
@@ -58,13 +60,14 @@
                    {:id "act:reading" :kind :interpretation :author "xiang"
                     :at at :target "act:card-a"})))))
 
-(deftest hyperedge-round-trips-preserve-record-and-harness
+(deftest hyperedge-round-trips-preserve-record-harness-and-stamp
   (testing "selection"
     (let [edge (record/record->hyperedge selection)]
       (is (= :pattern-card/selection (:hx/type edge)))
       (is (= at (:hx/valid-time edge)))
       (is (= at (get-in edge [:hx/props :at])))
       (is (= harness (get-in edge [:hx/props :act/harness])))
+      (is (= stamp (get-in edge [:hx/props :act/stamp])))
       (is (= selection (record/hyperedge->record edge)))))
   (testing "withdrawal"
     (let [edge (record/record->hyperedge withdrawal)]
@@ -72,10 +75,15 @@
       (is (= at (:hx/valid-time edge)))
       (is (= at (get-in edge [:hx/props :at])))
       (is (= harness (get-in edge [:hx/props :act/harness])))
+      (is (= stamp (get-in edge [:hx/props :act/stamp])))
       (is (= withdrawal (record/hyperedge->record edge)))))
   (testing "LIST readback has no :hx/valid-time, so props retain :at"
     (let [listed (dissoc (record/record->hyperedge selection) :hx/valid-time)]
       (is (= selection (record/hyperedge->record listed))))))
+
+(deftest legacy-record-without-stamp-still-maps
+  (let [legacy (dissoc selection :act/stamp)]
+    (is (= legacy (record/hyperedge->record (record/record->hyperedge legacy))))))
 
 (deftest reverses-must-name-an-act
   (is (= :invalid-reverses
