@@ -12,7 +12,13 @@
            [java.time Duration Instant]))
 
 (def stale-after (Duration/ofMinutes 30))
-(def card-stale-after (Duration/ofMinutes 2))
+(def card-stale-after
+  "A card is shown for this long after its last refresh. It is not the
+   withdrawal latency: every render rechecks the seat at most once per
+   `recheck-interval-ms`, so a withdrawal is seen within about a minute of the
+   next render.  At 2 minutes, the render at the end of any turn longer than
+   that (refresh at turn start, render at turn end) hid an active card."
+  (Duration/ofMinutes 30))
 (defonce ^:private !retrievals (atom {}))
 (defonce ^:private !refreshing (atom #{}))
 (defonce ^:private !checked-at (atom {}))

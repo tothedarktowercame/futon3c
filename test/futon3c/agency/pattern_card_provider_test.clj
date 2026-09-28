@@ -135,3 +135,18 @@
   (is (= "act:card"
          (get-in (pattern/cached-card "claude-17" "target")
                  [:result :active :id]))))
+
+(deftest active-card-survives-a-long-turn
+  ;; Refreshed at turn start, rendered at turn end ten minutes later.
+  (pattern/publish-card-result! "claude-17" "target"
+                                {:active card :provisional [] :ignored []}
+                                "2026-09-27T19:50:00Z")
+  (with-redefs [pattern/refresh-async! (fn [& _])
+                pattern/refresh-cards-async! (fn [& _])]
+    (is (= "~card/chosen"
+           (:segment/value (pattern/active-pattern-card
+                            {:agent-id "claude-17" :session-id "target"
+                             :render-at "2026-09-27T20:00:00Z"}))))
+    (is (nil? (pattern/active-pattern-card
+               {:agent-id "claude-17" :session-id "target"
+                :render-at "2026-09-27T20:31:00Z"})))))
