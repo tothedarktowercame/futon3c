@@ -1,6 +1,6 @@
 (ns futon3c.agency.grant-record-test
   (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.agency.grant-record :as grant]
             [futon3c.agency.rule-record :as store]))
 
@@ -81,6 +81,47 @@
            (grant/grant-status-for [root] "claude-11"
                                   "act:4b526112-dd5d-4765-a8a6-ed8701d0089c" event)))
     (is (= original root))))
+
+(deftest own-acts-root-grants
+  (let [wild-record (-> real-record
+                        (assoc :grant/grantee "*")
+                        (assoc-in [:grant/scope :own-acts-only] true))
+        wild (node "act:any-own" wild-record)
+        options {:leaf-id "act:any-own" :target-signer "claude-17"}]
+    (is (= :granted
+           (:status (grant/grant-covers? [wild] "claude-17" target from options))))
+    (is (= {:status :no-grant :reason :not-own-act}
+           (grant/grant-covers? [wild] "claude-17" target from
+                                (assoc options :target-signer "codex-5"))))
+    (is (= {:status :no-grant :reason :not-own-act}
+           (grant/grant-covers? [wild] "claude-17" target from
+                                {:leaf-id "act:any-own"})))
+    (is (= :wildcard-needs-own-acts
+           (reason #(grant/validate! (assoc real-record :grant/grantee "*") context))))
+    (is (= :wildcard-not-root
+           (reason #(grant/validate! (assoc wild-record :grant/parent "act:root")
+                                     (assoc context :records [root])))))
+    (is (= :wildcard-not-root
+           (reason #(grant/validate! (-> wild-record
+                                         (assoc :grant/grantor "claude-17")
+                                         (assoc-in [:grant/source :author] "claude-17"))
+                                     context))))
+    (is (= :invalid-scope
+           (reason #(grant/validate! (assoc-in real-record
+                                               [:grant/scope :own-acts-only] false)
+                                     context))))
+    (let [child-under-wildcard (-> child
+                                   (assoc :grant/grantor "*" :grant/parent "act:any-own")
+                                   (assoc-in [:grant/source :author] "*"))]
+      (is (= :wildcard-not-delegable
+             (reason #(grant/validate! child-under-wildcard
+                                       (assoc child-context :records [wild]))))))
+    (testing "a named own-acts grant applies the same signer check"
+      (let [named (node "act:named-own"
+                        (assoc-in real-record [:grant/scope :own-acts-only] true))]
+        (is (= :not-own-act
+               (:reason (grant/grant-covers? [named] "claude-11" target from
+                                             {:target-signer "codex-5"}))))))))
 
 (deftest write-rechecks-source-and-verifies-minted-readback
   (let [calls (atom []) p (grant/payload request context)]

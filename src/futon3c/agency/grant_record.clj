@@ -25,8 +25,10 @@
 (defn- props [r] (dissoc (:hx/props r) :grant/schema :act/harness))
 
 (defn- scope! [s]
-  (when-not (and (map? s) (every? #{:description :act-kinds :rule-ids} (keys s))
+  (when-not (and (map? s) (every? #{:description :act-kinds :rule-ids :own-acts-only} (keys s))
                  (text? (:description s))) (refuse! :invalid-scope :grant/scope))
+  (when (and (contains? s :own-acts-only) (not (true? (:own-acts-only s))))
+    (refuse! :invalid-scope :own-acts-only))
   (doseq [k [:act-kinds :rule-ids] :when (contains? s k)]
     (let [v (get s k)]
       (when-not (and (vector? v) (seq v) (= (count v) (count (set v)))
@@ -44,6 +46,11 @@
   (doseq [k [:grant/grantor :grant/grantee]]
     (when-not (text? (get r k)) (refuse! :missing-grant k)))
   (scope! (:grant/scope r))
+  (when (= "*" (:grant/grantee r))
+    (when (or (:grant/parent r) (not= "joe" (:grant/grantor r)))
+      (refuse! :wildcard-not-root :grant/grantee))
+    (when-not (true? (get-in r [:grant/scope :own-acts-only]))
+      (refuse! :wildcard-needs-own-acts :grant/scope)))
   (let [{:keys [from until] :as interval} (:grant/interval r)]
     (when-not (and (map? interval) (contains? interval :from)
                    (every? #{:from :until} (keys interval)))
@@ -80,6 +87,8 @@
               ancestors (chain! p by-id (conj seen id))
               cscope (:grant/scope r) pscope (:grant/scope p)
               ci (:grant/interval r) pi (:grant/interval p)]
+          (when (= "*" (:grant/grantee p))
+            (refuse! :wildcard-not-delegable :grant/parent))
           (when-not (= (:grant/grantor r) (:grant/grantee p))
             (refuse! :delegation-identity-mismatch :grant/parent))
           (when-not (and (checkable? cscope) (checkable? pscope))
@@ -124,11 +133,14 @@
    are validated stored grants. Query checks every ancestor, time, and scope;
    text-only scope never answers yes, even when its text mentions the target."
   ([records grantee target at] (grant-covers? records grantee target at nil))
-  ([records grantee target at leaf-id]
+  ([records grantee target at leaf-or-options]
   (try
     (stamp! at)
-    (let [by-id (index! records)
-          candidates (sort-by :hx/id (filter #(and (= grantee (get-in % [:hx/props :grant/grantee]))
+    (let [{:keys [leaf-id target-signer]}
+          (if (map? leaf-or-options) leaf-or-options {:leaf-id leaf-or-options})
+          by-id (index! records)
+          candidates (sort-by :hx/id (filter #(and (contains? #{grantee "*"}
+                                                                (get-in % [:hx/props :grant/grantee]))
                                               (or (nil? leaf-id) (= leaf-id (:hx/id %)))) records))
           results (for [leaf candidates]
                     (try
@@ -136,6 +148,8 @@
                         (doseq [node chain]
                           (let [r (props node) s (:grant/scope r) {:keys [from until]} (:grant/interval r)]
                             (when-not (checkable? s) (refuse! :scope-unchecked :grant/scope))
+                            (when (and (:own-acts-only s) (not= grantee target-signer))
+                              (refuse! :not-own-act :target-signer))
                             (when-not (contains? (set (concat (:act-kinds s) (:rule-ids s))) target)
                               (refuse! :out-of-scope :grant/scope))
                             (when (or (before? at from) (and until (not (before? at until))))
