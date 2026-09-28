@@ -1050,8 +1050,9 @@
 (defonce ^:private !delivery-turn-count (atom 0))
 (defonce ^:private !context-retrieval-runs (atom {}))
 
-(defn- context-retrieval-key [{:keys [agent-id session-id prompt-str response-text]}]
-  [(str agent-id) (str session-id) (hash [(str prompt-str) (str response-text)])])
+(defn- context-retrieval-key [{:keys [agent-id session-id prompt-str response-text turn-id]}]
+  [(str agent-id) (str session-id) (str (or turn-id turn-queue/*turn-id*))
+   (hash [(str prompt-str) (str response-text)])])
 
 (defn- retrieval-run
   [key]

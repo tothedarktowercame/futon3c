@@ -6032,7 +6032,7 @@
     (string? prompt) (assoc :prompt-line prompt)))
 
 (defn- this-turn-prompt-line
-  [agent-id session-id effective-prompt response-text surface]
+  [agent-id session-id turn-id effective-prompt response-text surface]
   (when (= "emacs-repl" (str surface))
     (try
       (when-let [f (some-> (find-ns 'futon3c.dev)
@@ -6041,6 +6041,7 @@
             :session-id (str session-id)
             :prompt-str (str effective-prompt)
             :response-text (str response-text)
+            :turn-id turn-id
             :bb-opts nil}))
       (catch Throwable _ nil))))
 
@@ -6113,7 +6114,7 @@
                                  (or ev-opts []))
                           (let [started-ns (System/nanoTime)
                                 prompt-line (this-turn-prompt-line
-                                             agent-id sid effective-prompt (:result result) surface)
+                                             agent-id sid turn-id effective-prompt (:result result) surface)
                                 wait-ms (/ (- (System/nanoTime) started-ns) 1000000.0)]
                             (sink-fn (cond-> (invoke-done-event result prompt-line)
                                        (= "emacs-repl" (str surface))

@@ -7,6 +7,7 @@
    :session-id "session-test"
    :prompt-str "--- CURRENT TURN ---\nSurface: emacs-repl\n\nUser message:\nquestion"
    :response-text "answer"
+   :turn-id "turn-test"
    :turn-counter (atom 0)
    :bb-opts nil})
 
