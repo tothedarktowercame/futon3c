@@ -24,6 +24,7 @@
     :act/rule-id (:rule-id record)
     :act/at (:at record)
     :act/effect-status (:status record)
+    :act/dispatch-edge (get-in record [:act/stamp :authority :dispatch-edge])
     :act/target-signer (or target-signer
                            (when (= :pattern-card/selection (:kind record))
                              (:agent record)))
@@ -113,6 +114,17 @@
           authority (:authority stamp)]
       (if (and (map? authority) (contains? authority :interpretation))
         (overreach act :interpretation-as-grant {:authority authority})
+        (if (contains? authority :dispatch-edge)
+          (if (and (= :disclosure/choice (:act/kind act))
+                   (= (:dispatch-edge authority) (:act/dispatch-edge act)))
+            (try
+              (act-stamp/validate! stamp #{:dispatch-edge})
+              {:act/id (:act/id act) :classification :authorised}
+              (catch clojure.lang.ExceptionInfo e
+                (overreach act (:reason (ex-data e))
+                           {:field (:field (ex-data e))})))
+            (overreach act :authority-kind-not-allowed
+                       {:authority :dispatch-edge :act/kind (:act/kind act)}))
         (try
           (let [stamp (act-stamp/validate! stamp)
                 grant-id (get-in stamp [:authority :grant])
@@ -153,7 +165,7 @@
                                            :grant-reason (:reason answer)}))))))
           (catch clojure.lang.ExceptionInfo e
             (overreach act (:reason (ex-data e))
-                       {:field (:field (ex-data e))})))))))
+                       {:field (:field (ex-data e))}))))))))
 
 (defn scan-report
   "Return one classification for every act, including unstamped history."

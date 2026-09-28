@@ -94,7 +94,9 @@
   (act-harness/validate! (:act/harness record))
   record)
 
-(defn- sha256-text [text]
+(defn sha256-text
+  "Return the lowercase SHA-256 digest used to bind a source prompt."
+  [text]
   (let [bytes (.getBytes (str text) StandardCharsets/UTF_8)
         digest (.digest (MessageDigest/getInstance "SHA-256") bytes)]
     (apply str (map #(format "%02x" (bit-and (int %) 0xff)) digest))))

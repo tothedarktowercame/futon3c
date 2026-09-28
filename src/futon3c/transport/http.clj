@@ -85,6 +85,8 @@
             [futon3c.agency.offer-record :as offer-record]
             [futon3c.agency.agreement-record :as agreement-record]
             [futon3c.agency.agreement-record-cli :as agreement-cli]
+            [futon3c.agency.disclosure-record :as disclosure-record]
+            [futon3c.agency.disclosure-record-cli :as disclosure-cli]
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
             [futon3c.agency.grant-record :as grant-record]
@@ -9448,6 +9450,91 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- disclosure-refusal [e]
+  (let [reason (or (:reason (ex-data e)) (:refusal (ex-data e)) :invalid-disclosure)
+        unavailable? (contains? #{:request-commission-missing
+                                  :request-commission-hot-archive-disagreement
+                                  :request-commission-digest-mismatch
+                                  :request-text-unavailable} reason)
+        status (cond
+                 (= :invoke-job-missing reason) 404
+                 (= :not-the-assignee reason) 403
+                 (or unavailable? (contains? #{:orchestrator-unknown
+                                               :orchestrator-ambiguous} reason)) 409
+                 :else 400)]
+    (json-response status {:ok false
+                           :reason (if unavailable? :request-text-unavailable reason)})))
+
+(defn- disclosure-idempotency-key [record]
+  (str "disclosure:"
+       (UUID/nameUUIDFromBytes
+        (.getBytes (pr-str (select-keys record
+                                        [:author :source-job :unspecified :chosen
+                                         :affects :inside-request]))
+                   StandardCharsets/UTF_8))))
+
+(defn- disclosure-edge [edge]
+  {:evidence/id (:evidence-id edge)
+   :evidence/body {:edge/id (:edge-id edge) :edge/kind (:kind edge)
+                   :edge/from (:from edge) :edge/to (:to edge)}})
+
+(defn handle-disclosure [request]
+  (let [payload (parse-json-map (read-body request))]
+    (cond
+      (not (map? payload)) (json-response 400 {:ok false :reason :invalid-json})
+      (or (contains? payload :at) (contains? payload "at"))
+      (json-response 400 {:ok false :reason :caller-supplied-at})
+      :else
+      (try
+        (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
+              source-job (some-> (or (:source-job payload)
+                                     (get payload "source-job")) str)
+              envelope (invoke-job-request-commission source-job)
+              prompt (get-in envelope [:commission :prompt])
+              _ (when-not (string? prompt)
+                  (throw (ex-info "Invoke prompt unavailable"
+                                  {:reason :request-text-unavailable})))
+              edges (->> (coordination-ledger/recent-mesh-edges 1000)
+                         (filter #(and (= source-job (:edge-id %))
+                                       (= :invoke (:kind %))))
+                         (mapv disclosure-edge))
+              _ (when (empty? edges)
+                  (throw (ex-info "No invoke edge" {:reason :orchestrator-unknown})))
+              _ (when (< 1 (count edges))
+                  (throw (ex-info "Ambiguous invoke edge"
+                                  {:reason :orchestrator-ambiguous})))
+              edge (first edges)
+              affects-raw (or (:affects payload) (get payload "affects"))
+              affects (when (map? affects-raw)
+                        (cond-> {:kind (parse-keyword (or (:kind affects-raw)
+                                                         (get affects-raw "kind")))
+                                 :id (or (:id affects-raw) (get affects-raw "id"))}
+                          (or (:path affects-raw) (get affects-raw "path"))
+                          (assoc :path (or (:path affects-raw)
+                                           (get affects-raw "path")))))
+              record {:kind :disclosure/choice :schema 1 :author caller
+                      :at (str (Instant/now)) :source-job source-job
+                      :unspecified (or (:unspecified payload) (get payload "unspecified"))
+                      :chosen (or (:chosen payload) (get payload "chosen"))
+                      :affects affects
+                      :inside-request {:basis :source-span
+                                       :quote (or (:quote payload) (get payload "quote"))
+                                       :text-sha256 (disclosure-record/sha256-text prompt)}
+                      :act/stamp (act-stamp/stamp
+                                  caller caller
+                                  {:dispatch-edge (:evidence/id edge)} :declared)
+                      :act/harness (act-harness/plain "route:futon3c.disclosure")}
+              _ (disclosure-record/validate-against-source!
+                 (assoc record :id "act:pending-mint") prompt edges)
+              result (disclosure-cli/write!
+                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      record (disclosure-idempotency-key record))]
+          (json-response 200 (assoc result :ok true)))
+        (catch clojure.lang.ExceptionInfo e (disclosure-refusal e))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- promise-creation [inputs promise-id]
   (some (fn [row]
           (when (and (contains? obligations/creation-types (:evidence/type row))
@@ -10000,6 +10087,9 @@
 
       (and (= :post method) (= "/api/alpha/offer" uri))
       (handle-offer request)
+
+      (and (= :post method) (= "/api/alpha/disclosure" uri))
+      (handle-disclosure request)
 
       (and (= :post method) (= "/api/alpha/promise/release" uri))
       (handle-promise-release request)

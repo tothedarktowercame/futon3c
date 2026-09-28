@@ -148,3 +148,17 @@
   (is (= [:act-time-unknown]
          (reason-for [(act "act:garbled" "act:grant-root" :deploy "yesterday" "agent-a")]
                      [root]))))
+
+(deftest dispatch-edge-authority-is-confined-to-disclosures
+  (let [dispatch-stamp {:executor "codex-5" :signer "codex-5"
+                        :authority {:dispatch-edge "edge-evidence-1"}
+                        :executor-basis :declared}
+        disclosure {:act/id "act:disclosure" :act/kind :disclosure/choice
+                    :act/at in-time :act/dispatch-edge "edge-evidence-1"
+                    :act/stamp dispatch-stamp}
+        unrelated (assoc disclosure :act/id "act:deploy" :act/kind :deploy)]
+    (is (= :authorised
+           (:classification (overreach/classify-act disclosure []))))
+    (is (= :authority-kind-not-allowed
+           (get-in (overreach/classify-act unrelated [])
+                   [:finding :finding/reason])))))
