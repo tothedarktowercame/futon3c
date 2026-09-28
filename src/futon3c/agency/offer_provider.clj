@@ -1,7 +1,8 @@
 (ns futon3c.agency.offer-provider
   "Cache-only prompt segment for the newest verified exact-seat offer write."
   (:require [clojure.string :as str]
-            [futon3c.agency.prompt-line :as prompt-line]))
+            [futon3c.agency.prompt-line :as prompt-line])
+  (:import [java.time Instant]))
 
 (defonce ^:private !offers (atom {}))
 
@@ -25,12 +26,18 @@
 
 (defn provider
   "Return one non-pattern marker from cache only. The `!` marker means a
-   structured offer is visible; the header carries its id and option count."
-  [{:keys [agent-id session-id]}]
+   structured offer is visible; the header carries its id and option count.
+   An offer is hidden from its `:until` onward (half-open, as in
+   `offer-record/active-offers-as-of`)."
+  [{:keys [agent-id session-id render-at]}]
   (when-let [{:keys [record observed-at]}
              (get @!offers [(str agent-id) (str session-id)])]
-    (let [id (str (:id record))]
-      (when-not (str/blank? id)
+    (let [id (str (:id record))
+          until (:until record)
+          expired? (and until render-at
+                        (not (.isBefore (Instant/parse (str render-at))
+                                        (Instant/parse (str until)))))]
+      (when-not (or (str/blank? id) expired?)
         {:segment/id :offer
          :segment/marker "!"
          :segment/provider "futon3c.agency.offer-provider/provider"

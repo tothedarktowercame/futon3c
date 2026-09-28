@@ -30,8 +30,10 @@
 (defn fake-store
   ([] (fake-store true))
   ([with-grant?]
+   (fake-store with-grant? (fn [id] (grant id "*"))))
+  ([with-grant? make-grant]
    (let [grant-id "act:offer-grant"
-         docs (atom (cond-> {} with-grant? (assoc grant-id (grant grant-id "*"))))
+         docs (atom (cond-> {} with-grant? (assoc grant-id (make-grant grant-id))))
          keys (atom {})
          calls (atom [])
          next-id (atom 0)]
@@ -132,3 +134,30 @@
         (is (= (get-in (body first-response) [:record :id])
                (get-in (body second-response) [:record :id])))
         (is (true? (get-in (body second-response) [:receipt :no-op?])))))))
+
+(deftest grants-that-do-not-cover-own-offers-are-not-found
+  ;; The live "*" own-acts grant lists other act kinds; a grant without
+  ;; :own-acts-only, or one naming another agent, must not cover agent-a.
+  ;; For "*" without :own-acts-only, grant validation (wildcard-needs-own-acts)
+  ;; refuses it even when the route's lookup filter is removed.
+  (doseq [make-grant [(fn [id] (assoc-in (grant id "*") [:hx/props :grant/scope :act-kinds]
+                                         [:pattern-card/selection :act/withdrawal]))
+                      (fn [id] (update-in (grant id "*") [:hx/props :grant/scope]
+                                          dissoc :own-acts-only))
+                      (fn [id] (grant id "agent-b"))]]
+    (let [{:keys [request! calls]} (fake-store true make-grant)]
+      (with-redefs [store/request! request!]
+        (let [response ((handler) (request base-body))]
+          (is (= 403 (:status response)))
+          (is (= "no-grant" (:reason (body response))))
+          (is (empty? (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest expired-offer-leaves-the-prompt
+  (let [{:keys [request!]} (fake-store)]
+    (with-redefs [store/request! request!]
+      (let [response ((handler) (request (assoc base-body :until "2026-09-28T15:00:00Z")))
+            seg (fn [at] (offer-provider/provider
+                          {:agent-id "agent-a" :session-id "session-a" :render-at at}))]
+        (is (= 200 (:status response)))
+        (is (some? (seg "2026-09-28T14:59:59Z")))
+        (is (nil? (seg "2026-09-28T15:00:00Z")))))))
