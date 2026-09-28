@@ -19,7 +19,7 @@
   (fn [symbol]
     (case symbol
       futon2.aif.full-loop-runner/config identity
-      futon2.aif.full-loop-runner/run-opportunity! run!
+      futon2.aif.full-loop-runtime/run-opportunity! run!
       futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
       futon3c.peripheral.live-wm-selection/validated-selection identity
       nil)))

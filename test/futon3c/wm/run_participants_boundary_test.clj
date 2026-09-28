@@ -33,7 +33,7 @@
                   (fn [sym]
                     (case sym
                       futon2.aif.full-loop-runner/config identity
-                      futon2.aif.full-loop-runner/run-opportunity! persist))]
+                      futon2.aif.full-loop-runtime/run-opportunity! persist))]
           (is (= 200 (:status (handler {:request-method :post :uri "/api/alpha/wm/click"
                                        :body (json/generate-string payload)})))))))
     {:record @record :consumed @consumed}))

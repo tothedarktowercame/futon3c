@@ -42,7 +42,7 @@
             (fn [sym]
               (case sym
                 futon2.aif.full-loop-runner/config identity
-                futon2.aif.full-loop-runner/run-opportunity!
+                futon2.aif.full-loop-runtime/run-opportunity!
                 (fn [opts]
                   (swap! observed conj {:click-id (:click-id opts) :rows (rows)})
                   (throw (ex-info "intentional immediate runner failure" {:fixture true})))
