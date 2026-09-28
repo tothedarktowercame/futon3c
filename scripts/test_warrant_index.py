@@ -236,6 +236,12 @@ class IndexTest(unittest.TestCase):
         row = self.check('stale', [self.a])
         self.assertEqual('files', row['basis'])
 
+    def test_reach_record_leaves_a_whole_file_test_without_a_record(self):
+        self.dependency_run()
+        result = self.runcli('reach-record', '--ns', 'test.one', '--file-rule', 'test.one',
+                             '--reach-dir', str(self.root / 'reach'))
+        self.assertEqual('keeps the whole-file rule', json.loads(result.stdout)['skipped'])
+        self.assertEqual([], list((self.root / 'reach').glob('*.json')))
     def test_reach_record_skips_stale_entry(self):
         self.dependency_run(); self.a.write_text(self.a.read_text() + '\n')
         result = self.runcli('reach-record', '--ns', 'test.one',

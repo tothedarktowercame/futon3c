@@ -20,6 +20,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT.parent / 'storage/test-registry/warrant-index.sqlite'
 WIRE_LEDGER_TEST = ROOT / 'test/futon3c/diagramprover/wm_wire_ledger_test.clj'
 REACH_DIR = ROOT.parent / 'storage/test-registry/reach-records'
+# Tests that keep the whole-file rule on purpose. The definition rule lets a
+# warrant stay current when an unreached part of a loaded file changes, even if
+# the change stops the file loading; these tests load every file and are rerun
+# on any change, so that break is seen by one run.
+FILE_RULE_NAMESPACES = frozenset({'futon3c.diagramprover.wm-wire-everything-loads-test'})
 TOKEN = re.compile(r'\s+|,[\s,]*|;[^\n]*|"(?:\\.|[^"\\])*"|#\{|[{}\[\]()]|[^\s,{}\[\]()]+')
 CLASSES = ('current', 'stale', 'registration-refused', 'not-passing',
            'unverifiable', 'no-warrant')
@@ -244,11 +249,15 @@ def classify(db, namespaces, root=None, reach_dir=REACH_DIR):
     return rows
 
 
-def reach_record(db, namespaces, reach_dir, root=None):
+def reach_record(db, namespaces, reach_dir, root=None, file_rule=FILE_RULE_NAMESPACES):
     destination = Path(reach_dir); destination.mkdir(parents=True, exist_ok=True)
     latest = latest_rows(db, namespaces, passing_only=True)
     answers = []
     for namespace in sorted(namespaces):
+        if namespace in file_rule:
+            answers.append({'namespace': namespace,
+                            'skipped': 'keeps the whole-file rule'})
+            continue
         run = latest.get(namespace)
         if not run:
             answers.append({'namespace': namespace,
@@ -324,6 +333,8 @@ def main(argv=None):
     reach_parser.add_argument('--ns', nargs='+', action='extend')
     reach_parser.add_argument('--wire', action='store_true')
     reach_parser.add_argument('--reach-dir', default=str(REACH_DIR))
+    reach_parser.add_argument('--file-rule', nargs='+', default=[],
+                              help='further namespaces that keep the whole-file rule')
     affected_parser = sub.add_parser('affected'); affected_parser.add_argument('paths', nargs='+')
     args = parser.parse_args(argv)
     with connect(args.db) as db:
@@ -337,7 +348,8 @@ def main(argv=None):
         if args.wire: selected.update(wire_namespaces())
         if args.ns is None and not args.wire: selected.update(local_namespaces(db))
         if args.action == 'reach-record':
-            for row in reach_record(db, selected, args.reach_dir, args.root):
+            for row in reach_record(db, selected, args.reach_dir, args.root,
+                                    FILE_RULE_NAMESPACES | set(args.file_rule)):
                 print(json.dumps(row, sort_keys=True))
             return 0
         selected = {namespace for namespace in selected if namespace.startswith(args.prefix)}
