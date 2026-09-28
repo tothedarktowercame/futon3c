@@ -166,6 +166,20 @@
     (spit file text)
     (println (.getPath file))))
 
+(defn- checked-field-paths [fields]
+  (concat
+   [[:live-absent?]]
+   (mapcat
+    (fn [wire-id]
+      (concat
+       (map #(vector :wires wire-id %) [:writer :reader :product-present? :received?])
+       (for [mode [:absent :different]
+             field [:writer-present? :received?]]
+         [:wires wire-id :interventions mode field])
+       (for [field (keys (get-in fields [:second-layer wire-id]))]
+         [:second-layer wire-id field])))
+    wire-ids)))
+
 (deftest temporal-courier-producer
   (let [actual (build-record)]
     (if (= "1" (System/getenv "WM_WIRE_PRODUCER_WRITE"))
@@ -173,5 +187,7 @@
       (let [expected (edn/read-string
                       (slurp (first (filter #(.startsWith (.getName %) "temporal-courier@")
                                             (.listFiles (io/file "test/fixtures/wire-producers"))))))]
-        (doseq [[field value] (:fields expected)]
-          (testing (name field) (is (= value (get-in actual [:fields field])))))))))
+        (doseq [path (checked-field-paths (:fields expected))]
+          (testing (pr-str path)
+            (is (= (get-in expected (into [:fields] path))
+                   (get-in actual (into [:fields] path))))))))))
