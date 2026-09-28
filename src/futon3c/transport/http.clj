@@ -9566,6 +9566,45 @@
    (merge {:agent agent :session session :notice-id (str evidence-id) :kind kind}
           fields)))
 
+(defn- agreement-refusal-id [evidence-id]
+  (str "agreement-refusal:"
+       (UUID/nameUUIDFromBytes (.getBytes (str evidence-id) StandardCharsets/UTF_8))))
+
+(defn- record-agreement-refusal!
+  [base {:keys [agent session text evidence-id parsed reason candidates ambiguous?]}]
+  (let [id (agreement-refusal-id evidence-id)
+        type (if ambiguous? :agreement/ambiguous :agreement/refused)
+        body (cond-> {:acceptance-evidence evidence-id :text text :reason reason
+                      :offer-id (:offer-id parsed) :option-id (:option-id parsed)
+                      :agent agent :session session}
+               ambiguous? (assoc :candidates candidates))
+        entry (origin/stamp
+               {:evidence/id id :evidence/type type :evidence/claim-type :observation
+                :evidence/subject {:ref/type :evidence :ref/id evidence-id}
+                :evidence/author "futon3c/agreement-route"
+                :evidence/in-reply-to evidence-id :evidence/session-id session
+                :evidence/at (str (Instant/now)) :evidence/tags [:agreement]
+                :evidence/body body}
+               (origin/harness "agreement-route" evidence-id)
+               "futon3c.transport.http")]
+    (try
+      (let [receipt (rule-record-store/request! base "POST" "/api/alpha/evidence" entry)]
+        (if (:ok receipt) {:recorded true :record-id id}
+            {:recorded false :record-id nil}))
+      (catch clojure.lang.ExceptionInfo e
+        (if (= 409 (:status (ex-data e)))
+          (try
+            (let [stored (rule-record-store/request!
+                          base "GET" (str "/api/alpha/evidence/"
+                                          (java.net.URLEncoder/encode id "UTF-8")) nil)]
+              (if (and (= id (:evidence/id stored)) (= type (:evidence/type stored))
+                       (= evidence-id (get-in stored [:evidence/body :acceptance-evidence])))
+                {:recorded true :record-id id}
+                {:recorded false :record-id nil}))
+            (catch Throwable _ {:recorded false :record-id nil}))
+          {:recorded false :record-id nil}))
+      (catch Throwable _ {:recorded false :record-id nil}))))
+
 (defn- grant-bearing-option? [option]
   (let [scope (:option/scope option)]
     (and (:grant-until scope)
@@ -9673,18 +9712,25 @@
                                         grant-outcome)))
 
             (:refused resolution)
-            (let [reason (get-in resolution [:refused :reason])]
+            (let [reason (get-in resolution [:refused :reason])
+                  recorded (record-agreement-refusal!
+                            base {:agent agent :session session :text text
+                                  :evidence-id evidence-id :parsed parsed :reason reason})]
               (publish-agreement-notice!
                agent session evidence-id "agreement-refused" {:reason reason})
-              (json-response 409 {:ok false :reason reason}))
+              (json-response 409 (merge {:ok false :reason reason} recorded)))
 
             (:ambiguous resolution)
-            (let [candidates (get-in resolution [:ambiguous :candidates])]
+            (let [candidates (get-in resolution [:ambiguous :candidates])
+                  recorded (record-agreement-refusal!
+                            base {:agent agent :session session :text text
+                                  :evidence-id evidence-id :parsed parsed
+                                  :reason :ambiguous :candidates candidates :ambiguous? true})]
               (publish-agreement-notice!
                agent session evidence-id "agreement-ambiguous"
                {:candidates candidates})
-              (json-response 409 {:ok false :reason :ambiguous
-                                  :candidates candidates}))
+              (json-response 409 (merge {:ok false :reason :ambiguous
+                                         :candidates candidates} recorded)))
 
             :else
             (let [{:keys [offer option]} (:accept resolution)

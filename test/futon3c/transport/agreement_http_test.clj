@@ -34,14 +34,25 @@
 
 (defn fake-store [offers evidence-map & withdrawals]
   (let [docs (atom (into {} (map (fn [o] [(:id o) (offer-record/record->hyperedge o)]) offers)))
-        keys (atom {}) calls (atom []) n (atom 0) fail-grant? (atom false)]
+        written-evidence (atom {}) keys (atom {}) calls (atom []) n (atom 0)
+        fail-grant? (atom false) fail-evidence? (atom false)]
     (doseq [w withdrawals]
       (swap! docs assoc (:hx/id w) w))
-    {:calls calls :docs docs :fail-grant? fail-grant?
+    {:calls calls :docs docs :written-evidence written-evidence
+     :fail-grant? fail-grant? :fail-evidence? fail-evidence?
      :request!
      (fn [_ method path value]
        (swap! calls conj [method path value])
        (cond
+         (and (= method "POST") (= path "/api/alpha/evidence"))
+         (do
+           (when @fail-evidence?
+             (throw (ex-info "evidence store failed" {:status 503})))
+           (let [id (:evidence/id value)]
+             (if (contains? @written-evidence id)
+               (throw (ex-info "duplicate" {:status 409}))
+               (do (swap! written-evidence assoc id value)
+                   {:ok true :evidence/id id :entry value}))))
          (= method "POST")
          (let [key (:hx/idempotency-key value)
                grant? (= :grant/record (:hx/type value))]
@@ -55,9 +66,10 @@
                (swap! docs assoc id doc) (swap! keys assoc key id)
                {:ok true :hx/id id})))
          (str/starts-with? path "/api/alpha/evidence/")
-         (or (get evidence-map (java.net.URLDecoder/decode
-                                (subs path (count "/api/alpha/evidence/")) "UTF-8"))
-             (throw (ex-info "missing" {:status 404})))
+         (let [id (java.net.URLDecoder/decode
+                   (subs path (count "/api/alpha/evidence/")) "UTF-8")]
+           (or (get evidence-map id) (get @written-evidence id)
+               (throw (ex-info "missing" {:status 404}))))
          (str/starts-with? path "/api/alpha/hyperedge/")
          (or (get @docs (java.net.URLDecoder/decode
                          (subs path (count "/api/alpha/hyperedge/")) "UTF-8"))
@@ -109,11 +121,11 @@
             (is (not (str/includes? (header) "agreement ")))
             (is (empty? (filter #(= "POST" (first %)) @calls)))))))))
 
-(deftest ambiguity-and-withdrawal-write-nothing
+(deftest ambiguity-and-withdrawal-record-durable-refusals
   (let [o1 (offer "act:offer-a" options)
         o2 (offer "act:offer-b" [(first options)])
         e (evidence "e:yes" "joe" "session-a" "yes" "agent-a")]
-    (let [{:keys [request! calls]} (fake-store [o1 o2] {"e:yes" e})]
+    (let [{:keys [request! written-evidence]} (fake-store [o1 o2] {"e:yes" e})]
       (with-redefs [store/request! request!]
         (let [r ((handler) (req "yes" "e:yes"))]
           (is (= 409 (:status r))) (is (= "ambiguous" (:reason (response-body r))))
@@ -121,17 +133,49 @@
           (is (str/includes?
                (header)
                "agreement ambiguous: ask Joe one short question naming which (act:offer-a 1, act:offer-a 2, act:offer-b 1)"))
-          (is (empty? (filter #(= "POST" (first %)) @calls))))))
+          (is (true? (:recorded (response-body r))))
+          (is (= 1 (count @written-evidence)))
+          (let [entry (first (vals @written-evidence))]
+            (is (= :agreement/ambiguous (:evidence/type entry)))
+            (is (= "futon3c/agreement-route" (:evidence/author entry)))
+            (is (= "e:yes" (:evidence/in-reply-to entry)))
+            (is (= 3 (count (get-in entry [:evidence/body :candidates]))))
+            (is (= :harness (get-in entry [:evidence/origin :kind])))))))
     (let [w {:hx/id "act:w" :hx/type :act/withdrawal
              :hx/props {:author "agent-a" :target "act:offer-a" :status :effective
                         :basis {:kind :self} :at (str (Instant/now))}}
           named (evidence "e:named" "joe" "session-a" "yes act:offer-a" "agent-a")
-          {:keys [request! calls]} (fake-store [o1] {"e:named" named} w)]
+          {:keys [request! written-evidence]} (fake-store [o1] {"e:named" named} w)]
       (with-redefs [store/request! request!]
         (let [r ((handler) (req "yes act:offer-a" "e:named"))]
           (is (= 409 (:status r))) (is (= "unknown-offer" (:reason (response-body r))))
           (is (str/includes? (header) "agreement refused: unknown-offer"))
-          (is (empty? (filter #(= "POST" (first %)) @calls))))))))
+          (is (true? (:recorded (response-body r))))
+          (let [entry (first (vals @written-evidence))]
+            (is (= :agreement/refused (:evidence/type entry)))
+            (is (= :unknown-offer (get-in entry [:evidence/body :reason])))
+            (is (= "act:offer-a" (get-in entry [:evidence/body :offer-id]))))
+          ;; Replaying the same acceptance verifies the deterministic record.
+          (let [replay ((handler) (req "yes act:offer-a" "e:named"))]
+            (is (= 409 (:status replay)))
+            (is (true? (:recorded (response-body replay))))
+            (is (= (:record-id (response-body r)) (:record-id (response-body replay))))
+            (is (= 1 (count @written-evidence)))))))))
+
+(deftest refusal-evidence-failure-does-not-change-the-409
+  (let [o (offer "act:offer-a" [(first options)])
+        e (evidence "e:failure-refusal" "joe" "session-a" "yes act:missing" "agent-a")
+        {:keys [request! fail-evidence? written-evidence]}
+        (fake-store [o] {"e:failure-refusal" e})]
+    (reset! fail-evidence? true)
+    (with-redefs [store/request! request!]
+      (let [r ((handler) (req "yes act:missing" "e:failure-refusal"))
+            b (response-body r)]
+        (is (= 409 (:status r)))
+        (is (= "unknown-offer" (:reason b)))
+        (is (false? (:recorded b)))
+        (is (nil? (:record-id b)))
+        (is (empty? @written-evidence))))))
 
 (deftest accept-clears-prompt-and-replay-is-idempotent
   (let [o (offer "act:offer-a" options)
@@ -156,7 +200,7 @@
         (let [second-r ((handler) (req "yes act:offer-a 2" "e:second"))]
           (is (= 409 (:status second-r)))
           (is (= "unknown-offer" (:reason (response-body second-r)))))
-        (is (= 1 (count (filter #(= "POST" (first %)) @calls))))))))
+        (is (= 2 (count (filter #(= "POST" (first %)) @calls))))))))
 
 (deftest finite-grant-option-writes-one-idempotent-covering-grant
   (let [grant-until (str (.plusSeconds (Instant/now) 3600))
