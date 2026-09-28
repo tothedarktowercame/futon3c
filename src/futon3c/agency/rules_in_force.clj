@@ -89,9 +89,11 @@
                         (not-any? #(valid-reversal? % candidate) reversals))
                       provisional)
              ended-by (->> classified
+                           ;; The grant check decides, not authorship: the "*"
+                           ;; own-acts grant already covers only the signer, and a
+                           ;; named grant lets another party withdraw (P10 (2)).
                            (filter (fn [[effect classification]]
-                                     (and (= signer (:author effect))
-                                          (= :effective (:status effect))
+                                     (and (= :effective (:status effect))
                                           (contains? #{:authorised :unverified-executor}
                                                      (:classification classification)))))
                            (map first)
@@ -105,7 +107,7 @@
                             (or (nil? signer)
                                 (= (:id effect) (:id ended-by))
                                 (contains? provisional-ids (:id effect))
-                                (and (= signer (:author effect))
+                                (and (= :effective (:status effect))
                                      (contains? #{:authorised :unverified-executor}
                                                 (:classification classification))))))
                   (mapv (fn [[effect classification]]

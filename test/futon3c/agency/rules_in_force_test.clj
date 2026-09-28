@@ -107,3 +107,26 @@
     (is (= {:record-id "analysis:withdraw" :reason :interpretation-not-effect}
            (some #(when (= "analysis:withdraw" (:record-id %)) %)
                  (:ignored result))))))
+
+(deftest a-party-holding-a-withdrawal-grant-ends-the-family
+  ;; Decision P10 (2): withdrawing another party's act needs a grant, and
+  ;; with one it takes effect.
+  (let [records (p13b-records)
+        named {:hx/id "act:named" :hx/type :grant/record
+               :hx/props {:grant/grantor "joe" :grant/grantee "resident-a"
+                          :grant/basis :explicit
+                          :grant/scope {:description "withdraw rules"
+                                        :act-kinds [:act/withdrawal]}
+                          :grant/interval {:from "2026-09-24T00:00:00Z"}
+                          :grant/source {:id "e:joe2" :author "joe"
+                                         :at "2026-09-24T00:00:00Z" :quote "named"}}}
+        resident-stamp {:executor "resident-a" :signer "resident-a"
+                        :authority {:grant "act:named"}
+                        :executor-basis :session-bound}
+        effect (withdrawal "act:granted" "resident-a"
+                           "2026-09-26T12:00:00Z" family resident-stamp)
+        result (rules/rules-in-force-as-of records [effect] [grant named]
+                                           "2026-09-26T12:00:30Z")]
+    (is (= [{:family family :by "act:granted"}] (:ended result)))
+    (is (empty? (:provisional result)))
+    (is (empty? (:ignored result)))))
