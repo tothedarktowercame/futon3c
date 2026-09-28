@@ -6111,9 +6111,13 @@
                         (do
                           (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                                  (or ev-opts []))
-                          (let [prompt-line (this-turn-prompt-line
-                                             agent-id sid effective-prompt (:result result) surface)]
-                            (sink-fn (invoke-done-event result prompt-line))))
+                          (let [started-ns (System/nanoTime)
+                                prompt-line (this-turn-prompt-line
+                                             agent-id sid effective-prompt (:result result) surface)
+                                wait-ms (/ (- (System/nanoTime) started-ns) 1000000.0)]
+                            (sink-fn (cond-> (invoke-done-event result prompt-line)
+                                       (= "emacs-repl" (str surface))
+                                       (assoc :prompt-line-wait-ms wait-ms)))))
                         (let [err (:error result)
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]
