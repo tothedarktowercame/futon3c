@@ -123,3 +123,17 @@
         (activation/record! nil artifact "packet"))
       (is (= :search-returned-nothing
              (get-in @appended [:evidence/body :error :reason]))))))
+
+(deftest real-descriptor-hashes-files-and-caches
+  ;; Every other test fakes *descriptor-fn*; this one runs the real hashing.
+  (let [script (java.io.File/createTempFile "notions" ".py")
+        index (java.io.File/createTempFile "index" ".json")]
+    (spit script "print(1)")
+    (spit index "[]")
+    (with-redefs [activation/script-file (constantly script)
+                  activation/index-file (constantly index)]
+      (let [d1 (activation/retrieval-descriptor)
+            d2 (activation/retrieval-descriptor)]
+        (is (re-matches #"[0-9a-f]{64}" (:index-sha256 d1)))
+        (is (not= (:script-sha256 d1) (:index-sha256 d1)))
+        (is (= d1 d2))))))

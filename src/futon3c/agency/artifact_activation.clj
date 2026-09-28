@@ -52,7 +52,7 @@
                         (remove (fn [[[path]]]
                                   (= path (.getCanonicalPath f))))
                         (into {})
-                        (assoc key digest))))
+                        (#(assoc % key digest)))))
           digest))))
 
 (defn retrieval-descriptor []
