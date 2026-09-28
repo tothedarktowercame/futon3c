@@ -9544,6 +9544,21 @@
    :evidence/body {:edge/id (:edge-id edge) :edge/kind (:kind edge)
                    :edge/from (:from edge) :edge/to (:to edge)}})
 
+(defn- disclosure-source-edges [source-job]
+  (->> (coordination-ledger/recent-mesh-edges 1000)
+       (filter #(and (= source-job (:edge-id %))
+                     (= :invoke (:kind %))))
+       (mapv disclosure-edge)))
+
+(defn- unique-disclosure-source-edge! [source-job]
+  (let [edges (disclosure-source-edges source-job)]
+    (when (empty? edges)
+      (throw (ex-info "No invoke edge" {:reason :orchestrator-unknown})))
+    (when (< 1 (count edges))
+      (throw (ex-info "Ambiguous invoke edge"
+                      {:reason :orchestrator-ambiguous})))
+    (first edges)))
+
 (defn handle-disclosure [request]
   (let [payload (parse-json-map (read-body request))]
     (cond
@@ -9560,16 +9575,7 @@
               _ (when-not (string? prompt)
                   (throw (ex-info "Invoke prompt unavailable"
                                   {:reason :request-text-unavailable})))
-              edges (->> (coordination-ledger/recent-mesh-edges 1000)
-                         (filter #(and (= source-job (:edge-id %))
-                                       (= :invoke (:kind %))))
-                         (mapv disclosure-edge))
-              _ (when (empty? edges)
-                  (throw (ex-info "No invoke edge" {:reason :orchestrator-unknown})))
-              _ (when (< 1 (count edges))
-                  (throw (ex-info "Ambiguous invoke edge"
-                                  {:reason :orchestrator-ambiguous})))
-              edge (first edges)
+              edge (unique-disclosure-source-edge! source-job)
               affects-raw (or (:affects payload) (get payload "affects"))
               affects (when (map? affects-raw)
                         (cond-> {:kind (parse-keyword (or (:kind affects-raw)
@@ -9591,7 +9597,7 @@
                                   {:dispatch-edge (:evidence/id edge)} :declared)
                       :act/harness (act-harness/plain "route:futon3c.disclosure")}
               _ (disclosure-record/validate-against-source!
-                 (assoc record :id "act:pending-mint") prompt edges)
+                 (assoc record :id "act:pending-mint") prompt [edge])
               result (disclosure-cli/write!
                       (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
                       record (disclosure-idempotency-key record))]
@@ -9657,16 +9663,8 @@
                   (throw (ex-info "Disclosure target not found"
                                   {:reason :unknown-disclosure})))
               disclosure (disclosure-record/hyperedge->record target-edge)
-              edges (->> (coordination-ledger/recent-mesh-edges 1000)
-                         (filter #(and (= (:source-job disclosure) (:edge-id %))
-                                       (= :invoke (:kind %))))
-                         (mapv disclosure-edge))
-              _ (when (empty? edges)
-                  (throw (ex-info "No invoke edge" {:reason :orchestrator-unknown})))
-              _ (when (< 1 (count edges))
-                  (throw (ex-info "Ambiguous invoke edge"
-                                  {:reason :orchestrator-ambiguous})))
-              edge (first edges)
+              edge (unique-disclosure-source-edge! (:source-job disclosure))
+              edges [edge]
               record {:kind :act/withdrawal :author caller :target target
                       :status :effective :basis {:kind :dispatch-edge}
                       :reason reason :at (str (Instant/now))
@@ -9958,7 +9956,97 @@
                           {:reason :store-failure})))
         {:entry stored :existing? false}))))
 
-(defn handle-negation-interpretation [request]
+(defn- negation-routing-id [interpretation-id]
+  (str "interpretation-negation-routing:"
+       (UUID/nameUUIDFromBytes
+        (.getBytes (str interpretation-id) StandardCharsets/UTF_8))))
+
+(defn- negation-routing-job-id [interpretation-id]
+  (str "invoke-negation-routing-"
+       (UUID/nameUUIDFromBytes
+        (.getBytes (str interpretation-id) StandardCharsets/UTF_8))))
+
+(defn route-negation-reading!
+  "Route a resolved immutable INTERPRETATION to its job's agent orchestrator.
+   The job id derives from the interpretation id, so retry cannot make a second
+   bell. Joe's own confirmation is deliberately left for P12-5-7."
+  [config disclosure interpretation orchestrator]
+  (if (= "joe" orchestrator)
+    {:status :joe-orchestrator-pending}
+    (let [interpretation-id (:evidence/id interpretation)
+          job-id (negation-routing-job-id interpretation-id)
+          existing (or (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+                       (read-commission-archive job-id))]
+      (if existing
+        {:status :routed :job-id job-id :existing? true}
+        (let [fragment (get-in interpretation [:evidence/body :fragment-text])
+              target (:id disclosure)
+              reason (str "Joe's negation: " fragment)
+              withdrawal-body {:caller orchestrator :target target :reason reason}
+              prompt (str "Joe said verbatim: " (pr-str fragment) "\n"
+                          "Disclosure " target ": " (:chosen disclosure) "\n"
+                          "Interpretation: " interpretation-id "\n"
+                          "To withdraw it, POST /api/alpha/disclosure/withdraw with exactly:\n"
+                          (json/generate-string withdrawal-body) "\n"
+                          "To decline, reply in text. Decline is recorded in P12-5-6; "
+                          "for now reply in text.")
+              evidence-store (evidence-store-for-config config)
+              created (create-invoke-job!
+                       {:evidence-store evidence-store :requested-job-id job-id
+                        :agent-id orchestrator :prompt prompt :caller "xiang"
+                        :surface "bell" :bellback-of (:source-job disclosure)
+                        :mode :brief})
+              run-job (fn [] (run-invoke-job!
+                              {:job-id created :agent-id orchestrator :prompt prompt
+                               :caller "xiang" :surface "bell"
+                               :evidence-store evidence-store}))]
+          (.submit invoke-executor
+                   ^Runnable
+                   (fn [] (record-bell-completion-delivery!
+                           created "xiang" (run-job))))
+          {:status :routed :job-id created :existing? false})))))
+
+(defn- write-negation-routing! [base interpretation routing]
+  (let [interpretation-id (:evidence/id interpretation)
+        entry (origin/stamp
+               {:evidence/id (negation-routing-id interpretation-id)
+                :evidence/type :interpretation/negation-routing
+                :evidence/claim-type :observation
+                :evidence/subject {:ref/type :evidence :ref/id interpretation-id}
+                :evidence/author "futon3c/negation-route"
+                :evidence/in-reply-to interpretation-id
+                :evidence/session-id (:evidence/session-id interpretation)
+                :evidence/at (str (Instant/now))
+                :evidence/tags [:interpretation :negation :routing]
+                :evidence/body routing}
+               (origin/harness "negation-routing" interpretation-id)
+               "futon3c.transport.http")]
+    (write-negation-interpretation! base entry)))
+
+(defn- route-new-negation! [config base interpretation]
+  (let [resolution (get-in interpretation [:evidence/body :resolution])]
+    (when (contains? #{:explicit-id :single-standing} resolution)
+      (let [target (get-in interpretation [:evidence/body :target])
+            target-edge (disclosure-cli/read-act! base target)
+            disclosure (disclosure-record/hyperedge->record target-edge)
+            routing
+            (try
+              (let [edge (unique-disclosure-source-edge! (:source-job disclosure))
+                    orchestrator (get-in edge [:evidence/body :edge/from])]
+                (assoc (route-negation-reading!
+                        config disclosure interpretation orchestrator)
+                       :orchestrator orchestrator))
+              (catch clojure.lang.ExceptionInfo e
+                (let [reason (:reason (ex-data e))]
+                  (if (contains? #{:orchestrator-unknown :orchestrator-ambiguous} reason)
+                    {:status reason}
+                    (throw e)))))]
+        (:entry (write-negation-routing!
+                 base interpretation
+                 (assoc routing :target target
+                        :source-job (:source-job disclosure))))))))
+
+(defn handle-negation-interpretation [request config]
   (let [body (parse-json-map (read-body request))
         required [:caller :operator-evidence-id :fragment-id :fragment-text
                   :analysis-version]
@@ -10021,10 +10109,15 @@
                      (origin/harness "negation-interpretation"
                                      (:operator-evidence-id body))
                      "futon3c.transport.http")
-              result (write-negation-interpretation! base entry)]
+              result (write-negation-interpretation! base entry)
+              routing (if (:existing? result)
+                        (existing-evidence!
+                         base (negation-routing-id (:evidence/id (:entry result))))
+                        (route-new-negation! config base (:entry result)))]
           (json-response (if (:existing? result) 200 201)
                          {:ok true :existing? (:existing? result)
-                          :entry (:entry result)}))
+                          :entry (:entry result)
+                          :routing (some-> routing :evidence/body)}))
         (catch clojure.lang.ExceptionInfo e
           (let [reason (:reason (ex-data e))]
             (json-response (case reason
@@ -10581,7 +10674,7 @@
       (handle-operator-turn-source-jobs request)
 
       (and (= :post method) (= "/api/alpha/interpretation/negation" uri))
-      (handle-negation-interpretation request)
+      (handle-negation-interpretation request config)
 
       (and (= :get method) (= "/api/alpha/prompt-line" uri))
       (let [params (parse-query-params request)
