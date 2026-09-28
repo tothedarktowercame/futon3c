@@ -900,8 +900,8 @@ boundary, only a prompt on the buffer's last line is accepted."
                    (= end (marker-position agent-chat--input-start))))
       end)))
 
-(defun agent-chat--insert-prompt (&optional face)
-  "Insert the rendered prompt at point, read-only, in FACE.
+(defun agent-chat--insert-prompt (&optional face prompt)
+  "Insert PROMPT (default: the rendered prompt line) at point, read-only, in FACE.
 Read-only because the prompt is the wall between typed input and the
 transcript: \"M-12 M-DEL\" at the input line once killed backward through
 \"> \", the turn-end rule and half the Cooked line, leaving claude-10 with no
@@ -912,13 +912,39 @@ an overlay: as an overlay it ballooned to span the whole buffer once the
 text-face overlays were removed, painting everything prompt-face orange
 \(2026-07-02)."
   (let ((start (point))
-        (prompt (agent-chat--prompt-line)))
+        (prompt (or prompt (agent-chat--prompt-line))))
     (insert prompt)
     (add-text-properties
      start (point)
      `(face ,(or face 'agent-chat-prompt-face)
        read-only "Agent REPL prompt is read-only; type after its final \"> \""
        rear-nonsticky (face read-only)))))
+
+(defun agent-chat--refresh-prompt-line! ()
+  "Redraw the live prompt with the current prompt-line render, keeping input.
+The prompt is drawn once when the buffer opens and messages insert above it,
+so without this the prefix would never change.  The new prompt is inserted
+before the old one and the old one then deleted, so the input marker, point and
+window points all end up after the new prompt with typed input untouched."
+  (when (and (markerp agent-chat--prompt-marker)
+             (markerp agent-chat--input-start))
+    (let ((start (marker-position agent-chat--prompt-marker))
+          (end (marker-position agent-chat--input-start)))
+      (when (and start end (< start end)
+                 (save-excursion
+                   (goto-char start)
+                   (eql (agent-chat--prompt-end-at-point) end)))
+        (let ((new (agent-chat--prompt-line)))
+          (unless (equal new (buffer-substring-no-properties start end))
+            (let ((inhibit-read-only t)
+                  (face (get-text-property start 'face)))
+              (save-excursion
+                (goto-char start)
+                (agent-chat--insert-prompt face new)
+                (delete-region (point) (+ (point) (- end start))))
+              (set-marker agent-chat--prompt-marker start)
+              (when (markerp agent-chat--separator-start)
+                (set-marker agent-chat--separator-start start)))))))))
 
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
@@ -1016,7 +1042,8 @@ text-face overlays were removed, painting everything prompt-face orange
           (set-marker agent-chat--prompt-marker prompt-start)
           (when (markerp agent-chat--separator-start)
             (set-marker agent-chat--separator-start prompt-start))
-          (set-marker-insertion-type agent-chat--prompt-marker t))))))
+          (set-marker-insertion-type agent-chat--prompt-marker t))))
+    (agent-chat--refresh-prompt-line!)))
 
 (defcustom agent-chat-sync-clock-from-server t
   "Non-nil means the repl reflects the agency's durable auto-clock on turn-end.

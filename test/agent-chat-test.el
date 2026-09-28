@@ -820,3 +820,34 @@ counted; a fresh one is kept for inspection."
                               "{\"prompt\":\"$~象/诺必践> \"}" 'utf-8)))
                    buf))))
       (should (equal (agent-chat--prompt-line) "$~象/诺必践> ")))))
+
+(ert-deftest agent-chat-turn-end-redraws-prompt-prefix-keeping-input ()
+  (with-temp-buffer
+    (let ((prompt "> "))
+      (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+                 (lambda () prompt)))
+        (agent-chat-test--init-buffer)
+        (insert "abc")
+        (setq prompt "$~x/y> ")
+        (agent-chat--insert-turn-end-flair 3)
+        (goto-char (point-max))
+        (should (equal "$~x/y> abc"
+                       (buffer-substring-no-properties
+                        (line-beginning-position) (point-max))))
+        (should (equal "abc" (buffer-substring-no-properties
+                              agent-chat--input-start (point-max))))
+        (should (= (point) (point-max)))
+        (let ((start (marker-position agent-chat--prompt-marker)))
+          (should (equal "$~x/y> " (buffer-substring-no-properties
+                                    start agent-chat--input-start)))
+          (dotimes (i 7) (should (get-text-property (+ start i) 'read-only))))
+        (should-not (get-text-property agent-chat--input-start 'read-only))
+        ;; A later turn with no pattern returns to the plain prompt.
+        (setq prompt "> ")
+        (agent-chat--insert-turn-end-flair 4)
+        (goto-char (point-max))
+        (should (equal "> abc" (buffer-substring-no-properties
+                                (line-beginning-position) (point-max))))
+        (should (equal "abc" (buffer-substring-no-properties
+                              agent-chat--input-start (point-max))))
+        (should (= 1 (how-many "^Cooked for 4s" (point-min) (point-max))))))))
