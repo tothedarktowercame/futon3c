@@ -54,3 +54,18 @@
       (is (not (str/includes? header "Prompt:")))
       (is (str/ends-with? header "---\n\nbody"))
       (is (< elapsed-ms 250.0)))))
+
+(deftest analysis-seats-get-no-prompt-line
+  (prompt-line/register-provider!
+   {:segment/id :pattern :provider "test/pattern" :budget-ms 100
+    :fn (fn [_] (segment {:segment/value "~x/y"
+                          :segment/header "retrieved x/y 0.5"}))})
+  (doseq [seat ["象" "象-sonnet" "象-kimi"]]
+    (is (not (str/includes? (#'http/wrap-surface-header
+                             "body" "bell" "turn-capture" seat nil "s1")
+                            "Prompt:"))
+        seat))
+  (is (str/includes? (#'http/wrap-surface-header
+                      "body" "bell" "joe" "claude-17" nil "s1")
+                     "Prompt: pattern ~x/y"))
+  (is (not (prompt-line/analysis-seat? "claude-象"))))

@@ -18,6 +18,14 @@
 
 (defn providers [] @!providers)
 
+(defn analysis-seat?
+  "True for the 象 turn-analysis seats (象, 象-sonnet, 象-kimi, …). They are kept
+   out of the per-turn Prompt line so what they supply can be compared with the
+   embedding's pattern rather than primed by it (Joe, 2026-09-28)."
+  [agent-id]
+  (let [a (str agent-id)]
+    (or (= "象" a) (str/starts-with? a "象-"))))
+
 (defn register-provider!
   [{:keys [segment/id provider fn budget-ms] :as registration}]
   (when-not (and (keyword? id) (not (str/blank? provider)) (ifn? fn))

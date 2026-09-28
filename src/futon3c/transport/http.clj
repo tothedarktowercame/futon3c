@@ -4547,7 +4547,8 @@
 (defn- prompt-facts-line
   [agent-id session-id surface]
   (when (and (not (str/blank? (str agent-id)))
-             (not (str/blank? (str session-id))))
+             (not (str/blank? (str session-id)))
+             (not (prompt-line/analysis-seat? agent-id)))
     (try
       (let [segments (:segments (prompt-line/render!
                                  {:agent-id (str agent-id)
