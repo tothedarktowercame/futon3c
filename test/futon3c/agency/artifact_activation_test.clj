@@ -112,3 +112,14 @@
            (activation/missing-activations
             ["invoke-work-1" "invoke-work-2" "invoke-missing"]
             [success failure])))))
+
+(deftest empty-search-is-a-typed-failure-not-an-empty-success
+  (doseq [result [nil []]]
+    (let [appended (atom nil)]
+      (binding [activation/*search-fn* (fn [_ _] result)
+                activation/*descriptor-fn* (constantly descriptor)
+                activation/*get-fn* (fn [_ _] nil)
+                activation/*append-fn* (fn [_ entry] (reset! appended entry) {:ok true :entry entry})]
+        (activation/record! nil artifact "packet"))
+      (is (= :search-returned-nothing
+             (get-in @appended [:evidence/body :error :reason]))))))

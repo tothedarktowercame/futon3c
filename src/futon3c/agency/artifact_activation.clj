@@ -155,7 +155,12 @@
   ([store artifact text]
    (let [descriptor (*descriptor-fn*)
          hits (try
-                (*search-fn* text top-k)
+                (let [r (*search-fn* text top-k)]
+                  ;; The one-shot fallback returns nil on timeout; an index of
+                  ;; ~1,600 patterns never yields zero hits, so empty is failure.
+                  (if (seq r) r
+                      {:error {:reason :search-returned-nothing
+                               :message "search returned no hits"}}))
                 (catch Throwable t
                   {:error {:reason (or (:error/code (ex-data t)) :search-failed)
                            :message (.getMessage t)}}))
