@@ -86,7 +86,17 @@
 
 (deftest acceptance-removes-offer-from-its-time
   (let [agreement {:id "act:agreement" :kind :agreement/record
-                   :offer (:id record) :at "2026-09-28T12:40:00Z"}]
+                   :agreement/offer (:id record)
+                   :agreement/acceptance-evidence "emacs:joe-turn"
+                   :agreement/option-id "1"
+                   :agreement/scope {:description "Build the first packet"}
+                   :agreement/offeror "claude-17"
+                   :agreement/acceptor "joe"
+                   :agreement/at "2026-09-28T12:40:00Z"
+                   :act/stamp {:executor "joe" :signer "joe"
+                               :authority {:operator true}
+                               :executor-basis :session-bound}
+                   :act/harness harness}]
     (is (= [record] (:offers (active [record agreement] "2026-09-28T12:39:59Z"))))
     (is (empty? (:offers (active [record agreement] "2026-09-28T12:40:00Z"))))))
 

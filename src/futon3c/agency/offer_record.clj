@@ -6,9 +6,7 @@
    cover a grant-checked act until it has checkable act kinds or rule ids.
 
    `active-offers-as-of` accepts offer records, generic withdrawal effects, and
-   the temporary agreement shape {:kind :agreement/record :offer ID :at TIME}.
-   Agreement validation belongs to P11-3; this projection only consumes that
-   minimal shape until the agreement record exists. Stored effects are assumed
+   schema-1 agreement records using :agreement/offer and :agreement/at. Stored effects are assumed
    to have passed their write-path authority checks. Effective effects remain
    final; provisional effects end an offer until a valid later reversal by the
    provisional author or Joe, matching pattern-card valid-time semantics."
@@ -176,8 +174,10 @@
         accepted (if as-of
                    (->> records
                         (filter #(and (= agreement-type (:kind %))
-                                      (at-or-before? % as-of)))
-                        (keep #(when (contains? offers-by-id (:offer %)) (:offer %)))
+                                      (when-let [at (instant (:agreement/at %))]
+                                        (not (.isAfter ^Instant at ^Instant as-of)))))
+                        (keep #(when (contains? offers-by-id (:agreement/offer %))
+                                 (:agreement/offer %)))
                         set)
                    #{})
         ignored-effects (concat
