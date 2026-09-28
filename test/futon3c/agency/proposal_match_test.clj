@@ -4,7 +4,8 @@
             [futon3c.agency.proposal-match :as proposal]))
 
 (def common
-  {:if "work is ready"
+  {:conclusion "proceed once the gate is met"
+   :if "work is ready"
    :then "proceed with the work"
    :because "the gate has been met"
    :scope "this packet"})
@@ -19,6 +20,7 @@
 (deftest different-names-identical-structure-merge
   (let [a (assoc common :id "operator/proceed" :however "A risk remains.")
         b {:id "orchestration/go-ahead"
+           :conclusion "Proceed once the gate is met."
            :if "  WORK   IS READY. "
            :however "a risk remains"
            :then "Proceed with the work!"
@@ -51,7 +53,7 @@
         l (proposal/flexiarg->clauses library)]
     (is (= "operator/name-the-acceptance-test" (:id d)))
     (is (= "orchestration/recorded-handoff" (:id l)))
-    (doseq [parsed [d l] field [:if :however :then :because]]
+    (doseq [parsed [d l] field [:conclusion :if :however :then :because]]
       (is (not-empty (get parsed field))))))
 
 (deftest corpus-report-keeps-only-relevant-pairs
@@ -63,3 +65,16 @@
     (is (= 1 (:same-id-adjacent-count report)))
     (is (= 1 (:merge-count report)))
     (is (= "other" (get-in report [:cross-id-merges 0 :right-id])))))
+
+(deftest templated-family-differs-by-conclusion
+  ;; The real iiching/exotype family shares one template's four clauses; only
+  ;; the conclusion tells two records apart. They must not merge.
+  (let [read-one #(proposal/flexiarg->clauses
+                   (slurp (io/file (str "../futon3/library/iiching/exotype-" % ".flexiarg"))))
+        a (read-one "000")
+        b (read-one "002")
+        result (proposal/match a b)]
+    (is (= (select-keys a [:if :however :then :because])
+           (select-keys b [:if :however :then :because])))
+    (is (= :adjacent (:verdict result)))
+    (is (= :different (get-in result [:fields :conclusion])))))

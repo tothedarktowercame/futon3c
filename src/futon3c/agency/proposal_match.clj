@@ -9,14 +9,24 @@
   (:import [java.text Normalizer Normalizer$Form]
            [java.util Locale]))
 
-(def ^:private structural-fields [:if :however :then :because :scope])
+;; :conclusion is the pattern's claim. Without it, the 256 generated
+;; iiching/exotype-* records (one template's clauses, differing only in their
+;; conclusion and encoding) matched each other as 16,932 exact "merges".
+(def ^:private structural-fields [:conclusion :if :however :then :because :scope])
 
 (defn- components-by-name [text]
-  (into {}
-        (keep (fn [{:keys [name-key text]}]
-                (when-not (str/blank? text)
-                  [(keyword name-key) text])))
-        (flexiarg/parse-components text)))
+  (let [components (flexiarg/parse-components text)
+        conclusion (some (fn [{:keys [name-key text]}]
+                           (when (and (contains? flexiarg/conclusion-aliases name-key)
+                                      (not (str/blank? text)))
+                             text))
+                         components)]
+    (cond-> (into {}
+                  (keep (fn [{:keys [name-key text]}]
+                          (when-not (str/blank? text)
+                            [(keyword name-key) text])))
+                  components)
+      conclusion (assoc :conclusion conclusion))))
 
 (defn flexiarg->clauses
   "Parse one pattern-level flexiarg TEXT into its id and structural clauses.
@@ -58,7 +68,8 @@
 (defn match
   "Compare two pattern-level clause maps.  Id is deliberately ignored.
 
-   All five fields equal => :merge.  Any difference => :adjacent.  Otherwise a
+   All six fields (conclusion, IF, HOWEVER, THEN, BECAUSE, scope) equal =>
+   :merge.  Any difference => :adjacent.  Otherwise a
    missing field => :uncomparable.  Scope absent on both sides is equal."
   [a b]
   (let [fields (into (array-map)
