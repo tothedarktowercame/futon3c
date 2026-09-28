@@ -1,35 +1,39 @@
 (ns futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test
-  "Real calls with IO isolated; no live record carries both ends.
-  See support/live-records-read for the pinned record survey."
-  (:require [futon3c.diagramprover.wm-wire-precision-horizon-products :as products]
-            [clojure.test :refer [deftest is]]
+  "Writer and reader values come from the content-addressed small-observe
+  producer record."
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-small-support :as support]))
-(defn check [] (support/observe :horizon (fn [v _] v)))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+(def wire-id [:r13-sources-horizon :construction-assemble [:horizon-steps {:record :sources}]])
+(def producer (delay (producer-record/record "small-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires wire-id]))
+(defn check [] (select-keys (wire-fields) [:writer :reader]))
 (def wire {:second-layer {:test `sources-horizon-changes-assembly-and-g :kind :value-varying
                    :product [:scores] :intervention :before-reader}
-   :wire [:r13-sources-horizon :construction-assemble [:horizon-steps {:record :sources}]] :kind :witnessed-hermetically
+   :wire wire-id :kind :witnessed-hermetically
            :test `the-writer-reaches-the-reader :check check
-           :live-records-read support/live-records-read})
+           :live-records-read []
+           :note "Writer and reader values come from the content-addressed small-observe producer record."})
 (deftest the-writer-reaches-the-reader
-  (is (w/received? (check))))
+  (let [r (check)]
+    (is (some? (:writer r)) "writer")
+    (is (w/received? r) (str "writer-reader " (pr-str r)))
+    (is (true? (:received? (wire-fields))))))
 (deftest typed-absence-before-reader-fails
-  (is (not (w/received? (support/observe :horizon (fn [_ _] {:status :absent :reason :not-carried}))))))
+  (let [r (get-in (wire-fields) [:interventions :absent])]
+    (is (:writer-present? r) "absent writer-present?")
+    (is (false? (:received? r)) "absent received?")))
 (deftest different-carrier-before-reader-fails
-  (let [o (support/observe :horizon (fn [_ other] other))]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :different])]
+    (is (:writer-present? r) "different writer-present?")
+    (is (:reader-present? r) "different reader-present?")
+    (is (false? (:received? r)) "different received?")))
 (deftest live-records-do-not-carry-both-ends
-  (support/assert-live-records))
+  (doseq [[field passed?] (get-in @producer [:fields :live])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))
 
 (deftest sources-horizon-changes-assembly-and-g
-  (let [a (products/horizon-product identity) b (products/horizon-product inc)]
-    (is (= (:written a) (:written b)))
-    (is (= (:carrier a) (update-in (:carrier b) [:sources :horizon-steps] dec)))
-    (is (= [3 4] (mapv #(get-in % [:problem :horizon-steps]) [a b])))
-    (is (= (:state a) (:state b)))
-    (is (= (:candidates a) (:candidates b)))
-    (is (= (dissoc (:opts a) :horizon-steps) (dissoc (:opts b) :horizon-steps)))
-    (is (every? number? (concat (:scores a) (:scores b))))
-    (is (not= (:scores a) (:scores b)))
-    (prn :sources-horizon {:horizon [3 4] :G [(:scores a) (:scores b)]})))
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer wire-id])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))

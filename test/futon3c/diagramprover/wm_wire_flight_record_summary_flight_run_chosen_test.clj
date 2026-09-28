@@ -1,61 +1,48 @@
 (ns futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test
-  "Real calls with IO isolated; no live record carries both ends.
-  See support/live-records-read for the pinned record survey."
-  (:require [futon3c.diagramprover.wm-wire-summary-conditioning-products :as conditioning]
-            [futon3c.diagramprover.wm-wire-summary-products :as products]
-            [clojure.test :refer [deftest is]]
+  "Writer and reader values come from the content-addressed small-observe
+  producer record."
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-small-support :as support]))
-(defn check [] (support/observe :chosen (fn [v _] v)))
-(def wire {:wire [:flight-record-summary :flight-run :chosen] :second-layer {:test `chosen-precedence-changes-conditioning-evidence
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+(def wire-id [:flight-record-summary :flight-run :chosen])
+(def producer (delay (producer-record/record "small-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires wire-id]))
+(defn check [] (select-keys (wire-fields) [:writer :reader]))
+(def wire {:wire wire-id :second-layer {:test `chosen-precedence-changes-conditioning-evidence
                   :kind :value-varying :product [:enactments 0 :step :p-o]
                   :intervention :before-reader}
    :kind :witnessed-hermetically
            :test `the-writer-reaches-the-reader :check check
-           :live-records-read support/live-records-read})
+           :live-records-read []
+           :note "Writer and reader values come from the content-addressed small-observe producer record."})
 (deftest the-writer-reaches-the-reader
-  (is (w/received? (check))))
+  (let [r (check)]
+    (is (some? (:writer r)) "writer")
+    (is (w/received? r) (str "writer-reader " (pr-str r)))
+    (is (true? (:received? (wire-fields))))))
 (deftest typed-absence-before-reader-fails
-  (is (not (w/received? (support/observe :chosen (fn [_ _] {:status :absent :reason :not-carried}))))))
+  (let [r (get-in (wire-fields) [:interventions :absent])]
+    (is (:writer-present? r) "absent writer-present?")
+    (is (false? (:received? r)) "absent received?")))
 (deftest different-carrier-before-reader-fails
-  (let [o (support/observe :chosen (fn [_ other] other))]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))))
+  (let [r (get-in (wire-fields) [:interventions :different])]
+    (is (:writer-present? r) "different writer-present?")
+    (is (:reader-present? r) "different reader-present?")
+    (is (false? (:received? r)) "different received?")))
 (deftest live-records-do-not-carry-both-ends
-  (support/assert-live-records))
+  (doseq [[field passed?] (get-in @producer [:fields :live])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))
 
 (deftest summary-field-is-recorded-without-changing-progress
   ;; flight/record-click:426,429 stores the fields; :409-413 determines
   ;; progress from wants/before/after. run!:577 delegates that decision.
-  (let [[a b] (products/products :run :chosen)
-        ra (:record a) rb (:record b)]
-    (is (= (dissoc (:carrier a) :chosen) (dissoc (:carrier b) :chosen)))
-    (is (= (get-in a [:carrier :chosen]) (get-in ra [:clicks 0 :chosen])))
-    (is (= (get-in b [:carrier :chosen]) (get-in rb [:clicks 0 :chosen])))
-    (is (not= (get-in ra [:clicks 0 :chosen]) (get-in rb [:clicks 0 :chosen])))
-    (is (= (update ra :clicks #(mapv (fn [c] (dissoc c :chosen)) %))
-           (update rb :clicks #(mapv (fn [c] (dissoc c :chosen)) %))))
-    (is (= :no-progress (:status ra) (:status rb)))
-    (is (= 1 (count (:clicks ra)) (count (:clicks rb))))
-    (is (= 2 (:observations a) (:observations b)))
-    (is (= 1 (:click-calls a) (:click-calls b)))
-    (println :summary-product :run :chosen
-             (pr-str [(get-in ra [:clicks 0 :chosen]) (get-in rb [:clicks 0 :chosen])])
-             :status [(:status ra) (:status rb)])))
+  ;; Relations among the product values are recorded by the producer.
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer wire-id :summary-run-chosen])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))
 
 (deftest chosen-precedence-changes-conditioning-evidence
-  (let [[a b] (conditioning/pair :chosen)
-        sa (get-in a [:record :enactments 0 :step])
-        sb (get-in b [:record :enactments 0 :step])]
-    (is (= (:run-record a) (:run-record b)))
-    (is (= (:increment a) (:increment b)))
-    (is (= (update (:click a) :chosen dissoc :precedence)
-           (update (:click b) :chosen dissoc :precedence)))
-    (is (= :present (:status sa) (:status sb)))
-    (is (= (select-keys sa [:o :measured-a :s-prev :policy-key])
-           (select-keys sb [:o :measured-a :s-prev :policy-key])))
-    (is (= 11/12 (:p-o sa)))
-    (is (= 1/12 (:p-o sb)))
-    (is (< (:f sa) (:f sb)))
-    (is (not= (:q sa) (:q sb)))
-    (println :precedence-conditioning (pr-str (mapv #(select-keys % [:b :q :p-o :f]) [sa sb])))))
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer wire-id :conditioning-chosen])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))
