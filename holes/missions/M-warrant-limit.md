@@ -55,3 +55,4 @@ Open. Inputs so far, all under `/home/joe/code/storage/test-registry/`: `exercis
 
 - 2026-09-28 17:58Z claude-8: mission opened. C1 and C2 recorded as met from the day's work; C3–C8 open.
 - 2026-09-28 18:00Z claude-8: LIMIT-I reviewed (e747cc03, codex-1); worker step added (a30d70a1). C3 met; C4 built, not yet automatic.
+- 2026-09-28 18:02Z claude-8: PRODUCERS-D reviewed (codex-7, read only): 194 wire tests are 126 runs-operation, 44 calls-function, 24 reads-record; 60 (operation, inputs) groups; estimate 2,511 -> 151 definitions over the limit if every runs-operation test reads a producer's record and calls no product code. 13 tests unbounded (I had said 14; one of the 14 is not a wire test). PRODUCER-1 dispatched to codex-7: the temporal courier flight, ten readers; it sets the pattern.
