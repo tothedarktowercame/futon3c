@@ -1,17 +1,23 @@
 (ns futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test
-  (:require [futon3c.diagramprover.wm-wire-construction-products :as products]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-construction-support :as support]))
-(defn observe [mutation] (support/kernel mutation))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+(def wire-id [:construction-assemble-one :r4-kernel [:want {:record :cascade-spec}]])
+(def producer (delay (producer-record/record "construction-kernel")))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn observe [mutation]
+  (let [o (if (= mutation :none) (:primary (fields))
+              (get-in (fields) [:interventions mutation]))]
+    {:writer (:writer o) :reader (:reader o)
+     :ranked (when (:ranked-present? o) [{}])}))
 (defn check [] (observe :none))
 (def wire {
   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/changed-carrier-changes-the-derived-product :kind :value-varying
                   :product [:scores] :intervention :before-reader}
- :wire [:construction-assemble-one :r4-kernel [:want {:record :cascade-spec}]]
+ :wire wire-id
            :kind :witnessed-hermetically
            :test `the-observed-handoff :check check
-           :live-records-read support/live-records-read})
+           :live-records-read []})
 (deftest the-observed-handoff
   (let [o (check)]
     (is (w/received? o))
@@ -24,11 +30,11 @@
     (is (not (w/received? o)))))
 
 (deftest changed-carrier-changes-the-derived-product
-  (let [before (products/score-product :want :none)
-        after (products/score-product :want :different)
-        v (:scores before) v-prime (:scores after)]
-    (prn :wire-2l-3a :r4-kernel-want :before before :after after)
+  (let [{:keys [before-scores after-scores competing? same-count? numeric? changed?]}
+        (:second-layer (fields))
+        v before-scores v-prime after-scores]
     (is (< 1 (count v)) "competing scored candidates")
     (is (= (count v) (count v-prime)))
     (is (every? number? (concat v v-prime)))
-    (is (not= v v-prime) "derived product changes after the carrier intervention")))
+    (is (not= v v-prime) "derived product changes after the carrier intervention")
+    (is (and competing? same-count? numeric? changed?))))
