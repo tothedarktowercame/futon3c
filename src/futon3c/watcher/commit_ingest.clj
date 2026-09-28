@@ -31,6 +31,7 @@
             [clojure.java.shell :refer [sh]]
             [babashka.http-client :as http]
             [cheshire.core :as json]
+            [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.registry :as registry]
             [futon3c.watcher.write-pace :as write-pace]))
 
@@ -250,6 +251,63 @@
   (some-> (run-git repo "rev-parse" "HEAD")
           str/trim
           not-empty))
+
+;; ---------- mission/build-plan weak activations ----------
+
+(def ^:private max-doc-sections-per-commit 20)
+
+(defn- activation-doc-path? [path]
+  (or (boolean (re-matches #"holes/missions/[^/]+\.md" path))
+      (boolean (re-matches #"holes/labs/.*/BUILD-PLAN[^/]*\.md" path))))
+
+(defn- git-file-at [repo revision path]
+  (apply run-git repo ["show" (str revision ":" path)]))
+
+(defn- commit-observed-at [{:keys [ts]}]
+  (str (java.time.Instant/ofEpochSecond (long (or ts 0)))))
+
+(defn process-doc-section-activations!
+  "Read changed mission and BUILD-PLAN files at COMMIT and its parent, then
+   submit one weak-activation job per changed section. Processing is called
+   only from the background hook. At most 20 sections are submitted; a larger
+   change also gets one typed cap record so omission is durable and visible."
+  [repo commit]
+  (let [sha (:sha commit)
+        observed-at (commit-observed-at commit)
+        sections (->> (filter activation-doc-path? (files-changed repo sha))
+                      (mapcat (fn [path]
+                                (let [new-text (git-file-at repo sha path)
+                                      old-text (git-file-at repo (str sha "^") path)]
+                                  (map #(assoc % :path path)
+                                       (artifact-activation/changed-sections
+                                        old-text new-text)))))
+                      vec)]
+    (doseq [{:keys [path heading start-line end-line text]}
+            (take max-doc-sections-per-commit sections)]
+      (artifact-activation/submit-work!
+       nil
+       {:kind :doc-section
+        :id (str sha ":" path ":" heading ":" start-line "-" end-line)
+        :observed-at observed-at}
+       text))
+    (when (> (count sections) max-doc-sections-per-commit)
+      (artifact-activation/submit-error!
+       nil
+       {:kind :doc-section
+        :id (str sha ":doc-sections:section-cap")
+        :observed-at observed-at}
+       ""
+       {:reason :section-cap-exceeded
+        :message "More than 20 changed sections in one commit"
+        :count (count sections)}))))
+
+(defn submit-doc-section-activations!
+  "Queue section discovery for one futon3c commit. Git reads and retrievals
+   both happen off the ingestion thread. Other repositories are ignored."
+  [repo repo-label commit]
+  (when (= "futon3c" repo-label)
+    (artifact-activation/submit-task!
+     #(process-doc-section-activations! repo commit))))
 
 ;; ---------- substrate-2 query ----------
 
@@ -670,6 +728,9 @@
         (let [result (credit-block-mana-for-commit! c :verbose? verbose?)]
           (when (:credited result)
             (swap! n-credited inc)))))
+
+      (doseq [c commits]
+        (submit-doc-section-activations! git-root repo-label c))
 
     {:n-ingested (count commits)
      :latest-sha (some-> commits last :sha)

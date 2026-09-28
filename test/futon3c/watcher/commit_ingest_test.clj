@@ -4,6 +4,7 @@
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
             [cheshire.core :as json]
+            [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.registry :as registry]
             [futon3c.watcher.commit-ingest :as sut]
             [futon3c.watcher.write-pace :as write-pace]
@@ -117,6 +118,56 @@
                                   :repo-label "demo"
                                   :file->structure (constantly nil)})
         (is (= ["demo" "only-new"] @recorded))))))
+
+(deftest doc-section-hook-submits-mission-sections-only
+  (let [submitted (atom [])
+        errors (atom [])
+        commit {:sha "abc" :ts 1790635000}]
+    (with-redefs [sut/files-changed (fn [_ _]
+                                     ["holes/missions/M-demo.md" "src/demo.clj"])
+                  sut/run-git (fn [_ _ spec]
+                                (case spec
+                                  "abc:holes/missions/M-demo.md" "# One\nnew\n# Two\nsame"
+                                  "abc^:holes/missions/M-demo.md" "# One\nold\n# Two\nsame"
+                                  ""))
+                  artifact-activation/submit-work!
+                  (fn [_ artifact text]
+                    (swap! submitted conj [artifact text]) :submitted)
+                  artifact-activation/submit-error!
+                  (fn [& args] (swap! errors conj args) :submitted)]
+      (sut/process-doc-section-activations! "/repo" commit))
+    (is (= 1 (count @submitted)))
+    (is (= "One" (some-> @submitted ffirst :id (str/split #":") (nth 2))))
+    (is (= "# One\nnew" (second (first @submitted))))
+    (is (empty? @errors))))
+
+(deftest doc-section-hook-ignores-non-futon3c-repos
+  (let [tasks (atom [])]
+    (with-redefs [artifact-activation/submit-task!
+                  (fn [task] (swap! tasks conj task) :submitted)]
+      (is (nil? (sut/submit-doc-section-activations!
+                 "/repo" "futon2" {:sha "abc" :ts 1})))
+      (is (empty? @tasks))
+      (is (= :submitted (sut/submit-doc-section-activations!
+                         "/repo" "futon3c" {:sha "abc" :ts 1})))
+      (is (= 1 (count @tasks))))))
+
+(deftest doc-section-hook-caps-large-rewrites
+  (let [submitted (atom [])
+        errors (atom [])
+        new-text (str/join "\n" (map #(str "# S" % "\nbody " %) (range 22)))]
+    (with-redefs [sut/files-changed (fn [& _] ["holes/labs/M/BUILD-PLAN-x.md"])
+                  sut/run-git (fn [_ _ spec]
+                                (if (str/starts-with? spec "abc:") new-text ""))
+                  artifact-activation/submit-work!
+                  (fn [_ artifact _] (swap! submitted conj artifact) :submitted)
+                  artifact-activation/submit-error!
+                  (fn [_ artifact _ error]
+                    (swap! errors conj [artifact error]) :submitted)]
+      (sut/process-doc-section-activations! "/repo" {:sha "abc" :ts 1}))
+    (is (= 20 (count @submitted)))
+    (is (= :section-cap-exceeded (get-in @errors [0 1 :reason])))
+    (is (= 22 (get-in @errors [0 1 :count])))))
 
 (deftest parses-mission-trailer-from-real-commit
   (let [repo (fixture-repo-with-mission-commit)]

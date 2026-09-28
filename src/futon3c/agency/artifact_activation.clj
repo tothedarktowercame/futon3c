@@ -33,6 +33,50 @@
 (defn- sha256-text [text]
   (sha256-bytes (.getBytes (str text) StandardCharsets/UTF_8)))
 
+(defn markdown-sections
+  "Split Markdown into headed sections. Each section owns its heading and the
+   following lines up to the next heading of any level, so body text belongs
+   to exactly one section. ATX headings of levels 1--4 are recognised;
+   heading-like lines inside fenced code blocks are ordinary body text."
+  [text]
+  (let [lines (vec (str/split-lines (str text)))
+        fence-re #"^\s*(```+|~~~+)"
+        heading-re #"^\s*(#{1,4})\s+(.+?)\s*#*\s*$"
+        headings (loop [i 0 fence nil found []]
+                   (if (= i (count lines))
+                     found
+                     (let [line (nth lines i)
+                           fence-mark (some-> (re-find fence-re line) second)
+                           closes? (and fence fence-mark
+                                        (= (first fence) (first fence-mark)))
+                           opens? (and (nil? fence) fence-mark)
+                           match (when-not fence (re-matches heading-re line))]
+                       (recur (inc i)
+                              (cond closes? nil opens? fence-mark :else fence)
+                              (cond-> found match
+                                (conj {:index i :heading (str/trim (nth match 2))}))))))]
+    (mapv (fn [n {:keys [index heading]}]
+            (let [end-index (dec (or (:index (nth headings (inc n) nil))
+                                     (count lines)))]
+              {:heading heading
+               :start-line (inc index)
+               :end-line (inc end-index)
+               :text (str/join "\n" (subvec lines index (inc end-index)))}))
+          (range (count headings)) headings)))
+
+(defn changed-sections
+  "Return NEW-TEXT sections that are new or changed. Identity for comparison
+   is heading plus text digest, deliberately excluding line numbers so a pure
+   line shift does not create an activation."
+  [old-text new-text]
+  (let [old-signatures (->> (markdown-sections old-text)
+                            (map (juxt :heading (comp sha256-text :text)))
+                            set)]
+    (->> (markdown-sections new-text)
+         (remove #(contains? old-signatures
+                             [(:heading %) (sha256-text (:text %))]))
+         vec)))
+
 (defn- file-sha256 [file]
   (let [f (io/file file)
         key [(.getCanonicalPath f) (.lastModified f) (.length f)]]
@@ -127,10 +171,12 @@
                       :cited cited
                       :weak weak
                       :observed-at (:observed-at artifact)}
-               error (assoc :error {:reason (:reason error)
-                                    :message (str (:message error))}))]
+               error (assoc :error (cond-> {:reason (:reason error)
+                                            :message (str (:message error))}
+                                     (contains? error :count)
+                                     (assoc :count (:count error)))))]
     {:evidence/id (record-id (:id artifact) text-sha retrieval)
-     :evidence/subject {:ref/type :invoke-job :ref/id (:id artifact)}
+     :evidence/subject {:ref/type (:kind artifact) :ref/id (:id artifact)}
      :evidence/type :artifact/weak-activation
      :evidence/claim-type :observation
      :evidence/author "futon3c/artifact-activation"
@@ -183,6 +229,30 @@
            (throw (ex-info "Weak-activation append failed"
                            {:reason :activation-append-failed :result result}))))))))
 
+(defn record-error!
+  "Append a typed activation failure without running retrieval. Used when the
+   artifact producer itself cannot submit the full retrieval population."
+  ([artifact text error] (record-error! nil artifact text error))
+  ([store artifact text error]
+   (let [entry (activation-record artifact text (*descriptor-fn*) {:error error})
+         existing (*get-fn* store (:evidence/id entry))]
+     (cond
+       (= (comparable-entry existing) (comparable-entry entry))
+       {:status :existing :entry existing :evidence/id (:evidence/id entry)}
+
+       existing
+       (throw (ex-info "Weak-activation deterministic id conflict"
+                       {:reason :activation-conflict
+                        :evidence/id (:evidence/id entry)}))
+
+       :else
+       (let [result (*append-fn* store entry)]
+         (if (:ok result)
+           {:status :recorded :entry (:entry result)
+            :evidence/id (:evidence/id entry)}
+           (throw (ex-info "Weak-activation append failed"
+                           {:reason :activation-append-failed :result result}))))))))
+
 (defonce ^:private executor
   (Executors/newSingleThreadExecutor
    (reify ThreadFactory
@@ -193,18 +263,34 @@
 (def ^:dynamic *submit-fn*
   (fn [task] (.submit executor ^Runnable task)))
 
+(defn submit-task!
+  "Run TASK on the activation executor and return immediately."
+  [task]
+  (*submit-fn* (bound-fn [] (task)))
+  :submitted)
+
 (defn submit-work!
   "Queue a work packet after its invoke job is durable. Returns immediately."
   [store artifact text]
-  (*submit-fn*
-   (bound-fn []
+  (submit-task!
+   (fn []
      (try (record! store artifact text)
           (catch Throwable t
             (binding [*out* *err*]
               (println "[artifact-activation] record failed"
                        (pr-str {:artifact (:id artifact)
-                                :message (.getMessage t)})))))))
-  :submitted)
+                                :message (.getMessage t)}))))))))
+
+(defn submit-error!
+  "Queue a typed producer-side failure record and return immediately."
+  [store artifact text error]
+  (submit-task!
+   #(try (record-error! store artifact text error)
+         (catch Throwable t
+           (binding [*out* *err*]
+             (println "[artifact-activation] error record failed"
+                      (pr-str {:artifact (:id artifact)
+                               :message (.getMessage t)})))))))
 
 (defn missing-activations
   "Accepted work JOB-IDS having neither a success nor typed failure record."

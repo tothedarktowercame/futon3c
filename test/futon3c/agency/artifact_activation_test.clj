@@ -137,3 +137,33 @@
         (is (re-matches #"[0-9a-f]{64}" (:index-sha256 d1)))
         (is (not= (:script-sha256 d1) (:index-sha256 d1)))
         (is (= d1 d2))))))
+
+(deftest markdown-sections-own-text-until-any-next-heading
+  (let [text (str "preamble\n"
+                  "# Root\nroot body\n"
+                  "## 子節\nchild body\n"
+                  "```md\n# not a heading\n```\n"
+                  "### Tail\nlast")]
+    (is (= [{:heading "Root" :start-line 2 :end-line 3
+             :text "# Root\nroot body"}
+            {:heading "子節" :start-line 4 :end-line 8
+             :text "## 子節\nchild body\n```md\n# not a heading\n```"}
+            {:heading "Tail" :start-line 9 :end-line 10
+             :text "### Tail\nlast"}]
+           (activation/markdown-sections text)))))
+
+(deftest changed-sections-ignore-line-shifts
+  (let [old "# A\nalpha\n# B\nbeta"
+        shifted "preamble\n\n# A\nalpha\n# B\nbeta"
+        edited "# A\nchanged\n# B\nbeta"]
+    (is (empty? (activation/changed-sections old shifted)))
+    (is (= ["A"] (mapv :heading (activation/changed-sections old edited))))))
+
+(deftest cap-failure-record-keeps-count
+  (let [entry (activation/activation-record
+               {:kind :doc-section :id "sha:path:section-cap" :observed-at observed-at}
+               "" descriptor
+               {:error {:reason :section-cap-exceeded :message "capped" :count 21}})]
+    (is (shapes/valid? shapes/EvidenceEntry entry))
+    (is (= {:reason :section-cap-exceeded :message "capped" :count 21}
+           (get-in entry [:evidence/body :error])))))

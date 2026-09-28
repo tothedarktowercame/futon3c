@@ -302,7 +302,7 @@
    memory in it and corrupt the provenance its benchmark depends on."
   [:enum :pattern :mission :component :gate :session :agent :thread :evidence
    :proof-path :task :portfolio :arse-thread :library :problem :language :tool
-   :service :script :memory :decision :git-commit :invoke-job])
+   :service :script :memory :decision :git-commit :invoke-job :doc-section])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
