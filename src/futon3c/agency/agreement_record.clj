@@ -64,6 +64,14 @@
       (and (nil? offer-id) (empty? offers))
       {:refused {:reason :no-visible-offer}}
 
+      ;; `yes <option>` names no offer, so it is read only when the seat has
+      ;; exactly one visible offer; an option id that happens to exist in
+      ;; just one of several offers does not pick that offer.
+      (and (nil? offer-id) option-id (< 1 (count offers)))
+      {:ambiguous {:candidates (mapv (fn [offer] {:offer-id (:id offer)
+                                                  :option-id option-id})
+                                     offers)}}
+
       :else
       (let [selected-offers (if offer-id
                               (filterv #(= offer-id (:id %)) offers)

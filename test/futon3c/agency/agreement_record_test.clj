@@ -64,6 +64,15 @@
                        (get-in (agreement/resolve-acceptance
                                 {:offers [offer other]}
                                 (agreement/parse-acceptance "yes 2"))
+                               [:ambiguous :candidates])))))))
+  (testing "yes <option> with two offers is ambiguous even if one lacks the option"
+    (let [other (assoc offer :id "act:offer-b"
+                       :options [(first (:options offer))])]
+      (is (= #{"act:offer-a" "act:offer-b"}
+             (set (map :offer-id
+                       (get-in (agreement/resolve-acceptance
+                                {:offers [offer other]}
+                                (agreement/parse-acceptance "yes 2"))
                                [:ambiguous :candidates]))))))))
 
 (deftest resolver-refuses-invisible-offer-and-unknown-option
