@@ -3,8 +3,10 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
+            [cheshire.core :as json]
             [futon3c.agency.registry :as registry]
             [futon3c.watcher.commit-ingest :as sut]
+            [futon3c.watcher.write-pace :as write-pace]
             [futon3c.test-support.git-fixture :as git-fixture]))
 
 (deftest cold-start-cursor-asks-store-for-one-latest-commit
@@ -179,3 +181,53 @@
             :session-id "s1"
             :relation/provenance "session-heuristic"}
            (sut/commit-mission-attribution {:ts 100})))))
+
+(deftest post-hyperedges-batches-and-falls-back
+  (let [missing-at (ns-resolve 'futon3c.watcher.commit-ingest '!batch-route-missing-at)
+        items [["code/v05/var" ["r/a"] ["r"] {"var/qname" "a"}]
+               ["code/v05/var" ["r/b"] ["r"] {"var/qname" "b"}]]]
+    (testing "one batch request, one result per item in post-hyperedge!'s shape"
+      (reset! @missing-at nil)
+      (let [posts (atom [])]
+        (with-redefs [write-pace/pace! (fn [] nil)
+                      http/post (fn [url opts]
+                                  (swap! posts conj [url (json/parse-string (:body opts))])
+                                  {:status 200
+                                   :body (pr-str {:ok true :results [{:ok true :hx/id "hx:a"}
+                                                                     {:ok true :hx/id "hx:b"}]})})]
+          (let [rs (binding [sut/*valid-time-ms* 1790000000000] (sut/post-hyperedges! items))]
+            (is (= 1 (count @posts)))
+            (is (str/ends-with? (ffirst @posts) "/api/alpha/hyperedges/batch"))
+            (is (= [1790000000000 1790000000000]
+                   (map #(get % "hx/valid-time") (get (second (first @posts)) "hyperedges"))))
+            (is (= [true true] (map :ok? rs)))
+            (is (= ["hx:a" "hx:b"] (map (comp :hx/id :body) rs)))))))
+    (testing "a store without the route gets single posts, and is remembered"
+      (reset! @missing-at nil)
+      (let [urls (atom [])]
+        (with-redefs [write-pace/pace! (fn [] nil)
+                      http/post (fn [url _]
+                                  (swap! urls conj url)
+                                  (if (str/ends-with? url "/batch")
+                                    {:status 404 :body "{}"}
+                                    {:status 200 :body "{\"hx/id\":\"hx:x\"}"}))]
+          (is (every? :ok? (sut/post-hyperedges! items)))
+          (is (every? :ok? (sut/post-hyperedges! items)))
+          (is (= 1 (count (filter #(str/ends-with? % "/batch") @urls))) "not retried")
+          (is (= 4 (count (remove #(str/ends-with? % "/batch") @urls))))
+          (reset! @missing-at (- (System/currentTimeMillis) (* 11 60 1000)))
+          (sut/post-hyperedges! items)
+          (is (= 2 (count (filter #(str/ends-with? % "/batch") @urls)))
+              "asked again once the recheck interval has passed"))))
+    (testing "a failed batch falls back to single posts for that chunk"
+      (reset! @missing-at nil)
+      (let [urls (atom [])]
+        (with-redefs [write-pace/pace! (fn [] nil)
+                      http/post (fn [url _]
+                                  (swap! urls conj url)
+                                  (if (str/ends-with? url "/batch")
+                                    {:status 500 :body "{:ok false}"}
+                                    {:status 200 :body "{\"hx/id\":\"hx:x\"}"}))]
+          (is (every? :ok? (sut/post-hyperedges! items)))
+          (is (nil? @@missing-at) "a 500 does not mark the route missing"))))
+    (reset! @missing-at nil)))

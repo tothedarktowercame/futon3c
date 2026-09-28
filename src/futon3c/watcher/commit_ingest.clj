@@ -66,13 +66,15 @@
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
     endpoints))
 
+(defn- hyperedge-payload [hx-type endpoints labels props]
+  (cond-> {"hx/type" hx-type "hx/endpoints" (directed-endpoints hx-type endpoints)}
+    (seq labels) (assoc "hx/labels" labels)
+    props (assoc "hx/props" props)
+    *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*)))
+
 (defn post-hyperedge!
   [hx-type endpoints labels & [props]]
-  (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
-                  (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props)
-                  *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*))
+  (let [payload (hyperedge-payload hx-type endpoints labels props)
         _ (write-pace/pace!)
         resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
@@ -87,6 +89,58 @@
                     (catch Exception _ (:body resp))))]
     {:ok? (and (= 200 (:status resp)) (or (:hyperedge body) (:hx/id body)))
      :status (:status resp) :body body}))
+
+;; Batched hyperedge writes (2026-09-28). A commit's var and edits
+;; hyperedges went out one request each (about 10 a second); futon1b
+;; POST /api/alpha/hyperedges/batch writes a chunk in one transaction. The
+;; body is JSON, as for single posts, so futon1b decodes every item exactly
+;; as it decodes a single write. A store without the route (404/405) gets
+;; single posts, and is asked again after batch-route-recheck-ms, so a
+;; futon1b restart onto a build with the route is picked up without one here.
+(def ^:private hyperedge-batch-size 200)
+
+(def ^:private batch-route-recheck-ms (* 10 60 1000))
+
+(defonce ^:private !batch-route-missing-at (atom nil))
+
+(defn- batch-route? []
+  (let [t @!batch-route-missing-at]
+    (or (nil? t) (> (- (System/currentTimeMillis) t) batch-route-recheck-ms))))
+
+(defn post-hyperedges!
+  "Post ITEMS, each [hx-type endpoints labels props], and return one result
+  per item in post-hyperedge!'s shape, in order."
+  [items]
+  (let [single (fn [[t eps labels props]] (post-hyperedge! t eps labels props))]
+    (if-not (batch-route?)
+      (mapv single items)
+      (vec
+       (mapcat
+        (fn [chunk]
+          (write-pace/pace!)
+          (let [resp (try
+                       (http/post (str FUTON1A "/api/alpha/hyperedges/batch")
+                                  {:headers {"Content-Type" "application/json"
+                                             "X-Penholder" PENHOLDER}
+                                   :body (json/generate-string
+                                          {"hyperedges" (mapv #(apply hyperedge-payload %) chunk)})
+                                   :throw false
+                                   :timeout watcher-http-timeout-ms})
+                       (catch Exception e {:status -1 :body (.getMessage e)}))
+                results (when (= 200 (:status resp))
+                          (try (:results (edn/read-string (:body resp)))
+                               (catch Exception _ nil)))]
+            (cond
+              (= (count results) (count chunk))
+              (mapv (fn [r] {:ok? (boolean (and (:ok r) (:hx/id r))) :status 200 :body r})
+                    results)
+
+              (#{404 405} (:status resp))
+              (do (reset! !batch-route-missing-at (System/currentTimeMillis))
+                  (mapv single chunk))
+
+              :else (mapv single chunk))))
+        (partition-all hyperedge-batch-size items))))))
 
 ;; ---------- git layer ----------
 
@@ -477,12 +531,13 @@
   [labels base-props repo-label commit file->vars git-root subtree]
   (let [pf (fn [q] (str repo-label "/" q))
         files (files-changed git-root (:sha commit) subtree)]
-    (vec
-     (for [path files
-           :let [vs (file->vars path)]
-           :when (seq vs)
-           v vs]
-       (post-hyperedge! "code/v05/edits" [(:sha commit) (pf v)] labels base-props)))))
+    (post-hyperedges!
+     (vec
+      (for [path files
+            :let [vs (file->vars path)]
+            :when (seq vs)
+            v vs]
+        ["code/v05/edits" [(:sha commit) (pf v)] labels base-props])))))
 
 (defn commit-vt-ms
   "Epoch-millis valid-time for a commit (git %at is unix seconds), or nil."
@@ -510,19 +565,20 @@
   [labels base-props repo-label commit file->structure git-root subtree]
   (let [pf (fn [q] (str repo-label "/" q))
         files (files-changed git-root (:sha commit) subtree)]
-    (vec
-     (for [path files
-           :let [{:keys [vars]} (when file->structure (file->structure path))]
-           v vars
-           :when (:var/qname v)]
-       (post-hyperedge! "code/v05/var"
-                        [(pf (:var/qname v))]
-                        labels
-                        (merge base-props
-                               {"var/ns" (:var/ns v)
-                                "var/qname" (:var/qname v)
-                                "var/kind" (:var/kind v)
-                                "var/has-doc" (:var/has-doc v)}))))))
+    (post-hyperedges!
+     (vec
+      (for [path files
+            :let [{:keys [vars]} (when file->structure (file->structure path))]
+            v vars
+            :when (:var/qname v)]
+        ["code/v05/var"
+         [(pf (:var/qname v))]
+         labels
+         (merge base-props
+                {"var/ns" (:var/ns v)
+                 "var/qname" (:var/qname v)
+                 "var/kind" (:var/kind v)
+                 "var/has-doc" (:var/has-doc v)})])))))
 
 ;; ---------- high-level ingestion ----------
 
