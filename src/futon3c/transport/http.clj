@@ -9478,7 +9478,9 @@
                   (throw (ex-info "Caller is not the named promise party"
                                   {:reason :not-a-party})))
               projection (obligations/obligations-as-of inputs debtor read-at)
-              incomplete? (some #(= promise-id (:obligation/id %)) (:incomplete projection))
+              incomplete? (some #(and (= promise-id (:obligation/id %))
+                                      (not= :no-beneficiary (:reason %)))
+                                (:incomplete projection))
               closed (some #(when (= promise-id (:obligation/id %)) %) (:ignored projection))
               _ (when incomplete?
                   (throw (ex-info "Promise history is incomplete"

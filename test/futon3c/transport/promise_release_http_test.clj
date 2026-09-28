@@ -81,3 +81,17 @@
     (let [prev {:sequence 1 :id "e-create" :type :promise/park-made}
           plain (history-row "e-release-plain" :promise/released 2 prev {})]
       (is (= 200 (:status (:response (run-write "debtor" "debtor" (inputs plain)))))))))
+
+(deftest missing-beneficiary-does-not-block-debtor-abandonment
+  (let [without-beneficiary (assoc rec :beneficiary nil)
+        creation' (assoc creation :evidence/body
+                         (merge without-beneficiary
+                                (select-keys (:evidence/body creation)
+                                             [:history/format :history/promise-id
+                                              :history/promise-sequence :history/predecessor])
+                                {:history/payload-edn
+                                 (pr-str {:record without-beneficiary :changes []
+                                          :predecessor nil})}))]
+    (is (= 200 (:status (:response
+                         (run-write "debtor" "debtor"
+                                    (assoc (inputs) :promise-history [creation']))))))))
