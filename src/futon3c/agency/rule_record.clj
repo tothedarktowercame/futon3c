@@ -6,6 +6,7 @@
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.agency.act-harness :as act-harness]
+            [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.rule-timeline :as timeline])
   (:import [java.net URI URLEncoder]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
@@ -13,6 +14,8 @@
 
 (defn- refuse! [field message]
   (throw (ex-info message {:reason :invalid-rule-record :field field})))
+(defn- refuse-reason! [reason field message]
+  (throw (ex-info message {:reason reason :field field})))
 (defn- text! [field value]
   (when-not (and (string? value) (not (str/blank? value)))
     (refuse! field "Rule field must be nonblank text")))
@@ -21,17 +24,53 @@
   (try (Instant/parse value)
        (catch Exception _ (refuse! field "Rule time must be an absolute ISO-8601 instant"))))
 
-(def record-keys
+(def legacy-record-keys
   #{:rule/key :rule/name :rule/kind :rule/internal :rule/input-output
     :rule/accomplishment :rule/world-assumption :rule/however :rule/incident
     :rule/withdrawal-condition :rule/provenance :rule/timeline :rule/description-ref})
+(def schema-2-keys
+  (into legacy-record-keys [:rule/schema :rule/family :rule/governs :act/stamp]))
+
+(defn- schema-version [record]
+  (or (:rule/schema record) 1))
 
 (defn validate!
   "Return RECORD or throw typed refusal. A known HOWEVER needs failure mode AND
    observable signal. An explicitly unknown failure mode needs a review date or instant.
    Temporary measures require an explicit incident ref, never a temporal guess."
   [record]
-  (when-not (and (map? record) (every? record-keys (keys record)))
+  (let [schema (schema-version record)
+        allowed (case schema 1 legacy-record-keys 2 schema-2-keys nil)]
+    (when-not allowed
+      (refuse-reason! :unsupported-rule-schema :rule/schema
+                      "Unsupported rule-record schema"))
+    (when-not (and (map? record) (every? allowed (keys record)))
+      (refuse! :record "Unknown rule fields or non-map record")))
+  (when (= 2 (schema-version record))
+    (when-not (contains? record :rule/family)
+      (refuse-reason! :missing-rule-family :rule/family "Schema 2 requires a family"))
+    (when-not (or (= :self (:rule/family record))
+                  (and (string? (:rule/family record))
+                       (str/starts-with? (:rule/family record) "act:")
+                       (< 4 (count (:rule/family record)))))
+      (refuse-reason! :invalid-rule-family :rule/family
+                      "Rule family must be :self or an act id"))
+    (when-not (contains? record :act/stamp)
+      (refuse-reason! :missing-act-stamp :act/stamp "Schema 2 requires an act stamp"))
+    (act-stamp/validate! (:act/stamp record))
+    (when-not (= (get-in record [:rule/provenance :author])
+                 (get-in record [:act/stamp :signer]))
+      (refuse-reason! :stamp-author-mismatch :act/stamp
+                      "Rule signer must equal its provenance author"))
+    (when-not (contains? record :rule/governs)
+      (refuse-reason! :missing-rule-governs :rule/governs
+                      "Schema 2 requires governed agents"))
+    (when-not (and (vector? (:rule/governs record))
+                   (every? #(and (string? %) (not (str/blank? %)))
+                           (:rule/governs record)))
+      (refuse-reason! :invalid-rule-governs :rule/governs
+                      "Governed agents must be a vector of nonblank ids")))
+  (when-not (map? record)
     (refuse! :record "Unknown rule fields or non-map record"))
   (doseq [k [:rule/key :rule/name :rule/world-assumption]] (text! k (get record k)))
   (when-not (contains? #{:temporary :standing} (:rule/kind record))
@@ -80,9 +119,32 @@
    (cond-> {:hx/type :rule/record :hx/mint-id true :hx/valid-time valid-from
             :hx/endpoints (cond-> [(str "rule:" (:rule/key record))]
                             (:rule/incident record) (conj (get-in record [:rule/incident :ref/id])))
-            :hx/props (assoc record :rule/schema 1 :rule/valid-from valid-from
+            :hx/props (assoc record :rule/schema (schema-version record)
+                             :rule/valid-from valid-from
                              :act/harness (act-harness/validate! harness))}
      idempotency-key (assoc :hx/idempotency-key idempotency-key))))
+
+(declare request!)
+
+(defn- verify-family! [base record]
+  (when (and (= 2 (schema-version record))
+             (not= :self (:rule/family record)))
+    (let [family (:rule/family record)
+          stored (try
+                   (request! base "GET"
+                             (str "/api/alpha/hyperedge/"
+                                  (URLEncoder/encode family "UTF-8")) nil)
+                   (catch clojure.lang.ExceptionInfo e
+                     (if (= 404 (:status (ex-data e)))
+                       (refuse-reason! :family-not-found :rule/family
+                                       "Rule family first record was not found")
+                       (throw e))))]
+      (when-not (and (= :rule/record (:hx/type stored))
+                     (= family (:hx/id stored))
+                     (= :self (get-in stored [:hx/props :rule/family])))
+        (refuse-reason! :invalid-family-first-record :rule/family
+                        "Rule family id must name its first self-family record"))))
+  record)
 
 (defn request!
   "EDN transport preserves keyword-valued properties. Errors never look like a receipt."
@@ -106,7 +168,8 @@
   ([base request]
    (write! base request (act-harness/plain "cli:futon3c.agency.rule-record")))
   ([base request harness]
-   (let [p (payload request harness)
+   (let [_ (verify-family! base (:record request))
+         p (payload request harness)
          receipt (request! base "POST" "/api/alpha/hyperedge" p)
          id (:hx/id receipt)]
      (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))

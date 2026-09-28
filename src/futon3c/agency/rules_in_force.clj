@@ -15,7 +15,8 @@
   {:record-id (:id record) :reason reason})
 
 (defn- family-id [record]
-  (get-in record [:hx/props :rule/family]))
+  (let [stored (get-in record [:hx/props :rule/family])]
+    (if (= :self stored) (:hx/id record) stored)))
 
 (defn- family-signer [records family]
   (some (fn [record]
