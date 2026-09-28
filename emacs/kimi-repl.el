@@ -230,6 +230,8 @@ must never break buffer setup."
            (format "[%s — waiting for the running turn to finish]"
                    (string-trim activity))))))
      ((equal type "done")
+      (when (fboundp 'agent-chat-note-done-prompt-line)
+        (agent-chat-note-done-prompt-line json-obj))
       (when-let ((sid (alist-get 'session-id json-obj)))
         (setq kimi-repl--session-id sid)
         (kimi-repl--persist-session-id))

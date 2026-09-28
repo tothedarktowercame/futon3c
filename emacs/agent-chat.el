@@ -843,6 +843,18 @@ the current \"Cooked for\" line."
 (defvar-local agent-chat--prefetched-prompt-line nil
   "Prompt fetched in the background at turn start, applied at turn end.")
 
+(defvar-local agent-chat--done-prompt-line nil
+  "This turn's prompt, delivered with the invoke's done event (P7a-1e).
+Preferred over `agent-chat--prefetched-prompt-line', which shows the previous
+turn's pattern; kept separate so a late prefetch cannot overwrite it.")
+
+(defun agent-chat-note-done-prompt-line (event)
+  "Keep the prompt line carried by a done EVENT (an alist), if it is valid.
+REPL files call this behind `fboundp', so an older loaded agent-chat is safe."
+  (let ((prompt (alist-get 'prompt-line event)))
+    (when (agent-chat--valid-prompt-line-p prompt)
+      (setq agent-chat--done-prompt-line prompt))))
+
 (defun agent-chat--prompt-line-url ()
   "Return the exact-seat prompt-line URL, or nil when it must not be fetched."
   (when (and agent-chat-prompt-line-enabled
@@ -980,8 +992,11 @@ window points all end up after the new prompt with typed input untouched."
                  (save-excursion
                    (goto-char start)
                    (eql (agent-chat--prompt-end-at-point) end)))
-        (let ((new (or prompt agent-chat--prefetched-prompt-line)))
-          (unless prompt (setq agent-chat--prefetched-prompt-line nil))
+        (let ((new (or prompt agent-chat--done-prompt-line
+                       agent-chat--prefetched-prompt-line)))
+          (unless prompt
+            (setq agent-chat--done-prompt-line nil
+                  agent-chat--prefetched-prompt-line nil))
           (unless (or (null new)
                       (equal new (buffer-substring-no-properties start end)))
             (let ((inhibit-read-only t)
@@ -2702,6 +2717,7 @@ operator input arriving while they run is queued for the next turn."
                   agent-chat--turn-counter))
     (agent-chat-start-turn-commit-window!)
     (agent-chat--refresh-prompt-line! "> ")
+    (setq agent-chat--done-prompt-line nil)
     (agent-chat--prefetch-prompt-line!)
     (setq agent-chat--turn-start-time (float-time))
     (setq agent-chat--pending-turn-origin origin)

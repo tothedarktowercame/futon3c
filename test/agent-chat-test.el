@@ -898,3 +898,23 @@ counted; a fresh one is kept for inspection."
               (should (= (- plain 6) (agent-chat--turn-flair-width))))
             (should (<= plain (window-body-width)))))
       (kill-buffer buf))))
+
+(ert-deftest agent-chat-done-prompt-line-wins-over-prefetch ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "> ")))
+      (agent-chat-test--init-buffer))
+    (insert "abc")
+    ;; Invalid values are ignored.
+    (agent-chat-note-done-prompt-line '((type . "done") (prompt-line . "no prompt")))
+    (should (null agent-chat--done-prompt-line))
+    (agent-chat-note-done-prompt-line '((type . "done") (prompt-line . "$~this/turn> ")))
+    ;; A late turn-start prefetch lands after the done event.
+    (setq agent-chat--prefetched-prompt-line "$~previous/turn> ")
+    (agent-chat--insert-turn-end-flair 2)
+    (goto-char (point-max))
+    (should (equal "$~this/turn> abc"
+                   (buffer-substring-no-properties
+                    (line-beginning-position) (point-max))))
+    (should (null agent-chat--done-prompt-line))
+    (should (null agent-chat--prefetched-prompt-line))))

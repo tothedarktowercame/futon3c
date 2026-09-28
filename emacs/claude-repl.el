@@ -1196,6 +1196,8 @@ CALLBACK is called with the final response text on completion."
                            (cond
                             ;; Successful done event
                             ((and done-event (alist-get 'ok done-event))
+                             (when (fboundp 'agent-chat-note-done-prompt-line)
+                               (agent-chat-note-done-prompt-line done-event))
                              (let ((sid (alist-get 'session-id done-event))
                                    (result (or (alist-get 'result done-event)
                                                "[empty response]")))

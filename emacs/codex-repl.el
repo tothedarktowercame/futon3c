@@ -3726,6 +3726,8 @@ When FORCE is non-nil, refresh immediately."
 
 (defun codex-repl--finish-invoke (proc done-event raw callback prompt-text retry-attempt)
   "Finalize invoke state for PROC using DONE-EVENT and RAW, then run CALLBACK."
+  (when (and done-event (fboundp 'agent-chat-note-done-prompt-line))
+    (agent-chat-note-done-prompt-line done-event))
   (codex-repl--record-invoke-timing!
    "finish-invoke-enter"
    (format "exit=%s done=%s"
