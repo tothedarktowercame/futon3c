@@ -1,28 +1,23 @@
 (ns futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test
-  (:require [clojure.test :refer [deftest is]]
-            [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-ask-out-support :as support]))
-(def positive (delay (support/interpretations :construct :none)))
-(defn check [] @positive)
-(def wire {
-   :second-layer {:test 'futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/different-carrier-changes-the-reader-product :kind :value-varying
-                  :product [:reader] :intervention :before-reader}
-  :wire [:ask-merge-published :construction-construct :interpretations]
-           :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value :check check
-           :live-records-read support/live-records-read
-           :note "Published patterns passed to real construct; receipt unreached-wants determines which open wants were produced. Missing interpretations refuse invalid-input."})
+  (:require [clojure.test :refer [deftest is]] [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+(def wire-id [:ask-merge-published :construction-construct :interpretations])
+(def producer (delay (producer-record/record "ask-out-live-census")))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn check [] (:primary (fields)))
+(def wire {:second-layer {:test `different-carrier-changes-the-reader-product :kind :value-varying
+                          :product [:reader] :intervention :before-reader}
+           :wire wire-id :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value
+           :check check :live-records-read []})
 (deftest the-real-reader-receives-the-published-value
-  (is (seq (support/live-census)))
-  (let [o (check)]
-    (is (w/received? o))
-    (is (= :constructed (get-in o [:constructed :status])))
-    (is (= [support/pattern-id] (get-in o [:constructed :candidates 0 :precedence])))))
+  (is (seq (:live-census @producer)))
+  (let [o (check)] (is (w/received? o) (str "writer-reader " (pr-str o)))
+       (is (= :constructed (:constructed-status o)))
+       (is (= [:writing-coherence/meet-the-reader-where-they-are] (:constructed-precedence o)))))
 (deftest absent-carrier-before-reader-is-not-a-witness
-  (let [o (support/interpretations :construct :absent)]
-    (is (not (w/received? o)))
-    (is (= :invalid-input (get-in o [:constructed :kind])))))
+  (let [o (get-in (fields) [:interventions :absent])]
+    (is (not (w/received? o))) (is (= :invalid-input (:constructed-kind o)))))
 (deftest different-carrier-changes-the-reader-product
-  (let [o (support/interpretations :construct :different)]
-    (is (not (w/received? o)))
-    (is (not= (:writer o) (:reader o)))
-    (is (contains? (:reader o) support/argue))))
+  (let [o (get-in (fields) [:interventions :different])]
+    (is (not (w/received? o))) (is (not= (:writer o) (:reader o)))
+    (is (:reader-contains-argue? o))))
