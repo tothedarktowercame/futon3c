@@ -34,8 +34,8 @@ Deferred: recording the definitions a run called (it replaces function objects i
 
 - [x] **C1 — Dependencies are definitions.** A warrant depends on the definitions its test can reach, not on every file loaded. Rule: `futon2/holes/labs/wm-contract/NOTE-warrant-definition-rule.md`. Built at futon3c a6898528 … 252860bf; read back through the live lookup for all 194 on 2026-09-28 17:42Z.
 - [x] **C2 — One test sees a file that stops loading.** `wm-wire-everything-loads-test` keeps the whole-file rule (futon3c a17ab9a9, 252860bf).
-- [ ] **C3 — The count is reported by cause.** For the current tree: each changed definition, remainder or file, and the warrants it makes stale.
-- [ ] **C4 — Over the limit, a request exists.** A cause with more than 10 stale warrants has exactly one open refactor request, written without anyone asking for it.
+- [x] **C3 — The count is reported by cause.** For the current tree: each changed definition, remainder or file, and the warrants it makes stale. `warrant_index.py impact` (futon3c e747cc03); run on the real database 2026-09-28 17:59Z: 0 stale, 0 causes, since no product file has changed since the renewal. Not yet seen on a real product edit.
+- [ ] **C4 — Over the limit, a request exists.** A cause with more than 10 stale warrants has exactly one open refactor request, written without anyone asking for it. Built: `impact --record` writes it (e747cc03) and the rerun worker calls that at the start of each pass (a30d70a1). Open: the worker itself is started by hand, so a request is written only when someone starts a pass.
 - [ ] **C5 — A request is dispatched without me.** An open request reaches a Codex or Kimi seat as a packet, with a job id on the request.
 - [ ] **C6 — A request closes on evidence.** It closes when the same edit, replayed against the refactored tests, makes 10 or fewer warrants stale; the replay's count is on the request.
 - [ ] **C7 — The wire suite meets the limit.** No product definition is reached by more than 10 wire tests, or each exception is listed with its reason. At 2026-09-28 17:53Z: 2,511 of 7,683 reached definitions are over.
@@ -54,3 +54,4 @@ Open. Inputs so far, all under `/home/joe/code/storage/test-registry/`: `exercis
 ## Log
 
 - 2026-09-28 17:58Z claude-8: mission opened. C1 and C2 recorded as met from the day's work; C3–C8 open.
+- 2026-09-28 18:00Z claude-8: LIMIT-I reviewed (e747cc03, codex-1); worker step added (a30d70a1). C3 met; C4 built, not yet automatic.
