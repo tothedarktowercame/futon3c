@@ -15,11 +15,17 @@
 
   No other live flight record carries the field: the seven earlier flights
   predate WM-CAST-I, their click entries have no :cast (the seventh,
-  flight-278b6988, is the flight whose missing cast motivated it)."
+  flight-278b6988, is the flight whose missing cast motivated it).
+
+  Converted to read the wire ends, the different cast and the second-layer
+  products from the content-addressed
+  wm-wire-flight-click-flight-record-click-cast-test-literal-f producer
+  record; this reader loads no product code."
   (:require [clojure.test :refer [deftest is]]
-            [futon2.aif.flight-runner :as fr]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-click-record-products-9a :as products]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+
+(def producer (delay (producer-record/record "wm-wire-flight-click-flight-record-click-cast-test-literal-f")))
 
 (def record
   {:path (str w/spike-dir "/flight-ada87008/flight-ada87008.edn")
@@ -30,10 +36,7 @@
   {:path (str w/spike-dir "/flight-278b6988.edn")
    :sha256 "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"})
 
-(defn check []
-  (let [r (w/read-record (:path record))]
-    {:writer (get-in r [:plan :resolved-steps :cast])
-     :reader (get-in r [:flight :clicks 0 :cast])}))
+(defn check [] (:wire-ends @producer))
 
 (def wire
   {:wire [:flight-click :flight-record-click :cast]
@@ -65,7 +68,7 @@
 (deftest a-different-cast-fails-the-wire
   ;; a real call: click-cast of a different seat set (the eighth flight's
   ;; own seats swapped, a repair-reviewer given) is a different cast
-  (let [other (fr/click-cast {:author "claude-13" :reviewer "claude-6" :repair-reviewer "kimi-2"})
+  (let [other (:different-cast @producer)
         o (check)]
     (is (some? other))
     (is (not= (:writer o) other))
@@ -76,12 +79,11 @@
   (is (not-any? :cast (:clicks (:flight (w/read-record (:path earlier-record)))))))
 
 (deftest click-field-is-recorded-without-changing-stop-rule
-  (doseq [[status after] products/scenarios]
-    (let [r (products/products :cast after)]
-      (is (= (:written r) (:products r)))
-      (is (apply not= (:products r)))
-      
-      (is (= [status status] (:statuses r)))
-      (is (= [[:earlier :later] [:earlier :later]] (:carried r)))
-      (is (apply = (:unchanged r)) "Every other part of the flight record is identical.")
-      (println :cast :products (:products r) :flight-status (:statuses r)))))
+  (doseq [[status r] (:products @producer)]
+    (is (= (:written r) (:products r)))
+    (is (apply not= (:products r)))
+
+    (is (= [status status] (:statuses r)))
+    (is (= [[:earlier :later] [:earlier :later]] (:carried r)))
+    (is (apply = (:unchanged r)) "Every other part of the flight record is identical.")
+    (println :cast :products (:products r) :flight-status (:statuses r))))
