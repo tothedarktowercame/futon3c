@@ -87,7 +87,8 @@
                 :ran-at "2026-09-27T23:30:00Z" :finished-at "2026-09-27T23:31:00Z"
                 :warrant? true :postcheck {:status :matched}
                 :results {:tests 1 :assertions 1 :failures 0 :errors 0}
-                :code-files {} :test-files {test-path (checks/content-sha test-path)}}
+                :load-closure [] :code-files {}
+                :test-files {test-path (checks/content-sha test-path)}}
         c8-id (append-run! store
                 (assoc common :run/id "c8" :command ["clojure" "-M:test" "-n" namespace]))
         increment-id (append-run! store
@@ -160,6 +161,39 @@
        (is (= :not-a-warrant (get-in result [:data :reason])))
        (is (= (:evidence/id run) (get-in result [:data :found-entry-id])))
        (is (empty? (sqlite/rerun-requests store {})))))))
+
+(deftest green-registration-refusal-requests-one-run
+  (current-fixture
+   1 false
+   (fn [{:keys [dir store namespace invoke]}]
+     (let [path "test/current_test.clj"
+           refused-id
+           (append-run!
+            store
+            {:kind :run :author "fixture-author" :run/id "green-refusal"
+             :repo/root (.getPath dir)
+             :namespace namespace :command ["clojure" "-M:test" "-n" namespace]
+             :ran-at "2099-01-01T00:00:00Z" :finished-at "2099-01-01T00:00:01Z"
+             :warrant? false
+             :results {:exit 0 :failures 0 :errors 0}
+             :postcheck {:record/type :test-registry/refusal
+                         :reason :scope-not-committed}
+             :load-closure []
+             :test-files {path (registry/file-sha (io/file dir path))}})
+           first-miss (invoke)
+           second-miss (invoke)
+           requests (sqlite/rerun-requests store {})]
+       (is (= :missing (:status first-miss)))
+       (is (= :no-current-warrant (:kind first-miss)))
+       (is (= :registration-refused (get-in first-miss [:data :reason])))
+       (is (= :scope-not-committed (get-in first-miss [:data :refusal-reason])))
+       (is (= refused-id (get-in first-miss [:data :found-entry-id])))
+       (is (= (get-in first-miss [:data :request-id])
+              (get-in second-miss [:data :request-id])))
+       (is (= 1 (count requests)))
+       (is (= :stale (:reason (first requests))))
+       (is (= "registration refused: scope-not-committed"
+              (:detail (first requests))))))))
 
 (deftest current-warrant-two-hundred-file-time-bar
   (current-fixture

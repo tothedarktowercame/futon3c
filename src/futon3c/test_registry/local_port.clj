@@ -54,6 +54,24 @@
                     :found-entry-id (:evidence/id entry)
                     :reason :not-a-warrant}}
 
+            :registration-refused
+            (let [refusal-reason (:reason classification)
+                  queued (sqlite/request-rerun!
+                          store {:namespace namespace :repo repo :reason :stale
+                                 :detail (str "registration refused: "
+                                              (name refusal-reason))})]
+              (if (:error/code queued)
+                (port/failure :rerun-request-failed
+                              {:miss {:namespace namespace :repo repo
+                                      :reason :registration-refused
+                                      :refusal-reason refusal-reason
+                                      :found-entry-id (:evidence/id entry)}
+                               :failure queued})
+                (assoc-in
+                 (missing-answer namespace repo :registration-refused
+                                 (:evidence/id entry) queued)
+                 [:data :refusal-reason] refusal-reason)))
+
             :stale
             (let [miss-reason :stale
                   queued (sqlite/request-rerun!

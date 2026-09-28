@@ -52,6 +52,41 @@
                (currentness/classify store unverifiable (.getPath dir)))))
       (finally (cleanup! dir)))))
 
+(deftest distinguishes-green-registration-refusal-from-test-failure
+  (let [dir (temp-dir) file (io/file dir "fixture.clj")
+        store (sqlite/sqlite-backend (io/file dir "registry.sqlite"))
+        files {"fixture.clj" nil}
+        refusal {:record/type :test-registry/refusal
+                 :reason :scope-not-committed}]
+    (try
+      (spit file "(ns fixture)\n")
+      (let [files (assoc files "fixture.clj" (registry/file-sha file))
+            entry (fn [payload]
+                    (append! store (merge {:kind :run :load-closure []
+                                           :test-files files}
+                                          payload)))
+            green-refusal
+            (entry {:warrant? false
+                    :results {:exit 0 :failures 0 :errors 0}
+                    :postcheck refusal})
+            failed-refusal
+            (entry {:warrant? false
+                    :results {:exit 1 :failures 1 :errors 0}
+                    :postcheck refusal})
+            failed (entry {:warrant? false
+                           :results {:exit 1 :failures 1 :errors 0}})
+            warrant (entry {:warrant? true
+                            :results {:exit 0 :failures 0 :errors 0}})]
+        (is (= {:class :registration-refused :reason :scope-not-committed}
+               (currentness/classify store green-refusal (.getPath dir))))
+        (is (= {:class :not-passing}
+               (currentness/classify store failed-refusal (.getPath dir))))
+        (is (= {:class :not-passing}
+               (currentness/classify store failed (.getPath dir))))
+        (is (= {:class :current}
+               (currentness/classify store warrant (.getPath dir)))))
+      (finally (cleanup! dir)))))
+
 (deftest agrees-with-python-over-live-wire-runs
   (let [source (io/file sqlite/default-path)]
     (if-not (.isFile source)

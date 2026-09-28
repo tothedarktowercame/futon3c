@@ -227,7 +227,7 @@
 (defn request-rerun!
   "Return the active rerun request for NAMESPACE, or append one queued request.
   Only an absent or stale current-warrant lookup licenses this operation."
-  [backend {:keys [namespace repo reason]}]
+  [backend {:keys [namespace repo reason detail]}]
   (if-not (and (string? namespace) (not (str/blank? namespace))
                (string? repo) (not (str/blank? repo))
                (#{:absent :stale} reason))
@@ -241,14 +241,18 @@
                                  [namespace]))]
           (do (execute! c "COMMIT") (request-result active false))
           (let [requested-at (str (Instant/now))]
+            ;; Registration refusals use reason 'stale' because the existing
+            ;; SQLite CHECK admits only stale/absent; DETAIL preserves why the
+            ;; otherwise-green registration was refused without rebuilding it.
             (with-open [s (.prepareStatement c
                             "INSERT INTO warrant_rerun_requests
-                               (namespace,repo,reason,requested_at,state)
-                             VALUES(?,?,?,?, 'queued')")]
+                               (namespace,repo,reason,requested_at,state,detail)
+                             VALUES(?,?,?,?, 'queued', ?)")]
               (.setString s 1 namespace)
               (.setString s 2 repo)
               (.setString s 3 (name reason))
               (.setString s 4 requested-at)
+              (.setString s 5 detail)
               (.executeUpdate s))
             (let [created (first (select-reruns c
                                    "WHERE namespace=? AND state='queued'"

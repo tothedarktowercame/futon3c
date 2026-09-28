@@ -65,6 +65,15 @@
       (when-not (.next result) (fail :missing-run-index))
       (= 1 (.getInt result "warrant")))))
 
+(defn- registration-refusal [payload]
+  (let [{:keys [exit failures errors]} (:results payload)
+        green? (= [0 0 0] [exit failures errors])]
+    (some (fn [check]
+            (when (and green?
+                       (= :test-registry/refusal (:record/type check)))
+              (:reason check)))
+          [(:postcheck payload) (:precheck payload)])))
+
 (defn classify
   "Classify ENTRY at REPO-ROOT as :current, :stale, :not-passing, or
   :unverifiable. A stale result names the lexically first changed file."
@@ -75,7 +84,9 @@
           indexed-warrant (indexed-warrant? store (:evidence/id entry))]
       (cond
         (or (not indexed-warrant) (not (true? (:warrant? payload))))
-        {:class :not-passing}
+        (if-let [reason (registration-refusal payload)]
+          {:class :registration-refused :reason reason}
+          {:class :not-passing})
 
         (empty? files)
         {:class :unverifiable :reason :no-recorded-files}

@@ -47,7 +47,7 @@ class IndexTest(unittest.TestCase):
                      '--root', str(self.root)]
 
     def insert_run(self, entry='one', namespace='test.one', when=1, passing=True,
-                   files=True, payload_text=None):
+                   files=True, payload_text=None, payload_updates=None):
         payload = {'kind': 'run', 'run/id': entry, 'repo/root': str(self.root), 'namespace': namespace,
                    'command': ['clojure', '-M:test', '-n', namespace],
                    'ran-at': f'2026-09-27T01:00:{when:02d}Z',
@@ -58,6 +58,7 @@ class IndexTest(unittest.TestCase):
                                     if files else []),
                    'test-files': ({self.b.name: hashlib.sha256(self.b.read_bytes()).hexdigest()}
                                   if files else {})}
+        payload.update(payload_updates or {})
         text = encode(payload) if payload_text is None else payload_text
         # As the registry makes them: the id is the digest of the stored text.
         digest = hashlib.sha256(text.encode()).hexdigest()
@@ -108,6 +109,31 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(self.ids['fail'], self.check('not-passing')['entry-id'])
         self.insert_run('pass-again', when=3, passing=True)
         self.assertEqual(self.ids['pass-again'], self.check('current')['entry-id'])
+
+    def test_registration_refusal_is_distinct_from_test_failure(self):
+        refusal = {'record/type': 'test-registry/refusal',
+                   'reason': 'scope-not-committed'}
+        green = {'results': {'exit': 0, 'failures': 0, 'errors': 0},
+                 'postcheck': refusal}
+        failing = {'results': {'exit': 1, 'failures': 1, 'errors': 0},
+                   'postcheck': refusal}
+        self.insert_run('green-refusal', 'test.green-refusal', when=1,
+                        passing=False, payload_updates=green)
+        row = self.check('registration-refused', namespace='test.green-refusal')
+        self.assertEqual('scope-not-committed', row['reason'])
+        self.insert_run('failed-refusal', 'test.failed-refusal', when=2,
+                        passing=False, payload_updates=failing)
+        self.check('not-passing', namespace='test.failed-refusal')
+        self.insert_run('ordinary-failure', 'test.ordinary-failure', when=3,
+                        passing=False,
+                        payload_updates={'results': {'exit': 1, 'failures': 1, 'errors': 0}})
+        self.check('not-passing', namespace='test.ordinary-failure')
+        self.insert_run('warrant', 'test.warrant', when=4, passing=True,
+                        payload_updates={'results': {'exit': 0, 'failures': 0, 'errors': 0}})
+        self.check('current', namespace='test.warrant')
+        summary = self.runcli('check', '--ns', 'test.green-refusal', status=1).stdout
+        self.assertIn('test.green-refusal: registration-refused', summary)
+        self.assertIn('registration-refused: 1', summary)
 
     def test_out_of_order_append_cannot_hide_newer_failure(self):
         self.insert_run('newer-fail', when=9, passing=False)

@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT.parent / 'storage/test-registry/warrant-index.sqlite'
 WIRE_LEDGER_TEST = ROOT / 'test/futon3c/diagramprover/wm_wire_ledger_test.clj'
 TOKEN = re.compile(r'\s+|,[\s,]*|;[^\n]*|"(?:\\.|[^"\\])*"|#\{|[{}\[\]()]|[^\s,{}\[\]()]+')
-CLASSES = ('current', 'stale', 'not-passing', 'unverifiable', 'no-warrant')
+CLASSES = ('current', 'stale', 'registration-refused', 'not-passing',
+           'unverifiable', 'no-warrant')
 
 
 def edn(source):
@@ -137,6 +138,18 @@ def recorded_files(run, payload, root=None):
     return files
 
 
+def registration_refusal(payload):
+    results = payload.get('results')
+    green = (isinstance(results, dict) and results.get('exit') == 0
+             and results.get('failures') == 0 and results.get('errors') == 0)
+    for key in ('postcheck', 'precheck'):
+        check = payload.get(key)
+        if (green and isinstance(check, dict)
+                and check.get('record/type') == 'test-registry/refusal'):
+            return check.get('reason')
+    return None
+
+
 def classify(db, namespaces, root=None):
     latest = latest_rows(db, namespaces)
     prepared, all_paths = {}, set()
@@ -154,7 +167,10 @@ def classify(db, namespaces, root=None):
         except (TypeError, ValueError):
             prepared[namespace] = ('unverifiable', run, {}); continue
         if not run['warrant'] or payload.get('warrant?') is not True:
-            prepared[namespace] = ('not-passing', run, files); continue
+            refusal = registration_refusal(payload)
+            prepared[namespace] = (('registration-refused' if refusal else 'not-passing'),
+                                   run, files, refusal)
+            continue
         if not files:
             prepared[namespace] = ('unverifiable', run, {}); continue
         prepared[namespace] = ('passing', run, files); all_paths.update(files)
@@ -166,7 +182,8 @@ def classify(db, namespaces, root=None):
         except OSError: observed[path] = None
     rows = []
     for namespace in sorted(namespaces):
-        state, run, files = prepared[namespace]; changed = []
+        prepared_row = prepared[namespace]
+        state, run, files = prepared_row[:3]; changed = []
         if state == 'passing':
             for path, digest in files.items():
                 if observed[path] != digest:
@@ -175,6 +192,7 @@ def classify(db, namespaces, root=None):
             state = 'stale' if changed else 'current'
         rows.append({'namespace': namespace, 'class': state,
                      'entry-id': run and run['entry-id'],
+                     'reason': prepared_row[3] if len(prepared_row) > 3 else None,
                      'changed': sorted(changed, key=lambda change: change['path'])})
     return rows
 
