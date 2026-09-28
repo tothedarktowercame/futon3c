@@ -160,6 +160,83 @@
                              (line-beginning-position) (point-max))))
         (should (= (point-max) (marker-position agent-chat--input-start)))))))
 
+(defun agent-chat-test--agreement-send (text response &optional no-evidence)
+  "Send TEXT with stubbed agreement RESPONSE and return observed effects."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (setq-local agent-chat--agent-id "agent-a"
+                agent-chat--session-id "session-a")
+    (insert text)
+    (let (events messages sent)
+      (cl-letf (((symbol-function 'agent-chat-insert-message)
+                 (lambda (name value)
+                   (push (cons name value) messages)))
+                ((symbol-function 'agent-chat-evidence-request-json)
+                 (lambda (_method _url _timeout payload)
+                   (push (list :request payload) events)
+                   (if (eq response :timeout) (error "timeout") response)))
+                ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore)
+                ((symbol-function 'agent-chat--refresh-prompt-line!) #'ignore)
+                ((symbol-function 'agent-chat--prefetch-prompt-line!) #'ignore)
+                ((symbol-function 'agent-chat-insert-thinking) #'ignore)
+                ((symbol-function 'redisplay) #'ignore))
+        (agent-chat-send-input
+         (lambda (value _callback)
+           (setq sent value)
+           (push :invoke events)
+           nil)
+         "agent"
+         (list :before-send
+               (lambda (_value)
+                 (push :evidence events)
+                 (unless no-evidence
+                   (setq agent-chat--last-evidence-id "e:yes")))))
+        (list :events (reverse events) :messages (reverse messages) :sent sent)))))
+
+(ert-deftest agent-chat-agreement-checks-after-evidence-and-always-sends ()
+  (dolist
+      (case
+       `(((:status 200
+           :json (:record (:id "act:agreement-1"
+                           :agreement/offer "act:offer-1"
+                           :agreement/option-id "2")))
+          "yes: agreement act:agreement-1 (offer act:offer-1 option 2)")
+         ((:status 409 :json (:reason "ambiguous"))
+          "yes: ambiguous; the agent will ask which")
+         ((:status 409 :json (:reason "unknown-option"))
+          "yes: not recorded (unknown-option)")
+         ((:status 403 :json (:reason "evidence-not-operator-turn"))
+          "yes: not checked (http 403)")
+         (:timeout "yes: not checked (timeout)")))
+    (let* ((result (agent-chat-test--agreement-send "yes 2" (car case)))
+           (events (plist-get result :events))
+           (system-lines (mapcar #'cdr
+                                 (seq-filter (lambda (entry)
+                                               (equal "system" (car entry)))
+                                             (plist-get result :messages)))))
+      (should (equal "yes 2" (plist-get result :sent)))
+      (should (= 1 (seq-count (lambda (event) (eq event :invoke)) events)))
+      (should (equal '(:evidence :request :invoke)
+                     (mapcar (lambda (event) (if (listp event) :request event))
+                             events)))
+      (should (member (cadr case) system-lines)))))
+
+(ert-deftest agent-chat-agreement-near-miss-makes-no-request ()
+  (let* ((result (agent-chat-test--agreement-send
+                  "yes please" '(:status 500 :json (:reason "should-not-run"))))
+         (events (plist-get result :events)))
+    (should (equal "yes please" (plist-get result :sent)))
+    (should (equal '(:evidence :invoke) events))))
+
+(ert-deftest agent-chat-agreement-without-acknowledged-evidence-still-sends ()
+  (let* ((result (agent-chat-test--agreement-send
+                  "yes" '(:status 200 :json nil) t))
+         (events (plist-get result :events)))
+    (should (equal "yes" (plist-get result :sent)))
+    (should (equal '(:evidence :invoke) events))
+    (should (member '("system" . "yes: not checked (no evidence id)")
+                    (plist-get result :messages)))))
+
 (ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
   (should (equal (agent-chat-cost-flair-suffix
                   '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1

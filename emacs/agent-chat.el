@@ -49,6 +49,12 @@ Failure falls through to an ordinary agent turn with the original text."
   :type 'number
   :group 'agent-chat)
 
+(defcustom agent-chat-agreement-timeout 3
+  "Maximum seconds to wait while recording an operator acceptance.
+The original turn is sent to the agent after every outcome, including timeout."
+  :type 'number
+  :group 'agent-chat)
+
 (defcustom agent-chat-cost-script
   (expand-file-name "../scripts/session-cost.py"
                     (file-name-directory agent-chat--source-file))
@@ -2712,8 +2718,14 @@ operator input arriving while they run is queued for the next turn."
     (agent-chat-insert-message speaker trimmed)
     (when (agent-chat--operator-speaker-p speaker)
       (agent-chat--maybe-auto-clock-from-turn trimmed))
+    ;; The evidence hook is synchronous.  It sets this shared acknowledgement
+    ;; only after futon1b has accepted this exact user turn.
+    (setq agent-chat--last-evidence-id nil)
     (when (functionp before-send)
       (funcall before-send trimmed))
+    (when (and (agent-chat--operator-speaker-p speaker)
+               (agent-chat--acceptance-command trimmed))
+      (agent-chat--check-acceptance trimmed agent-chat--last-evidence-id))
     (setq agent-chat--last-auto-clock-witness nil)
     (agent-chat-insert-thinking)
     (cl-incf agent-chat--turn-counter)
@@ -2816,6 +2828,61 @@ Only `yes' is case-insensitive; either id may be nil."
              (fboundp 'agent-chat--refresh-prompt-line!))
     (when-let* ((prompt (agent-chat--fetch-prompt-line)))
       (agent-chat--refresh-prompt-line! prompt))))
+
+(defun agent-chat--agreement-reason (body)
+  "Return BODY's reason as display text, without keyword punctuation."
+  (let ((reason (plist-get body :reason)))
+    (cond ((keywordp reason) (substring (symbol-name reason) 1))
+          ((symbolp reason) (symbol-name reason))
+          ((stringp reason) reason)
+          (t "unknown"))))
+
+(defun agent-chat--check-acceptance (text evidence-id)
+  "Best-effort record classical acceptance TEXT backed by EVIDENCE-ID.
+This runs after the user-turn evidence hook and never consumes or changes TEXT."
+  (when-let* ((agent-id (and (stringp agent-chat--agent-id)
+                             (not (string-empty-p agent-chat--agent-id))
+                             agent-chat--agent-id))
+              (session-id (and (stringp agent-chat--session-id)
+                               (not (string-empty-p agent-chat--session-id))
+                               (not (equal agent-chat--session-id "pending"))
+                               agent-chat--session-id)))
+    (if (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
+        (agent-chat-insert-message "system" "yes: not checked (no evidence id)")
+      (if-let* ((request-fn (and (fboundp 'agent-chat-evidence-request-json)
+                                 #'agent-chat-evidence-request-json)))
+          (let* ((url (format "%s/api/alpha/agreement"
+                              (string-remove-suffix "/" agent-chat-agency-base-url)))
+                 (payload `((agent . ,agent-id) (session . ,session-id)
+                            (text . ,text) (evidence-id . ,evidence-id)))
+                 (response (condition-case nil
+                               (funcall request-fn "POST" url
+                                        agent-chat-agreement-timeout payload)
+                             (error nil)))
+                 (status (plist-get response :status))
+                 (body (plist-get response :json)))
+            (cond
+             ((eql status 200)
+              (let ((record (plist-get body :record)))
+                (agent-chat-insert-message
+                 "system"
+                 (format "yes: agreement %s (offer %s option %s)"
+                         (or (plist-get record :id) "unknown")
+                         (or (plist-get record :agreement/offer) "unknown")
+                         (or (plist-get record :agreement/option-id) "unknown")))))
+             ((and (eql status 409)
+                   (equal "ambiguous" (agent-chat--agreement-reason body)))
+              (agent-chat-insert-message
+               "system" "yes: ambiguous; the agent will ask which"))
+             ((eql status 409)
+              (agent-chat-insert-message
+               "system" (format "yes: not recorded (%s)"
+                                (agent-chat--agreement-reason body))))
+             (t
+              (agent-chat-insert-message
+               "system" (format "yes: not checked (%s)"
+                                (if status (format "http %s" status) "timeout"))))))
+        (agent-chat-insert-message "system" "yes: not checked (request unavailable)")))))
 
 (defun agent-chat--maybe-handle-undo (text)
   "Handle exact operator undo TEXT. Return non-nil only when consumed.
@@ -3710,7 +3777,10 @@ character the operator meant to write."
         (set session-var sid)
         (set last-id-var new-id)
         (when (eq agent-chat--last-evidence-delivery-outcome 'acked)
-          (agent-chat--maybe-run-affect-live evidence-url))))))
+          (setq agent-chat--last-evidence-id new-id
+                agent-chat--evidence-session-id sid)
+          (agent-chat--maybe-run-affect-live evidence-url))
+        new-id))))
 
 (defun agent-chat-emit-turn-commits-evidence!
     (evidence-url timeout sid assistant-author transport session-var last-id-var)
