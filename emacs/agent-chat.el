@@ -822,9 +822,12 @@ the current \"Cooked for\" line."
 
 (defun agent-chat--turn-flair-width ()
   "Return display width for the transcript turn-end flair."
+  ;; `window-max-chars-per-line', not `window-body-width': it subtracts the
+  ;; columns taken by `display-line-numbers-mode' and the continuation glyph,
+  ;; so the rule does not wrap when line numbers are on (Joe, 2026-09-28).
   (max 40
        (or (when-let* ((win (get-buffer-window (current-buffer))))
-             (window-body-width win))
+             (window-max-chars-per-line win))
            fill-column
            80)))
 

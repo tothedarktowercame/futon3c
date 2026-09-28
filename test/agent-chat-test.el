@@ -886,3 +886,15 @@ counted; a fresh one is kept for inspection."
           (funcall callback nil))
         (should (equal "$~象/诺必践> "
                        (buffer-local-value 'agent-chat--prefetched-prompt-line chat)))))))
+
+(ert-deftest agent-chat-turn-flair-width-leaves-room-for-line-numbers ()
+  (let ((buf (generate-new-buffer " *flair-width*")))
+    (unwind-protect
+        (save-window-excursion
+          (switch-to-buffer buf)
+          (let ((plain (agent-chat--turn-flair-width)))
+            (cl-letf (((symbol-function 'line-number-display-width)
+                       (lambda (&rest _) 6)))
+              (should (= (- plain 6) (agent-chat--turn-flair-width))))
+            (should (<= plain (window-body-width)))))
+      (kill-buffer buf))))
