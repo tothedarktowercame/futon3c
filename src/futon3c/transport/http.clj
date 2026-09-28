@@ -84,6 +84,7 @@
             [futon3c.agency.offer-record :as offer-record]
             [futon3c.agency.agreement-record :as agreement-record]
             [futon3c.agency.agreement-record-cli :as agreement-cli]
+            [futon3c.agency.grant-record :as grant-record]
             [futon3c.agency.rule-record :as rule-record-store]
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
@@ -9472,6 +9473,56 @@
    (merge {:agent agent :session session :notice-id (str evidence-id) :kind kind}
           fields)))
 
+(defn- grant-bearing-option? [option]
+  (let [scope (:option/scope option)]
+    (and (:grant-until scope)
+         (or (seq (:act-kinds scope)) (seq (:rule-ids scope))))))
+
+(defn- agreement-grant-record [offer option agreement]
+  (let [scope (:option/scope option)]
+    {:grant/grantor "joe"
+     :grant/grantee (:author offer)
+     :grant/basis :explicit
+     :grant/scope (cond-> {:description (:option/label option)
+                           :own-acts-only true}
+                    (seq (:act-kinds scope)) (assoc :act-kinds (:act-kinds scope))
+                    (seq (:rule-ids scope)) (assoc :rule-ids (:rule-ids scope)))
+     :grant/interval {:from (:agreement/at agreement)
+                      :until (:grant-until scope)}
+     :grant/source {:kind :agreement :offer (:id offer)
+                    :agreement (:id agreement)}}))
+
+(defn- agreement-grant-outcome
+  [base offer option agreement existing-grant-edges]
+  (if-not (grant-bearing-option? option)
+    {:grant nil :grant-reason "agreement-only"}
+    (let [until (get-in option [:option/scope :grant-until])
+          existing (some #(when (= (:id agreement)
+                                   (get-in % [:hx/props :grant/source :agreement])) %)
+                         existing-grant-edges)]
+      (if existing
+        {:grant {:id (:hx/id existing) :until until}}
+        (try
+          (let [record (agreement-grant-record offer option agreement)
+                receipt (grant-record/write-with-context!
+                         base
+                         {:record record
+                          :idempotency-key (str "grant:" (:id agreement))}
+                         {:records [] :evidence [] :offers [offer]
+                          :agreements [agreement]}
+                         (act-harness/plain "route:futon3c.agreement-grant"))]
+            {:grant {:id (:hx/id receipt) :until until}})
+          (catch Throwable _
+            {:grant nil :grant-reason "grant-write-failed"}))))))
+
+(defn- agreement-notice-fields [agreement grant-outcome]
+  (merge {:agreement-id (:id agreement)
+          :offer-id (:agreement/offer agreement)
+          :option-id (:agreement/option-id agreement)}
+         (if-let [grant (:grant grant-outcome)]
+           {:grant-id (:id grant) :grant-until (:until grant)}
+           {:grant-reason (:grant-reason grant-outcome)})))
+
 (defn handle-agreement
   "Verify an operator acceptance, resolve it against exact-seat visible offers,
    and mint the immutable agreement."
@@ -9514,15 +9565,19 @@
               resolution (agreement-record/resolve-acceptance visible parsed)]
           (cond
             existing
-            (do
+            (let [offer (some #(when (= (:agreement/offer existing) (:id %)) %) offers)
+                  option (some #(when (= (:agreement/option-id existing)
+                                         (:option/id %)) %) (:options offer))
+                  grant-edges (list-hyperedges! base :grant/record (:id existing))
+                  grant-outcome (agreement-grant-outcome
+                                 base offer option existing grant-edges)]
               (publish-agreement-notice!
                agent session evidence-id "agreement-accepted"
-               {:agreement-id (:id existing)
-                :offer-id (:agreement/offer existing)
-                :option-id (:agreement/option-id existing)})
-              (json-response 200 {:ok true :record existing
-                                  :receipt {:ok true :hx/id (:id existing)
-                                            :no-op? true :verified? true}}))
+               (agreement-notice-fields existing grant-outcome))
+              (json-response 200 (merge {:ok true :record existing
+                                         :receipt {:ok true :hx/id (:id existing)
+                                                   :no-op? true :verified? true}}
+                                        grant-outcome)))
 
             (:refused resolution)
             (let [reason (get-in resolution [:refused :reason])]
@@ -9548,14 +9603,14 @@
                           :agreement/offeror (:author offer)
                           :agreement/acceptor "joe" :agreement/at at}
                   key (str (:id offer) ":" (:option/id option) ":" evidence-id)
-                  result (agreement-cli/write! base {:record record :idempotency-key key} offer)]
+                  result (agreement-cli/write! base {:record record :idempotency-key key} offer)
+                  agreement (:record result)
+                  grant-outcome (agreement-grant-outcome base offer option agreement [])]
               (offer-provider/clear! agent session (:id offer))
               (publish-agreement-notice!
                agent session evidence-id "agreement-accepted"
-               {:agreement-id (get-in result [:record :id])
-                :offer-id (:id offer)
-                :option-id (:option/id option)})
-              (json-response 200 (assoc result :ok true)))))
+               (agreement-notice-fields agreement grant-outcome))
+              (json-response 200 (merge result grant-outcome {:ok true})))))
         (catch clojure.lang.ExceptionInfo e
           (let [reason (:reason (ex-data e))]
             (if (= :evidence-not-operator-turn reason)

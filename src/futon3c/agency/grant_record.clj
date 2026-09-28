@@ -281,11 +281,15 @@
               (recur (props p) (conj records p) (conj evidence source) (conj seen parent))))
         {:records records :evidence (vec (vals (into {} (map (juxt :evidence/id identity) (conj evidence source)))))}))))
 
-(defn write!
-  ([base request]
-   (write! base request (act-harness/plain "cli:futon3c.agency.grant-record")))
-  ([base request harness]
-   (let [p (payload request (live-context! base (:record request)) harness)
+(defn write-with-context!
+  "Mint REQUEST after validation against already fetched CONTEXT, then verify
+   the stored record by id. This is the callable form used when another write
+   has already fetched and validated its agreement and offer."
+  ([base request context]
+   (write-with-context! base request context
+                        (act-harness/plain "cli:futon3c.agency.grant-record")))
+  ([base request context harness]
+   (let [p (payload request context harness)
          receipt (store/request! base "POST" "/api/alpha/hyperedge" p)
          id (:hx/id receipt)]
      (when-not (and (:ok receipt) (act? id)) (refuse! :missing-minted-receipt :receipt))
@@ -294,6 +298,12 @@
                     (select-keys stored [:hx/type :hx/endpoints :hx/props]))
          (refuse! :readback-mismatch :receipt))
        (assoc receipt :verified? true)))))
+
+(defn write!
+  ([base request]
+   (write! base request (act-harness/plain "cli:futon3c.agency.grant-record")))
+  ([base request harness]
+   (write-with-context! base request (live-context! base (:record request)) harness)))
 
 (defn -main [& args]
   (try

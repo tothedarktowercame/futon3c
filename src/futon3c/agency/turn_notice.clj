@@ -31,11 +31,13 @@
 
 (defn- validate-notice!
   [{:keys [agent session notice-id kind effect-id agreement-id offer-id
-           option-id candidates reason] :as notice}]
+           option-id candidates reason grant-id grant-until grant-reason]
+    :as notice}]
   (let [base #{:agent :session :notice-id :kind}
         allowed (case kind
                   "effect" (conj base :effect-id)
-                  "agreement-accepted" (into base [:agreement-id :offer-id :option-id])
+                  "agreement-accepted" (into base [:agreement-id :offer-id :option-id
+                                                    :grant-id :grant-until :grant-reason])
                   "agreement-ambiguous" (conj base :candidates)
                   "agreement-refused" (conj base :reason)
                   base)]
@@ -52,7 +54,18 @@
       "agreement-accepted"
       (cond (not (act-id? agreement-id)) (invalid! :invalid-agreement-id :agreement-id)
             (not (act-id? offer-id)) (invalid! :invalid-offer-id :offer-id)
-            (not (nonblank? option-id)) (invalid! :invalid-option-id :option-id))
+            (not (nonblank? option-id)) (invalid! :invalid-option-id :option-id)
+            (and grant-id (not (act-id? grant-id)))
+            (invalid! :invalid-grant-id :grant-id)
+            (not= (boolean grant-id) (boolean grant-until))
+            (invalid! :incomplete-grant :grant-id)
+            (and grant-id (not (nonblank? grant-until)))
+            (invalid! :invalid-grant-until :grant-until)
+            (and grant-reason
+                 (not (contains? #{"agreement-only" "grant-write-failed"}
+                                 grant-reason)))
+            (invalid! :invalid-grant-reason :grant-reason)
+            (and grant-id grant-reason) (invalid! :conflicting-grant :grant-id))
       "agreement-ambiguous"
       (when-not (and (sequential? candidates) (seq candidates)
                      (every? (fn [candidate]
@@ -69,14 +82,19 @@
     notice))
 
 (defn- notice-text [{:keys [kind effect-id agreement-id offer-id option-id
-                            candidates reason]}]
+                            candidates reason grant-id grant-until grant-reason]}]
   (case kind
     "unresolved" "withdraw inferred: unresolved (no target)"
     "effect" (str "withdraw inferred: effect " effect-id " (undo to reverse)")
     "no-grant" "withdraw inferred: off (no grant)"
     "agreement-accepted"
     (str "agreement " agreement-id ": you offered " offer-id
-         ", Joe accepted option " option-id)
+         ", Joe accepted option " option-id
+         (cond
+           grant-id (str "; grant " grant-id " until " grant-until)
+           (= "agreement-only" grant-reason) "; agreement only, no grant"
+           (= "grant-write-failed" grant-reason) "; grant write failed"
+           :else ""))
     "agreement-ambiguous"
     (str "agreement ambiguous: ask Joe one short question naming which ("
          (str/join ", " (map (fn [{:keys [offer-id option-id]}]

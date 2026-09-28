@@ -1,5 +1,6 @@
 (ns futon3c.agency.turn-notice-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.turn-notice :as notice]))
 
 (use-fixtures :each (fn [f] (notice/reset-state!) (f)))
@@ -38,3 +39,27 @@
                                    :notice-id "n-1" :kind "no-grant"})))
   (is (= "withdraw inferred: off (no grant)"
          (:notice/text (notice/take! "agent-z" "session-z")))))
+
+(deftest agreement-outcomes-are-rendered-from-closed-fields
+  (notice/publish! {:agent "a" :session "s" :notice-id "accepted"
+                    :kind "agreement-accepted"
+                    :agreement-id "act:agreement" :offer-id "act:offer"
+                    :option-id "1" :grant-id "act:grant"
+                    :grant-until "2026-09-29T00:00:00Z"})
+  (is (= (str "agreement act:agreement: you offered act:offer, Joe accepted option 1; "
+              "grant act:grant until 2026-09-29T00:00:00Z")
+         (:notice/text (notice/take! "a" "s"))))
+  (notice/publish! {:agent "a" :session "s" :notice-id "only"
+                    :kind "agreement-accepted"
+                    :agreement-id "act:agreement" :offer-id "act:offer"
+                    :option-id "2" :grant-reason "agreement-only"})
+  (is (str/ends-with? (:notice/text (notice/take! "a" "s"))
+                      "; agreement only, no grant"))
+  (is (= :incomplete-grant
+         (try
+           (notice/publish! {:agent "a" :session "s" :notice-id "bad"
+                             :kind "agreement-accepted"
+                             :agreement-id "act:agreement" :offer-id "act:offer"
+                             :option-id "1" :grant-id "act:grant"})
+           nil
+           (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))

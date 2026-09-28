@@ -5,6 +5,7 @@
             [futon3c.agency.offer-provider :as offer-provider]
             [futon3c.agency.offer-record :as offer-record]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.agency.grant-record :as grant-record]
             [futon3c.agency.registry :as registry]
             [futon3c.agency.rule-record :as store]
             [futon3c.agency.turn-notice :as turn-notice]
@@ -33,19 +34,22 @@
 
 (defn fake-store [offers evidence-map & withdrawals]
   (let [docs (atom (into {} (map (fn [o] [(:id o) (offer-record/record->hyperedge o)]) offers)))
-        keys (atom {}) calls (atom []) n (atom 0)]
+        keys (atom {}) calls (atom []) n (atom 0) fail-grant? (atom false)]
     (doseq [w withdrawals]
       (swap! docs assoc (:hx/id w) w))
-    {:calls calls :docs docs
+    {:calls calls :docs docs :fail-grant? fail-grant?
      :request!
      (fn [_ method path value]
        (swap! calls conj [method path value])
        (cond
          (= method "POST")
-         (let [key (:hx/idempotency-key value)]
+         (let [key (:hx/idempotency-key value)
+               grant? (= :grant/record (:hx/type value))]
+           (when (and grant? @fail-grant?)
+             (throw (ex-info "grant store failed" {:status 503})))
            (if-let [id (get @keys key)]
              {:ok true :hx/id id :no-op? true}
-             (let [id (str "act:agreement-" (swap! n inc))
+             (let [id (str (if grant? "act:grant-" "act:agreement-") (swap! n inc))
                    doc (-> value (dissoc :hx/mint-id :hx/idempotency-key :hx/valid-time)
                            (assoc :hx/id id))]
                (swap! docs assoc id doc) (swap! keys assoc key id)
@@ -54,12 +58,18 @@
          (or (get evidence-map (java.net.URLDecoder/decode
                                 (subs path (count "/api/alpha/evidence/")) "UTF-8"))
              (throw (ex-info "missing" {:status 404})))
+         (str/starts-with? path "/api/alpha/hyperedge/")
+         (or (get @docs (java.net.URLDecoder/decode
+                         (subs path (count "/api/alpha/hyperedge/")) "UTF-8"))
+             (throw (ex-info "missing" {:status 404})))
          (str/includes? path "type=offer%2Frecord")
          {:hyperedges (filterv #(= :offer/record (:hx/type %)) (vals @docs))}
          (str/includes? path "type=act%2Fwithdrawal")
          {:hyperedges (filterv #(= :act/withdrawal (:hx/type %)) (vals @docs))}
          (str/includes? path "type=agreement%2Frecord")
          {:hyperedges (filterv #(= :agreement/record (:hx/type %)) (vals @docs))}
+         (str/includes? path "type=grant%2Frecord")
+         {:hyperedges (filterv #(= :grant/record (:hx/type %)) (vals @docs))}
          :else (throw (ex-info "unexpected" {:path path}))))}))
 
 (defn handler [] (http/make-handler {:registry (fix/mock-registry) :patterns (fix/mock-patterns)}))
@@ -147,6 +157,82 @@
           (is (= 409 (:status second-r)))
           (is (= "unknown-offer" (:reason (response-body second-r)))))
         (is (= 1 (count (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest finite-grant-option-writes-one-idempotent-covering-grant
+  (let [grant-until (str (.plusSeconds (Instant/now) 3600))
+        scoped-option {:option/id "1" :option/label "withdraw own acts"
+                       :option/scope {:description "withdraw own acts"
+                                      :act-kinds [:act/withdrawal]
+                                      :rule-ids ["act:rule-a"]
+                                      :grant-until grant-until}}
+        o (offer "act:offer-grant" [scoped-option])
+        e (evidence "e:grant-yes" "joe" "session-a" "yes" "agent-a")
+        {:keys [request! calls docs]} (fake-store [o] {"e:grant-yes" e})]
+    (with-redefs [store/request! request!]
+      (let [first-r ((handler) (req "yes" "e:grant-yes"))
+            first-body (response-body first-r)
+            agreement-id (get-in first-body [:record :id])
+            grant-id (get-in first-body [:grant :id])
+            grant-edge (get @docs grant-id)
+            props (:hx/props grant-edge)
+            at (get-in first-body [:record :agreement/at])]
+        (is (= 200 (:status first-r)))
+        (is (= grant-until (get-in first-body [:grant :until])))
+        (is (= {:description "withdraw own acts"
+                :act-kinds [:act/withdrawal]
+                :rule-ids ["act:rule-a"] :own-acts-only true}
+               (:grant/scope props)))
+        (is (= {:from at :until grant-until} (:grant/interval props)))
+        (is (= {:kind :agreement :offer "act:offer-grant"
+                :agreement agreement-id}
+               (:grant/source props)))
+        (is (= :granted
+               (:status (grant-record/grant-covers?
+                         [grant-edge] "agent-a" :act/withdrawal at
+                         {:target-signer "agent-a"}))))
+        (is (= :not-own-act
+               (:reason (grant-record/grant-covers?
+                         [grant-edge] "agent-a" :act/withdrawal at
+                         {:target-signer "agent-b"}))))
+        (is (str/includes? (header)
+                           (str "; grant " grant-id " until " grant-until)))
+        (let [replay ((handler) (req "yes" "e:grant-yes"))]
+          (is (= 200 (:status replay)))
+          (is (= grant-id (get-in (response-body replay) [:grant :id]))))
+        (is (= 2 (count (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest agreement-only-and-grant-failure-preserve-the-agreement
+  (let [description (offer "act:offer-description" [(first options)])
+        e1 (evidence "e:description" "joe" "session-a" "yes" "agent-a")
+        store-1 (fake-store [description] {"e:description" e1})]
+    (with-redefs [store/request! (:request! store-1)]
+      (let [r ((handler) (req "yes" "e:description"))
+            b (response-body r)]
+        (is (= 200 (:status r)))
+        (is (nil? (:grant b)))
+        (is (= "agreement-only" (:grant-reason b)))
+        (is (str/includes? (header) "; agreement only, no grant"))
+        (is (= 1 (count (filter #(= "POST" (first %)) @(:calls store-1))))))))
+  (turn-notice/reset-state!)
+  (let [grant-until (str (.plusSeconds (Instant/now) 3600))
+        o (offer "act:offer-failure"
+                 [{:option/id "1" :option/label "finite"
+                   :option/scope {:description "finite"
+                                  :act-kinds [:act/withdrawal]
+                                  :grant-until grant-until}}])
+        e (evidence "e:failure" "joe" "session-a" "yes" "agent-a")
+        {:keys [request! calls docs fail-grant?]} (fake-store [o] {"e:failure" e})]
+    (reset! fail-grant? true)
+    (with-redefs [store/request! request!]
+      (let [r ((handler) (req "yes" "e:failure"))
+            b (response-body r)]
+        (is (= 200 (:status r)))
+        (is (some? (get-in b [:record :id])))
+        (is (nil? (:grant b)))
+        (is (= "grant-write-failed" (:grant-reason b)))
+        (is (some #(= :agreement/record (:hx/type %)) (vals @docs)))
+        (is (str/includes? (header) "; grant write failed"))
+        (is (= 2 (count (filter #(= "POST" (first %)) @calls))))))))
 
 (deftest ambiguous-notice-renders-at-most-six-candidates
   (turn-notice/publish!

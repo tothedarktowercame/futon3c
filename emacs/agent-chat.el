@@ -2904,13 +2904,24 @@ This runs after the user-turn evidence hook and never consumes or changes TEXT."
                  (body (plist-get response :json)))
             (cond
              ((eql status 200)
-              (let ((record (plist-get body :record)))
+              (let* ((record (plist-get body :record))
+                     (grant (plist-get body :grant))
+                     (grant-reason (plist-get body :grant-reason))
+                     (suffix (cond
+                              (grant
+                               (format "; grant %s until %s"
+                                       (or (plist-get grant :id) "unknown")
+                                       (or (plist-get grant :until) "unknown")))
+                              ((equal grant-reason "grant-write-failed")
+                               "; grant write failed")
+                              (t "; agreement only, no grant"))))
                 (agent-chat-insert-message
                  "system"
-                 (format "yes: agreement %s (offer %s option %s)"
+                 (format "yes: agreement %s (offer %s option %s)%s"
                          (or (plist-get record :id) "unknown")
                          (or (plist-get record :agreement/offer) "unknown")
-                         (or (plist-get record :agreement/option-id) "unknown")))))
+                         (or (plist-get record :agreement/option-id) "unknown")
+                         suffix))))
              ((and (eql status 409)
                    (equal "ambiguous" (agent-chat--agreement-reason body)))
               (agent-chat-insert-message
