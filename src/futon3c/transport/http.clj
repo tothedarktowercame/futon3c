@@ -77,9 +77,13 @@
             [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
+            [futon3c.agency.pattern-card-record :as pattern-card-record]
             [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
             [futon3c.agency.offer-provider :as offer-provider]
             [futon3c.agency.offer-record-cli :as offer-cli]
+            [futon3c.agency.offer-record :as offer-record]
+            [futon3c.agency.agreement-record :as agreement-record]
+            [futon3c.agency.agreement-record-cli :as agreement-cli]
             [futon3c.agency.rule-record :as rule-record-store]
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
@@ -9418,6 +9422,114 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- evidence-body-map [entry]
+  (let [body (:evidence/body entry)]
+    (if (string? body) (try (clojure.edn/read-string body) (catch Throwable _ nil)) body)))
+
+(defn- operator-acceptance-evidence! [base evidence-id agent session text]
+  (let [entry (try (rule-record-store/request!
+                    base "GET" (str "/api/alpha/evidence/"
+                                    (java.net.URLEncoder/encode (str evidence-id) "UTF-8")) nil)
+                   (catch Throwable _ nil))
+        body (evidence-body-map entry)
+        registered-session (some-> (reg/get-agent (str agent)) :agent/session-id str)
+        field (fn [m k] (or (get m k) (get m (name k))))]
+    (when-not (and entry (= "joe" (:evidence/author entry))
+                   (= (str session) registered-session)
+                   (= (str session) (str (:evidence/session-id entry)))
+                   (= "chat-turn" (str (field body :event)))
+                   (= "user" (str (field body :role)))
+                   (= (str/trim (str text)) (str/trim (str (field body :text))))
+                   (not= "harness" (some-> (get-in entry [:evidence/origin :kind]) name)))
+      (throw (ex-info "Evidence is not Joe's operator turn for this exact seat"
+                      {:reason :evidence-not-operator-turn :field :evidence-id})))
+    entry))
+
+(defn- list-hyperedges! [base type endpoint]
+  (:hyperedges
+   (rule-record-store/request!
+    base "GET" (str "/api/alpha/hyperedges?type="
+                    (java.net.URLEncoder/encode (subs (str type) 1) "UTF-8")
+                    "&end=" (java.net.URLEncoder/encode endpoint "UTF-8")
+                    "&limit=1000&include-total=false") nil)))
+
+(declare required-pattern-card-field!)
+
+(defn handle-agreement
+  "Verify an operator acceptance, resolve it against exact-seat visible offers,
+   and mint the immutable agreement."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [agent (required-pattern-card-field! payload :agent)
+              session (required-pattern-card-field! payload :session)
+              text (required-pattern-card-field! payload :text)
+              evidence-id (required-pattern-card-field! payload :evidence-id)
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              evidence (operator-acceptance-evidence! base evidence-id agent session text)
+              parsed (or (agreement-record/parse-acceptance text)
+                         (throw (ex-info "Text is not a classical acceptance"
+                                         {:reason :not-an-acceptance :field :text})))
+              offer-edges (list-hyperedges! base :offer/record (str "session:" session))
+              offers (keep #(try (offer-record/hyperedge->record %)
+                                 (catch Throwable _ nil)) offer-edges)
+              related (mapcat (fn [offer]
+                                (concat (list-hyperedges! base :act/withdrawal (:id offer))
+                                        (list-hyperedges! base :agreement/record (:id offer))))
+                              offers)
+              records (concat offers
+                              (keep #(try
+                                       (case (:hx/type %)
+                                         :act/withdrawal
+                                         (pattern-card-record/hyperedge->record %)
+                                         :agreement/record
+                                         (agreement-record/hyperedge->record %))
+                                       (catch Throwable _ nil)) related))
+              at (str (Instant/now))
+              existing (some #(when (and (= :agreement/record (:kind %))
+                                          (= (str evidence-id)
+                                             (str (:agreement/acceptance-evidence %)))) %)
+                             records)
+              visible (offer-record/active-offers-as-of
+                       records {:agent agent :session session} at)
+              resolution (agreement-record/resolve-acceptance visible parsed)]
+          (cond
+            existing
+            (json-response 200 {:ok true :record existing
+                                :receipt {:ok true :hx/id (:id existing)
+                                          :no-op? true :verified? true}})
+
+            (:refused resolution)
+            (json-response 409 {:ok false :reason (get-in resolution [:refused :reason])})
+
+            (:ambiguous resolution)
+            (json-response 409 {:ok false :reason :ambiguous
+                                :candidates (get-in resolution [:ambiguous :candidates])})
+
+            :else
+            (let [{:keys [offer option]} (:accept resolution)
+                  record {:kind :agreement/record
+                          :agreement/offer (:id offer)
+                          :agreement/acceptance-evidence (:evidence/id evidence)
+                          :agreement/option-id (:option/id option)
+                          :agreement/scope (:option/scope option)
+                          :agreement/offeror (:author offer)
+                          :agreement/acceptor "joe" :agreement/at at}
+                  key (str (:id offer) ":" (:option/id option) ":" evidence-id)
+                  result (agreement-cli/write! base {:record record :idempotency-key key} offer)]
+              (offer-provider/clear! agent session (:id offer))
+              (json-response 200 (assoc result :ok true)))))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (if (= :evidence-not-operator-turn reason)
+              (json-response 403 {:ok false :reason reason})
+              (pattern-card-refusal e))))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- pattern-card-basis [payload]
   (let [basis (or (:basis payload) (get payload "basis"))]
     (if (map? basis)
@@ -9615,6 +9727,9 @@
 
       (and (= :post method) (= "/api/alpha/offer" uri))
       (handle-offer request)
+
+      (and (= :post method) (= "/api/alpha/agreement" uri))
+      (handle-agreement request)
 
       (and (= :post method) (= "/api/alpha/pattern-card/withdraw" uri))
       (handle-pattern-card-withdraw request)

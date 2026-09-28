@@ -24,6 +24,15 @@
 (defn cached-offer [agent session]
   (get @!offers [(str agent) (str session)]))
 
+(defn clear!
+  "Clear OFFER-ID from one exact seat after its verified acceptance."
+  [agent session offer-id]
+  (let [key [(str agent) (str session)]]
+    (swap! !offers (fn [cache]
+                     (if (= (str offer-id) (str (get-in cache [key :record :id])))
+                       (dissoc cache key)
+                       cache)))))
+
 (defn provider
   "Return one non-pattern marker from cache only. The `!` marker means a
    structured offer is visible; the header carries its id and option count.
