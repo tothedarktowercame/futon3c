@@ -45,6 +45,17 @@
     (is (= expected (get-in result [:in-force 0 :answer])))
     (is (empty? (:ended result)))))
 
+(deftest legacy-timeline-family-remains-projectable
+  (let [requests (edn/read-string
+                  (slurp "holes/labs/M-象-2000/P13b-requisition-versions.edn"))
+        records (mapv #(assoc % :hx/props (:record %)) requests)
+        at "2026-09-25T21:00:00Z"
+        expected (timeline/as-of records "kimi-requisition-20260924" at)
+        result (rules/rules-in-force-as-of records [] [] at)]
+    (is (= expected (get-in result [:in-force 0 :answer])))
+    (is (= "kimi-requisition-20260924"
+           (get-in result [:in-force 0 :family])))))
+
 (deftest signer-withdrawal-ends-the-family-half-open
   (let [records (p13b-records)
         effect (withdrawal "act:end" signer "2026-09-26T12:00:00Z")

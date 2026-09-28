@@ -16,7 +16,11 @@
 
 (defn- family-id [record]
   (let [stored (get-in record [:hx/props :rule/family])]
-    (if (= :self stored) (:hx/id record) stored)))
+    (or (when stored
+          (if (= :self stored) (:hx/id record) stored))
+        ;; Schema-1 rule records predate :rule/family. Their timeline family
+        ;; remains the stored family identity and keeps old fixtures readable.
+        (get-in record [:hx/props :rule/timeline :family]))))
 
 (defn- family-signer [records family]
   (some (fn [record]
