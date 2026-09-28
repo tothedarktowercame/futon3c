@@ -1,5 +1,5 @@
 (ns futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test
-  (:require [futon3c.diagramprover.wm-wire-precision-horizon-products :as products]
+  (:require [futon3c.diagramprover.wm-wire-depth-products :as products]
             [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-fold-in-support :as support]))

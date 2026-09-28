@@ -8,8 +8,7 @@
             [futon2.aif.locator-fixtures :as loc]
             [futon2.report.cascade-decision-test :as fixture]
             [futon2.aif.wm.construction-inputs :as construction-inputs]
-            [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-fold-in-support :as fold]))
+            [futon3c.diagramprover.wm-wire :as w]))
 
 (defn horizon-product [change]
   (let [root (w/tmp-dir "horizon-product-") assemble cp/assemble
@@ -38,14 +37,3 @@
         {:written @written :carrier @carrier :problem p :candidates candidates
          :state state :opts opts :scores (mapv :controller-score ranked)})
       (finally (doseq [f (reverse (file-seq (io/file root)))] (io/delete-file f))))))
-
-(defn depth-product [mutation]
-  (let [rank efe/rank-actions inputs (atom []) scores (atom [])
-        r (with-redefs [efe/rank-actions
-                        (fn [state candidates opts]
-                          (swap! inputs conj [state candidates (select-keys opts [:horizon-steps :beta :rates :cascade-spec])])
-                          (let [v (rank state candidates opts)]
-                            (swap! scores conj (mapv :controller-score v)) v))]
-            (fold/observe :horizon mutation))]
-    (assoc r :rank-inputs @inputs :scores @scores
-           :posterior (get-in r [:result :decision :selection-law :posterior]))))
