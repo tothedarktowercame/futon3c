@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-publication-enact-observe-test
+(ns futon3c.diagramprover.wm-wire-producer-publication-enact-observe
   (:require [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire-publication-support :as support])
   (:import [java.security MessageDigest]))
 (def producer 'futon3c.diagramprover.wm-wire-producer-publication-enact-observe-test) (def operation 'futon2.aif.flight-runner/enact-fn) (def wire-id [:r10-observe-publication :r0-enact-step :publication-observed])

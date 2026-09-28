@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r10-publication-observed-test-literal-fixture-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r10-publication-observed-test-literal-fixture
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]

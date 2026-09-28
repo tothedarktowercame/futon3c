@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-click-flight-cast-test-cast-test-literal-fixt-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-click-flight-cast-test-cast-test-literal-fixt
   (:require [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]]
             [futon2.aif.flight :as flight] [futon2.aif.flight-runner :as fr]
             [futon3c.diagramprover.wm-wire :as w])

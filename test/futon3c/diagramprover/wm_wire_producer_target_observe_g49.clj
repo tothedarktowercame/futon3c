@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-target-observe-g49-test
+(ns futon3c.diagramprover.wm-wire-producer-target-observe-g49
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]

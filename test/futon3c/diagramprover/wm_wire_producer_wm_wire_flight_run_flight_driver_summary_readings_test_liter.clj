@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-run-flight-driver-summary-readings-test-liter-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-run-flight-driver-summary-readings-test-liter
   (:require [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]] [futon2.aif.flight-driver :as fd] [futon3c.diagramprover.wm-wire :as w])
   (:import [java.security MessageDigest]))
 (def producer 'futon3c.diagramprover.wm-wire-producer-wm-wire-flight-run-flight-driver-summary-readings-test-liter-test)

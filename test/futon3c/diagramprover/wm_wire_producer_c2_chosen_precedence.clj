@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-c2-chosen-precedence-test
+(ns futon3c.diagramprover.wm-wire-producer-c2-chosen-precedence
   (:require [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire-c2-support :as support])
   (:import [java.security MessageDigest]))
 (def producer 'futon3c.diagramprover.wm-wire-producer-c2-chosen-precedence-test)

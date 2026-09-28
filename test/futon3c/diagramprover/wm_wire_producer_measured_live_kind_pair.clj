@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-measured-live-kind-pair-test
+(ns futon3c.diagramprover.wm-wire-producer-measured-live-kind-pair
   (:require [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire-abstention-kind-products :as products] [futon3c.diagramprover.wm-wire-measured-support :as support])
   (:import [java.security MessageDigest]))
 (def producer 'futon3c.diagramprover.wm-wire-producer-measured-live-kind-pair-test)

@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-temporal-courier-test
+(ns futon3c.diagramprover.wm-wire-producer-temporal-courier
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]

@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-small-observe-test
+(ns futon3c.diagramprover.wm-wire-producer-small-observe
   "Producer for the small-observe wire group. Runs
   futon3c.diagramprover.wm-wire-small-support/observe (operation
   futon2.aif.flight/run! and the lane's product calls) once per lane and

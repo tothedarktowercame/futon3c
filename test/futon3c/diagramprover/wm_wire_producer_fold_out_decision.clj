@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-fold-out-simple-test
+(ns futon3c.diagramprover.wm-wire-producer-fold-out-decision
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
@@ -6,17 +6,18 @@
             [futon3c.diagramprover.wm-wire-fold-out-support :as fold-support])
   (:import [java.security MessageDigest]))
 
-(def producer 'futon3c.diagramprover.wm-wire-producer-fold-out-simple-test)
+(def producer 'futon3c.diagramprover.wm-wire-producer-fold-out-decision-test)
 (def operations
-  ['futon2.aif.flight/run!
+  ['futon2.aif.wm.cascade-decision/cascade-decision
+   'futon2.aif.flight/run!
    'futon2.report.war-machine/judge
    'futon2.aif.enactment-habit/fold])
-(def kinds [:carry :belief :prediction])
+(def kinds [:conditioning-steps :enactment-fold])
 
 (defn- primary [kind]
-  (let [ordinary (fold-support/simple kind :none)
-        absent (fold-support/simple kind :absent)
-        different (fold-support/simple kind :different)]
+  (let [ordinary (fold-support/decision kind :none)
+        absent (fold-support/decision kind :absent)
+        different (fold-support/decision kind :different)]
     {:writer (:writer ordinary)
      :reader (:reader ordinary)
      :writer-present? (some? (:writer ordinary))
@@ -24,35 +25,33 @@
      :received? (w/received? ordinary)
      :ordinary
      (case kind
-       :carry {:reader-is-belief-pre? (= (:reader ordinary) (get-in ordinary [:result :belief-pre]))}
-       :belief {:events-present? (boolean (seq (:events ordinary)))
-                :input-changed? (not= (:input ordinary) (:reader ordinary))}
-       :prediction {:present? (= :present (get-in ordinary [:error :status]))
-                    :numeric-error? (number? (get-in ordinary [:error :error]))})
+       :conditioning-steps
+       {:flight-step-present? (= :present (get-in ordinary [:flight :enactments 0 :step :status]))
+        :admitted-prefix? (boolean (some #(= :admitted (:conditioning-status %))
+                                         (vals (:prefixes ordinary))))}
+       :enactment-fold
+       {:one-record-sample? (= {:records 1 :samples 1} (:reader ordinary))
+        :receipt-present? (= :present (get-in ordinary [:read :receipt :status]))})
      :interventions
      {:absent
       (merge {:received? (w/received? absent)}
              (case kind
-               :carry {:fresh-belief? (= (:fresh absent) (:reader absent))}
-               :belief {}
-               :prediction {:refused? (= :refused (get-in absent [:error :status]))
-                            :reason? (= :malformed-prediction-triple
-                                        (get-in absent [:error :reason]))}))
+               :conditioning-steps
+               {:all-no-flight-records?
+                (every? #(= :no-flight-records (:conditioning-status %))
+                        (vals (:prefixes absent)))}
+               :enactment-fold
+               {:zero-records-samples? (= {:records 0 :samples 0} (:reader absent))
+                :no-enactment-fold? (= :no-enactment-fold (get-in absent [:read :receipt :reason]))}))
       :different
       (merge {:received? (w/received? different)
               :writer-reader-differ? (not= (:writer different) (:reader different))}
-             (if (= kind :prediction)
-               {:present? (= :present (get-in different [:error :status]))}
-               {}))}}))
-
-(defn- carry-relations []
-  (let [a (fold-support/simple :carry :none)
-        b (fold-support/simple :carry :different)]
-    {:ordinary-carried? (= (:writer a) (:reader a) (get-in a [:result :belief-pre]))
-     :different-carried? (= (:reader b) (get-in b [:result :belief-pre]))
-     :readers-differ? (not= (:reader a) (:reader b))
-     :domain-stable? (= #{"known"} (set (keys (:reader a))) (set (keys (:reader b))))
-     :fresh-stable? (= (:fresh a) (:fresh b))}))
+             (case kind
+               :conditioning-steps
+               {:f-incremented? (= (inc (get-in different [:writer :f]))
+                                    (get-in different [:reader :f]))}
+               :enactment-fold
+               {:two-records-samples? (= {:records 2 :samples 2} (:reader different))}))}}))
 
 (defn build-record []
   (fold-support/assert-live-pins)
@@ -63,11 +62,10 @@
      :fields {:live-pins-valid? true
               :wires primary-fields
               :second-layer
-              {:carry (carry-relations)
-               :belief (get-in primary-fields [:belief :interventions :different])
-               :prediction (get-in primary-fields [:prediction :interventions :absent])}}
-     :left-out {:temporary-trace-paths "the trace paths are temporary; readers assert the resulting carried values"
-                :judge-results "readers check the individually named carry, belief-event, and prediction-error relations"}}))
+              {:conditioning-steps (get-in primary-fields [:conditioning-steps :interventions :absent])
+               :enactment-fold (get-in primary-fields [:enactment-fold :interventions :different])}}
+     :left-out {:temporary-flight-and-tick-paths "the fixture persists under a temporary directory; readers check step and receipt values"
+                :decision-results "readers check the individually named prefix, fold, receipt, and carrier relations"}}))
 
 (defn- record-text [record] (str (pr-str record) "\n"))
 (defn- sha256 [text]
@@ -77,7 +75,7 @@
 (defn- write-record! [record]
   (let [text (record-text record)
         file (io/file "test/fixtures/wire-producers"
-                      (str "fold-out-simple@" (subs (sha256 text) 0 12) ".edn"))]
+                      (str "fold-out-decision@" (subs (sha256 text) 0 12) ".edn"))]
     (.mkdirs (.getParentFile file))
     (when (.exists file)
       (throw (ex-info "producer record already exists" {:file (str file)})))
@@ -101,12 +99,12 @@
          field (keys (get-in fields [:second-layer kind]))]
      [:second-layer kind field])))
 
-(deftest fold-out-simple-producer
+(deftest fold-out-decision-producer
   (let [actual (build-record)]
     (if (= "1" (System/getenv "WM_WIRE_PRODUCER_WRITE"))
       (write-record! actual)
       (let [expected (edn/read-string
-                      (slurp (first (filter #(.startsWith (.getName %) "fold-out-simple@")
+                      (slurp (first (filter #(.startsWith (.getName %) "fold-out-decision@")
                                             (.listFiles (io/file "test/fixtures/wire-producers"))))))]
         (doseq [path (checked-field-paths (:fields expected))]
           (testing (pr-str path)

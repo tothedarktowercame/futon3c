@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r1-outer-cascade-flight-entry-chosen-target-test-lit-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r1-outer-cascade-flight-entry-chosen-target-test-lit
   "Producer for the [:r1-outer-cascade :flight-entry :chosen-target] wire.
   Runs the real futon2.aif.outer-cascade/select (the writer) over the
   reader's FIELD with seed 42, then the real

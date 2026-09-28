@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-measured-tick-observe-test
+(ns futon3c.diagramprover.wm-wire-producer-measured-tick-observe
   "Producer for the measured-tick-observe wire group. Runs
   futon3c.diagramprover.wm-wire-measured-support/tick-observe (whose product
   operation is futon2.aif.flight/conditioning-step reading the persisted
