@@ -91,6 +91,7 @@
             [futon3c.agency.disclosure-audit :as disclosure-audit]
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
+            [futon3c.agency.operator-turn-source :as operator-turn-source]
             [futon3c.agency.answer-population :as answer-population]
             [futon3c.agency.grant-record :as grant-record]
             [futon3c.agency.rule-record :as rule-record-store]
@@ -9798,6 +9799,99 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- evidence-entry! [base evidence-id]
+  (rule-record-store/request!
+   base "GET" (str "/api/alpha/evidence/"
+                   (java.net.URLEncoder/encode (str evidence-id) "UTF-8")) nil))
+
+(defn- predecessor-delivery-job-id [entry]
+  (let [origin (:evidence/origin entry)
+        body (:evidence/body entry)]
+    (some-> (or (:job-id origin) (get origin "job-id")
+                (:source-id origin) (get origin "source-id")
+                (:delivery-job-id body) (get body "delivery-job-id"))
+            str)))
+
+(defn- assistant-chat-turn? [entry session]
+  (let [body (:evidence/body entry)]
+    (and (= session (:evidence/session-id entry))
+         (= "chat-turn" (str (:event body)))
+         (= "assistant" (str (:role body))))))
+
+(defn- previous-agent-turn!
+  "Walk the evidence reply chain past auxiliary rows such as turn-commits."
+  [base operator]
+  (loop [evidence-id (:evidence/in-reply-to operator) depth 0]
+    (when (and evidence-id (< depth 20))
+      (let [entry (evidence-entry! base evidence-id)]
+        (if (assistant-chat-turn? entry (:evidence/session-id operator))
+          entry
+          (recur (:evidence/in-reply-to entry) (inc depth)))))))
+
+(defn standing-disclosures-for-job
+  "Read JOB-ID's disclosure audit population and return standing choices."
+  [job-id]
+  (->> (read-disclosure-audit-inputs job-id)
+       disclosure-audit/audit
+       :disclosures
+       (filter #(= :standing (:status %)))
+       vec))
+
+(defn read-operator-turn-source-jobs
+  "Read an operator turn and its structured predecessor, then resolve source
+   jobs and their standing disclosures. Every remote store operation is GET."
+  [evidence-id]
+  (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+        operator (evidence-entry! base evidence-id)
+        previous (previous-agent-turn! base operator)
+        _ (when-not (and operator previous)
+            (throw (ex-info "Operator turn or predecessor not found"
+                            {:reason :turn-chain-not-found})))
+        delivery-id (predecessor-delivery-job-id previous)
+        delivery-job (when delivery-id (disclosure-audit-job delivery-id))
+        previous (cond-> previous
+                   (:bellback-of delivery-job)
+                   (assoc :bellback-of (:bellback-of delivery-job)))
+        park-id (let [source-ref (get-in previous [:evidence/harness :source-ref])]
+                  (when (or (= "parked-resume"
+                               (some-> previous :evidence/origin :actor str))
+                            (some-> source-ref str (str/starts-with? "park-")))
+                    (str (or (get-in previous [:evidence/origin :source-id])
+                             source-ref))))
+        history (if park-id
+                  (:entries
+                   (rule-record-store/request!
+                    base "GET"
+                    (str "/api/alpha/evidence?tags=promise-history&session-id="
+                         (java.net.URLEncoder/encode
+                          (str (:evidence/session-id operator)) "UTF-8")
+                         "&limit=1000") nil))
+                  [])
+        resolved (operator-turn-source/source-jobs-for-turn
+                  (assoc operator :chain/previous-agent-id (:evidence/id previous))
+                  previous history)
+        disclosures (vec
+                     (mapcat (fn [job-id]
+                               (map #(assoc % :source-job job-id)
+                                    (standing-disclosures-for-job job-id)))
+                             (:source-jobs resolved)))]
+    (assoc resolved :evidence-id evidence-id :disclosures disclosures)))
+
+(defn handle-operator-turn-source-jobs [request]
+  (let [evidence-id (get (parse-query-params request) "evidence")]
+    (if (str/blank? evidence-id)
+      (json-response 400 {:ok false :reason :missing-evidence})
+      (try
+        (json-response 200 (assoc (read-operator-turn-source-jobs evidence-id)
+                                  :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (or (:reason (ex-data e)) :store-failure)]
+            (json-response (if (= :turn-chain-not-found reason) 404 500)
+                           {:ok false :reason reason})))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- promise-creation [inputs promise-id]
   (some (fn [row]
           (when (and (contains? obligations/creation-types (:evidence/type row))
@@ -10336,6 +10430,9 @@
 
       (and (= :get method) (= "/api/alpha/disclosure/audit" uri))
       (handle-disclosure-audit request)
+
+      (and (= :get method) (= "/api/alpha/operator-turn/source-jobs" uri))
+      (handle-operator-turn-source-jobs request)
 
       (and (= :get method) (= "/api/alpha/prompt-line" uri))
       (let [params (parse-query-params request)
