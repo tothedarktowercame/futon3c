@@ -58,10 +58,28 @@
                      cache
                      (assoc cache [agent session]
                             {:evidence-id (:evidence/id entry)
+                             :basis-status :persisted
                              :observed-at at
                              :results results})))))))))
 
 (defn reset-cache! [] (reset! !retrievals {}) (reset! !checked-at {}))
+
+(defn observe-results!
+  "Publish exact-seat results before the durable evidence append completes."
+  [agent session results observed-at evidence-id basis-status]
+  (when (and (not (str/blank? (str agent)))
+             (not (str/blank? (str session)))
+             (seq results))
+    (swap! !retrievals assoc [(str agent) (str session)]
+           {:evidence-id evidence-id
+            :basis-status basis-status
+            :observed-at (str observed-at)
+            :results (vec results)})))
+
+(defn cached-retrieval
+  "Return the inspectable exact-seat cache entry used for latency probes."
+  [agent session]
+  (get @!retrievals [(str agent) (str session)]))
 
 (defn refresh!
   "Refresh an exact seat from the evidence LIST seam. Intended for startup/tests,
@@ -131,7 +149,8 @@
                  :segment/observed-at (:observed-at cached)
                  :segment/basis {:evidence-ref (:evidence-id cached)
                                  :scope {:agent-id (str agent-id)
-                                         :session-id (str session-id)}}
+                                         :session-id (str session-id)
+                                         :basis-status (:basis-status cached)}}
                  :segment/header
                  (str "retrieved " id " " score
                       (when (seq also) (str "; also " (str/join ", " also))))})))))))

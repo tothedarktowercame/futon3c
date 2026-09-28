@@ -21,6 +21,7 @@
                                      :render-at "2026-09-27T20:00:00Z"})]
       (is (= "~right/pattern" (:segment/value segment)))
       (is (= "e-right" (get-in segment [:segment/basis :evidence-ref])))
+      (is (= :persisted (get-in segment [:segment/basis :scope :basis-status])))
       (is (= "retrieved right/pattern 0.7; also other/two"
              (:segment/header segment))))))
 
@@ -41,6 +42,16 @@
          (:segment/value
           (pattern/provider {:agent-id "claude-17" :session-id "target"
                              :render-at "2026-09-27T20:00:00Z"})))))
+
+(deftest provisional-results-are-visible-before-evidence-append
+  (pattern/observe-results!
+   "claude-17" "target" [{:id "fast/pattern" :score 0.9 :rank 1}]
+   "2026-09-27T19:59:59Z" "e-pending" :provisional)
+  (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
+                                   :render-at "2026-09-27T20:00:00Z"})]
+    (is (= "~fast/pattern" (:segment/value segment)))
+    (is (= "e-pending" (get-in segment [:segment/basis :evidence-ref])))
+    (is (= :provisional (get-in segment [:segment/basis :scope :basis-status])))))
 
 (deftest background-reads-are-rate-limited-per-seat
   (let [calls (atom [])]

@@ -71,6 +71,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
+            [futon3c.agency.pattern-search :as pattern-search]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
             [futon3c.runtime.incidents :as incidents]
@@ -841,31 +842,10 @@
    Returns an enriched vector of result maps when available, or raw
    {:id :title :score :rank} maps on fallback."
   [query-text]
-  (let [futon3a-root (or (System/getenv "FUTON3A_ROOT")
-                         (str (System/getProperty "user.home") "/code/futon3a"))
-        venv-python (str futon3a-root "/.venv/bin/python3")
-        search-script (str futon3a-root "/scripts/notions_search.py")
-        embeddings (str futon3a-root "/resources/notions/minilm_pattern_embeddings.json")]
-    (when (.exists (java.io.File. venv-python))
-      (let [pb (doto (ProcessBuilder.
-                       [venv-python search-script
-                        "--query" query-text
-                        "--top" "3"
-                        "--embeddings" embeddings
-                        "--json"])
-                 (.redirectErrorStream true))
-            proc (.start pb)
-            _ (.waitFor proc 15000 java.util.concurrent.TimeUnit/MILLISECONDS)
-            out (slurp (.getInputStream proc))
-            json-line (->> (str/split-lines out)
-                           (filter #(str/starts-with? % "["))
-                           first)]
-        (when json-line
-          (let [results (json/parse-string json-line true)]
-            (try
-              (notions/enrich-results results)
-              (catch Throwable _
-                results))))))))
+  (when-let [results (pattern-search/search query-text 3)]
+    (try
+      (notions/enrich-results results)
+      (catch Throwable _ results))))
 
 (defn- normalize-hotwords
   [hotwords]
@@ -954,11 +934,12 @@
 
 (defn- emit-context-evidence!
   "Emit a context-retrieval evidence entry synchronously. Returns the evidence ID."
-  [agent-id session-id turn-n query-text result-map]
+  [agent-id session-id turn-n query-text result-map evidence-id]
   (try
     (when-let [store @!evidence-store]
       (let [result (boundary/append! store
-                     {:subject {:ref/type :agent :ref/id (str agent-id)}
+                     {:evidence-id evidence-id
+                      :subject {:ref/type :agent :ref/id (str agent-id)}
                       :type :coordination
                       :claim-type :step
                       :author (str agent-id)
@@ -970,10 +951,15 @@
                              "query" (subs query-text 0 (min 100 (count query-text)))
                              "results" result-map}
                       :tags [:invoke :dev :context-retrieval :futon3a]})]
-        (when (:ok result)
-          (pattern-card-provider/observe-entry! (:entry result)))
+        (if (:ok result)
+          (pattern-card-provider/observe-entry! (:entry result))
+          (binding [*out* *err*]
+            (println "[context] evidence append failed" (pr-str result))))
         (get-in result [:entry :evidence/id])))
-    (catch Throwable _ nil)))
+    (catch Throwable t
+      (binding [*out* *err*]
+        (println "[context] evidence append exception" (.getMessage t)))
+      nil)))
 
 (defn- project-context-hud!
   "Project the recent context ring buffer to the *context* blackboard buffer."
@@ -1016,7 +1002,12 @@
         (let [body (format-context-body results)
               turn-n (swap! turn-counter inc)
               result-map (context-result-map results)
-              eid (or (emit-context-evidence! agent-id session-id turn-n proto-text result-map)
+              observed-at (str (java.time.Instant/now))
+              evidence-id (str "e-" (UUID/randomUUID))
+              _ (pattern-card-provider/observe-results!
+                 agent-id session-id result-map observed-at evidence-id :provisional)
+              eid (or (emit-context-evidence! agent-id session-id turn-n proto-text
+                                              result-map evidence-id)
                       (str "t" turn-n))
               cert (str eid " \u00b7 " agent-id)]
           ;; Log to console
