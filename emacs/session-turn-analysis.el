@@ -4,6 +4,9 @@
 (require 'cl-lib)
 (require 'subr-x)
 
+(defvar agent-chat--last-evidence-id nil
+  "Most recently acknowledged chat evidence id in the current REPL buffer.")
+
 (defcustom session-mode-turn-analysis-directory
   (expand-file-name "session-turn-analysis" user-emacs-directory)
   "Private durable records for operator passages, cues and agent interpretations."
@@ -148,6 +151,10 @@ reached the buffer. The surface itself is kept in the record's metadata."
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
+                      ;; `agent-chat--start-turn' runs :before-send before it
+                      ;; calls us, so this is the acknowledged operator row,
+                      ;; not an id reconstructed from text later.
+                      (evidence_id . ,(or agent-chat--last-evidence-id :json-null))
                       (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
                       (quotes . ,(vconcat session-mode--last-quotes))
@@ -540,6 +547,51 @@ bell was accepted, not that the turn was interpreted.")
           (reason . ,(or reason :null)) (effect_id . ,(or effect-id :null))
           (idempotency_key . ,idempotency-key))))))
 
+(defun session-mode--post-negation-interpretation (fragment-id record fragment)
+  "Store 象's reading of withdraw FRAGMENT and return its outcome alist.
+The exact source `text' in FRAGMENT is sent.  A card-relative target is not a
+disclosure id, so only an act id is sent as `target'."
+  (let* ((field (lambda (key)
+                  (let ((value (alist-get key record)))
+                    (unless (eq value :null) value))))
+         (operator-evidence-id (funcall field 'evidence_id)))
+    (if (not (and (stringp operator-evidence-id)
+                  (not (string-empty-p operator-evidence-id))))
+        `((fragment_id . ,fragment-id) (status . 0)
+          (evidence_id . :null) (resolution . :null)
+          (reason . "no-evidence-id"))
+      (let* ((target (alist-get 'target fragment))
+             (payload `((caller . "xiang")
+                        (operator-evidence-id . ,operator-evidence-id)
+                        (fragment-id . ,fragment-id)
+                        (fragment-text . ,(alist-get 'text fragment))
+                        (analysis-version . ,(funcall field 'interpretation_version))))
+             (payload (if (and (stringp target) (string-prefix-p "act:" target))
+                          (append payload `((target . ,target)))
+                        payload))
+             (response
+              (condition-case err
+                  (if (fboundp 'agent-chat-evidence-request-json)
+                      (agent-chat-evidence-request-json
+                       "POST"
+                       (format "%s/api/alpha/interpretation/negation"
+                               (string-remove-suffix "/" agent-chat-agency-base-url))
+                       3 payload)
+                    (list :status 0 :error "HTTP helper unavailable"))
+                (error (list :status 0 :error (error-message-string err)))))
+             (status (or (plist-get response :status) 0))
+             (body (plist-get response :json))
+             (entry (and (listp body) (plist-get body :entry)))
+             (entry-body (and (listp entry) (plist-get entry :evidence/body)))
+             (evidence-id (and (listp entry) (plist-get entry :evidence/id)))
+             (resolution (and (listp entry-body) (plist-get entry-body :resolution)))
+             (reason (or (session-mode--withdrawal-response-reason response)
+                         (plist-get response :error))))
+        `((fragment_id . ,fragment-id) (status . ,status)
+          (evidence_id . ,(or evidence-id :null))
+          (resolution . ,(or resolution :null))
+          (reason . ,(or reason :null)))))))
+
 (defun session-mode--withdrawal-notice (outcome)
   "Return the fixed notice alist for OUTCOME, or nil when it has no notice."
   (let ((status (alist-get 'status outcome))
@@ -687,7 +739,12 @@ health and never retries a failed route call."
              (existing (alist-get 'withdrawal_effects record))
              (existing (if (eq existing :null) nil (append existing nil)))
              (done (mapcar (lambda (outcome) (alist-get 'fragment_id outcome)) existing))
-             outcomes changed)
+             (negations-value (alist-get 'negation_interpretations record))
+             (negations (if (eq negations-value :null) nil
+                          (append negations-value nil)))
+             (negation-done
+              (mapcar (lambda (outcome) (alist-get 'fragment_id outcome)) negations))
+             outcomes negation-outcomes changed)
         (when operator-p
           (dolist (pair (session-mode--withdrawal-fragments analysis))
             (unless (member (car pair) done)
@@ -700,15 +757,23 @@ health and never retries a failed route call."
                   (puthash 'emacs t
                            session-mode--withdrawal-disabled-messaged-sessions)
                   (message "象: inferred withdrawals are off until Joe's grant exists"))
-                (push outcome outcomes))))
+                (push outcome outcomes)))
+            (unless (member (car pair) negation-done)
+              (push (session-mode--post-negation-interpretation
+                     (car pair) record (cdr pair))
+                    negation-outcomes)))
           (when outcomes
             (setq existing (append existing (nreverse outcomes))
+                  changed t))
+          (when negation-outcomes
+            (setq negations (append negations (nreverse negation-outcomes))
                   changed t))
           (dolist (outcome existing)
             (when (session-mode--deliver-withdrawal-notice! record outcome)
               (setq changed t)))
           (when changed
             (setf (alist-get 'withdrawal_effects record) (vconcat existing))
+            (setf (alist-get 'negation_interpretations record) (vconcat negations))
             (session-mode--write-analysis-record path record))
           (setq session-mode--withdrawal-pending-paths
                 (delete path session-mode--withdrawal-pending-paths))

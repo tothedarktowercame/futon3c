@@ -44,29 +44,97 @@
     (unwind-protect
         (with-temp-buffer
           (session-mode-test--init)
+          (setq-local agent-chat--last-evidence-id "emacs-operator-1")
           (let* ((path (session-mode--record-turn "Withdraw that pattern."))
                  (json-object-type 'alist)
                  (record (json-read-file path)))
             (should (= (alist-get 'vocabulary_version record)
                        session-mode-turn-vocabulary-version))
             (should (= (alist-get 'interpretation_version record)
-                       session-mode-turn-interpretation-version))))
+                       session-mode-turn-interpretation-version))
+            (should (equal (alist-get 'evidence_id record)
+                           "emacs-operator-1"))))
       (delete-directory session-mode-turn-analysis-directory t))))
 
-(defun session-mode-test--withdrawal-files (origin target)
+(defun session-mode-test--withdrawal-files (origin target &optional evidence-id text)
   "Return (DIRECTORY RECORD-PATH), containing one analysed withdraw TARGET."
   (let* ((directory (make-temp-file "withdraw-reap-test-" t))
          (path (expand-file-name "turn-stable.json" directory))
          (record `((origin . ,origin) (agent_id . "claude-17")
                    (session_id . "session-17") (turn_id . "turn-17")
                    (interpretation_version . 3) (analysis_status . "analyzed")))
-         (fragment `((start . 0) (end . 8) (text . "withdraw")
+         (record (if evidence-id
+                     (append record `((evidence_id . ,evidence-id)))
+                   record))
+         (fragment `((start . 0) (end . 8) (text . ,(or text "withdraw"))
                      (intent . "withdraw") (target . ,target)))
          (analysis `((status . "analyzed")
                      (sentences . [((id . "s1") (fragments . [,fragment]))]))))
     (with-temp-file path (insert (json-encode record)))
     (with-temp-file (concat path ".analysis.json") (insert (json-encode analysis)))
     (list directory path)))
+
+(ert-deftest session-mode-negation-posts-exact-fragment-and-act-target-once ()
+  (pcase-let* ((`(,directory ,path)
+                (session-mode-test--withdrawal-files
+                 "operator" "act:choice" "emacs:joe-1" "take that choice back"))
+               (negation-calls nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (_method url _timeout payload)
+                     (cond
+                      ((string-suffix-p "/interpretation/negation" url)
+                       (push payload negation-calls)
+                       '(:status 201
+                         :json (:entry (:evidence/id "interpretation:neg-1"
+                                        :evidence/body (:resolution "explicit-id")))))
+                      ((string-suffix-p "/turn-notice" url)
+                       '(:status 200 :json (:result "queued")))
+                      (t '(:status 403 :json (:reason "no-grant")))))))
+          (session-mode--process-withdrawals path)
+          (session-mode--process-withdrawals path)
+          (should (= 1 (length negation-calls)))
+          (let ((payload (car negation-calls)))
+            (should (equal "emacs:joe-1"
+                           (alist-get 'operator-evidence-id payload)))
+            (should (equal "s1:0" (alist-get 'fragment-id payload)))
+            (should (equal "take that choice back"
+                           (alist-get 'fragment-text payload)))
+            (should (equal "act:choice" (alist-get 'target payload)))
+            (should (= 3 (alist-get 'analysis-version payload))))
+          (let* ((json-object-type 'alist) (json-array-type 'list)
+                 (record (json-read-file path))
+                 (outcome (car (alist-get 'negation_interpretations record))))
+            (should (= 201 (alist-get 'status outcome)))
+            (should (equal "interpretation:neg-1"
+                           (alist-get 'evidence_id outcome)))
+            (should (equal "explicit-id" (alist-get 'resolution outcome)))))
+      (delete-directory directory t))))
+
+(ert-deftest session-mode-negation-omits-seat-target ()
+  (let (request)
+    (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+               (lambda (_method _url _timeout payload)
+                 (setq request payload)
+                 '(:status 201 :json (:entry (:evidence/id "interpretation:n"
+                                              :evidence/body
+                                              (:resolution "single-standing")))))))
+      (session-mode--post-negation-interpretation
+       "s1:0" '((evidence_id . "emacs:joe") (interpretation_version . 3))
+       '((text . "withdraw this card") (target . "seat-active-card")))
+      (should-not (assq 'target request)))))
+
+(ert-deftest session-mode-negation-without-evidence-id-records-local-outcome ()
+  (let (called)
+    (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+               (lambda (&rest _) (setq called t))))
+      (let ((outcome
+             (session-mode--post-negation-interpretation
+              "s1:0" '((evidence_id . :null) (interpretation_version . 3))
+              '((text . "withdraw") (target . :null)))))
+        (should-not called)
+        (should (= 0 (alist-get 'status outcome)))
+        (should (equal "no-evidence-id" (alist-get 'reason outcome)))))))
 
 (ert-deftest session-mode-withdraw-reap-success-and-stable-idempotency ()
   (pcase-let* ((`(,directory ,path)
