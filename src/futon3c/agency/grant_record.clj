@@ -136,6 +136,9 @@
   ([records grantee target at leaf-or-options]
   (try
     (stamp! at)
+    ;; "*" names a grant's audience, never the party asking: asking as "*"
+    ;; with signer "*" would otherwise satisfy the own-acts check.
+    (when (= "*" grantee) (refuse! :wildcard-not-a-grantee :grantee))
     (let [{:keys [leaf-id target-signer]}
           (if (map? leaf-or-options) leaf-or-options {:leaf-id leaf-or-options})
           by-id (index! records)

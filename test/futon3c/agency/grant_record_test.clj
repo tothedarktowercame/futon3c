@@ -96,6 +96,9 @@
     (is (= {:status :no-grant :reason :not-own-act}
            (grant/grant-covers? [wild] "claude-17" target from
                                 {:leaf-id "act:any-own"})))
+    (is (= {:status :no-grant :reason :wildcard-not-a-grantee}
+           (grant/grant-covers? [wild] "*" target from
+                                {:leaf-id "act:any-own" :target-signer "*"})))
     (is (= :wildcard-needs-own-acts
            (reason #(grant/validate! (assoc real-record :grant/grantee "*") context))))
     (is (= :wildcard-not-root
