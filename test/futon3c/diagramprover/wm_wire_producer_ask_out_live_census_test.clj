@@ -10,11 +10,7 @@
 (def operation
   {:writer 'futon2.aif.flight/click-wants
    :readers ['futon2.aif.flight/judge-opts
-             'futon2.aif.wm.construction-inputs/flight-assembly-input]
-   :published-interpretations
-   {:writer 'futon2.aif.want-interpretation/merge-published
-    :readers ['futon2.aif.cascade-problems/assemble-one
-              'futon2.aif.interpretation-construction/construct]}})
+             'futon2.aif.wm.construction-inputs/flight-assembly-input]})
 
 (def cases
   [{:reader :opts :field :universe
@@ -25,12 +21,6 @@
     :wire-id [:flight-click-wants :tick-flight-assembly :universe]}
    {:reader :assembly :field :wants
     :wire-id [:flight-click-wants :tick-flight-assembly :wants]}])
-
-(def interpretation-cases
-  [{:kind :assemble
-    :wire-id [:ask-merge-published :construction-assemble-one :interpretations]}
-   {:kind :construct
-    :wire-id [:ask-merge-published :construction-construct :interpretations]}])
 
 (defn- stable-click [reader field mutation]
   (select-keys (support/click reader field mutation) [:writer :reader]))
@@ -53,37 +43,17 @@
     :different (stable-click reader field :different)}
    :second-layer (product-fields reader field)})
 
-(defn- interpretation-observation [kind mutation]
-  (let [o (support/interpretations kind mutation)]
-    {:writer (:writer o)
-     :reader (:reader o)
-     :assembled-kind (get-in o [:assembled :kind])
-     :constructed-status (get-in o [:constructed :status])
-     :constructed-kind (get-in o [:constructed :kind])
-     :constructed-precedence (get-in o [:constructed :candidates 0 :precedence])
-     :tokens-contain-document? (contains? (:tokens o) support/document)
-     :constructed-candidates-present? (boolean (seq (get-in o [:assembled :constructed-candidates])))
-     :reader-contains-argue? (contains? (or (:reader o) #{}) support/argue)}))
-
-(defn- interpretation-fields [{:keys [kind]}]
-  {:primary (interpretation-observation kind :none)
-   :interventions {:absent (interpretation-observation kind :absent)
-                   :different (interpretation-observation kind :different)}})
-
 (defn build-record []
   {:producer producer
    :operation operation
    :inputs {:target-id support/target-id
             :mission-fixture "mission-criteria/M-futon-seams@futon3c-d05cb755.md"
             :cases (mapv #(select-keys % [:reader :field :wire-id]) cases)
-            :interpretation-cases interpretation-cases
             :mutations [:none :absent :different]}
    :live-census (support/live-census)
-   :wires (into (into {} (map (juxt :wire-id case-fields) cases))
-                (map (juxt :wire-id interpretation-fields) interpretation-cases))
+   :wires (into {} (map (juxt :wire-id case-fields) cases))
    :left-out {:temporary-store-paths "the click support creates fresh hermetic stores; no reader checks their paths"
-              :flight-store-records "the readers check only the named writer/reader fields and preservation relations"
-              :full-assembled-and-constructed-values "interpretation readers check the retained statuses, precedence, token and candidate relations"}})
+              :flight-store-records "the readers check only the named writer/reader fields and preservation relations"}})
 
 (defn- record-text [record] (str (pr-str record) "\n"))
 (defn- sha256 [text]
