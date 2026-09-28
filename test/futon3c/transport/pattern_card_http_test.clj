@@ -81,6 +81,20 @@
 
          :else (throw (ex-info "unexpected fake store request" {:path path}))))}))
 
+(defn with-evidence [request! entries]
+  (fn [base method path body]
+    (if (and (= "GET" method) (str/starts-with? path "/api/alpha/evidence/"))
+      (let [id (java.net.URLDecoder/decode
+                (subs path (count "/api/alpha/evidence/")) "UTF-8")]
+        (or (get entries id) (throw (ex-info "missing evidence" {:status 404}))))
+      (request! base method path body))))
+
+(defn retrieval [id agent session at ids]
+  {:evidence/id id :evidence/type :coordination :evidence/author agent
+   :evidence/session-id session :evidence/at at
+   :evidence/body {"event" "context-retrieval"
+                   "results" (mapv (fn [pattern] {"id" pattern}) ids)}})
+
 (use-fixtures :each (fn [f] (provider/reset-cache!) (f)))
 
 (deftest select-and-withdraw-update-the-next-render
@@ -121,6 +135,80 @@
                   (provider/provider {:agent-id "agent-a" :session-id "session-a"
                                       :render-at (get-in (response-body withdrawn)
                                                          [:receipt :system-as-of])})))))))))
+
+(deftest selection-writes-attestation-from-server-resolved-presentation
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)
+        evidence (retrieval "e:presentation" "agent-a" "session-a"
+                            "2026-09-28T11:59:00Z" ["card/chosen" "card/other"])]
+    (with-redefs [store/request! (with-evidence request! {"e:presentation" evidence})]
+      (let [response (h (request "/api/alpha/pattern-card/select"
+                                 {:caller "agent-a" :agent "agent-a"
+                                  :session "session-a" :pattern-id "card/chosen"
+                                  :at "2026-09-28T12:00:00Z"
+                                  :presentation "e:presentation"
+                                  ;; This caller field is not part of the route's
+                                  ;; trust boundary and must be ignored.
+                                  :shown-pattern-ids []
+                                  :idempotency-key "selection-with-presentation"}))
+            body (response-body response)
+            attestation (get-in body [:attestation :record])]
+        (is (= 200 (:status response)))
+        (is (true? (get-in body [:attestation :written])))
+        (is (= "shown-list-echo" (:disposition attestation)))
+        (is (= ["card/chosen" "card/other"]
+               (get-in attestation [:presentation :shown-pattern-ids])))
+        (is (= "e:presentation" (get-in attestation [:presentation :ref])))
+        (is (= (get-in body [:record :act/stamp]) (:act/stamp attestation)))
+        (is (= 1 (count (filter #(= :pattern/attestation (:hx/type %))
+                                (vals @docs)))))))))
+
+(deftest invalid-presentations-still-write-selection-as-presentation-unknown
+  (let [{:keys [request!]} (fake-store)
+        h (handler)
+        cases {"other-session" (retrieval "e:other-session" "agent-a" "other"
+                                           "2026-09-28T11:00:00Z" ["card/a"])
+               "after" (retrieval "e:after" "agent-a" "session-a"
+                                  "2026-09-28T13:00:00Z" ["card/a"])
+               "wrong-event" (assoc (retrieval "e:wrong-event" "agent-a" "session-a"
+                                                "2026-09-28T11:00:00Z" ["card/a"])
+                                    :evidence/body {"event" "something-else"
+                                                    "results" [{"id" "card/a"}]})}]
+    (with-redefs [store/request! (with-evidence request! (into {} (map (juxt :evidence/id identity)
+                                                                        (vals cases))))]
+      (doseq [[label entry] cases]
+        (let [response (h (request "/api/alpha/pattern-card/select"
+                                   {:caller "agent-a" :agent "agent-a"
+                                    :session "session-a" :pattern-id "card/a"
+                                    :at "2026-09-28T12:00:00Z"
+                                    :presentation (:evidence/id entry)
+                                    :idempotency-key (str "invalid-presentation-" label)}))
+              body (response-body response)]
+          (is (= 200 (:status response)) label)
+          (is (= "presentation-unknown"
+                 (get-in body [:attestation :record :disposition])) label)
+          (is (nil? (get-in body [:attestation :record :presentation :ref])) label))))))
+
+(deftest attestation-write-failure-does-not-roll-back-selection
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)
+        failing (fn [base method path body]
+                  (if (and (= "POST" method)
+                           (= :pattern/attestation (:hx/type body)))
+                    (throw (ex-info "attestation store failed" {:status 503}))
+                    (request! base method path body)))]
+    (with-redefs [store/request! failing]
+      (let [response (h (request "/api/alpha/pattern-card/select"
+                                 {:caller "agent-a" :agent "agent-a"
+                                  :session "session-a" :pattern-id "card/a"
+                                  :at "2026-09-28T12:00:00Z"
+                                  :idempotency-key "selection-attestation-fails"}))
+            body (response-body response)]
+        (is (= 200 (:status response)))
+        (is (false? (get-in body [:attestation :written])))
+        (is (= "store-failure" (get-in body [:attestation :error])))
+        (is (= 1 (count (filter #(= :pattern-card/selection (:hx/type %))
+                                (vals @docs)))))))))
 
 (deftest non-author-withdrawal-is-forbidden
   (let [{:keys [request!]} (fake-store)

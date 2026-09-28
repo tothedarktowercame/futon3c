@@ -80,6 +80,7 @@
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.agency.pattern-card-record :as pattern-card-record]
             [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
+            [futon3c.agency.attestation-record :as attestation-record]
             [futon3c.agency.offer-provider :as offer-provider]
             [futon3c.agency.offer-record-cli :as offer-cli]
             [futon3c.agency.offer-record :as offer-record]
@@ -9391,11 +9392,66 @@
                       :at (pattern-card-at payload)}
               request {:record record
                        :idempotency-key (pattern-card-idempotency-key payload)}
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
               result (pattern-card-cli/write-selection!
-                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      base
                       request (act-harness/plain "route:futon3c.pattern-card/select")
-                      (pattern-card-stamp author))]
-          (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+                      (pattern-card-stamp author))
+              selection (:record result)
+              presentation-id (or (:presentation payload) (get payload "presentation"))
+              presentation
+              (or
+               (when (string? presentation-id)
+                 (try
+                   (let [entry (rule-record-store/request!
+                                base "GET"
+                                (str "/api/alpha/evidence/"
+                                     (java.net.URLEncoder/encode presentation-id "UTF-8")) nil)
+                         body (let [b (:evidence/body entry)]
+                                (if (string? b)
+                                  (try (edn/read-string b) (catch Throwable _ nil))
+                                  b))
+                         field (fn [m k] (or (get m k) (get m (name k))))
+                         results (field body :results)
+                         entry-at (some-> (:evidence/at entry) str Instant/parse)
+                         selection-at (Instant/parse (:at selection))]
+                     (when (and (= "context-retrieval" (str (field body :event)))
+                                (= (str agent) (str (:evidence/author entry)))
+                                (= (str (:session selection))
+                                   (str (:evidence/session-id entry)))
+                                entry-at (.isBefore entry-at selection-at)
+                                (sequential? results))
+                       {:ref (:evidence/id entry)
+                        :shown-pattern-ids
+                        (into [] (keep #(some-> (field % :id) str)) results)}))
+                   (catch Throwable _ nil)))
+               {:ref nil :shown-pattern-ids []})
+              attestation
+              (try
+                (let [attester (:author selection)
+                      pattern-id (:pattern-id selection)
+                      record {:kind :pattern/attestation :schema 1
+                              :pattern-id pattern-id :attester attester
+                              :at (:at selection)
+                              :use {:kind :pattern-card-selection
+                                    :ref (:id selection)}
+                              :presentation presentation
+                              ;; Library patterns have no proposal author. Draft
+                              ;; authorship awaits an authoritative registry.
+                              :proposal-author nil
+                              :disposition (attestation-record/disposition
+                                            attester pattern-id presentation nil)
+                              :act/stamp (:act/stamp selection)
+                              :act/harness (:act/harness selection)}
+                      written (attestation-record/write!
+                               base record (str "attestation:" (:id selection)))]
+                  {:written true :record (:record written)
+                   :receipt (:receipt written)})
+                (catch Throwable e
+                  {:written false
+                   :error (or (:reason (ex-data e)) :store-failure)}))]
+          (json-response 200 (assoc (publish-pattern-card-write! result)
+                                    :ok true :attestation attestation)))
         (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
