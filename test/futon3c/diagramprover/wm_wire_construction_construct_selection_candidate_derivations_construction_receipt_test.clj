@@ -1,30 +1,45 @@
 (ns futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-construction-support :as support]))
-(defn observe [mutation] (support/derivation mutation))
-(defn check [] (support/live-digest))
-(def wire {
-   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/different-value-before-reader-fails :kind :value-varying
-                  :product [:reader] :intervention :before-reader}
-  :wire [:construction-construct :selection-candidate-derivations :construction-receipt]
-           :kind :verified
-           :test `the-observed-handoff :check check
-           :live-records-read support/live-records-read
-           :record (assoc (first support/live-records-read)
-                          :writer-path support/receipt-path :reader-path support/digest-path)
-           :note "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry."})
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+
+(def producer (delay (producer-record/record "construction-live-digest")))
+(defn- fields [] (:fields @producer))
+(defn observe [mutation] (get-in (fields) [:interventions mutation]))
+(defn check [] (select-keys (fields) [:writer :reader :recomputed]))
+
+(def wire
+  {:second-layer
+   {:test 'futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/different-value-before-reader-fails
+    :kind :value-varying :product [:reader] :intervention :before-reader}
+   :wire [:construction-construct :selection-candidate-derivations :construction-receipt]
+   :kind :verified
+   :test `the-observed-handoff
+   :check check
+   :live-records-read []
+   :record (:source-record @producer)
+   :note "Writer and reader digests come from the content-addressed construction-live-digest producer record."})
+
 (deftest the-observed-handoff
-  (let [o (check)]
-    (is (w/received? o))
-    (is (= (:writer o) (:recomputed o)))
-    (is (= :machine-constructed (get-in o [:receipt :kind])))
-    (is (nil? (:outer-receipt o)))
-    (is (= :machine-constructed (get-in o [:entry :construction :kind]))
-        "Entry retains the production payload receipt under :id")))
+  (let [recorded (fields)
+        observed (check)]
+    (is (:writer-present? recorded) "writer")
+    (is (false? (:writer-typed-absence? recorded)) "writer is not a typed absence")
+    (is (w/received? observed) (str "writer-reader " (pr-str observed)))
+    (doseq [field [:writer-recomputed?
+                   :receipt-machine-constructed?
+                   :outer-receipt-absent?
+                   :entry-retains-receipt?]]
+      (testing (name field)
+        (is (true? (get recorded field)) (str field " relation failed"))))))
+
 (deftest absence-before-reader-fails
-  (is (not (w/received? (observe :absent)))))
+  (is (false? (:received? (observe :absent))) "received?"))
+
 (deftest different-value-before-reader-fails
-  (let [o (observe :different)]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))))
+  (doseq [[field passed?] (:second-layer (fields))]
+    (testing (name field)
+      (is (if (= field :received?)
+            (false? passed?)
+            (true? passed?))
+          (str field " relation failed")))))
