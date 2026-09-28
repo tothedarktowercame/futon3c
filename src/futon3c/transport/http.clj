@@ -9646,7 +9646,11 @@
                          (:orchestrator-unknown :orchestrator-ambiguous
                           :already-withdrawn) 409
                          400)]
-            (json-response status {:ok false :reason reason})))
+            (json-response status
+                           (cond-> {:ok false :reason reason}
+                             (= :not-the-orchestrator reason)
+                             (assoc :message
+                                    "Only the source job's orchestrator may withdraw; author self-withdrawal is out of scope.")))))
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))

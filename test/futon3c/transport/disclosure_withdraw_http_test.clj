@@ -95,7 +95,9 @@
           (let [response ((handler) (request {:caller caller :target "act:choice-a"
                                               :reason "attempt"}))]
             (is (= 403 (:status response)))
-            (is (= "not-the-orchestrator" (:reason (body response)))))))
+            (is (= "not-the-orchestrator" (:reason (body response))))
+            (is (str/includes? (:message (body response))
+                               "author self-withdrawal is out of scope")))))
       (is (empty? @posts)))))
 
 (deftest missing-target-and-edge-ambiguity-are-typed-before-write
