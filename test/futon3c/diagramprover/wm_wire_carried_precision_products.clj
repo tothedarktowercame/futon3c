@@ -2,7 +2,7 @@
   "Real decision and sealed producer; mutate only at the producer-return seam."
   (:require [futon2.aif.policy :as policy]
             [futon2.aif.policy-precision-carry :as precision]
-            [futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test :as fixture]))
+            [futon3c.diagramprover.wm-wire-beta-product-support :as fixture]))
 
 (defn observe [mode]
   (let [advance precision/advance select policy/select-action-cascades
