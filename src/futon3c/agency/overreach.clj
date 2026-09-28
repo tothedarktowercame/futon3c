@@ -1,146 +1,164 @@
 (ns futon3c.agency.overreach
-  "Pure retrospective grant scanner.
+  "Pure retrospective classification of stamped acts against stored grants.
 
-   Each act is a map with :act/id, :act/kind, :act/rule-id,
-   :act/executor, :act/at, and :act/authority. Authority is either a grant
-   act id, a typed non-grant reference such as {:kind :interpretation}, or
-   absent. Grants are stored :grant/record hyperedges; direct grant maps with
-   :act/id are also accepted to keep the pure boundary convenient.
-
-   scan returns at most one finding per act and performs no I/O."
+   Scanner acts have :act/id, :act/kind, :act/rule-id, :act/at,
+   :act/target-signer and :act/stamp. `record->act` adapts plain minted-act
+   records to this shape. `scan-report` returns one classification per act;
+   `scan` retains the P4-1 findings-only interface."
+  (:require [futon3c.agency.act-stamp :as act-stamp]
+            [futon3c.agency.grant-record :as grant-record])
   (:import [java.time Instant]))
-
-(defn- props [grant]
-  (if (= :grant/record (:hx/type grant))
-    (dissoc (:hx/props grant) :grant/schema :act/harness)
-    grant))
-
-(defn- grant-id [grant]
-  (or (:hx/id grant) (:act/id grant)))
-
-(defn- instant [stamp]
-  (try
-    (when stamp (Instant/parse stamp))
-    (catch Exception _ nil)))
-
-(defn- time-reason [grant at]
-  (let [{:keys [from until]} (:grant/interval grant)
-        t (instant at)
-        start (instant from)
-        end (instant until)]
-    (cond
-      (nil? t) :act-time-unknown
-      (nil? start) :grant-not-yet-valid
-      (.isBefore ^Instant t ^Instant start) :grant-not-yet-valid
-      (and end (not (.isBefore ^Instant t ^Instant end))) :grant-expired)))
-
-(defn- scope-result [grant act]
-  (let [{:keys [description act-kinds rule-ids]} (:grant/scope grant)
-        checkable? (or (seq act-kinds) (seq rule-ids))]
-    (cond
-      (not checkable?) {:covered? false
-                        :detail {:scope description
-                                 :explanation :description-only-scope}}
-      (or (contains? (set act-kinds) (:act/kind act))
-          (contains? (set rule-ids) (:act/rule-id act)))
-      {:covered? true}
-      :else {:covered? false
-             :detail {:act-kind (:act/kind act)
-                      :act/rule-id (:act/rule-id act)}})))
 
 (defn- finding [act reason detail]
   {:finding/act-id (:act/id act)
    :finding/reason reason
    :finding/detail detail})
 
-(defn- direct-failure [act grant]
-  (let [g (props grant)
-        tr (time-reason g (:act/at act))
-        sr (scope-result g act)]
+(defn record->act
+  "Adapt a plain stamped act RECORD. TARGET-SIGNER is required when the target
+   is another act; selections default it to their exact-seat agent."
+  ([record] (record->act record nil))
+  ([record target-signer]
+   {:act/id (:id record)
+    :act/kind (:kind record)
+    :act/rule-id (:rule-id record)
+    :act/at (:at record)
+    :act/target-signer (or target-signer
+                           (when (= :pattern-card/selection (:kind record))
+                             (:agent record)))
+    :act/stamp (:act/stamp record)}))
+
+(defn- grants-by-id [grants]
+  (into {} (keep (fn [grant]
+                   (when-let [id (or (:hx/id grant) (:act/id grant))]
+                     [id grant]))) grants))
+
+(defn- claimed-chain [leaf by-id]
+  (loop [node leaf result [leaf] seen #{(:hx/id leaf)}]
+    (if-let [parent-id (get-in node [:hx/props :grant/parent])]
+      (if (contains? seen parent-id)
+        result
+        (if-let [parent (get by-id parent-id)]
+          (recur parent (conj result parent) (conj seen parent-id))
+          result))
+      result)))
+
+(defn- instant [value]
+  (try (some-> value Instant/parse) (catch Exception _ nil)))
+
+(defn- props [grant]
+  (if (= :grant/record (:hx/type grant)) (:hx/props grant) grant))
+
+(defn- time-reason
+  "Preserve P4-1's early/expired vocabulary after the shared query reports its
+   coarser :out-of-time. This classifies the supplied chain; it does not decide
+   coverage."
+  [records at]
+  (let [t (instant at)
+        intervals (map (comp :grant/interval props) records)]
     (cond
-      (not= :explicit (:grant/basis g))
-      [:interpretation-as-grant {:authority (grant-id grant)
-                                 :basis (:grant/basis g)}]
+      (nil? t) :act-time-unknown
+      (some (fn [{:keys [from]}]
+              (when-let [start (instant from)] (.isBefore t start))) intervals)
+      :grant-not-yet-valid
+      (some (fn [{:keys [until]}]
+              (when-let [end (instant until)] (not (.isBefore t end)))) intervals)
+      :grant-expired
+      :else :out-of-time)))
 
-      (not= (:act/executor act) (:grant/grantee g))
-      [:wrong-grantee {:authority (grant-id grant)
-                       :executor (:act/executor act)
-                       :grantee (:grant/grantee g)}]
+(defn- map-cover-reason [act records reason]
+  (case reason
+    :no-candidate :no-grant
+    :out-of-time (time-reason records (:act/at act))
+    :scope-unchecked :out-of-scope
+    :out-of-scope :out-of-scope
+    :not-own-act :not-own-act
+    :broken-parent-chain :broken-delegation
+    :parent-cycle :broken-delegation
+    :delegation-identity-mismatch :broken-delegation
+    :scope-exceeds-parent :broken-delegation
+    :interval-exceeds-parent :broken-delegation
+    :wildcard-not-delegable :broken-delegation
+    :interpretation-not-grant :interpretation-as-grant
+    reason))
 
-      tr [tr {:authority (grant-id grant)
-              :at (:act/at act)
-              :interval (:grant/interval g)}]
+(defn- cover-answer [act grants stamp]
+  (let [grant-id (get-in stamp [:authority :grant])
+        targets (remove nil? [(:act/kind act) (:act/rule-id act)])
+        query (fn [target]
+                (grant-record/grant-covers?
+                 grants (:executor stamp) target (:act/at act)
+                 {:leaf-id grant-id :target-signer (:act/target-signer act)}))
+        answers (mapv query targets)]
+    (or (first (filter #(= :granted (:status %)) answers))
+        (first answers)
+        {:status :no-grant :reason :out-of-scope})))
 
-      (not (:covered? sr))
-      [:out-of-scope (assoc (:detail sr) :authority (grant-id grant))])))
+(defn- overreach [act reason detail]
+  {:act/id (:act/id act)
+   :classification :overreach
+   :finding (finding act reason detail)})
 
-(defn- chain-failure [act leaf by-id]
-  (loop [child leaf, seen #{(grant-id leaf)}]
-    (let [c (props child)
-          parent-id (:grant/parent c)]
-      (if-not parent-id
-        (when-not (= "joe" (:grant/grantor c))
-          {:authority (grant-id leaf)
-           :grant (grant-id child)
-           :explanation :root-grantor-not-operator})
-        (cond
-          (contains? seen parent-id)
-          {:authority (grant-id leaf) :grant parent-id :explanation :parent-cycle}
-
-          (nil? (get by-id parent-id))
-          {:authority (grant-id leaf) :grant parent-id :explanation :missing-parent}
-
-          :else
-          (let [parent (get by-id parent-id)
-                p (props parent)
-                tr (time-reason p (:act/at act))
-                sr (scope-result p act)]
+(defn classify-act
+  "Classify one act as authorised, overreach, unverified executor, or outside
+   coverage. Only overreach and unverified-executor carry findings."
+  [act grants]
+  (if (nil? (:act/stamp act))
+    {:act/id (:act/id act) :classification :outside-coverage
+     :reason :missing-act-stamp}
+    (let [stamp (:act/stamp act)
+          authority (:authority stamp)]
+      (if (and (map? authority) (contains? authority :interpretation))
+        (overreach act :interpretation-as-grant {:authority authority})
+        (try
+          (let [stamp (act-stamp/validate! stamp)
+                grant-id (get-in stamp [:authority :grant])
+                by-id (grants-by-id grants)
+                operator? (= {:operator true} (:authority stamp))
+                leaf (get by-id grant-id)]
             (cond
-              (not= :explicit (:grant/basis p))
-              {:authority (grant-id leaf) :grant parent-id
-               :explanation :parent-not-explicit}
+              operator?
+              (if (= :declared (:executor-basis stamp))
+                {:act/id (:act/id act) :classification :unverified-executor
+                 :finding (finding act :unverified-executor
+                                   {:executor (:executor stamp) :basis :declared})}
+                {:act/id (:act/id act) :classification :authorised})
 
-              (not= (:grant/grantor c) (:grant/grantee p))
-              {:authority (grant-id leaf) :grant parent-id
-               :explanation :delegation-identity-mismatch}
+              (nil? leaf)
+              (overreach act :no-grant {:authority grant-id
+                                        :explanation :grant-not-found})
 
-              tr
-              {:authority (grant-id leaf) :grant parent-id
-               :explanation tr :interval (:grant/interval p)}
+              (nil? (instant (:act/at act)))
+              (overreach act :act-time-unknown {:at (:act/at act)})
 
-              (not (:covered? sr))
-              (merge {:authority (grant-id leaf) :grant parent-id
-                      :explanation :parent-out-of-scope}
-                     (:detail sr))
+              :else
+              (let [answer (cover-answer act grants stamp)]
+                (if (= :granted (:status answer))
+                  (if (= :declared (:executor-basis stamp))
+                    {:act/id (:act/id act) :classification :unverified-executor
+                     :finding (finding act :unverified-executor
+                                       {:executor (:executor stamp) :basis :declared})}
+                    {:act/id (:act/id act) :classification :authorised})
+                  (let [reason (if (and (= :no-candidate (:reason answer))
+                                        (not= "*" (get-in leaf [:hx/props :grant/grantee]))
+                                        (not= (:executor stamp)
+                                              (get-in leaf [:hx/props :grant/grantee])))
+                                 :wrong-grantee
+                                 (map-cover-reason act (claimed-chain leaf by-id)
+                                                   (:reason answer)))]
+                    (overreach act reason {:authority grant-id
+                                           :grant-reason (:reason answer)}))))))
+          (catch clojure.lang.ExceptionInfo e
+            (overreach act (:reason (ex-data e))
+                       {:field (:field (ex-data e))})))))))
 
-              :else (recur parent (conj seen parent-id)))))))))
-
-(defn- scan-act [act by-id]
-  (let [authority (:act/authority act)]
-    (cond
-      (nil? authority)
-      (finding act :no-grant {:explanation :authority-absent})
-
-      (map? authority)
-      (if (= :interpretation (:kind authority))
-        (finding act :interpretation-as-grant {:authority authority})
-        (finding act :no-grant {:authority authority
-                                :explanation :authority-is-not-a-grant-id}))
-
-      (nil? (get by-id authority))
-      (finding act :no-grant {:authority authority
-                              :explanation :grant-not-found})
-
-      :else
-      (let [leaf (get by-id authority)]
-        (if-let [[reason detail] (direct-failure act leaf)]
-          (finding act reason detail)
-          (when-let [detail (chain-failure act leaf by-id)]
-            (finding act :broken-delegation detail)))))))
+(defn scan-report
+  "Return one classification for every act, including unstamped history."
+  [acts grants]
+  (mapv #(classify-act % grants) acts))
 
 (defn scan
-  "Return one finding for every act not covered by its claimed explicit grant."
+  "Return findings for overreach and unverified executors. Authorised acts and
+   unstamped acts have no finding; use `scan-report` to list all classes."
   [acts grants]
-  (let [by-id (into {} (keep (fn [grant]
-                               (when-let [id (grant-id grant)] [id grant]))) grants)]
-    (into [] (keep #(scan-act % by-id)) acts)))
+  (into [] (keep :finding) (scan-report acts grants)))
