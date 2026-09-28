@@ -25,6 +25,7 @@
             [futon2.aif.hermetic-repair-fixture :as hermetic]
             [futon2.aif.learning-trial-ledger :as learning-ledger]
             [futon2.aif.trace :as trace]
+            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (defn- runner-opts
@@ -32,6 +33,7 @@
   throwing THROW-FN's exception."
   [throw-fn]
   (merge (hermetic/runner-repair-options)
+         r9-support/hermetic-runner-defaults
          {:cohort? false :author "zai-5" :reviewer "codex-7" :repair-reviewer "codex-1"
           :phase-log-fn (fn [_])
           :roster-fn (fn [_] {:zai-5 {:status "idle" :invoke-ready? true}

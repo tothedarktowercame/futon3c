@@ -15,6 +15,31 @@
             [futon2.aif.trace :as trace]
             [futon3c.diagramprover.wm-wire :as w]))
 
+(def scan-render-calls
+  "Arguments observed by the hermetic renderer. Wire fixtures do not consume
+  scan output, but retaining the calls proves the runner crossed the seam."
+  (atom []))
+
+(defn- recording-scan-render
+  [& args]
+  (swap! scan-render-calls conj args)
+  nil)
+
+(defn- declared-effective-configuration
+  [opts]
+  {:schema :wm/effective-run-configuration-v1
+   :run/id (:run-id opts)
+   :loaded-code-identity (or (:loaded-code-identity opts) {:status :unavailable})
+   :evaluation :not-reached
+   :policy-details? false
+   :fpi-dark? false
+   :fpi-posterior? false})
+
+(def hermetic-runner-defaults
+  "Report-independent defaults declared by these wire fixtures."
+  {:scan-render-fn recording-scan-render
+   :effective-run-configuration-fn declared-effective-configuration})
+
 (defn run-tick
   "One hermetic tick whose judge-fn throws JUDGE-THROWS. Returns
   {:result run-opportunity!'s result
@@ -31,6 +56,7 @@
          (let [result
                (runner/run-opportunity!
                 (merge (hermetic/runner-repair-options)
+                       hermetic-runner-defaults
                        {:cohort? false :author "zai-5" :reviewer "codex-7" :repair-reviewer "codex-1"
                         :phase-log-fn (fn [_])
                         :roster-fn (fn [_] {:zai-5 {:status "idle" :invoke-ready? true}
