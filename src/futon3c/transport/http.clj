@@ -78,6 +78,8 @@
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
+            [futon3c.agency.offer-provider :as offer-provider]
+            [futon3c.agency.offer-record-cli :as offer-cli]
             [futon3c.agency.rule-record :as rule-record-store]
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
@@ -9281,27 +9283,51 @@
    would be lost on the next reload of this namespace."
   (System/getenv "FUTON3C_XIANG_PROVISIONAL_GRANT_ID"))
 
+(defn- matching-grant-id
+  "Find one live grant for CALLER and ACT-KIND. OPTIONS restrict the audience
+   and required boolean scope flags. Refuse ambiguity instead of selecting by
+   order. This is shared by provisional withdrawals and offers."
+  [base caller act-kind {:keys [allow-wildcard? scope-flags]}]
+  (let [grantees (cond-> [caller] allow-wildcard? (conj "*"))
+        grants (->> grantees
+                    (mapcat
+                     (fn [grantee]
+                       (let [path (str "/api/alpha/hyperedges?type=grant%2Frecord&end="
+                                       (java.net.URLEncoder/encode
+                                        (str "agent:" grantee) "UTF-8")
+                                       "&limit=1000&include-total=false")]
+                         (or (try (:hyperedges
+                                   (rule-record-store/request! base "GET" path nil))
+                                  (catch clojure.lang.ExceptionInfo _ nil))
+                             []))))
+                    (filter (fn [g]
+                              (let [p (:hx/props g)
+                                    grantee (:grant/grantee p)
+                                    scope (:grant/scope p)]
+                                (and (contains? (set grantees) grantee)
+                                     (some #{act-kind} (:act-kinds scope))
+                                     (every? #(true? (get scope %)) scope-flags)))))
+                    (reduce (fn [by-id grant] (assoc by-id (:hx/id grant) grant)) {})
+                    vals
+                    vec)]
+    (case (count grants)
+      0 nil
+      1 (:hx/id (first grants))
+      (throw (ex-info "More than one grant covers this act"
+                      {:reason :ambiguous-grant :field :act/stamp
+                       :act-kind act-kind :caller caller})))))
+
 (defn- provisional-grant-id
-  "The one stored provisional-only withdrawal grant naming CALLER as grantee,
-   or nil. Two or more is refused rather than chosen between."
+  "The one stored provisional-only withdrawal grant naming CALLER as grantee."
   [base caller]
   (or xiang-provisional-grant-id
-      (let [path (str "/api/alpha/hyperedges?type=grant%2Frecord&end="
-                      (java.net.URLEncoder/encode (str "agent:" caller) "UTF-8")
-                      "&limit=1000&include-total=false")
-            grants (->> (try (:hyperedges (rule-record-store/request! base "GET" path nil))
-                             (catch clojure.lang.ExceptionInfo _ nil))
-                        (filter (fn [g]
-                                  (let [p (:hx/props g)]
-                                    (and (= caller (:grant/grantee p))
-                                         (true? (get-in p [:grant/scope :provisional-only]))
-                                         (some #{:act/withdrawal}
-                                               (get-in p [:grant/scope :act-kinds])))))))]
-        (case (count grants)
-          0 nil
-          1 (:hx/id (first grants))
-          (throw (ex-info "More than one provisional grant names this caller"
-                          {:reason :ambiguous-grant :field :act/stamp}))))))
+      (matching-grant-id base caller :act/withdrawal
+                         {:allow-wildcard? false
+                          :scope-flags [:provisional-only]})))
+
+(defn- offer-grant-id [base caller]
+  (matching-grant-id base caller :offer/record
+                     {:allow-wildcard? true :scope-flags [:own-acts-only]}))
 
 (defn- pattern-card-stamp [caller]
   (act-stamp/stamp caller caller
@@ -9345,6 +9371,48 @@
                       request (act-harness/plain "route:futon3c.pattern-card/select")
                       (pattern-card-stamp author))]
           (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+        (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
+(defn handle-offer
+  "Mint an offer authored by CALLER on CALLER's exact seat. The grant is found
+   live and the verified record is published to the cache-only prompt provider."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [caller (pattern-card-author! payload)
+              supplied-agent (some-> (or (:agent payload) (get payload "agent")) str)
+              _ (when (and supplied-agent (not= supplied-agent caller))
+                  (throw (ex-info "Offer seat must belong to caller"
+                                  {:reason :not-seat-owner :field :agent})))
+              session (or (:session payload) (get payload "session"))
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              grant-id (or (offer-grant-id base caller)
+                           (throw (ex-info "No grant covers offers by this caller"
+                                           {:reason :no-grant :field :act/stamp})))
+              raw-options (or (:options payload) (get payload "options"))
+              options (when (vector? raw-options)
+                        (mapv (fn [option]
+                                {:option/id (or (:id option) (get option "id"))
+                                 :option/label (or (:label option) (get option "label"))
+                                 :option/scope (or (:scope option) (get option "scope"))})
+                              raw-options))
+              until (or (:until payload) (get payload "until"))
+              record (cond-> {:kind :offer/record :author caller :addressee "joe"
+                              :seat {:agent caller :session session}
+                              :at (pattern-card-at payload) :options options}
+                       until (assoc :until until))
+              offer-request {:record record
+                             :idempotency-key (pattern-card-idempotency-key payload)}
+              stamp (act-stamp/stamp caller caller {:grant grant-id} :declared)
+              result (offer-cli/write!
+                      base offer-request
+                      (act-harness/plain "route:futon3c.offer") stamp)]
+          (json-response 200 (assoc (offer-provider/publish! result) :ok true)))
         (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
@@ -9544,6 +9612,9 @@
 
       (and (= :post method) (= "/api/alpha/pattern-card/select" uri))
       (handle-pattern-card-select request)
+
+      (and (= :post method) (= "/api/alpha/offer" uri))
+      (handle-offer request)
 
       (and (= :post method) (= "/api/alpha/pattern-card/withdraw" uri))
       (handle-pattern-card-withdraw request)
