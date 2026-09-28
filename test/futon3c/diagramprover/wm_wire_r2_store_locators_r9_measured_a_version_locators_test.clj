@@ -1,4 +1,20 @@
 (ns futon3c.diagramprover.wm-wire-r2-store-locators-r9-measured-a-version-locators-test
+  "Wire [:r2-store-locators :r9-measured-a-version :locators]: a locator
+  published into the store by mission-reading/publish-locator! reaching
+  measured-a-version, which reads it as the assembled problem's
+  [:cascade-problem :locators].
+
+  No live record carries both ends: the tick records under spike/ carry
+  [:decision :selection-certificate :candidate-derivations …
+  :observation-locators] (the store's locators, keyed [target token] — the
+  writer's end) but no [:decision :measured-a] at all (the reader's end
+  was never persisted), so no single record pins both.
+  WITNESSED-HERMETICALLY: a real locator published into a temp store by
+  the real writer chain (issue! → validate-locator with the real C3
+  observation → publish-locator!), assembled by the real
+  cascade-problems/assemble, read by the real measured-a-version.
+
+  The values are read from the producer record `publication-locators-observe`."
   (:require [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 (def producer (delay (producer-record/record "publication-locators-observe")))

@@ -17,7 +17,7 @@
            :test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/the-real-reader-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, reader, and intervention relations come from the content-addressed fold-out-simple producer record."})
+           :note "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission. The values are read from the producer record `fold-out-simple`."})
 
 (deftest the-real-reader-produces-the-received-value
   (let [fields (wire-fields)

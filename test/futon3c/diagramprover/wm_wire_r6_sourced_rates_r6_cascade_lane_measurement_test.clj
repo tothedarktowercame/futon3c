@@ -1,5 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test
-  "Rates wire, read from the content-addressed rates-observe-g28 producer
+  "Rates wire, witnessed by real calls using ten real subjects admitted through the store and reader.
+  See support/live-records-read for the live records lacking both ends.
+
+  Rates wire, read from the content-addressed rates-observe-g28 producer
   record. The producer ran the real cascade-lane using ten real subjects
   admitted through the store and reader; this reader loads no product code.
   See :live-records-read for the live records lacking both ends, re-verified

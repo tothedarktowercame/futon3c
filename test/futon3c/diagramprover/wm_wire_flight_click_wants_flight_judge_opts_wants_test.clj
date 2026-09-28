@@ -5,7 +5,8 @@
 (def producer (delay (producer-record/record "ask-out-live-census")))
 (defn- fields [] (get-in @producer [:wires wire-id]))
 (defn check [] (:primary (fields)))
-(def wire {:wire wire-id :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value
+(def wire {:note "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling. The values are read from the producer record `ask-out-live-census`."
+           :wire wire-id :kind :witnessed-hermetically :test `the-real-reader-receives-the-published-value
            :second-layer {:test `reader-carries-the-intervened-value :kind :record :product [:products]
                           :intervention :before-reader}
            :check check :live-records-read []})

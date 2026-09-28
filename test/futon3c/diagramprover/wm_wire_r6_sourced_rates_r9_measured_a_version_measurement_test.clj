@@ -1,4 +1,18 @@
 (ns futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test
+  "Wire [:r6-sourced-rates :r9-measured-a-version [:measurement {:record :sourced-rates}]]: the
+  measurement provenance on sourced-rates' :sourced return reaching
+  measured-a-version's own :measurement, keyed [target token].
+
+  No live record carries either end: the tick records under spike/ carry
+  no :measured-a at all (they predate measured-A persistence — the brief's
+  expectation of [:decision :measured-a :measurement] on the tick records
+  is stale), and sourced-rates' return is never persisted separately.
+  live-records-read names the records read, each pinned. So the wire is
+  WITNESSED-HERMETICALLY: the real sourced-rates driven through the real
+  measured-a-version over admitted labels, as
+  flight_conditioning_step_test's produced-measured-a does.
+
+  The values are read from the producer record `rates-products-measured-product`."
   (:require [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 (def producer (delay (producer-record/record "rates-products-measured-product")))

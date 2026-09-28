@@ -16,7 +16,7 @@
            :test 'futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/the-judge-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, judge reader, and intervention relations come from the content-addressed fold-in-observe producer record."})
+           :note "Reader produces :policy-depth-used (3 -> 4); not cascade family T. The cascade-horizon remains sourced independently from cascade-sources. The values are read from the producer record `fold-in-observe`."})
 
 (deftest the-judge-produces-the-received-value
   (let [fields (wire-fields)

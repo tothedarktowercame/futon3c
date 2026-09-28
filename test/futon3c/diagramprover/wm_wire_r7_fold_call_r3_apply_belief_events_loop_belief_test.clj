@@ -17,7 +17,7 @@
            :test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/the-real-reader-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, reader, and intervention relations come from the content-addressed fold-out-simple producer record."})
+           :note "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader. The values are read from the producer record `fold-out-simple`."})
 
 (deftest the-real-reader-produces-the-received-value
   (let [fields (wire-fields)

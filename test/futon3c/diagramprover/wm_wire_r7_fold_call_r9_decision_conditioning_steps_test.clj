@@ -20,7 +20,7 @@
    :test `the-real-reader-produces-the-received-value
    :check check
    :live-records-read []
-   :note "Writer and reader values come from the content-addressed fold-out-decision producer record."})
+   :note "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update. The values are read from the producer record `fold-out-decision`."})
 
 (deftest the-real-reader-produces-the-received-value
   (let [fields (wire-fields)

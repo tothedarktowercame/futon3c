@@ -1,5 +1,7 @@
 (ns futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test
-  "Scoped target handoff read from the content-addressed target-observe producer record."
+  "Scoped target handoff. Negative controls change the flight before the real reader.
+
+  Scoped target handoff read from the content-addressed target-observe producer record."
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))

@@ -1,4 +1,26 @@
 (ns futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test
+  "Wire [:r14-precision-carry :r9-decision [:beta {:record :precision}]]:
+  the carried beta reaching the joint cascade decision.
+
+  The writer is futon2.aif.policy-precision-carry/advance's advancing
+  return (see futon3c.diagramprover.wm-wire-temperature-support). The
+  reader is war-machine/cascade-decision-admitted
+  (war_machine.clj:6825-6848): `beta-state (precision-carry/advance ...)`,
+  then `{:beta (:beta beta-state) :beta-state beta-state ...}` into
+  policy/select-action-cascades, whose decision records
+  :beta {:value beta :status :declared} — the reader's produced value
+  under the field.
+
+  This wire is VERIFIED: the pinned tick record carries both ends — the
+  writer's sealed record's :beta at
+  [:decision :selection-certificate :policy-precision-state :beta] and the
+  decision's recorded beta at
+  [:decision :selection-certificate :beta :value] — and they are equal.
+  (The record's precision-state is :status :held: the live tick took a
+  hold branch, which returns the previous record's beta; the advancing
+  branch is the hermetic witness path in the sibling wires' tests.)
+
+  The values are read from the producer record `temperature-observe`."
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))

@@ -1,4 +1,21 @@
 (ns futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test
+  "Wire [:r9-judge-refusal-abstention :r9-failure-classifier :outcome]: the
+  abstention exception's {:outcome :abstained} (judge-refusal-abstention,
+  WM-MAP-REPLAY-I defect G) reaching the runner's failure classifier
+  (explicit-failure-kind), which reads :outcome off the ex-data anywhere in
+  the cause chain. This is the read that closes a refused tick :abstained
+  instead of :untyped-failure.
+
+  No live record carries both ends: every flight predates the fix
+  (321d82c8). The fourth flight's refused tick (live-records-read, pinned)
+  closed :untyped-failure — the classifier read nothing of the refusal. So
+  the wire is WITNESSED-HERMETICALLY: the writer's var is called and its
+  thrown ex-data's :outcome observed; the reader's value is the tick's
+  recorded [:data :failure-kind], which is explicit-failure-kind's read of
+  :outcome (failure-kind-from consults it first), off one hermetic tick
+  whose judge throws a typed refusal.
+
+  The values are read from the producer record `r9-run-tick`."
   (:require [clojure.test :refer [deftest is]] [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 (def wire-id [:r9-judge-refusal-abstention :r9-failure-classifier :outcome])

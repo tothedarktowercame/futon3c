@@ -17,7 +17,7 @@
    :test 'futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test/the-real-reader-produces-the-writers-belief
    :check check
    :live-records-read []
-   :note "Writer and reader values and intervention relations come from the content-addressed token-input-observe producer record."})
+   :note "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."})
 
 (deftest the-real-reader-produces-the-writers-belief
   (let [r (check)]

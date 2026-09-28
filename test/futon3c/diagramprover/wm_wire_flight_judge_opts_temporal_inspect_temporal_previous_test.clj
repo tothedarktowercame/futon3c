@@ -15,7 +15,7 @@
            :second-layer {:test `temporal-previous-reader-product :kind :record
                           :product [:temporal-previous] :intervention :before-reader}
            :live-records-read []
-           :note "Writer and reader values come from the content-addressed temporal-courier producer record."})
+           :note "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."})
 
 (deftest real-courier-reaches-reader
   (let [r (check)]

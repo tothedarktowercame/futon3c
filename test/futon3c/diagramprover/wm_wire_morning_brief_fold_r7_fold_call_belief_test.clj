@@ -16,7 +16,7 @@
            :test 'futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, judge reader, and intervention relations come from the content-addressed fold-in-observe producer record."})
+           :note "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence. The values are read from the producer record `fold-in-observe`."})
 
 (deftest the-judge-produces-the-received-value
   (let [fields (wire-fields)

@@ -18,7 +18,7 @@
    :check check
    :live-records-read []
    :record (:source-record @producer)
-   :note "Writer and reader digests come from the content-addressed construction-live-digest producer record."})
+   :note "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry. The values are read from the producer record `construction-live-digest`."})
 
 (deftest the-observed-handoff
   (let [recorded (fields)

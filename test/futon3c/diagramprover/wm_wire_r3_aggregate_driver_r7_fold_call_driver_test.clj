@@ -16,7 +16,7 @@
            :test 'futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/the-judge-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, judge reader, and intervention relations come from the content-addressed fold-in-observe producer record."})
+           :note "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation. The values are read from the producer record `fold-in-observe`."})
 
 (deftest the-judge-produces-the-received-value
   (let [fields (wire-fields)

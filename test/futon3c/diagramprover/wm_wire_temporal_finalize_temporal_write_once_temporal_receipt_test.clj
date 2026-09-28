@@ -15,7 +15,7 @@
            :kind :witnessed-hermetically
            :test `real-courier-reaches-reader :check check
            :live-records-read []
-           :note "Writer and reader values come from the content-addressed temporal-courier-publication-paths producer record."})
+           :note "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier-publication-paths`."})
 
 (deftest real-courier-reaches-reader
   (let [r (check)]

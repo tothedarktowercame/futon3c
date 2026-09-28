@@ -17,7 +17,7 @@
            :test 'futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/the-real-reader-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, reader, and intervention relations come from the content-addressed fold-out-simple producer record."})
+           :note "Reconcile returns the carried posterior for surviving entities; absence is nil at the reader door and produces the fresh prior. The values are read from the producer record `fold-out-simple`."})
 
 (deftest the-real-reader-produces-the-received-value
   (let [fields (wire-fields)

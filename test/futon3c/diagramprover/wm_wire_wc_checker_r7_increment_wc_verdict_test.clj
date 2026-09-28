@@ -5,7 +5,8 @@
 (def producer (delay (producer-record/record "selection-out-observe")))
 (defn- fields [] (get-in @producer [:wires wire-id]))
 (defn check [] (:primary (fields)))
-(def wire {:second-layer {:test `different-value-before-reader :kind :value-varying
+(def wire {:note "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0. The values are read from the producer record `selection-out-observe`."
+           :second-layer {:test `different-value-before-reader :kind :value-varying
                           :product [:result :wc-failures] :intervention :before-reader}
            :wire wire-id :kind :witnessed-hermetically :test `the-real-reader-handoff
            :check check :live-records-read []})

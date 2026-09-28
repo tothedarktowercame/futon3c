@@ -13,7 +13,7 @@
    :test `the-real-reader-handoff
    :check check
    :live-records-read []
-   :note "Writer and reader values come from the content-addressed selection-out-refusal producer record."})
+   :note "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind. The values are read from the producer record `selection-out-refusal`."})
 
 (deftest the-real-reader-handoff
   (let [recorded (fields)

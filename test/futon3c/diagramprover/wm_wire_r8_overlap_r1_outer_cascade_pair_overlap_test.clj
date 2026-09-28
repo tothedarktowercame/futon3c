@@ -17,7 +17,7 @@
                           :kind :record :product [:target-selection :inputs :pair-overlap]
                           :intervention :before-reader}
            :live-records-read []
-           :note "Writer and reader values and intervention relations come from the content-addressed outer-inputs-observe producer record."})
+           :note "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."})
 
 (deftest the-produced-input-is-received
   (let [fields (wire-fields)

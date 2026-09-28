@@ -1,4 +1,19 @@
 (ns futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test
+  "Wire [:r9-phase-kind :r9-failure-classifier :failure-kind]: the
+  selection catch's re-thrown :failure-kind (phase-kind-failure,
+  WM-PHASE-KIND-I) reaching the runner's failure classifier
+  (explicit-failure-kind), which reads :failure-kind off the ex-data
+  anywhere in the cause chain. This is the read that closes a
+  bare-:kind-throwing tick with its kind instead of :untyped-failure.
+
+  No live record carries the reader's end (see the phase-kind-test wire's
+  pinned live record: the eighth flight closed :untyped-failure, pre-fix).
+  So the wire is WITNESSED-HERMETICALLY: the writer's var re-throws a
+  bare-:kind exception carrying :failure-kind, the reader's var reads that
+  very exception, and one hermetic tick whose judge throws the same
+  exception closes with the kind as its recorded [:data :failure-kind].
+
+  The values are read from the producer record `r9-run-tick`."
   (:require [clojure.test :refer [deftest is]] [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 (def wire-id [:r9-phase-kind :r9-failure-classifier :failure-kind])

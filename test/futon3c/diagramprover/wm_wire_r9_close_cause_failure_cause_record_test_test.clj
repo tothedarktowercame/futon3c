@@ -1,4 +1,26 @@
 (ns futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test
+  "Wire [:r9-close-cause :failure-cause-record-test :failure-cause]: the
+  close's cause chain (run-opportunity-core!, WM-CAUSE-ON-RECORD-I)
+  reaching the component's own test,
+  futon2/test/futon2/aif/failure_cause_record_test.clj, whose reads of the
+  field are
+
+    (:failure-cause finding)                       ; on the handed finding
+    (get-in result [:data :cause])                 ; the close map's copy
+    (runner/finding-failure-cause stored)          ; off the durable record
+
+  A test box has no runtime var to drive through, so the hermetic witness
+  performs exactly those reads on one hermetic tick whose judge throws a
+  refusal with a cause beneath it: the writer's value is the
+  :failure-cause run-opportunity-core! put on the finding it handed the
+  store; the reader's value is the close map's [:data :cause] the test
+  equates it with.
+
+  No live record carries either end: every finding under spike/ predates
+  WM-CAUSE-ON-RECORD-I (live-records-read, both pinned: neither carries a
+  :failure-cause key). So the wire is WITNESSED-HERMETICALLY.
+
+  The values are read from the producer record `r9-run-tick`."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))

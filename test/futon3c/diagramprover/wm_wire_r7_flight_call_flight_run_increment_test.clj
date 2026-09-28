@@ -1,4 +1,18 @@
 (ns futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test
+  "Wire [:r7-flight-call :flight-run :increment]: the habit increment on
+  wc-verdict-fn's return (flight_runner.clj:913-952) reaching flight/run!,
+  which merges it onto the click's enactments entry.
+
+  No live record carries either end: every flight record under spike/
+  records its one enactment as a typed absence ({:absent
+  :no-dispatch-configured} or {:absent :no-decision}), no
+  [:enactments i :increment] appears anywhere, and wc-verdict-fn's return
+  is never persisted apart from run!'s copy of it. WITNESSED-HERMETICALLY:
+  a real one-click flight/run! with the real enact-fn (the lane-8
+  driver's exemplar-backed fixture) and the real wc-verdict-fn (real
+  checker, real enactment-habit/increment).
+
+  The values are read from the producer record `publication-increment-observe`."
   (:require [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 (def live-records-read

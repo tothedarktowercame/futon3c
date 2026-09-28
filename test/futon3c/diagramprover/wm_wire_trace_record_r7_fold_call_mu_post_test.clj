@@ -16,7 +16,7 @@
            :test 'futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value
            :check check
            :live-records-read []
-           :note "Writer, judge reader, and intervention relations come from the content-addressed fold-in-observe producer record."})
+           :note "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict. The values are read from the producer record `fold-in-observe`."})
 
 (deftest the-judge-produces-the-received-value
   (let [fields (wire-fields)

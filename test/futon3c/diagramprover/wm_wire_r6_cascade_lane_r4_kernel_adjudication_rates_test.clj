@@ -1,5 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test
-  "Rates wire, read from the content-addressed rates-observe producer record.
+  "Rates wire, witnessed by real calls using ten real subjects admitted through the store and reader.
+  See support/live-records-read for the live records lacking both ends.
+
+  Rates wire, read from the content-addressed rates-observe producer record.
   The producer ran the real calls using ten real subjects admitted through the
   store and reader; this reader loads no product code."
   (:require [clojure.test :refer [deftest is]]

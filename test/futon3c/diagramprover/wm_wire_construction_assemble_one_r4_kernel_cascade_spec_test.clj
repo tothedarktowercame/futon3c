@@ -1,5 +1,9 @@
 (ns futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test
   "assemble/assemble-one's spec through the real ranker, following cascade-lane's
+  :cascade-spec option. The reader records the input in its own metadata beside
+  its derived scoring spec; no projection is used to manufacture equality.
+
+  assemble/assemble-one's spec through the real ranker, following cascade-lane's
   :cascade-spec option. Values come from the content-addressed producer record;
   no product code is loaded here."
   (:require [clojure.test :refer [deftest is testing]]
@@ -20,7 +24,7 @@
    :wire [:construction-assemble-one :r4-kernel :cascade-spec]
    :kind :witnessed-hermetically :test `the-observed-handoff :check check
    :live-records-read []
-   :note "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources, then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record. Values read from the producer record."})
+   :note "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record. The values are read from the producer record."})
 
 (deftest the-observed-handoff
   (let [o (check)]

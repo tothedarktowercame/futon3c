@@ -5,7 +5,8 @@
 (def producer (delay (producer-record/record "selection-out-observe")))
 (defn- fields [] (get-in @producer [:wires wire-id]))
 (defn check [] (:primary (fields)))
-(def wire {:second-layer {:test `different-value-before-reader :kind :value-varying :product [:verdict]
+(def wire {:note "WIRE-23-C1 declares the executable checker site. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join. The values are read from the producer record `selection-out-observe`."
+           :second-layer {:test `different-value-before-reader :kind :value-varying :product [:verdict]
                           :intervention :before-reader}
            :wire wire-id :kind :witnessed-hermetically :test `the-real-reader-handoff
            :check check :live-records-read []})

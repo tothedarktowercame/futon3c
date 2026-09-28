@@ -19,7 +19,7 @@
    :test `the-real-reader-produces-the-received-value
    :check check
    :live-records-read []
-   :note "Writer and reader values come from the content-addressed fold-out-decision producer record."})
+   :note "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry. The values are read from the producer record `fold-out-decision`."})
 
 (deftest the-real-reader-produces-the-received-value
   (let [fields (wire-fields)

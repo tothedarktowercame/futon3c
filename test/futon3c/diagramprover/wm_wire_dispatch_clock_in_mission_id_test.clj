@@ -1,5 +1,8 @@
 (ns futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test
-  "Writer and reader values come from the content-addressed small-observe
+  "Real calls with IO isolated; no live record carries both ends.
+  See support/live-records-read for the pinned record survey.
+
+  Writer and reader values come from the content-addressed small-observe
   producer record."
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
