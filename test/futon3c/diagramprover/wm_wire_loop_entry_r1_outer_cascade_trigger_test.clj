@@ -19,36 +19,22 @@
   spike's records are the full-loop-runner's phase-event provenance
   (:duree-click-on-demand), not the scheduled run's, and the cascade was
   not built when they were written (see live-records-read, each pinned and
-  read). So the wire is WITNESSED-HERMETICALLY."
+  read). So the wire is WITNESSED-HERMETICALLY.
+
+  The values are read from the producer record: the producer ran the real
+  trigger-from-env and outer-cascade/select; this reader loads no product
+  code."
   (:require [clojure.test :refer [deftest is]]
-            [futon2.aif.outer-cascade :as oc]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon2.wm-trigger]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn- trigger-from-env [getenv]
-  (@(ns-resolve 'futon2.wm-trigger 'trigger-from-env) getenv))
-
-(def field
-  "A minimal field with one eligible target (select's input shape)."
-  {:considered [{:target "M-a" :kind :mission}]
-   :feasible [{:target "M-a" :kind :mission :next-step :ready :eligible true}]
-   :exclusions []})
-
-(defn observe
-  "trigger-from-env (writer, as -main calls it) with FUTON_WM_TRIGGER
-  \"wallclock-cron\", then select (reader) over FIELD with the writer's
-  value as :trigger; TRIGGER-OPT edits what select is handed (the bad
-  cases). {:writer the trigger keyword, :reader the value the reader
-  records under [:target-selection :trigger]}."
-  ([] (observe ::written))
-  ([trigger-opt]
-   (let [w (trigger-from-env (constantly "wallclock-cron"))
-         handed (if (= ::written trigger-opt) w trigger-opt)
-         r (oc/select {:field field :seed 1 :trigger handed})]
-     {:writer w
-      :reader (get-in r [:target-selection :trigger])})))
-
-(defn check [] (observe))
+(def wire-id [:loop-entry :r1-outer-cascade :trigger])
+(def stem "wm-wire-loop-entry-r1-outer-cascade-trigger-test-literal-fix")
+(def producer (delay (producer-record/record stem)))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn observe [mutation]
+  (if (= mutation :none) (:primary (fields)) (get-in (fields) [:interventions mutation])))
+(defn check [] (observe :none))
 
 (def live-records-read
   (let [p #(str w/spike-dir "/" %)]
@@ -69,20 +55,20 @@
 (deftest the-trigger-reaches-the-cascade
   (let [o (check)]
     (is (= :wallclock-cron (:writer o))
-        "the writer's end, from a real trigger-from-env call as -main makes it")
-    (is (w/received? o))))
+        "[:primary :writer] the writer's end, from a real trigger-from-env call as -main makes it")
+    (is (w/received? o) "[:primary] the writer's value reached the reader")))
 
 (deftest a-typed-absence-at-the-reader-fails-the-wire
   ;; select records {:absent :no-trigger} when nothing is handed
-  (let [o (observe nil)]
-    (is (= {:absent :no-trigger} (:reader o)))
-    (is (not (w/received? o)))))
+  (let [o (observe :absent)]
+    (is (= {:absent :no-trigger} (:reader o)) "[:interventions :absent :reader]")
+    (is (not (w/received? o)) "[:interventions :absent] not received")))
 
 (deftest a-different-trigger-fails-the-wire
-  (let [o (observe :duree-click-on-demand)]
-    (is (some? (:reader o)))
+  (let [o (observe :different)]
+    (is (some? (:reader o)) "[:interventions :different :reader]")
     (is (not (w/received? o))
-        "present, not absent, but not the value the writer wrote")))
+        "[:interventions :different] present, not absent, but not the value the writer wrote")))
 
 (deftest the-live-records-carry-no-loop-trigger
   (doseq [{:keys [path sha256]} live-records-read]
