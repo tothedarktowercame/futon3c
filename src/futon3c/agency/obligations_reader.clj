@@ -90,7 +90,8 @@
          outcome-page (evidence-pages base "promise-outcome" t mode :promise-outcomes)
          history (:rows history-page)
          outcomes (->> (:rows outcome-page)
-                       (filter #(contains? #{:promise/fulfilled :promise/lapsed}
+                       (filter #(contains? #{:promise/fulfilled :promise/lapsed
+                                             :promise/fulfilment-check}
                                            (:evidence/type %))) vec)
          endpoint (str "agent:" agent-id)
          agreement-page (hyperedge-page base :agreement/record endpoint t mode :agreements)

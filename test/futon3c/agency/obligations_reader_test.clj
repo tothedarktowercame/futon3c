@@ -69,6 +69,18 @@
         (is (= :store-timeout (:reason (ex-data e))))
         (is (= :promise-history (:source (ex-data e))))))))
 
+(deftest fulfilment-check-survives-the-outcome-reader
+  (let [check {:evidence/id "promise-check:x"
+               :evidence/type :promise/fulfilment-check
+               :evidence/body {:promise-id "x" :verdict :unfulfilled}}]
+    (binding [reader/*request!*
+              (fn [_ _ path _]
+                (if (str/includes? path "promise-outcome")
+                  {:entries [check] :count 1}
+                  (empty-response path)))]
+      (is (= [check]
+             (:promise-outcomes (reader/read-inputs "http://store" "a" t :as-of)))))))
+
 (deftest unreadable-agreement-is-kept-as-incomplete
   (let [bad {:hx/id "act:bad" :hx/type :agreement/record :hx/props {}}]
     (binding [reader/*request!*

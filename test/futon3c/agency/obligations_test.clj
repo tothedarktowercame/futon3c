@@ -31,6 +31,14 @@
   {:evidence/id id :evidence/type type :evidence/at at
    :evidence/body {:promise-id pid}})
 
+(defn check
+  ([id pid at verdict] (check id pid at verdict nil))
+  ([id pid at verdict unable-reason]
+   {:evidence/id id :evidence/type :promise/fulfilment-check :evidence/at at
+    :evidence/body (cond-> {:promise-id pid :verdict verdict
+                            :due-at "2026-09-28T11:00:00Z"}
+                     unable-reason (assoc :unable-reason unable-reason))}))
+
 (defn project [history outcomes agent]
   (obligations/obligations-as-of
    {:promise-history history :promise-outcomes outcomes :agreements [] :offers []}
@@ -63,6 +71,22 @@
     (is (= ["wake"] (mapv :obligation/id (:owes r))))
     (is (= :open (get-in r [:owes 0 :status])))))
 
+(deftest wake-and-plain-release-with-failed-check-stays-overdue
+  (let [rec {:id "wake-failed" :agent "agent-a" :beneficiary "agent-b"
+             :deadline "2026-09-28T11:00:00Z"
+             :fulfilment-criterion {:kind :job-terminal-ok :job-id "job"
+                                    :machine-evaluable? true}}
+        rows (chain "wake-failed" rec
+                    [:promise/woken "2026-09-28T11:00:00Z" {}]
+                    [:promise/released "2026-09-28T11:00:00Z" {}])
+        r (project rows [(check "check-failed" "wake-failed" "2026-09-28T11:01:00Z"
+                                :unfulfilled)] "agent-a")]
+    (is (= ["wake-failed"] (mapv :obligation/id (:owes r))))
+    (is (= :overdue (get-in r [:owes 0 :status])))
+    (is (= "check-failed" (get-in r [:owes 0 :check :id])))
+    (is (some #{"check-failed"} (get-in r [:owes 0 :facts])))
+    (is (not-any? #{:outcome-unknown} (get-in r [:owes 0 :facts])))))
+
 (deftest fulfilled-and-completed-late-are-auditable-closed-rows
   (let [rec {:id "done" :agent "a" :beneficiary "b"
              :deadline "2026-09-28T11:00:00Z"
@@ -75,6 +99,68 @@
     (is (empty? (:owes completed)))
     (is (= :completed (get-in completed [:ignored 0 :status])))
     (is (= :completed-late (get-in late [:ignored 0 :status])))))
+
+(deftest checks-close-or-mark-incomplete-and-later-fulfilment-wins
+  (let [rec {:id "checked" :agent "a" :beneficiary "b"
+             :deadline "2026-09-28T11:00:00Z"
+             :fulfilment-criterion {:kind :job-terminal-ok :job-id "j"
+                                    :machine-evaluable? true}}
+        rows (chain "checked" rec)
+        completed (project rows [(check "check-ok" "checked" "2026-09-28T11:00:00Z"
+                                             :fulfilled)] "a")
+        unable (project rows [(check "check-unknown" "checked" "2026-09-28T11:00:00Z"
+                                           :unable-to-determine :job-not-found)] "a")
+        later (project rows [(check "check-first" "checked" "2026-09-28T11:00:00Z"
+                                          :unfulfilled)
+                             (outcome "fulfilled-later" :promise/fulfilled "checked"
+                                      "2026-09-28T11:30:00Z")] "a")]
+    (is (= :completed (get-in completed [:ignored 0 :status])))
+    (is (= :overdue (get-in unable [:owes 0 :status])))
+    (is (= {:obligation/id "checked" :reason :unable-to-determine
+            :record-id "check-unknown" :unable-reason :job-not-found}
+           (first (:incomplete unable))))
+    (is (= :completed-late (get-in later [:ignored 0 :status])))
+    (is (every? (set (get-in later [:ignored 0 :facts]))
+                ["check-first" "fulfilled-later"]))))
+
+(deftest pending-check-rules-and-check-time-boundary
+  (let [deadline-rec {:id "due" :agent "a" :beneficiary "b"
+                      :deadline "2026-09-28T11:00:00Z"
+                      :fulfilment-criterion {:kind :job-terminal-ok :job-id "j"
+                                             :machine-evaluable? true}}
+        no-deadline (dissoc (assoc deadline-rec :id "natural") :deadline)
+        no-criterion {:id "wait" :agent "a" :beneficiary "b"}
+        due (project (chain "due" deadline-rec) [] "a")
+        natural (project (chain "natural" no-deadline) [] "a")
+        wait (project (chain "wait" no-criterion) [] "a")
+        after (project (chain "due" deadline-rec)
+                       [(check "check-after" "due" "2026-09-28T12:00:00.001Z" :fulfilled)] "a")]
+    (is (= :check-pending (get-in due [:incomplete 0 :reason])))
+    (is (= :check-pending (get-in natural [:incomplete 0 :reason])))
+    (is (= ["wait"] (mapv :obligation/id (:unchecked wait))))
+    (is (= :check-pending (get-in after [:incomplete 0 :reason])))
+    (is (nil? (get-in after [:owes 0 :check])))))
+
+(deftest explicit-release-precedes-a-failed-check
+  (let [rec {:id "released-check" :agent "a" :beneficiary "b"
+             :deadline "2026-09-28T11:00:00Z"
+             :fulfilment-criterion {:kind :job-terminal-ok :job-id "j"
+                                    :machine-evaluable? true}}
+        rows (chain "released-check" rec
+                    [:promise/released "2026-09-28T11:30:00Z"
+                     {:release/basis :explicit :release/role :creditor}])
+        r (project rows [(check "check-no" "released-check" "2026-09-28T11:01:00Z"
+                                :unfulfilled)] "a")]
+    (is (empty? (:owes r)))
+    (is (= :released (get-in r [:ignored 0 :status])))))
+
+(deftest orphan-check-is-incomplete-without-inventing-a-row
+  (let [r (project [] [(check "orphan" "missing" "2026-09-28T11:00:00Z"
+                             :unfulfilled)] "a")]
+    (is (empty? (:owes r)))
+    (is (empty? (:owed r)))
+    (is (= {:obligation/id "missing" :reason :orphan-check :record-id "orphan"}
+           (first (:incomplete r))))))
 
 (deftest unchecked-wait-ends-on-plain-release
   (let [rec {:id "wait" :agent "a" :beneficiary "b"}
@@ -147,7 +233,7 @@
     (is (= ["p"] (mapv :obligation/id (:owes debtor))))
     (is (= ["p"] (mapv :obligation/id (:owed creditor))))
     (is (= ["missing"] (mapv :obligation/id (:owes missing))))
-    (is (= :no-beneficiary (get-in missing [:incomplete 0 :reason])))))
+    (is (some #(= :no-beneficiary (:reason %)) (:incomplete missing)))))
 
 (deftest other-agents-waits-and-closed-rows-are-not-listed
   (let [wait (chain "wait-c" {:id "wait-c" :agent "agent-c" :beneficiary "agent-d"})

@@ -61,32 +61,59 @@
         plain-release (some #(when (= :promise/released (:evidence/type %)) %) lifecycle)
         fulfilled (some #(when (= :promise/fulfilled (:evidence/type %)) %) outcomes)
         lapsed (some #(when (= :promise/lapsed (:evidence/type %)) %) outcomes)
+        check (first (sort-by :evidence/at
+                              #(compare %2 %1)
+                              (filter #(= :promise/fulfilment-check (:evidence/type %)) outcomes)))
+        check-body (:evidence/body check)
+        check-verdict (:verdict check-body)
         deadline-passed? (when-let [d (instant deadline)]
                            (not (.isAfter ^Instant d ^Instant t)))
+        fulfilled-after-check? (and fulfilled check
+                                    (.isAfter ^Instant (instant (:evidence/at fulfilled))
+                                              ^Instant (instant (:evidence/at check))))
         status (cond
                  invalid-release :invalid-release
                  explicit-release (if (= :creditor release-role) :released :abandoned)
-                 fulfilled (if lapsed :completed-late :completed)
+                 fulfilled (if (or lapsed
+                                   (and fulfilled-after-check?
+                                        (contains? #{:unfulfilled :unable-to-determine}
+                                                   check-verdict)))
+                             :completed-late :completed)
+                 (= :fulfilled check-verdict) (if lapsed :completed-late :completed)
+                 (= :unfulfilled check-verdict) :overdue
+                 (= :unable-to-determine check-verdict) (if deadline-passed? :overdue :open)
                  lapsed :overdue
                  deadline-passed? :overdue
                  :else :open)
-        facts (cond-> (into (fact-ids lifecycle) (fact-ids outcomes))
-                (and checkable? deadline-passed? (nil? lapsed) (nil? fulfilled))
-                (conj :outcome-unknown))]
-    {:row {:obligation/id pid
-           :source/id (:evidence/id creation)
-           :source/kind :promise
-           :debtor (:agent rec)
-           :creditor (:beneficiary rec)
-           :deliverable (or criterion (:payload rec))
-           :due-at deadline
-           :status status
-           :authority (or (:act/stamp rec) :unrecorded)
-           :as-of (str t)
-           :facts facts}
+        facts (into (fact-ids lifecycle) (fact-ids outcomes))
+        check-summary (when check
+                        {:id (:evidence/id check) :verdict check-verdict
+                         :unable-reason (:unable-reason check-body)
+                         :due-at (:due-at check-body)})
+        check-incomplete (cond
+                           (= :unable-to-determine check-verdict)
+                           (incomplete pid :unable-to-determine
+                                       {:record-id (:evidence/id check)
+                                        :unable-reason (:unable-reason check-body)})
+                           (and criterion (nil? check)
+                                (or deadline-passed? (nil? deadline)))
+                           (incomplete pid :check-pending {:source/id (:evidence/id creation)}))]
+    {:row (cond-> {:obligation/id pid
+                   :source/id (:evidence/id creation)
+                   :source/kind :promise
+                   :debtor (:agent rec)
+                   :creditor (:beneficiary rec)
+                   :deliverable (or criterion (:payload rec))
+                   :due-at deadline
+                   :status status
+                   :authority (or (:act/stamp rec) :unrecorded)
+                   :as-of (str t)
+                   :facts facts}
+            check-summary (assoc :check check-summary))
      :checkable? checkable?
      :error (when invalid-release
               (incomplete pid :invalid-release {:record-id (:evidence/id invalid-release)}))
+     :check-incomplete check-incomplete
      :plain-release? (boolean plain-release)}))
 
 (defn- agreement-row [agreement offer t]
@@ -117,6 +144,10 @@
         bad-pids (set (keep :promise-id chain-issues))
         by-promise (group-by promise-id visible-history)
         outcomes-by-promise (group-by outcome-promise-id visible-outcomes)
+        creation-pids (set (keep (fn [row]
+                                   (when (creation-types (:evidence/type row))
+                                     (promise-id row)))
+                                 visible-history))
         decoded-errors (keep (fn [row]
                                (when (creation-types (:evidence/type row))
                                  (:error (decode-record row))))
@@ -160,7 +191,14 @@
                          (incomplete (:id a) :unknown-offer
                                      {:source/id (:id a) :offer (:agreement/offer a)}))
         invalid-releases (keep :error promise-results)
+        check-incompletes (keep :check-incomplete promise-results)
+        orphan-checks (for [row visible-outcomes
+                            :when (= :promise/fulfilment-check (:evidence/type row))
+                            :let [pid (outcome-promise-id row)]
+                            :when (not (contains? creation-pids pid))]
+                        (incomplete pid :orphan-check {:record-id (:evidence/id row)}))
         incompletes (vec (concat reader-incomplete chain-issues decoded-errors invalid-releases
+                                 check-incompletes orphan-checks
                                  missing-beneficiary no-due missing-offers))
         party? #(or (= agent-id (:debtor %)) (= agent-id (:creditor %)))]
     ;; :incomplete stays unfiltered: a broken chain or unreadable creation may
