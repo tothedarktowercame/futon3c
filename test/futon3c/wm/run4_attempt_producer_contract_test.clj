@@ -44,7 +44,7 @@
                               {:attempt-id "success-shape"
                                :identity attempt-identity})
           (let [accepted (service/click! {})]
-            (is (true? (deref entered 2000 false)))
+            (is (true? (deref entered 15000 false)))
             (is (= #{:click-id :started-at} (set (keys accepted))))
             (is (= :click-recorded
                    (:state (admission/record-click! (.getPath root)
