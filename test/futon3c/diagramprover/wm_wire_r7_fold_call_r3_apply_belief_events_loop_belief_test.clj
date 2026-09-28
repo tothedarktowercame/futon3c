@@ -1,27 +1,45 @@
 (ns futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-fold-out-support :as support]))
-(defn check [] (support/simple :belief :none))
-(def wire {
-   :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/different-carrier-changes-the-reader-product :kind :value-varying
-                  :product [:reader] :intervention :before-reader}
-  :wire [:r7-fold-call :r3-apply-belief-events :loop-belief]
-           :kind :witnessed-hermetically :test `the-real-reader-produces-the-received-value :check check
-           :live-records-read support/live-records-read
-           :note "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader."})
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+
+(def reader-kind :belief)
+(def producer (delay (producer-record/record "fold-out-simple")))
+(defn- wire-fields [] (get-in @producer [:fields :wires reader-kind]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
+(def wire {:second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/different-carrier-changes-the-reader-product
+                          :kind :value-varying :product [:reader]
+                          :intervention :before-reader}
+           :wire [:r7-fold-call :r3-apply-belief-events :loop-belief]
+           :kind :witnessed-hermetically
+           :test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/the-real-reader-produces-the-received-value
+           :check check
+           :live-records-read []
+           :note "Writer, reader, and intervention relations come from the content-addressed fold-out-simple producer record."})
+
 (deftest the-real-reader-produces-the-received-value
-  (support/assert-live-pins)
-  (let [o (check)]
-    (is (w/received? o))
-    (is (seq (:events o)))
-    (is (not= (:input o) (:reader o)))))
+  (let [fields (wire-fields)
+        value (check)]
+    (is (true? (get-in @producer [:fields :live-pins-valid?])) "live-pins-valid?")
+    (is (true? (:writer-present? fields)) "writer-present?")
+    (is (false? (:writer-typed-absence? fields)) "writer-typed-absence?")
+    (is (w/received? value) (str "writer-reader " (pr-str value)))
+    (doseq [[relation passed?] (:ordinary fields)]
+      (testing (name relation)
+        (is (true? passed?) (str relation " relation failed"))))))
+
 (deftest absence-at-the-reader-door-is-not-a-witness
-  (let [o (support/simple :belief :absent)]
-    (is (not (w/received? o)))
-    ))
+  (let [result (get-in (wire-fields) [:interventions :absent])]
+    (is (false? (:received? result)) "absent received?")
+    (doseq [[relation passed?] (dissoc result :received?)]
+      (testing (name relation)
+        (is (true? passed?) (str relation " relation failed"))))))
+
 (deftest different-carrier-changes-the-reader-product
-  (let [o (support/simple :belief :different)]
-    (is (not (w/received? o)))
-    (is (not= (:writer o) (:reader o)))
-    ))
+  (let [result (get-in (wire-fields) [:interventions :different])]
+    (is (false? (:received? result)) "different received?")
+    (doseq [[relation passed?] (dissoc result :received?)]
+      (testing (name relation)
+        (is (true? passed?) (str relation " relation failed"))))))
