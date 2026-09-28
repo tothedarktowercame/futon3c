@@ -23,6 +23,7 @@
     :act/kind (:kind record)
     :act/rule-id (:rule-id record)
     :act/at (:at record)
+    :act/effect-status (:status record)
     :act/target-signer (or target-signer
                            (when (= :pattern-card/selection (:kind record))
                              (:agent record)))
@@ -88,7 +89,9 @@
         query (fn [target]
                 (grant-record/grant-covers?
                  grants (:executor stamp) target (:act/at act)
-                 {:leaf-id grant-id :target-signer (:act/target-signer act)}))
+                 {:leaf-id grant-id
+                  :target-signer (:act/target-signer act)
+                  :effect-status (:act/effect-status act)}))
         answers (mapv query targets)]
     (or (first (filter #(= :granted (:status %)) answers))
         (first answers)

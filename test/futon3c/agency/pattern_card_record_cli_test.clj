@@ -175,3 +175,22 @@
                   (catch clojure.lang.ExceptionInfo e (:grant-reason (ex-data e))))))
       (is (= stamp (cli/authorize! "http://store" stamp :act/withdrawal
                                    "claude-17" "2026-09-28T11:30:00Z"))))))
+
+(deftest withdrawal-authorization-carries-effect-status
+  (let [provisional-grant (assoc-in grant
+                                    [:hx/props :grant/scope :provisional-only]
+                                    true)]
+    (with-redefs [store/request! (fn [_ _ path _]
+                                   (if (re-find #"own-acts" path)
+                                     provisional-grant
+                                     (throw (ex-info "unexpected" {:path path}))))]
+      (is (= stamp (cli/authorize! "http://store" stamp :act/withdrawal
+                                   "claude-17" "2026-09-28T11:30:00Z"
+                                   :provisional)))
+      (is (= :not-provisional
+             (try (cli/authorize! "http://store" stamp :act/withdrawal
+                                  "claude-17" "2026-09-28T11:30:00Z"
+                                  :effective)
+                  nil
+                  (catch clojure.lang.ExceptionInfo e
+                    (:grant-reason (ex-data e)))))))))

@@ -54,7 +54,9 @@
      {:id ID :kind :interpretation :version VERSION :intent :withdraw
       :target ID ...}
 
-   Interpretations never end a selection. The return value is
+   Interpretations never end a selection. Stored withdrawal effects are
+   assumed to have passed the write path's act-stamp and grant authorization;
+   this projection does not infer authority from :status. The return value is
    {:active SELECTION-OR-NIL :provisional [EFFECT ...]
     :ignored [{:record-id ID :reason KEYWORD} ...]}."
   [records agent-id session-id t]
@@ -101,6 +103,7 @@
                           (remove (fn [provisional]
                                     (some #(valid-reversal? % provisional) reversals)))
                           vec)
+        active-provisional-targets (set (map :target provisionals))
         effective-targets (->> classified
                                (filter #(= :effective (second %)))
                                (map (comp :target first))
@@ -120,6 +123,8 @@
                                    (mapv (fn [[effect _ reason]]
                                            (ignored effect reason))))
                               bad-reversals)]
-    {:active (when-not (contains? effective-targets (:id candidate)) candidate)
+    {:active (when-not (or (contains? effective-targets (:id candidate))
+                           (contains? active-provisional-targets (:id candidate)))
+               candidate)
      :provisional provisionals
      :ignored ignored-effects}))

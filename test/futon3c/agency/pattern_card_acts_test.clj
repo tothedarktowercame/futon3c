@@ -57,16 +57,16 @@
     (is (= card-a (:active (project [card-a other effect] after))))
     (is (empty? (:ignored (project [card-a other effect] after))))))
 
-(deftest provisional-withdrawal-is-visible-until-reversed
+(deftest provisional-withdrawal-takes-effect-until-reversed
   (let [provisional (withdrawal "act:provisional" "xiang" :provisional
                                 :provisional-interpretation withdrawn-at)
         reversal (withdrawal "act:reverse" "xiang" :effective :self after
                              "act:card-a" "act:provisional")]
-    (testing "a provisional interpretation effect does not terminate its target"
+    (testing "an authorised provisional effect terminates its target"
       (let [result (project [card-a provisional] after)]
-        (is (= card-a (:active result)))
+        (is (nil? (:active result)))
         (is (= [provisional] (:provisional result)))))
-    (testing "a later reversal by the same author removes the provisional display"
+    (testing "a later reversal restores the target from the reversal time"
       (let [result (project [card-a provisional reversal] after)]
         (is (= card-a (:active result)))
         (is (empty? (:provisional result)))))))
@@ -95,5 +95,6 @@
                         "act:card-a" "act:provisional")
         result (project [card-a provisional bad] after)]
     (is (= [provisional] (:provisional result)))
+    (is (nil? (:active result)))
     (is (= [{:record-id "act:bad-reverse" :reason :invalid-reversal}]
            (:ignored result)))))

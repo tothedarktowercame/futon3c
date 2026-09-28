@@ -146,8 +146,10 @@
   "Check STAMP against live grant records for TARGET at AT. Joe's operator
    authority needs no grant read. Return the validated stamp or refuse with
    :no-grant and the grant query's typed :grant-reason."
-  [base stamp target target-signer at]
-  (let [validated (act-stamp/validate! stamp)]
+  ([base stamp target target-signer at]
+   (authorize! base stamp target target-signer at nil))
+  ([base stamp target target-signer at effect-status]
+   (let [validated (act-stamp/validate! stamp)]
     (when-let [grant-id (get-in validated [:authority :grant])]
       (let [leaf (grant-hyperedge! base grant-id)
             answer (grant-record/grant-covers?
@@ -155,12 +157,13 @@
                     ;; signer let an executor sign as another agent and use
                     ;; the own-acts grant on that agent's acts.
                     (grant-records! base leaf) (:executor validated) target at
-                    {:leaf-id grant-id :target-signer target-signer})]
+                    {:leaf-id grant-id :target-signer target-signer
+                     :effect-status effect-status})]
         (when-not (= :granted (:status answer))
           (throw (ex-info "No grant covers the pattern-card act"
                           {:reason :no-grant :field :act/stamp
                            :grant-reason (:reason answer)})))))
-    validated))
+     validated)))
 
 (defn- verified-result! [base payload receipt seat at]
   (let [id (minted-id! receipt)
@@ -196,7 +199,8 @@
         target-signer (or (get-in target-record [:act/stamp :signer])
                           (:author target-record))
         _ (authorize! base stamp :act/withdrawal target-signer
-                      (get-in request [:record :at]))
+                      (get-in request [:record :at])
+                      (get-in request [:record :status]))
         receipt (store/request! base "POST" "/api/alpha/hyperedge" payload)]
     (verified-result! base payload receipt target-record (get-in request [:record :at]))))
 

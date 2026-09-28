@@ -68,24 +68,35 @@
     (is (empty? (:in-force at)))
     (is (= records (p13b-records)))))
 
-(deftest governed-party-is-provisional-and-reversible
+(deftest governed-party-without-grant-is-requested
   (let [records (p13b-records)
         resident-stamp {:executor "resident-a" :signer "resident-a"
                         :authority {:grant "act:missing"}
                         :executor-basis :session-bound}
         proposal (withdrawal "act:proposal" "resident-a"
                              "2026-09-26T12:00:00Z" family resident-stamp)
-        reversal (assoc (withdrawal "act:reverse" "resident-a"
-                                    "2026-09-26T12:01:00Z" family resident-stamp)
-                        :reverses "act:proposal")
         open (rules/rules-in-force-as-of records [proposal] [grant]
-                                         "2026-09-26T12:00:30Z")
-        reversed (rules/rules-in-force-as-of records [proposal reversal] [grant]
-                                             "2026-09-26T12:02:00Z")]
-    (is (= ["act:proposal"] (mapv :id (:provisional open))))
-    (is (seq (:in-force open)))
-    (is (empty? (:provisional reversed)))
-    (is (seq (:in-force reversed)))))
+                                         "2026-09-26T12:00:30Z")]
+    (is (= ["act:proposal"] (mapv :id (:requested open))))
+    (is (empty? (:provisional open)))
+    (is (seq (:in-force open)))))
+
+(deftest authorised-provisional-ends-until-reversed
+  (let [records (p13b-records)
+        provisional (assoc (withdrawal "act:provisional" signer
+                                       "2026-09-26T12:00:00Z")
+                           :status :provisional)
+        reversal (assoc (withdrawal "act:reverse" signer
+                                    "2026-09-26T12:01:00Z")
+                        :reverses "act:provisional")
+        during (rules/rules-in-force-as-of records [provisional] [grant]
+                                           "2026-09-26T12:00:30Z")
+        restored (rules/rules-in-force-as-of records [provisional reversal] [grant]
+                                             "2026-09-26T12:01:00Z")]
+    (is (= [{:family family :by "act:provisional"}] (:ended during)))
+    (is (= ["act:provisional"] (mapv :id (:provisional during))))
+    (is (empty? (:ended restored)))
+    (is (= [family] (mapv :family (:in-force restored))))))
 
 (deftest unresolved-version-target-own-act-and-interpretation
   (let [records (p13b-records)

@@ -63,7 +63,7 @@
         effects (filter #(= :act/withdrawal (:kind %)) visible-effects)
         reversals (filter :reverses effects)
         ordinary (remove :reverses effects)
-        initial {:in-force [] :ended [] :provisional [] :unresolved []
+        initial {:in-force [] :ended [] :provisional [] :requested [] :unresolved []
                  :ignored (mapv #(ignored % :interpretation-not-effect)
                                 interpretations)}]
     (reduce
@@ -79,7 +79,7 @@
                                (overreach/classify-act
                                 (overreach/record->act effect signer) grants))])
                    targeted)
-             provisional (->> classified
+             requested (->> classified
                               (filter (fn [[effect classification]]
                                         (and signer
                                              (not= signer (:author effect))
@@ -89,29 +89,41 @@
                                                                 [:finding :finding/reason])))))
                               (map first)
                               vec)
+             authorised-provisional
+             (->> classified
+                  (filter (fn [[effect classification]]
+                            (and (= :provisional (:status effect))
+                                 (contains? #{:authorised :unverified-executor}
+                                            (:classification classification)))))
+                  (map first)
+                  vec)
              active-provisional
              (filterv (fn [candidate]
                         (not-any? #(valid-reversal? % candidate) reversals))
-                      provisional)
-             ended-by (->> classified
-                           ;; The grant check decides, not authorship: the "*"
-                           ;; own-acts grant already covers only the signer, and a
-                           ;; named grant lets another party withdraw (P10 (2)).
-                           (filter (fn [[effect classification]]
-                                     (and (= :effective (:status effect))
-                                          (contains? #{:authorised :unverified-executor}
-                                                     (:classification classification)))))
-                           (map first)
+                      authorised-provisional)
+             authorised-effective
+             (->> classified
+                  ;; The grant check decides, not authorship: the "*" own-acts
+                  ;; grant already covers only the signer, and a named grant
+                  ;; lets another party withdraw (P10 (2)).
+                  (filter (fn [[effect classification]]
+                            (and (= :effective (:status effect))
+                                 (contains? #{:authorised :unverified-executor}
+                                            (:classification classification)))))
+                  (map first))
+             ended-by (->> (concat authorised-effective active-provisional)
                            (sort-by (juxt (comp instant :at) (comp str :id)))
                            last)
              unresolved (if signer [] targeted)
-             provisional-ids (set (map :id provisional))
+             requested-ids (set (map :id requested))
+             authorised-provisional-ids (set (map :id authorised-provisional))
              ignored-effects
              (->> classified
                   (remove (fn [[effect classification]]
                             (or (nil? signer)
                                 (= (:id effect) (:id ended-by))
-                                (contains? provisional-ids (:id effect))
+                                (contains? requested-ids (:id effect))
+                                (contains? authorised-provisional-ids (:id effect))
                                 (and (= :effective (:status effect))
                                      (contains? #{:authorised :unverified-executor}
                                                 (:classification classification))))))
@@ -119,13 +131,16 @@
                           (ignored effect
                                    (or (get-in classification [:finding :finding/reason])
                                        :unsupported-withdrawal)))))
-             relevant-reversals (filter #(contains? provisional-ids (:reverses %)) reversals)
+             relevant-reversals
+             (filter #(contains? authorised-provisional-ids (:reverses %)) reversals)
              bad-reversals (->> relevant-reversals
                                 (remove (fn [effect]
-                                          (some #(valid-reversal? effect %) provisional)))
+                                          (some #(valid-reversal? effect %)
+                                                authorised-provisional)))
                                 (mapv #(ignored % :invalid-reversal)))
              result (-> result
                         (update :provisional into active-provisional)
+                        (update :requested into requested)
                         (update :unresolved into unresolved)
                         (update :ignored into ignored-effects)
                         (update :ignored into bad-reversals))]

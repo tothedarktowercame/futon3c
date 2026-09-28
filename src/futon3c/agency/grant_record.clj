@@ -25,10 +25,12 @@
 (defn- props [r] (dissoc (:hx/props r) :grant/schema :act/harness))
 
 (defn- scope! [s]
-  (when-not (and (map? s) (every? #{:description :act-kinds :rule-ids :own-acts-only} (keys s))
+  (when-not (and (map? s) (every? #{:description :act-kinds :rule-ids :own-acts-only
+                                    :provisional-only} (keys s))
                  (text? (:description s))) (refuse! :invalid-scope :grant/scope))
-  (when (and (contains? s :own-acts-only) (not (true? (:own-acts-only s))))
-    (refuse! :invalid-scope :own-acts-only))
+  (doseq [k [:own-acts-only :provisional-only]]
+    (when (and (contains? s k) (not (true? (get s k))))
+      (refuse! :invalid-scope k)))
   (doseq [k [:act-kinds :rule-ids] :when (contains? s k)]
     (let [v (get s k)]
       (when-not (and (vector? v) (seq v) (= (count v) (count (set v)))
@@ -139,7 +141,7 @@
     ;; "*" names a grant's audience, never the party asking: asking as "*"
     ;; with signer "*" would otherwise satisfy the own-acts check.
     (when (= "*" grantee) (refuse! :wildcard-not-a-grantee :grantee))
-    (let [{:keys [leaf-id target-signer]}
+    (let [{:keys [leaf-id target-signer effect-status]}
           (if (map? leaf-or-options) leaf-or-options {:leaf-id leaf-or-options})
           by-id (index! records)
           candidates (sort-by :hx/id (filter #(and (contains? #{grantee "*"}
@@ -153,6 +155,9 @@
                             (when-not (checkable? s) (refuse! :scope-unchecked :grant/scope))
                             (when (and (:own-acts-only s) (not= grantee target-signer))
                               (refuse! :not-own-act :target-signer))
+                            (when (and (:provisional-only s)
+                                       (not= :provisional effect-status))
+                              (refuse! :not-provisional :effect-status))
                             (when-not (contains? (set (concat (:act-kinds s) (:rule-ids s))) target)
                               (refuse! :out-of-scope :grant/scope))
                             (when (or (before? at from) (and until (not (before? at until))))

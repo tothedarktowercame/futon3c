@@ -126,6 +126,25 @@
                (:reason (grant/grant-covers? [named] "claude-11" target from
                                              {:target-signer "codex-5"}))))))))
 
+(deftest provisional-only-scope-requires-provisional-status
+  (let [record (assoc-in real-record [:grant/scope :provisional-only] true)
+        stored (node "act:provisional-only" record)
+        options {:leaf-id "act:provisional-only"}]
+    (is (= record (grant/validate! record context)))
+    (is (= :granted
+           (:status (grant/grant-covers? [stored] "claude-11" target from
+                                         (assoc options :effect-status :provisional)))))
+    (is (= {:status :no-grant :reason :not-provisional}
+           (grant/grant-covers? [stored] "claude-11" target from
+                                (assoc options :effect-status :effective))))
+    (is (= {:status :no-grant :reason :not-provisional}
+           (grant/grant-covers? [stored] "claude-11" target from options)))
+    (is (= :invalid-scope
+           (reason #(grant/validate! (assoc-in real-record
+                                               [:grant/scope :provisional-only]
+                                               false)
+                                     context))))))
+
 (deftest write-rechecks-source-and-verifies-minted-readback
   (let [calls (atom []) p (grant/payload request context)]
     (with-redefs [store/request! (fn [_ method path value]
