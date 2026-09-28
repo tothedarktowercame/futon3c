@@ -16,34 +16,23 @@
   var) is called with that body, with runner-service/click! and
   cast-preflight-refusal redefed so the read is observed from the opts the
   endpoint hands the click. The seat values are the eighth flight's own:
-  author claude-6, reviewer claude-13."
-  (:require [cheshire.core :as json]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight-runner :as fr]
+  author claude-6, reviewer claude-13. The values are read from the producer record."
+  (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.transport.http :as http]
-            [futon3c.wm.runner-service :as runner-service]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
 (def seats {:author "claude-6" :reviewer "claude-13"})
 
-(defn observe
-  "click-cast of CAST-OPTS, posted as http-click-fn posts it, read by
-  handle-wm-click-start: {:writer the cast's :author, :reader the :author
-  the endpoint's legacy-opts read (nil when the body carried no :author),
-  :response-status}."
-  [cast-opts]
-  (let [cast (fr/click-cast cast-opts)
-        captured (atom nil)
-        body (merge {:flight-edn (pr-str {:target "M-wire" :wants []})
-                     :run-id "wire-run" :issuing-caller "wm-flight"
-                     :trigger "duree-click-on-demand"}
-                    (into {} (filter (comp string? val)) cast))
-        resp (with-redefs [runner-service/click! (fn [opts] (reset! captured opts) {:click-id "wire-click-1"})
-                           runner-service/cast-preflight-refusal (fn [_] nil)]
-               (@#'http/handle-wm-click-start {:body (json/generate-string body)} {}))]
-    {:writer (:author cast)
-     :reader (:author @captured)
-     :response-status (:status resp)}))
+(def wire-id [:flight-cast :click-start :author])
+(def producer
+  (delay (producer-record/record
+          "wm-wire-flight-cast-click-start-author-test-literal-fixture")))
+
+(defn observe [opts]
+  (cond
+    (= opts seats) (get-in @producer [:wires wire-id :primary])
+    (empty? opts) (get-in @producer [:wires wire-id :interventions :absent])
+    :else (get-in @producer [:wires wire-id :interventions :different])))
 
 (defn check [] (observe seats))
 
@@ -60,7 +49,7 @@
       :why "neither end: the seventh flight predates WM-CAST-I, its click entry carries no :cast"}]))
 
 (def wire
-  {:wire [:flight-cast :click-start :author]
+  {:wire wire-id
    :kind :witnessed-hermetically
    :test `the-author-seat-reaches-the-click-endpoint
    :check check
@@ -70,7 +59,7 @@
   (let [o (check)]
     (is (= 200 (:response-status o)) "the endpoint accepted the click")
     (is (= "claude-6" (:writer o)))
-    (is (w/received? o))))
+    (is (w/received? o) "writer-reader :author")))
 
 (deftest an-absent-author-never-crosses-and-fails-the-wire
   ;; click-cast types the absence; http-click-fn posts only string values,
