@@ -1,6 +1,8 @@
 (ns futon3c.wm.run4-historical-projection-test
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
+            [futon2.aif.full-loop-cohort :as cohort]
             [futon3c.wm.run4-historical-projection :as sut]))
 
 (defn- fixture []
@@ -65,3 +67,19 @@
     (is (= :malformed-historical-result
            (:reason (try (sut/projection "click-1" (assoc result :outcome :grounded-change)) nil
                          (catch Exception e (ex-data e))))))))
+
+(deftest refused-cohort-preserves-the-closed-execution-cause
+  (let [packet-root "holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11"
+        inputs (edn/read-string (slurp (str packet-root "/LIVE-HISTORICAL-INPUTS.edn")))
+        {:keys [roots admission-request started]} (:historical-evidence inputs)
+        refusal (try
+                  (with-redefs [cohort/closed-execution
+                                (fn [& _]
+                                  (throw (ex-info "fixture cohort refusal"
+                                                  {:reason :closed-execution-unavailable
+                                                   :failed [:events]})))]
+                    (sut/read-bundle! roots admission-request started))
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+    (is (= :historical-cohort-binding-mismatch (:reason refusal)))
+    (is (= [:events] (get-in refusal [:cause :failed])))))

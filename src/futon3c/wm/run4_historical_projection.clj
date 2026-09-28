@@ -10,9 +10,15 @@
             [futon3c.wm.run4-realized-recording :as recording]
             [futon3c.wm.run4-terminal-evidence :as evidence]))
 
-(defn- refuse! [reason]
+(defn- refuse! [reason & [data]]
   (throw (ex-info "RUN4 historical projection refused"
-                  {:error :run4-historical-projection-refused :reason reason})))
+                  (merge {:error :run4-historical-projection-refused :reason reason}
+                         data))))
+
+(defn- throwable-cause [^Throwable throwable]
+  (or (ex-data throwable)
+      {:class (.getName (class throwable))
+       :message (.getMessage throwable)}))
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- sha? [x] (and (string? x) (boolean (re-matches #"[0-9a-f]{64}" x))))
@@ -137,8 +143,9 @@
                             :sha256 (get-in value [:cohort :sha256])}
             closed (try (cohort/closed-execution cohort-binding
                                                  (:runner-attempt/id value))
-                        (catch Throwable _
-                          (refuse! :historical-cohort-binding-mismatch)))]
+                        (catch Throwable e
+                          (refuse! :historical-cohort-binding-mismatch
+                                   {:cause (throwable-cause e)})))]
         (when-not (and (= expected-keys (set (keys value)))
                        (= (:sha256 ref) (digest/sha256 (pr-str value)))
                        (contains? #{:wm/run4-historical-admission-projection-v1
@@ -197,10 +204,14 @@
           (refuse! :historical-verification-store-mismatch))
         (when-not (= (get-in value [:cohort :sha256])
                      (try (digest/sha256 (slurp cohort-preregistration))
-                          (catch Throwable _ (refuse! :historical-cohort-unreadable))))
+                          (catch Throwable e
+                            (refuse! :historical-cohort-unreadable
+                                     {:cause (throwable-cause e)}))))
           (refuse! :historical-cohort-source-mismatch))
         (let [ledger (try (cohort/ledger cohort-preregistration cohort-data-root)
-                          (catch Throwable _ (refuse! :historical-cohort-unreadable)))
+                          (catch Throwable e
+                            (refuse! :historical-cohort-unreadable
+                                     {:cause (throwable-cause e)})))
               attempt (some #(when (= (:runner-attempt/id value) (:attempt/id %)) %)
                             (:attempts ledger))]
           (when-not (and (map? (:activation ledger))
