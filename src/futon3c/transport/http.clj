@@ -9741,6 +9741,37 @@
   (vec (distinct (re-seq #"(?<![A-Za-z0-9:_-])act:[A-Za-z0-9][A-Za-z0-9:_-]*"
                          (str text)))))
 
+(defn- evidence-all-pages!
+  "GET BASE-PATH (an evidence LIST path with its filters and limit) and follow
+   cursors to exhaustion. A page cap or a malformed or repeated cursor is a
+   typed :truncated-input refusal, never a silently short population."
+  [base base-path]
+  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")]
+    (loop [path base-path pages 0 rows [] seen #{}]
+      (let [response (rule-record-store/request! base "GET" path nil)
+            rows (into rows (:entries response))
+            cursor (:next-cursor response)]
+        (cond
+          (nil? cursor) rows
+          (or (>= (inc pages) 20) (contains? seen cursor)
+              (not (string? (:at cursor))) (not (string? (:id cursor))))
+          (throw (ex-info "Evidence population exceeded its page cap"
+                          {:reason :truncated-input :rows (count rows)}))
+          :else (recur (str base-path "&cursor-at=" (enc (:at cursor))
+                            "&cursor-id=" (enc (:id cursor)))
+                       (inc pages) rows (conj seen cursor)))))))
+
+(defn- job-negation-interpretations!
+  "Stored interpretation/negation entries whose bound source jobs include JOB-ID."
+  [base job-id]
+  (->> (evidence-all-pages!
+        base (str "/api/alpha/evidence?tags=negation&type="
+                  (java.net.URLEncoder/encode "interpretation/negation" "UTF-8")
+                  "&limit=1000"))
+       (filter #(some #{(str job-id)}
+                      (map str (get-in % [:evidence/body :source-jobs]))))
+       vec))
+
 (defn read-disclosure-audit-inputs [job-id]
   (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
         job (disclosure-audit-job job-id)]
@@ -9754,11 +9785,9 @@
                                           base :act/withdrawal (:id %))
                                         disclosures))
           withdrawals (into [] (keep withdrawal-record-from-edge) withdrawal-edges)
-          ;; No stored record type holds an interpretation that names a
-          ;; disclosure: 象's withdraw readings live in local analysis files and
-          ;; target the seat's active card. Reading an empty population would
-          ;; make :negation-without-effect pass vacuously, so say it is not run.
-          interpretations []
+          ;; P12-5-2 stores 象's negation readings as interpretation/negation
+          ;; evidence bound to their source jobs (DERIVE-2 item 16).
+          interpretations (job-negation-interpretations! base job-id)
           routing-jobs (into []
                              (keep (comp disclosure-audit-routing-job
                                          disclosure-audit/routing-job-id :id))
@@ -9779,8 +9808,10 @@
                       :routing-jobs (count routing-jobs)
                       :stored-acts (count stored-act-ids)}
                :report-text-available? (contains? job :result)
-               :negation-check {:run? false
-                                :reason :no-interpretation-source}
+               :negation-check {:run? true
+                                :source {:type :interpretation/negation
+                                         :tags [:negation]
+                                         :filter {:source-jobs job-id}}}
                :read-at (str (Instant/now))}})))
 
 (defn handle-disclosure-audit [request]
@@ -9830,26 +9861,13 @@
           (recur (:evidence/in-reply-to entry) (inc depth)))))))
 
 (defn- woken-history!
-  "Every promise/woken row of SESSION, following cursors to exhaustion. A page
-   cap or a malformed cursor is a typed refusal, never a silent :none."
+  "Every promise/woken row of SESSION (see `evidence-all-pages!`)."
   [base session]
-  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")
-        base-path (str "/api/alpha/evidence?tags=promise-history&type="
-                       (enc "promise/woken") "&session-id=" (enc session)
-                       "&limit=1000")]
-    (loop [path base-path pages 0 rows [] seen #{}]
-      (let [response (rule-record-store/request! base "GET" path nil)
-            rows (into rows (:entries response))
-            cursor (:next-cursor response)]
-        (cond
-          (nil? cursor) rows
-          (or (>= (inc pages) 20) (contains? seen cursor)
-              (not (string? (:at cursor))) (not (string? (:id cursor))))
-          (throw (ex-info "Park history exceeded its page cap"
-                          {:reason :truncated-input :rows (count rows)}))
-          :else (recur (str base-path "&cursor-at=" (enc (:at cursor))
-                            "&cursor-id=" (enc (:id cursor)))
-                       (inc pages) rows (conj seen cursor)))))))
+  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")]
+    (evidence-all-pages!
+     base (str "/api/alpha/evidence?tags=promise-history&type="
+               (enc "promise/woken") "&session-id=" (enc session)
+               "&limit=1000"))))
 
 (defn standing-disclosures-for-job
   "Read JOB-ID's disclosure audit population and return standing choices."

@@ -42,6 +42,8 @@
             {:hyperedges [(disclosure/->hyperedge d)]}
             (str/includes? path "type=act%2Fwithdrawal")
             {:hyperedges [(withdrawal/record->hyperedge w)]}
+            (str/includes? path "type=interpretation%2Fnegation")
+            {:entries []}
             (str/ends-with? path "act%3Agrant")
             {:hx/id "act:grant" :hx/type :grant/record}
             (str/ends-with? path "act%3Aghost")
@@ -64,8 +66,42 @@
         (is (= [{:id "act:ghost" :reason "disclosure-unrecorded"}]
                (:findings result)))
         (is (= 1 (get-in result [:basis :rows :routing-jobs])))
-        ;; No interpretation source exists yet; the route says so rather than
-        ;; reading an empty population and passing the check vacuously.
-        (is (= {:run? false :reason "no-interpretation-source"}
-               (get-in result [:basis :negation-check])))
+        (is (true? (get-in result [:basis :negation-check :run?])))
         (is (every? #(= "GET" (first %)) @calls))))))
+
+(defn- negation [id jobs target]
+  {:evidence/id id :evidence/type :interpretation/negation
+   :evidence/body {:source-jobs jobs :target target :intent "withdraw"
+                   :resolution "single-standing"}})
+
+(deftest audit-reports-stored-negation-without-effect
+  ;; P12-5-3: a stored negation of a standing disclosure of this job, with no
+  ;; withdrawal, is a finding; a negation bound to another job is not read.
+  (let [pages (atom 0)
+        fake-request
+        (fn [_ _ path _]
+          (cond
+            (str/includes? path "type=disclosure%2Fchoice")
+            {:hyperedges [(disclosure/->hyperedge d)]}
+            (str/includes? path "type=act%2Fwithdrawal") {:hyperedges []}
+            (and (str/includes? path "type=interpretation%2Fnegation")
+                 (str/includes? path "cursor-id=n1"))
+            (do (swap! pages inc)
+                {:entries [(negation "neg:mine" [job-id] "act:d")]})
+            (str/includes? path "type=interpretation%2Fnegation")
+            (do (swap! pages inc)
+                {:entries [(negation "neg:other" ["invoke-other"] "act:d")]
+                 :next-cursor {:at "2026-09-28T20:00:00Z" :id "n1"}})
+            :else (throw (ex-info "unexpected GET" {:path path}))))]
+    (with-redefs [store/request! fake-request
+                  http/disclosure-audit-job
+                  (fn [_] {:job-id job-id :result "report"})]
+      (let [result (body ((handler) {:request-method :get
+                                     :uri "/api/alpha/disclosure/audit"
+                                     :query-string "job=invoke-audit"}))]
+        (is (= 2 @pages))
+        (is (= 1 (get-in result [:basis :rows :interpretations])))
+        (is (= [{:reason "negation-without-effect" :disclosure-id "act:d"
+                 :interpretation-id "neg:mine"}]
+               (filter #(= "negation-without-effect" (:reason %))
+                       (:findings result))))))))
