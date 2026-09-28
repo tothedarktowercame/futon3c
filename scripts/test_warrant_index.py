@@ -271,5 +271,72 @@ class IndexTest(unittest.TestCase):
         self.assertEqual('files', row['basis'])
         self.assertTrue(row['reach-record'].startswith('ignored:'))
 
+    def test_impact_limit_and_cause_grouping(self):
+        definition = {'kind': 'definition-changed',
+                      'definition': ['product.core', 'shared', '/repo/core.clj']}
+        rows = [{'namespace': f'test.{index:02d}', 'class': 'stale',
+                 'basis': 'definitions', 'changed': [definition]}
+                for index in range(11)]
+        result = wi.impact_rows(rows, 10)
+        self.assertEqual(
+            {'cause': {'ns': 'product.core', 'name': 'shared'},
+             'kind': 'definition', 'count': 11,
+             'namespaces': [f'test.{index:02d}' for index in range(11)],
+             'over-limit': True, 'cause-ns': 'product.core',
+             'cause-name': 'shared', 'cause-file': None},
+            result['causes'][0])
+        self.assertEqual({'stale-namespaces': 11, 'causes': 1,
+                          'causes-over-limit': 1}, result['totals'])
+        self.assertFalse(wi.impact_rows(rows[:10], 10)['causes'][0]['over-limit'])
+
+    def test_impact_groups_two_definitions_and_file_basis(self):
+        rows = []
+        for index in range(11):
+            changes = [{'kind': 'definition-changed',
+                        'definition': ['p', 'large', '/p.clj']}]
+            if index < 3:
+                changes.append({'kind': 'definition-changed',
+                                'definition': ['p', 'small', '/p.clj']})
+            rows.append({'namespace': f'n{index:02d}', 'class': 'stale',
+                         'basis': 'definitions', 'changed': changes})
+        rows.append({'namespace': 'file.stale', 'class': 'stale', 'basis': 'files',
+                     'changed': [{'path': '/x.clj', 'reason': 'hash-mismatch'}]})
+        causes = wi.impact_rows(rows, 10)['causes']
+        by_kind = {(item['kind'], str(item['cause'])): item for item in causes}
+        self.assertEqual(11, by_kind[('definition', "{'ns': 'p', 'name': 'large'}")]['count'])
+        self.assertEqual(3, by_kind[('definition', "{'ns': 'p', 'name': 'small'}")]['count'])
+        self.assertEqual({'cause': '/x.clj', 'kind': 'file', 'count': 1,
+                          'namespaces': ['file.stale'], 'over-limit': False,
+                          'cause-ns': None, 'cause-name': None, 'cause-file': '/x.clj'},
+                         by_kind[('file', '/x.clj')])
+
+    def test_impact_excludes_whole_file_rule_namespace(self):
+        rows = [{'namespace': next(iter(wi.FILE_RULE_NAMESPACES)), 'class': 'stale',
+                 'basis': 'files',
+                 'changed': [{'path': '/everything.clj', 'reason': 'hash-mismatch'}]}]
+        self.assertEqual({'causes': [],
+                          'totals': {'stale-namespaces': 0, 'causes': 0,
+                                     'causes-over-limit': 0}},
+                         wi.impact_rows(rows, 10))
+
+    def test_refactor_request_is_idempotent_and_updates_count(self):
+        cause = {'cause': {'ns': 'p', 'name': 'shared'}, 'kind': 'definition',
+                 'count': 11, 'namespaces': [f'n{i:02d}' for i in range(11)],
+                 'over-limit': True, 'cause-ns': 'p', 'cause-name': 'shared',
+                 'cause-file': None}
+        with wi.connect(self.db_path) as db:
+            first = wi.record_refactor_requests(
+                db, {'causes': [cause], 'totals': {}}, 10)
+            cause = dict(cause, count=12, namespaces=[f'n{i:02d}' for i in range(12)])
+            second = wi.record_refactor_requests(
+                db, {'causes': [cause], 'totals': {}}, 10)
+            requests = wi.refactor_requests(db)
+        self.assertTrue(first[0]['created'])
+        self.assertFalse(second[0]['created'])
+        self.assertEqual(first[0]['request-id'], second[0]['request-id'])
+        self.assertEqual(1, len(requests))
+        self.assertEqual(12, requests[0]['stale-count'])
+        self.assertEqual([f'n{i:02d}' for i in range(12)], requests[0]['namespaces'])
+
 
 if __name__ == '__main__': unittest.main()

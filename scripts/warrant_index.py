@@ -8,6 +8,7 @@ cannot become current local warrants. No command in this script uses a network
 or the git-tracked namespace ledger.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -95,6 +96,18 @@ def connect(path):
         command_key TEXT, ran_at TEXT, finished_at TEXT, warrant INTEGER,
         revision TEXT, ran_order TEXT NOT NULL, finished_order TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS registry_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS warrant_refactor_requests (
+        request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cause_kind TEXT NOT NULL, cause_ns TEXT, cause_name TEXT, cause_file TEXT,
+        stale_count INTEGER NOT NULL, namespaces_json TEXT NOT NULL,
+        limit_value INTEGER NOT NULL, requested_at TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('open','dispatched','done','declined')),
+        detail TEXT, finished_at TEXT);
+      CREATE UNIQUE INDEX IF NOT EXISTS warrant_refactor_one_active_cause
+        ON warrant_refactor_requests
+          (cause_kind,COALESCE(cause_ns,''),COALESCE(cause_name,''),
+           COALESCE(cause_file,''))
+        WHERE state IN ('open','dispatched');
     ''')
     return db
 
@@ -316,6 +329,97 @@ def affected(db, paths, root=None):
     return sorted(found)
 
 
+def change_cause(row, change):
+    kind = change.get('kind')
+    if kind in ('definition-changed', 'definition-missing', 'definition-added'):
+        definition = change.get('definition', [])
+        return ('definition', definition[0], definition[1], None)
+    if kind in ('remainder-changed', 'remainder-added'):
+        return ('remainder', None, None, change.get('file'))
+    if kind in ('whole-file-changed', 'file-missing'):
+        return ('whole-file', None, None, change.get('file'))
+    return ('file', None, None, change.get('path'))
+
+
+def impact_rows(rows, limit=10, file_rule=FILE_RULE_NAMESPACES):
+    groups = {}
+    stale = set()
+    for row in rows:
+        namespace = row['namespace']
+        if row['class'] != 'stale' or namespace in file_rule:
+            continue
+        stale.add(namespace)
+        for change in row.get('changed', []):
+            key = change_cause(row, change)
+            groups.setdefault(key, set()).add(namespace)
+    causes = []
+    for (kind, cause_ns, cause_name, cause_file), namespaces in sorted(
+            groups.items(), key=lambda item: tuple(value or '' for value in item[0])):
+        names = sorted(namespaces)
+        cause = ({'ns': cause_ns, 'name': cause_name}
+                 if kind == 'definition' else cause_file)
+        causes.append({'cause': cause, 'kind': kind, 'count': len(names),
+                       'namespaces': names, 'over-limit': len(names) > limit,
+                       'cause-ns': cause_ns, 'cause-name': cause_name,
+                       'cause-file': cause_file})
+    return {'causes': causes,
+            'totals': {'stale-namespaces': len(stale), 'causes': len(causes),
+                       'causes-over-limit': sum(item['over-limit'] for item in causes)}}
+
+
+def record_refactor_requests(db, impact, limit):
+    now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    recorded = []
+    db.execute('BEGIN IMMEDIATE')
+    try:
+        for cause in impact['causes']:
+            if not cause['over-limit']:
+                continue
+            identity = (cause['kind'], cause['cause-ns'], cause['cause-name'],
+                        cause['cause-file'])
+            row = db.execute(
+                '''SELECT request_id FROM warrant_refactor_requests
+                   WHERE cause_kind=? AND cause_ns IS ? AND cause_name IS ?
+                     AND cause_file IS ? AND state IN ('open','dispatched')
+                   ORDER BY request_id LIMIT 1''', identity).fetchone()
+            namespaces = json.dumps(cause['namespaces'], separators=(',', ':'))
+            if row:
+                db.execute('''UPDATE warrant_refactor_requests
+                              SET stale_count=?,namespaces_json=?,limit_value=?
+                              WHERE request_id=?''',
+                           (cause['count'], namespaces, limit, row[0]))
+                request_id, created = row[0], False
+            else:
+                cursor = db.execute(
+                    '''INSERT INTO warrant_refactor_requests
+                       (cause_kind,cause_ns,cause_name,cause_file,stale_count,
+                        namespaces_json,limit_value,requested_at,state,detail)
+                       VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                    (*identity, cause['count'], namespaces, limit, now, 'open',
+                     json.dumps({'cause': cause['cause']}, sort_keys=True)))
+                request_id, created = cursor.lastrowid, True
+            recorded.append({'request-id': request_id, 'created': created,
+                             'cause': cause['cause'], 'kind': cause['kind']})
+        db.commit()
+    except Exception:
+        db.rollback(); raise
+    return recorded
+
+
+def refactor_requests(db, state='open'):
+    rows = db.execute(
+        '''SELECT request_id,cause_kind,cause_ns,cause_name,cause_file,
+                  stale_count,namespaces_json,limit_value,requested_at,state,
+                  detail,finished_at
+           FROM warrant_refactor_requests WHERE state=?
+           ORDER BY stale_count DESC,request_id''', (state,))
+    return [{'request-id': row[0], 'kind': row[1], 'cause-ns': row[2],
+             'cause-name': row[3], 'cause-file': row[4], 'stale-count': row[5],
+             'namespaces': json.loads(row[6]), 'limit': row[7],
+             'requested-at': row[8], 'state': row[9], 'detail': row[10],
+             'finished-at': row[11]} for row in rows]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', default=str(DB))
@@ -335,6 +439,18 @@ def main(argv=None):
     reach_parser.add_argument('--reach-dir', default=str(REACH_DIR))
     reach_parser.add_argument('--file-rule', nargs='+', default=[],
                               help='further namespaces that keep the whole-file rule')
+    impact_parser = sub.add_parser('impact')
+    impact_parser.add_argument('--ns', nargs='+', action='extend')
+    impact_parser.add_argument('--prefix', default='')
+    impact_parser.add_argument('--wire', action='store_true')
+    impact_parser.add_argument('--limit', type=int, default=10)
+    impact_parser.add_argument('--json', action='store_true')
+    impact_parser.add_argument('--record', action='store_true')
+    impact_parser.add_argument('--reach-dir', default=str(REACH_DIR))
+    requests_parser = sub.add_parser('refactor-requests')
+    requests_parser.add_argument('--state', default='open',
+                                 choices=('open', 'dispatched', 'done', 'declined'))
+    requests_parser.add_argument('--json', action='store_true')
     affected_parser = sub.add_parser('affected'); affected_parser.add_argument('paths', nargs='+')
     args = parser.parse_args(argv)
     with connect(args.db) as db:
@@ -344,6 +460,12 @@ def main(argv=None):
             print(json.dumps({'class': 'local-records', 'runs': len(local_namespaces(db))})); return 0
         if args.action == 'affected':
             print(json.dumps(affected(db, args.paths, args.root))); return 0
+        if args.action == 'refactor-requests':
+            requests = refactor_requests(db, args.state)
+            if args.json: print(json.dumps({'requests': requests}))
+            else:
+                for request in requests: print(json.dumps(request, sort_keys=True))
+            return 0
         selected = set(args.ns or ())
         if args.wire: selected.update(wire_namespaces())
         if args.ns is None and not args.wire: selected.update(local_namespaces(db))
@@ -354,6 +476,15 @@ def main(argv=None):
             return 0
         selected = {namespace for namespace in selected if namespace.startswith(args.prefix)}
         rows = classify(db, selected, args.root, args.reach_dir)
+        if args.action == 'impact':
+            result = impact_rows(rows, args.limit)
+            if args.record:
+                result['requests'] = record_refactor_requests(db, result, args.limit)
+            if args.json: print(json.dumps(result))
+            else:
+                for cause in result['causes']: print(json.dumps(cause, sort_keys=True))
+                print(json.dumps(result['totals'], sort_keys=True))
+            return 3 if result['totals']['causes-over-limit'] else 0
         counts = {state: sum(row['class'] == state for row in rows) for state in CLASSES}
         if args.json: print(json.dumps({'namespaces': rows, 'counts': counts}))
         else:
