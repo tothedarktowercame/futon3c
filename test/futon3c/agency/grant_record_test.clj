@@ -1,6 +1,7 @@
 (ns futon3c.agency.grant-record-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.agency.agreement-record :as agreement]
             [futon3c.agency.grant-record :as grant]
             [futon3c.agency.rule-record :as store]))
 
@@ -144,6 +145,89 @@
                                                [:grant/scope :provisional-only]
                                                false)
                                      context))))))
+
+(def agreement-at "2026-09-27T20:00:00Z")
+(def agreement-scope
+  {:description "Write offer records" :act-kinds [:offer/record]})
+(def agreement-offer
+  {:id "act:offer-source" :kind :offer/record :author "agent-a"
+   :addressee "joe" :seat {:agent "agent-a" :session "session-a"}
+   :at "2026-09-27T19:00:00Z" :until "2026-09-27T21:00:00Z"
+   :options [{:option/id "1" :option/label "offer"
+              :option/scope agreement-scope}]
+   :act/stamp {:executor "agent-a" :signer "agent-a"
+               :authority {:grant "act:offer-grant"}
+               :executor-basis :declared}
+   :act/harness {:kind :none :basis :producer-context :source-ref "test:p11-5"}})
+(def accepted-agreement
+  {:id "act:agreement-source" :kind :agreement/record
+   :agreement/offer "act:offer-source"
+   :agreement/acceptance-evidence "e:acceptance"
+   :agreement/option-id "1" :agreement/scope agreement-scope
+   :agreement/offeror "agent-a" :agreement/acceptor "joe"
+   :agreement/at agreement-at :act/stamp agreement/operator-stamp
+   :act/harness {:kind :none :basis :producer-context :source-ref "test:p11-5"}})
+(def agreement-grant
+  (-> real-record
+      (dissoc :grant/parent)
+      (assoc :grant/grantor "joe" :grant/grantee "agent-a"
+             :grant/scope agreement-scope
+             :grant/interval {:from agreement-at}
+             :grant/source {:kind :agreement
+                            :offer "act:offer-source"
+                            :agreement "act:agreement-source"})))
+(def agreement-context
+  {:records [] :evidence [] :offers [agreement-offer]
+   :agreements [accepted-agreement]})
+
+(deftest accepted-agreement-is-a-closed-checked-grant-source
+  (is (= agreement-grant (grant/validate! agreement-grant agreement-context)))
+  (let [p (grant/payload {:record agreement-grant :idempotency-key "p11-5"}
+                         agreement-context)]
+    (is (= ["act:agreement-source" "agent:agent-a"] (:hx/endpoints p)))
+    (is (= agreement-grant (dissoc (:hx/props p) :grant/schema :act/harness))))
+  (let [stored (node "act:agreement-grant" agreement-grant)]
+    (is (= :granted
+           (:status (grant/grant-covers? [stored] "agent-a" :offer/record
+                                         agreement-at))))
+    (is (= {:status :no-grant :reason :out-of-scope}
+           (grant/grant-covers? [stored] "agent-a" :act/withdrawal
+                                agreement-at)))))
+
+(deftest agreement-source-refusals
+  (let [description-only {:description "uncheckable proposal"}
+        offer-2 (assoc agreement-offer :id "act:other-offer")]
+    (doseq [[record ctx expected]
+            [[agreement-grant (assoc agreement-context :agreements [])
+              :unsourced-grant]
+             [(assoc agreement-grant :grant/source
+                     {:kind :agreement :offer "act:offer-source"
+                      :agreement "act:agreement-source" :id "e:mixed"})
+              agreement-context :unsourced-grant]
+             [(assoc agreement-grant :grant/grantee "other")
+              agreement-context :agreement-grantee-mismatch]
+             [(assoc agreement-grant :grant/grantee "*")
+              agreement-context :agreement-grantee-wildcard]
+             [(assoc-in agreement-grant [:grant/scope :act-kinds]
+                        [:offer/record :act/withdrawal])
+              agreement-context :scope-exceeds-agreement]
+             [(assoc-in agreement-grant [:grant/source :offer] "act:other-offer")
+              (assoc agreement-context :offers [offer-2])
+              :agreement-source-mismatch]
+             [agreement-grant
+              (assoc agreement-context :agreements
+                     [(assoc accepted-agreement :agreement/scope
+                             {:description "changed" :act-kinds [:offer/record]})])
+              :scope-mismatch]
+             [(assoc-in agreement-grant [:grant/interval :from]
+                        "2026-09-27T19:59:59Z")
+              agreement-context :grant-before-source]
+             [(assoc agreement-grant :grant/scope description-only)
+              (-> agreement-context
+                  (assoc-in [:offers 0 :options 0 :option/scope] description-only)
+                  (assoc-in [:agreements 0 :agreement/scope] description-only))
+              :unchecked-agreement-scope]]]
+      (is (= expected (reason #(grant/validate! record ctx))) (str expected)))))
 
 (deftest write-rechecks-source-and-verifies-minted-readback
   (let [calls (atom []) p (grant/payload request context)]

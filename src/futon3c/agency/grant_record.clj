@@ -7,6 +7,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.agency.act-harness :as act-harness]
+            [futon3c.agency.agreement-record :as agreement-record]
             [futon3c.agency.rule-record :as store])
   (:import [java.time Instant]
            [java.net URLEncoder]))
@@ -39,6 +40,22 @@
   s)
 (defn- checkable? [s] (boolean (or (seq (:act-kinds s)) (seq (:rule-ids s)))))
 
+(defn- source-kind! [source]
+  (cond
+    (and (map? source)
+         (= #{:id :author :at :quote} (set (keys source)))
+         (every? text? (vals source)))
+    :evidence
+
+    (and (map? source)
+         (= #{:kind :offer :agreement} (set (keys source)))
+         (= :agreement (:kind source))
+         (act? (:offer source))
+         (act? (:agreement source)))
+    :agreement
+
+    :else (refuse! :unsourced-grant :grant/source)))
+
 (defn- shape! [r]
   (when-not (and (map? r)
                  (= (set (keys (dissoc r :grant/parent))) #{:grant/grantor :grant/grantee :grant/scope
@@ -48,6 +65,9 @@
   (doseq [k [:grant/grantor :grant/grantee]]
     (when-not (text? (get r k)) (refuse! :missing-grant k)))
   (scope! (:grant/scope r))
+  (when (and (= "*" (:grant/grantee r))
+             (= :agreement (source-kind! (:grant/source r))))
+    (refuse! :agreement-grantee-wildcard :grant/grantee))
   (when (= "*" (:grant/grantee r))
     (when (or (:grant/parent r) (not= "joe" (:grant/grantor r)))
       (refuse! :wildcard-not-root :grant/grantee))
@@ -60,12 +80,22 @@
     (stamp! from)
     (when until (when-not (before? from until) (refuse! :invalid-interval :grant/interval))))
   (let [s (:grant/source r)]
-    (when-not (and (map? s) (= #{:id :author :at :quote} (set (keys s)))
-                   (every? text? (vals s))) (refuse! :unsourced-grant :grant/source))
-    (stamp! (:at s))
-    (when-not (= (:author s) (:grant/grantor r)) (refuse! :source-author-mismatch :grant/source))
-    (when (before? (get-in r [:grant/interval :from]) (:at s))
-      (refuse! :grant-before-source :grant/interval)))
+    (case (source-kind! s)
+      :evidence
+      (do
+        (stamp! (:at s))
+        (when-not (= (:author s) (:grant/grantor r))
+          (refuse! :source-author-mismatch :grant/source))
+        (when (before? (get-in r [:grant/interval :from]) (:at s))
+          (refuse! :grant-before-source :grant/interval)))
+      :agreement
+      (do
+        (when (:grant/parent r)
+          (refuse! :agreement-grant-not-root :grant/parent))
+        (when-not (= "joe" (:grant/grantor r))
+          (refuse! :agreement-grantor-mismatch :grant/grantor))
+        (when (= "*" (:grant/grantee r))
+          (refuse! :agreement-grantee-wildcard :grant/grantee)))))
   (if-let [parent (:grant/parent r)]
     (when-not (act? parent) (refuse! :invalid-parent :grant/parent))
     (when-not (= "joe" (:grant/grantor r)) (refuse! :non-operator-root :grant/grantor)))
@@ -105,11 +135,41 @@
           (conj ancestors parent))))
     []))
 
+(defn- exactly-one! [records id]
+  (let [matches (filter #(= id (:id %)) records)]
+    (when-not (= 1 (count matches))
+      (refuse! :unsourced-grant :grant/source))
+    (first matches)))
+
+(defn- validate-agreement-source!
+  [grant offers agreements]
+  (let [source (:grant/source grant)
+        agreement (exactly-one! agreements (:agreement source))
+        offer (exactly-one! offers (:offer source))]
+    (when-not (= (:offer source) (:agreement/offer agreement))
+      (refuse! :agreement-source-mismatch :grant/source))
+    (agreement-record/validate-against-offer! agreement offer)
+    (when-not (= "joe" (:grant/grantor grant) (:agreement/acceptor agreement))
+      (refuse! :agreement-grantor-mismatch :grant/grantor))
+    (when-not (= (:grant/grantee grant) (:agreement/offeror agreement))
+      (refuse! :agreement-grantee-mismatch :grant/grantee))
+    (let [grant-scope (:grant/scope grant)
+          agreement-scope (:agreement/scope agreement)]
+      (when-not (checkable? agreement-scope)
+        (refuse! :unchecked-agreement-scope :grant/source))
+      (doseq [key [:act-kinds :rule-ids]]
+        (when-not (set/subset? (set (get grant-scope key))
+                               (set (get agreement-scope key)))
+          (refuse! :scope-exceeds-agreement :grant/scope))))
+    (when (before? (get-in grant [:grant/interval :from])
+                   (:agreement/at agreement))
+      (refuse! :grant-before-source :grant/interval))))
+
 (defn validate!
-  "Validate against independently fetched evidence and grant ancestors. Source
-   quote is a verbatim witness, not an NLP classifier: explicitness is reviewed
-   when authoring the record. Text-only child scope is refused as unchecked."
-  [r {:keys [evidence records]}]
+  "Validate against independently fetched evidence, agreements, offers, and
+   grant ancestors. An evidence-source quote remains a verbatim witness, not
+   an NLP classifier. Text-only child or agreement scope cannot confer authority."
+  [r {:keys [evidence records offers agreements]}]
   (when (contains? r :act/harness)
     (act-harness/validate! (:act/harness r)))
   (let [record (dissoc r :act/harness)
@@ -117,17 +177,22 @@
         chain (chain! record by-id #{})
         sources (group-by :evidence/id evidence)]
     (doseq [g (conj (mapv props chain) record)]
-      (let [s (:grant/source g) matches (get sources (:id s)) e (first matches)
-            b (when e (body e))]
-        (when-not (= 1 (count matches)) (refuse! :unsourced-grant :grant/source))
-        (when-not (= (:grant/grantor g) (:evidence/author e) (:author s))
-          (refuse! :source-author-mismatch :grant/source))
-        (when-not (and (= (:at s) (:evidence/at e))
-                       (text? (field b :text)) (str/includes? (field b :text) (:quote s))
-                       (not= "harness" (some-> (get-in e [:evidence/origin :kind]) name))
-                       (if (= "joe" (:grant/grantor g))
-                         (= "user" (field b :role)) true))
-          (refuse! :unsourced-grant :grant/source)))))
+      (let [s (:grant/source g)]
+        (case (source-kind! s)
+          :evidence
+          (let [matches (get sources (:id s)) e (first matches)
+                b (when e (body e))]
+            (when-not (= 1 (count matches)) (refuse! :unsourced-grant :grant/source))
+            (when-not (= (:grant/grantor g) (:evidence/author e) (:author s))
+              (refuse! :source-author-mismatch :grant/source))
+            (when-not (and (= (:at s) (:evidence/at e))
+                           (text? (field b :text)) (str/includes? (field b :text) (:quote s))
+                           (not= "harness" (some-> (get-in e [:evidence/origin :kind]) name))
+                           (if (= "joe" (:grant/grantor g))
+                             (= "user" (field b :role)) true))
+              (refuse! :unsourced-grant :grant/source)))
+          :agreement
+          (validate-agreement-source! g offers agreements)))))
   r)
 
 (defn grant-covers?
@@ -198,7 +263,8 @@
      (validate! record context)
      {:hx/type :grant/record :hx/mint-id true :hx/idempotency-key idempotency-key
       :hx/valid-time (get-in record [:grant/interval :from])
-      :hx/endpoints (cond-> [(get-in record [:grant/source :id])
+      :hx/endpoints (cond-> [(or (get-in record [:grant/source :id])
+                                 (get-in record [:grant/source :agreement]))
                              (str "agent:" (:grant/grantee record))]
                       (:grant/parent record) (conj (:grant/parent record)))
       :hx/props (assoc record :grant/schema 1
