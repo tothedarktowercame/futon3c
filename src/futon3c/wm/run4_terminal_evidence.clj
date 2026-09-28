@@ -118,18 +118,35 @@
         evidence-keys (set (filter #{:run4/terminal-projection
                                     :run4/historical-projection}
                                    (keys value)))]
-    (when-not (and (exact-keys? value (into base evidence-keys))
-                   (= 1 (count evidence-keys))
-                   (= :wm-click-run-binding-v1 (:schema value))
-                   (= (:click-id started) (:click/id value))
-                   (= :verified (:binding-status value))
-                   (= :present (:run-record-status value))
-                   (nonblank? (:attempt/id value))
-                   (instant? (:recorded-at value))
-                   (= :present (get-in value [:run-id-observation :status]))
-                   (nonblank? (get-in value [:run-id-observation :value]))
-                   (map? (get value (first evidence-keys))))
-      (refuse! :invalid-click-run-binding))
+    ;; The refusal names the conditions that failed and, for a binding with no
+    ;; evidence reference, the outcome the binding recorded.
+    (when-let [failed (seq (cond-> []
+                             (not (exact-keys? value (into base evidence-keys)))
+                             (conj :keys)
+                             (not= 1 (count evidence-keys))
+                             (conj :evidence-reference-count)
+                             (not= :wm-click-run-binding-v1 (:schema value))
+                             (conj :schema)
+                             (not= (:click-id started) (:click/id value))
+                             (conj :click/id)
+                             (not= :verified (:binding-status value))
+                             (conj :binding-status)
+                             (not= :present (:run-record-status value))
+                             (conj :run-record-status)
+                             (not (nonblank? (:attempt/id value)))
+                             (conj :attempt/id)
+                             (not (instant? (:recorded-at value)))
+                             (conj :recorded-at)
+                             (not= :present (get-in value [:run-id-observation :status]))
+                             (conj :run-id-observation-status)
+                             (not (nonblank? (get-in value [:run-id-observation :value])))
+                             (conj :run-id-observation-value)
+                             (not (map? (get value (first evidence-keys))))
+                             (conj :evidence-reference)))]
+      (refuse! :invalid-click-run-binding
+               (cond-> {:failed (vec failed)
+                        :evidence-references (count evidence-keys)}
+                 (map? value) (assoc :outcome (:outcome value)))))
     value))
 
 (def projection-keys

@@ -216,6 +216,28 @@
                               nil
                               (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
 
+(deftest invalid-binding-refusal-names-what-failed
+  (fixture
+   (fn [{:keys [roots binding-file binding]}]
+     (let [refusal (fn [value]
+                     (write! binding-file value)
+                     (try (sut/read-terminal-evidence-bundle roots request started) nil
+                          (catch clojure.lang.ExceptionInfo e
+                            (select-keys (ex-data e)
+                                         [:reason :failed :evidence-references :outcome]))))]
+       (testing "a binding written for a run that stopped before selection"
+         (is (= {:reason :invalid-click-run-binding
+                 ;; the key set itself is valid: the nine base keys and no reference
+                 :failed [:evidence-reference-count :evidence-reference]
+                 :evidence-references 0
+                 :outcome :agent-unavailable}
+                (refusal (-> binding
+                             (dissoc :run4/terminal-projection)
+                             (assoc :outcome :agent-unavailable))))))
+       (testing "an unverified binding"
+         (is (= [:binding-status]
+                (:failed (refusal (assoc binding :binding-status :unverified))))))))))
+
 (deftest versioned-run-record-execution-authority-is-exact-and-paired
   (fixture
    (fn [{:keys [roots run-file projection-file binding-file projection binding
