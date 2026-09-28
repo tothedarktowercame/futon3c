@@ -107,8 +107,31 @@
         (is (= 200 (:status response)))
         (is (= (str "offer " id " (2 options)")
                (get-in render [:segments 0 :segment/header])))
+        (is (= [(str "offer " id " from agent-a (reply yes <n>, or yes " id " <n>):")
+                "  1  one  — agreement only, no grant"
+                "  2  two  — agreement only, no grant"]
+               (get-in render [:segments 0 :segment/detail])))
         (is (= "$!> " (:prompt render)))
         (is (empty? (:omitted render)))))))
+
+(deftest route-normalizes-json-act-kinds-before-rendering-authority
+  (let [{:keys [request!]} (fake-store)
+        grant-body (assoc base-body :options
+                          [{:id "1" :label "withdraw own act"
+                            :scope {:description "finite authority"
+                                    :act-kinds ["act/withdrawal"]
+                                    :grant-until "2026-09-28T15:00:00Z"}}])]
+    (with-redefs [store/request! request!]
+      (let [response ((handler) (request grant-body))
+            detail (:segment/detail
+                    (offer-provider/provider
+                     {:agent-id "agent-a" :session-id "session-a"
+                      :render-at "2026-09-28T14:30:00Z"}))]
+        (is (= 200 (:status response)))
+        (is (str/includes? (second detail)
+                           "act-kinds [:act/withdrawal]"))
+        (is (str/includes? (second detail)
+                           "until 2026-09-28T15:00:00Z"))))))
 
 (deftest another-seat-and-duplicate-options-are-typed
   (let [{:keys [request! calls]} (fake-store)]

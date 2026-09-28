@@ -1,6 +1,7 @@
 (ns futon3c.agency.offer-provider
   "Cache-only prompt segment for the newest verified exact-seat offer write."
   (:require [clojure.string :as str]
+            [futon3c.agency.offer-record :as offer-record]
             [futon3c.agency.prompt-line :as prompt-line])
   (:import [java.time Instant]))
 
@@ -54,6 +55,7 @@
          :segment/basis {:evidence-ref id
                          :scope {:agent-id (str agent-id)
                                  :session-id (str session-id)}}
+         :segment/detail (offer-record/display-lines record)
          :segment/header (str "offer " id " (" (count (:options record)) " options)")}))))
 
 (defn register! []

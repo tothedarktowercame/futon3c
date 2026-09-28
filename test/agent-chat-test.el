@@ -121,6 +121,42 @@
         (agent-chat--insert-prompt))
       (should (equal "> " (buffer-string))))))
 
+(defun agent-chat-test--offer-payload (agent session offer-id)
+  `((prompt . "$!> ")
+    (segments
+     . (((segment/id . "offer")
+         (segment/basis . ((evidence-ref . ,offer-id)
+                           (scope . ((agent-id . ,agent)
+                                     (session-id . ,session)))))
+         (segment/detail . (,(format "offer %s from agent-a:" offer-id)
+                            "  1  grant  — agreement only, no grant")))))))
+
+(ert-deftest agent-chat-offer-detail-is-exact-seat-and-once-per-offer ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (setq-local agent-chat--agent-id "agent-a"
+                agent-chat--session-id "session-a"
+                agent-chat--shown-offer-ids nil)
+    (let (messages)
+      (cl-letf (((symbol-function 'agent-chat-insert-message)
+                 (lambda (name text) (push (cons name text) messages))))
+        (let ((first (agent-chat-test--offer-payload
+                      "agent-a" "session-a" "act:offer-1")))
+          (agent-chat--show-offer-detail! first)
+          (agent-chat--show-offer-detail! first))
+        (agent-chat--show-offer-detail!
+         (agent-chat-test--offer-payload
+          "agent-b" "session-b" "act:offer-foreign"))
+        (agent-chat--show-offer-detail!
+         (agent-chat-test--offer-payload
+          "agent-a" "session-a" "act:offer-2")))
+      (should (= 2 (length messages)))
+      (should (string-match-p "act:offer-1" (cdr (nth 1 messages))))
+      (should (string-match-p "act:offer-2" (cdr (nth 0 messages))))
+      (should-not (seq-some (lambda (entry)
+                              (string-match-p "foreign" (cdr entry)))
+                            messages)))))
+
 (ert-deftest agent-chat-prefixed-prompt-repair-uses-only-last-line ()
   (with-temp-buffer
     (insert "$foo> historical\n> quoted\ntranscript\n$~x/y> typed")

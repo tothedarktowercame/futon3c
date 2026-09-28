@@ -1,5 +1,6 @@
 (ns futon3c.agency.offer-record-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
             [futon3c.agency.offer-record :as offer]))
 
 (def at "2026-09-28T12:00:00Z")
@@ -35,6 +36,17 @@
                    (assoc-in record [:options 0] {:option/id "1"})))))
   (is (= :invalid-interval
          (reason #(offer/validate! (assoc record :until at)))))
+  (is (= :invalid-grant-until
+         (reason #(offer/validate!
+                   (assoc-in record [:options 0 :option/scope :grant-until]
+                             "not-an-instant")))))
+  (is (= :invalid-grant-until
+         (reason #(offer/validate!
+                   (assoc-in record [:options 0 :option/scope :grant-until] at)))))
+  (is (= :invalid-act-kinds
+         (reason #(offer/validate!
+                   (assoc-in record [:options 0 :option/scope :act-kinds]
+                             ["not-a-keyword"])))))
   (is (= :missing-act-stamp
          (reason #(offer/validate! (dissoc record :act/stamp)))))
   (is (= :invalid-grant-id
@@ -46,6 +58,32 @@
 
 (deftest description-only-scope-is-a-valid-proposal
   (is (= record (offer/validate! record))))
+
+(deftest display-lines-show-only-structured-finite-grants
+  (let [long-label (str "line one\n" (apply str (repeat 300 "x")))
+        shown (assoc record :options
+                     [{:option/id "1" :option/label "grant choice"
+                       :option/scope {:description "grant"
+                                      :act-kinds [:x :y]
+                                      :rule-ids ["act:rule"]
+                                      :grant-until "2026-09-28T12:30:00Z"}}
+                      {:option/id "2" :option/label "agreement"
+                       :option/scope {:description "only"}}
+                      {:option/id "3" :option/label "description deadline"
+                       :option/scope {:description "not authority"
+                                      :grant-until "2026-09-28T12:30:00Z"}}
+                      {:option/id "4" :option/label long-label
+                       :option/scope {:description "label test"}}])
+        lines (offer/display-lines shown)]
+    (is (= "offer act:offer-a from claude-17 (reply yes <n>, or yes act:offer-a <n>):"
+           (first lines)))
+    (is (= "  1  grant choice  — grants: act-kinds [:x :y] rule-ids [\"act:rule\"] until 2026-09-28T12:30:00Z"
+           (nth lines 1)))
+    (is (str/includes? (nth lines 2) "agreement only, no grant"))
+    (is (str/includes? (nth lines 3) "agreement only, no grant"))
+    (is (not (str/includes? (nth lines 4) "\n")))
+    (let [[_ label] (re-find #"^  4  (.*)  — agreement" (nth lines 4))]
+      (is (= 120 (count label))))))
 
 (deftest hyperedge-round-trip-keeps-time-harness-and-schema
   (let [edge (offer/record->hyperedge record)]

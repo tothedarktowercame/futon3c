@@ -51,14 +51,29 @@
       (let [end (parse-instant! until :invalid-until :until)]
         (when-not (.isBefore ^Instant at ^Instant end)
           (refuse! :invalid-interval :until)))))
-  (let [options (:options record)]
+  (let [offer-at (parse-instant! (:at record) :invalid-at :at)
+        options (:options record)]
     (when-not (and (vector? options) (seq options))
       (refuse! :no-options :options))
     (doseq [option options]
       (when-not (text? (:option/id option))
         (refuse! :missing-option-id :option/id))
-      (when-not (map? (:option/scope option))
-        (refuse! :missing-option-scope :option/scope)))
+      (let [scope (:option/scope option)]
+        (when-not (map? scope)
+          (refuse! :missing-option-scope :option/scope))
+        (when (contains? scope :act-kinds)
+          (when-not (and (vector? (:act-kinds scope))
+                         (every? keyword? (:act-kinds scope)))
+            (refuse! :invalid-act-kinds :option/scope)))
+        (when (contains? scope :rule-ids)
+          (when-not (and (vector? (:rule-ids scope))
+                         (every? string? (:rule-ids scope)))
+            (refuse! :invalid-rule-ids :option/scope)))
+        (when-let [grant-until (:grant-until scope)]
+          (let [until (parse-instant! grant-until :invalid-grant-until
+                                      :option/scope)]
+            (when-not (.isBefore ^Instant offer-at ^Instant until)
+              (refuse! :invalid-grant-until :option/scope))))))
     (when-not (= (count options) (count (set (map :option/id options))))
       (refuse! :duplicate-option-ids :options)))
   (when-not (contains? record :act/stamp)
@@ -69,6 +84,38 @@
   (when (contains? record :act/harness)
     (act-harness/validate! (:act/harness record)))
   record)
+
+(defn- display-label [label]
+  (let [clean (-> (if (string? label) label "")
+                  (str/replace #"\p{C}" " ")
+                  (str/replace #"\s+" " ")
+                  str/trim)]
+    (subs clean 0 (min 120 (count clean)))))
+
+(defn display-lines
+  "Render OFFER's structured choices for the operator before acceptance.
+   A line describes grant authority only when its scope is checkable and has
+   the finite :grant-until required by DERIVE-2 item 7. Labels are display text,
+   never authority, and are flattened and capped before rendering."
+  [offer]
+  (let [offer (validate! offer)
+        id (:id offer)]
+    (into [(format "offer %s from %s (reply yes <n>, or yes %s <n>):"
+                   id (:author offer) id)]
+          (map (fn [option]
+                 (let [scope (:option/scope option)
+                       checkable? (or (seq (:act-kinds scope))
+                                      (seq (:rule-ids scope)))
+                       grant? (and checkable? (:grant-until scope))]
+                   (format "  %s  %s  — %s"
+                           (:option/id option)
+                           (display-label (:option/label option))
+                           (if grant?
+                             (str "grants: act-kinds " (pr-str (vec (:act-kinds scope)))
+                                  " rule-ids " (pr-str (vec (:rule-ids scope)))
+                                  " until " (:grant-until scope))
+                             "agreement only, no grant"))))
+               (:options offer)))))
 
 (defn record->hyperedge
   "Map a validated offer to a schema-1 hyperedge. :at remains in props because

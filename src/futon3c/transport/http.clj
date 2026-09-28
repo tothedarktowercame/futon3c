@@ -9380,6 +9380,13 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- normalize-offer-scope [scope]
+  (if (map? scope)
+    (cond-> scope
+      (vector? (:act-kinds scope))
+      (update :act-kinds #(mapv parse-keyword %)))
+    scope))
+
 (defn handle-offer
   "Mint an offer authored by CALLER on CALLER's exact seat. The grant is found
    live and the verified record is published to the cache-only prompt provider."
@@ -9401,9 +9408,11 @@
               raw-options (or (:options payload) (get payload "options"))
               options (when (vector? raw-options)
                         (mapv (fn [option]
-                                {:option/id (or (:id option) (get option "id"))
+                                 {:option/id (or (:id option) (get option "id"))
                                  :option/label (or (:label option) (get option "label"))
-                                 :option/scope (or (:scope option) (get option "scope"))})
+                                 :option/scope (normalize-offer-scope
+                                                (or (:scope option)
+                                                    (get option "scope")))})
                               raw-options))
               until (or (:until payload) (get payload "until"))
               record (cond-> {:kind :offer/record :author caller :addressee "joe"

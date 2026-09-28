@@ -860,6 +860,9 @@ the current \"Cooked for\" line."
 Preferred over `agent-chat--prefetched-prompt-line', which shows the previous
 turn's pattern; kept separate so a late prefetch cannot overwrite it.")
 
+(defvar-local agent-chat--shown-offer-ids nil
+  "Offer act ids whose structured choices were shown in this buffer.")
+
 (defun agent-chat-note-done-prompt-line (event)
   "Keep the prompt line carried by a done EVENT (an alist), if it is valid.
 REPL files call this behind `fboundp', so an older loaded agent-chat is safe."
@@ -880,8 +883,8 @@ REPL files call this behind `fboundp', so an older loaded agent-chat is safe."
             (url-hexify-string agent-chat--agent-id)
             (url-hexify-string agent-chat--session-id))))
 
-(defun agent-chat--parse-prompt-line-response ()
-  "Return the valid prompt in the current HTTP response buffer, or nil."
+(defun agent-chat--parse-prompt-line-payload ()
+  "Return a valid prompt-line payload from the current HTTP response, or nil."
   (goto-char (point-min))
   (when (and (boundp 'url-http-response-status)
              (eql url-http-response-status 200)
@@ -889,27 +892,53 @@ REPL files call this behind `fboundp', so an older loaded agent-chat is safe."
     ;; The body arrives as raw UTF-8 octets; decode before parsing
     ;; or a pattern id such as 象/诺必践 renders as mojibake.
     (let* ((json-object-type 'alist)
+           (json-array-type 'list)
            (payload (json-read-from-string
                      (decode-coding-string
                       (buffer-substring-no-properties (point) (point-max))
                       'utf-8)))
            (prompt (alist-get 'prompt payload)))
-      (when (agent-chat--valid-prompt-line-p prompt)
-        prompt))))
+      (when (agent-chat--valid-prompt-line-p prompt) payload))))
+
+(defun agent-chat--parse-prompt-line-response ()
+  "Return the valid prompt in the current HTTP response buffer, or nil."
+  (when-let* ((payload (agent-chat--parse-prompt-line-payload)))
+    (alist-get 'prompt payload)))
+
+(defun agent-chat--show-offer-detail! (payload)
+  "Show exact-seat offer detail from prompt-line PAYLOAD once in this buffer."
+  (when (and (listp payload) (fboundp 'agent-chat-insert-message))
+    (dolist (segment (alist-get 'segments payload))
+      (when (equal "offer" (format "%s" (alist-get 'segment/id segment)))
+        (let* ((basis (alist-get 'segment/basis segment))
+               (scope (alist-get 'scope basis))
+               (offer-id (alist-get 'evidence-ref basis))
+               (detail (alist-get 'segment/detail segment)))
+          (when (and (stringp offer-id)
+                     (equal agent-chat--agent-id (alist-get 'agent-id scope))
+                     (equal agent-chat--session-id (alist-get 'session-id scope))
+                     (listp detail) (cl-every #'stringp detail)
+                     (not (member offer-id agent-chat--shown-offer-ids)))
+            (push offer-id agent-chat--shown-offer-ids)
+            (agent-chat-insert-message "system" (string-join detail "\n"))))))))
 
 (defun agent-chat--fetch-prompt-line ()
   "Fetch the exact-seat prompt-line, or nil on any unavailable condition."
   (when-let* ((url (agent-chat--prompt-line-url)))
-    (let ((url-request-method "GET")
+    (let ((chat-buffer (current-buffer))
+          (url-request-method "GET")
           (timeout (max 0.01 (min 0.3 (or agent-chat-prompt-line-timeout 0.3))))
-          response-buffer)
+          response-buffer payload)
       (unwind-protect
           (when (setq response-buffer
                       (url-retrieve-synchronously url t t timeout))
             (with-current-buffer response-buffer
-              (agent-chat--parse-prompt-line-response)))
+              (setq payload (agent-chat--parse-prompt-line-payload))))
         (when (buffer-live-p response-buffer)
-          (kill-buffer response-buffer))))))
+          (kill-buffer response-buffer)))
+      (when (and payload (buffer-live-p chat-buffer))
+        (with-current-buffer chat-buffer (agent-chat--show-offer-detail! payload)))
+      (alist-get 'prompt payload))))
 
 (defun agent-chat--prefetch-prompt-line! ()
   "Fetch the prompt line in the background; turn end applies it without waiting.
@@ -923,13 +952,15 @@ turn starts, so fetching then lets the prompt land with the turn-end flair."
           (url-retrieve
            url
            (lambda (status)
-             (let ((prompt (and (not (plist-get status :error))
-                                (condition-case nil
-                                    (agent-chat--parse-prompt-line-response)
-                                  (error nil)))))
+             (let* ((payload (and (not (plist-get status :error))
+                                  (condition-case nil
+                                      (agent-chat--parse-prompt-line-payload)
+                                    (error nil))))
+                    (prompt (alist-get 'prompt payload)))
                (kill-buffer (current-buffer))
                (when (and prompt (buffer-live-p chat-buffer))
                  (with-current-buffer chat-buffer
+                   (agent-chat--show-offer-detail! payload)
                    (setq agent-chat--prefetched-prompt-line prompt)))))
            nil t t)
         (error nil)))))
@@ -983,9 +1014,10 @@ text-face overlays were removed, painting everything prompt-face orange
 (defun agent-chat--refresh-prompt-line! (&optional prompt)
   "Redraw the live prompt with the prefetched prompt line, keeping input.
 The prompt is drawn once when the buffer opens and messages insert above it,
-so without this the prefix would never change.  No network call here: the value
-was fetched at turn start, so the prompt changes in the same redisplay as the
-turn-end flair (Joe, 2026-09-28).  If the prefetch has not arrived, the prompt
+so without this the prefix would never change. The prompt value was fetched at
+turn start, so it changes in the same redisplay as the turn-end flair. An offer
+marker starts one bounded asynchronous detail read; it never delays redraw.
+If the prefetch has not arrived, the prompt
 is left as it is.  With PROMPT, draw that instead; turn start uses \"> \" so a
 sent turn does not leave the previous pattern on the last line.  The new prompt is inserted
 before the old one and the old one then deleted, so the input marker, point and
@@ -1020,7 +1052,16 @@ window points all end up after the new prompt with typed input untouched."
               ;; An insertion-type-t prompt marker at START rode past the
               ;; new text; put it back.  The separator marker is type nil.
               (when marker-at-start
-                (set-marker agent-chat--prompt-marker start)))))))))
+                (set-marker agent-chat--prompt-marker start)))))))
+    ;; A same-turn offer first appears in the done-event prompt as `!`; fetch
+    ;; its structured segment asynchronously so Joe sees its choices before
+    ;; answering. The exact-seat shown set makes repeated refreshes harmless.
+    (when (and agent-chat-prompt-line-enabled
+               (save-excursion
+                 (goto-char (marker-position agent-chat--input-start))
+                 (beginning-of-line)
+                 (looking-at-p "^\\$[^[:space:]>]*!.*> ")))
+      (agent-chat--prefetch-prompt-line!))))
 
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
