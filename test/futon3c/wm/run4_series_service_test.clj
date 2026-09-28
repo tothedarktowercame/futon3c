@@ -465,20 +465,21 @@
             core
             (fn [opts]
               (reset! seen-opts opts)
-              (let [action {:type :advance-mission :target "M-outer-loop-successor"}
-                    judgment {:decision {:action {:type :no-op}}
-                              :ranked-actions [{:rank 1 :action action}]
-                              :admissible-actions [{:rank 1 :action action}]}
-                    selected (full-runner/resolve-pinned-selection
-                              opts judgment (select-keys opts (keys casting)))
-                    identity (:identity selected)]
+              (let [requested (:run4/requested-pin opts)
+                    requested-identity (:identity requested)
+                    identity (-> requested-identity
+                                 (assoc :sha256 (:pin-sha256 requested-identity))
+                                 (dissoc :pin-sha256))
+                    attestation ((:run4-trusted-boundary-fn opts)
+                                 {:pin-digest (:pin-sha256 requested-identity)
+                                  :operator-selection (:operator-selection requested)})]
                 {:attempt-id "worker-internal-attempt"
                  :outcome :grounded-change
                  :checkpoints
                  {:selection {:judgment {:outcome :ok}
                               :ground {:kind :wm-judgement :run4/task-pin identity
                                        :run4/operator-selection
-                                       (:provenance selected)}}
+                                       {:authority-attestation attestation}}}
                   :construction {:judgment {:run4/task-pin identity}
                                  :ground {:kind :decision-pinned-construction
                                           :run4/task-pin identity}}
