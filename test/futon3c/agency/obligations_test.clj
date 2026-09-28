@@ -44,7 +44,7 @@
         b (assoc a :id "b")
         h (concat (chain "a" a)
                   (chain "b" b [:promise/released "2026-09-28T11:30:00Z"
-                                 {:release/basis :explicit}]))
+                                 {:release/basis :explicit :release/role :creditor}]))
         r (project h [(outcome "lapsed-a" :promise/lapsed "a" "2026-09-28T11:01:00Z")]
                    "agent-a")]
     (is (= ["a"] (mapv :obligation/id (:owes r))))
@@ -109,9 +109,10 @@
 (deftest temporal-boundary-and-broken-chain
   (let [rec {:id "edge" :agent "a" :beneficiary "b"
              :deadline "2026-09-28T13:00:00Z"}
-        exact (project (chain "edge" rec [:promise/released t {:release/basis :explicit}]) [] "a")
+        exact (project (chain "edge" rec [:promise/released t
+                                          {:release/basis :explicit :release/role :creditor}]) [] "a")
         later (project (chain "edge" rec [:promise/released "2026-09-28T12:00:00.001Z"
-                                          {:release/basis :explicit}]) [] "a")
+                                          {:release/basis :explicit :release/role :creditor}]) [] "a")
         broken (let [rows (chain "edge" rec [:promise/woken "2026-09-28T11:00:00Z" {}])
                      row (-> (second rows)
                              (assoc-in [:evidence/body :history/promise-sequence] 3)
@@ -122,6 +123,17 @@
     (is (= ["edge"] (mapv :obligation/id (:owes later))))
     (is (empty? (:owes broken)))
     (is (= :missing-transition (get-in broken [:incomplete 0 :reason])))))
+
+(deftest debtor-abandonment-and-invalid-explicit-release
+  (let [rec {:id "p" :agent "a" :beneficiary "b" :deadline "2026-09-29T00:00:00Z"}
+        abandoned (project (chain "p" rec [:promise/released "2026-09-28T11:00:00Z"
+                                           {:release/basis :explicit :release/role :debtor}]) [] "a")
+        invalid (project (chain "p" rec [:promise/released "2026-09-28T11:00:00Z"
+                                         {:release/basis :explicit :release/role :observer}]) [] "a")]
+    (is (= :abandoned (get-in abandoned [:ignored 0 :status])))
+    (is (empty? (:owes abandoned)))
+    (is (empty? (:owes invalid)))
+    (is (= :invalid-release (get-in invalid [:incomplete 0 :reason])))))
 
 (deftest owes-and-owed-partition-and-missing-beneficiary
   (let [rec {:id "p" :agent "agent-a" :beneficiary "agent-b"

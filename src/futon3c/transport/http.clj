@@ -9336,6 +9336,10 @@
   (matching-grant-id base caller :offer/record
                      {:allow-wildcard? true :scope-flags [:own-acts-only]}))
 
+(defn- promise-release-grant-id [base caller]
+  (matching-grant-id base caller :promise/release
+                     {:allow-wildcard? true :scope-flags [:own-acts-only]}))
+
 (defn- pattern-card-stamp [caller]
   (act-stamp/stamp caller caller
                    (if (= "joe" caller)
@@ -9433,6 +9437,89 @@
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
+
+(defn- promise-creation [inputs promise-id]
+  (some (fn [row]
+          (when (and (contains? obligations/creation-types (:evidence/type row))
+                     (= promise-id (or (get-in row [:evidence/body :history/promise-id])
+                                       (get-in row [:evidence/body :id])
+                                       (get-in row [:evidence/body :followup-id]))))
+            (try (:record (promise-history/payload row))
+                 (catch Throwable _ nil))))
+        (:promise-history inputs)))
+
+(defn- release-refusal [status reason]
+  (json-response status {:ok false :reason reason}))
+
+(defn handle-promise-release [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (release-refusal 400 :invalid-json)
+      (try
+        (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
+              promise-id (some-> (or (:promise-id payload) (get payload "promise-id")) str)
+              role (some-> (or (:role payload) (get payload "role")) name keyword)
+              at (str (or (:at payload) (get payload "at") (Instant/now)))
+              at-instant (try (Instant/parse at)
+                              (catch Throwable _
+                                (throw (ex-info "Invalid release time" {:reason :invalid-at}))))
+              _ (when-not (and (not (str/blank? caller)) (not (str/blank? promise-id))
+                               (contains? #{:creditor :debtor} role))
+                  (throw (ex-info "Invalid promise release" {:reason :invalid-request})))
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              read-at (str (Instant/now))
+              inputs (obligations-reader/read-inputs base caller read-at :current)
+              rec (or (promise-creation inputs promise-id)
+                      (throw (ex-info "Unknown promise" {:reason :unknown-promise})))
+              debtor (some-> (:agent rec) str)
+              creditor (some-> (:beneficiary rec) str)
+              party (if (= :debtor role) debtor creditor)
+              _ (when-not (= caller party)
+                  (throw (ex-info "Caller is not the named promise party"
+                                  {:reason :not-a-party})))
+              projection (obligations/obligations-as-of inputs debtor read-at)
+              incomplete? (some #(= promise-id (:obligation/id %)) (:incomplete projection))
+              closed (some #(when (= promise-id (:obligation/id %)) %) (:ignored projection))
+              _ (when incomplete?
+                  (throw (ex-info "Promise history is incomplete"
+                                  {:reason :incomplete-promise})))
+              _ (when (and closed (contains? #{:completed :completed-late :released :abandoned}
+                                             (:status closed)))
+                  (throw (ex-info "Promise is already closed" {:reason :already-closed})))
+              grant-id (or (promise-release-grant-id base caller)
+                           (throw (ex-info "No grant covers promise release"
+                                           {:reason :no-grant})))
+              stamp (act-stamp/stamp caller caller {:grant grant-id} :declared)
+              eid (promise-history/record!
+                   :promise/released rec (.toEpochMilli at-instant)
+                   {:release/basis :explicit :release/role role :release/by caller
+                    :act/stamp stamp})
+              _ (when-not (and (string? eid) (promise-history/await-writes! 5000))
+                  (throw (ex-info "Promise release write was not acknowledged"
+                                  {:reason :store-failure})))
+              stored (rule-record-store/request!
+                      base "GET" (str "/api/alpha/evidence/"
+                                      (java.net.URLEncoder/encode eid "UTF-8")) nil)
+              body (:evidence/body stored)]
+          (when-not (and (= eid (:evidence/id stored))
+                         (= :promise/released (:evidence/type stored))
+                         (= :explicit (:release/basis body))
+                         (= role (:release/role body))
+                         (= caller (:release/by body))
+                         (= stamp (:act/stamp body)))
+            (throw (ex-info "Promise release readback mismatch" {:reason :store-failure})))
+          (json-response 200 {:ok true :evidence-id eid :promise-id promise-id
+                              :status (if (= :creditor role) :released :abandoned)}))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (release-refusal (case reason
+                               :unknown-promise 404
+                               (:not-a-party :no-grant) 403
+                               (:already-closed :incomplete-promise) 409
+                               (:store-timeout :store-failure) 504
+                               400)
+                             reason)))
+        (catch Throwable _ (release-refusal 500 :store-failure))))))
 
 (defn- evidence-body-map [entry]
   (let [body (:evidence/body entry)]
@@ -9853,6 +9940,9 @@
 
       (and (= :post method) (= "/api/alpha/offer" uri))
       (handle-offer request)
+
+      (and (= :post method) (= "/api/alpha/promise/release" uri))
+      (handle-promise-release request)
 
       (and (= :post method) (= "/api/alpha/agreement" uri))
       (handle-agreement request)

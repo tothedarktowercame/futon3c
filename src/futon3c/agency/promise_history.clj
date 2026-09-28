@@ -120,7 +120,8 @@
                              (try (outcome/evaluate! (backend) eid rec (System/currentTimeMillis))
                                   (catch Throwable e (outcome/failed! e))))
                          (failed! type (:error/code result))))
-                     (catch Throwable e (failed! type (.getMessage e)))))))
+                     (catch Throwable e (failed! type (.getMessage e))))))
+       eid)
      (catch Throwable e (failed! type (.getMessage e)))))))
 
 (defn await-writes!

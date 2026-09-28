@@ -50,16 +50,22 @@
         criterion (:fulfilment-criterion rec)
         deadline (:deadline rec)
         checkable? (or criterion deadline)
-        explicit-release (some #(when (and (= :promise/released (:evidence/type %))
-                                           (= :explicit (get-in % [:evidence/body :release/basis]))) %)
-                               lifecycle)
+        explicit-releases (filterv #(and (= :promise/released (:evidence/type %))
+                                         (= :explicit (get-in % [:evidence/body :release/basis])))
+                                   lifecycle)
+        invalid-release (some #(when-not (contains? #{:creditor :debtor}
+                                                     (get-in % [:evidence/body :release/role])) %)
+                              explicit-releases)
+        explicit-release (first explicit-releases)
+        release-role (get-in explicit-release [:evidence/body :release/role])
         plain-release (some #(when (= :promise/released (:evidence/type %)) %) lifecycle)
         fulfilled (some #(when (= :promise/fulfilled (:evidence/type %)) %) outcomes)
         lapsed (some #(when (= :promise/lapsed (:evidence/type %)) %) outcomes)
         deadline-passed? (when-let [d (instant deadline)]
                            (not (.isAfter ^Instant d ^Instant t)))
         status (cond
-                 explicit-release :released
+                 invalid-release :invalid-release
+                 explicit-release (if (= :creditor release-role) :released :abandoned)
                  fulfilled (if lapsed :completed-late :completed)
                  lapsed :overdue
                  deadline-passed? :overdue
@@ -79,6 +85,8 @@
            :as-of (str t)
            :facts facts}
      :checkable? checkable?
+     :error (when invalid-release
+              (incomplete pid :invalid-release {:record-id (:evidence/id invalid-release)}))
      :plain-release? (boolean plain-release)}))
 
 (defn- agreement-row [agreement offer t]
@@ -123,17 +131,17 @@
                                                (filter #(creation-types (:evidence/type %)) rows)))]
                (conj acc (promise-row pid creation rows (get outcomes-by-promise pid []) t))
                acc))) [] by-promise)
-        promise-open (mapv :row (filter (fn [{:keys [row checkable?]}]
-                                          (and checkable?
-                                               (not (contains? #{:released :completed :completed-late}
+        promise-open (mapv :row (filter (fn [{:keys [row checkable? error]}]
+                                          (and checkable? (nil? error)
+                                               (not (contains? #{:released :abandoned :completed :completed-late}
                                                                (:status row)))))
                                         promise-results))
-        unchecked (mapv :row (filter (fn [{:keys [checkable? plain-release?]}]
-                                       (and (not checkable?) (not plain-release?)))
+        unchecked (mapv :row (filter (fn [{:keys [checkable? plain-release? error]}]
+                                       (and (nil? error) (not checkable?) (not plain-release?)))
                                      promise-results))
-        closed (mapv :row (filter (fn [{:keys [row checkable?]}]
-                                    (and checkable?
-                                         (contains? #{:released :completed :completed-late}
+        closed (mapv :row (filter (fn [{:keys [row checkable? error]}]
+                                    (and checkable? (nil? error)
+                                         (contains? #{:released :abandoned :completed :completed-late}
                                                     (:status row))))
                                   promise-results))
         visible-agreements (filter #(at-or-before? % t) agreements)
@@ -151,7 +159,8 @@
                              :when (nil? (get offers-by-id (:agreement/offer a)))]
                          (incomplete (:id a) :unknown-offer
                                      {:source/id (:id a) :offer (:agreement/offer a)}))
-        incompletes (vec (concat reader-incomplete chain-issues decoded-errors
+        invalid-releases (keep :error promise-results)
+        incompletes (vec (concat reader-incomplete chain-issues decoded-errors invalid-releases
                                  missing-beneficiary no-due missing-offers))
         party? #(or (= agent-id (:debtor %)) (= agent-id (:creditor %)))]
     ;; :incomplete stays unfiltered: a broken chain or unreadable creation may
