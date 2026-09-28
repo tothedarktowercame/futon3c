@@ -5,6 +5,9 @@
 (require 'agent-chat)
 (require 'codex-repl)
 
+;; Unit tests never depend on the live Agency prompt-line endpoint.
+(setq agent-chat-prompt-line-enabled nil)
+
 (defmacro codex-repl-test--without-side-effects (&rest body)
   `(cl-letf (((symbol-function 'codex-repl--refresh-session-header) (lambda (&rest _) nil))
              ((symbol-function 'codex-repl-refresh-header-line) (lambda (&rest _) nil))
@@ -12,6 +15,17 @@
              ((symbol-function 'codex-repl--emit-session-start-evidence!) (lambda (&rest _) nil))
              ((symbol-function 'codex-repl--report-registry-invoke-state!) (lambda (&rest _) nil)))
      ,@body))
+
+(ert-deftest codex-repl-restores-prefixed-prompt-boundary ()
+  (with-temp-buffer
+    (insert "transcript\n────────────────\n$~x/y> typed")
+    (setq-local agent-chat--prompt-marker nil)
+    (setq-local agent-chat--separator-start nil)
+    (setq-local agent-chat--input-start nil)
+    (should (codex-repl--restore-ui-state))
+    (should (equal "typed"
+                   (buffer-substring-no-properties
+                    (marker-position agent-chat--input-start) (point-max))))))
 
 (ert-deftest codex-repl-session-id-is-buffer-local-per-lane ()
   (let ((buf-a (generate-new-buffer " *codex-lane-a*"))

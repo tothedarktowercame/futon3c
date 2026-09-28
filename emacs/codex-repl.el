@@ -1981,7 +1981,7 @@ Returns non-nil when prompt markers were restored."
         (separator-pos nil))
     (save-excursion
       (goto-char (point-max))
-      (when (re-search-backward "^> " nil t)
+      (when (re-search-backward agent-chat--prompt-regexp nil t)
         (setq prompt-pos (match-end 0)
               separator-pos (line-beginning-position))
         (save-excursion

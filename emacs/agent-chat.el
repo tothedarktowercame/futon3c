@@ -32,6 +32,17 @@
   :type 'string
   :group 'agent-chat)
 
+(defcustom agent-chat-prompt-line-enabled t
+  "When non-nil, fetch the bounded Agency prompt-line when inserting a prompt."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-prompt-line-timeout 0.3
+  "Maximum seconds to wait for the Agency prompt-line response.
+Values above 0.3 are capped at 0.3 so prompt insertion remains bounded."
+  :type 'number
+  :group 'agent-chat)
+
 (defcustom agent-chat-cost-script
   (expand-file-name "../scripts/session-cost.py"
                     (file-name-directory agent-chat--source-file))
@@ -131,7 +142,7 @@ to this many attempts, then retain the record as a terminal failure."
   "Marker before the separator line. Messages insert here.")
 
 (defvar-local agent-chat--input-start nil
-  "Marker at start of user input (after \"> \").")
+  "Marker at start of user input (after the complete prompt line).")
 
 (defvar-local agent-chat--separator-start nil
   "Marker at start of the separator line above prompt.")
@@ -817,8 +828,75 @@ the current \"Cooked for\" line."
            fill-column
            80)))
 
+(defconst agent-chat--prompt-regexp
+  "^\\(?:\\$[^[:space:]>]+\\)?> "
+  "Tight line-start regexp for a plain or prefixed agent prompt.")
+
+(defun agent-chat--valid-prompt-line-p (value)
+  "Return non-nil when VALUE is exactly a supported prompt string."
+  (and (stringp value)
+       (string-match-p "\\`\\(?:\\$[^[:space:]>]+\\)?> \\'" value)))
+
+(defun agent-chat--fetch-prompt-line ()
+  "Fetch the exact-seat prompt-line, or nil on any unavailable condition."
+  (when (and agent-chat-prompt-line-enabled
+             (stringp agent-chat--agent-id)
+             (not (string-empty-p agent-chat--agent-id))
+             (stringp agent-chat--session-id)
+             (not (string-empty-p agent-chat--session-id))
+             (not (equal agent-chat--session-id "pending")))
+    (let* ((base (string-remove-suffix "/" agent-chat-agency-base-url))
+           (url-request-method "GET")
+           (url (format "%s/api/alpha/prompt-line?agent=%s&session=%s"
+                        base
+                        (url-hexify-string agent-chat--agent-id)
+                        (url-hexify-string agent-chat--session-id)))
+           (timeout (max 0.01 (min 0.3 (or agent-chat-prompt-line-timeout 0.3))))
+           response-buffer)
+      (unwind-protect
+          (when (setq response-buffer
+                      (url-retrieve-synchronously url t t timeout))
+            (with-current-buffer response-buffer
+              (goto-char (point-min))
+              (when (and (boundp 'url-http-response-status)
+                         (= url-http-response-status 200)
+                         (re-search-forward "\r?\n\r?\n" nil t))
+                (let* ((json-object-type 'alist)
+                       (payload (json-read))
+                       (prompt (alist-get 'prompt payload)))
+                  (when (agent-chat--valid-prompt-line-p prompt)
+                    prompt)))))
+        (when (buffer-live-p response-buffer)
+          (kill-buffer response-buffer))))))
+
+(defun agent-chat--prompt-line ()
+  "Return the fetched prompt, failing soft to the historical plain prompt."
+  (condition-case nil
+      (or (agent-chat--fetch-prompt-line) "> ")
+    (error "> ")))
+
+(defun agent-chat--prompt-end-at-point ()
+  "Return the end of a prompt beginning at point, or nil."
+  (when (looking-at agent-chat--prompt-regexp)
+    (match-end 0)))
+
+(defun agent-chat--last-line-p ()
+  "Return non-nil when point is on the buffer's last line."
+  (= (line-beginning-position)
+     (save-excursion (goto-char (point-max)) (line-beginning-position))))
+
+(defun agent-chat--live-prompt-end-at-point ()
+  "Return prompt end when point identifies the live prompt, else nil.
+An existing input marker permits multiline pending input; without that exact
+boundary, only a prompt on the buffer's last line is accepted."
+  (when-let* ((end (agent-chat--prompt-end-at-point)))
+    (when (or (agent-chat--last-line-p)
+              (and (markerp agent-chat--input-start)
+                   (= end (marker-position agent-chat--input-start))))
+      end)))
+
 (defun agent-chat--insert-prompt (&optional face)
-  "Insert the \"> \" prompt at point, read-only, in FACE.
+  "Insert the rendered prompt at point, read-only, in FACE.
 Read-only because the prompt is the wall between typed input and the
 transcript: \"M-12 M-DEL\" at the input line once killed backward through
 \"> \", the turn-end rule and half the Cooked line, leaving claude-10 with no
@@ -828,12 +906,13 @@ after it is neither read-only nor prompt-faced.  Face as a TEXT-PROPERTY, not
 an overlay: as an overlay it ballooned to span the whole buffer once the
 text-face overlays were removed, painting everything prompt-face orange
 \(2026-07-02)."
-  (let ((start (point)))
-    (insert "> ")
+  (let ((start (point))
+        (prompt (agent-chat--prompt-line)))
+    (insert prompt)
     (add-text-properties
      start (point)
      `(face ,(or face 'agent-chat-prompt-face)
-       read-only "Agent REPL prompt is read-only; type after \"> \""
+       read-only "Agent REPL prompt is read-only; type after its final \"> \""
        rear-nonsticky (face read-only)))))
 
 (defun agent-chat--ensure-prompt-markers! ()
@@ -844,11 +923,11 @@ text-face overlays were removed, painting everything prompt-face orange
       (save-excursion
         (goto-char marker-pos)
         (cond
-         ((looking-at-p "> ")
+         ((agent-chat--live-prompt-end-at-point)
           (setq prompt-pos marker-pos))
          ((looking-at-p "^─+$")
           (forward-line 1)
-          (when (looking-at-p "> ")
+          (when (agent-chat--live-prompt-end-at-point)
             (setq prompt-pos (line-beginning-position)))))))
     (unless prompt-pos
       ;; The prompt is always the LAST line of the buffer (typed input may follow
@@ -859,7 +938,7 @@ text-face overlays were removed, painting everything prompt-face orange
       (save-excursion
         (goto-char (point-max))
         (forward-line 0)
-        (if (looking-at-p "> ")
+        (if (agent-chat--prompt-end-at-point)
             (setq prompt-pos (point))
           (let ((inhibit-read-only t))
             (goto-char (point-max))
@@ -870,7 +949,10 @@ text-face overlays were removed, painting everything prompt-face orange
       (setq agent-chat--prompt-marker (copy-marker prompt-pos t))
       (setq agent-chat--separator-start (copy-marker prompt-pos))
       (set-marker-insertion-type agent-chat--prompt-marker t)
-      (setq agent-chat--input-start (copy-marker (+ prompt-pos 2) nil))
+      (save-excursion
+        (goto-char prompt-pos)
+        (setq agent-chat--input-start
+              (copy-marker (or (agent-chat--prompt-end-at-point) prompt-pos) nil)))
       (set-marker-insertion-type agent-chat--input-start nil)))
   (and (markerp agent-chat--prompt-marker)
        (marker-position agent-chat--prompt-marker)))

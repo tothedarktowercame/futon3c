@@ -77,6 +77,83 @@
     (should (string-suffix-p "Cooked for 6m 15s\n> " (buffer-string)))
     (should (= (marker-position agent-chat--input-start) (point-max)))))
 
+(ert-deftest agent-chat-prefixed-prompt-is-wholly-read-only ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "$~x/y> ")))
+      (agent-chat-test--init-buffer))
+    (should (string-suffix-p "$~x/y> " (buffer-string)))
+    (let ((start (save-excursion
+                   (goto-char (marker-position agent-chat--input-start))
+                   (line-beginning-position)))
+          (end (marker-position agent-chat--input-start)))
+      (should (equal "$~x/y> "
+                     (buffer-substring-no-properties start end)))
+      (dotimes (offset (- end start))
+        (should (get-text-property (+ start offset) 'read-only)))
+      (should-not (get-text-property end 'read-only)))))
+
+(ert-deftest agent-chat-large-backward-kill-preserves-prompt-wall ()
+  (dolist (rendered '(nil "$~x/y> "))
+    (with-temp-buffer
+      (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+                 (lambda () rendered)))
+        (agent-chat-test--init-buffer))
+      (insert "abc")
+      (let* ((prompt-start (marker-position agent-chat--prompt-marker))
+             (input-start (marker-position agent-chat--input-start))
+             (prompt (buffer-substring-no-properties prompt-start input-start)))
+        (condition-case nil
+            (kill-word -12)
+          (text-read-only nil)
+          (beginning-of-buffer nil))
+        (should (equal prompt
+                       (buffer-substring-no-properties prompt-start input-start)))))))
+
+(ert-deftest agent-chat-prompt-fetch-failure-falls-back-exactly ()
+  (dolist (failure '(:error :timeout))
+    (with-temp-buffer
+      (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+                 (lambda ()
+                   (if (eq failure :error)
+                       (error "unavailable")
+                     (signal 'error '("timed out"))))))
+        (agent-chat--insert-prompt))
+      (should (equal "> " (buffer-string))))))
+
+(ert-deftest agent-chat-prefixed-prompt-repair-uses-only-last-line ()
+  (with-temp-buffer
+    (insert "$foo> historical\n> quoted\ntranscript\n$~x/y> typed")
+    (setq-local agent-chat--prompt-marker (copy-marker (point-min) t))
+    (setq-local agent-chat--separator-start nil)
+    (setq-local agent-chat--input-start nil)
+    (agent-chat--ensure-prompt-markers!)
+    (should (equal "$~x/y> typed"
+                   (buffer-substring-no-properties
+                    (marker-position agent-chat--prompt-marker) (point-max))))
+    (should (equal "typed"
+                   (buffer-substring-no-properties
+                    (marker-position agent-chat--input-start) (point-max))))))
+
+(ert-deftest agent-chat-send-input-excludes-prefixed-prompt ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "$~x/y> ")))
+      (agent-chat-test--init-buffer))
+    (insert "hello")
+    (let (sent-text)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay) (lambda (&rest _) nil)))
+        (agent-chat-send-input
+         (lambda (text _callback) (setq sent-text text) nil)
+         "agent")
+        (should (equal "hello" sent-text))))))
+
 (ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
   (should (equal (agent-chat-cost-flair-suffix
                   '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
@@ -110,17 +187,18 @@
     (should (equal (agent-chat-cost-segment) ""))))
 
 (defun agent-chat-test--init-buffer ()
-  (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count)
-             (lambda (&rest _) nil)))
-    (agent-chat-init-buffer
-     (list :title "agent chat test"
-           :session-id "sid-test"
-           :modeline-fn (lambda () "test modeline")
-           :agent-name "agent"
-           :agent-id "agent-1"
-           :face-alist nil
-           :thinking-text "agent is thinking..."
-           :thinking-prop 'agent-chat-test-thinking))))
+  (let ((agent-chat-prompt-line-enabled nil))
+    (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count)
+               (lambda (&rest _) nil)))
+      (agent-chat-init-buffer
+       (list :title "agent chat test"
+             :session-id "sid-test"
+             :modeline-fn (lambda () "test modeline")
+             :agent-name "agent"
+             :agent-id "agent-1"
+             :face-alist nil
+             :thinking-text "agent is thinking..."
+             :thinking-prop 'agent-chat-test-thinking)))))
 
 (ert-deftest agent-chat-init-buffer-preserves-default-face-remapping ()
   (with-temp-buffer
