@@ -614,6 +614,7 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     ("constrain" "don't do that" "I am not asking you to" "I don't want to spend" "please use aliases" "we will not do any deep dives" "I don't want a repeat" "not going to decide things by fiat")
     ("defer" "we'll do it when we get time" "we can come back to" "at some point" "for now" "defer processing")
     ("continue" "please continue" "go on" "get on with it" "let's continue" "Please do 1, 2, and 3")
+    ("withdraw" "withdraw that pattern" "rule should be removed")
     ("redirect" "rather than" "let's trim" "we will instead focus" "I'd like to return to" "what we should do is" "I want to alter" "I would want" "I would prefer" "what I want instead" "I meant that")
     ("explain" "here's why" "my main point" "what I mean" "the broader long term idea" "the use cases would be" "my use case")
     ("report-problem" "is currently broken" "I still see an HTTP error" "it's broken" "login doesn't work" "overlaps existing UI elements" "point of major concern" "not getting any markup" "totally underlined")
@@ -622,7 +623,14 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     ("ask-action" "can you please" "please publish" "please sort this out" "I would like to have" "please update"))
   "Agent-curated intent phrases from recorded operator turns (2026-09-22).
 See analysis/audits/intent-vocabulary-2026-09-22.md in futon0 for evidence.
+The `withdraw' phrases are Joe's exact words in evidence
+emacs-4c7d6a17516feb370bfadaeca20f6939 and
+emacs-495da0160da7cbbe11e87e98bae8d56f (2026-09-27).  Its chip is
+`op-drop-stack'.  A cue is an interpretation only; it has no effect by itself.
 Single conjunctions such as but do not identify intent.")
+
+(defconst session-mode-turn-vocabulary-version 3
+  "Version of the literal intent vocabulary written to analysis requests.")
 
 (defcustom session-mode-turn-vocabulary
   (copy-tree session-mode-turn-intent-vocabulary)
@@ -660,7 +668,7 @@ corrections override the vocabulary and remain recorded as human labels."
       (when (file-exists-p file)
         (let* ((json-object-type 'alist) (json-array-type 'list)
                (json-key-type 'symbol) (data (json-read-file file)))
-          (unless (memq (alist-get 'version data) '(1 2))
+          (unless (memq (alist-get 'version data) '(1 2 3))
             (user-error "Unsupported turn vocabulary version; live rules unchanged"))
           (setq session-mode-turn-vocabulary
                 (session-mode--validate-turn-vocabulary (alist-get 'rules data))
@@ -678,7 +686,8 @@ corrections override the vocabulary and remain recorded as human labels."
         (progn
           (setq temp (make-temp-file (expand-file-name ".turn-vocabulary-" directory)))
           (with-temp-file temp
-            (insert (json-encode `((version . 2) (rules . ,(vconcat (mapcar #'vconcat rules)))
+            (insert (json-encode `((version . ,session-mode-turn-vocabulary-version)
+                                   (rules . ,(vconcat (mapcar #'vconcat rules)))
                                    (corrections . ,(vconcat (or corrections session-mode-turn-corrections)))
                                    (learned_cues . ,(vconcat (or learned session-mode-learned-cues))))))
             (insert "\n"))

@@ -16,6 +16,43 @@
                         (session-mode--turn-matches "I DON'T AGREE; that's wrong; that’s a good fit"))
                  '("disagree" "disagree" "approve"))))
 
+(ert-deftest session-mode-tags-withdraw-and-rejects-disagreement-near-miss ()
+  (let ((session-mode-turn-vocabulary session-mode-turn-intent-vocabulary))
+    (should (equal (mapcar (lambda (hit) (nth 2 hit))
+                           (session-mode--turn-matches
+                            "I withdraw that pattern."))
+                   '("withdraw")))
+    (should (equal (mapcar (lambda (hit) (nth 2 hit))
+                           (session-mode--turn-matches
+                            "I disagree with withdrawing."))
+                   '("disagree")))))
+
+(ert-deftest session-mode-withdraw-brief-defines-target-without-effect ()
+  (let ((session-mode-turn-vocabulary session-mode-turn-intent-vocabulary)
+        (brief (session-mode--analysis-instruction "/tmp/request.json")))
+    (should (string-match-p "withdraw means the operator ends or takes back" brief))
+    (should (string-match-p "seat-active-card" brief))
+    (should (string-match-p "otherwise set target to null" brief))
+    (should (string-match-p "terminates nothing" brief))
+    (should (string-match-p
+             (format "interpretation version %d" session-mode-turn-interpretation-version)
+             brief))))
+
+(ert-deftest session-mode-analysis-record-stores-interpretation-versions ()
+  (let ((session-mode-turn-analysis-directory
+         (make-temp-file "turn-version-test-" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let* ((path (session-mode--record-turn "Withdraw that pattern."))
+                 (json-object-type 'alist)
+                 (record (json-read-file path)))
+            (should (= (alist-get 'vocabulary_version record)
+                       session-mode-turn-vocabulary-version))
+            (should (= (alist-get 'interpretation_version record)
+                       session-mode-turn-interpretation-version))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
 (defun session-mode-test--init ()
   ;; The real chat initializer establishes prompt markers and text properties.
   (agent-chat-init-buffer '(:title "tag-test" :agent-name "codex"))
@@ -243,6 +280,10 @@
                    (record (json-read-file session-mode--last-analysis-request)))
               (should (equal (alist-get 'analysis_status record) "requested"))
               (should (equal (alist-get 'source_text record) text))
+              (should (= (alist-get 'vocabulary_version record)
+                         session-mode-turn-vocabulary-version))
+              (should (= (alist-get 'interpretation_version record)
+                         session-mode-turn-interpretation-version))
               (should (equal (alist-get 'turn_id record) "test-agent-turn-1")))))
       (delete-directory session-mode-turn-analysis-directory t))))
 

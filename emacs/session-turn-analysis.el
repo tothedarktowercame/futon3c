@@ -26,6 +26,9 @@ no lexical cues; `never' records structure without requesting interpretation."
                     (file-name-directory (or load-file-name buffer-file-name))))
 (defvar-local session-mode--last-analysis-request nil)
 
+(defconst session-mode-turn-interpretation-version 3
+  "Version of the delegated interpretation brief and its withdraw semantics.")
+
 (defun session-mode--sentence-spans (text)
   "Return sentence spans in TEXT, using zero-based Unicode character offsets."
   (with-temp-buffer
@@ -131,6 +134,8 @@ reached the buffer. The surface itself is kept in the record's metadata."
     (let ((path (make-temp-file (expand-file-name "turn-" directory) nil ".json"))
           ;; Capture buffer-local identity before with-temp-file changes buffers.
           (metadata `((created_at . ,(format-time-string "%FT%TZ" nil t))
+                      (vocabulary_version . ,session-mode-turn-vocabulary-version)
+                      (interpretation_version . ,session-mode-turn-interpretation-version)
                       (tagging_failed . ,(if failed t :json-false))
                       (original_text . ,(or original-text text))
                       (agent_id . ,agent-chat--agent-id)
@@ -164,6 +169,9 @@ reached the buffer. The surface itself is kept in the record's metadata."
            "Select content-bearing cues naming the action, object, constraint or success criterion, not just discourse openers like I wonder if. "
            "For pattern alignment, compare the full passage and target to the pattern context/IF/THEN, never match on the intent label alone. "
            "Suggested intents: %s. "
+           "Intent withdraw means the operator ends or takes back an earlier act, his own or an agent's; it is not disagreement or redirection. "
+           "For a withdraw fragment, set target to the named act id when the turn names one; set it to seat-active-card only when the turn refers to this/the pattern/card in the current seat; otherwise set target to null. Never guess a withdrawal target. "
+           "A withdraw label is an interpretation only and terminates nothing. This brief is interpretation version %d. "
            "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "
            "Record inferred interpretations, not human-approved labels. "
            "To improve future draft tagging, optionally propose top-level reusable_cues with exact start/end/text, intent and rationale for reuse. "
@@ -175,6 +183,7 @@ reached the buffer. The surface itself is kept in the record's metadata."
            "[End structural analysis request]")
    path (shell-quote-argument session-mode--analysis-tool)
    (string-join (mapcar #'car session-mode-turn-vocabulary) ", ")
+   session-mode-turn-interpretation-version
    (shell-quote-argument session-mode--analysis-tool)))
 
 (defvar-local session-mode--analysis-display-stamp nil)

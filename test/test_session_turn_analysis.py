@@ -22,9 +22,13 @@ class ValidationTest(unittest.TestCase):
             {"id": "s1", "fragments": [self.fragment], "unresolved_reason": ""}]}
 
     def test_exact_unicode_span_and_real_pattern(self):
+        self.request["interpretation_version"] = 3
+        self.request["vocabulary_version"] = 3
         self.fragment["pattern_refs"] = [{"id": "agent/provisional-claims-ledger", "rationale": "explicit evidence requirement"}]
         result = analysis.validate(self.request, self.data)
         self.assertFalse(result["human_approved"])
+        self.assertEqual(result["interpretation_version"], 3)
+        self.assertEqual(result["vocabulary_version"], 3)
         self.assertEqual(result["sentences"][0]["fragments"][0]["text"], "needs evidence")
 
     def test_reject_wrong_offsets_and_invented_pattern(self):
@@ -63,6 +67,15 @@ class ValidationTest(unittest.TestCase):
         self.assertEqual(result["reusable_cues"][0]["intent"], "verify")
         self.data["reusable_cues"][0]["text"] = "not actually said"
         with self.assertRaisesRegex(ValueError, "exact source span"):
+            analysis.validate(self.request, self.data)
+
+    def test_withdraw_target_may_be_null_but_other_intents_may_not(self):
+        self.fragment["intent"] = "withdraw"
+        self.fragment["target"] = None
+        self.assertIsNone(
+            analysis.validate(self.request, self.data)["sentences"][0]["fragments"][0]["target"])
+        self.fragment["intent"] = "redirect"
+        with self.assertRaisesRegex(ValueError, "target must be a nonempty string"):
             analysis.validate(self.request, self.data)
 
     def test_publication_preserves_request_and_refuses_overwrite(self):

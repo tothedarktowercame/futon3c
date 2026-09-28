@@ -74,10 +74,13 @@ def validate(request, analysis, library=LIBRARY):
                     or source[start:end] != fragment.get("text")):
                 raise ValueError("fragment offsets/text must match their source sentence exactly")
             item = {key: fragment[key] for key in ("start", "end", "text")}
-            for field in ("intent", "target", "rationale"):
-                item[field] = required_text(fragment.get(field), field)
+            item["intent"] = required_text(fragment.get("intent"), "intent")
             if not re.fullmatch(r"[a-z][a-z0-9_-]*", item["intent"]):
                 raise ValueError("intent must be a vocabulary label, not a sentence")
+            target = fragment.get("target")
+            item["target"] = (None if item["intent"] == "withdraw" and target is None
+                              else required_text(target, "target"))
+            item["rationale"] = required_text(fragment.get("rationale"), "rationale")
             roles = fragment.get("relations")
             if not isinstance(roles, list) or not roles or any(r not in ROLES for r in roles):
                 raise ValueError("relations must name at least one documented structural role")
@@ -191,6 +194,8 @@ def validate(request, analysis, library=LIBRARY):
         learned.append({"start": start, "end": end, "text": phrase, "intent": intent,
                         "rationale": required_text(cue.get("rationale"), "reuse rationale")})
     return {"version": 2, "status": "analyzed", "method": "agent-interpretation",
+            "interpretation_version": request.get("interpretation_version", 1),
+            "vocabulary_version": request.get("vocabulary_version", 1),
             "human_approved": False, "labeller": labeller, "reusable_cues": learned,
             "created_at": datetime.now(timezone.utc).isoformat(), "source_text": source,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
