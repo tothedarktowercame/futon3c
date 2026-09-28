@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-cast-click-start-author-test-literal-fixture-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-cast-click-start-author-test-literal-fixture
   (:require [cheshire.core :as json] [clojure.edn :as edn] [clojure.java.io :as io] [clojure.test :refer [deftest is testing]] [futon2.aif.flight-runner :as fr] [futon3c.transport.http :as http] [futon3c.wm.runner-service :as service])
   (:import [java.security MessageDigest]))
 (def producer 'futon3c.diagramprover.wm-wire-producer-wm-wire-flight-cast-click-start-author-test-literal-fixture-test) (def operation 'futon3c.transport.http/handle-wm-click-start) (def wire-id [:flight-cast :click-start :author])

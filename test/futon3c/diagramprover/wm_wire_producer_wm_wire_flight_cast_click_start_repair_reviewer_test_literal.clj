@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-cast-click-start-repair-reviewer-test-literal-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-flight-cast-click-start-repair-reviewer-test-literal
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
