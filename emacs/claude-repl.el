@@ -796,27 +796,35 @@ session isolation between buffers."
 (defun claude-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
   (let ((logged? (and claude-repl-evidence-log-turns
-                      (agent-chat-evidence-enabled-p claude-repl-evidence-url))))
-    (agent-chat-emit-turn-evidence!
-     claude-repl-evidence-url
-     claude-repl-evidence-timeout
-     claude-repl-evidence-log-turns
-     agent-chat--session-id
-     role
-     text
-     claude-repl-agent-id
-     "emacs-claude-repl"
-     '("claude" "chat" "turn")
-     'claude-repl--evidence-session-id
-     'claude-repl--last-evidence-id)
+                      (agent-chat-evidence-enabled-p claude-repl-evidence-url)))
+        evidence-id)
+    (setq evidence-id
+          (agent-chat-emit-turn-evidence!
+           claude-repl-evidence-url
+           claude-repl-evidence-timeout
+           claude-repl-evidence-log-turns
+           agent-chat--session-id
+           role
+           text
+           claude-repl-agent-id
+           "emacs-claude-repl"
+           '("claude" "chat" "turn")
+           'claude-repl--evidence-session-id
+           'claude-repl--last-evidence-id))
     (when logged?
-      (agent-chat-note-turn-recorded))))
+      (agent-chat-note-turn-recorded))
+    evidence-id))
 
 (defun claude-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
   (if (and (stringp agent-chat--session-id)
            (not (string-empty-p agent-chat--session-id)))
-      (claude-repl--emit-turn-evidence! "user" text)
+      (progn
+        (when (fboundp 'agent-chat--flush-banked-assistant-before-operator)
+          (agent-chat--flush-banked-assistant-before-operator
+           (lambda (banked)
+             (claude-repl--emit-turn-evidence! "assistant" banked))))
+        (claude-repl--emit-turn-evidence! "user" text))
     (agent-chat-stage-pending-user-turn text)))
 
 (defun claude-repl--emit-assistant-turn-evidence! (text)
@@ -826,7 +834,8 @@ covers the WHOLE turn, not just the first segment (E-repl-continuations)."
   (let ((full (concat (or agent-chat--accum-text "") (or text ""))))
     (claude-repl--emit-turn-evidence! "assistant" full)
     (setq agent-chat--last-assistant-text full)
-    (setq agent-chat--accum-text "")))
+    (setq agent-chat--accum-text ""
+          agent-chat--accum-origin nil)))
 
 (defun claude-repl--emit-turn-commits-evidence! ()
   "Emit evidence for commits made during the current Claude turn."
@@ -1219,9 +1228,11 @@ CALLBACK is called with the final response text on completion."
                                      (if continued
                                          ;; Parked segment: DEFER — bank the output for
                                          ;; the unified evidence; no per-segment emit.
-                                         (setq agent-chat--accum-text
-                                               (concat (or agent-chat--accum-text "")
-                                                       (or result "")))
+                                         (if (fboundp 'agent-chat--bank-assistant-output)
+                                             (agent-chat--bank-assistant-output result)
+                                           (setq agent-chat--accum-text
+                                                 (concat (or agent-chat--accum-text "")
+                                                         (or result ""))))
                                        ;; Final segment: emit ONE evidence over the whole
                                        ;; unified output (emit- prepends the banked text).
                                        (claude-repl--emit-assistant-turn-evidence! result)

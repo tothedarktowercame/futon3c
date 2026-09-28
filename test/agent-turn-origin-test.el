@@ -157,3 +157,68 @@
                'p6o-session 'p6o-last))
             (should-not (assq 'harness payload)))
         (fset 'agent-turn-harness-stamp saved-function)))))
+
+(ert-deftest p12-5-1b-operator-flushes-banked-assistant-before-user ()
+  (with-temp-buffer
+    (let ((agent-chat--session-id "sid")
+          (agent-chat--accum-text "banked assistant")
+          (agent-chat--accum-origin
+           '(:kind "harness" :actor "parked-resume" :source-id "park-1"))
+          (agent-turn-origin-current '(:kind "operator" :actor "joe"))
+          (claude-repl-evidence-log-turns t)
+          (claude-repl-evidence-url "test")
+          (claude-repl-agent-id "claude-17")
+          payloads)
+      (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                ((symbol-function 'agent-chat-evidence-enabled-p)
+                 (lambda (&rest _) t))
+                ((symbol-function 'agent-chat-note-turn-recorded) #'ignore)
+                ((symbol-function 'agent-chat-evidence-post-entry-id)
+                 (lambda (_url _timeout payload)
+                   (push payload payloads)
+                   (format "evidence-%d" (length payloads)))))
+        (claude-repl--emit-user-turn-evidence! "next operator turn"))
+      (setq payloads (nreverse payloads))
+      (should (= 2 (length payloads)))
+      (let* ((assistant (car payloads))
+             (user (cadr payloads))
+             (assistant-body (alist-get 'body assistant)))
+        (should (equal "assistant" (alist-get 'role assistant-body)))
+        (should (equal "banked assistant" (alist-get 'text assistant-body)))
+        (should (equal "claude-17"
+                       (alist-get 'actor (alist-get 'origin assistant))))
+        (should-not (equal "joe"
+                           (alist-get 'actor (alist-get 'origin assistant))))
+        (should (equal "park-1"
+                       (alist-get 'source-ref (alist-get 'harness assistant))))
+        (should (equal "user" (alist-get 'role (alist-get 'body user))))
+        (should (equal "evidence-1" (alist-get 'in-reply-to user))))
+      (should (equal "" agent-chat--accum-text))
+      (should-not agent-chat--accum-origin))))
+
+(ert-deftest p12-5-1b-harness-turn-does-not-flush-bank ()
+  (with-temp-buffer
+    (let ((agent-chat--session-id "sid")
+          (agent-chat--accum-text "banked assistant")
+          (agent-chat--accum-origin
+           '(:kind "harness" :actor "parked-resume" :source-id "park-1"))
+          (agent-turn-origin-current
+           '(:kind "harness" :actor "parked-resume" :source-id "park-2"))
+          calls)
+      (cl-letf (((symbol-function 'claude-repl--emit-turn-evidence!)
+                 (lambda (role text) (push (list role text) calls) "evidence")))
+        (claude-repl--emit-user-turn-evidence! "resume"))
+      (should (equal '(("user" "resume")) calls))
+      (should (equal "banked assistant" agent-chat--accum-text)))))
+
+(ert-deftest p12-5-1b-empty-bank-emits-only-user ()
+  (with-temp-buffer
+    (let ((agent-chat--session-id "sid")
+          (agent-chat--accum-text "")
+          (agent-chat--accum-origin nil)
+          (agent-turn-origin-current '(:kind "operator" :actor "joe"))
+          calls)
+      (cl-letf (((symbol-function 'claude-repl--emit-turn-evidence!)
+                 (lambda (role text) (push (list role text) calls) "evidence")))
+        (claude-repl--emit-user-turn-evidence! "operator"))
+      (should (equal '(("user" "operator")) calls)))))

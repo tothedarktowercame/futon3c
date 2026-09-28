@@ -280,9 +280,40 @@ the previous segment's text here, so the FINAL segment's turn-evidence embeds th
 WHOLE output (E-repl-continuations within-turn model) — the per-turn pattern tag is
 built over the unified text, not just the first segment.")
 
+(defvar-local agent-chat--accum-origin nil
+  "Write-time provenance of the first segment in `agent-chat--accum-text'.
+The first segment defines the unified continuation's source.  Retaining it
+prevents a later operator turn from relabelling banked assistant output.")
+
 (defvar-local agent-chat--last-assistant-text ""
   "The complete assistant text of the most recent emitted turn-evidence, for a
 continuation to carry forward when it absorbs that segment.")
+
+(defun agent-chat--bank-assistant-output (text)
+  "Append TEXT to the deferred assistant output, retaining its first origin."
+  (when (string-empty-p (or agent-chat--accum-text ""))
+    (setq agent-chat--accum-origin (copy-tree agent-turn-origin-current)))
+  (setq agent-chat--accum-text
+        (concat (or agent-chat--accum-text "") (or text ""))))
+
+(defun agent-chat--flush-banked-assistant-before-operator (emit-fn)
+  "Emit deferred assistant output before an operator turn.
+EMIT-FN receives the banked text and must return non-nil after its evidence row
+is accepted.  Harness turns do not flush.  The bank is cleared only after an
+accepted emission, and its retained origin is dynamically restored while the
+row is built."
+  (when (and (stringp agent-chat--accum-text)
+             (not (string-empty-p agent-chat--accum-text))
+             (or (equal "operator" (plist-get agent-turn-origin-current :kind))
+                 (equal "joe" (plist-get agent-turn-origin-current :actor))))
+    (let ((agent-turn-origin-current
+           (copy-tree (or agent-chat--accum-origin
+                          '(:kind "unknown" :actor "unknown")))))
+      (when (funcall emit-fn agent-chat--accum-text)
+        (setq agent-chat--last-assistant-text agent-chat--accum-text
+              agent-chat--accum-text ""
+              agent-chat--accum-origin nil)
+        t))))
 
 (defvar-local agent-chat--insert-message-hook nil
   "Hook called with (NAME TEXT) before inserting a message.
