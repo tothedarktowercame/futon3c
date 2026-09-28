@@ -3,13 +3,20 @@
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full]
-            [futon2.aif.full-loop-runtime :as runtime]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-action :as action]
             [futon3c.wm.run4-historical-qualification :as qualification]
             [futon3c.wm.run4-historical-verification :as v]))
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- write! [f x] (spit f (str (pr-str x) "\n")) f)
+(defn- declared-effective-configuration [opts]
+  {:schema :wm/effective-run-configuration-v1
+   :run/id (:run-id opts)
+   :loaded-code-identity (or (:loaded-code-identity opts) {:status :unavailable})
+   :evaluation :not-reached
+   :policy-details? false
+   :fpi-dark? false
+   :fpi-posterior? false})
 (defn- isolated-runner-opts [store dispatches]
   {:cohort? false
    :author "zai-2" :reviewer "codex-10" :repair-reviewer "codex-10"
@@ -26,8 +33,7 @@
                           :git-dirty? false :repo-heads {}})
    :mode-flags-fn (fn [] {})
    :scan-render-fn (fn [& _] nil)
-   :effective-run-configuration-fn
-   (:effective-run-configuration-fn (runtime/production-defaults {}))
+   :effective-run-configuration-fn declared-effective-configuration
    :version-stamp-fn identity
    :repair-open-fn #(repair/open-obligations store)
    :repair-system-record-fn #(assoc % :repair/id "isolated-followup")
@@ -100,10 +106,24 @@
       (let [dispatches (atom [])
             selected (atom nil)
             actual-candidate (:historical-verification-candidate-fn ports)
+            target (first (filter #(= "repair-058" (:repair/id %))
+                                  (repair/open-obligations (.getPath store))))
+            action {:type :revalidate-historical-repair
+                    :target (:repair/id target)
+                    :repair-obligation target}
             result (full/run-opportunity!
                     (merge (isolated-runner-opts (.getPath store) dispatches)
                            ports
-                           {:historical-verification-candidate-fn
+                           {:judge-fn
+                            (constantly
+                             {:judgement
+                              {:decision
+                               {:action action
+                                :controller-score 1.0
+                                :selection-law
+                                {:applied :cascade-selection-posterior
+                                 :posterior [[action 1.0]]}}}})
+                            :historical-verification-candidate-fn
                             (fn [obligation]
                               (reset! selected (:repair/id obligation))
                               (actual-candidate obligation))}))]
