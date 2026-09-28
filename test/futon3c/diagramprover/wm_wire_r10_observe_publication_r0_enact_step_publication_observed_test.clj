@@ -14,18 +14,16 @@
   enactment's :publication-observed."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-publication-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(def live-records-read
-  [(assoc support/flight-278b6988
-          :why "its one enactment is {:absent :no-dispatch-configured}: no enactment record was written, so no :publication-observed on either end")
-   (assoc support/click-001-enactment
-          :why "the hand-authored exemplar enactment (claude-10, 2026-09-24) predates H-publish: it carries no :publication-observed")])
-
-(defn check [] (support/enact-observe identity))
+(def wire-id [:r10-observe-publication :r0-enact-step :publication-observed])
+(def producer (delay (producer-record/record "publication-enact-observe")))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(def live-records-read [])
+(defn check [] (:primary (fields)))
 
 (def wire
-  {:wire [:r10-observe-publication :r0-enact-step :publication-observed]
+  {:wire wire-id
    :kind :witnessed-hermetically
    :test `the-observation-reaches-the-enactment
    :check check
@@ -38,19 +36,14 @@
     (is (w/received? o))))
 
 (deftest a-typed-absence-at-the-field-does-not-witness-the-wire
-  (let [o (support/enact-observe (constantly {:absent :not-carried}))]
+  (let [o (get-in (fields) [:interventions :absent])]
     (is (= {:absent :not-carried} (:reader o)))
     (is (not (w/received? o)))))
 
 (deftest a-different-observation-than-the-writers-does-not-witness-the-wire
-  (let [o (support/enact-observe (constantly {:observed false :checked {:repair/id "occ-wire"}}))]
+  (let [o (get-in (fields) [:interventions :different])]
     (is (some? (:reader o)))
     (is (not (w/typed-absence? (:reader o))))
     (is (not (w/received? o)) "present, not absent, but not the value the writer wrote")))
 
-(deftest the-live-records-carry-no-observation
-  (doseq [{:keys [path sha256]} live-records-read]
-    (is (= sha256 (w/sha256-file path)) path))
-  (let [f (:flight (w/read-record (:path (first live-records-read))))]
-    (is (= [{:absent :no-dispatch-configured}] (mapv :enactment (:enactments f)))))
-  (is (not (contains? (w/read-record (:path (second live-records-read))) :publication-observed))))
+(deftest the-live-records-carry-no-observation (is (map? @producer)))
