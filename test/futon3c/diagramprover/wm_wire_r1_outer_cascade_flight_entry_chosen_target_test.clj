@@ -17,45 +17,22 @@
   cascade was not built when they were written. So the wire is
   WITNESSED-HERMETICALLY: a real select chooses, and its :chosen-target is
   handed to a real resolve-target, whose :target is the reader's value
-  under the field."
-  (:require [clojure.set :as set]
-            [futon3c.diagramprover.wm-wire-target-identity-products-10a2 :as products]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight-driver :as driver]
-            [futon2.aif.outer-cascade :as oc]
-            [futon3c.diagramprover.wm-wire :as w]))
+  under the field.
 
-(def field
-  "A field of two eligible targets and one a requisition makes ineligible
-  (outer_cascade_test.clj's fixture shape)."
-  {:considered [{:target "M-a" :kind :mission} {:target "M-b" :kind :mission}
-                {:target "M-c" :kind :mission}]
-   :feasible [{:target "M-b" :kind :mission :next-step :ready :eligible true}
-              {:target "M-c" :kind :mission :next-step :read-criteria :eligible false
-               :ineligible-reason :requisition/mooted}
-              {:target "M-a" :kind :mission :next-step :ask-interpretation :eligible true}]
-   :exclusions []})
+  The values are read from the producer record: the producer ran the real
+  select and resolve-target, and the second-layer products pipeline; this
+  reader loads no product code."
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn- choose [field seed]
-  (oc/select {:field field :seed seed :trigger :wallclock-cron}))
-
-(defn observe
-  "select (writer) over FIELD with seed 42, then resolve-target (reader)
-  handed the writer's :chosen-target; TAMPER edits the opts the reader is
-  called with (the bad cases). {:writer the written :chosen-target, :reader
-  the reader's value under the field — its result's :target, or the typed
-  absence the writer records when it cannot choose (the production shape:
-  outer-loop/plan-from-field! then plans nothing)}."
-  ([] (observe identity))
-  ([tamper]
-   (let [sel (choose field 42)
-         w (:chosen-target sel)
-         opts (tamper {:chosen-target w})
-         r (driver/resolve-target opts)]
-     {:writer w
-      :reader (:target r)})))
-
-(defn check [] (observe))
+(def wire-id [:r1-outer-cascade :flight-entry :chosen-target])
+(def stem "wm-wire-r1-outer-cascade-flight-entry-chosen-target-test-lit")
+(def producer (delay (producer-record/record stem)))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn observe [mutation]
+  (if (= mutation :none) (:primary (fields)) (get-in (fields) [:interventions mutation])))
+(defn check [] (observe :none))
 
 (def live-records-read
   (let [p #(str w/spike-dir "/" %)]
@@ -82,32 +59,27 @@
 (deftest the-chosen-target-reaches-the-flight-entry
   (let [o (check)]
     (is (contains? #{"M-a" "M-b"} (:writer o))
-        "the writer's end, from a real select: an eligible target")
-    (is (= :chosen (:target-source (driver/resolve-target {:chosen-target (:writer o)})))
-        "and the reader records the placement as chosen")
-    (is (w/received? o))))
+        "[:primary :writer] the writer's end, from a real select: an eligible target")
+    (is (= :chosen (:target-source o))
+        "[:primary :target-source] and the reader records the placement as chosen")
+    (is (w/received? o) "[:primary] the writer's value reached the reader")))
 
 (deftest an-unable-choice-is-a-typed-absence-and-fails-the-wire
   ;; an empty support: select records {:absent :no-eligible-target} and
   ;; returns no :chosen-target; plan-from-field! then plans nothing — the
   ;; reader never receives a value. Observed on the writer's real record.
-  (let [f (update field :feasible
-                  (fn [fs] (mapv #(assoc % :eligible false :ineligible-reason :requisition/mooted) fs)))
-        sel (choose f 3)]
-    (is (not (contains? sel :chosen-target)))
-    (is (= {:absent :no-eligible-target} (get-in sel [:target-selection :chosen])))
-    (is (not (w/received? {:writer (get-in sel [:target-selection :chosen])
-                           :reader (get-in sel [:target-selection :chosen])}))
+  (let [o (observe :unable)]
+    (is (false? (:chosen-target-present? o)) "[:interventions :unable :chosen-target-present?]")
+    (is (= {:absent :no-eligible-target} (:chosen o)) "[:interventions :unable :chosen]")
+    (is (not (w/received? {:writer (:chosen o) :reader (:chosen o)}))
         "a typed absence at the reader fails the wire")))
 
 (deftest a-different-target-fails-the-wire
   ;; the reader is handed a chosen target other than the one the writer wrote
-  (let [w (:chosen-target (choose field 42))
-        other (first (disj #{"M-a" "M-b"} w))
-        o (observe (fn [_] {:chosen-target other}))]
-    (is (some? (:reader o)))
+  (let [o (observe :different)]
+    (is (some? (:reader o)) "[:interventions :different :reader]")
     (is (not (w/received? o))
-        "present, not absent, but not the value the writer wrote")))
+        "[:interventions :different] present, not absent, but not the value the writer wrote")))
 
 (deftest the-live-records-carry-no-chosen-target
   (doseq [{:keys [path sha256]} live-records-read]
@@ -118,27 +90,31 @@
           (str path " carries no :chosen-target")))))
 
 (deftest target-controls-token-identity-and-store-lookup
-  (let [{:keys [tokens initial located criterion validated published]} (products/products)
+  (let [sl (:second-layer (fields))
+        {:keys [tokens initial located criterion validated published]} (:products sl)
+        targets (:targets sl)
+        locator (:locator sl)
         [a b] (:clicks tokens)
         [fa fb] (:flights tokens)
         stated #(mapv :stated (vals (get-in % [:source :criteria-by-token])))
         [la lb] (:clicks located)
         token (:token criterion)]
-    (is (= products/targets (mapv :target (:flights tokens))))
+    (is (true? (:flights-equal-modulo-target? sl)) "[:second-layer :flights-equal-modulo-target?]")
+    (is (= targets (mapv :target (:flights tokens))) "[:second-layer :products :tokens :flights :target]")
     (is (= (dissoc fa :target) (dissoc fb :target))
         "Only chosen-target changed: path, text reader, store and all provenance are fixed.")
-    (is (= 6 (count (:wants a)) (count (:wants b))))
-    (is (= (set (stated a)) (set (stated b))))
-    (is (= 6 (count (stated a))))
-    (is (empty? (set/intersection (set (:wants a)) (set (:wants b)))))
-    (is (= :valid (:status validated)))
-    (is (= products/locator (get-in published [:locators token :locator])))
-    (is (every? #(empty? (:locators %)) (:clicks initial)))
-    (is (= products/locator (get-in la [:locators token])))
-    (is (empty? (:locators lb)))
-    (is (= [token] (get-in la [:source :machine-located])))
-    (is (empty? (get-in lb [:source :machine-located])))
-    (is (= (:wants (first (:clicks initial))) (:wants la)))
-    (is (= (:wants (second (:clicks initial))) (:wants lb)))
+    (is (= 6 (count (:wants a)) (count (:wants b))) "[:second-layer :tokens :clicks :wants]")
+    (is (= (set (stated a)) (set (stated b))) "[:second-layer :tokens :clicks :stated]")
+    (is (= 6 (count (stated a))) "[:second-layer :tokens :clicks :stated count]")
+    (is (nil? (some (set (:wants b)) (:wants a))) "[:second-layer :tokens :clicks :wants] disjoint")
+    (is (= :valid (:status validated)) "[:second-layer :products :validated :status]")
+    (is (= locator (get-in published [:locators token :locator])) "[:second-layer :products :published :locators]")
+    (is (every? #(empty? (:locators %)) (:clicks initial)) "[:second-layer :products :initial :clicks :locators]")
+    (is (= locator (get-in la [:locators token])) "[:second-layer :products :located :clicks :locators]")
+    (is (empty? (:locators lb)) "[:second-layer :products :located :clicks 1 :locators]")
+    (is (= [token] (get-in la [:source :machine-located])) "[:second-layer :products :located :machine-located]")
+    (is (empty? (get-in lb [:source :machine-located])) "[:second-layer :products :located :machine-located 1]")
+    (is (= (:wants (first (:clicks initial))) (:wants la)) "[:second-layer :wants initial->located]")
+    (is (= (:wants (second (:clicks initial))) (:wants lb)) "[:second-layer :wants initial->located 2]")
     (println :target-tokens [(:wants a) (:wants b)]
              :machine-locators [(:locators la) (:locators lb)])))
