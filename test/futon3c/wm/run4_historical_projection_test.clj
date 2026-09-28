@@ -68,6 +68,32 @@
            (:reason (try (sut/projection "click-1" (assoc result :outcome :grounded-change)) nil
                          (catch Exception e (ex-data e))))))))
 
+(deftest malformed-historical-result-names-what-failed
+  (let [{:keys [result]} (fixture)
+        refusal (fn [click-id r]
+                  (try (sut/projection click-id r) nil
+                       (catch clojure.lang.ExceptionInfo e
+                         (select-keys (ex-data e)
+                                      [:reason :failed :outcome :failure-kind]))))]
+    (is (= {:reason :malformed-historical-result
+            :failed [:outcome]
+            :outcome :historical-verification-refused
+            :failure-kind :historical-verification-transition-invalid}
+           (refusal "click-1"
+                    (-> result
+                        (assoc :outcome :historical-verification-refused)
+                        (assoc-in [:data :failure-kind]
+                                  :historical-verification-transition-invalid)))))
+    (is (= {:reason :malformed-historical-result
+            :failed [:outcome :attempt-id]
+            :outcome :grounded-change
+            :failure-kind {:absent :no-failure-kind-on-result}}
+           (refusal "click-1"
+                    (-> result
+                        (assoc :outcome :grounded-change)
+                        (update :data dissoc :failure-kind)
+                        (dissoc :attempt-id)))))))
+
 (deftest refused-cohort-preserves-the-closed-execution-cause
   (let [packet-root "holes/labs/wm-contract/runs/RUN4-repair058-admission-2026-09-11"
         inputs (edn/read-string (slurp (str packet-root "/LIVE-HISTORICAL-INPUTS.edn")))

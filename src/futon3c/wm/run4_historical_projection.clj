@@ -37,14 +37,28 @@
   (let [requested (get-in result [:checkpoints :selection :ground :run4/requested-pin])
         enacted (get-in result [:checkpoints :selection :ground :run4/enacted-action])]
     (when (= :revalidate-historical-repair (:type enacted))
-      (when-not (and (= :historical-verification-awaiting-validation (:outcome result))
-                     (nonblank? click-id) (nonblank? (:run/id result))
-                     (nonblank? (:attempt-id result))
-                     (= :authenticated-not-enacted (:status requested))
-                     (map? (:identity requested))
-                     (sha? (get-in requested [:identity :pin-sha256]))
-                     (map? enacted))
-        (refuse! :malformed-historical-result))
+      ;; The refusal names the conditions that failed, and the outcome and
+      ;; failure kind the runner returned, so a reader need not rerun the click.
+      (when-let [failed (seq (cond-> []
+                               (not= :historical-verification-awaiting-validation
+                                     (:outcome result))
+                               (conj :outcome)
+                               (not (nonblank? click-id)) (conj :click-id)
+                               (not (nonblank? (:run/id result))) (conj :run/id)
+                               (not (nonblank? (:attempt-id result))) (conj :attempt-id)
+                               (not= :authenticated-not-enacted (:status requested))
+                               (conj :requested-pin-status)
+                               (not (map? (:identity requested)))
+                               (conj :requested-pin-identity)
+                               (not (sha? (get-in requested [:identity :pin-sha256])))
+                               (conj :requested-pin-sha256)
+                               (not (map? enacted)) (conj :enacted-action)))]
+        (refuse! :malformed-historical-result
+                 {:failed (vec failed)
+                  :outcome (:outcome result)
+                  :failure-kind (if (contains? (:data result) :failure-kind)
+                                  (get-in result [:data :failure-kind])
+                                  {:absent :no-failure-kind-on-result})}))
       (let [path (:run-record result)
             file (when (nonblank? path) (.getCanonicalFile (io/file path)))
             bytes (try (java.nio.file.Files/readAllBytes (.toPath file))
