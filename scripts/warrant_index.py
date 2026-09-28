@@ -341,6 +341,18 @@ def change_cause(row, change):
     return ('file', None, None, change.get('path'))
 
 
+def own_test_file_change(row):
+    """The path of the test's own source file when the row reports it changed."""
+    suffix = '/' + row['namespace'].replace('.', '/').replace('-', '_') + '.clj'
+    for change in row.get('changed', []):
+        path = change.get('file') or change.get('path') or ''
+        if (change.get('kind') in ('whole-file-changed', 'file-missing')
+                or change.get('reason') in ('hash-mismatch', 'unreadable')) \
+                and path.endswith(suffix):
+            return path
+    return None
+
+
 def impact_rows(rows, limit=10, file_rule=FILE_RULE_NAMESPACES):
     groups = {}
     stale = set()
@@ -349,6 +361,13 @@ def impact_rows(rows, limit=10, file_rule=FILE_RULE_NAMESPACES):
         if row['class'] != 'stale' or namespace in file_rule:
             continue
         stale.add(namespace)
+        own = own_test_file_change(row)
+        if own:
+            # The test itself was edited. What it reaches now differs from what
+            # was recorded, so the check also reports every definition gained
+            # or lost; those follow from the edit and are not causes.
+            groups.setdefault(('own-test-file', None, None, own), set()).add(namespace)
+            continue
         for change in row.get('changed', []):
             key = change_cause(row, change)
             groups.setdefault(key, set()).add(namespace)

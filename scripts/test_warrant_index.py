@@ -289,6 +289,20 @@ class IndexTest(unittest.TestCase):
                           'causes-over-limit': 1}, result['totals'])
         self.assertFalse(wi.impact_rows(rows[:10], 10)['causes'][0]['over-limit'])
 
+    def test_impact_attributes_an_edited_test_to_its_own_file(self):
+        own = '/repo/test/wire/reader_test.clj'
+        rows = [{'namespace': 'wire.reader-test', 'class': 'stale', 'basis': 'definitions',
+                 'changed': [{'kind': 'definition-missing',
+                              'definition': ['product.core', 'shared', '/repo/core.clj']},
+                             {'kind': 'whole-file-changed', 'file': own}]},
+                {'namespace': 'wire.other-test', 'class': 'stale', 'basis': 'definitions',
+                 'changed': [{'kind': 'whole-file-changed',
+                              'file': '/repo/resources/data.edn'}]}]
+        result = wi.impact_rows(rows, 10)
+        self.assertEqual([('own-test-file', own, ['wire.reader-test']),
+                          ('whole-file', '/repo/resources/data.edn', ['wire.other-test'])],
+                         [(c['kind'], c['cause'], c['namespaces']) for c in result['causes']])
+
     def test_impact_groups_two_definitions_and_file_basis(self):
         rows = []
         for index in range(11):
