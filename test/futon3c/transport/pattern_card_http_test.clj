@@ -72,6 +72,9 @@
          {:hyperedges (vec (filter #(= :pattern-card/selection (:hx/type %))
                                    (vals @docs)))}
 
+         (str/includes? path "type=grant%2Frecord")
+         {:hyperedges (vec (filter #(= :grant/record (:hx/type %)) (vals @docs)))}
+
          (str/includes? path "type=act%2Fwithdrawal")
          {:hyperedges (vec (filter #(= :act/withdrawal (:hx/type %))
                                    (vals @docs)))}
@@ -285,3 +288,24 @@
         (is (= 403 (:status response)))
         (is (= "no-grant" (:reason (response-body response))))
         (is (= before (count (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest provisional-grant-is-found-in-the-store-without-configuration
+  ;; Setting the id by env or alter-var-root does not survive a reload of
+  ;; http.clj, so with no override the route looks the grant up.
+  (let [{:keys [request! docs calls]} (fake-store)
+        h (handler)]
+    (swap! docs assoc "act:xiang-grant" (provisional-grant "act:xiang-grant"))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id nil]
+      (select-card! h "agent-a" "session-a" "card/a"
+                    "lookup-select" "2026-09-28T11:00:00Z")
+      (let [response (h (request "/api/alpha/withdrawal/provisional"
+                                 {:caller "xiang" :agent "agent-a" :session "session-a"
+                                  :interpretation-id "interpretation:1"
+                                  :interpretation-version 1
+                                  :idempotency-key "lookup"}))]
+        (is (= 200 (:status response)))
+        (is (= {:grant "act:xiang-grant"}
+               (get-in (response-body response) [:record :act/stamp :authority])))
+        (is (some #(re-find #"type=grant%2Frecord&end=agent%3Axiang" (second %))
+                  @calls))))))

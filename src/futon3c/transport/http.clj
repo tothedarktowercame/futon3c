@@ -77,6 +77,7 @@
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
+            [futon3c.agency.rule-record :as rule-record-store]
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
@@ -9239,9 +9240,33 @@
       "act:32d338a3-ef31-49d9-b12c-1a17bb486ae2"))
 
 (def xiang-provisional-grant-id
-  "The explicit grant for inferred provisional withdrawals. Nil fails closed;
-   it is configured only after the corresponding grant record exists."
+  "Optional override for the inferred-withdrawal grant id. Nil (the default)
+   means `provisional-grant-id` finds the caller's grant in futon1b: an env
+   var cannot be set in a running JVM, and a value set by alter-var-root
+   would be lost on the next reload of this namespace."
   (System/getenv "FUTON3C_XIANG_PROVISIONAL_GRANT_ID"))
+
+(defn- provisional-grant-id
+  "The one stored provisional-only withdrawal grant naming CALLER as grantee,
+   or nil. Two or more is refused rather than chosen between."
+  [base caller]
+  (or xiang-provisional-grant-id
+      (let [path (str "/api/alpha/hyperedges?type=grant%2Frecord&end="
+                      (java.net.URLEncoder/encode (str "agent:" caller) "UTF-8")
+                      "&limit=1000&include-total=false")
+            grants (->> (try (:hyperedges (rule-record-store/request! base "GET" path nil))
+                             (catch clojure.lang.ExceptionInfo _ nil))
+                        (filter (fn [g]
+                                  (let [p (:hx/props g)]
+                                    (and (= caller (:grant/grantee p))
+                                         (true? (get-in p [:grant/scope :provisional-only]))
+                                         (some #{:act/withdrawal}
+                                               (get-in p [:grant/scope :act-kinds])))))))]
+        (case (count grants)
+          0 nil
+          1 (:hx/id (first grants))
+          (throw (ex-info "More than one provisional grant names this caller"
+                          {:reason :ambiguous-grant :field :act/stamp}))))))
 
 (defn- pattern-card-stamp [caller]
   (act-stamp/stamp caller caller
@@ -9342,10 +9367,11 @@
     (if-not (map? payload)
       (json-response 400 {:ok false :reason :invalid-json})
       (try
-        (when-not xiang-provisional-grant-id
-          (throw (ex-info "No grant is configured for inferred withdrawals"
-                          {:reason :no-grant :field :act/stamp})))
         (let [caller (required-pattern-card-field! payload :caller)
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              grant-id (or (provisional-grant-id base caller)
+                           (throw (ex-info "No grant covers inferred withdrawals by this caller"
+                                           {:reason :no-grant :field :act/stamp})))
               agent (required-pattern-card-field! payload :agent)
               session (required-pattern-card-field! payload :session)
               interpretation-id (required-pattern-card-field! payload :interpretation-id)
@@ -9375,7 +9401,7 @@
               card-request {:record record
                             :idempotency-key (pattern-card-idempotency-key payload)}
               stamp (act-stamp/stamp caller "joe"
-                                     {:grant xiang-provisional-grant-id}
+                                     {:grant grant-id}
                                      :declared)
               result (pattern-card-cli/write-withdrawal!
                       (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
