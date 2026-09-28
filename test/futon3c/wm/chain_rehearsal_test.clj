@@ -40,7 +40,10 @@
   (reg/reset-registry!)
   (reg/register-agent!
    {:agent-id {:id/value "war-machine" :id/type :apparatus}
-    :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}}))
+    :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}})
+  (reg/register-agent!
+   {:agent-id {:id/value "rehearsal-reviewer" :id/type :agent}
+    :type :agent :invoke-fn (fn [_] nil) :capabilities [] :metadata {}}))
 
 (defn- fixture-repo [run-out]
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
@@ -69,7 +72,7 @@
   (case sym
     futon2.aif.full-loop-runner/config
     (resolve 'futon2.aif.full-loop-runner/config)
-    futon2.aif.full-loop-runner/run-opportunity!
+    futon2.aif.full-loop-runtime/run-opportunity!
     (resolve 'futon2.aif.full-loop-runner/run-opportunity!)
     futon3c.wm.code-identity/status identity/status
     futon3c.peripheral.live-wm-selection/validated-selection
@@ -102,6 +105,9 @@
       (is (true? (:stable? loaded))))
     (load-file observer-source)
     (binding [service/*resolve-var* resolver
+              service/*roster-fn*
+              (fn [_]
+                {:rehearsal-reviewer {:status :idle :invoke-ready? true}})
               service/*click-run-binding-dir* binding-dir
               budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
       (let [h (handler)
@@ -118,7 +124,10 @@
                                                        :pids-current 12})
                            :journal-sample (constantly {:readable? true
                                                         :native-thread-markers []})
-                           :sleep-ms (fn [_] (Thread/sleep 5))})))
+                           ;; A related worker-entry timing run measured 9203 ms;
+                           ;; 25 ms preserves the observer's finite 600-poll
+                           ;; bound while allowing a 15-second entry window.
+                           :sleep-ms (fn [_] (Thread/sleep 25))})))
       (is (= "clean" (:resource-status @observed-receipt))))
     (is (.isFile (io/file run-out)))
     (is (= :grounded-no-change
