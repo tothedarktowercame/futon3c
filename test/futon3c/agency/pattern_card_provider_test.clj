@@ -120,10 +120,42 @@
                                :session "target" :pattern-id "card/old"}}
         result (pattern/refresh-cards!
                 "claude-17" "target"
-                (fn [type _] (if (= :pattern-card/selection type)
-                               [missing-at valid] [])))]
+                (fn [type _endpoint _system-as-of]
+                  (if (= :pattern-card/selection type)
+                    [missing-at valid] [])))]
     (is (= "act:card" (get-in result [:result :active :id])))
     (is (= [{:hx/id "act:old" :reason :missing-at}] (:unreadable result)))))
+
+(deftest refresh-filters-selection-by-session-and-withdrawal-by-target
+  (let [calls (atom [])
+        selection {:hx/id "act:card" :hx/type :pattern-card/selection
+                   :hx/props {:author "claude-17" :agent "claude-17"
+                              :session "target" :at "2026-09-27T19:58:00Z"
+                              :pattern-id "card/chosen"}}
+        other-agent {:hx/id "act:other" :hx/type :pattern-card/selection
+                     :hx/props {:author "agent-b" :agent "agent-b"
+                                :session "target" :at "2026-09-27T19:58:00Z"
+                                :pattern-id "card/other"}}
+        withdrawal {:hx/id "act:withdraw" :hx/type :act/withdrawal
+                    :hx/props {:author "claude-17" :at "2026-09-27T19:59:00Z"
+                               :target "act:card" :status :effective
+                               :basis {:kind :self}}}
+        result (pattern/refresh-cards!
+                "claude-17" "target"
+                (fn [type endpoint _system-as-of]
+                  (swap! calls conj [type endpoint])
+                  (cond
+                    (= [type endpoint]
+                       [:pattern-card/selection "session:target"])
+                    [selection other-agent]
+                    (= [type endpoint] [:act/withdrawal "act:card"])
+                    [withdrawal]
+                    :else (throw (ex-info "unscoped query" {:type type
+                                                             :endpoint endpoint})))))]
+    (is (= [[:pattern-card/selection "session:target"]
+            [:act/withdrawal "act:card"]]
+           @calls))
+    (is (nil? (get-in result [:result :active])))))
 
 (deftest older-background-result-cannot-overwrite-immediate-publication
   (pattern/publish-card-result! "claude-17" "target"

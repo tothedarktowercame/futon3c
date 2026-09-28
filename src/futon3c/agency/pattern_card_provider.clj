@@ -174,30 +174,43 @@
 
 (defn- encode [value] (URLEncoder/encode (str value) "UTF-8"))
 
-(defn- default-card-query [type system-as-of]
+(defn- default-card-query [type endpoint system-as-of]
   (let [path (str "/api/alpha/hyperedges?type=" (encode (subs (str type) 1))
+                  "&end=" (encode endpoint)
                   "&limit=1000&include-total=false&valid-as-of=" (encode system-as-of)
                   "&system-as-of=" (encode system-as-of))]
     (:hyperedges (hx-store/request! "http://127.0.0.1:7073" "GET" path nil))))
 
 (defn refresh-cards!
-  "Refresh an exact-seat card projection. QUERY-FN receives [type system-as-of]
-   and returns hyperedges. Malformed historical documents are reported in the
-   cache entry and excluded from the projection."
+  "Refresh an exact-seat card projection. QUERY-FN receives
+   [type endpoint system-as-of] and returns hyperedges. Selections are read by
+   exact session endpoint, then withdrawals by each matching selection act id.
+   Malformed historical documents are reported in the cache entry and excluded
+   from the projection."
   ([agent session] (refresh-cards! agent session default-card-query))
   ([agent session query-fn]
    (let [system-as-of (str (Instant/now))
-         edges (mapcat #(or (query-fn % system-as-of) [])
-                       [:pattern-card/selection :act/withdrawal])
-         parsed (mapv (fn [edge]
-                        (try
-                          {:record (card-record/hyperedge->record edge)}
-                          (catch clojure.lang.ExceptionInfo e
-                            {:unreadable {:hx/id (:hx/id edge)
-                                          :reason (:reason (ex-data e))}})))
-                      edges)
-         records (keep :record parsed)
-         unreadable (vec (keep :unreadable parsed))
+         read-edge (fn [edge]
+                     (try
+                       {:record (card-record/hyperedge->record edge)}
+                       (catch clojure.lang.ExceptionInfo e
+                         {:unreadable {:hx/id (:hx/id edge)
+                                       :reason (:reason (ex-data e))}})))
+         selection-edges (or (query-fn :pattern-card/selection
+                                       (str "session:" session) system-as-of) [])
+         parsed-selections (mapv read-edge selection-edges)
+         seat-selections (->> parsed-selections
+                              (keep :record)
+                              (filter #(and (= (str agent) (str (:agent %)))
+                                            (= (str session) (str (:session %)))))
+                              vec)
+         withdrawal-edges (mapcat #(or (query-fn :act/withdrawal
+                                                  (:id %) system-as-of) [])
+                                  seat-selections)
+         parsed-withdrawals (mapv read-edge withdrawal-edges)
+         records (concat seat-selections (keep :record parsed-withdrawals))
+         unreadable (into (vec (keep :unreadable parsed-selections))
+                          (keep :unreadable parsed-withdrawals))
          result (card-acts/card-as-of records (str agent) (str session) system-as-of)
          entry {:result result :observed-at system-as-of :unreadable unreadable}]
      (cache-card-entry! agent session entry)
