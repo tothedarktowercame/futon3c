@@ -1,39 +1,22 @@
 (ns futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test
   (:require [clojure.test :refer [deftest is]]
-            [futon2.aif.belief :as belief]
-            [futon2.report.war-machine :as wm]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-fold-out-support :as support]
-            [futon3c.diagramprover.wm-wire-fold-in-support :as fold-in]
-            [futon3c.diagramprover.wm-wire-measured-support :as measured]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn observe [mutation]
-  (let [root (w/tmp-dir "belief-prediction-wire-")
-        predict belief/predict-observation
-        captured (atom [])
-        other (wm/apply-arena-belief-events
-               (belief/initial-belief-state ["known"])
-               [(assoc (first fold-in/events) :type :foreclosed)])]
-    (try
-      (with-redefs [belief/predict-observation
-                    (fn [& args]
-                      ;; Observe only judge's three-argument call. The real reader's
-                      ;; recursive arity calls still run their original bodies.
-                      (if (= 3 (count args))
-                        (let [[value tags context] args
-                              received (case mutation :none value :absent nil :different other)
-                              expected (predict value tags context)
-                              actual (predict received tags context)]
-                          (swap! captured conj {:writer value :reader received
-                                                :expected-predictions expected
-                                                :predictions actual})
-                          actual)
-                        (apply predict args)))]
-        (support/judge root {:annotation-graph {:health 0.9}}))
-      (assoc (first @captured) :calls (count @captured))
-      (finally (measured/cleanup root)))))
+;; Converted to read the wire ends from the content-addressed
+;; measured-cleanup producer record; this reader loads no product code.
+(def producer (delay (producer-record/record "measured-cleanup")))
 
-(defn check [] (observe :none))
+(def live-records-read (:live-records-read @producer))
+
+(defn assert-live-pins []
+  (doseq [{:keys [path sha256]} live-records-read]
+    (assert (= sha256 (w/sha256-file path)))
+    (let [r (w/read-record path)]
+      (assert (not-any? #(and (map? %) (some (partial contains? %) [:carried-mu-post :loop-belief :channel-prediction :conditioning-steps]))
+                        (tree-seq coll? seq r))))))
+
+(defn check [] (get-in @producer [:cases :none]))
 (def wire
   {
    :second-layer {:test 'futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/different-belief-changes-the-real-prediction :kind :value-varying
@@ -42,11 +25,11 @@
    :kind :witnessed-hermetically
    :test `real-judge-hands-belief-to-real-predictor
    :check check
-   :live-records-read support/live-records-read
-   :note "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls."})
+   :live-records-read live-records-read
+   :note "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls. The values are read from the measured-cleanup producer record."})
 
 (deftest real-judge-hands-belief-to-real-predictor
-  (support/assert-live-pins)
+  (assert-live-pins)
   (let [o (check)]
     (is (pos? (:calls o)))
     (is (seq (:writer o)))
@@ -55,13 +38,13 @@
     (is (number? (get-in o [:predictions :annotation-health :mean])))))
 
 (deftest missing-belief-is-not-a-wire-witness
-  (let [o (observe :absent)]
+  (let [o (get-in @producer [:cases :absent])]
     (is (pos? (:calls o)))
     (is (not (w/received? o)))
     (is (not= (:expected-predictions o) (:predictions o)))))
 
 (deftest different-belief-changes-the-real-prediction
-  (let [o (observe :different)]
+  (let [o (get-in @producer [:cases :different])]
     (is (pos? (:calls o)))
     (is (not (w/received? o)))
     (is (not= (get-in o [:expected-predictions :annotation-health])
