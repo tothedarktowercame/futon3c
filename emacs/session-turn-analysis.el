@@ -26,6 +26,10 @@ no lexical cues; `never' records structure without requesting interpretation."
                     (file-name-directory (or load-file-name buffer-file-name))))
 (defvar-local session-mode--last-analysis-request nil)
 
+(defvar session-mode--withdrawal-disabled-messaged-sessions
+  (make-hash-table :test #'equal)
+  "Sessions already told once that inferred withdrawals lack a grant.")
+
 (defconst session-mode-turn-interpretation-version 3
   "Version of the delegated interpretation brief and its withdraw semantics.")
 
@@ -141,6 +145,7 @@ reached the buffer. The surface itself is kept in the record's metadata."
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
+                      (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
                       (quotes . ,(vconcat session-mode--last-quotes))
                       (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
@@ -461,6 +466,115 @@ bell was accepted, not that the turn was interpreted.")
   (call-process "python3" nil nil nil
                 session-mode--dispatch-reaper "--set-job" path job-id))
 
+(defun session-mode--withdrawal-response-reason (response)
+  "Return RESPONSE's typed reason as a string, when present."
+  (let* ((body (plist-get response :json))
+         (reason (and (listp body) (plist-get body :reason))))
+    (when reason (replace-regexp-in-string "^:" "" (format "%s" reason)))))
+
+(defun session-mode--write-analysis-record (path record)
+  "Atomically replace PATH with JSON RECORD."
+  (let ((temp (make-temp-file
+               (expand-file-name ".turn-withdrawal-" (file-name-directory path)))))
+    (unwind-protect
+        (progn
+          (with-temp-file temp
+            (let ((coding-system-for-write 'utf-8-unix))
+              (insert (json-encode record) "\n")))
+          (rename-file temp path t)
+          (setq temp nil))
+      (when (and temp (file-exists-p temp)) (delete-file temp)))))
+
+(defun session-mode--withdrawal-fragments (analysis)
+  "Return (FRAGMENT-ID . FRAGMENT) pairs for withdraw intents in ANALYSIS."
+  (let (found)
+    (dolist (sentence (alist-get 'sentences analysis))
+      (let ((sid (alist-get 'id sentence)) (index 0))
+        (dolist (fragment (alist-get 'fragments sentence))
+          (when (equal (alist-get 'intent fragment) "withdraw")
+            (push (cons (format "%s:%d" sid index) fragment) found))
+          (setq index (1+ index)))))
+    (nreverse found)))
+
+(defun session-mode--post-inferred-withdrawal (record-id fragment-id record fragment)
+  "POST one withdraw FRAGMENT and return its durable outcome alist."
+  (let* ((target (alist-get 'target fragment))
+         (agent (alist-get 'agent_id record))
+         (session (alist-get 'session_id record))
+         (version (alist-get 'interpretation_version record))
+         (idempotency-key (format "%s:%s" record-id fragment-id)))
+    (if (null target)
+        `((fragment_id . ,fragment-id) (status . 422)
+          (reason . "target-unresolved")
+          (idempotency_key . ,idempotency-key))
+      (let* ((payload `((caller . "xiang") (agent . ,agent) (session . ,session)
+                        (interpretation-id . ,(or (alist-get 'turn_id record) record-id))
+                        (interpretation-version . ,version)
+                        (idempotency-key . ,idempotency-key)))
+             (payload (if (equal target "seat-active-card")
+                          payload
+                        (append payload `((target . ,target)))))
+             (response
+              (condition-case err
+                  (if (fboundp 'agent-chat-evidence-request-json)
+                      (agent-chat-evidence-request-json
+                       "POST"
+                       (format "%s/api/alpha/withdrawal/provisional"
+                               (string-remove-suffix "/" agent-chat-agency-base-url))
+                       3 payload)
+                    (list :status 0 :error "HTTP helper unavailable"))
+                (error (list :status 0 :error (error-message-string err)))))
+             (status (or (plist-get response :status) 0))
+             (body (plist-get response :json))
+             (reason (or (session-mode--withdrawal-response-reason response)
+                         (plist-get response :error)))
+             (effect-id (or (plist-get (plist-get body :record) :id)
+                            (plist-get body :effect-id))))
+        `((fragment_id . ,fragment-id) (status . ,status)
+          (reason . ,reason) (effect_id . ,effect-id)
+          (idempotency_key . ,idempotency-key))))))
+
+(defun session-mode--process-withdrawals (path)
+  "Apply newly analysed withdraw interpretations for operator record PATH.
+Every outcome is written onto PATH.  This function never changes analysis
+health and never retries a failed route call."
+  (let ((analysis-path (concat path ".analysis.json")))
+    (when (and (file-exists-p path) (file-exists-p analysis-path))
+      (let* ((json-object-type 'alist) (json-array-type 'list)
+             (record (json-read-file path))
+             (analysis (json-read-file analysis-path))
+             (operator-p (equal (alist-get 'origin record) "operator"))
+             (record-id (file-name-base path))
+             (existing (alist-get 'withdrawal_effects record))
+             (done (mapcar (lambda (outcome) (alist-get 'fragment_id outcome)) existing))
+             outcomes)
+        (when operator-p
+          (dolist (pair (session-mode--withdrawal-fragments analysis))
+            (unless (member (car pair) done)
+              (let ((outcome (session-mode--post-inferred-withdrawal
+                              record-id (car pair) record (cdr pair))))
+                (when (and (= (or (alist-get 'status outcome) 0) 403)
+                           (equal (alist-get 'reason outcome) "no-grant")
+                           (not (gethash (alist-get 'session_id record)
+                                         session-mode--withdrawal-disabled-messaged-sessions)))
+                  (puthash (alist-get 'session_id record) t
+                           session-mode--withdrawal-disabled-messaged-sessions)
+                  (message "象: inferred withdrawals are off until Joe's grant exists"))
+                (push outcome outcomes))))
+          (when outcomes
+            (setf (alist-get 'withdrawal_effects record)
+                  (vconcat (append existing (nreverse outcomes))))
+            (session-mode--write-analysis-record path record)))))))
+
+(defun session-mode--handle-reap-output (path out)
+  "Handle successful analysis reap OUT for PATH without coupling side effects."
+  (when (string-match-p "analyzed" out)
+    (condition-case nil
+        (session-mode--process-withdrawals path)
+      (error nil))
+    (session-mode--set-analysis-health
+     'ok (format "%s: analysed" (file-name-base path)))))
+
 (defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
@@ -508,8 +622,7 @@ that found it running left the lighter's health unchanged for good."
                           'failing (format "%s: job status unreachable"
                                            (file-name-base path))))
                         ((string-match-p "analyzed" out)
-                         (session-mode--set-analysis-health
-                          'ok (format "%s: analysed" (file-name-base path))))
+                         (session-mode--handle-reap-output path out))
                         ((and (string-match-p "running" out)
                               (> (or tries 3) 1))
                          (run-at-time session-mode-analysis-reap-after nil
