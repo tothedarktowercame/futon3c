@@ -151,7 +151,10 @@
       (is (empty? @tasks))
       (is (= :submitted (sut/submit-doc-section-activations!
                          "/repo" "futon3c" {:sha "abc" :ts 1})))
-      (is (= 1 (count @tasks))))))
+      (is (= :submitted (sut/submit-doc-section-activations!
+                         "/repo" "futon3c-d" {:sha "abc" :ts 1}))
+          "the label the live watcher uses")
+      (is (= 2 (count @tasks))))))
 
 (deftest doc-section-hook-caps-large-rewrites
   (let [submitted (atom [])

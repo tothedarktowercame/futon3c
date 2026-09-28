@@ -308,7 +308,9 @@
   "Queue section discovery for one futon3c commit. Git reads and retrievals
    both happen off the ingestion thread. Other repositories are ignored."
   [repo repo-label commit]
-  (when (= "futon3c" repo-label)
+  ;; The live watcher labels this repository "futon3c-d"; the tests used
+  ;; "futon3c". Matching only the latter meant the hook never fired live.
+  (when (contains? #{"futon3c" "futon3c-d"} repo-label)
     (artifact-activation/submit-task!
      #(try (process-doc-section-activations! repo commit)
            ;; The executor would otherwise drop the exception with the Future.
