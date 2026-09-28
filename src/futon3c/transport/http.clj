@@ -9690,10 +9690,11 @@
                                           base :act/withdrawal (:id %))
                                         disclosures))
           withdrawals (into [] (keep withdrawal-record-from-edge) withdrawal-edges)
-          interpretation-page (rule-record-store/request!
-                               base "GET"
-                               "/api/alpha/evidence?type=interpretation&limit=1000" nil)
-          interpretations (vec (or (:entries interpretation-page) []))
+          ;; No stored record type holds an interpretation that names a
+          ;; disclosure: 象's withdraw readings live in local analysis files and
+          ;; target the seat's active card. Reading an empty population would
+          ;; make :negation-without-effect pass vacuously, so say it is not run.
+          interpretations []
           routing-jobs (into []
                              (keep (comp disclosure-audit-routing-job
                                          disclosure-audit/routing-job-id :id))
@@ -9714,6 +9715,8 @@
                       :routing-jobs (count routing-jobs)
                       :stored-acts (count stored-act-ids)}
                :report-text-available? (contains? job :result)
+               :negation-check {:run? false
+                                :reason :no-interpretation-source}
                :read-at (str (Instant/now))}})))
 
 (defn handle-disclosure-audit [request]

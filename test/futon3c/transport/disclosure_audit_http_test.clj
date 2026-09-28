@@ -42,8 +42,6 @@
             {:hyperedges [(disclosure/->hyperedge d)]}
             (str/includes? path "type=act%2Fwithdrawal")
             {:hyperedges [(withdrawal/record->hyperedge w)]}
-            (str/includes? path "/api/alpha/evidence?type=interpretation")
-            {:entries []}
             (str/ends-with? path "act%3Agrant")
             {:hx/id "act:grant" :hx/type :grant/record}
             (str/ends-with? path "act%3Aghost")
@@ -66,4 +64,8 @@
         (is (= [{:id "act:ghost" :reason "disclosure-unrecorded"}]
                (:findings result)))
         (is (= 1 (get-in result [:basis :rows :routing-jobs])))
+        ;; No interpretation source exists yet; the route says so rather than
+        ;; reading an empty population and passing the check vacuously.
+        (is (= {:run? false :reason "no-interpretation-source"}
+               (get-in result [:basis :negation-check])))
         (is (every? #(= "GET" (first %)) @calls))))))
