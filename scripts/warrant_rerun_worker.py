@@ -58,19 +58,35 @@ def claim(db, limit, excluded=()):
 def test_file(namespace):
     return "test/" + namespace.replace("-", "_").replace(".", "/") + ".clj"
 
+def repo_of(path):
+    """The git checkout that holds PATH, or None."""
+    directory = os.path.dirname(path)
+    while directory and directory != "/":
+        if os.path.exists(os.path.join(directory, ".git")):
+            return directory
+        directory = os.path.dirname(directory)
+    return None
+
 def dirty_path(root, previous, namespace):
+    """First modified tracked file among the recorded files, in whichever
+    checkout holds it. A test's recorded files span several repositories."""
     if previous:
         payload = warrant_index.edn(previous[4])
         paths = list(warrant_index.recorded_files(
             {"repo-root": previous[1]}, payload, root).keys())
-        paths = [os.path.relpath(p, root) for p in paths]
     else:
-        paths = [test_file(namespace)]
-    if not paths:
-        return None
-    result = subprocess.run(["git", "status", "--porcelain", "--", *paths], cwd=root,
-                            env=clean_git_env(), text=True, capture_output=True, check=True)
-    return result.stdout.splitlines()[0][3:] if result.stdout else None
+        paths = [os.path.join(root, test_file(namespace))]
+    by_repo = {}
+    for path in paths:
+        repo = repo_of(path)
+        if repo:
+            by_repo.setdefault(repo, []).append(os.path.relpath(path, repo))
+    for repo, relative in sorted(by_repo.items()):
+        result = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no", "--", *relative],
+                                cwd=repo, env=clean_git_env(), text=True, capture_output=True, check=True)
+        if result.stdout:
+            return os.path.join(repo, result.stdout.splitlines()[0][3:])
+    return None
 
 def finish(db_path, request_id, state, entry=None, detail=None):
     with connect(db_path) as db:
@@ -111,11 +127,21 @@ def process_one(db_path, request_id, runner, log_dir):
     except subprocess.TimeoutExpired:
         code = 124
     with connect(db_path) as db: after = latest(db, namespace)
-    entry = after[0] if after and after[5] > requested else None
+    # A run is new when its entry differs from the one seen before the child
+    # started. (ran_order is an epoch key, requested_at an ISO time; the two
+    # do not compare.)
+    entry = after[0] if after and (previous is None or after[0] != previous[0]) else None
     if entry and after[2] and after[3] == head:
         finish(db_path, request_id, "done", entry=entry)
     else:
         finish(db_path, request_id, "failed", entry=entry, detail=f"runner exit {code}")
+
+def guarded(db_path, request_id, runner, log_dir):
+    """An error in one request fails that request; it never leaves it running."""
+    try:
+        process_one(db_path, request_id, runner, log_dir)
+    except Exception as error:  # noqa: BLE001
+        finish(db_path, request_id, "failed", detail="worker error: %r" % (error,))
 
 def run_pass(args):
     seen = set()
@@ -124,7 +150,7 @@ def run_pass(args):
         if not ids: return
         seen.update(ids)
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-            list(pool.map(lambda i: process_one(args.db, i, args.runner, args.log_dir), ids))
+            list(pool.map(lambda i: guarded(args.db, i, args.runner, args.log_dir), ids))
 
 def main(argv=None):
     p = argparse.ArgumentParser(); p.add_argument("--db", default=DEFAULT_DB)
