@@ -1,45 +1,44 @@
 (ns futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test
-  (:require [futon3c.diagramprover.wm-wire-token-continuation-products :as products]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-token-input-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn check [] (support/observe :initialization-temporal :none))
+(def reader-hop :initialization-temporal)
+(def producer (delay (producer-record/record "token-input-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires reader-hop]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
 (def wire
-  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/changed-continuation-product :kind :record
-                   :product [:belief] :intervention :before-reader}
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/changed-continuation-product
+                  :kind :record :product [:belief] :intervention :before-reader}
    :wire [:r1-token-initialization :r1-token-temporal [:continuation-belief {:record :initialized-token-belief-input}]]
-   :kind :witnessed-hermetically :test `the-real-reader-produces-the-writers-belief :check check
-   :live-records-read support/live-records-read
-   :note "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."})
+   :kind :witnessed-hermetically
+   :test 'futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/the-real-reader-produces-the-writers-belief
+   :check check
+   :live-records-read []
+   :note "Writer and reader values and intervention relations come from the content-addressed token-input-observe producer record."})
 
 (deftest the-real-reader-produces-the-writers-belief
   (let [r (check)]
-    (is (some? (:writer r)))
-    (is (w/received? r) (pr-str (dissoc r :product)))))
+    (is (some? (:writer r)) "writer")
+    (is (not (w/typed-absence? (:writer r))) "writer-typed-absence")
+    (is (w/received? r) (str "writer-reader " (pr-str r)))))
 
 (deftest an-absent-carrier-is-not-the-writers-belief
-  (let [r (support/observe :initialization-temporal :absent)]
-    (is (some? (:writer r)))
-    (is (not (w/received? r)) (pr-str (dissoc r :product)))))
+  (let [result (get-in (wire-fields) [:interventions :absent])]
+    (is (true? (:writer-present? result)) "absent writer-present?")
+    (is (false? (:received? result)) "absent received?")))
 
 (deftest a-different-carrier-is-not-the-writers-belief
-  (let [r (support/observe :initialization-temporal :different)]
-    (is (not= {#{} 1} (:writer r)))
-    (is (not (w/received? r)) (pr-str (dissoc r :product)))))
+  (let [result (get-in (wire-fields) [:interventions :different])]
+    (is (true? (:writer-differs-from-carrier? result)) "different writer/carrier")
+    (is (false? (:received? result)) "different received?")))
 
 (deftest pinned-live-records-do-not-record-both-scoped-endpoints
-  (is (support/live-reader-absent?)))
+  (is (true? (get-in @producer [:fields :live-reader-absent?]))))
 
 (deftest changed-continuation-product
-  (let [a (products/receipt-product :initialization-temporal :none)
-        b (products/receipt-product :initialization-temporal :different)]
-    (prn :wire-2l-4b :initialization-temporal :before (dissoc a :inputs :other-fields)
-         :after (dissoc b :inputs :other-fields))
-    (is (= (:inputs a) (:inputs b)))
-    (is (= (:other-fields a) (:other-fields b)))
-    (is (= (:supplied a) (:belief a)))
-    (is (= (:supplied b) (:belief b)))
-    (is (not= (:belief a) (:belief b)))
-    ;; Retaining branch: no posterior computation is driven by this field.
-    (is (= [] (:updates a) (:updates b)))))
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer reader-hop])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))

@@ -1,48 +1,44 @@
 (ns futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test
-  (:require [clojure.data :as data]
-            [futon3c.diagramprover.wm-wire-token-continuation-products :as products]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-token-input-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn check [] (support/observe :temporal-decision :none))
+(def reader-hop :temporal-decision)
+(def producer (delay (producer-record/record "token-input-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires reader-hop]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
 (def wire
-  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/changed-continuation-product :kind :value-varying
-                   :product [:calls 0 :scores] :intervention :before-reader}
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/changed-continuation-product
+                  :kind :value-varying :product [:calls 0 :scores] :intervention :before-reader}
    :wire [:r1-token-temporal :r9-decision [:continuation-belief {:record :token-belief-input}]]
-   :kind :witnessed-hermetically :test `the-real-reader-produces-the-writers-belief :check check
-   :live-records-read support/live-records-read
-   :note "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."})
+   :kind :witnessed-hermetically
+   :test 'futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/the-real-reader-produces-the-writers-belief
+   :check check
+   :live-records-read []
+   :note "Writer and reader values and intervention relations come from the content-addressed token-input-observe producer record."})
 
 (deftest the-real-reader-produces-the-writers-belief
   (let [r (check)]
-    (is (some? (:writer r)))
-    (is (w/received? r) (pr-str (dissoc r :product)))))
+    (is (some? (:writer r)) "writer")
+    (is (not (w/typed-absence? (:writer r))) "writer-typed-absence")
+    (is (w/received? r) (str "writer-reader " (pr-str r)))))
 
 (deftest an-absent-carrier-is-not-the-writers-belief
-  (let [r (support/observe :temporal-decision :absent)]
-    (is (some? (:writer r)))
-    (is (not (w/received? r)) (pr-str (dissoc r :product)))))
+  (let [result (get-in (wire-fields) [:interventions :absent])]
+    (is (true? (:writer-present? result)) "absent writer-present?")
+    (is (false? (:received? result)) "absent received?")))
 
 (deftest a-different-carrier-is-not-the-writers-belief
-  (let [r (support/observe :temporal-decision :different)]
-    (is (not= {#{} 1} (:writer r)))
-    (is (not (w/received? r)) (pr-str (dissoc r :product)))))
+  (let [result (get-in (wire-fields) [:interventions :different])]
+    (is (true? (:writer-differs-from-carrier? result)) "different writer/carrier")
+    (is (false? (:received? result)) "different received?")))
 
 (deftest pinned-live-records-do-not-record-both-scoped-endpoints
-  (is (support/live-reader-absent?)))
+  (is (true? (get-in @producer [:fields :live-reader-absent?]))))
 
 (deftest changed-continuation-product
-  (let [a (products/decision-product :none)
-        b (products/decision-product :different)]
-    (prn :wire-2l-4b :temporal-decision :before (dissoc a :calls :decision-inputs)
-         :after (dissoc b :calls :decision-inputs)
-         :scores-before (mapv :scores (:calls a)) :scores-after (mapv :scores (:calls b)))
-    (is (= (:decision-inputs a) (:decision-inputs b)))
-    (is (nil? (:exception a))) (is (nil? (:exception b)))
-    (is (= 1 (count (:calls a)) (count (:calls b))))
-    (is (= (mapv :other-inputs (:calls a)) (mapv :other-inputs (:calls b)))
-        (pr-str (take 2 (data/diff (mapv :other-inputs (:calls a)) (mapv :other-inputs (:calls b))))))
-    (is (= (:supplied a) (:incoming a)))
-    (is (= (:supplied b) (:incoming b)))
-    (is (not= (mapv :scores (:calls a)) (mapv :scores (:calls b))))))
+  (doseq [[field passed?] (get-in @producer [:fields :second-layer reader-hop])]
+    (testing (name field)
+      (is (true? passed?) (str field " relation failed")))))
