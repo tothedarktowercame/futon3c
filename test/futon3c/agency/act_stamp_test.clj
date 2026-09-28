@@ -57,8 +57,23 @@
   (is (= :invalid-grant-id
          (reason (assoc valid :authority {:grant "act:"})))))
 
+(defn reason-allowing [value kinds]
+  (try (act-stamp/validate! value kinds) nil
+       (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))
+
 (deftest dispatch-edge-does-not-authorize-another-executor
   (is (= :overreach-without-grant
-         (reason (assoc valid
-                        :executor "codex-5" :signer "claude-17"
-                        :authority {:dispatch-edge "e-edge-1"})))))
+         (reason-allowing (assoc valid
+                                 :executor "codex-5" :signer "claude-17"
+                                 :authority {:dispatch-edge "e-edge-1"})
+                          #{:dispatch-edge}))))
+
+(deftest dispatch-edge-is-refused-where-no-validator-checks-the-edge
+  ;; Rules, cards, offers and agreements call the one-argument validator; an
+  ;; unverified edge id must not pass as authority there.
+  (let [edge-stamp (assoc valid :executor "codex-5" :signer "codex-5"
+                          :authority {:dispatch-edge "e-edge-1"})]
+    (is (= :authority-kind-not-allowed (reason edge-stamp)))
+    (is (nil? (reason-allowing edge-stamp #{:dispatch-edge})))
+    (is (= :authority-kind-not-allowed
+           (reason-allowing (assoc valid :authority {:grant "act:g"}) #{:dispatch-edge})))))

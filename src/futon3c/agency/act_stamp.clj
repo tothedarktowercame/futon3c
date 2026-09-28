@@ -35,8 +35,11 @@
 
   The closed shape is {:executor ID :signer ID :authority AUTH
   :executor-basis (:declared | :session-bound)}. AUTH is exactly a grant act
-  reference, a dispatch-edge evidence reference, or {:operator true}."
-  [stamp]
+  reference or {:operator true}. A dispatch-edge evidence reference is valid
+  only where the caller names it in ALLOWED-KINDS: only the disclosure record
+  verifies the edge, so every other record kind refuses it."
+  ([stamp] (validate! stamp #{:grant :operator}))
+  ([stamp allowed-kinds]
   (when-not (map? stamp)
     (fail! :invalid-stamp-map :act/stamp))
   (when-let [key (first (remove allowed-keys (keys stamp)))]
@@ -55,6 +58,9 @@
     (fail! :unknown-executor-basis :executor-basis))
   (let [authority (:authority stamp)
         kind (authority-kind authority)]
+    (when (and (contains? #{:grant :operator :dispatch-edge} kind)
+               (not (contains? allowed-kinds kind)))
+      (fail! :authority-kind-not-allowed :authority))
     (case kind
       :interpretation (fail! :interpretation-not-authority :authority)
       :invalid (fail! :invalid-authority :authority)
@@ -69,12 +75,14 @@
     (when (and (not= (:executor stamp) (:signer stamp))
                (not= :grant kind))
       (fail! :overreach-without-grant :authority)))
-  stamp)
+  stamp))
 
 (defn stamp
-  "Build and validate an act stamp."
+  "Build and validate an act stamp. Any authority kind is built; the record
+   that carries the stamp decides which kinds it accepts."
   [executor signer authority basis]
   (validate! {:executor executor
               :signer signer
               :authority authority
-              :executor-basis basis}))
+              :executor-basis basis}
+             #{:grant :operator :dispatch-edge}))

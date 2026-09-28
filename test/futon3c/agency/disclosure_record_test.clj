@@ -64,6 +64,12 @@
   (testing "a grant cannot stand in for the dispatch edge"
     (let [record (assoc-in (choice "act:grant" "FIFO")
                            [:act/stamp :authority] {:grant "act:grant-1"})]
+      ;; Refused by the stamp validator before the edge comparison.
+      (is (= :authority-kind-not-allowed
+             (reason #(disclosure/validate-against-source! record prompt edge))))))
+  (testing "a dispatch-edge id that is not this job's edge"
+    (let [record (assoc-in (choice "act:other-edge" "FIFO")
+                           [:act/stamp :authority] {:dispatch-edge "e-some-other-edge"})]
       (is (= :authority-not-dispatch-edge
              (reason #(disclosure/validate-against-source! record prompt edge))))))
   (testing "missing and duplicate dispatch edges never guess"

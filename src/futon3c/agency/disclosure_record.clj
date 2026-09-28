@@ -88,7 +88,7 @@
       (refuse! :invalid-request-quote :inside-request))
     (when-not (sha256? (:text-sha256 inside))
       (refuse! :invalid-request-hash :inside-request)))
-  (act-stamp/validate! (:act/stamp record))
+  (act-stamp/validate! (:act/stamp record) #{:dispatch-edge})
   (when-not (= (:author record) (get-in record [:act/stamp :signer]))
     (refuse! :not-the-assignee :act/stamp))
   (act-harness/validate! (:act/harness record))
@@ -165,10 +165,12 @@
     (validate! record)))
 
 (defn unrecorded-citations
-  "Return cited act ids absent from STORED-DISCLOSURE-IDS. This detects only
-   explicit citations; an undisclosed choice with no id remains unknowable."
-  [report-text stored-disclosure-ids]
-  (let [stored (set stored-disclosure-ids)]
+  "Return cited act ids absent from STORED-ACT-IDS. Pass every stored act id
+   the report could cite (grants and offers too), or a cited grant is reported
+   as an unrecorded disclosure. This detects only explicit citations; an
+   undisclosed choice with no id remains unknowable."
+  [report-text stored-act-ids]
+  (let [stored (set stored-act-ids)]
     (->> (re-seq #"(?<![A-Za-z0-9:_-])act:[A-Za-z0-9][A-Za-z0-9:_-]*"
                  (str report-text))
          distinct
