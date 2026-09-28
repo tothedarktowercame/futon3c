@@ -98,9 +98,10 @@
                 effect-id (str (:id effect))]
             (when (and (not (str/blank? pattern-id))
                        (not (str/blank? effect-id)))
+              ;; prompt-line refuses a :pattern segment with a marker, so the
+              ;; "?" goes in the value: the prompt reads $~<pattern>?>
               {:segment/id :pattern
-               :segment/value (str "~" pattern-id)
-               :segment/marker "?"
+               :segment/value (str "~" pattern-id "?")
                :segment/provider "futon3c.agency.pattern-card-provider/provider"
                :segment/observed-at observed-at
                :segment/basis {:evidence-ref effect-id

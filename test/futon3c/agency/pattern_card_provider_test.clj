@@ -1,7 +1,8 @@
 (ns futon3c.agency.pattern-card-provider-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.rule-record :as hx-store]
-            [futon3c.agency.pattern-card-provider :as pattern]))
+            [futon3c.agency.pattern-card-provider :as pattern]
+            [futon3c.agency.prompt-line :as prompt-line]))
 
 (defn entry [id agent session at pattern-id]
   {:evidence/id id :evidence/author agent :evidence/session-id session
@@ -127,10 +128,17 @@
                   pattern/refresh-cards-async! (fn [& _])]
       (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
                                        :render-at "2026-09-27T20:00:00Z"})]
-        (is (= "~card/chosen" (:segment/value segment)))
-        (is (= "?" (:segment/marker segment)))
+        (is (= "~card/chosen?" (:segment/value segment)))
         (is (= "withdrawn? card/chosen (act:provisional)"
-               (:segment/header segment)))))))
+               (:segment/header segment))))
+      ;; Through prompt-line itself, which validates segment shape.
+      (let [result (prompt-line/render {:agent-id "claude-17" :session-id "target"
+                                        :render-at "2026-09-27T20:00:00Z"}
+                                       [{:segment/id :pattern
+                                         :provider "futon3c.agency.pattern-card-provider/provider"
+                                         :fn pattern/provider :budget-ms 100}])]
+        (is (= "$~card/chosen?> " (:prompt result)))
+        (is (empty? (:omitted result)))))))
 
 (deftest unreadable-card-document-does-not-break-refresh
   (let [valid {:hx/id "act:card" :hx/type :pattern-card/selection
