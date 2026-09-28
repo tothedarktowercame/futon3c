@@ -3,8 +3,10 @@
             [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.test-registry :as registry]
+            [futon3c.test-registry.local-port :as local-port]
             [futon3c.test-registry.sqlite-backend :as sqlite]
             [futon3c.test-registry.validation :as validation]
             [futon3c.transport.http :as http])
@@ -33,6 +35,69 @@
                       "test-registry-http-db-"
                       (make-array FileAttribute 0)))]
     [dir (str (io/file dir "registry.sqlite"))]))
+
+(defn- current-request [namespace repo]
+  {:request-method :get :uri "/api/alpha/test-registry/current"
+   :query-string (str "namespace=" namespace "&repo=" repo)})
+
+(deftest current-endpoint-reads-and-requests-through-the-local-port
+  (let [[dir path] (temp-db)
+        root (io/file dir "repo")
+        root-path (.getAbsolutePath root)]
+    (try
+      (.mkdirs root)
+      (git! root-path "git" "init" "-q")
+      (git! root-path "git" "config" "user.email" "test@example.com")
+      (git! root-path "git" "config" "user.name" "test")
+      (let [file (write! root-path "src/a.clj" "(ns a)\n")]
+        (git! root-path "git" "add" "src/a.clj")
+        (git! root-path "git" "commit" "-qm" "fixture")
+        (let [head (str/trim (:out (git! root-path "git" "rev-parse" "HEAD")))
+              backend (sqlite/sqlite-backend path)
+              intent (registry/append-record! backend {:kind :intent :author "http-test" :run/id "current"} nil)
+              run (registry/append-record!
+                   backend {:kind :run :author "http-test" :run/id "current"
+                            :namespace "example.current-test" :command ["test"]
+                            :repo/root root-path :git-head head
+                            :ran-at "2026-09-28T00:00:00Z" :finished-at "2026-09-28T00:00:01Z"
+                            :warrant? true :load-closure []
+                            :test-files {"src/a.clj" (registry/file-sha file)}}
+                   (:evidence/id intent))]
+          (with-redefs [local-port/*repo-roots* {"futon3c" root-path}]
+            (let [response (http/extra-routes (current-request "example.current-test" "futon3c")
+                                              {:registry-db path})
+                  body (json-body response)]
+              (is (= 200 (:status response)))
+              (is (= "current" (get-in body [:current :status])))
+              (is (= (:evidence/id run) (get-in body [:current :entry-id]))))
+            (spit file "(ns a) ;; changed\n")
+            (let [first-body (json-body (http/handle-test-registry-current
+                                         (current-request "example.current-test" "futon3c")
+                                         {:registry-db path}))
+                  second-body (json-body (http/handle-test-registry-current
+                                          (current-request "example.current-test" "futon3c")
+                                          {:registry-db path}))]
+              (is (= "missing" (get-in first-body [:current :status])))
+              (is (= "stale" (get-in first-body [:current :data :reason])))
+              (is (= (get-in first-body [:current :data :request-id])
+                     (get-in second-body [:current :data :request-id]))))
+            (let [body (json-body (http/handle-test-registry-current
+                                   (current-request "example.absent-test" "futon3c")
+                                   {:registry-db path}))]
+              (is (= "absent" (get-in body [:current :data :reason])))
+              (is (integer? (get-in body [:current :data :request-id]))))))
+      (is (= 400 (:status (http/handle-test-registry-current
+                           (current-request "example.test" "elsewhere")
+                           {:registry-db path}))))
+      (let [response (http/handle-test-registry-current
+                      (current-request "example.test" "futon3c")
+                      {:registry-db (.getAbsolutePath dir)})
+            body (json-body response)]
+        (is (= 500 (:status response)))
+        (is (= "local-store-unavailable" (:reason body)))))
+      (finally
+        (doseq [file (reverse (file-seq dir))]
+          (io/delete-file file true))))))
 
 (deftest latest-endpoint-reads-only-the-local-registry
   (let [[dir path] (temp-db)

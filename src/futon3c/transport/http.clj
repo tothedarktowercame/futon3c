@@ -68,6 +68,7 @@
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.test-registry.local-port :as registry-local-port]
             [futon3c.test-registry.local-store :as registry-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
@@ -2591,6 +2592,26 @@
                                            :ran-at (:ran-at payload)}}))))))
     (catch Throwable throwable
       (json-response 500 (local-store-refusal throwable :latest-endpoint-failed)))))
+
+(defn handle-test-registry-current
+  "GET /api/alpha/test-registry/current — answer canonical local currentness,
+  requesting a background rerun only for stale or absent warrants."
+  [request config]
+  (let [params (parse-query-params request)
+        namespace (get params "namespace")
+        repo (get params "repo")]
+    (if-not (and (string? namespace) (not (str/blank? namespace))
+                 (#{"futon2" "futon3c"} repo))
+      (json-response 400 {:record/type :test-registry/refusal
+                          :reason :invalid-current-warrant-request
+                          :details {:required {:namespace :nonblank-string
+                                               :repo ["futon2" "futon3c"]}}})
+      (try
+        (let [path (:path (test-registry-store-for-config config))
+              operation (:current-or-request (registry-local-port/implementation path))]
+          (json-response 200 {:current (operation {:namespace namespace :repo repo})}))
+        (catch Throwable throwable
+          (json-response 500 (local-store-refusal throwable :current-endpoint-failed)))))))
 
 (defn handle-test-registry-run
   "POST /api/alpha/test-registry/run — register a mechanical test run.
@@ -9203,6 +9224,9 @@
 
       (and (= :get method) (= "/api/alpha/test-registry/latest" uri))
       (handle-test-registry-latest request config)
+
+      (and (= :get method) (= "/api/alpha/test-registry/current" uri))
+      (handle-test-registry-current request config)
 
       (and (= :get method) (= "/api/alpha/test-registry/report" uri))
       (handle-test-registry-report request config)
