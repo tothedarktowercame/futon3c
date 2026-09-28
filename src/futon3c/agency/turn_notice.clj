@@ -36,7 +36,9 @@
                 :notice/effect-id effect-id}]
     (loop []
       (let [before @!state
-            entry (get before seat {:queue [] :seen-order [] :seen #{} :drops 0})]
+            ;; `or`, not get's default: a nil stored under the seat would
+            ;; otherwise be used, and (+ nil …) fails.
+            entry (or (get before seat) {:queue [] :seen-order [] :seen #{} :drops 0})]
         (if (contains? (:seen entry) id)
           :duplicate
           (let [queue (conj (:queue entry) notice)
@@ -58,11 +60,14 @@
   [agent session]
   (when-let [seat (seat-key agent session)]
     (let [[before _]
-          (swap-vals! !state update seat
-                      (fn [entry]
-                        (if (seq (:queue entry))
-                          (assoc entry :queue (vec (rest (:queue entry))))
-                          entry)))]
+          ;; Every exact-seat header calls this; a seat with nothing queued
+          ;; must be left absent, not given a nil entry.
+          (swap-vals! !state
+                      (fn [state]
+                        (let [entry (get state seat)]
+                          (if (seq (:queue entry))
+                            (assoc state seat (assoc entry :queue (vec (rest (:queue entry)))))
+                            state))))]
       (first (get-in before [seat :queue])))))
 
 (defn stats

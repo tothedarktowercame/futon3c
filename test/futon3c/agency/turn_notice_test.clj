@@ -28,3 +28,13 @@
                                  (future (notice/take! "a" "s"))]))]
     (is (= 1 (count (remove nil? takes))))
     (is (= "n1" (:notice/id (first (remove nil? takes)))))))
+
+(deftest a-header-before-the-first-notice-does-not-block-it
+  ;; Every exact-seat header calls take!; the first notice for that seat
+  ;; usually arrives afterwards.
+  (notice/reset-state!)
+  (is (nil? (notice/take! "agent-z" "session-z")))
+  (is (= :queued (notice/publish! {:agent "agent-z" :session "session-z"
+                                   :notice-id "n-1" :kind "no-grant"})))
+  (is (= "withdraw inferred: off (no grant)"
+         (:notice/text (notice/take! "agent-z" "session-z")))))
