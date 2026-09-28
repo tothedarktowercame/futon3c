@@ -1,39 +1,28 @@
 (ns futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test
-  (:require [futon3c.diagramprover.wm-wire-selection-handoff-products :as products]
-            [clojure.test :refer [deftest is]]
-            [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-selection-out-support :as support]))
-(def positive (delay (support/observe :candidate-increment :none)))
-(defn check [] @positive)
-(def wire {:second-layer {:test 'futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/changed-selection-product :kind :record
-                   :product [:receipt :record-id] :intervention :before-reader}
-   :wire [:r9-selection-law :r7-increment :candidate]
-           :kind :witnessed-hermetically :test `the-real-reader-handoff :check check
-           :live-records-read support/live-records-read
-           :note "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed."})
+  (:require [clojure.test :refer [deftest is testing]] [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+(def wire-id [:r9-selection-law :r7-increment :candidate])
+(def producer (delay (producer-record/record "selection-out-observe")))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn check [] (:primary (fields)))
+(def wire {:second-layer {:test `changed-selection-product :kind :record :product [:receipt :record-id]
+                          :intervention :before-reader}
+           :wire wire-id :kind :witnessed-hermetically :test `the-real-reader-handoff
+           :check check :live-records-read []})
 (deftest the-real-reader-handoff
-  (is (seq (support/census)))
-  (let [o (check)] (is (w/received? o))
-    (is (= 1 (get-in o [:result :delta])))))
+  (is (seq (:census @producer)))
+  (let [o (check)] (is (w/received? o) (str "writer-reader " (pr-str o))) (is (= 1 (:delta o)))))
 (deftest absence-before-reader
-  (let [o (support/observe :candidate-increment :absent)]
-    (is (not (w/received? o)))
-    (is (nil? (:reader o)))
-    (is (= 1 (get-in o [:result :delta])))))
+  (let [o (get-in (fields) [:interventions :absent])]
+    (is (not (w/received? o))) (is (nil? (:reader o))) (is (= 1 (:delta o)))))
 (deftest different-value-before-reader
-  (let [o (support/observe :candidate-increment :different)]
-    (is (not (w/received? o)))
-    (is (= :different-candidate (:reader o)))
-    (is (= (get-in (check) [:result :policy-key]) (get-in o [:result :policy-key])))))
-
+  (let [o (get-in (fields) [:interventions :different])]
+    (is (not (w/received? o))) (is (= :different-candidate (:reader o)))
+    (is (= (:policy-key (check)) (:policy-key o)))))
 (deftest changed-selection-product
-  (let [a (products/increment-product false) b (products/increment-product true)]
-    (prn :wire-2l-5b :increment :before a :after b)
-    (is (= (:other-inputs a) (:other-inputs b)))
-    (is (not= (:candidate a) (:candidate b)))
-    (is (not= (:posterior a) (:posterior b)))
-    (is (= (:candidate a) (get-in a [:receipt :record-id 1])))
-    (is (= (:candidate b) (get-in b [:receipt :record-id 1])))
-    ;; enactment_habit.clj:74: candidate is the record-id component only.
-    (is (= 1 (get-in a [:receipt :delta]) (get-in b [:receipt :delta])))
-    (is (= (dissoc (:receipt a) :record-id) (dissoc (:receipt b) :record-id)))))
+  (doseq [[k v] (dissoc (:second-layer (fields)) :before :after)]
+    (testing (name k) (is (true? v) (str k " relation failed"))))
+  (let [r (:second-layer (fields))]
+    (is (not= (get-in r [:before :candidate]) (get-in r [:after :candidate])))
+    (is (= (get-in r [:before :candidate]) (get-in r [:before :receipt-record-id 1])))
+    (is (= (get-in r [:after :candidate]) (get-in r [:after :receipt-record-id 1])))))
