@@ -73,6 +73,7 @@
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
@@ -4627,6 +4628,8 @@
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
             (prompt-facts-line agent-id session-id surface)
+            (when-let [notice (turn-notice/take! agent-id session-id)]
+              (str (:notice/text notice) "\n"))
             ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
             ;; and forbid a manual re-send — independent of bell-router, since the dup
             ;; happened with bell-router off (the agent re-sent defensively).
@@ -9199,6 +9202,37 @@
   ;; boundary; author is derived from it and is never accepted as an override.
   (some-> (or (:caller payload) (get payload "caller")) str str/trim not-empty))
 
+(defn- handle-turn-notice [request]
+  (let [payload (parse-json-map (read-body request))
+        allowed #{:caller :agent :session :notice-id :kind :effect-id}]
+    (cond
+      (not (map? payload))
+      (json-response 400 {:ok false :reason :invalid-json})
+
+      (seq (remove allowed (keys payload)))
+      (json-response 400 {:ok false :reason :unexpected-field})
+
+      (not= "xiang" (some-> (:caller payload) str str/trim))
+      (json-response 403 {:ok false :reason :not-xiang})
+
+      (some #(str/blank? (str (% payload))) [:agent :session :notice-id])
+      (json-response 400 {:ok false :reason :missing-field})
+
+      (not (#{"unresolved" "effect" "no-grant"} (:kind payload)))
+      (json-response 400 {:ok false :reason :invalid-kind})
+
+      (and (= "effect" (:kind payload))
+           (not (and (string? (:effect-id payload))
+                     (str/starts-with? (:effect-id payload) "act:"))))
+      (json-response 400 {:ok false :reason :invalid-effect-id})
+
+      (and (not= "effect" (:kind payload)) (contains? payload :effect-id))
+      (json-response 400 {:ok false :reason :unexpected-effect-id})
+
+      :else
+      (let [result (turn-notice/publish! payload)]
+        (json-response 200 {:ok true :result result})))))
+
 (defn- pattern-card-refusal [throwable]
   (let [{:keys [reason status]} (ex-data throwable)
         reason (or reason
@@ -9519,6 +9553,9 @@
 
       (and (= :post method) (= "/api/alpha/withdrawal/undo" uri))
       (handle-provisional-withdrawal-undo request)
+
+      (and (= :post method) (= "/api/alpha/turn-notice" uri))
+      (handle-turn-notice request)
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)

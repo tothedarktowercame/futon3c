@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is]]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]))
 
@@ -29,3 +30,25 @@
                            :query-string "agent=a&session=s"})]
           (is (= 200 (:status response)))
           (is (= "$~x/y> " (:prompt (json/parse-string (:body response) true)))))))))
+
+(deftest turn-notice-route-validates-and-does-not-consume-on-prompt-get
+  (turn-notice/reset-state!)
+  (let [h (handler)
+        post (fn [body]
+               (h {:request-method :post :uri "/api/alpha/turn-notice"
+                   :body (java.io.ByteArrayInputStream.
+                          (.getBytes (json/generate-string body) "UTF-8"))}))]
+    (is (= 403 (:status (post {:caller "claude-17" :agent "a" :session "s"
+                               :notice-id "n1" :kind "unresolved"}))))
+    (is (= 400 (:status (post {:caller "xiang" :agent "a" :session "s"
+                               :notice-id "n1" :kind "wrong"}))))
+    (is (= 400 (:status (post {:caller "xiang" :agent "a" :session "s"
+                               :notice-id "n1" :kind "effect"}))))
+    (is (= 200 (:status (post {:caller "xiang" :agent "a" :session "s"
+                               :notice-id "n1" :kind "effect"
+                               :effect-id "act:e1"}))))
+    (is (= 200 (:status
+                (h {:request-method :get :uri "/api/alpha/prompt-line"
+                    :query-string "agent=a&session=s"}))))
+    (is (= "withdraw inferred: effect act:e1 (undo to reverse)"
+           (:notice/text (turn-notice/take! "a" "s"))))))

@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.transport.http :as http]))
 
 (def observed-at "2026-09-27T23:40:51Z")
@@ -13,7 +14,10 @@
           :segment/basis {:evidence-ref "e-pattern" :scope {}}}
          extra))
 
-(use-fixtures :each (fn [f] (prompt-line/reset-registry!) (f)))
+(use-fixtures :each (fn [f]
+                      (prompt-line/reset-registry!)
+                      (turn-notice/reset-state!)
+                      (f)))
 
 (deftest current-turn-header-renders-pattern-fact-before-reply-contract
   (prompt-line/register-provider!
@@ -69,3 +73,21 @@
                       "body" "bell" "joe" "claude-17" nil "s1")
                      "Prompt: pattern ~x/y"))
   (is (not (prompt-line/analysis-seat? "claude-象"))))
+
+(deftest exact-seat-notice-appears-in-one-header-only
+  (turn-notice/publish! {:agent "codex-5" :session "s1" :notice-id "n1"
+                         :kind "unresolved"})
+  (let [first-header (#'http/wrap-surface-header
+                      "body" "bell" "joe" "codex-5" nil "s1")
+        second-header (#'http/wrap-surface-header
+                       "body" "bell" "joe" "codex-5" nil "s1")]
+    (is (str/includes? first-header "withdraw inferred: unresolved (no target)\n"))
+    (is (not (str/includes? second-header "withdraw inferred:"))))
+  (is (nil? (turn-notice/take! "codex-5" "other"))))
+
+(deftest prompt-render-does-not-consume-a-turn-notice
+  (turn-notice/publish! {:agent "codex-5" :session "s1" :notice-id "n1"
+                         :kind "no-grant"})
+  (prompt-line/render! {:agent-id "codex-5" :session-id "s1" :surface :http})
+  (is (= "withdraw inferred: off (no grant)"
+         (:notice/text (turn-notice/take! "codex-5" "s1")))))

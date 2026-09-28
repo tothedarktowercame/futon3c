@@ -1,0 +1,74 @@
+(ns futon3c.agency.turn-notice
+  "Bounded, exact-seat notices consumed only by current-turn header assembly."
+  (:require [clojure.string :as str]))
+
+(def queue-limit 20)
+(def seen-limit 500)
+
+(defonce ^:private !state (atom {}))
+
+(defn reset-state!
+  "Testing seam. Remove all queued notices and deduplication history."
+  []
+  (reset! !state {}))
+
+(defn- seat-key [agent session]
+  (when (and (not (str/blank? (str agent)))
+             (not (str/blank? (str session))))
+    [(str agent) (str session)]))
+
+(defn- notice-text [kind effect-id]
+  (case kind
+    "unresolved" "withdraw inferred: unresolved (no target)"
+    "effect" (str "withdraw inferred: effect " effect-id " (undo to reverse)")
+    "no-grant" "withdraw inferred: off (no grant)"))
+
+(defn publish!
+  "Queue NOTICE once for its exact seat. Return :queued or :duplicate.
+   NOTICE has :agent, :session, :notice-id, :kind, and optional :effect-id.
+   Validation belongs to the HTTP boundary; this function renders all text."
+  [{:keys [agent session notice-id kind effect-id]}]
+  (let [seat (seat-key agent session)
+        id (str notice-id)
+        notice {:notice/id id
+                :notice/kind kind
+                :notice/text (notice-text kind effect-id)
+                :notice/effect-id effect-id}]
+    (loop []
+      (let [before @!state
+            entry (get before seat {:queue [] :seen-order [] :seen #{} :drops 0})]
+        (if (contains? (:seen entry) id)
+          :duplicate
+          (let [queue (conj (:queue entry) notice)
+                overflow (max 0 (- (count queue) queue-limit))
+                queue (vec (drop overflow queue))
+                seen-order (conj (:seen-order entry) id)
+                seen-overflow (max 0 (- (count seen-order) seen-limit))
+                forgotten (take seen-overflow seen-order)
+                seen-order (vec (drop seen-overflow seen-order))
+                seen (-> (:seen entry) (conj id) (#(apply disj % forgotten)))
+                after (assoc before seat {:queue queue
+                                          :seen-order seen-order
+                                          :seen seen
+                                          :drops (+ (:drops entry) overflow)})]
+            (if (compare-and-set! !state before after) :queued (recur))))))))
+
+(defn take!
+  "Atomically remove and return one queued notice for AGENT and SESSION."
+  [agent session]
+  (when-let [seat (seat-key agent session)]
+    (let [[before _]
+          (swap-vals! !state update seat
+                      (fn [entry]
+                        (if (seq (:queue entry))
+                          (assoc entry :queue (vec (rest (:queue entry))))
+                          entry)))]
+      (first (get-in before [seat :queue])))))
+
+(defn stats
+  "Inspectable per-seat queue depth, seen count, and dropped count."
+  [agent session]
+  (when-let [entry (get @!state (seat-key agent session))]
+    {:queued (count (:queue entry))
+     :seen (count (:seen entry))
+     :drops (:drops entry)}))
