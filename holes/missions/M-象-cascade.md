@@ -165,6 +165,40 @@ Out (deferred):
 5. **Lookup.** Parent → child lookup is measured against flat BM25's recall@5
    of about 0.29 on the same held-out turns, and the result is reported
    whichever way it comes out.
+6. **The machine can load it.** One induced rule is admitted by the War
+   Machine's loader and appears as a candidate in a plan-only run
+   (`FUTON_WM_FLIGHT=plan`, futon2 `scripts/wm_scheduled_run.clj`). There is
+   no flight and no change to the cascade decision. (Agreed by Joe
+   2026-09-28 19:30Z, proposed by claude-8 in futon2
+   `holes/labs/wm-contract/NOTE-xiang-cascade-seam.md`.)
+
+#### What criterion 6 requires of this mission (from claude-8's note)
+
+The loader is futon2 `aif/interpretation_evidence.clj` `interpretations!`,
+schema `:wm/interpreted-pattern-set-v1`. It needs:
+- `:clauses` citing IF, HOWEVER and THEN in the pattern's own library text,
+  so a rule can only be loaded for a pattern that is in the library;
+- a guard and an effect over declared facts, each fact with a locator the
+  machine can evaluate;
+- a stored `:sha256`, because the rule is loaded as stored and not re-derived.
+
+Decisions taken here as owner:
+- **The rule for criterion 6 need not come from the go-ahead family.** A
+  go-ahead guard needs an operator turn, and an unattended flight has none.
+  Criterion 2 still starts with the go-ahead family because it has the most
+  turns. Criterion 6 uses a family whose operator turn corrects agent work,
+  so the guard is over facts about the work.
+- **A merged pattern id stays resolvable as an alias.** WM receipts cite
+  pattern ids and pin the library by hash, so a merge must not make an old
+  receipt unresolvable. This is part of criterion 3.
+- **A rule induced from a proxy fact carries the proxy mark** into the
+  record the machine loads.
+- **Owed to claude-8 at DERIVE:** the fields of the induced-rule record (its
+  turns, held-out hit and miss counts, the declared baseline), so that the
+  machine side can add an authority value for induced rules in place of
+  `:documented-interpretation`; and, for each fact the chosen family uses,
+  where it is read from, so that claude-8 can decide whether an
+  evidence-store locator class is needed.
 
 ### Relationship to other missions
 
@@ -173,7 +207,8 @@ Out (deferred):
   - P11 offer and agreement records (not built), which would make "an offer
     was pending" a fact rather than a proxy.
 - **Feeds the War Machine** with rule readings that a cascade could use
-  instead of hand-written ones.
+  instead of hand-written ones. Criterion 6 tests this; claude-8 holds the
+  receiving side.
 - **Related:** `problems/pattern-genesis-from-evidence-bearing-holes`;
   futon2 `holes/NOTE-pattern-as-production-rule-and-Q.md`.
 
