@@ -1,5 +1,6 @@
 (ns futon3c.agency.pattern-card-provider-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
+            [futon3c.agency.rule-record :as hx-store]
             [futon3c.agency.pattern-card-provider :as pattern]))
 
 (defn entry [id agent session at pattern-id]
@@ -55,7 +56,8 @@
 
 (deftest background-reads-are-rate-limited-per-seat
   (let [calls (atom [])]
-    (with-redefs [pattern/refresh-async! (fn [a s] (swap! calls conj [a s]))]
+    (with-redefs [pattern/refresh-async! (fn [a s] (swap! calls conj [:retrieval a s]))
+                  pattern/refresh-cards-async! (fn [a s] (swap! calls conj [:card a s]))]
       (dotimes [_ 5]
         (pattern/provider {:agent-id "claude-17" :session-id "none"
                            :render-at "2026-09-27T20:00:00Z"}))
@@ -64,4 +66,72 @@
       (dotimes [_ 3]
         (pattern/provider {:agent-id "claude-17" :session-id "target"
                            :render-at "2026-09-27T20:00:00Z"})))
-    (is (= [["claude-17" "none"] ["claude-17" "target"]] @calls))))
+    (is (= [[:retrieval "claude-17" "none"] [:card "claude-17" "none"]
+            [:retrieval "claude-17" "target"] [:card "claude-17" "target"]]
+           @calls))))
+
+(def card
+  {:id "act:card" :kind :pattern-card/selection :author "claude-17"
+   :agent "claude-17" :session "target" :at "2026-09-27T19:58:00Z"
+   :pattern-id "card/chosen"})
+
+(deftest active-card-wins-over-retrieval-without-render-path-http
+  (pattern/observe-entry! (entry "e-retrieval" "claude-17" "target"
+                                 "2026-09-27T19:59:50Z" "retrieved/pattern"))
+  (pattern/publish-card-result! "claude-17" "target"
+                                {:active card :provisional [] :ignored []}
+                                "2026-09-27T19:59:55Z")
+  (with-redefs [hx-store/request! (fn [& _] (throw (ex-info "HTTP on render" {})))
+                pattern/refresh-async! (fn [& _])
+                pattern/refresh-cards-async! (fn [& _])]
+    (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
+                                     :render-at "2026-09-27T20:00:00Z"})]
+      (is (= "~card/chosen" (:segment/value segment)))
+      (is (= "card card/chosen (act:card)" (:segment/header segment)))
+      (is (= "act:card" (get-in segment [:segment/basis :evidence-ref]))))))
+
+(deftest withdrawn-card-falls-back-and-another-session-is-unaffected
+  (pattern/observe-entry! (entry "e-target" "claude-17" "target"
+                                 "2026-09-27T19:59:50Z" "retrieved/target"))
+  (pattern/observe-entry! (entry "e-other" "claude-17" "other"
+                                 "2026-09-27T19:59:50Z" "retrieved/other"))
+  (pattern/publish-card-result! "claude-17" "target"
+                                {:active nil :provisional [] :ignored []}
+                                "2026-09-27T19:59:55Z")
+  (pattern/publish-card-result! "claude-17" "other"
+                                {:active (assoc card :session "other")
+                                 :provisional [] :ignored []}
+                                "2026-09-27T19:59:55Z")
+  (with-redefs [pattern/refresh-async! (fn [& _])
+                pattern/refresh-cards-async! (fn [& _])]
+    (is (= "~retrieved/target"
+           (:segment/value (pattern/provider {:agent-id "claude-17" :session-id "target"
+                                              :render-at "2026-09-27T20:00:00Z"}))))
+    (is (= "~card/chosen"
+           (:segment/value (pattern/provider {:agent-id "claude-17" :session-id "other"
+                                              :render-at "2026-09-27T20:00:00Z"}))))))
+
+(deftest unreadable-card-document-does-not-break-refresh
+  (let [valid {:hx/id "act:card" :hx/type :pattern-card/selection
+               :hx/props {:author "claude-17" :agent "claude-17" :session "target"
+                          :at "2026-09-27T19:58:00Z" :pattern-id "card/chosen"}}
+        missing-at {:hx/id "act:old" :hx/type :pattern-card/selection
+                    :hx/props {:author "claude-17" :agent "claude-17"
+                               :session "target" :pattern-id "card/old"}}
+        result (pattern/refresh-cards!
+                "claude-17" "target"
+                (fn [type _] (if (= :pattern-card/selection type)
+                               [missing-at valid] [])))]
+    (is (= "act:card" (get-in result [:result :active :id])))
+    (is (= [{:hx/id "act:old" :reason :missing-at}] (:unreadable result)))))
+
+(deftest older-background-result-cannot-overwrite-immediate-publication
+  (pattern/publish-card-result! "claude-17" "target"
+                                {:active card :provisional [] :ignored []}
+                                "2026-09-27T20:00:00Z")
+  (pattern/publish-card-result! "claude-17" "target"
+                                {:active nil :provisional [] :ignored []}
+                                "2026-09-27T19:59:59Z")
+  (is (= "act:card"
+         (get-in (pattern/cached-card "claude-17" "target")
+                 [:result :active :id]))))

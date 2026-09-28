@@ -2,15 +2,22 @@
   "Cached prompt-line provider for the most recent exact-session retrieval."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
+            [futon3c.agency.pattern-card-acts :as card-acts]
+            [futon3c.agency.pattern-card-record :as card-record]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.agency.rule-record :as hx-store]
             [futon3c.evidence.store :as estore]
             [futon3c.mission-control.service :as mcs])
-  (:import [java.time Duration Instant]))
+  (:import [java.net URLEncoder]
+           [java.time Duration Instant]))
 
 (def stale-after (Duration/ofMinutes 30))
+(def card-stale-after (Duration/ofMinutes 2))
 (defonce ^:private !retrievals (atom {}))
 (defonce ^:private !refreshing (atom #{}))
 (defonce ^:private !checked-at (atom {}))
+(defonce ^:private !cards (atom {}))
+(defonce ^:private !card-refreshing (atom #{}))
 
 (def recheck-interval-ms
   "At most one background LIST read per seat per interval. Until the dev
@@ -19,10 +26,55 @@
    one, from querying futon1b on every render."
   60000)
 
+(defn- fresh-within? [render-at observed-at duration]
+  (try
+    (let [age (Duration/between (Instant/parse observed-at) (Instant/parse render-at))]
+      (and (not (.isNegative age)) (neg? (.compareTo age duration))))
+    (catch Throwable _ false)))
+
+(defn- cache-card-entry! [agent session entry]
+  (let [key [(str agent) (str session)]]
+    (swap! !cards
+           (fn [cache]
+             (let [prior (get cache key)]
+               (if (and prior
+                        (pos? (compare (:observed-at prior) (:observed-at entry))))
+                 cache
+                 (assoc cache key entry)))))))
+
+(defn publish-card-result!
+  "Publish a card-as-of result already verified outside the render path.
+   The CLI runs in another JVM, so calling this there cannot update the live
+   cache; this seam is for a later in-JVM write route and tests."
+  [agent session result observed-at]
+  (when (and (not (str/blank? (str agent)))
+             (not (str/blank? (str session)))
+             (map? result))
+    (cache-card-entry! agent session
+                       {:result result :observed-at (str observed-at)})))
+
+(defn cached-card [agent session]
+  (get @!cards [(str agent) (str session)]))
+
 (defn active-pattern-card
-  "P10 hook. A card, when implemented, takes precedence over retrieval."
-  [_ctx]
-  nil)
+  "Return the cached active-card segment. Performs no I/O."
+  [{:keys [agent-id session-id render-at]}]
+  (when-let [{:keys [result observed-at]}
+             (get @!cards [(str agent-id) (str session-id)])]
+    (when-let [card (when (fresh-within? (str render-at) observed-at card-stale-after)
+                     (:active result))]
+      (let [pattern-id (str (:pattern-id card))
+            act-id (str (:id card))]
+        (when (and (not (str/blank? pattern-id)) (not (str/blank? act-id)))
+          {:segment/id :pattern
+           :segment/value (str "~" pattern-id)
+           :segment/provider "futon3c.agency.pattern-card-provider/provider"
+           :segment/observed-at observed-at
+           :segment/basis {:evidence-ref act-id
+                           :scope {:agent-id (str agent-id)
+                                   :session-id (str session-id)
+                                   :basis-status :pattern-card}}
+           :segment/header (str "card " pattern-id " (" act-id ")")})))))
 
 (defn- field [m k]
   (or (get m k) (get m (name k))))
@@ -62,7 +114,12 @@
                              :observed-at at
                              :results results})))))))))
 
-(defn reset-cache! [] (reset! !retrievals {}) (reset! !checked-at {}))
+(defn reset-cache! []
+  (reset! !retrievals {})
+  (reset! !cards {})
+  (reset! !refreshing #{})
+  (reset! !card-refreshing #{})
+  (reset! !checked-at {}))
 
 (defn observe-results!
   "Publish exact-seat results before the durable evidence append completes."
@@ -109,6 +166,46 @@
              (catch Throwable _)
              (finally (swap! !refreshing disj key)))))))
 
+(defn- encode [value] (URLEncoder/encode (str value) "UTF-8"))
+
+(defn- default-card-query [type system-as-of]
+  (let [path (str "/api/alpha/hyperedges?type=" (encode (subs (str type) 1))
+                  "&limit=1000&include-total=false&valid-as-of=" (encode system-as-of)
+                  "&system-as-of=" (encode system-as-of))]
+    (:hyperedges (hx-store/request! "http://127.0.0.1:7073" "GET" path nil))))
+
+(defn refresh-cards!
+  "Refresh an exact-seat card projection. QUERY-FN receives [type system-as-of]
+   and returns hyperedges. Malformed historical documents are reported in the
+   cache entry and excluded from the projection."
+  ([agent session] (refresh-cards! agent session default-card-query))
+  ([agent session query-fn]
+   (let [system-as-of (str (Instant/now))
+         edges (mapcat #(or (query-fn % system-as-of) [])
+                       [:pattern-card/selection :act/withdrawal])
+         parsed (mapv (fn [edge]
+                        (try
+                          {:record (card-record/hyperedge->record edge)}
+                          (catch clojure.lang.ExceptionInfo e
+                            {:unreadable {:hx/id (:hx/id edge)
+                                          :reason (:reason (ex-data e))}})))
+                      edges)
+         records (keep :record parsed)
+         unreadable (vec (keep :unreadable parsed))
+         result (card-acts/card-as-of records (str agent) (str session) system-as-of)
+         entry {:result result :observed-at system-as-of :unreadable unreadable}]
+     (cache-card-entry! agent session entry)
+     entry)))
+
+(defn refresh-cards-async! [agent session]
+  (let [key [(str agent) (str session)]]
+    (when-not (contains? @!card-refreshing key)
+      (swap! !card-refreshing conj key)
+      (future
+        (try (refresh-cards! agent session)
+             (catch Throwable _)
+             (finally (swap! !card-refreshing disj key)))))))
+
 (defn- recheck-async!
   [agent session]
   (let [key [(str agent) (str session)]
@@ -116,22 +213,20 @@
         before @!checked-at]
     (when (and (>= (- now (get before key 0)) recheck-interval-ms)
                (compare-and-set! !checked-at before (assoc before key now)))
-      (refresh-async! agent session))))
+      (refresh-async! agent session)
+      (refresh-cards-async! agent session))))
 
 (defn- fresh? [render-at observed-at]
-  (try
-    (let [age (Duration/between (Instant/parse observed-at) (Instant/parse render-at))]
-      (and (not (.isNegative age)) (neg? (.compareTo age stale-after))))
-    (catch Throwable _ false)))
+  (fresh-within? render-at observed-at stale-after))
 
 (defn- result-field [result k] (or (get result k) (get result (name k))))
 
 (defn provider
   [{:keys [agent-id session-id render-at] :as ctx}]
+  (recheck-async! agent-id session-id)
   (or (active-pattern-card ctx)
       (let [key [(str agent-id) (str session-id)]
             cached (get @!retrievals key)]
-        (recheck-async! agent-id session-id)
         (if-not cached
           nil
           (if-not (fresh? (str render-at) (:observed-at cached))
