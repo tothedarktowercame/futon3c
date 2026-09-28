@@ -83,9 +83,12 @@ def analyze(namespace, closure_path):
         report = json.loads(process.stdout)
     except json.JSONDecodeError as error:
         raise RuntimeError(process.stdout + process.stderr) from error
-    if report.get('summary', {}).get('error', 0):
-        raise RuntimeError('clj-kondo reported analysis errors: '
-                           + json.dumps(report.get('findings', [])))
+    findings = report.get('findings', [])
+    error_files = {
+        finding.get('filename')
+        for finding in findings
+        if finding.get('level') == 'error' and finding.get('filename') in loaded
+    }
     analysis = report.get('analysis', {})
     definitions = analysis.get('var-definitions')
     usages = analysis.get('var-usages')
@@ -167,7 +170,8 @@ def analyze(namespace, closure_path):
                   if '/test/' in path and any(row.get('ns') == namespace
                                                and row.get('filename') == path
                                                for row in definitions)}
-    roots = {key for key, row in rows.items() if row['filename'] in test_files}
+    roots = {key for key, row in rows.items()
+             if row['filename'] in test_files or row['filename'] in error_files}
     reached = set(roots)
     queue = list(roots)
     unbounded = set()
@@ -181,10 +185,21 @@ def analyze(namespace, closure_path):
                 reached.add(target)
                 queue.append(target)
 
-    whole_files = sorted(test_files | set(resources))
+    whole_file_inputs = ([{'file': path, 'reason': 'test-file'}
+                          for path in sorted(test_files)]
+                         + [{'file': path, 'reason': 'resource'}
+                            for path in sorted(set(resources))]
+                         + [{'file': path,
+                             'reason': 'clj-kondo-error-whole-file-input'}
+                            for path in sorted(error_files
+                                               - test_files
+                                               - set(resources))])
+    whole_files = sorted({entry['file'] for entry in whole_file_inputs})
     if unbounded:
         reached = set(defs)
         whole_files = sorted(set(whole_files) | set(loaded))
+        whole_file_inputs = ([{'file': path, 'reason': 'unbounded'}
+                              for path in whole_files])
     output = {
         'namespace': namespace,
         'status': 'unbounded' if unbounded else 'bounded',
@@ -197,7 +212,8 @@ def analyze(namespace, closure_path):
         'reached-file-count': len({defs[key]['file'] for key in reached} | set(whole_files)),
         'reached-definitions': [defs[key] for key in sorted(reached)],
         'whole-files': whole_files,
-        'clj-kondo-findings': report.get('findings', [])}
+        'whole-file-inputs': whole_file_inputs,
+        'clj-kondo-findings': findings}
     return output
 
 
