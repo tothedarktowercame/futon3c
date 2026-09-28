@@ -20,73 +20,30 @@
 
   No live record carries the writer's end: every live run record predates
   WM-CLICK-REASON-I and has no :failure key (see live-records-read, each
-  pinned), so the wire is WITNESSED-HERMETICALLY."
-  (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight :as flight]
-            [futon2.aif.flight-runner :as fr]
-            [futon2.aif.full-loop-runner :as runner]
-            [futon2.aif.hermetic-repair-fixture :as hermetic]
-            [futon2.aif.learning-trial-ledger :as learning-ledger]
-            [futon2.aif.trace :as trace]
-            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
-            [futon3c.diagramprover.wm-wire :as w]))
+  pinned), so the wire is WITNESSED-HERMETICALLY.
 
-(defn- runner-opts [throw-fn]
-  (merge (hermetic/runner-repair-options)
-         r9-support/hermetic-runner-defaults
-         {:cohort? false :author "zai-5" :reviewer "codex-7" :repair-reviewer "codex-1"
-          :phase-log-fn (fn [_])
-          :roster-fn (fn [_] {:zai-5 {:status "idle" :invoke-ready? true}
-                              :codex-7 {:status "idle" :invoke-ready? true}
-                              :codex-1 {:status "idle" :invoke-ready? true}})
-          :refresh-fn (fn [])
-          :substrate-preflight-fn (fn [_] {:route :test})
-          :code-state-fn (fn [] {:repo "/futon2" :git-sha "head" :git-dirty? false :repo-heads {}})
-          :mode-flags-fn (fn [] {}) :version-stamp-fn identity :mission-fn (fn [t] {:id t})
-          :repair-open-fn (constantly [])
-          :repair-system-record-fn (fn [m] {:repair/id "repair-wire-1" :repair/class (:repair-class m)})
-          :r16-park-fn (fn [_ _] {:ok true :id "park-wire" :status :parked})
-          :delivery-qa-fn (fn [_ _] {:morning-brief/addendum-id "qa-wire"})
-          :queue-fn identity
-          :judge-fn (fn [_] (throw (throw-fn)))
-          :construct-fn (fn [& _] (throw (ex-info "no construction expected" {})))}))
+  The values are read from the producer record: the producer ran the real
+  run-opportunity!, record-summary and record-click; this reader loads no
+  product code."
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(defn- run-record [throw-fn]
-  (with-redefs-fn {#'trace/default-trace-dir (w/tmp-dir "wire-trace")
-                   #'runner/default-run-record-dir (w/tmp-dir "wire-run-records")
-                   #'learning-ledger/default-root (w/tmp-dir "wire-learning")}
-    #(binding [runner/*wm-status-reporting?* false]
-       (edn/read-string (slurp (:run-record (runner/run-opportunity! (runner-opts throw-fn))))))))
+(def wire-id [:flight-record-summary :click-reason-test :failure])
+(def stem "wm-wire-flight-record-summary-click-reason-test-failure-test")
+(def producer (delay (producer-record/record stem)))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(defn observe [mutation]
+  (case mutation
+    :none (:primary (fields))
+    :different (:different (fields))
+    :pinned (:pinned (fields))))
+(defn check [] (observe :none))
 
 (def eighth-run-record
   ;; a live run record written before WM-CLICK-REASON-I: no :failure key
   {:path (str w/spike-dir "/flight-ada87008/tick-run-record-2026-09-26-flight-ada87008-click-1.edn")
    :sha256 "df01831c24a7042d66b6ef2c38d82cdfbd0994a03b5539f3112db7dc41894970"})
-
-(defn- substrate-throw []
-  (ex-info "substrate-2 mission registry unreachable" {}
-           (java.net.ConnectException. "Connection refused")))
-
-(defn observe
-  "The writer (record-summary) over a real failure's run record, then the
-  reader's read of :failure as click_reason_test.clj performs it:
-  {:writer the summary's :failure, :reader the entry's :failure,
-  :reader-agrees? the box's click-failure comparison}."
-  ([] (observe substrate-throw))
-  ([throw-fn]
-   (let [record (run-record throw-fn)
-         summary (fr/record-summary "M-t" "click-1" record)
-         e (first (:clicks (flight/record-click
-                            (flight/start {:target "M-t" :chosen-because {:kind :requested}}
-                                          {:kind :a-exits :repo "futon3c" :path "p" :read-text (fn [& _] "")}
-                                          {:id "flight-wire"})
-                            (merge summary {:wants [:t/b] :before {} :after {}}))))]
-     {:writer (:failure summary)
-      :reader (:failure e)
-      :reader-agrees? (= (:failure e) (flight/click-failure e))})))
-
-(defn check [] (observe))
 
 (def live-records-read
   (let [p #(str w/spike-dir "/" %)]
@@ -114,31 +71,28 @@
             :error "substrate-2 mission registry unreachable"
             :cause {:cause [{:class "java.net.ConnectException" :message "Connection refused"}]}
             :detail {:absent :no-error-data}}
-           (:reader o)))
-    (is (:reader-agrees? o))
-    (is (w/received? o))))
+           (:reader o))
+        "[:primary :reader]")
+    (is (:reader-agrees? o) "[:primary :reader-agrees?]")
+    (is (w/received? o) "[:primary] the writer's value reached the reader")))
 
 (deftest a-record-with-no-failure-is-a-typed-absence-and-fails-the-wire
   ;; the pinned eighth run record through the same vars: the box's own
   ;; a-record-written-before-this-packet case
   (is (= (:sha256 eighth-run-record) (w/sha256-file (:path eighth-run-record))))
-  (let [record (w/read-record (:path eighth-run-record))
-        summary (fr/record-summary "M-autoclock-in" "click-1" record)
-        e (first (:clicks (flight/record-click
-                           (flight/start {:target "M-autoclock-in" :chosen-because {:kind :requested}}
-                                         {:kind :a-exits :repo "futon3c" :path "p" :read-text (fn [& _] "")}
-                                         {:id "flight-wire"})
-                           (merge summary {:wants [:t/b] :before {} :after {}}))))]
-    (is (= {:absent :failure-not-on-run-record} (:failure e)))
-    (is (not (w/received? {:writer (:failure summary) :reader (:failure e)})))))
+  (let [o (observe :pinned)]
+    (is (= {:absent :failure-not-on-run-record} (:reader o)) "[:pinned :reader]")
+    (is (not (w/received? {:writer (:writer o) :reader (:reader o)}))
+        "[:pinned] a typed absence at the reader fails the wire")))
 
 (deftest a-different-failure-fails-the-wire
   (let [o (check)
-        other (observe (fn [] (ex-info "the judge's model returned no parseable decision" {})))]
-    (is (some? (:reader other)))
-    (is (not (w/typed-absence? (:reader other))))
-    (is (not= (:writer o) (:reader other)))
-    (is (not (w/received? (assoc o :reader (:reader other)))))))
+        other (observe :different)]
+    (is (some? (:reader other)) "[:different :reader]")
+    (is (not (w/typed-absence? (:reader other))) "[:different :reader] not a typed absence")
+    (is (not= (:writer o) (:reader other)) "[:different] not the writer's failure")
+    (is (not (w/received? (assoc o :reader (:reader other))))
+        "[:different] present, not absent, but not the value the writer wrote")))
 
 (deftest the-live-records-carry-no-failure
   (doseq [{:keys [path sha256]} live-records-read]
