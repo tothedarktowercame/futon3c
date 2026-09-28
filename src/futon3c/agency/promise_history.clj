@@ -15,6 +15,9 @@
 
 (def ^:dynamic *backend* nil)
 (defonce ^:private writer-id (str (UUID/randomUUID)))
+;; Counters use fnil: this atom is a defonce, so a live reload keeps the old
+;; map. On 2026-09-28 the reload that added :pending/:drained/:conflict made
+;; every empty drain throw until the keys were added by hand.
 (defonce ^:private !counts (atom {:submitted 0 :written 0 :failed 0
                                   :pending 0 :drained 0 :conflict 0}))
 (defonce ^:private !failed-outbox-ids (atom #{}))
@@ -131,12 +134,12 @@
    (let [entry (prepare-entry! type rec now-ms details false)
          eid (:evidence/id entry)]
      (swap! state assoc-in [:history-outbox eid] entry)
-     (swap! !counts update :pending inc)
+     (swap! !counts update :pending (fnil inc 0))
      eid)))
 (defn register-pending! [entries]
   (locking !chain-cache
     (let [heads (heads!)]
-      (swap! !counts update :pending max (count entries))
+      (swap! !counts update :pending (fnil max 0) (count entries))
       (doseq [entry (sort-by #(get-in % [:evidence/body :history/promise-sequence]) entries)
               :let [pid (get-in entry [:evidence/body :history/promise-id])
                     head {:sequence (get-in entry [:evidence/body :history/promise-sequence])
@@ -171,14 +174,14 @@
             (locking !chain-cache (persist-heads! (heads!)))
             (swap! state update :history-outbox dissoc eid)
             (persist! @state)
-            (swap! !counts #(-> % (update :drained inc)
-                                  (update :pending (fn [n] (max 0 (dec n))))))
+            (swap! !counts #(-> % (update :drained (fnil inc 0))
+                                  (update :pending (fn [n] (max 0 (dec (or n 0)))))))
             (try
               (let [rec (:record (edn/read-string
                                   (get-in entry [:evidence/body :history/payload-edn])))]
                 (outcome/evaluate! (backend) eid rec (System/currentTimeMillis)))
               (catch Throwable e (outcome/failed! e))))
-        (= :duplicate-id (:error/code result)) (swap! !counts update :conflict inc)
+        (= :duplicate-id (:error/code result)) (swap! !counts update :conflict (fnil inc 0))
         :else (outbox-failed! eid (:evidence/type entry) (:error/code result))))))
 (defn drain! [state persist!]
   (.execute writer ^Runnable (bound-fn [] (try (drain-now! state persist!)
