@@ -480,7 +480,9 @@ bell was accepted, not that the turn was interpreted.")
         (progn
           (with-temp-file temp
             (let ((coding-system-for-write 'utf-8-unix))
-              (insert (json-encode record) "\n")))
+              (insert (json-serialize record :null-object :null
+                                      :false-object :false)
+                      "\n")))
           (rename-file temp path t)
           (setq temp nil))
       (when (and temp (file-exists-p temp)) (delete-file temp)))))
@@ -499,16 +501,17 @@ bell was accepted, not that the turn was interpreted.")
 (defun session-mode--post-inferred-withdrawal (record-id fragment-id record fragment)
   "POST one withdraw FRAGMENT and return its durable outcome alist."
   (let* ((target (alist-get 'target fragment))
-         (agent (alist-get 'agent_id record))
-         (session (alist-get 'session_id record))
-         (version (alist-get 'interpretation_version record))
+         (field (lambda (k) (let ((v (alist-get k record))) (unless (eq v :null) v))))
+         (agent (funcall field 'agent_id))
+         (session (funcall field 'session_id))
+         (version (funcall field 'interpretation_version))
          (idempotency-key (format "%s:%s" record-id fragment-id)))
     (if (null target)
         `((fragment_id . ,fragment-id) (status . 422)
           (reason . "target-unresolved")
           (idempotency_key . ,idempotency-key))
       (let* ((payload `((caller . "xiang") (agent . ,agent) (session . ,session)
-                        (interpretation-id . ,(or (alist-get 'turn_id record) record-id))
+                        (interpretation-id . ,(or (funcall field 'turn_id) record-id))
                         (interpretation-version . ,version)
                         (idempotency-key . ,idempotency-key)))
              (payload (if (equal target "seat-active-card")
@@ -541,11 +544,19 @@ health and never retries a failed route call."
   (let ((analysis-path (concat path ".analysis.json")))
     (when (and (file-exists-p path) (file-exists-p analysis-path))
       (let* ((json-object-type 'alist) (json-array-type 'list)
-             (record (json-read-file path))
+             ;; The record is rewritten, so it must round-trip exactly: the
+             ;; legacy reader turns [] and {} into nil, written back as null,
+             ;; and the Python readers iterate those fields.
+             (record (with-temp-buffer
+                       (let ((coding-system-for-read 'utf-8))
+                         (insert-file-contents path))
+                       (json-parse-buffer :object-type 'alist :array-type 'array
+                                          :null-object :null :false-object :false)))
              (analysis (json-read-file analysis-path))
              (operator-p (equal (alist-get 'origin record) "operator"))
              (record-id (file-name-base path))
              (existing (alist-get 'withdrawal_effects record))
+             (existing (if (eq existing :null) nil (append existing nil)))
              (done (mapcar (lambda (outcome) (alist-get 'fragment_id outcome)) existing))
              outcomes)
         (when operator-p
@@ -555,9 +566,9 @@ health and never retries a failed route call."
                               record-id (car pair) record (cdr pair))))
                 (when (and (= (or (alist-get 'status outcome) 0) 403)
                            (equal (alist-get 'reason outcome) "no-grant")
-                           (not (gethash (alist-get 'session_id record)
+                           (not (gethash 'emacs
                                          session-mode--withdrawal-disabled-messaged-sessions)))
-                  (puthash (alist-get 'session_id record) t
+                  (puthash 'emacs t
                            session-mode--withdrawal-disabled-messaged-sessions)
                   (message "象: inferred withdrawals are off until Joe's grant exists"))
                 (push outcome outcomes))))

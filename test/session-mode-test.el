@@ -603,3 +603,31 @@
           (should (= 1 (length session-mode-learned-cues)))
           (should (equal (mapcar (lambda (h) (nth 2 h)) (session-mode--turn-matches "just testing")) '("verify"))))
       (delete-directory dir t))))
+
+(ert-deftest session-mode-withdraw-reap-keeps-empty-and-false-fields ()
+  ;; The turn record is rewritten; [] {} false and null must survive, since the
+  ;; Python readers iterate quotes/cues/unmatched.
+  (pcase-let* ((`(,directory ,path)
+                (session-mode-test--withdrawal-files "operator" "seat-active-card")))
+    (unwind-protect
+        (progn
+          (with-temp-file path
+            (insert "{\"origin\":\"operator\",\"agent_id\":\"claude-17\","
+                    "\"session_id\":\"session-17\",\"turn_id\":\"turn-17\","
+                    "\"interpretation_version\":3,\"quotes\":[],\"unmatched\":[],"
+                    "\"analysis_dispatch\":{},\"tagging_failed\":false,"
+                    "\"note\":null}"))
+          (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                     (lambda (&rest _) '(:status 200 :json (:record (:id "act:e"))))))
+            (session-mode--process-withdrawals path))
+          (let ((back (with-temp-buffer
+                        (insert-file-contents path)
+                        (json-parse-buffer :object-type 'hash-table
+                                           :null-object :null :false-object :false))))
+            (should (equal [] (gethash "quotes" back)))
+            (should (equal [] (gethash "unmatched" back)))
+            (should (hash-table-p (gethash "analysis_dispatch" back)))
+            (should (eq :false (gethash "tagging_failed" back)))
+            (should (eq :null (gethash "note" back)))
+            (should (= 1 (length (gethash "withdrawal_effects" back))))))
+      (delete-directory directory t))))
