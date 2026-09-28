@@ -9515,7 +9515,16 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(declare disclosure-refusal*)
 (defn- disclosure-refusal [e]
+  (if-let [store-status (let [st (:status (ex-data e))]
+                          (when (and (integer? st) (or (= 429 st) (<= 500 st))) st))]
+    ;; futon1b refused (e.g. capacity-exhausted): not a fault in the disclosure.
+    (json-response 503 {:ok false :reason :store-unavailable
+                        :store-status store-status})
+    (disclosure-refusal* e)))
+
+(defn- disclosure-refusal* [e]
   (let [reason (or (:reason (ex-data e)) (:refusal (ex-data e)) :invalid-disclosure)
         unavailable? (contains? #{:request-commission-missing
                                   :request-commission-hot-archive-disagreement

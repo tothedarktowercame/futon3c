@@ -114,3 +114,15 @@
           (is (= (get-in (body a) [:record :id]) (get-in (body b) [:record :id])))
           (is (true? (get-in (body b) [:receipt :existing?])))
           (is (= 1 (count @docs))))))))
+
+(deftest store-refusal-is-503-not-invalid-disclosure
+  ;; futon1b capacity-exhausted (2026-09-28) was reported as 400
+  ;; invalid-disclosure, telling the agent its disclosure was wrong.
+  (with-source [edge]
+    (with-redefs [store/request!
+                  (fn [_ _ _ _]
+                    (throw (ex-info "Rule store request refused"
+                                    {:status 503 :body "capacity-exhausted=true"})))]
+      (let [response ((handler) (request base-body))]
+        (is (= 503 (:status response)))
+        (is (= "store-unavailable" (:reason (body response))))))))
