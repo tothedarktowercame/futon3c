@@ -87,3 +87,13 @@
     (is (= card-a (:active result)))
     (is (= [{:record-id "act:grant" :reason :grant-check-not-implemented}]
            (:ignored result)))))
+
+(deftest reversal-by-another-author-is-reported-not-dropped
+  (let [provisional (withdrawal "act:provisional" "xiang" :provisional
+                                :provisional-interpretation withdrawn-at)
+        bad (withdrawal "act:bad-reverse" "agent-b" :effective :self after
+                        "act:card-a" "act:provisional")
+        result (project [card-a provisional bad] after)]
+    (is (= [provisional] (:provisional result)))
+    (is (= [{:record-id "act:bad-reverse" :reason :invalid-reversal}]
+           (:ignored result)))))

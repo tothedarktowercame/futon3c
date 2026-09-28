@@ -105,10 +105,21 @@
                                (filter #(= :effective (second %)))
                                (map (comp :target first))
                                set)
-        ignored-effects (->> classified
-                             (filter #(= :ignored (second %)))
-                             (mapv (fn [[effect _ reason]]
-                                     (ignored effect reason))))]
+        provisional-by-id (->> classified
+                               (filter #(= :provisional (second %)))
+                               (map (fn [[e]] [(:id e) e]))
+                               (into {}))
+        ;; A reversal that reverses nothing visible (wrong author, unknown or
+        ;; non-provisional target, or dated first) is reported, not dropped.
+        bad-reversals (->> reversals
+                           (remove #(some-> (provisional-by-id (:reverses %))
+                                            (->> (valid-reversal? %))))
+                           (map #(ignored % :invalid-reversal)))
+        ignored-effects (into (->> classified
+                                   (filter #(= :ignored (second %)))
+                                   (mapv (fn [[effect _ reason]]
+                                           (ignored effect reason))))
+                              bad-reversals)]
     {:active (when-not (contains? effective-targets (:id candidate)) candidate)
      :provisional provisionals
      :ignored ignored-effects}))
