@@ -222,3 +222,84 @@
                  (lambda (role text) (push (list role text) calls) "evidence")))
         (claude-repl--emit-user-turn-evidence! "operator"))
       (should (equal '(("user" "operator")) calls)))))
+
+(defmacro p12-5-1c-with-segment-capture (&rest body)
+  "Run BODY and return the emitted assistant segment payloads."
+  (declare (indent 1))
+  `(let ((agent-chat--session-id "sid")
+         (agent-chat--unified-turn-id nil)
+         (agent-chat--segment-index 0)
+         (agent-chat--unified-segments nil)
+         (agent-chat--last-assistant-text "")
+         (claude-repl-evidence-log-turns t)
+         (claude-repl-evidence-url "test")
+         (claude-repl-agent-id "claude-17")
+         payloads)
+     (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+               ((symbol-function 'agent-chat-evidence-enabled-p)
+                (lambda (&rest _) t))
+               ((symbol-function 'agent-chat-note-turn-recorded) #'ignore)
+               ((symbol-function 'agent-chat-evidence-post-entry-id)
+                (lambda (_url _timeout payload)
+                  (push payload payloads)
+                  (alist-get 'id payload))))
+       ,@body)
+     (nreverse payloads)))
+
+(ert-deftest p12-5-1c-two-segments-emit-linked-rows ()
+  (with-temp-buffer
+    (let ((payloads
+           (p12-5-1c-with-segment-capture
+             (setq agent-turn-origin-current '(:kind "operator" :actor "joe"))
+             (claude-repl--emit-assistant-segment-evidence! "first" nil)
+             (setq agent-turn-origin-current
+                   '(:kind "harness" :actor "parked-resume" :source-id "park-2"))
+             (claude-repl--emit-assistant-segment-evidence! "second" t))))
+    (should (= 2 (length payloads)))
+    (let* ((first (car payloads))
+           (second (cadr payloads))
+           (first-body (alist-get 'body first))
+           (second-body (alist-get 'body second))
+           (unified-id (alist-get 'unified-turn-id first-body)))
+      (should (equal unified-id (alist-get 'id first)))
+      (should (equal unified-id (alist-get 'unified-turn-id second-body)))
+      (should (= 0 (alist-get 'segment-index first-body)))
+      (should (= 1 (alist-get 'segment-index second-body)))
+      (should (eq :json-false (alist-get 'segment-final first-body)))
+      (should (eq t (alist-get 'segment-final second-body)))
+      (should (equal (alist-get 'id first) (alist-get 'in-reply-to second)))
+      (should (equal "park-2"
+                     (alist-get 'source-ref (alist-get 'harness second))))
+      ;; Whole-turn consumers receive the joined form on the final row.
+      (should (equal "first\n\nsecond"
+                     (alist-get 'unified-text second-body)))))))
+
+(ert-deftest p12-5-1c-single-segment-names-itself ()
+  (with-temp-buffer
+    (let ((payloads
+           (p12-5-1c-with-segment-capture
+             (setq agent-turn-origin-current '(:kind "operator" :actor "joe"))
+             (claude-repl--emit-assistant-segment-evidence! "only" t))))
+    (let* ((payload (car payloads))
+           (body (alist-get 'body payload)))
+      (should (= 1 (length payloads)))
+      (should (equal (alist-get 'id payload) (alist-get 'unified-turn-id body)))
+      (should (= 0 (alist-get 'segment-index body)))
+      (should (eq t (alist-get 'segment-final body)))))))
+
+(ert-deftest p12-5-1c-parked-segment-survives-without-final-segment ()
+  (with-temp-buffer
+    (let ((payloads
+           (p12-5-1c-with-segment-capture
+             (setq agent-turn-origin-current
+                   '(:kind "harness" :actor "parked-resume" :source-id "park-crash"))
+             ;; Simulate the process ending here: no final segment is run.
+             (claude-repl--emit-assistant-segment-evidence!
+              "durable before crash" nil))))
+    (should (= 1 (length payloads)))
+    (let ((body (alist-get 'body (car payloads))))
+      (should (equal "durable before crash" (alist-get 'text body)))
+      (should (eq :json-false (alist-get 'segment-final body)))
+      (should (equal "park-crash"
+                     (alist-get 'source-ref
+                                (alist-get 'harness (car payloads)))))))))

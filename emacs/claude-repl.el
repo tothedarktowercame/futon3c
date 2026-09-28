@@ -793,7 +793,7 @@ session isolation between buffers."
   (when-let* ((pending (agent-chat-consume-pending-user-turn)))
     (claude-repl--emit-user-turn-evidence! pending)))
 
-(defun claude-repl--emit-turn-evidence! (role text)
+(defun claude-repl--emit-turn-evidence! (role text &optional body-fields forced-id)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
   (let ((logged? (and claude-repl-evidence-log-turns
                       (agent-chat-evidence-enabled-p claude-repl-evidence-url)))
@@ -810,7 +810,9 @@ session isolation between buffers."
            "emacs-claude-repl"
            '("claude" "chat" "turn")
            'claude-repl--evidence-session-id
-           'claude-repl--last-evidence-id))
+           'claude-repl--last-evidence-id
+           body-fields
+           forced-id))
     (when logged?
       (agent-chat-note-turn-recorded))
     evidence-id))
@@ -828,14 +830,38 @@ session isolation between buffers."
     (agent-chat-stage-pending-user-turn text)))
 
 (defun claude-repl--emit-assistant-turn-evidence! (text)
-  "Emit evidence for assistant TEXT.  For a unified (parked-then-resumed) turn,
-prepend any output carried forward from earlier segments so the per-turn embedding
-covers the WHOLE turn, not just the first segment (E-repl-continuations)."
-  (let ((full (concat (or agent-chat--accum-text "") (or text ""))))
-    (claude-repl--emit-turn-evidence! "assistant" full)
-    (setq agent-chat--last-assistant-text full)
-    (setq agent-chat--accum-text ""
-          agent-chat--accum-origin nil)))
+  "Emit a single, final assistant segment for callback-based responses."
+  (claude-repl--emit-assistant-segment-evidence! text t))
+
+(defun claude-repl--new-evidence-id ()
+  "Allocate the stable id needed in a segment's own body before posting it."
+  (cadr (agent-chat-evidence--ensure-id nil)))
+
+(defun claude-repl--emit-assistant-segment-evidence! (text final)
+  "Emit TEXT immediately as one assistant segment.
+FINAL says this segment ends the unified turn.  The final row also carries the
+blank-line-joined text for consumers which operate on the whole turn."
+  (let* ((evidence-id (claude-repl--new-evidence-id))
+         (unified-id (or agent-chat--unified-turn-id evidence-id))
+         (index (or agent-chat--segment-index 0))
+         (segments (append agent-chat--unified-segments (list (or text ""))))
+         (unified-text (string-join segments "\n\n"))
+         (body-fields `((unified-turn-id . ,unified-id)
+                        (segment-index . ,index)
+                        (segment-final . ,(if final t :json-false))
+                        ,@(when final `((unified-text . ,unified-text)))))
+         (written (claude-repl--emit-turn-evidence!
+                   "assistant" text body-fields evidence-id)))
+    (when written
+      (setq agent-chat--unified-turn-id unified-id
+            agent-chat--segment-index (1+ index)
+            agent-chat--unified-segments segments
+            agent-chat--last-assistant-text unified-text)
+      (when final
+        (setq agent-chat--unified-turn-id nil
+              agent-chat--segment-index 0
+              agent-chat--unified-segments nil)))
+    written))
 
 (defun claude-repl--emit-turn-commits-evidence! ()
   "Emit evidence for commits made during the current Claude turn."
@@ -1225,17 +1251,11 @@ CALLBACK is called with the final response text on completion."
                                                (ignore-errors
                                                  (funcall agent-chat-turn-continued-fn)))))
                                      (agent-chat-end-streaming-message)
-                                     (if continued
-                                         ;; Parked segment: DEFER — bank the output for
-                                         ;; the unified evidence; no per-segment emit.
-                                         (if (fboundp 'agent-chat--bank-assistant-output)
-                                             (agent-chat--bank-assistant-output result)
-                                           (setq agent-chat--accum-text
-                                                 (concat (or agent-chat--accum-text "")
-                                                         (or result ""))))
-                                       ;; Final segment: emit ONE evidence over the whole
-                                       ;; unified output (emit- prepends the banked text).
-                                       (claude-repl--emit-assistant-turn-evidence! result)
+                                     ;; Evidence is per segment even when flair and clock
+                                     ;; finalization remain deferred across a park chain.
+                                     (claude-repl--emit-assistant-segment-evidence!
+                                      result (not continued))
+                                     (unless continued
                                        (claude-repl--emit-turn-commits-evidence!))
                                      (claude-repl--close-frame "done")
                                      (agent-chat-finish-turn! nil continued)

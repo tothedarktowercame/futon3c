@@ -289,6 +289,15 @@ prevents a later operator turn from relabelling banked assistant output.")
   "The complete assistant text of the most recent emitted turn-evidence, for a
 continuation to carry forward when it absorbs that segment.")
 
+(defvar-local agent-chat--unified-turn-id nil
+  "Evidence id of the first assistant segment in the current unified turn.")
+
+(defvar-local agent-chat--segment-index 0
+  "Zero-based index of the next assistant segment in the unified turn.")
+
+(defvar-local agent-chat--unified-segments nil
+  "Assistant segment texts accumulated for whole-turn consumers.")
+
 (defun agent-chat--bank-assistant-output (text)
   "Append TEXT to the deferred assistant output, retaining its first origin."
   (when (string-empty-p (or agent-chat--accum-text ""))
@@ -3800,7 +3809,8 @@ character the operator meant to write."
       (cons nil text))))
 
 (defun agent-chat-emit-turn-evidence!
-    (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
+    (evidence-url timeout log-turns sid role text assistant-author transport tags
+                  session-var last-id-var &optional body-fields evidence-id)
   "Emit turn evidence for ROLE and TEXT using the shared evidence helpers."
   (when (and log-turns
              (stringp text)
@@ -3827,6 +3837,7 @@ character the operator meant to write."
            (role-tag (if is-user "user" "assistant"))
            (payload `((subject . ((ref/type . "session")
                                   (ref/id . ,sid)))
+                      ,@(when evidence-id `((id . ,evidence-id)))
                       (type . "coordination")
                       (claim-type . ,claim-type)
                       (author . ,author)
@@ -3843,6 +3854,7 @@ character the operator meant to write."
                                          (role . ,role)
                                          (turn-id . ,agent-chat--current-turn-id)
                                          (text . ,trimmed))
+                                       body-fields
                                        (agent-chat--mission-body-fields)))
                       ;; The surface rides in the tags, not in the body: it is
                       ;; metadata about the turn, and the text stays the text.
