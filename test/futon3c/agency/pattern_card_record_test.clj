@@ -63,14 +63,19 @@
     (let [edge (record/record->hyperedge selection)]
       (is (= :pattern-card/selection (:hx/type edge)))
       (is (= at (:hx/valid-time edge)))
+      (is (= at (get-in edge [:hx/props :at])))
       (is (= harness (get-in edge [:hx/props :act/harness])))
       (is (= selection (record/hyperedge->record edge)))))
   (testing "withdrawal"
     (let [edge (record/record->hyperedge withdrawal)]
       (is (= :act/withdrawal (:hx/type edge)))
       (is (= at (:hx/valid-time edge)))
+      (is (= at (get-in edge [:hx/props :at])))
       (is (= harness (get-in edge [:hx/props :act/harness])))
-      (is (= withdrawal (record/hyperedge->record edge))))))
+      (is (= withdrawal (record/hyperedge->record edge)))))
+  (testing "LIST readback has no :hx/valid-time, so props retain :at"
+    (let [listed (dissoc (record/record->hyperedge selection) :hx/valid-time)]
+      (is (= selection (record/hyperedge->record listed))))))
 
 (deftest reverses-must-name-an-act
   (is (= :invalid-reverses

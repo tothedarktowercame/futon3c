@@ -72,7 +72,10 @@
                     :pattern-card/selection (validate-selection record)
                     :act/withdrawal (validate-withdrawal record)
                     (refuse! :unsupported-record-type :kind))
-        props (dissoc validated :id :kind :at)]
+        ;; futon1b uses :hx/valid-time as transaction metadata and deliberately
+        ;; does not return it in LIST documents. Keep :at in props as the
+        ;; domain record's queryable valid-time witness as well.
+        props (dissoc validated :id :kind)]
     {:hx/id (:id validated)
      :hx/type (:kind validated)
      :hx/valid-time (:at validated)
@@ -88,10 +91,11 @@
 (defn hyperedge->record
   "Map one pattern-card act hyperedge back to its validated plain record."
   [hyperedge]
-  (let [record (assoc (:hx/props hyperedge)
+  (let [props (:hx/props hyperedge)
+        record (assoc (dissoc props :at)
                       :id (:hx/id hyperedge)
                       :kind (:hx/type hyperedge)
-                      :at (:hx/valid-time hyperedge))]
+                      :at (or (:hx/valid-time hyperedge) (:at props)))]
     (case (:kind record)
       :pattern-card/selection (validate-selection record)
       :act/withdrawal (validate-withdrawal record)

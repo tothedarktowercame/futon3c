@@ -13,7 +13,7 @@
    :hx/valid-time "2026-09-28T11:00:00Z"
    :hx/endpoints ["agent:claude-17" "session:session-1" "pattern:pattern/a"]
    :hx/props (-> selection-record
-                 (dissoc :kind :at)
+                 (dissoc :kind)
                  (assoc :act/harness harness :pattern-card/schema 1))})
 (def withdrawal-record
   {:kind :act/withdrawal :author "claude-17" :at "2026-09-28T11:30:00Z"
@@ -29,6 +29,7 @@
     (is (true? (:hx/mint-id payload)))
     (is (= "p10-selection-1" (:hx/idempotency-key payload)))
     (is (= 1 (get-in payload [:hx/props :pattern-card/schema])))
+    (is (= (:at selection-record) (get-in payload [:hx/props :at])))
     (is (= harness (get-in payload [:hx/props :act/harness])))))
 
 (deftest withdrawal-payload-validates-the-stored-target
