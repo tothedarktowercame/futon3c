@@ -90,6 +90,7 @@
             [futon3c.agency.disclosure-audit :as disclosure-audit]
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
+            [futon3c.agency.answer-population :as answer-population]
             [futon3c.agency.grant-record :as grant-record]
             [futon3c.agency.rule-record :as rule-record-store]
             [futon3c.agency.atomic-file :as agency-atomic-file]
@@ -10244,13 +10245,22 @@
             (let [inputs (obligations-reader/read-inputs
                           (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
                           agent at mode)
-                  result (obligations/obligations-as-of inputs agent at)]
-              (json-response 200
-                             (-> result
-                                 (assoc :ok true :as-of at
-                                        :basis (:basis inputs)
-                                        :ignored-count (count (:ignored result)))
-                                 (dissoc :ignored))))
+                  result (obligations/obligations-as-of inputs agent at)
+                  question {:agent agent :at-or-cutoff at
+                            :kinds #{:promise :agreement} :mode mode}
+                  basis (assoc-in (:basis inputs) [:population :excluded 0 :rows]
+                                  (count (:incomplete result)))
+                  comparison (answer-population/same-population?
+                              question (:population basis))]
+              (if (= :same (:status comparison))
+                (json-response 200
+                               (-> result
+                                   (assoc :ok true :as-of at
+                                          :basis basis
+                                          :ignored-count (count (:ignored result)))
+                                   (dissoc :ignored)))
+                (json-response 500 {:ok false :reason :population-mismatch
+                                    :reasons (:reasons comparison)})))
             (catch clojure.lang.ExceptionInfo e
               (let [{:keys [reason source]} (ex-data e)]
                 (cond

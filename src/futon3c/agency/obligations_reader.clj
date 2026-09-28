@@ -86,7 +86,8 @@
      (throw (ex-info "Invalid obligations read mode" {:reason :invalid-mode})))
    (when-not (try (Instant/parse t) true (catch Exception _ false))
      (throw (ex-info "Invalid obligations instant" {:reason :invalid-as-of})))
-   (let [history-page (evidence-pages base "promise-history" t mode :promise-history)
+   (let [started-at (str (Instant/now))
+         history-page (evidence-pages base "promise-history" t mode :promise-history)
          outcome-page (evidence-pages base "promise-outcome" t mode :promise-outcomes)
          history (:rows history-page)
          outcomes (->> (:rows outcome-page)
@@ -109,10 +110,11 @@
          offer-mapped (mapv (fn [id]
                               (try
                                 (if-let [edge (read-offer base id t mode)]
-                                  {:record (offer/hyperedge->record edge)}
+                                  {:record (offer/hyperedge->record edge) :fetched? true}
                                   {:issue {:obligation/id id :reason :unknown-offer :record-id id}})
                                 (catch Exception e
-                                  {:issue {:obligation/id id :reason :unreadable-offer
+                                  {:fetched? true
+                                   :issue {:obligation/id id :reason :unreadable-offer
                                            :record-id id :message (.getMessage e)}})))
                             offer-ids)
          pages {:promise-history (:pages history-page)
@@ -122,10 +124,39 @@
          rows {:promise-history (count history)
                :promise-outcomes (count (:rows outcome-page))
                :agreements (count agreement-edges)
-               :offers (count offer-ids)}]
+               :offers (count offer-ids)}
+         reader-incomplete (vec (concat (keep :issue mapped) (keep :issue offer-mapped)))
+         finished-at (str (Instant/now))
+         population
+         {:question {:agent agent-id :at-or-cutoff t
+                     :kinds #{:promise :agreement} :mode mode}
+          :sources
+          [{:kind :evidence :filter {:tags ["promise-history"]}
+            :rows-fetched (count history) :rows-used (count history)
+            :pages (:pages history-page) :page-limit page-limit :complete? true}
+           {:kind :evidence
+            :filter {:tags ["promise-outcome"]
+                     :types [:promise/fulfilled :promise/lapsed
+                             :promise/fulfilment-check]}
+            :rows-fetched (count (:rows outcome-page)) :rows-used (count outcomes)
+            :pages (:pages outcome-page) :page-limit page-limit :complete? true}
+           {:kind :hyperedge
+            :filter {:type :agreement/record :end endpoint}
+            :rows-fetched (count agreement-edges) :rows-used (count agreements)
+            :pages (:pages agreement-page) :page-limit page-limit :complete? true}
+           {:kind :hyperedge :filter {:type :offer/record :ids offer-ids}
+            :rows-fetched (count (filter :fetched? offer-mapped))
+            :rows-used (count (keep :record offer-mapped))
+            :pages (count offer-ids) :page-limit page-limit :complete? true}]
+          :excluded [{:reason :incomplete :rows (count reader-incomplete)
+                      :scope :repository-wide}]
+          :read (if (= :current mode)
+                  {:mode :current :system-as-of :unpinned :cutoff t
+                   :started-at started-at :finished-at finished-at}
+                  {:mode :as-of :system-as-of t :valid-as-of t})}]
      {:promise-history history
       :promise-outcomes outcomes
       :agreements agreements
       :offers (vec (keep :record offer-mapped))
-      :reader-incomplete (vec (concat (keep :issue mapped) (keep :issue offer-mapped)))
-      :basis {:mode mode :t t :pages pages :rows rows}})))
+      :reader-incomplete reader-incomplete
+      :basis {:mode mode :t t :pages pages :rows rows :population population}})))

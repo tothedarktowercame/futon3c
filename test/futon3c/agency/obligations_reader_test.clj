@@ -37,7 +37,9 @@
                                  (swap! paths conj path) (empty-response path))]
       (let [result (reader/read-inputs "http://store" "agent-a" t :current)]
         (is (= :current (get-in result [:basis :mode])))
-        (is (= t (get-in result [:basis :t])))))
+        (is (= t (get-in result [:basis :t])))
+        (is (= :unpinned (get-in result [:basis :population :read :system-as-of])))
+        (is (= t (get-in result [:basis :population :read :cutoff])))))
     (is (every? #(not (re-find #"(?:system|valid)-as-of=" %)) @paths))
     (is (some #(str/includes? % "end=agent%3Aagent-a") @paths))))
 
@@ -80,6 +82,27 @@
                   (empty-response path)))]
       (is (= [check]
              (:promise-outcomes (reader/read-inputs "http://store" "a" t :as-of)))))))
+
+(deftest population-declares-actual-source-filters-and-counts
+  (let [history {:evidence/id "h"}
+        used {:evidence/id "o" :evidence/type :promise/lapsed}
+        unused {:evidence/id "x" :evidence/type :something/else}]
+    (binding [reader/*request!*
+              (fn [_ _ path _]
+                (cond
+                  (str/includes? path "promise-history") {:entries [history]}
+                  (str/includes? path "promise-outcome") {:entries [used unused]}
+                  :else (empty-response path)))]
+      (let [population (get-in (reader/read-inputs "http://store" "agent-a" t :as-of)
+                               [:basis :population])]
+        (is (= {:mode :as-of :system-as-of t :valid-as-of t}
+               (:read population)))
+        (is (= {:tags ["promise-outcome"]
+                :types [:promise/fulfilled :promise/lapsed
+                        :promise/fulfilment-check]}
+               (get-in population [:sources 1 :filter])))
+        (is (= 2 (get-in population [:sources 1 :rows-fetched])))
+        (is (= 1 (get-in population [:sources 1 :rows-used])))))))
 
 (deftest unreadable-agreement-is-kept-as-incomplete
   (let [bad {:hx/id "act:bad" :hx/type :agreement/record :hx/props {}}]
