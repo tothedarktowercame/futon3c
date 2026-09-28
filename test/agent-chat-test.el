@@ -149,10 +149,16 @@
                 ((symbol-function 'agent-chat-scroll-to-bottom)
                  (lambda (&rest _) nil))
                 ((symbol-function 'redisplay) (lambda (&rest _) nil)))
-        (agent-chat-send-input
-         (lambda (text _callback) (setq sent-text text) nil)
-         "agent")
-        (should (equal "hello" sent-text))))))
+        (cl-letf (((symbol-function 'url-retrieve) (lambda (&rest _) nil)))
+          (agent-chat-send-input
+           (lambda (text _callback) (setq sent-text text) nil)
+           "agent"))
+        (should (equal "hello" sent-text))
+        ;; Sending clears the previous pattern from the last line.
+        (goto-char (point-max))
+        (should (equal "> " (buffer-substring-no-properties
+                             (line-beginning-position) (point-max))))
+        (should (= (point-max) (marker-position agent-chat--input-start)))))))
 
 (ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
   (should (equal (agent-chat-cost-flair-suffix

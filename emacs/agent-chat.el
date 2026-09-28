@@ -953,25 +953,32 @@ text-face overlays were removed, painting everything prompt-face orange
        read-only "Agent REPL prompt is read-only; type after its final \"> \""
        rear-nonsticky (face read-only)))))
 
-(defun agent-chat--refresh-prompt-line! ()
+(defun agent-chat--refresh-prompt-line! (&optional prompt)
   "Redraw the live prompt with the prefetched prompt line, keeping input.
 The prompt is drawn once when the buffer opens and messages insert above it,
 so without this the prefix would never change.  No network call here: the value
 was fetched at turn start, so the prompt changes in the same redisplay as the
 turn-end flair (Joe, 2026-09-28).  If the prefetch has not arrived, the prompt
-is left as it is.  The new prompt is inserted
+is left as it is.  With PROMPT, draw that instead; turn start uses \"> \" so a
+sent turn does not leave the previous pattern on the last line.  The new prompt is inserted
 before the old one and the old one then deleted, so the input marker, point and
 window points all end up after the new prompt with typed input untouched."
-  (when (and (markerp agent-chat--prompt-marker)
-             (markerp agent-chat--input-start))
-    (let ((start (marker-position agent-chat--prompt-marker))
-          (end (marker-position agent-chat--input-start)))
-      (when (and start end (< start end)
+  (when (and (markerp agent-chat--input-start)
+             (marker-position agent-chat--input-start))
+    ;; The prompt is the text from the start of the input line to input-start.
+    ;; In a fresh buffer the prompt marker sits above the separator line, so it
+    ;; cannot be used to find the prompt.
+    (let* ((end (marker-position agent-chat--input-start))
+           (start (save-excursion (goto-char end) (line-beginning-position)))
+           (marker-at-start (and (markerp agent-chat--prompt-marker)
+                                 (eql (marker-position agent-chat--prompt-marker)
+                                      start))))
+      (when (and (< start end)
                  (save-excursion
                    (goto-char start)
                    (eql (agent-chat--prompt-end-at-point) end)))
-        (let ((new agent-chat--prefetched-prompt-line))
-          (setq agent-chat--prefetched-prompt-line nil)
+        (let ((new (or prompt agent-chat--prefetched-prompt-line)))
+          (unless prompt (setq agent-chat--prefetched-prompt-line nil))
           (unless (or (null new)
                       (equal new (buffer-substring-no-properties start end)))
             (let ((inhibit-read-only t)
@@ -980,9 +987,10 @@ window points all end up after the new prompt with typed input untouched."
                 (goto-char start)
                 (agent-chat--insert-prompt face new)
                 (delete-region (point) (+ (point) (- end start))))
-              (set-marker agent-chat--prompt-marker start)
-              (when (markerp agent-chat--separator-start)
-                (set-marker agent-chat--separator-start start)))))))))
+              ;; An insertion-type-t prompt marker at START rode past the
+              ;; new text; put it back.  The separator marker is type nil.
+              (when marker-at-start
+                (set-marker agent-chat--prompt-marker start)))))))))
 
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
@@ -2690,6 +2698,7 @@ operator input arriving while they run is queued for the next turn."
                   (or agent-chat--agent-id agent-name "agent")
                   agent-chat--turn-counter))
     (agent-chat-start-turn-commit-window!)
+    (agent-chat--refresh-prompt-line! "> ")
     (agent-chat--prefetch-prompt-line!)
     (setq agent-chat--turn-start-time (float-time))
     (setq agent-chat--pending-turn-origin origin)
