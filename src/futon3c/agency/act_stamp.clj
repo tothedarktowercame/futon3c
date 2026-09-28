@@ -21,6 +21,10 @@
     :grant
 
     (and (map? authority)
+         (= #{:dispatch-edge} (set (keys authority))))
+    :dispatch-edge
+
+    (and (map? authority)
          (= {:operator true} authority))
     :operator
 
@@ -31,7 +35,7 @@
 
   The closed shape is {:executor ID :signer ID :authority AUTH
   :executor-basis (:declared | :session-bound)}. AUTH is exactly a grant act
-  reference or {:operator true}."
+  reference, a dispatch-edge evidence reference, or {:operator true}."
   [stamp]
   (when-not (map? stamp)
     (fail! :invalid-stamp-map :act/stamp))
@@ -58,7 +62,10 @@
                   (fail! :operator-authority-requires-joe :signer))
       :grant (when-not (and (text? (:grant authority))
                             (re-matches #"act:.+" (:grant authority)))
-               (fail! :invalid-grant-id :authority)))
+               (fail! :invalid-grant-id :authority))
+      :dispatch-edge
+      (when-not (text? (:dispatch-edge authority))
+        (fail! :invalid-dispatch-edge-id :authority)))
     (when (and (not= (:executor stamp) (:signer stamp))
                (not= :grant kind))
       (fail! :overreach-without-grant :authority)))

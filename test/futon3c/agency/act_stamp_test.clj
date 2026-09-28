@@ -26,7 +26,13 @@
     (is (= "joe"
            (:signer (act-stamp/stamp "codex-5" "joe"
                                      {:grant "act:delegation"}
-                                     :session-bound))))))
+                                     :session-bound)))))
+  (testing "self execution under the job's dispatch edge"
+    (is (= {:executor "codex-5" :signer "codex-5"
+            :authority {:dispatch-edge "e-edge-1"}
+            :executor-basis :declared}
+           (act-stamp/stamp "codex-5" "codex-5"
+                            {:dispatch-edge "e-edge-1"} :declared)))))
 
 (deftest typed-refusals
   (is (= :invalid-stamp-map (reason nil)))
@@ -50,3 +56,9 @@
          (reason (assoc valid :authority {:grant "grant-1"}))))
   (is (= :invalid-grant-id
          (reason (assoc valid :authority {:grant "act:"})))))
+
+(deftest dispatch-edge-does-not-authorize-another-executor
+  (is (= :overreach-without-grant
+         (reason (assoc valid
+                        :executor "codex-5" :signer "claude-17"
+                        :authority {:dispatch-edge "e-edge-1"})))))
