@@ -9206,6 +9206,7 @@
         response-status (cond
                           (= :not-author reason) 403
                           (= :author-mismatch reason) 403
+                          (= :not-seat-owner reason) 403
                           (= :target-absent reason) 404
                           (= :idempotency-conflict reason) 409
                           (and status (>= status 500)) 502
@@ -9246,9 +9247,16 @@
       (json-response 400 {:ok false :reason :invalid-json})
       (try
         (let [author (pattern-card-author! payload)
+              agent (or (:agent payload) (get payload "agent"))
+              ;; Setting a card on another agent's seat is an act on another
+              ;; party; like withdrawing one (Decision P10 (2)) it would need a
+              ;; grant, which this route does not check. Joe may set any seat.
+              _ (when-not (or (= (str agent) author) (= "joe" author))
+                  (throw (ex-info "Pattern-card selection must be for the caller's own seat"
+                                  {:reason :not-seat-owner :field :agent})))
               record {:kind :pattern-card/selection
                       :author author
-                      :agent (or (:agent payload) (get payload "agent"))
+                      :agent agent
                       :session (or (:session payload) (get payload "session"))
                       :pattern-id (or (:pattern-id payload) (get payload "pattern-id"))
                       :at (pattern-card-at payload)}

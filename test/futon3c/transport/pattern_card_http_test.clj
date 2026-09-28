@@ -110,3 +110,16 @@
                                   :pattern-id "card/a" :idempotency-key "same"}))]
         (is (= 409 (:status response)))
         (is (= "idempotency-conflict" (:reason (response-body response))))))))
+
+(deftest selection-on-another-agents-seat-is-forbidden
+  (let [{:keys [request!]} (fake-store)
+        h (handler)]
+    (with-redefs [store/request! request!]
+      (let [response (h (request "/api/alpha/pattern-card/select"
+                                 {:caller "agent-b" :agent "agent-a" :session "s"
+                                  :pattern-id "card/a" :idempotency-key "select-b"}))]
+        (is (= 403 (:status response)))
+        (is (= "not-seat-owner" (:reason (response-body response)))))
+      (is (= 200 (:status (h (request "/api/alpha/pattern-card/select"
+                                      {:caller "joe" :agent "agent-a" :session "s"
+                                       :pattern-id "card/a" :idempotency-key "select-joe"}))))))))
