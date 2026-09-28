@@ -72,6 +72,7 @@
             [futon3c.test-registry.local-store :as registry-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.agency.act-harness :as act-harness]
@@ -1709,6 +1710,15 @@
                           controller ticket @accepted-id)))))
                  (create-invoke-job-ledger! request))
         {:keys [caller agent-id surface warrants]} request]
+    ;; The invoke ledger is durable before this asynchronous observation is
+    ;; submitted. Retrieval and evidence failure never delay or fail the job.
+    (when (= "work" (invoke-job-mode (:prompt request) (:mode request)))
+      (artifact-activation/submit-work!
+       evidence-store
+       {:kind :invoke-job :id job-id
+        :observed-at (or (get-in @!invoke-jobs-ledger [:jobs job-id :created-at])
+                         (str (Instant/now)))}
+       (:prompt request)))
     ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
     ;; (from→to) edge keyed by job-id so the in-band `Edge:` join-key resolves to a stored
     ;; edge for EVERY job (not just wrapped social-dispatch invokes). Never break the hot path.

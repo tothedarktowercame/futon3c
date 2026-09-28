@@ -302,7 +302,7 @@
    memory in it and corrupt the provenance its benchmark depends on."
   [:enum :pattern :mission :component :gate :session :agent :thread :evidence
    :proof-path :task :portfolio :arse-thread :library :problem :language :tool
-   :service :script :memory :decision :git-commit])
+   :service :script :memory :decision :git-commit :invoke-job])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -321,7 +321,8 @@
    :promise/followup-enqueued :promise/followup-dequeued
    :promise/followup-terminal :promise/followup-requeued
    :promise/ready-enqueued :promise/ready-leased :promise/ready-acked :promise/ready-requeued
-   :promise/park-store-changed :promise/followup-store-changed])
+   :promise/park-store-changed :promise/followup-store-changed
+   :artifact/weak-activation])
 
 (def EvidenceEntry
   "Primary evidence shape — all other evidence projections are derived from this.

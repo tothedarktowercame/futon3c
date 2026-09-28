@@ -22,6 +22,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -87,18 +88,19 @@
 (use-fixtures
   :each mesh-fixtures/with-store
   (fn [f]
-    (reg/reset-registry!)
-    (clock-store/reset-store!)
-    (persist/reset-sessions!)
-    (estore/reset-store!)
-    (reset! portfolio/!state {:mu perceive/default-mu
-                              :prec perceive/default-precision
-                              :pending nil
-                              :recent []
-                              :step-count 0})
-    (enc/clear-cache!)
-    (http/reset-invoke-jobs!)
-    (f)))
+    (with-redefs [artifact-activation/submit-work! (fn [& _] :submitted)]
+      (reg/reset-registry!)
+      (clock-store/reset-store!)
+      (persist/reset-sessions!)
+      (estore/reset-store!)
+      (reset! portfolio/!state {:mu perceive/default-mu
+                                :prec perceive/default-precision
+                                :pending nil
+                                :recent []
+                                :step-count 0})
+      (enc/clear-cache!)
+      (http/reset-invoke-jobs!)
+      (f))))
 
 ;; =============================================================================
 ;; Test helpers
@@ -2045,6 +2047,30 @@
       (is (= "brief" (get-in final [:job :mode])))
       (is (= "done" (get-in final [:job :state]))
           "explicit brief mode disables keyword-inferred work enforcement"))))
+
+(deftest bell-activation-hook-is-work-only
+  (register-mock-agent! "codex-bell-activation" :codex)
+  (let [submitted (atom [])
+        handler (make-handler)]
+    (with-redefs [artifact-activation/submit-work!
+                  (fn [_store artifact text]
+                    (swap! submitted conj [artifact text])
+                    :submitted)]
+      (let [brief (post handler "/api/alpha/bell"
+                        (json/generate-string
+                         {"agent-id" "codex-bell-activation"
+                          "prompt" "conversation only"
+                          "mode" "brief"}))]
+        (is (= 202 (:status brief)))
+        (is (empty? @submitted) "non-work bells have no activation record"))
+      (let [work (post handler "/api/alpha/bell"
+                       (json/generate-string
+                        {"agent-id" "codex-bell-activation"
+                         "prompt" "full build packet"
+                         "mode" "work"}))]
+        (is (= 202 (:status work)))
+        (is (= 1 (count @submitted)))
+        (is (= "full build packet" (second (first @submitted))))))))
 
 (deftest invoke-announce-creates-canonical-queued-job
   (testing "POST /api/alpha/invoke/announce records a queued job before external acceptance"
