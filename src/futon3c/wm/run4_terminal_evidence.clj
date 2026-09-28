@@ -176,7 +176,7 @@
                    (= (:sha256 snapshot)
                       (get-in projection [:source :run-record-sha256]))
                    (= identity-present? provenance-present?)
-                   (exact-keys? value expected-keys)
+                   (every? #(contains? value %) expected-keys)
                    (= (:click/id projection) (:click/id value))
                    (= (:run/id projection) (:run/id value))
                    (= (:run4/task-pin projection) (:run4/task-pin value))

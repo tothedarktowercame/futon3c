@@ -180,6 +180,42 @@
        (is (= (digest/sha256 (pr-str projection)) (:projection-digest bundle)))
        (is (= :succeeded (get-in bundle [:classification :task-result])))))))
 
+(deftest run-record-requires-the-contract-and-preserves-runner-additions
+  (fixture
+   (fn [{:keys [roots run-file projection-file binding-file projection binding]}]
+     (let [required-record (read-string (slurp run-file))
+           install! (fn [record]
+                      (write! run-file record)
+                      (let [sha (digest/sha256 (slurp run-file))
+                            p (assoc-in projection [:source :run-record-sha256] sha)]
+                        (write! projection-file p)
+                        (write! binding-file
+                                (assoc binding :run4/terminal-projection
+                                       (assoc (:run4/terminal-projection binding)
+                                              :sha256 (digest/sha256 (pr-str p))
+                                              :source-sha256 sha)))))]
+       (testing "the complete runner record is returned without projection"
+         (let [record (assoc required-record
+                             :decision {:selection-law :recorded}
+                             :participants [{:id "war-machine"}]
+                             :refresh {:status :completed})]
+           (install! record)
+           (is (= record
+                  (:run-record
+                   (sut/read-terminal-evidence-bundle roots request started))))))
+       (testing "a missing required key is a binding mismatch"
+         (install! (dissoc required-record :selectorSeam))
+         (is (= :run-record-binding-mismatch
+                (:reason (try (sut/read-terminal-evidence-bundle roots request started)
+                              nil
+                              (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+       (testing "execution identity and provenance must remain paired"
+         (install! (dissoc required-record :runner-execution/provenance))
+         (is (= :run-record-binding-mismatch
+                (:reason (try (sut/read-terminal-evidence-bundle roots request started)
+                              nil
+                              (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+
 (deftest versioned-run-record-execution-authority-is-exact-and-paired
   (fixture
    (fn [{:keys [roots run-file projection-file binding-file projection binding
