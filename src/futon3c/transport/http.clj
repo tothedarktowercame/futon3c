@@ -73,7 +73,9 @@
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.prompt-line :as prompt-line]
-            [futon3c.agency.pattern-card-provider]
+            [futon3c.agency.act-harness :as act-harness]
+            [futon3c.agency.pattern-card-provider :as pattern-card-provider]
+            [futon3c.agency.pattern-card-record-cli :as pattern-card-cli]
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
@@ -9189,6 +9191,113 @@
                             :reason (some-> (:reason data) name)
                             :message (.getMessage throwable)})))))))
 
+(defn- pattern-card-caller [payload]
+  ;; Agency's bell, invoke and cancellation write routes carry the initiating
+  ;; identity in the body-level caller field. Pattern-card writes use the same
+  ;; boundary; author is derived from it and is never accepted as an override.
+  (some-> (or (:caller payload) (get payload "caller")) str str/trim not-empty))
+
+(defn- pattern-card-refusal [throwable]
+  (let [{:keys [reason status]} (ex-data throwable)
+        reason (or reason
+                   (when (= 409 status) :idempotency-conflict)
+                   (when (= 404 status) :target-absent)
+                   :store-failure)
+        response-status (cond
+                          (= :not-author reason) 403
+                          (= :author-mismatch reason) 403
+                          (= :target-absent reason) 404
+                          (= :idempotency-conflict reason) 409
+                          (and status (>= status 500)) 502
+                          (= :store-failure reason) 500
+                          :else 400)]
+    (json-response response-status
+                   {:ok false :reason reason :message (.getMessage throwable)})))
+
+(defn- pattern-card-author! [payload]
+  (let [caller (pattern-card-caller payload)
+        supplied (some-> (or (:author payload) (get payload "author")) str)]
+    (when-not caller
+      (throw (ex-info "Pattern-card caller is required"
+                      {:reason :missing-caller :field :caller})))
+    (when (and supplied (not= supplied caller))
+      (throw (ex-info "Pattern-card author must equal caller"
+                      {:reason :author-mismatch :field :author})))
+    caller))
+
+(defn- pattern-card-at [payload]
+  (str (or (:at payload) (get payload "at") (Instant/now))))
+
+(defn- pattern-card-idempotency-key [payload]
+  (or (:idempotency-key payload) (get payload "idempotency-key")))
+
+(defn- publish-pattern-card-write! [result]
+  (let [{:keys [agent session]} (:seat result)]
+    (pattern-card-provider/publish-card-result!
+     agent session (:card-as-of result) (get-in result [:receipt :system-as-of])))
+  result)
+
+(defn handle-pattern-card-select
+  "Mint a self-authored exact-seat pattern-card selection and publish its
+   verified projection to the live prompt cache."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [author (pattern-card-author! payload)
+              record {:kind :pattern-card/selection
+                      :author author
+                      :agent (or (:agent payload) (get payload "agent"))
+                      :session (or (:session payload) (get payload "session"))
+                      :pattern-id (or (:pattern-id payload) (get payload "pattern-id"))
+                      :at (pattern-card-at payload)}
+              request {:record record
+                       :idempotency-key (pattern-card-idempotency-key payload)}
+              result (pattern-card-cli/write-selection!
+                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      request (act-harness/plain "route:futon3c.pattern-card/select"))]
+          (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+        (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
+(defn- pattern-card-basis [payload]
+  (let [basis (or (:basis payload) (get payload "basis"))]
+    (if (map? basis)
+      {:kind (parse-keyword (or (:kind basis) (get basis "kind")))}
+      {:kind (parse-keyword basis)})))
+
+(defn handle-pattern-card-withdraw
+  "Mint a withdrawal authored by the body-level Agency caller and publish its
+   verified projection to the live prompt cache."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [author (pattern-card-author! payload)
+              reverses (or (:reverses payload) (get payload "reverses"))
+              record (cond-> {:kind :act/withdrawal
+                              :author author
+                              :target (or (:target payload) (get payload "target"))
+                              :status (parse-keyword (or (:status payload)
+                                                        (get payload "status")))
+                              :basis (pattern-card-basis payload)
+                              :at (pattern-card-at payload)}
+                       reverses (assoc :reverses reverses))
+              request {:record record
+                       :idempotency-key (pattern-card-idempotency-key payload)}
+              result (pattern-card-cli/write-withdrawal!
+                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      request (act-harness/plain "route:futon3c.pattern-card/withdraw"))]
+          (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+        (catch clojure.lang.ExceptionInfo e (pattern-card-refusal e))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -9215,6 +9324,12 @@
           (if-let [last-render (prompt-line/last-render agent session)]
             (json-response 200 last-render)
             (json-response 404 {:error "prompt-line-render-not-found"}))))
+
+      (and (= :post method) (= "/api/alpha/pattern-card/select" uri))
+      (handle-pattern-card-select request)
+
+      (and (= :post method) (= "/api/alpha/pattern-card/withdraw" uri))
+      (handle-pattern-card-withdraw request)
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)

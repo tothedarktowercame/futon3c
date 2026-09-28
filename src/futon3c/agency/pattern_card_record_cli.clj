@@ -128,6 +128,7 @@
       (refuse! :readback-mismatch :receipt))
     {:receipt (assoc receipt :verified? true :system-as-of system-as-of)
      :record stored
+     :seat (select-keys seat [:agent :session])
      :card-as-of (acts/card-as-of (concat selections withdrawals)
                                   (:agent seat) (:session seat) at)
      :unreadable (into (:unreadable sel) (:unreadable wd))}))
