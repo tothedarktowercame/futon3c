@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-loop-entry-r1-outer-cascade-trigger-test-literal-fix-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-loop-entry-r1-outer-cascade-trigger-test-literal-fix
   "Producer for the [:loop-entry :r1-outer-cascade :trigger] wire. Runs the
   real futon2.wm-trigger/trigger-from-env 1-arity (the writer's end, as
   wm-scheduled-run/-main calls it) with FUTON_WM_TRIGGER stubbed to

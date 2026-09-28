@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-plan-observe-test
+(ns futon3c.diagramprover.wm-wire-producer-plan-observe
   "Producer for the plan-observe group: one run of the support's real
   outer-loop/plan-from-field! calls (and the entry/loop product helpers the
   readers' second layers used), recorded once. The ten wire readers then
