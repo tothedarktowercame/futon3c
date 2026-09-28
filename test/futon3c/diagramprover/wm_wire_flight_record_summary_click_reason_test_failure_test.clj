@@ -109,10 +109,11 @@
 
 (deftest the-close-failure-reaches-the-components-own-test
   (let [o (check)]
-    ;; the reader's own assertions: all four parts, and click-failure agrees
+    ;; the reader's own assertions: all five parts, and click-failure agrees
     (is (= {:kind :transport-unavailable :stage :selection
             :error "substrate-2 mission registry unreachable"
-            :cause {:cause [{:class "java.net.ConnectException" :message "Connection refused"}]}}
+            :cause {:cause [{:class "java.net.ConnectException" :message "Connection refused"}]}
+            :detail {:absent :no-error-data}}
            (:reader o)))
     (is (:reader-agrees? o))
     (is (w/received? o))))

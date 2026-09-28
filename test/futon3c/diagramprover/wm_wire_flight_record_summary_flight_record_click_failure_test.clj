@@ -1,7 +1,7 @@
 (ns futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test
   "Wire [:flight-record-summary :flight-record-click :failure]: why the
   click closed, as record-summary reads it from the run record's :failure
-  (run-record-failure: the close map's kind/stage/error/cause, each part
+  (run-record-failure: the close map's kind/stage/error/cause/detail, each part
   typed absent when the record lacks it, WM-CLICK-REASON-I) reaching the
   flight record's click entry (record-click keeps it: `(contains? click
   :failure) (assoc :failure ...)`).
@@ -117,10 +117,11 @@
   (let [o (check)]
     (is (= {:kind :transport-unavailable :stage :selection
             :error "substrate-2 mission registry unreachable"
-            :cause {:cause [{:class "java.net.ConnectException" :message "Connection refused"}]}}
+            :cause {:cause [{:class "java.net.ConnectException" :message "Connection refused"}]}
+            :detail {:absent :no-error-data}}
            (:record-failure o))
         "the runner wrote the close's failure onto the run record")
-    (is (= (:record-failure o) (:writer o)) "record-summary reads all four parts")
+    (is (= (:record-failure o) (:writer o)) "record-summary reads all five parts")
     (is (w/received? o))))
 
 (deftest a-record-with-no-failure-is-a-typed-absence-and-fails-the-wire
