@@ -6,6 +6,7 @@
    retain their exact EDN envelope and payload bytes; indexed columns only
    accelerate protocol queries and latest-run lookup."
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [futon3c.evidence.backend :as backend])
   (:import [java.sql Connection DriverManager]
            [java.time Instant]))
@@ -50,22 +51,22 @@
     (execute! c "CREATE INDEX IF NOT EXISTS registry_runs_command ON registry_runs(command_key, ran_order DESC, finished_order DESC, entry_id DESC)")
     (execute! c
       "CREATE TABLE IF NOT EXISTS registry_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    (execute! c
+      "CREATE TABLE IF NOT EXISTS warrant_rerun_requests (
+         request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+         namespace TEXT NOT NULL,
+         repo TEXT NOT NULL,
+         reason TEXT NOT NULL CHECK (reason IN ('stale','absent')),
+         requested_at TEXT NOT NULL,
+         state TEXT NOT NULL CHECK (state IN ('queued','running','done','failed')),
+         entry_id TEXT,
+         detail TEXT,
+         finished_at TEXT)")
+    (execute! c
+      "CREATE UNIQUE INDEX IF NOT EXISTS warrant_rerun_one_active_namespace
+         ON warrant_rerun_requests(namespace) WHERE state IN ('queued','running')")
     (with-open [s (.prepareStatement c "INSERT OR IGNORE INTO registry_metadata(key,value) VALUES('generation','local-v1')")]
       (.executeUpdate s))))
-
-(defn- initialized? [path]
-  (try
-    (with-open [c (connect path)
-                s (.prepareStatement c
-                    "SELECT 1 FROM registry_metadata WHERE key='generation'")
-                r (.executeQuery s)]
-      (.next r))
-    (catch java.sql.SQLException e
-      ;; An unopened database has no metadata table. Other storage failures
-      ;; must remain failures rather than being mistaken for initialization.
-      (if (re-find #"no such table: registry_metadata" (or (.getMessage e) ""))
-        false
-        (throw e)))))
 
 (defn- instant-order [x]
   (try
@@ -185,7 +186,10 @@
   ([] (sqlite-backend default-path))
   ([path]
    (let [path (str path)]
-     (when-not (initialized? path) (initialize! path))
+     ;; Every schema change is expressed with IF NOT EXISTS, so opening an
+     ;; established store also applies additive migrations without rewriting
+     ;; registry evidence.
+     (initialize! path)
      (->SQLiteBackend path))))
 
 (defn latest-run-for-namespace [backend namespace]
@@ -193,6 +197,153 @@
 
 (defn latest-run-for-command [backend command]
   (latest (:path backend) "command_key" (pr-str command)))
+
+(defn- rerun-row [r]
+  {:request-id (.getLong r "request_id")
+   :namespace (.getString r "namespace")
+   :repo (.getString r "repo")
+   :reason (keyword (.getString r "reason"))
+   :requested-at (.getString r "requested_at")
+   :state (keyword (.getString r "state"))
+   :entry-id (.getString r "entry_id")
+   :detail (.getString r "detail")
+   :finished-at (.getString r "finished_at")})
+
+(defn- select-reruns [^Connection c where-sql bind]
+  (with-open [s (.prepareStatement c
+                  (str "SELECT request_id,namespace,repo,reason,requested_at,state,entry_id,detail,finished_at "
+                       "FROM warrant_rerun_requests " where-sql
+                       " ORDER BY request_id"))]
+    (doseq [[i value] (map-indexed vector bind)]
+      (.setObject s (inc i) value))
+    (with-open [r (.executeQuery s)]
+      (loop [out []]
+        (if (.next r) (recur (conj out (rerun-row r))) out)))))
+
+(defn- request-result [row created?]
+  (assoc (select-keys row [:request-id :namespace :repo :reason :requested-at :state])
+         :created? created?))
+
+(defn request-rerun!
+  "Return the active rerun request for NAMESPACE, or append one queued request.
+  Only an absent or stale current-warrant lookup licenses this operation."
+  [backend {:keys [namespace repo reason]}]
+  (if-not (and (string? namespace) (not (str/blank? namespace))
+               (string? repo) (not (str/blank? repo))
+               (#{:absent :stale} reason))
+    (error :invalid-rerun-request "Reruns require namespace, repo, and reason stale or absent"
+           {:namespace namespace :repo repo :reason reason})
+    (with-open [c (connect (:path backend))]
+      (execute! c "BEGIN IMMEDIATE")
+      (try
+        (if-let [active (first (select-reruns c
+                                 "WHERE namespace=? AND state IN ('queued','running')"
+                                 [namespace]))]
+          (do (execute! c "COMMIT") (request-result active false))
+          (let [requested-at (str (Instant/now))]
+            (with-open [s (.prepareStatement c
+                            "INSERT INTO warrant_rerun_requests
+                               (namespace,repo,reason,requested_at,state)
+                             VALUES(?,?,?,?, 'queued')")]
+              (.setString s 1 namespace)
+              (.setString s 2 repo)
+              (.setString s 3 (name reason))
+              (.setString s 4 requested-at)
+              (.executeUpdate s))
+            (let [created (first (select-reruns c
+                                   "WHERE namespace=? AND state='queued'"
+                                   [namespace]))]
+              (execute! c "COMMIT")
+              (request-result created true))))
+        (catch Throwable t
+          (try (execute! c "ROLLBACK") (catch Throwable _))
+          (throw t))))))
+
+(defn claim-reruns!
+  "Atomically move at most N oldest queued requests to running and return them."
+  [backend n]
+  (if-not (and (integer? n) (pos? n))
+    (error :invalid-rerun-claim "Rerun claim count must be a positive integer" {:n n})
+    (with-open [c (connect (:path backend))]
+      (execute! c "BEGIN IMMEDIATE")
+      (try
+        (let [claimed (take n (select-reruns c "WHERE state='queued'" []))]
+          (with-open [s (.prepareStatement c
+                          "UPDATE warrant_rerun_requests SET state='running'
+                           WHERE request_id=? AND state='queued'")]
+            (doseq [{:keys [request-id]} claimed]
+              (.setLong s 1 request-id)
+              (.addBatch s))
+            (.executeBatch s))
+          (execute! c "COMMIT")
+          (mapv #(assoc % :state :running) claimed))
+        (catch Throwable t
+          (try (execute! c "ROLLBACK") (catch Throwable _))
+          (throw t))))))
+
+(defn finish-rerun!
+  "Finish a running request as done or failed. A done request must name its
+  passing registry entry; a failed request may name a non-warrant run."
+  [backend request-id {:keys [state entry-id detail]}]
+  (cond
+    (not (#{:done :failed} state))
+    (error :invalid-rerun-finish "Rerun finish state must be done or failed"
+           {:request-id request-id :state state})
+
+    (and (= :done state) (or (not (string? entry-id)) (str/blank? entry-id)))
+    (error :invalid-rerun-finish "A completed rerun must name its passing registry entry"
+           {:request-id request-id :state state :entry-id entry-id})
+
+    :else
+    (with-open [c (connect (:path backend))]
+      (execute! c "BEGIN IMMEDIATE")
+      (try
+        (let [row (first (select-reruns c "WHERE request_id=?" [request-id]))]
+          (cond
+            (nil? row)
+            (do (execute! c "ROLLBACK")
+                (error :rerun-request-not-found "Rerun request does not exist"
+                       {:request-id request-id}))
+
+            (not= :running (:state row))
+            (do (execute! c "ROLLBACK")
+                (error :rerun-not-running "Only a running rerun request can finish"
+                       {:request-id request-id :state (:state row)}))
+
+            :else
+            (let [finished-at (str (Instant/now))]
+              (with-open [s (.prepareStatement c
+                              "UPDATE warrant_rerun_requests
+                               SET state=?,entry_id=?,detail=?,finished_at=?
+                               WHERE request_id=?")]
+                (.setString s 1 (name state))
+                (.setString s 2 entry-id)
+                (.setString s 3 detail)
+                (.setString s 4 finished-at)
+                (.setLong s 5 request-id)
+                (.executeUpdate s))
+              (let [finished (first (select-reruns c "WHERE request_id=?" [request-id]))]
+                (execute! c "COMMIT")
+                finished))))
+        (catch Throwable t
+          (try (execute! c "ROLLBACK") (catch Throwable _))
+          (throw t))))))
+
+(defn rerun-requests
+  "Read rerun request history, optionally filtered by state and namespace."
+  [backend {:keys [state namespace]}]
+  (let [[clauses bind] (reduce (fn [[clauses bind] [clause value]]
+                                 (if (nil? value)
+                                   [clauses bind]
+                                   [(conj clauses clause) (conj bind value)]))
+                               [[] []]
+                               [["state=?" (some-> state name)]
+                                ["namespace=?" namespace]])
+        where-sql (if (seq clauses)
+                    (str "WHERE " (str/join " AND " clauses))
+                    "")]
+    (with-open [c (connect (:path backend))]
+      (select-reruns c where-sql bind))))
 
 (defn append-batch!
   "Append ENTRIES in one transaction. Used by rebuild tooling and contention tests."

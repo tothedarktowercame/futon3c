@@ -171,6 +171,120 @@
                      (when (.next r) (.getLong r 1))))))
       (finally (cleanup! dir)))))
 
+(deftest rerun-request-lifecycle
+  (let [dir (temp-dir) b (sqlite/sqlite-backend (io/file dir "registry.sqlite"))]
+    (try
+      (testing "only stale and absent lookups license a request"
+        (let [absent (sqlite/request-rerun! b {:namespace "absent-test"
+                                               :repo "futon3c" :reason :absent})
+              stale (sqlite/request-rerun! b {:namespace "stale-test"
+                                              :repo "futon2" :reason :stale})]
+          (is (true? (:created? absent)))
+          (is (= :queued (:state absent)))
+          (is (true? (:created? stale)))
+          (is (= :invalid-rerun-request
+                 (:error/code (sqlite/request-rerun!
+                               b {:namespace "failed-test" :repo "futon2"
+                                  :reason :not-passing}))))))
+      (testing "queued and running requests deduplicate by namespace"
+        (let [first-request (sqlite/request-rerun!
+                             b {:namespace "same-test" :repo "futon3c" :reason :absent})
+              queued-again (sqlite/request-rerun!
+                            b {:namespace "same-test" :repo "futon3c" :reason :stale})]
+          (is (= (:request-id first-request) (:request-id queued-again)))
+          (is (false? (:created? queued-again)))
+          (let [claimed (sqlite/claim-reruns! b 3)
+                running (first (filter #(= "same-test" (:namespace %)) claimed))
+                running-again (sqlite/request-rerun!
+                               b {:namespace "same-test" :repo "futon3c" :reason :stale})]
+            (is (= :running (:state running)))
+            (is (= (:request-id first-request) (:request-id running-again)))
+            (is (false? (:created? running-again)))
+            (is (= 1 (count (sqlite/rerun-requests b {:namespace "same-test"})))))))
+      (testing "only running rows finish, and history remains append-only"
+        (let [queued (sqlite/request-rerun!
+                      b {:namespace "finish-test" :repo "futon3c" :reason :absent})]
+          (is (= :rerun-not-running
+                 (:error/code (sqlite/finish-rerun!
+                               b (:request-id queued)
+                               {:state :done :entry-id "test-registry-pass"}))))
+          (let [running (first (sqlite/claim-reruns! b 1))]
+            (is (= (:request-id queued) (:request-id running)))
+            (is (= :done (:state (sqlite/finish-rerun!
+                                  b (:request-id running)
+                                  {:state :done :entry-id "test-registry-pass"}))))
+            (let [next-request (sqlite/request-rerun!
+                                b {:namespace "finish-test" :repo "futon3c"
+                                   :reason :stale})
+                  history (sqlite/rerun-requests b {:namespace "finish-test"})]
+              (is (true? (:created? next-request)))
+              (is (not= (:request-id queued) (:request-id next-request)))
+              (is (= [:done :queued] (mapv :state history))))))
+        (let [queued (first (sqlite/rerun-requests b {:state :queued}))
+              running (first (sqlite/claim-reruns! b 1))
+              failed (sqlite/finish-rerun!
+                      b (:request-id running)
+                      {:state :failed :detail "test command exited 1"})]
+          (is (= (:request-id queued) (:request-id running)))
+          (is (= :failed (:state failed)))
+          (is (= "test command exited 1" (:detail failed)))))
+      (finally (cleanup! dir)))))
+
+(deftest rerun-claims-are-oldest-first
+  (let [dir (temp-dir) b (sqlite/sqlite-backend (io/file dir "registry.sqlite"))]
+    (try
+      (doseq [namespace ["first-test" "second-test" "third-test"]]
+        (sqlite/request-rerun! b {:namespace namespace :repo "futon3c" :reason :absent}))
+      (is (= ["first-test" "second-test"]
+             (mapv :namespace (sqlite/claim-reruns! b 2))))
+      (is (= ["third-test"]
+             (mapv :namespace (sqlite/rerun-requests b {:state :queued}))))
+      (finally (cleanup! dir)))))
+
+(deftest concurrent-rerun-requests-have-one-identity
+  (let [dir (temp-dir) db (io/file dir "registry.sqlite")
+        b (sqlite/sqlite-backend db)
+        ready (promise)
+        calls (mapv (fn [_]
+                      (future
+                        @ready
+                        (sqlite/request-rerun!
+                         b {:namespace "concurrent-test" :repo "futon3c"
+                            :reason :absent})))
+                    (range 20))]
+    (try
+      (deliver ready true)
+      (let [results (mapv deref calls)]
+        (is (= 1 (count (set (map :request-id results)))))
+        (is (= 1 (count (filter :created? results))))
+        (is (= 1 (count (sqlite/rerun-requests b {:namespace "concurrent-test"})))))
+      (finally (cleanup! dir)))))
+
+(deftest rerun-request-time-bar
+  (let [dir (temp-dir) b (sqlite/sqlite-backend (io/file dir "registry.sqlite"))
+        base (.getEpochSecond (Instant/parse "2026-09-27T07:00:00Z"))
+        entries (mapv (fn [i]
+                        (entry (str "perf-entry-" i)
+                               (str (Instant/ofEpochSecond (+ base i)))))
+                      (range 200))]
+    (try
+      (is (every? :ok (sqlite/append-batch! b entries)))
+      (let [samples (mapv (fn [i]
+                            (let [start (System/nanoTime)]
+                              (sqlite/request-rerun!
+                               b {:namespace (str "request-perf-" i)
+                                  :repo "futon3c" :reason :absent})
+                              (/ (double (- (System/nanoTime) start)) 1000000.0)))
+                          (range 200))
+            ordered (sort samples)
+            median (nth ordered 100)
+            maximum (last ordered)]
+        (println "RERUN REQUEST TIME BAR"
+                 {:registry-entries 200 :requests 200
+                  :median-ms median :maximum-ms maximum})
+        (is (< maximum 50.0)))
+      (finally (cleanup! dir)))))
+
 (deftest five-thousand-entry-time-bar
   (let [dir (temp-dir) b (sqlite/sqlite-backend (io/file dir "registry.sqlite"))
         base (.getEpochSecond (Instant/parse "2026-09-27T06:00:00Z"))
