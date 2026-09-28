@@ -82,6 +82,33 @@
                                    :basis-status :pattern-card}}
            :segment/header (str "card " pattern-id " (" act-id ")")})))))
 
+(defn provisional-pattern-card
+  "Return a cache-only marker for one provisionally withdrawn candidate card.
+   Multiple effects are deliberately not collapsed into one asserted marker."
+  [{:keys [agent-id session-id render-at]}]
+  (when-let [{:keys [result observed-at]}
+             (get @!cards [(str agent-id) (str session-id)])]
+    (when (fresh-within? (str render-at) observed-at card-stale-after)
+      (let [candidate (:candidate result)
+            effects (filterv #(= (:id candidate) (:target %))
+                             (:provisional result))]
+        (when (and candidate (= 1 (count effects)))
+          (let [effect (first effects)
+                pattern-id (str (:pattern-id candidate))
+                effect-id (str (:id effect))]
+            (when (and (not (str/blank? pattern-id))
+                       (not (str/blank? effect-id)))
+              {:segment/id :pattern
+               :segment/value (str "~" pattern-id)
+               :segment/marker "?"
+               :segment/provider "futon3c.agency.pattern-card-provider/provider"
+               :segment/observed-at observed-at
+               :segment/basis {:evidence-ref effect-id
+                               :scope {:agent-id (str agent-id)
+                                       :session-id (str session-id)
+                                       :basis-status :provisional-withdrawal}}
+               :segment/header (str "withdrawn? " pattern-id " (" effect-id ")")})))))))
+
 (defn- field [m k]
   (or (get m k) (get m (name k))))
 
@@ -244,6 +271,7 @@
   [{:keys [agent-id session-id render-at] :as ctx}]
   (recheck-async! agent-id session-id)
   (or (active-pattern-card ctx)
+      (provisional-pattern-card ctx)
       (let [key [(str agent-id) (str session-id)]
             cached (get @!retrievals key)]
         (if-not cached

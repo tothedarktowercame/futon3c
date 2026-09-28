@@ -309,3 +309,93 @@
                (get-in (response-body response) [:record :act/stamp :authority])))
         (is (some #(re-find #"type=grant%2Frecord&end=agent%3Axiang" (second %))
                   @calls))))))
+
+(defn provisionally-withdraw! [h key]
+  (h (request "/api/alpha/withdrawal/provisional"
+              {:caller "xiang" :agent "agent-a" :session "session-a"
+               :interpretation-id (str "interpretation:" key)
+               :interpretation-version 1 :at "2026-09-28T11:30:00Z"
+               :idempotency-key key})))
+
+(deftest undo-one-provisional-restores-the-card-and-prompt
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)
+        grant-id "act:xiang-provisional"]
+    (swap! docs assoc grant-id (provisional-grant grant-id))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id grant-id
+                  provider/refresh-async! (fn [& _])
+                  provider/refresh-cards-async! (fn [& _])]
+      (select-card! h "agent-a" "session-a" "card/a"
+                    "undo-select" "2026-09-28T11:00:00Z")
+      (let [withdrawn (response-body (provisionally-withdraw! h "undo-provisional"))
+            effect-id (get-in withdrawn [:record :id])
+            before (provider/provider {:agent-id "agent-a" :session-id "session-a"
+                                       :render-at (get-in withdrawn
+                                                          [:receipt :system-as-of])})
+            response (h (request "/api/alpha/withdrawal/undo"
+                                 {:caller "joe" :agent "agent-a" :session "session-a"
+                                  :at "2026-09-28T11:31:00Z"
+                                  :idempotency-key "undo-one"}))
+            body (response-body response)
+            after (provider/provider {:agent-id "agent-a" :session-id "session-a"
+                                      :render-at (get-in body [:receipt :system-as-of])})]
+        (is (= "withdrawn? card/a" (subs (:segment/header before) 0 17)))
+        (is (= 200 (:status response)))
+        (is (= effect-id (get-in body [:record :reverses])))
+        (is (= "grant" (get-in body [:record :basis :kind])))
+        (is (= "card/a" (get-in body [:card-as-of :active :pattern-id])))
+        (is (empty? (get-in body [:card-as-of :provisional])))
+        (is (not-any? #(= "invalid-reversal" (:reason %))
+                      (get-in body [:card-as-of :ignored])))
+        (is (= "card card/a" (subs (:segment/header after) 0 11)))))))
+
+(deftest undo-refuses-zero-non-operator-and-ambiguous-effects-without-post
+  (let [{:keys [request! docs calls]} (fake-store)
+        h (handler)
+        grant-id "act:xiang-provisional"]
+    (swap! docs assoc grant-id (provisional-grant grant-id))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id grant-id]
+      (let [before (count (filter #(= "POST" (first %)) @calls))
+            zero (h (request "/api/alpha/withdrawal/undo"
+                             {:caller "joe" :agent "agent-a" :session "empty"
+                              :idempotency-key "undo-zero"}))
+            foreign (h (request "/api/alpha/withdrawal/undo"
+                                {:caller "agent-a" :agent "agent-a" :session "empty"
+                                 :idempotency-key "undo-foreign"}))]
+        (is (= 422 (:status zero)))
+        (is (= "nothing-to-undo" (:reason (response-body zero))))
+        (is (= 403 (:status foreign)))
+        (is (= "not-operator" (:reason (response-body foreign))))
+        (is (= before (count (filter #(= "POST" (first %)) @calls)))))
+      (select-card! h "agent-a" "session-a" "card/a"
+                    "ambiguous-select" "2026-09-28T11:00:00Z")
+      (let [first-response (response-body
+                            (provisionally-withdraw! h "ambiguous-first"))
+            first-id (get-in first-response [:record :id])
+            first-doc (get @docs first-id)
+            second-id "act:second-provisional"
+            second-doc (-> first-doc
+                           (assoc :hx/id second-id)
+                           (assoc-in [:hx/props :at] "2026-09-28T11:30:01Z"))]
+        (swap! docs assoc second-id second-doc)
+        (let [before (count (filter #(= "POST" (first %)) @calls))
+              ambiguous (h (request "/api/alpha/withdrawal/undo"
+                                    {:caller "joe" :agent "agent-a"
+                                     :session "session-a"
+                                     :idempotency-key "undo-ambiguous"}))
+              ambiguous-body (response-body ambiguous)]
+          (is (= 409 (:status ambiguous)))
+          (is (= "ambiguous" (:reason ambiguous-body)))
+          (is (= #{first-id second-id} (set (:effects ambiguous-body))))
+          (is (= before (count (filter #(= "POST" (first %)) @calls)))))
+        (let [chosen (h (request "/api/alpha/withdrawal/undo"
+                                 {:caller "joe" :agent "agent-a" :session "session-a"
+                                  :effect second-id :at "2026-09-28T11:31:00Z"
+                                  :idempotency-key "undo-chosen"}))
+              chosen-body (response-body chosen)]
+          (is (= 200 (:status chosen)))
+          (is (= second-id (get-in chosen-body [:record :reverses])))
+          (is (= [first-id]
+                 (mapv :id (get-in chosen-body [:card-as-of :provisional])))))))))

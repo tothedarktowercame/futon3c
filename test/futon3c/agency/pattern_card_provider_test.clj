@@ -111,6 +111,27 @@
            (:segment/value (pattern/provider {:agent-id "claude-17" :session-id "other"
                                               :render-at "2026-09-27T20:00:00Z"}))))))
 
+(deftest provisional-withdrawal-marker-precedes-retrieval-without-http
+  (let [effect {:id "act:provisional" :kind :act/withdrawal :author "joe"
+                :target "act:card" :status :provisional
+                :basis {:kind :provisional-interpretation}
+                :at "2026-09-27T19:59:00Z"}]
+    (pattern/observe-entry! (entry "e-target" "claude-17" "target"
+                                   "2026-09-27T19:59:50Z" "retrieved/target"))
+    (pattern/publish-card-result! "claude-17" "target"
+                                  {:candidate card :active nil
+                                   :provisional [effect] :ignored []}
+                                  "2026-09-27T19:59:55Z")
+    (with-redefs [hx-store/request! (fn [& _] (throw (ex-info "HTTP on render" {})))
+                  pattern/refresh-async! (fn [& _])
+                  pattern/refresh-cards-async! (fn [& _])]
+      (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
+                                       :render-at "2026-09-27T20:00:00Z"})]
+        (is (= "~card/chosen" (:segment/value segment)))
+        (is (= "?" (:segment/marker segment)))
+        (is (= "withdrawn? card/chosen (act:provisional)"
+               (:segment/header segment)))))))
+
 (deftest unreadable-card-document-does-not-break-refresh
   (let [valid {:hx/id "act:card" :hx/type :pattern-card/selection
                :hx/props {:author "claude-17" :agent "claude-17" :session "target"

@@ -9209,6 +9209,7 @@
                           (= :not-author reason) 403
                           (= :author-mismatch reason) 403
                           (= :not-seat-owner reason) 403
+                          (= :not-operator reason) 403
                           (= :no-grant reason) 403
                           (= :target-absent reason) 404
                           (= :idempotency-conflict reason) 409
@@ -9418,6 +9419,68 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn handle-provisional-withdrawal-undo
+  "Reverse one visible provisional withdrawal for an exact seat. Joe is the
+   only caller; ambiguity is returned to him rather than resolved by recency."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [caller (required-pattern-card-field! payload :caller)
+              _ (when-not (= "joe" caller)
+                  (throw (ex-info "Only Joe can undo an inferred withdrawal"
+                                  {:reason :not-operator :field :caller})))
+              agent (required-pattern-card-field! payload :agent)
+              session (required-pattern-card-field! payload :session)
+              requested-effect (or (:effect payload) (get payload "effect"))
+              refreshed (pattern-card-provider/refresh-cards! agent session)
+              effects (vec (get-in refreshed [:result :provisional]))
+              effect (cond
+                       requested-effect
+                       (or (some #(when (= (str requested-effect) (str (:id %))) %) effects)
+                           (throw (ex-info "The requested provisional effect is not visible"
+                                           {:reason :nothing-to-undo :field :effect})))
+                       (empty? effects)
+                       (throw (ex-info "No provisional withdrawal is visible"
+                                       {:reason :nothing-to-undo :field :effect}))
+                       (= 1 (count effects)) (first effects)
+                       :else
+                       (throw (ex-info "More than one provisional withdrawal is visible"
+                                       {:reason :ambiguous
+                                        :effects (mapv :id effects)})))
+              at (pattern-card-at payload)
+              record {:kind :act/withdrawal
+                      :author "joe"
+                      :target (:target effect)
+                      :status :effective
+                      ;; This is an operator-authorised act on another
+                      ;; author's selection, so :grant is more accurate than
+                      ;; :self even though Joe's stamp needs no grant lookup.
+                      :basis {:kind :grant}
+                      :reverses (:id effect)
+                      :at at}
+              card-request {:record record
+                            :idempotency-key (pattern-card-idempotency-key payload)}
+              result (pattern-card-cli/write-withdrawal!
+                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      card-request
+                      (act-harness/plain "route:futon3c.withdrawal/undo")
+                      (act-stamp/stamp "joe" "joe" {:operator true} :declared))]
+          (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+        (catch clojure.lang.ExceptionInfo e
+          (let [{:keys [reason effects]} (ex-data e)]
+            (cond
+              (= :nothing-to-undo reason)
+              (json-response 422 {:ok false :reason reason :message (.getMessage e)})
+              (= :ambiguous reason)
+              (json-response 409 {:ok false :reason reason :effects effects
+                                  :message (.getMessage e)})
+              :else (pattern-card-refusal e))))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -9453,6 +9516,9 @@
 
       (and (= :post method) (= "/api/alpha/withdrawal/provisional" uri))
       (handle-provisional-withdrawal request)
+
+      (and (= :post method) (= "/api/alpha/withdrawal/undo" uri))
+      (handle-provisional-withdrawal-undo request)
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)

@@ -57,7 +57,8 @@
    Interpretations never end a selection. Stored withdrawal effects are
    assumed to have passed the write path's act-stamp and grant authorization;
    this projection does not infer authority from :status. The return value is
-   {:active SELECTION-OR-NIL :provisional [EFFECT ...]
+   {:candidate LATEST-SELECTION-OR-NIL :active SELECTION-OR-NIL
+    :provisional [EFFECT ...]
     :ignored [{:record-id ID :reason KEYWORD} ...]}."
   [records agent-id session-id t]
   (let [as-of (instant t)
@@ -123,7 +124,8 @@
                                    (mapv (fn [[effect _ reason]]
                                            (ignored effect reason))))
                               bad-reversals)]
-    {:active (when-not (or (contains? effective-targets (:id candidate))
+    {:candidate candidate
+     :active (when-not (or (contains? effective-targets (:id candidate))
                            (contains? active-provisional-targets (:id candidate)))
                candidate)
      :provisional provisionals
