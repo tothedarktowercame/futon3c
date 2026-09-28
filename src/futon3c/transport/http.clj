@@ -9995,7 +9995,7 @@
                        {:evidence-store evidence-store :requested-job-id job-id
                         :agent-id orchestrator :prompt prompt :caller "xiang"
                         :surface "bell" :bellback-of (:source-job disclosure)
-                        :mode :brief})
+                        :mode :work})
               run-job (fn [] (run-invoke-job!
                               {:job-id created :agent-id orchestrator :prompt prompt
                                :caller "xiang" :surface "bell"
@@ -10110,10 +10110,13 @@
                                      (:operator-evidence-id body))
                      "futon3c.transport.http")
               result (write-negation-interpretation! base entry)
-              routing (if (:existing? result)
-                        (existing-evidence!
-                         base (negation-routing-id (:evidence/id (:entry result))))
-                        (route-new-negation! config base (:entry result)))]
+              ;; A replay routes when no routing record exists: the process can
+              ;; stop between the two writes. The bell id is derived from the
+              ;; interpretation id, so this never bells twice.
+              routing (or (when (:existing? result)
+                            (existing-evidence!
+                             base (negation-routing-id (:evidence/id (:entry result)))))
+                          (route-new-negation! config base (:entry result)))]
           (json-response (if (:existing? result) 200 201)
                          {:ok true :existing? (:existing? result)
                           :entry (:entry result)

@@ -214,3 +214,56 @@
            (get-in result [:response :entry :evidence/body :resolution])))
     (is (nil? (get-in result [:response :routing])))
     (is (zero? (:bells result)))))
+
+(deftest replay-routes-when-routing-record-is-missing
+  ;; The process can stop between the interpretation write and the routing
+  ;; write. A replay must then route once, and a further replay must not.
+  (let [{:keys [stored]} (routing-case [source-edge] [disclosure-a])
+        interpretation-id (some #(when (str/starts-with? % "interpretation-negation:") %)
+                                (keys stored))
+        without-routing (select-keys stored [interpretation-id])
+        store-state (atom without-routing)
+        bells (atom 0)
+        fake-store
+        (fn [_ method path body]
+          (cond
+            (and (= method "GET") (str/ends-with? path "turn%3Ajoe")) operator
+            (= method "GET")
+            (let [id (java.net.URLDecoder/decode (last (str/split path #"/")) "UTF-8")]
+              (or (get @store-state id) (throw (ex-info "missing" {:status 404}))))
+            (= method "POST")
+            (do (swap! store-state assoc (:evidence/id body) body)
+                {:ok true :evidence/id (:evidence/id body)})))]
+    (is (string? interpretation-id))
+    (with-redefs [store/request! fake-store
+                  disclosure-cli/read-act!
+                  (fn [_ _] (disclosure-record/->hyperedge disclosure-a))
+                  coordination-ledger/recent-mesh-edges (fn [& _] [source-edge])
+                  http/route-negation-reading!
+                  (fn [_ _ _ _] (swap! bells inc) {:status :routed :job-id "invoke:routing"})
+                  http/read-operator-turn-source-jobs
+                  (fn [_] {:source-jobs [source-job] :basis :park-resume
+                           :disclosures [disclosure-a]})]
+      (let [first-replay (parse-response ((handler) (request base-body)))
+            second-replay (parse-response ((handler) (request base-body)))]
+        (is (= 200 (:status first-replay)))
+        (is (= "routed" (get-in first-replay [:routing :status])))
+        (is (= "routed" (get-in second-replay [:routing :status])))
+        (is (= 1 @bells))))))
+
+(deftest route-negation-reading-never-creates-a-second-job
+  ;; The real dedupe: a job with the derived id already in the ledger means no
+  ;; new job and no bell.
+  (let [created (atom 0)
+        interpretation {:evidence/id "interpretation-negation:x"
+                        :evidence/body {:fragment-text "drop it"}}]
+    (with-redefs-fn {#'http/ensure-invoke-jobs-ledger!
+                     (fn [] {:jobs {(#'http/negation-routing-job-id
+                                     "interpretation-negation:x") {:state "done"}}})
+                     #'http/create-invoke-job! (fn [_] (swap! created inc) "job")}
+      (fn []
+        (let [result (http/route-negation-reading!
+                      {} disclosure-a interpretation "claude-17")]
+          (is (= :routed (:status result)))
+          (is (true? (:existing? result)))
+          (is (= 0 @created)))))))
