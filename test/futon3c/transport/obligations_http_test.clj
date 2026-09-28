@@ -12,17 +12,22 @@
 
 (deftest obligations-route-projects-and-hides-closed-detail
   (with-redefs [reader/read-inputs
-                (fn [_ agent at]
+                (fn [_ agent at mode]
                   (is (= "agent-a" agent))
                   (is (= "2026-09-28T12:00:00Z" at))
+                  (is (= :as-of mode))
                   {:promise-history [] :promise-outcomes [] :agreements [] :offers []
-                   :source-counts {:promise-history 0 :promise-outcomes 0
-                                   :agreements 0 :offers 0}})]
+                   :basis {:mode mode :t at
+                           :pages {:promise-history 1 :promise-outcomes 1
+                                   :agreements 1 :offers 0}
+                           :rows {:promise-history 0 :promise-outcomes 0
+                                  :agreements 0 :offers 0}}})]
     (let [response ((handler) {:request-method :get :uri "/api/alpha/obligations"
                                :query-string "agent=agent-a&at=2026-09-28T12%3A00%3A00Z"})
           result (body response)]
       (is (= 200 (:status response)))
       (is (true? (:ok result)))
+      (is (= "as-of" (get-in result [:basis :mode])))
       (is (= 0 (:ignored-count result)))
       (is (not (contains? result :ignored))))))
 
@@ -38,4 +43,11 @@
     (let [response ((handler) {:request-method :get :uri "/api/alpha/obligations"
                                :query-string "agent=a"})]
       (is (= 409 (:status response)))
-      (is (= "promise-history" (:source (body response)))))))
+      (is (= "promise-history" (:source (body response))))))
+  (with-redefs [reader/read-inputs
+                (fn [& _] (throw (ex-info "timeout" {:reason :store-timeout
+                                                      :source :promise-outcomes})))]
+    (let [response ((handler) {:request-method :get :uri "/api/alpha/obligations"
+                               :query-string "agent=a"})]
+      (is (= 504 (:status response)))
+      (is (= "store-timeout" (:reason (body response)))))))

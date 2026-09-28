@@ -9797,7 +9797,9 @@
       (and (= :get method) (= "/api/alpha/obligations" uri))
       (let [params (parse-query-params request)
             agent (get params "agent")
-            at (or (get params "at") (str (java.time.Instant/now)))]
+            supplied-at (get params "at")
+            at (or supplied-at (str (java.time.Instant/now)))
+            mode (if supplied-at :as-of :current)]
         (cond
           (str/blank? agent)
           (json-response 400 {:ok false :reason :missing-agent})
@@ -9806,12 +9808,12 @@
           (try
             (let [inputs (obligations-reader/read-inputs
                           (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
-                          agent at)
+                          agent at mode)
                   result (obligations/obligations-as-of inputs agent at)]
               (json-response 200
                              (-> result
                                  (assoc :ok true :as-of at
-                                        :source-counts (:source-counts inputs)
+                                        :basis (:basis inputs)
                                         :ignored-count (count (:ignored result)))
                                  (dissoc :ignored))))
             (catch clojure.lang.ExceptionInfo e
@@ -9821,6 +9823,8 @@
                   (json-response 409 {:ok false :reason reason :source source})
                   (= :invalid-as-of reason)
                   (json-response 400 {:ok false :reason reason})
+                  (= :store-timeout reason)
+                  (json-response 504 {:ok false :reason reason :source source})
                   :else
                   (json-response 500 {:ok false :reason :store-failure})))))))
 
