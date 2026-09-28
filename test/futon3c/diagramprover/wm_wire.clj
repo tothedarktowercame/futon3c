@@ -3,9 +3,7 @@
   live-record reads. What a wire test is, and the three statuses, are
   defined once, in futon3c.diagramprover.wm-wire-ledger-test's docstring."
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [futon3c.test-registry.local-port :as local-port]
-            [futon3c.test-registry.sqlite-backend :as sqlite])
+            [clojure.java.io :as io])
   (:import [java.security MessageDigest]))
 
 (def spike-dir "holes/labs/M-wm-wiring/spike")
@@ -38,23 +36,6 @@
 (defn tmp-dir [prefix]
   (str (java.nio.file.Files/createTempDirectory
         prefix (make-array java.nio.file.attribute.FileAttribute 0))))
-
-(def ^:dynamic *warrant-store-path*
-  "Local warrant database override. Nil selects REGISTRY_DB, then
-  the test registry's canonical local path."
-  nil)
-
-(defn warrant-store-path []
-  (or *warrant-store-path*
-      (System/getenv "REGISTRY_DB")
-      sqlite/default-path))
-
-(defn latest-local-run
-  "Ask the registry's one currentness operation for NAMESPACE in REPO.
-  The operation may durably request, but never executes or waits for, a run."
-  [namespace repo]
-  ((:current-or-request (local-port/implementation (warrant-store-path)))
-   {:namespace namespace :repo repo}))
 
 (defn- source-repo [v]
   (when-let [url (some-> (:file (meta v)) io/resource)]

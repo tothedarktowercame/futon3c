@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-warrants :as warrants]
             [futon3c.test-registry :as registry]
             [futon3c.test-registry.local-port :as local-port]
             [futon3c.test-registry.sqlite-backend :as sqlite])
@@ -26,7 +27,7 @@
 
 (defn- context []
   {:allowed-nses #{'futon3c.diagramprover.wm-wire-local-warrant-test}
-   :lookup (memoize w/latest-local-run)
+   :lookup (memoize warrants/latest-local-run)
    :record-only? (constantly false)})
 
 (deftest local-warrant-resolution
@@ -39,7 +40,7 @@
     (try
       (spit file "(ns fixture)\n")
       (append-current-run! store namespace dir file)
-      (binding [w/*warrant-store-path* (str db)
+      (binding [warrants/*warrant-store-path* (str db)
                 local-port/*repo-roots* {"futon3c" (.getPath dir)}]
         (testing "an unchanged warrant is current"
           (is (= {:warrant-id (:evidence/id (sqlite/latest-run-for-namespace store namespace))
@@ -57,7 +58,7 @@
             (is (= 1 (count requests)))))
         (testing "an absent namespace requests one run and remains absent"
           (let [missing-db (io/file dir "missing.sqlite")]
-            (binding [w/*warrant-store-path* (str missing-db)]
+            (binding [warrants/*warrant-store-path* (str missing-db)]
               (let [evidence (:evidence (w/second-layer (declaration) (context)))
                     missing-store (sqlite/sqlite-backend missing-db)]
                 (is (= :no-warrant (:absent evidence)))

@@ -60,6 +60,7 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-warrants :as warrants]
             [futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test]
             [futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test]
             [futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test]
@@ -483,7 +484,7 @@
         explicit (set (for [b (:boxes model) f (:attribution-findings b)
                             :when (= :to-do (:kind f))] (:wire f)))]
     {:allowed-nses (set wire-test-nses)
-     :lookup (memoize w/latest-local-run)
+     :lookup (memoize warrants/latest-local-run)
      :record-only? (fn [[_ reader field :as wire]]
                      (or (explicit wire)
                          (some #(and (= reader (:box/id %)) (= field (:field %))
