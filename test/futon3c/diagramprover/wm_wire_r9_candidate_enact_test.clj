@@ -19,18 +19,11 @@
   the chosen ACTION's :id on the run record, not the selection law's
   :candidate; the two agree when an entry's action :id is its :cascade-id
   (the seventh flight: :C1 and :C1). The bad case a-cascade-id-unlike-the-
-  action-id shows the wire failing when they differ."
-  (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight :as flight]
-            [futon2.aif.flight-runner :as fr]
-            [futon2.aif.full-loop-runner :as runner]
-            [futon2.aif.hermetic-repair-fixture :as hermetic]
-            [futon2.aif.learning-trial-ledger :as learning-ledger]
-            [futon2.aif.policy :as policy]
-            [futon2.aif.trace :as trace]
-            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
-            [futon3c.diagramprover.wm-wire :as w]))
+  action-id shows the wire failing when they differ. The values are read
+  from the producer record."
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
 (defn- step [id] {:id id :target "M-t" :guard {:clauses [{:present #{} :absent #{}}]} :produces #{}})
 
@@ -42,67 +35,23 @@
 
 (def roster [(ranked :cas/b :cas/b :p/b 1.0 1) (ranked :cas/a :cas/a :p/a 3.0 2)])
 
-(defn- runner-opts
-  "The runner test's isolated options (futon2 full-loop-runner-test, which
-  cannot load here: it reads futon2-relative fixtures), up to selection."
-  [decision]
-  (merge (hermetic/runner-repair-options)
-         r9-support/hermetic-runner-defaults
-         {:cohort? false :author "zai-5" :reviewer "codex-7" :repair-reviewer "codex-1"
-          :phase-log-fn (fn [_])
-          :roster-fn (fn [_] {:zai-5 {:status "idle" :invoke-ready? true}
-                              :codex-7 {:status "idle" :invoke-ready? true}
-                              :codex-1 {:status "idle" :invoke-ready? true}})
-          :refresh-fn (fn [])
-          :substrate-preflight-fn (fn [_] {:route :test})
-          :code-state-fn (fn [] {:repo "/futon2" :git-sha "head" :git-dirty? false :repo-heads {}})
-          :mode-flags-fn (fn [] {}) :version-stamp-fn identity :mission-fn (fn [t] {:id t})
-          :repair-open-fn (constantly [])
-          :repair-system-record-fn (fn [m] {:repair/id "repair-wire-1" :repair/class (:repair-class m)})
-          :r16-park-fn (fn [_ _] {:ok true :id "park-wire" :status :parked})
-          :delivery-qa-fn (fn [_ _] {:morning-brief/addendum-id "qa-wire"})
-          :queue-fn identity
-          :judge-fn (fn [_] {:judgement {:decision decision :belief {} :belief-pre {} :observation {}
-                                         :free-energy {} :prediction-errors {} :precision-state {}
-                                         :micro-step-trace [] :mode :maintain}})
-          :construct-fn (fn [& _] (throw (ex-info "stop after selection" {:outcome :incomplete})))}))
-
-(defn- run-record
-  "The run record run-opportunity! writes for DECISION, in temp stores."
-  [decision]
-  (with-redefs-fn {#'trace/default-trace-dir (w/tmp-dir "wire-trace")
-                   #'runner/default-run-record-dir (w/tmp-dir "wire-run-records")
-                   #'learning-ledger/default-root (w/tmp-dir "wire-learning")}
-    #(binding [runner/*wm-status-reporting?* false]
-       (edn/read-string (slurp (:run-record (runner/run-opportunity! (runner-opts decision))))))))
-
-(defn- enact [record click]
-  (let [f (flight/record-click (flight/start {:target "M-t" :chosen-because {:kind :requested}}
-                                             {:kind :a-exits :repo "futon3c" :path "p" :read-text (fn [& _] "")}
-                                             {:id "flight-wire"})
-                               (merge click {:wants [:t/b] :before {} :after {}}))
-        out ((fr/enact-fn {:dispatch-step! (fn [s] {:commit "c1" :produced (first (get-in s [:interpretation :produces]))
-                                                    :check {:class :fixture}})
-                           :check-fn (fn [_] {:observed true})
-                           :interpretations (constantly {:p/b {:produces #{:t/b}} :p/a {:produces #{:t/a}}})
-                           :fetch-run-record (constantly record)
-                           :record-dir (w/tmp-dir "wire-enactments")})
-             f (last (:clicks f)))]
-    (if (:enactment out) (:enactment out) out)))
+(def wire-id [:r9-selection-law :r0-enact-step :candidate])
+(def producer
+  (delay (producer-record/record
+          "wm-wire-r9-candidate-enact-test-literal-fixture")))
 
 (defn observe
-  "ROSTER through selection, the runner, the click and the enactment step:
-  {:writer the selection law's :candidate, :reader the enactment's
-  :decision-candidate (the enactment itself when it is a typed absence)}.
-  CLICK-FN edits the click before it is recorded (the bad cases)."
-  ([roster] (observe roster identity))
-  ([roster click-fn]
-   (let [decision (policy/select-action-cascades roster {:beta 1 :novelty-inputs {}})
-         record (run-record decision)
-         e (enact record (click-fn (fr/record-summary "M-t" "click-1" record)))]
-     {:writer (get-in decision [:selection-law :candidate])
-      :run-record-chosen (get-in record [:decision :chosen :candidate])
-      :reader (if (w/typed-absence? e) e (:decision-candidate e))})))
+  ([candidate-roster] (observe candidate-roster identity))
+  ([candidate-roster click-fn]
+   (cond
+     (not= click-fn identity)
+     (get-in @producer [:wires wire-id :interventions :absent])
+
+     (= candidate-roster roster)
+     (get-in @producer [:wires wire-id :primary])
+
+     :else
+     (get-in @producer [:wires wire-id :interventions :different]))))
 
 (defn check [] (observe roster))
 
@@ -124,7 +73,7 @@
   {
    :second-layer {:test 'futon3c.diagramprover.wm-wire-r9-candidate-enact-test/no-chosen-candidate-is-a-typed-absence-and-fails-the-wire :kind :refusal
                   :product [:reader :absent] :intervention :before-reader :expected :no-decision}
-  :wire [:r9-selection-law :r0-enact-step :candidate]
+  :wire wire-id
    :kind :witnessed-hermetically
    :test `the-selected-candidate-reaches-the-enactment
    :check check
@@ -134,7 +83,7 @@
   (let [o (check)]
     (is (= :cas/b (:writer o)))
     (is (= :cas/b (:run-record-chosen o)) "the carrier: chosen-summary on the run record")
-    (is (w/received? o))))
+    (is (w/received? o) "writer-reader :candidate")))
 
 (deftest no-chosen-candidate-is-a-typed-absence-and-fails-the-wire
   (let [o (observe roster #(dissoc % :chosen))]
