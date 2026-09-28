@@ -43,6 +43,12 @@ Values above 0.3 are capped at 0.3 so prompt insertion remains bounded."
   :type 'number
   :group 'agent-chat)
 
+(defcustom agent-chat-undo-timeout 3
+  "Maximum seconds to wait for the operator `undo' route.
+Failure falls through to an ordinary agent turn with the original text."
+  :type 'number
+  :group 'agent-chat)
+
 (defcustom agent-chat-cost-script
   (expand-file-name "../scripts/session-cost.py"
                     (file-name-directory agent-chat--source-file))
@@ -2780,6 +2786,68 @@ path) may already have recorded the delivery, so refusing would lose it."
     (agent-chat--start-turn call-async-fn agent-name hooks text
                             (or speaker "continuation") 'unsolicited))))
 
+(defun agent-chat--undo-command (text)
+  "Return nil, `undo', or the explicit effect id named by TEXT."
+  (let ((normalized (downcase (string-trim text))))
+    (setq normalized (replace-regexp-in-string "[.!?,;]+\\'" "" normalized))
+    (when (string-match "\\`undo\\(?:[[:space:]]+\\(act:[^[:space:]]+\\)\\)?\\'"
+                        normalized)
+      (or (match-string 1 normalized) 'undo))))
+
+(defun agent-chat--insert-undo-line (text)
+  "Insert one operator undo status line and redraw the prompt."
+  (agent-chat-insert-message "system" text)
+  (when (and (fboundp 'agent-chat--fetch-prompt-line)
+             (fboundp 'agent-chat--refresh-prompt-line!))
+    (when-let* ((prompt (agent-chat--fetch-prompt-line)))
+      (agent-chat--refresh-prompt-line! prompt))))
+
+(defun agent-chat--maybe-handle-undo (text)
+  "Handle exact operator undo TEXT. Return non-nil only when consumed.
+HTTP failures, timeouts and :nothing-to-undo deliberately return nil so TEXT
+continues through the ordinary agent send path unchanged."
+  (when-let* ((command (agent-chat--undo-command text))
+              (agent-id (and (stringp agent-chat--agent-id)
+                             (not (string-empty-p agent-chat--agent-id))
+                             agent-chat--agent-id))
+              (session-id (and (stringp agent-chat--session-id)
+                               (not (string-empty-p agent-chat--session-id))
+                               (not (equal agent-chat--session-id "pending"))
+                               agent-chat--session-id))
+              (request-fn (and (fboundp 'agent-chat-evidence-request-json)
+                               #'agent-chat-evidence-request-json)))
+    (let* ((url (format "%s/api/alpha/withdrawal/undo"
+                        (string-remove-suffix "/" agent-chat-agency-base-url)))
+           (payload `((caller . "joe")
+                      (agent . ,agent-id)
+                      (session . ,session-id)
+                      (idempotency-key
+                       . ,(format "emacs-undo:%s:%.0f"
+                                  session-id (* 1000 (float-time))))))
+           (payload (if (stringp command)
+                        (append payload `((effect . ,command)))
+                      payload))
+           (response (condition-case nil
+                         (funcall request-fn "POST" url agent-chat-undo-timeout payload)
+                       (error nil)))
+           (status (plist-get response :status))
+           (body (plist-get response :json)))
+      (cond
+       ((eql status 200)
+        (let ((pattern (plist-get (plist-get (plist-get body :card-as-of) :active)
+                                  :pattern-id))
+              (reversal (plist-get (plist-get body :record) :id)))
+          (agent-chat--insert-undo-line
+           (format "undo: %s restored (reversal %s)"
+                   (or pattern "pattern card") (or reversal "unknown"))))
+        t)
+       ((eql status 409)
+        (agent-chat--insert-undo-line
+         (format "undo: ambiguous; name one effect: %s"
+                 (mapconcat #'identity (plist-get body :effects) ", ")))
+        t)
+       (t nil)))))
+
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.
 CALL-ASYNC-FN: (text callback) -> process.
@@ -2808,9 +2876,11 @@ additionally posted to the evidence HTTP endpoint."
                  (marker-position agent-chat--input-start)
                  (point-max))))
       (when (not (string-empty-p (string-trim text)))
-        (delete-region (marker-position agent-chat--input-start) (point-max))
-        (agent-chat--start-turn call-async-fn agent-name hooks text
-                                agent-chat-user-speaker 'operator)))))
+        (if (agent-chat--maybe-handle-undo text)
+            (delete-region (marker-position agent-chat--input-start) (point-max))
+          (delete-region (marker-position agent-chat--input-start) (point-max))
+          (agent-chat--start-turn call-async-fn agent-name hooks text
+                                  agent-chat-user-speaker 'operator))))))
 
 (defun agent-chat--handle-par (call-async-fn agent-name hint chat-buffer hooks)
   "Handle !par walkie-talkie command.

@@ -206,6 +206,73 @@
              :thinking-text "agent is thinking..."
              :thinking-prop 'agent-chat-test-thinking)))))
 
+(defun agent-chat-test--send-undo (text response)
+  "Send TEXT with a stubbed undo RESPONSE; return captured request/send data."
+  (let (request-payload sent-text)
+    (insert text)
+    (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+               (lambda (_method _url _timeout payload)
+                 (setq request-payload payload)
+                 (if (eq response :timeout) (error "timed out") response)))
+              ((symbol-function 'agent-chat--fetch-prompt-line) (lambda () nil))
+              ((symbol-function 'agent-chat-start-turn-commit-window!)
+               (lambda (&rest _) nil))
+              ((symbol-function 'agent-chat-finish-turn-commits)
+               (lambda (&rest _) nil))
+              ((symbol-function 'agent-chat-scroll-to-bottom)
+               (lambda (&rest _) nil))
+              ((symbol-function 'redisplay) (lambda (&rest _) nil)))
+      (agent-chat-send-input
+       (lambda (sent _callback) (setq sent-text sent) nil)
+       "agent"))
+    (list :request request-payload :sent sent-text :buffer (buffer-string))))
+
+(ert-deftest agent-chat-operator-undo-restores-without-agent-turn ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let* ((result (agent-chat-test--send-undo
+                    "Undo!"
+                    '(:status 200
+                      :json (:record (:id "act:reversal")
+                             :card-as-of (:active (:pattern-id "card/a"))))))
+           (buffer (plist-get result :buffer)))
+      (should-not (plist-get result :sent))
+      (should (string-match-p
+               "undo: card/a restored (reversal act:reversal)" buffer)))))
+
+(ert-deftest agent-chat-operator-undo-ambiguous-names-effects ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let* ((result (agent-chat-test--send-undo
+                    "undo"
+                    '(:status 409 :json (:reason "ambiguous"
+                                          :effects ("act:a" "act:b")))))
+           (buffer (plist-get result :buffer)))
+      (should-not (plist-get result :sent))
+      (should (string-match-p "act:a, act:b" buffer)))))
+
+(ert-deftest agent-chat-explicit-undo-passes-effect-id ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let* ((result (agent-chat-test--send-undo
+                    "undo act:b."
+                    '(:status 200
+                      :json (:record (:id "act:reversal")
+                             :card-as-of (:active (:pattern-id "card/a"))))))
+           (payload (plist-get result :request)))
+      (should (equal "act:b" (alist-get 'effect payload)))
+      (should-not (plist-get result :sent)))))
+
+(ert-deftest agent-chat-undo-failures-fall-through-unchanged ()
+  (dolist (case '(("undo" . (:status 422 :json (:reason "nothing-to-undo")))
+                  ("undo" . :timeout)
+                  ("undo that" . (:status 200 :json nil))
+                  ("Undo it" . (:status 200 :json nil))))
+    (with-temp-buffer
+      (agent-chat-test--init-buffer)
+      (let ((result (agent-chat-test--send-undo (car case) (cdr case))))
+        (should (equal (car case) (plist-get result :sent)))))))
+
 (ert-deftest agent-chat-init-buffer-preserves-default-face-remapping ()
   (with-temp-buffer
     (setq-local face-remapping-alist '((default custom-existing-face)))
