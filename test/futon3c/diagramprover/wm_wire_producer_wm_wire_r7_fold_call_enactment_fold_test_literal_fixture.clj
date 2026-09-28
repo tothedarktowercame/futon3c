@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r7-fold-call-enactment-fold-test-literal-fixture-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r7-fold-call-enactment-fold-test-literal-fixture
   "Producer for the [:r7-fold-call :habit-fold-call-test :enactment-fold] wire.
   Runs the real war-machine/judge over a temp store with one flight record
   carrying one real increment receipt (the writer's enactment fold), then the

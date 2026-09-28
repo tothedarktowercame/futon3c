@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-wc-checker-r7-test-wc-verdict-test-literal-fixture-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-wc-checker-r7-test-wc-verdict-test-literal-fixture
   "Producer for the [:wc-checker :r7-test :wc-verdict] wire. Runs the named
   futon2 test futon2.aif.selection-reads-fold-test/real-checker-verdict-into-increment
   with capture wrapped around the real checker-verdict (bb W_c over the two

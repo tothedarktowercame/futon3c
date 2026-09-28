@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-measured-cleanup-test
+(ns futon3c.diagramprover.wm-wire-producer-measured-cleanup
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
