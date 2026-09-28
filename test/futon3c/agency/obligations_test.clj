@@ -136,3 +136,16 @@
     (is (= ["p"] (mapv :obligation/id (:owed creditor))))
     (is (= ["missing"] (mapv :obligation/id (:owes missing))))
     (is (= :no-beneficiary (get-in missing [:incomplete 0 :reason])))))
+
+(deftest other-agents-waits-and-closed-rows-are-not-listed
+  (let [wait (chain "wait-c" {:id "wait-c" :agent "agent-c" :beneficiary "agent-d"})
+        done-rec {:id "done-c" :agent "agent-c" :beneficiary "agent-d"
+                  :deadline "2026-09-28T11:30:00Z"}
+        done (chain "done-c" done-rec)
+        result (project (into wait done)
+                        [(outcome "o-c" :promise/fulfilled "done-c" "2026-09-28T11:00:00Z")]
+                        "agent-a")]
+    (is (empty? (:unchecked result)))
+    (is (empty? (:ignored result)))
+    (is (= ["wait-c"] (mapv :obligation/id
+                            (:unchecked (project wait [] "agent-d")))))))

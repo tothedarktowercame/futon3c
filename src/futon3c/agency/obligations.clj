@@ -151,9 +151,12 @@
                              :when (nil? (get offers-by-id (:agreement/offer a)))]
                          (incomplete (:id a) :unknown-offer
                                      {:source/id (:id a) :offer (:agreement/offer a)}))
-        incompletes (vec (concat chain-issues decoded-errors missing-beneficiary no-due missing-offers))]
+        incompletes (vec (concat chain-issues decoded-errors missing-beneficiary no-due missing-offers))
+        party? #(or (= agent-id (:debtor %)) (= agent-id (:creditor %)))]
+    ;; :incomplete stays unfiltered: a broken chain or unreadable creation may
+    ;; not reveal its parties, so it is shown to every asker rather than hidden.
     {:owes (vec (filter #(= agent-id (:debtor %)) active))
      :owed (vec (filter #(= agent-id (:creditor %)) active))
-     :unchecked unchecked
+     :unchecked (vec (filter party? unchecked))
      :incomplete incompletes
-     :ignored closed}))
+     :ignored (vec (filter party? closed))}))
