@@ -16,6 +16,21 @@ import warrant_index
 DEFAULT_DB = "/home/joe/code/storage/test-registry/warrant-index.sqlite"
 DEFAULT_RUNNER = "/home/joe/code/futon2/scripts/wm/register-warrant.sh"
 REPOS = {"futon2": "/home/joe/code/futon2", "futon3c": "/home/joe/code/futon3c"}
+# Declared scope for namespaces the registration script cannot derive one for
+# and that have no earlier run to take it from. The warrant's reach is the
+# recorded load closure; this is only the script's required declaration.
+DEFAULT_CODE_PATHS = {"futon3c.diagramprover.": "test/futon3c/diagramprover/wm_wire.clj"}
+
+def code_paths(previous, namespace):
+    """The earlier run's declared code paths, else the declared default."""
+    if previous:
+        declared = (warrant_index.edn(previous[4]).get("scope") or {}).get("code-paths")
+        if declared:
+            return " ".join(declared)
+    for prefix, paths in DEFAULT_CODE_PATHS.items():
+        if namespace.startswith(prefix):
+            return paths
+    return None
 DDL = """
 CREATE TABLE IF NOT EXISTS warrant_rerun_requests (
  request_id INTEGER PRIMARY KEY AUTOINCREMENT, namespace TEXT NOT NULL,
@@ -120,6 +135,9 @@ def process_one(db_path, request_id, runner, log_dir):
     env = clean_git_env()
     env.update(AUTHOR="warrant-rerun-worker", REGISTRY_DB=db_path,
                WARRANT_WORKTREE_SUFFIX=f"rerun-{request_id}")
+    declared = code_paths(previous, namespace)
+    if declared:
+        env["CODE_PATHS"] = declared
     try:
         with log.open("wb") as out:
             code = subprocess.run([runner, "--pinned", head, namespace], cwd=root, env=env,
@@ -134,7 +152,14 @@ def process_one(db_path, request_id, runner, log_dir):
     if entry and after[2] and after[3] == head:
         finish(db_path, request_id, "done", entry=entry)
     else:
-        finish(db_path, request_id, "failed", entry=entry, detail=f"runner exit {code}")
+        last = ""
+        try:
+            lines = [l for l in log.read_text(errors="replace").splitlines() if l.strip()]
+            last = lines[-1][:200] if lines else ""
+        except OSError:
+            pass
+        finish(db_path, request_id, "failed", entry=entry,
+               detail=f"runner exit {code}: {last}" if last else f"runner exit {code}")
 
 def guarded(db_path, request_id, runner, log_dir):
     """An error in one request fails that request; it never leaves it running."""
