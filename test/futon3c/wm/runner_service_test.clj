@@ -76,7 +76,12 @@
   (fn [sym]
     (case sym
       futon2.aif.full-loop-runner/config identity
-      futon2.aif.full-loop-runner/run-opportunity! run!
+      futon2.aif.full-loop-runner/agent-roster
+      (fn [_]
+        {:zai-2 {:status "idle" :invoke-ready? true}
+         :codex-2 {:status "idle" :invoke-ready? true}
+         :codex-1 {:status "idle" :invoke-ready? true}})
+      futon2.aif.full-loop-runtime/run-opportunity! run!
       futon3c.peripheral.live-wm-selection/validated-selection select
       futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
       nil)))

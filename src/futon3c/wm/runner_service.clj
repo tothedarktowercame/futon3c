@@ -489,7 +489,7 @@
     (try
       (let [configured (configured-runner-opts opts)
             run! (*resolve-var*
-                  'futon2.aif.full-loop-runner/run-opportunity!)
+                  'futon2.aif.full-loop-runtime/run-opportunity!)
             runner-opts
             (-> configured
                 (dissoc :wm-agent-id)

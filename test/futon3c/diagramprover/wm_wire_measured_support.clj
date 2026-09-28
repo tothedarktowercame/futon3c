@@ -65,7 +65,9 @@
   (let [root (w/tmp-dir "measured-tick-")]
     (try
       (let [saved (#'runner/persist-run-record!
-                   {:run-record-dir root} "offline-wire" "2026-09-26T00:00:00Z"
+                   {:run-record-dir root
+                    :scan-render-fn (fn [& _] nil)}
+                   "offline-wire" "2026-09-26T00:00:00Z"
                    {:outcome :offline-no-selection
                     :checkpoints {:selection {:judgment {:controller-decision (:decision @produced)}}}})
             file (:run-record saved) record (edn/read-string (slurp file))]
