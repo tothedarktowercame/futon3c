@@ -27,10 +27,43 @@
        (URLEncoder/encode system-as-of "UTF-8")
        "&valid-as-of=" (URLEncoder/encode valid-as-of "UTF-8")))
 
+(def ^:private identity-keys
+  [:author :source-job :unspecified :chosen :affects :inside-request])
+
+(defn- existing-disclosure
+  "The stored disclosure on RECORD's job with the same content, if any. The
+   idempotency key excludes :at (the server clock), so a replay reaches futon1b
+   as the same key with a different payload and gets 409; it is the same choice."
+  [base record]
+  (let [now (str (Instant/now))]
+    (some (fn [hx]
+            (let [stored (disclosure/hyperedge->record hx)]
+              (when (= (select-keys stored identity-keys)
+                       (select-keys record identity-keys))
+                stored)))
+          (:hyperedges
+           (store/request! base "GET" (list-path (:source-job record) now now) nil)))))
+
+(declare write-new!)
+
 (defn write! [base record idempotency-key]
   (let [write-payload (payload record idempotency-key)
-        receipt (store/request! base "POST" "/api/alpha/hyperedge" write-payload)
-        id (:hx/id receipt)]
+        receipt (try
+                  (store/request! base "POST" "/api/alpha/hyperedge" write-payload)
+                  (catch clojure.lang.ExceptionInfo e
+                    (if (= 409 (:status (ex-data e)))
+                      (if-let [stored (existing-disclosure base record)]
+                        {::existing stored}
+                        (refuse! :idempotency-conflict :idempotency-key))
+                      (throw e))))]
+    (if-let [stored (::existing receipt)]
+      {:receipt {:ok true :hx/id (:id stored) :minted? false :existing? true
+                 :verified? true}
+       :record stored}
+      (write-new! base record write-payload receipt))))
+
+(defn- write-new! [base record write-payload receipt]
+  (let [id (:hx/id receipt)]
     (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
       (refuse! :missing-minted-receipt :receipt))
     (let [system-as-of (str (Instant/now))

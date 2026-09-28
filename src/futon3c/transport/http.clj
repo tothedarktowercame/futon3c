@@ -9460,7 +9460,8 @@
                  (= :invoke-job-missing reason) 404
                  (= :not-the-assignee reason) 403
                  (or unavailable? (contains? #{:orchestrator-unknown
-                                               :orchestrator-ambiguous} reason)) 409
+                                               :orchestrator-ambiguous
+                                               :idempotency-conflict} reason)) 409
                  :else 400)]
     (json-response status {:ok false
                            :reason (if unavailable? :request-text-unavailable reason)})))

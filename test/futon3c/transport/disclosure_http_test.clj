@@ -89,3 +89,28 @@
             (is (= 409 (:status response)))
             (is (= "request-text-unavailable" (:reason (body response)))))))
       (is (empty? @posts)))))
+
+(deftest replay-returns-the-existing-disclosure
+  ;; futon1b answers a reused idempotency key with a different payload (here, a
+  ;; later server :at) with 409. A replay of the same choice is not an error.
+  (let [{:keys [request! docs]} (fake-store)
+        keys-seen (atom {})
+        keyed (fn [base method path value]
+                (if (= "POST" method)
+                  (let [k (:hx/idempotency-key value)
+                        prior (get @keys-seen k)]
+                    (cond
+                      (nil? prior) (let [r (request! base method path value)]
+                                     (swap! keys-seen assoc k value) r)
+                      (= prior value) {:ok true :hx/id (key (first @docs)) :minted? false}
+                      :else (throw (ex-info "HTTP 409" {:status 409}))))
+                  (request! base method path value)))]
+    (with-redefs [store/request! keyed]
+      (with-source [edge]
+        (let [a ((handler) (request base-body))
+              _ (Thread/sleep 5)
+              b ((handler) (request base-body))]
+          (is (= [200 200] [(:status a) (:status b)]) (pr-str (body b)))
+          (is (= (get-in (body a) [:record :id]) (get-in (body b) [:record :id])))
+          (is (true? (get-in (body b) [:receipt :existing?])))
+          (is (= 1 (count @docs))))))))
