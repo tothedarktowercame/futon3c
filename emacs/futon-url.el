@@ -56,6 +56,37 @@ indefinitely."
           (let (kill-buffer-query-functions) (kill-buffer proc-buffer)))))
     data-buffer))
 
+(defun futon-url-retrieve (url timeout callback)
+  "`url-retrieve' URL silently, calling CALLBACK once, with a TIMEOUT deadline.
+
+CALLBACK gets url.el's STATUS argument in the response buffer, which it must
+kill.  If no answer arrives within TIMEOUT seconds the connection is deleted
+and CALLBACK runs in a scratch buffer with status (:error (timeout URL)), so
+the caller handles a timeout the way it handles any other failure.  Callers
+bind `url-request-method' and friends around this call, as for `url-retrieve'."
+  (let* ((done nil)
+         (resp-buf nil)
+         (once (lambda (status)
+                 (unless done
+                   (setq done t)
+                   (funcall callback status)))))
+    (setq resp-buf (url-retrieve url once nil t t))
+    (run-at-time
+     timeout nil
+     (lambda ()
+       (unless done
+         (when (buffer-live-p resp-buf)
+           (let ((proc (get-buffer-process resp-buf)))
+             (when proc
+               ;; url.el's end-of-document sentinel re-issues a request whose
+               ;; connection closed early, so detach it before deleting.
+               (set-process-sentinel proc #'ignore)
+               (delete-process proc)))
+           (kill-buffer resp-buf))
+         (with-temp-buffer
+           (funcall once (list :error (list 'timeout url)))))))
+    resp-buf))
+
 (provide 'futon-url)
 
 ;;; futon-url.el ends here

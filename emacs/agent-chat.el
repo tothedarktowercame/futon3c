@@ -3223,20 +3223,64 @@ under outbox/failed and return nil."
   (when (and (agent-chat-evidence-enabled-p evidence-url)
              (stringp sid)
              (not (string-empty-p sid)))
-    (let* ((query (format "session-id=%s&limit=1"
-                          (url-hexify-string sid)))
-           (url (format "%s/api/alpha/evidence?%s"
-                        (agent-chat-evidence-base-url evidence-url)
-                        query))
+    (let* ((url (agent-chat--latest-id-url evidence-url sid))
            (response (agent-chat-evidence-request-json "GET" url timeout nil))
-           (status (plist-get response :status))
-           (entries (and (integerp status)
-                         (<= 200 status)
-                         (< status 300)
-                         (plist-get (plist-get response :json) :entries)))
-           (entry (and (listp entries) (car entries))))
-      (and (listp entry)
-           (plist-get entry :evidence/id)))))
+           (status (plist-get response :status)))
+      (and (integerp status)
+           (<= 200 status)
+           (< status 300)
+           (agent-chat--first-entry-id (plist-get response :json))))))
+
+(defun agent-chat--first-entry-id (json)
+  "The :evidence/id of the first of JSON's :entries, or nil.
+`agent-chat--parse-json-string' returns JSON arrays as vectors.  From
+2026-03-10 to 2026-09-28 this was read with `listp'/`car', so the latest-id
+fetch always came back nil: turns never anchored to the session's newest entry,
+and every turn paid for the request anyway."
+  (let* ((entries (plist-get json :entries))
+         (entry (and (sequencep entries) (> (length entries) 0) (elt entries 0))))
+    (and (listp entry) (plist-get entry :evidence/id))))
+
+(defun agent-chat--latest-id-url (evidence-url sid)
+  "The URL that asks for the newest evidence entry of session SID."
+  (format "%s/api/alpha/evidence?session-id=%s&limit=1"
+          (agent-chat-evidence-base-url evidence-url)
+          (url-hexify-string sid)))
+
+(defun agent-chat-refresh-evidence-anchor-async! (evidence-url timeout sid session-var last-id-var)
+  "Point LAST-ID-VAR at the newest evidence of SID without blocking Emacs.
+
+The answer is applied in the buffer that asked, and only if SESSION-VAR still
+names SID and nothing has moved LAST-ID-VAR since the request left: a turn
+posted in the meantime is newer than whatever the server reports."
+  (when (and (agent-chat-evidence-enabled-p evidence-url)
+             (stringp sid)
+             (not (string-empty-p sid)))
+    (let ((origin (current-buffer))
+          (asked-with (symbol-value last-id-var))
+          (url-request-method "GET")
+          (url-request-extra-headers '(("Accept" . "application/json"))))
+      (futon-url-retrieve
+       (agent-chat--latest-id-url evidence-url sid)
+       timeout
+       (lambda (status)
+         (let* ((ok (and (not (plist-get status :error))
+                         (boundp 'url-http-response-status)
+                         (integerp url-http-response-status)
+                         (<= 200 url-http-response-status 299)))
+                (id (when ok
+                      (goto-char (point-min))
+                      (when (re-search-forward "\n\n" nil t)
+                        (agent-chat--first-entry-id
+                         (agent-chat--parse-json-string
+                          (buffer-substring-no-properties (point) (point-max))))))))
+           (unless (string-prefix-p " *temp" (buffer-name))
+             (kill-buffer (current-buffer)))
+           (when (and (stringp id) (buffer-live-p origin))
+             (with-current-buffer origin
+               (when (and (equal sid (symbol-value session-var))
+                          (equal asked-with (symbol-value last-id-var)))
+                 (set last-id-var id))))))))))
 
 (defun agent-chat-sync-evidence-anchor! (evidence-url timeout sid session-var last-id-var &optional force)
   "Refresh evidence anchor state for SID into SESSION-VAR and LAST-ID-VAR."
@@ -3255,7 +3299,18 @@ under outbox/failed and return nil."
     (unless (equal sid (symbol-value session-var))
       (set session-var sid)
       (set last-id-var nil))
-    (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t)
+    ;; Only a session this buffer has no evidence anchor for needs the answer
+    ;; now, to decide whether to post session-start.  Every later turn just
+    ;; re-points the anchor at the session's newest entry, which may have
+    ;; been written elsewhere; that happens in the background, because this
+    ;; runs at the end of every turn and park resume and used to block Emacs
+    ;; for the whole request (13 s under futon1b load, 2026-09-27).
+    (if (or (equal sid (symbol-value last-emitted-var))
+            (and (stringp (symbol-value last-id-var))
+                 (not (string-empty-p (symbol-value last-id-var)))))
+        (agent-chat-refresh-evidence-anchor-async!
+         evidence-url timeout sid session-var last-id-var)
+      (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))
     (when (and (not (equal sid (symbol-value last-emitted-var)))
                (not (and (stringp (symbol-value last-id-var))
                          (not (string-empty-p (symbol-value last-id-var)))))

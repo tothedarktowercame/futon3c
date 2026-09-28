@@ -20,6 +20,7 @@
 (require 'claude-repl)
 (require 'agent-repl-registry)
 (require 'futon-agency-ws)
+(require 'futon-url)
 (require 'ring)
 (require 'seq)
 
@@ -220,28 +221,7 @@ If no answer arrives within `agent-repl-park-request-timeout', the connection is
 deleted and CALLBACK runs in a scratch buffer with status (:error (timeout)), so
 callers clear their latches the same way they do on any other failure.  Binds
 nothing itself: callers still set `url-request-method' and friends around it."
-  (let* ((done nil)
-         (resp-buf nil)
-         (once (lambda (status)
-                 (unless done
-                   (setq done t)
-                   (funcall callback status)))))
-    (setq resp-buf (url-retrieve url once nil t t))
-    (run-at-time
-     agent-repl-park-request-timeout nil
-     (lambda ()
-       (unless done
-         (when (buffer-live-p resp-buf)
-           (let ((proc (get-buffer-process resp-buf)))
-             (when proc
-               ;; url.el's end-of-document sentinel re-issues a request whose
-               ;; connection closed early, so detach it before deleting.
-               (set-process-sentinel proc #'ignore)
-               (delete-process proc)))
-           (kill-buffer resp-buf))
-         (with-temp-buffer
-           (funcall once (list :error (list 'timeout url)))))))
-    resp-buf))
+  (futon-url-retrieve url agent-repl-park-request-timeout callback))
 
 (defun agent-repl-park--reap-dead-url-processes ()
   "Delete url.el connections that were already dead on the previous call.
