@@ -29,13 +29,27 @@
     :grant/source {:id "e:joe" :author "joe" :at "2026-09-28T10:00:00Z"
                    :quote "own acts"}}})
 
+(defn provisional-grant [id]
+  {:hx/id id :hx/type :grant/record
+   :hx/props
+   {:grant/grantor "joe" :grant/grantee "xiang" :grant/basis :explicit
+    :grant/scope {:description "inferred provisional withdrawals"
+                  :act-kinds [:act/withdrawal]
+                  :provisional-only true}
+    :grant/interval {:from "2026-09-28T10:00:00Z"}
+    :grant/source {:id "e:joe-provisional" :author "joe"
+                   :at "2026-09-28T10:00:00Z" :quote "provisional"}}})
+
 (defn fake-store []
   (let [docs (atom {http/own-acts-grant-id (own-grant)})
         keys (atom {})
+        calls (atom [])
         next-id (atom 0)]
     {:docs docs
+     :calls calls
      :request!
      (fn [_ method path body]
+       (swap! calls conj [method path body])
        (cond
          (= method "POST")
          (let [key (:hx/idempotency-key body)]
@@ -179,3 +193,95 @@
         (is (= 200 (:status response)))
         (is (= "agent-a" (get-in (response-body response)
                                   [:record :act/stamp :signer])))))))
+
+(defn select-card! [h caller session pattern key at]
+  (response-body
+   (h (request "/api/alpha/pattern-card/select"
+               {:caller caller :agent caller :session session :pattern-id pattern
+                :at at :idempotency-key key}))))
+
+(deftest inferred-provisional-withdrawal-updates-the-exact-seat
+  (let [{:keys [request! docs]} (fake-store)
+        h (handler)
+        grant-id "act:xiang-provisional"]
+    (swap! docs assoc grant-id (provisional-grant grant-id))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id grant-id
+                  provider/refresh-async! (fn [& _])
+                  provider/refresh-cards-async! (fn [& _])]
+      (let [selection (select-card! h "agent-a" "session-a" "card/a"
+                                    "provisional-select" "2026-09-28T11:00:00Z")
+            target (get-in selection [:record :id])
+            response (h (request "/api/alpha/withdrawal/provisional"
+                                 {:caller "xiang" :agent "agent-a" :session "session-a"
+                                  :interpretation-id "interpretation:1"
+                                  :interpretation-version 3
+                                  :at "2026-09-28T11:30:00Z"
+                                  :idempotency-key "provisional-withdraw"}))
+            body (response-body response)]
+        (is (= 200 (:status response)))
+        (is (= "provisional" (get-in body [:record :status])))
+        (is (not= "effective" (get-in body [:record :status])))
+        (is (= target (get-in body [:record :target])))
+        (is (nil? (get-in body [:card-as-of :active])))
+        (is (= [(get body :record)] (get-in body [:card-as-of :provisional])))))))
+
+(deftest inferred-provisional-target-refusals-write-nothing
+  (let [{:keys [request! docs calls]} (fake-store)
+        h (handler)
+        grant-id "act:xiang-provisional"]
+    (swap! docs assoc grant-id (provisional-grant grant-id))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id grant-id]
+      (let [base {:caller "xiang" :agent "agent-a" :session "empty"
+                  :interpretation-id "interpretation:1" :interpretation-version 1
+                  :idempotency-key "unresolved"}
+            before (count (filter #(= "POST" (first %)) @calls))
+            unresolved (h (request "/api/alpha/withdrawal/provisional" base))]
+        (is (= 422 (:status unresolved)))
+        (is (= "target-unresolved" (:reason (response-body unresolved))))
+        (is (= before (count (filter #(= "POST" (first %)) @calls)))))
+      (let [selection (select-card! h "agent-a" "session-a" "card/a"
+                                    "visible-select" "2026-09-28T11:00:00Z")
+            active-id (get-in selection [:record :id])
+            before (count (filter #(= "POST" (first %)) @calls))
+            invisible (h (request "/api/alpha/withdrawal/provisional"
+                                  {:caller "xiang" :agent "agent-a" :session "session-a"
+                                   :target "act:not-active"
+                                   :interpretation-id "interpretation:2"
+                                   :interpretation-version 1
+                                   :idempotency-key "invisible"}))]
+        (is (string? active-id))
+        (is (= 422 (:status invisible)))
+        (is (= "target-not-visible" (:reason (response-body invisible))))
+        (is (= before (count (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest inferred-provisional-withdrawal-fails-closed-without-covering-grant
+  (let [{:keys [request! docs calls]} (fake-store)
+        h (handler)
+        grant-id "act:xiang-provisional"]
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id nil]
+      (let [response (h (request "/api/alpha/withdrawal/provisional"
+                                 {:caller "xiang" :agent "agent-a" :session "session-a"
+                                  :interpretation-id "interpretation:1"
+                                  :interpretation-version 1
+                                  :idempotency-key "no-config"}))]
+        (is (= 403 (:status response)))
+        (is (= "no-grant" (:reason (response-body response))))
+        (is (empty? (filter #(= "POST" (first %)) @calls)))))
+    (swap! docs assoc grant-id (provisional-grant grant-id))
+    (with-redefs [store/request! request!
+                  http/xiang-provisional-grant-id grant-id]
+      (select-card! h "agent-a" "session-a" "card/a"
+                    "wrong-caller-select" "2026-09-28T11:00:00Z")
+      (let [before (count (filter #(= "POST" (first %)) @calls))
+            response (h (request "/api/alpha/withdrawal/provisional"
+                                 {:caller "claude-17" :agent "agent-a"
+                                  :session "session-a"
+                                  :interpretation-id "interpretation:1"
+                                  :interpretation-version 1
+                                  :idempotency-key "wrong-caller"}))]
+        (is (= 403 (:status response)))
+        (is (= "no-grant" (:reason (response-body response))))
+        (is (= before (count (filter #(= "POST" (first %)) @calls))))))))

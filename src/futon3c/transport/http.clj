@@ -9238,6 +9238,11 @@
   (or (System/getenv "FUTON3C_PATTERN_CARD_OWN_ACTS_GRANT_ID")
       "act:32d338a3-ef31-49d9-b12c-1a17bb486ae2"))
 
+(def xiang-provisional-grant-id
+  "The explicit grant for inferred provisional withdrawals. Nil fails closed;
+   it is configured only after the corresponding grant record exists."
+  (System/getenv "FUTON3C_XIANG_PROVISIONAL_GRANT_ID"))
+
 (defn- pattern-card-stamp [caller]
   (act-stamp/stamp caller caller
                    (if (= "joe" caller)
@@ -9321,6 +9326,72 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- required-pattern-card-field! [payload key]
+  (let [value (or (get payload key) (get payload (name key)))]
+    (when (or (nil? value) (and (string? value) (str/blank? value)))
+      (throw (ex-info "Required provisional-withdrawal field is missing"
+                      {:reason :invalid-request :field key})))
+    value))
+
+(defn handle-provisional-withdrawal
+  "Write Joe's provisional withdrawal inferred by an explicitly granted
+   executor. Resolve the exact seat's active card before constructing the act;
+   absent grant configuration and unresolved targets fail before any POST."
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (when-not xiang-provisional-grant-id
+          (throw (ex-info "No grant is configured for inferred withdrawals"
+                          {:reason :no-grant :field :act/stamp})))
+        (let [caller (required-pattern-card-field! payload :caller)
+              agent (required-pattern-card-field! payload :agent)
+              session (required-pattern-card-field! payload :session)
+              interpretation-id (required-pattern-card-field! payload :interpretation-id)
+              interpretation-version
+              (required-pattern-card-field! payload :interpretation-version)
+              target-supplied (or (:target payload) (get payload "target"))
+              refreshed (pattern-card-provider/refresh-cards! agent session)
+              active (get-in refreshed [:result :active])
+              active-id (:id active)
+              target (if target-supplied
+                       (if (= (str target-supplied) (str active-id))
+                         target-supplied
+                         (throw (ex-info "Target is not the exact seat's active card"
+                                         {:reason :target-not-visible :field :target})))
+                       (or active-id
+                           (throw (ex-info "The exact seat has no active card"
+                                           {:reason :target-unresolved :field :target}))))
+              at (pattern-card-at payload)
+              record {:kind :act/withdrawal
+                      :author "joe"
+                      :target target
+                      :status :provisional
+                      :basis {:kind :provisional-interpretation
+                              :interpretation-id interpretation-id
+                              :interpretation-version interpretation-version}
+                      :at at}
+              card-request {:record record
+                            :idempotency-key (pattern-card-idempotency-key payload)}
+              stamp (act-stamp/stamp caller "joe"
+                                     {:grant xiang-provisional-grant-id}
+                                     :declared)
+              result (pattern-card-cli/write-withdrawal!
+                      (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+                      card-request
+                      (act-harness/plain "route:futon3c.withdrawal/provisional")
+                      stamp)]
+          (json-response 200 (assoc (publish-pattern-card-write! result) :ok true)))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (if (contains? #{:target-unresolved :target-not-visible} reason)
+              (json-response 422 {:ok false :reason reason :message (.getMessage e)})
+              (pattern-card-refusal e))))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -9353,6 +9424,9 @@
 
       (and (= :post method) (= "/api/alpha/pattern-card/withdraw" uri))
       (handle-pattern-card-withdraw request)
+
+      (and (= :post method) (= "/api/alpha/withdrawal/provisional" uri))
+      (handle-provisional-withdrawal request)
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)
