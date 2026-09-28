@@ -3,6 +3,7 @@
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full]
+            [futon2.aif.full-loop-runtime :as runtime]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-action :as action]
             [futon3c.wm.run4-historical-qualification :as qualification]
@@ -24,6 +25,9 @@
    :code-state-fn (fn [] {:repo "/isolated" :git-sha "head"
                           :git-dirty? false :repo-heads {}})
    :mode-flags-fn (fn [] {})
+   :scan-render-fn (fn [& _] nil)
+   :effective-run-configuration-fn
+   (:effective-run-configuration-fn (runtime/production-defaults {}))
    :version-stamp-fn identity
    :repair-open-fn #(repair/open-obligations store)
    :repair-system-record-fn #(assoc % :repair/id "isolated-followup")

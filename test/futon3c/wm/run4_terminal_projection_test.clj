@@ -157,6 +157,7 @@
            (fn []
              (let [result (full-runner/run-opportunity!
                            {:run-id "actual-run" :click-id "actual-click"
+                            :scan-render-fn (fn [& _] nil)
                             :run-record-dir (.getPath record-dir)})
                    ref (sut/persist! projections "actual-click" result)
                    value (read-string (slurp (:path ref)))]
