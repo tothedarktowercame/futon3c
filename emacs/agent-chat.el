@@ -861,8 +861,13 @@ the current \"Cooked for\" line."
               (when (and (boundp 'url-http-response-status)
                          (= url-http-response-status 200)
                          (re-search-forward "\r?\n\r?\n" nil t))
+                ;; The body arrives as raw UTF-8 octets; decode before parsing
+                ;; or a pattern id such as 象/诺必践 renders as mojibake.
                 (let* ((json-object-type 'alist)
-                       (payload (json-read))
+                       (payload (json-read-from-string
+                                 (decode-coding-string
+                                  (buffer-substring-no-properties (point) (point-max))
+                                  'utf-8)))
                        (prompt (alist-get 'prompt payload)))
                   (when (agent-chat--valid-prompt-line-p prompt)
                     prompt)))))

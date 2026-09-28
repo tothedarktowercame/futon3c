@@ -159,3 +159,14 @@
     (codex-repl--parse-stream-event
      "{\"type\":\"invoke.activity\",\"activity\":\"using bash\"}")
     (should (equal codex-repl--last-progress-status "using bash"))))
+
+(ert-deftest codex-repl-restore-survives-old-agent-chat-without-prompt-regexp ()
+  (let ((saved (symbol-value 'agent-chat--prompt-regexp)))
+    (unwind-protect
+        (progn
+          (makunbound 'agent-chat--prompt-regexp)
+          (with-temp-buffer
+            (insert "hello\n> ")
+            (should (codex-repl--restore-ui-state))
+            (should (= (marker-position agent-chat--input-start) (point-max)))))
+      (set 'agent-chat--prompt-regexp saved))))

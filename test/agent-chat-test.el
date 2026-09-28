@@ -804,3 +804,19 @@ counted; a fresh one is kept for inspection."
           (should (file-exists-p fresh))
           (should (equal (list fresh) (agent-chat-evidence--failed-files))))
       (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-prompt-fetch-decodes-utf8-body ()
+  (with-temp-buffer
+    (setq agent-chat--agent-id "claude-17"
+          agent-chat--session-id "s1")
+    (cl-letf (((symbol-function 'url-retrieve-synchronously)
+               (lambda (&rest _)
+                 (let ((buf (generate-new-buffer " *p7a1c-utf8*")))
+                   (with-current-buffer buf
+                     (set-buffer-multibyte nil)
+                     (setq-local url-http-response-status 200)
+                     (insert "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"
+                             (encode-coding-string
+                              "{\"prompt\":\"$~象/诺必践> \"}" 'utf-8)))
+                   buf))))
+      (should (equal (agent-chat--prompt-line) "$~象/诺必践> ")))))
