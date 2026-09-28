@@ -194,6 +194,19 @@
                (:reason (grant-record/grant-covers?
                          [grant-edge] "agent-a" :act/withdrawal at
                          {:target-signer "agent-b"}))))
+        ;; the written grant covers nothing beyond what Joe was shown
+        (is (= :out-of-scope
+               (:reason (grant-record/grant-covers?
+                         [grant-edge] "agent-a" :pattern-card/selection at
+                         {:target-signer "agent-a"}))))
+        (is (= :no-candidate
+               (:reason (grant-record/grant-covers?
+                         [grant-edge] "agent-b" :act/withdrawal at
+                         {:target-signer "agent-b"}))))
+        (is (= :out-of-time
+               (:reason (grant-record/grant-covers?
+                         [grant-edge] "agent-a" :act/withdrawal grant-until
+                         {:target-signer "agent-a"}))))
         (is (str/includes? (header)
                            (str "; grant " grant-id " until " grant-until)))
         (let [replay ((handler) (req "yes" "e:grant-yes"))]
