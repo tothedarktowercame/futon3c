@@ -15,15 +15,17 @@
   real observe-publication-fn."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-publication-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
 (def live-records-read
-  [(assoc support/tick-278b6988
-          :why "carries the writer's end (:repair/publication on the run record) but the reader's product is not persisted on it")
-   (assoc support/flight-278b6988
-          :why "its one enactment is {:absent :no-dispatch-configured}: no [:enactments i :publication-observed] exists on any spike flight record, so the reader's end is not persisted")])
+  [{:path "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn"
+    :sha256 "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"
+    :why "carries the writer's end (:repair/publication on the run record) but the reader's product is not persisted on it"}
+   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn"
+    :sha256 "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"
+    :why "its one enactment is {:absent :no-dispatch-configured}: no [:enactments i :publication-observed] exists on any spike flight record, so the reader's end is not persisted"}])
 
-(defn check [] (support/publication-observe identity))
+(defn check [] (:fields (producer-record/record "publication-publication-observe")))
 
 (def wire
   {
@@ -37,7 +39,7 @@
 
 (deftest the-run-records-publication-reaches-the-reader
   (let [{:keys [writer observation] :as o} (check)]
-    (is (= support/publication-entries writer)
+    (is (= [{:status :receipt-committed :repair/id "occ-wire" :repair/discharged? true}] writer)
         "persist-run-record! carried the entries verbatim")
     (is (true? (:observed observation)))
     (is (= "occ-wire" (get-in observation [:evidence :repair/id]))
@@ -45,16 +47,14 @@
     (is (w/received? o))))
 
 (deftest a-typed-absence-at-the-field-does-not-witness-the-wire
-  (let [o (support/publication-observe #(dissoc % :repair/publication))]
+  (let [o (:absent (check))]
     (is (nil? (:reader o)))
     (is (= :no-publication-observation-source (:absent (:observation o)))
         "the reader types the absence itself")
     (is (not (w/received? o)))))
 
 (deftest a-different-publication-than-the-writers-does-not-witness-the-wire
-  (let [o (support/publication-observe
-           #(assoc % :repair/publication
-                   [{:status :publication-refused :repair/id "occ-wire" :reason :publication-error}]))]
+  (let [o (:different (check))]
     (is (some? (:reader o)))
     (is (false? (get-in o [:observation :observed])))
     (is (not (w/received? o)) "present, not absent, but not the entries the writer wrote")))
