@@ -829,10 +829,6 @@ session isolation between buffers."
           (setq agent-chat--unified-turn-id nil
                 agent-chat--segment-index 0
                 agent-chat--unified-segments nil))
-        (when (fboundp 'agent-chat--flush-banked-assistant-before-operator)
-          (agent-chat--flush-banked-assistant-before-operator
-           (lambda (banked)
-             (claude-repl--emit-turn-evidence! "assistant" banked))))
         (claude-repl--emit-turn-evidence! "user" text))
     (agent-chat-stage-pending-user-turn text)))
 
