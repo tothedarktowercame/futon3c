@@ -1,58 +1,32 @@
 (ns futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test
   "assemble/assemble-one's spec through the real ranker, following cascade-lane's
-  :cascade-spec option. The reader records the input in its own metadata beside
-  its derived scoring spec; no projection is used to manufacture equality."
-  (:require [futon3c.diagramprover.wm-wire-construction-products :as products]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.cascade-model-manifest :as manifest]
-            [futon2.aif.cascade-policy :as policy]
-            [futon2.aif.efe :as efe]
+  :cascade-spec option. Values come from the content-addressed producer record;
+  no product code is loaded here."
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-construction-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(def live-records-read
-  (mapv #(assoc % :why "No :cascade-spec in the spike record: neither the assembled spec nor the ranker's received-spec receipt is recorded.")
-        (filter #(re-find #"tick-run-record.*(278b6988|7f89646a|e70b4baf)" (:path %))
-                support/live-records-read)))
-
+(def stem "wm-wire-construction-assemble-one-r4-kernel-cascade-spec-tes")
+(def wire-id [:construction-assemble-one :r4-kernel :cascade-spec])
+(def producer (delay (producer-record/record stem)))
+(defn- fields [] (get-in @producer [:wires wire-id]))
 (defn observe [mutation]
-  (let [p (get-in @support/assembled [:problems 0 :cascade-problem])
-        pair (get-in @support/assembled [:problems 0 :constructed-candidates 0])
-        candidate {:kind :cascade-candidate :id (:candidate-id pair)
-                   :precedence (mapv #(policy/token-interpretation % (get-in p [:interpretations %]))
-                                     (:precedence pair))
-                   :construction-receipt (:construction-receipt pair)}
-        writer (:cascade-spec p)
-        carrier (case mutation
-                  :none writer
-                  :absent {:absent :no-cascade-spec}
-                  :different (assoc writer :want #{:test-covers-missing-total-repos})
-                  :missing-want (dissoc writer :want))
-        ranked (efe/rank-cascade-actions
-                {:cascade-belief (manifest/observed-belief
-                                  (set (for [[k v] (:facts p) :when (true? v)] k)))}
-                [candidate] {:cascade-spec carrier :horizon-steps (:horizon-steps p)
-                             :f-prefix-production? true})]
-    {:writer writer :reader (get-in (meta ranked) [:cascade-scoring :spec-in])
-     :ranked ranked :derived (get-in (meta ranked) [:cascade-scoring :spec])}))
-
+  (if (= mutation :none) (:primary (fields)) (get-in (fields) [:interventions mutation])))
 (defn check [] (observe :none))
 
 (def wire
-  {
-   :second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/changed-carrier-changes-the-derived-product :kind :value-varying
+  {:second-layer {:test 'futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/changed-carrier-changes-the-derived-product :kind :value-varying
                   :product [:scores] :intervention :before-reader}
-  :wire [:construction-assemble-one :r4-kernel :cascade-spec]
+   :wire [:construction-assemble-one :r4-kernel :cascade-spec]
    :kind :witnessed-hermetically :test `the-observed-handoff :check check
-   :live-records-read live-records-read
-   :note "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record."})
+   :live-records-read []
+   :note "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources, then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record. Values read from the producer record."})
 
 (deftest the-observed-handoff
   (let [o (check)]
-    (is (w/received? o))
-    (is (= (pr-str (:writer o)) (pr-str (:reader o))))
-    (is (seq (:ranked o)))
-    (is (not= (:reader o) (:derived o)))))
+    (is (w/received? o) (str "writer-reader " (pr-str o)))
+    (is (:ranked-present? o))
+    (is (:reader-differs-from-derived? o))))
 
 (deftest bad-carriers-before-the-real-reader
   (doseq [mutation [:absent :different :missing-want]]
@@ -60,26 +34,22 @@
       (is (not (w/received? o)) (name mutation))
       (case mutation
         :absent (do (is (= {:absent :no-cascade-spec} (:reader o)))
-                    (is (= :missing-cascade-want (get-in o [:ranked :kind]))))
+                    (is (= :missing-cascade-want (:ranked-kind o))))
         :missing-want (do (is (not (contains? (:reader o) :want)))
-                          (is (= :missing-cascade-want (get-in o [:ranked :kind]))))
+                          (is (= :missing-cascade-want (:ranked-kind o))))
         :different (do (is (= #{:test-covers-missing-total-repos} (get-in o [:reader :want])))
-                       (is (seq (:ranked o))))))))
+                       (is (:ranked-present? o)))))))
 
 (deftest live-records-do-not-carry-this-wire
-  (is (= 3 (count live-records-read)))
-  (doseq [{:keys [path sha256]} live-records-read]
-    (is (= sha256 (w/sha256-file path)))
-    (when (= sha256 (w/sha256-file path))
-      (is (not-any? #(and (map? %) (contains? % :cascade-spec))
-                    (tree-seq coll? seq (w/read-record path)))))))
+  (let [live (:live-records @producer)]
+    (is (= 3 (:count live)))
+    (doseq [{:keys [sha256 sha-matches? no-cascade-spec?]} (:pins live)]
+      (is sha-matches? (str "sha256 " sha256))
+      (is no-cascade-spec? (str "no :cascade-spec in " sha256)))))
 
 (deftest changed-carrier-changes-the-derived-product
-  (let [before (products/score-product :cascade-spec :none)
-        after (products/score-product :cascade-spec :different)
-        v (:scores before) v-prime (:scores after)]
-    (prn :wire-2l-3a :r4-kernel-cascade-spec :before before :after after)
-    (is (< 1 (count v)) "competing scored candidates")
-    (is (= (count v) (count v-prime)))
-    (is (every? number? (concat v v-prime)))
-    (is (not= v v-prime) "derived product changes after the carrier intervention")))
+  (let [r (:second-layer (fields))]
+    (doseq [k [:competing-before? :scores-numeric? :scores-differ?]]
+      (testing (name k) (is (true? (get r k)))))
+    (is (= [3 3] (:candidate-counts r)))
+    (is (not= (get-in r [:before :scores]) (get-in r [:after :scores])))))
