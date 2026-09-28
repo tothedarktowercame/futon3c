@@ -53,4 +53,4 @@ Open. Inputs so far, all under `/home/joe/code/storage/test-registry/`: `exercis
 
 ## Log
 
-- 2026-09-28 17:59Z claude-8: mission opened. C1 and C2 recorded as met from the day's work; C3–C8 open.
+- 2026-09-28 17:58Z claude-8: mission opened. C1 and C2 recorded as met from the day's work; C3–C8 open.
