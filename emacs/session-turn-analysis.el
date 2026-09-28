@@ -642,6 +642,30 @@ bell was accepted, not that the turn was interpreted.")
         (setq changed t))
       changed)))
 
+(defvar session-mode--withdrawal-pending-paths nil
+  "Turn records with a notice not yet published or displayed.
+A record is reaped once, when its analysis completes, so a notice that failed
+then is retried on later reaps of OTHER records; each outcome stops after
+`session-mode-withdrawal-notice-max-attempts'.  Kept in memory only: an Emacs
+restart drops the retries, and the give-up is then not recorded.")
+
+(defun session-mode--withdrawal-notice-pending-p (outcome)
+  "Non-nil if OUTCOME has a notice still to publish or display."
+  (and (session-mode--withdrawal-notice outcome)
+       (or (and (not (alist-get 'header_notice_published_at outcome))
+                (not (alist-get 'header_notice_give_up_reason outcome)))
+           (and (not (alist-get 'repl_notice_delivered_at outcome))
+                (not (alist-get 'repl_notice_give_up_reason outcome))))))
+
+(defun session-mode--retry-pending-withdrawal-notices (except)
+  "Retry pending notices on every remembered record but EXCEPT."
+  (dolist (path (copy-sequence session-mode--withdrawal-pending-paths))
+    (unless (equal path except)
+      (condition-case nil
+          (session-mode--process-withdrawals path)
+        (error (setq session-mode--withdrawal-pending-paths
+                     (delete path session-mode--withdrawal-pending-paths)))))))
+
 (defun session-mode--process-withdrawals (path)
   "Apply newly analysed withdraw interpretations for operator record PATH.
 Every outcome is written onto PATH.  This function never changes analysis
@@ -685,7 +709,11 @@ health and never retries a failed route call."
               (setq changed t)))
           (when changed
             (setf (alist-get 'withdrawal_effects record) (vconcat existing))
-            (session-mode--write-analysis-record path record)))))))
+            (session-mode--write-analysis-record path record))
+          (setq session-mode--withdrawal-pending-paths
+                (delete path session-mode--withdrawal-pending-paths))
+          (when (seq-some #'session-mode--withdrawal-notice-pending-p existing)
+            (push path session-mode--withdrawal-pending-paths)))))))
 
 (defun session-mode--handle-reap-output (path out)
   "Handle successful analysis reap OUT for PATH without coupling side effects."
@@ -693,6 +721,7 @@ health and never retries a failed route call."
     (condition-case nil
         (session-mode--process-withdrawals path)
       (error nil))
+    (session-mode--retry-pending-withdrawal-notices path)
     (session-mode--set-analysis-health
      'ok (format "%s: analysed" (file-name-base path)))))
 
