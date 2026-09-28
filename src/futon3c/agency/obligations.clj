@@ -101,7 +101,7 @@
    promises are retained in :ignored with their final :status for audit. An
    unchecked wait is removed after any release. Agreements are open and undated;
    :grant-until inside their scope is authority expiry and is never a due date."
-  [{:keys [promise-history promise-outcomes agreements offers]} agent-id t]
+  [{:keys [promise-history promise-outcomes agreements offers reader-incomplete]} agent-id t]
   (let [t (or (instant t) (throw (ex-info "Invalid as-of instant" {:reason :invalid-as-of})))
         visible-history (vec (filter #(at-or-before? % t) promise-history))
         visible-outcomes (vec (filter #(at-or-before? % t) promise-outcomes))
@@ -151,7 +151,8 @@
                              :when (nil? (get offers-by-id (:agreement/offer a)))]
                          (incomplete (:id a) :unknown-offer
                                      {:source/id (:id a) :offer (:agreement/offer a)}))
-        incompletes (vec (concat chain-issues decoded-errors missing-beneficiary no-due missing-offers))
+        incompletes (vec (concat reader-incomplete chain-issues decoded-errors
+                                 missing-beneficiary no-due missing-offers))
         party? #(or (= agent-id (:debtor %)) (= agent-id (:creditor %)))]
     ;; :incomplete stays unfiltered: a broken chain or unreadable creation may
     ;; not reveal its parties, so it is shown to every asker rather than hidden.
