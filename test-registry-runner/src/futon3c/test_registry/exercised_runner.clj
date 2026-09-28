@@ -89,7 +89,9 @@
           (apply original-load args)
           (finally
             (let [loaded (sort (remove before (map ns-name (all-ns))))]
-              (reset! context {:phase :load :namespaces (mapv str loaded)})
+              (reset! context {:phase :load
+                               :source (str (first args))
+                               :namespaces (mapv str loaded)})
               (instrument-new-namespaces! before))))))))
 
 (defn- test-source? [url]
