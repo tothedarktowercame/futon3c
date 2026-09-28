@@ -5287,6 +5287,7 @@ RESPOND WITH ONLY:
 
 (defn -main [& _args]
   (incidents/install-default-handler!)
+  (pattern-search/prewarm!)
   (dev-bootstrap/run-main!
    {:!f1-sys !f1-sys
     :!evidence-store !evidence-store

@@ -158,3 +158,14 @@
                :last-error-data (ex-data t))
         (swap! !stats update :fallbacks inc)
         ((or *fallback-search* default-fallback) query-text top)))))
+
+(defn prewarm!
+  "Start the resident process in the background, so the first turn after a JVM
+   start does not pay the ~3-8 s cold start. Failures are recorded in stats;
+   the first search then starts it or falls back as usual."
+  []
+  (future
+    (locking owner-lock
+      (try (ensure-resident!)
+           (catch Throwable t
+             (swap! !stats assoc :last-error (.getMessage t)))))))

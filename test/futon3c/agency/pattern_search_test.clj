@@ -67,3 +67,16 @@
         (is (= "fallback" (:id (first (search/search "bad" 1)))))
         (is (= 1 (:fallbacks (search/stats)))))
       (finally (delete-tree! root)))))
+
+(deftest prewarm-starts-resident-before-first-search
+  (let [{:keys [root path]} (temp-script)]
+    (try
+      (binding [search/*resident-command* ["python3" "-u" path "normal"]
+                search/*fallback-search* (fn [& _] (throw (ex-info "unexpected" {})))]
+        @(search/prewarm!)
+        (is (= 0 (:resident-hits (search/stats))))
+        ;; Only a process started by prewarm makes the next start a restart.
+        (search/stop!)
+        (is (= "q" (:id (first (search/search "q" 1)))))
+        (is (= 1 (:restarts (search/stats)))))
+      (finally (delete-tree! root)))))
