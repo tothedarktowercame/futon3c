@@ -30,6 +30,12 @@
             [futon3c.watcher.projections.essay :as essay]
             [futon3c.watcher.scope-reingest :as scope-reingest]))
 
+
+;; Every watcher HTTP call has a deadline. babashka's http-client waits
+;; forever by default: on 2026-09-28 a hyperedge POST whose response never
+;; came held the multi-watcher's first cycle for 45 minutes, so no watched
+;; root was observed and inbox-zero did not run at all.
+(def ^:private watcher-http-timeout-ms 30000)
 (def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
                    (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
@@ -117,7 +123,8 @@
                               {:headers {"Content-Type" "application/edn"
                                          "X-Penholder" PENHOLDER}
                                :body (pr-str payload)
-                               :throw false})]
+                               :throw false
+                               :timeout watcher-http-timeout-ms})]
           (when (not= 200 (:status resp))
             (println "[futon1b dual-write] non-200:" (:status resp)
                      (subs (str (:body resp)) 0 (min 200 (count (str (:body resp))))))))
@@ -174,7 +181,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)
@@ -306,7 +314,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)
@@ -326,7 +335,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)
@@ -347,7 +357,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)
@@ -371,7 +382,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)
@@ -904,7 +916,8 @@
                (http/post (str FUTON3C "/api/alpha/mc/sync-mission")
                           {:headers {"Content-Type" "application/json"}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)

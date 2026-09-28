@@ -34,6 +34,12 @@
             [futon3c.agency.registry :as registry]
             [futon3c.watcher.write-pace :as write-pace]))
 
+
+;; Every watcher HTTP call has a deadline. babashka's http-client waits
+;; forever by default: on 2026-09-28 a hyperedge POST whose response never
+;; came held the multi-watcher's first cycle for 45 minutes, so no watched
+;; root was observed and inbox-zero did not run at all.
+(def ^:private watcher-http-timeout-ms 30000)
 (def FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
                  (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def FUTON3C (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
@@ -73,7 +79,8 @@
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
-                           :throw false})
+                           :throw false
+                           :timeout watcher-http-timeout-ms})
                (catch Exception e {:status -1 :body (.getMessage e)}))
         body (when (string? (:body resp))
                (try (json/parse-string (:body resp) true)

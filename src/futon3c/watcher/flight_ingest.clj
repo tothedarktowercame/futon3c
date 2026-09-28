@@ -15,6 +15,12 @@
             [futon3c.watcher.projections.flight :as flight])
   (:import (java.net URLEncoder)))
 
+
+;; Every watcher HTTP call has a deadline. babashka's http-client waits
+;; forever by default: on 2026-09-28 a hyperedge POST whose response never
+;; came held the multi-watcher's first cycle for 45 minutes, so no watched
+;; root was observed and inbox-zero did not run at all.
+(def ^:private watcher-http-timeout-ms 30000)
 (def futon1a-url (or (System/getenv "FUTON_SUBSTRATE_URL")
                      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
@@ -60,7 +66,8 @@
   [entity-id]
   (let [resp (http/get (str futon1a-url "/api/alpha/entity/" (url-encode entity-id))
                        {:headers {"Accept" "application/json"}
-                        :throw false})]
+                        :throw false
+                        :timeout watcher-http-timeout-ms})]
     (when (= 200 (:status resp))
       (:entity (json/parse-string (:body resp) true)))))
 
