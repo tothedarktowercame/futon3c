@@ -879,3 +879,25 @@ agent text is left alone."
     (should (equal (cdr case) (agent-chat--acceptance-command (car case)))))
   (dolist (miss '("yes please" "yes, but" "yes 2 3" "not yes" "yes?" "yes!!"))
     (should-not (agent-chat--acceptance-command miss))))
+
+(ert-deftest session-mode-external-turn-never-takes-the-calling-buffers-evidence-id ()
+  ;; emacsclient may evaluate in a REPL buffer whose last acknowledged id is
+  ;; another turn; only the id passed in may be recorded.
+  (let ((session-mode-turn-analysis-directory
+         (make-temp-file "turn-external-test-" t))
+        (session-mode-analysis-agent nil)
+        (json-object-type 'alist))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (setq-local agent-chat--last-evidence-id "emacs-some-other-turn")
+          (let ((no-id (json-read-file
+                        (session-mode-record-external-turn
+                         "No." "claude-17" "sid" "claude-17-turn-1")))
+                (given (json-read-file
+                        (session-mode-record-external-turn
+                         "No." "claude-17" "sid" "claude-17-turn-2"
+                         "emacs-given"))))
+            (should (null (alist-get 'evidence_id no-id)))
+            (should (equal "emacs-given" (alist-get 'evidence_id given)))))
+      (delete-directory session-mode-turn-analysis-directory t))))

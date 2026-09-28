@@ -47,6 +47,7 @@ def turns(limit):
         if '"chat-turn"' not in entry or ':role "user"' not in entry:
             continue
         yield {"turn_id": field(entry, "turn-id"), "text": field(entry, "text"),
+               "evidence_id": field(entry, "evidence/id"),
                "session": field(entry, "evidence/session-id"),
                "at": field(entry, "evidence/at")}
 
@@ -91,9 +92,10 @@ def capture(agents, since, limit):
             continue
         new.append((t, agent))
     for t, agent in sorted(new, key=lambda x: x[0]["at"]):
-        form = "(session-mode-record-external-turn %s %s %s %s)" % (
+        form = "(session-mode-record-external-turn %s %s %s %s %s)" % (
             elisp_str(t["text"]), elisp_str(agent), elisp_str(t["session"] or ""),
-            elisp_str(t["turn_id"]))
+            elisp_str(t["turn_id"]),
+            elisp_str(t["evidence_id"]) if t["evidence_id"] else "nil")
         out = subprocess.run(["emacsclient", "-e", form], capture_output=True, text=True)
         path = out.stdout.strip().strip('"')
         if out.returncode or not os.path.exists(path):

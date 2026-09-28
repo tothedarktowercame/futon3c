@@ -154,7 +154,7 @@ reached the buffer. The surface itself is kept in the record's metadata."
                       ;; `agent-chat--start-turn' runs :before-send before it
                       ;; calls us, so this is the acknowledged operator row,
                       ;; not an id reconstructed from text later.
-                      (evidence_id . ,(or agent-chat--last-evidence-id :json-null))
+                      (evidence_id . ,agent-chat--last-evidence-id)
                       (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
                       (quotes . ,(vconcat session-mode--last-quotes))
@@ -1072,14 +1072,17 @@ state -- never silently complete."
 ;; one to this function, so it is structured and sent for interpretation by
 ;; the same code as a turn typed in this Emacs.
 
-(defun session-mode-record-external-turn (text agent-id session-id turn-id)
+(defun session-mode-record-external-turn (text agent-id session-id turn-id
+                                               &optional evidence-id)
   "Record TEXT as an operator turn to AGENT-ID and request its interpretation.
-SESSION-ID and TURN-ID are the ones the evidence store gave it. Returns the
-record's path. The record's created_at is the capture time; the caller
-corrects it to the turn's own time."
+SESSION-ID, TURN-ID and EVIDENCE-ID are the ones the evidence store gave it.
+Returns the record's path. The record's created_at is the capture time; the
+caller corrects it to the turn's own time."
   (let ((agent-chat--agent-id agent-id)
         (agent-chat--session-id session-id)
         (agent-chat--current-turn-id turn-id)
+        ;; Never the calling buffer's last acknowledged id: that is another turn.
+        (agent-chat--last-evidence-id evidence-id)
         (session-mode--last-quotes nil))
     (let ((path (session-mode--record-turn text)))
       (when (and path session-mode-analysis-agent
