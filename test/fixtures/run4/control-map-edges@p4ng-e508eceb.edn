@@ -1,0 +1,283 @@
+;; control-map-edges.edn — Figure 4 (aif-control-map-paper.svg) lifted to data.
+;; DRAFT 2026-08-30 (claude-15). Endpoints matched to the node <rect> containing them;
+;; labels matched to the nearest SAMPLED point of a control-edge curve (not the chord midpoint).
+;; Vocabulary follows fig-loop.edn: {:from :to :label :kind :status}. This is
+;; M-formal-war-machine §1.6 criterion 1 in draft: the wiring as data, so gen_wr_overlay.bb
+;; can render from it and a check can reject an SVG that disagrees. :status is NOT a claim
+;; that the edge works in the running system (see wr-overlay.edn :holds); it is
+;; :drawn (as in the figure) | :unresolved (an endpoint matched no node rect).
+{:source "aif-control-map-paper.svg" :as-of "2026-08-30"
+ :columns [:PERCEIVE :BELIEVE :EVALUATE :SELECT :ACT]
+ :nodes [R1 R2 R3 R3a R4 R5 R6 R7 R8 R9 R10 R11 R12 R13 R14 R15 R16 R17 R20 TRACE]
+ :edges
+ [
+  {:from :R1 :to :R4 :label "predict" :kind :control :status :drawn}
+  {:from :R2 :to :R3 :label "observe" :kind :control :status :drawn}
+  {:from :R3 :to :R1 :kind :control :status :drawn}
+  {:from :R4 :to :R5 :kind :control :status :drawn}
+  {:from :R5 :to :R6 :label "rank" :kind :control :status :drawn}
+  {:from :R6 :to :R13 :kind :control :status :drawn}
+  {:from :R11 :to :R16 :label "arbitrate" :kind :control :status :drawn}
+  {:from :R13 :to :R14 :kind :control :status :drawn}
+  {:from :R14 :to :R16 :kind :control :status :drawn}
+  {:from :R16 :to :R2 :label "observe construction" :kind :control :status :drawn,
+ :label-amendment {:date "2026-08-31"
+                   :old-label "re-observe"
+                   :reason "R16 constructs an in-model wiring map; it does not perform an outward act whose effects R2 can re-observe."
+                   :cite "futon2/src/futon2/aif/enact.clj:130-160"
+                   :cite-repin {:date "2026-09-03" :by :U31
+                                :old-cite "futon2/src/futon2/aif/enact.clj:113"
+                                :reason "enact.clj:113 is now inside the escrow-unreadable warning println (futon2/src/futon2/aif/enact.clj:110-114); engine-wiring is at :130-160."}}
+ :schema {:payload {:tick :unspecified-type
+                    :mission :unspecified-type
+                    :construction [:constructed-wiring {:boxes :map :policy-holes :value}]
+                    :absence [:no-construction {:reason #{:engine-returned-no-wiring :empty-cascade}}]
+                    :failure [:enactment-failed {:phase :engine-execution
+                                                 :exception-class :string-or-nil
+                                                 :message :string
+                                                 :exit :int-on-nonzero-exit
+                                                 :stderr :string-on-nonzero-exit}]}
+          :guarantee :unspecified :atomic-with :unspecified :retry :unspecified
+          :timeout-ms :unspecified :idem-key :unspecified :receipt :unspecified}
+ :payload-pins {:pinned-at "futon2 e76c51c (2026-09-02 08:58:59Z); lines read 2026-09-03"
+                :producer "futon2/src/futon2/aif/enact.clj:130-160"
+                :declared-arms "futon2/src/futon2/aif/enact.clj:133"
+                :constructed-wiring "futon2/src/futon2/aif/enact.clj:146"
+                :engine-returned-no-wiring "futon2/src/futon2/aif/enact.clj:147"
+                :empty-cascade "futon2/src/futon2/aif/enact.clj:262"
+                :enactment-failed ["futon2/src/futon2/aif/enact.clj:148-154"
+                                   "futon2/src/futon2/aif/enact.clj:156-160"]
+                :persisted-result-union "futon2/src/futon2/aif/enact.clj:283-292"
+                :superseded {:date "2026-09-03" :by :U31
+                             :payload {:absence [:no-construction {:reason :engine-returned-nil}]}
+                             :cite "futon2/src/futon2/aif/enact.clj:113"}}
+ :schema-note "CML-D2 2026-08-30 (futon2 031c5f2): reconciled from P-R16's proposal {tick, mission, witness}; P-R2 states no incoming payload for this edge — ONE-SIDED. Six of nine Delivery fields unspecified because neither record states them. No observation channel can receive this payload today (P-R2 §0 ring); :acknowledged? is not a substitute. Written by the owner (claude-15) from the builder's proposal; refusals kept: no outgoing receipt copied onto an incoming edge; no invented operational defaults. AMENDED 2026-08-31: ExternalWitness/re-observe was a false outward-act claim. engine-wiring returns an in-model construction (:boxes/:policy-holes) or nil (futon2/src/futon2/aif/enact.clj:113); the old label remains in :label-amendment. RE-SYNCED 2026-09-03 (worklist :U31, from C485 §4): the replacement type had itself drifted. The 2026-08-31 payload was written against a pre-typed engine-wiring (p4ng 199252b, 10:21:26Z) whose absence case was a bare nil, and futon2 09200bf (13:38:19Z, 3h17m later) split that case into :engine-returned-no-wiring (futon2/src/futon2/aif/enact.clj:147) and :empty-cascade (futon2/src/futon2/aif/enact.clj:262) and added a third arm :enactment-failed (futon2/src/futon2/aif/enact.clj:148-154 and :156-160), leaving the schema keyword :engine-returned-nil with zero code occurrences. The payload now carries the three arms the code persists (futon2/src/futon2/aif/enact.clj:283-292) with a live pin per arm in :payload-pins; the amendment :cite moved from enact.clj:113 (now inside the escrow-unreadable warning println, futon2/src/futon2/aif/enact.clj:110-114) to engine-wiring at futon2/src/futon2/aif/enact.clj:130-160. Superseded payload kept as dated history in :payload-pins :superseded."
+ :fixture :unspecified}
+  {:from :R5 :to :R5 :kind :support :status :unresolved :note "start point 98px from the nearest node (R5); the figure has 12 support paths, the mission counts 11"}
+  {:from :R6 :to :R11 :kind :support :status :drawn}
+  {:from :R7 :to :R3 :kind :support :status :drawn}
+  {:from :R7 :to :R8 :kind :support :status :drawn}
+  {:from :R7 :to :R14 :kind :support :status :drawn}
+  {:from :R8 :to :R5 :kind :support :status :drawn
+   :data-flow :none
+   :basis "C451 (holes/labs/wm-contract/C451-unexplained-drawn-edges.md): drawn and traversed as route sequencing, but no value crosses it. F is bound at war_machine.clj:4450-4451 and route-tagged :R8 at war_machine.clj:4452; the wm-state map handed to scoring omits it (war_machine.clj:4458-4466); rank-actions receives that wm-state, the candidates and the options (war_machine.clj:4536), and compute-efe predicts from state and action (efe.clj:601-619). F's only other appearance in the file is the report copy at war_machine.clj:4753, downstream of scoring. R5 recomputes its own EFE score; it does not read R8's F."}
+  {:from :R9 :to :R16 :kind :support :status :drawn,
+ :schema {:payload {:claim :unspecified-type
+                    :witness {:id :unspecified-type :producer :unspecified-type :layer #{:L1 :L2}}
+                    :verdict #{:independent :self :unknown}}
+          :guarantee :unspecified :atomic-with :unspecified :retry :unspecified
+          :timeout-ms :unspecified :idem-key :unspecified
+          :receipt {:shape :inferred-untested :note "\"receipt = the verdict record\" may mean only {verdict}"}}
+ :consumer-constraint "R16 acts only on :independent; :self and :unknown are valid DELIVERED verdicts and neither authorises an act (P-R16 §Edges; P-R9 §solved 3)."
+ :schema-note "CML-D2 2026-08-30 (futon2 ab539dd): ONE proposal endorsed twice — P-R16.md:108-109 cites P-R9's {claim, witness, verdict} (re-pinned 2026-09-03 under :U48 from P-R16.md:61-62; the range moved when P-R16 clause 2 and the Edges label were re-scoped, futon2 DECISIONS-PENDING #2 ruling); no confirmatory weight from the agreement; R16 adds the consumer constraint (the receiving end's contribution). atomic-with/retry/timeout-ms unspecified because neither record states them; R16→R2's values NOT imported (different edge, different contract). No implementation carries an R9 verdict into enact! or an act-gate today (measured: 0 independence terms in enact.clj/close_loop.clj) — a specification, not a description. Written by the owner from the builder's proposal."
+ :fixture :unspecified}
+  {:from :R10 :to :R8 :kind :support :status :drawn}
+  {:from :R12 :to :R7 :kind :support :status :drawn}
+  {:from :R15 :to :R13 :kind :support :status :drawn}
+  {:from :R15 :to :R16 :kind :support :status :drawn}
+  {:from :R20 :to :R7 :kind :support :status :drawn}
+ ]
+ ;; --- added 2026-08-30: derivation results and decisions (PREREG-war-machine.md §2c–§2d)
+ ;; :derived-undrawn — edges the THEORY (sec-catalog THEN clauses + sec-glossary) implies and the
+ ;; figure does not draw; :by names the derivation(s) that found each (:claude-15 §2c, :codex-22 blind).
+ ;; :drawn-not-derivable — drawn edges neither derivation could derive from the text (see §2d).
+ :derived-undrawn
+ [{:from :R1  :to :R8  :by [:claude-15 :codex-22] :basis "R8 is a pure function of belief, observation, precision"}
+  {:from :R2  :to :R8  :by [:claude-15 :codex-22] :basis "same"}
+  {:from :R6  :to :R4  :by [:claude-15 :codex-22] :basis "the kernel predicts over a candidate action (R6 as candidate space)"}
+  {:from :R6  :to :R5  :by [:claude-15 :codex-22] :basis "scoring needs the candidate set; reverses the drawn R5→R6 for the catalogue R6"}
+  {:from :R7  :to :R5  :by [:claude-15 :codex-22] :basis "precision applied wherever scoring occurs"}
+  {:from :R8  :to :R14 :by [:claude-15 :codex-22] :basis "present-fit jumps are the diagnostic signal R14 couples the dial to"}
+  {:from :R4  :to :R12 :by [:claude-15 :codex-22] :basis "calibration consumes predictions"}
+  {:from :R9  :to :R12 :by [:claude-15 :codex-22] :basis "only independent Layer 2 certifies value"}
+  {:from :R16 :to :R10 :by [:claude-15 :codex-22] :basis "liveness gates on evidence a tick changed observable state"}
+  {:from :R16 :to :R12 :by [:claude-15 :codex-22] :basis "Layer 2 consumes witnessed outcomes the model did not produce"}
+  {:from :R16 :to :R15 :by [:claude-15 :codex-22] :basis "witnessed tactical outcomes update strategic calibration"}
+  {:from :R10 :to :R2  :by [:claude-15 :codex-22] :basis "the scheduled entrypoint starts the tick at PERCEIVE"}
+  {:from :R16 :to :R17 :by [:codex-22 :claude-15] :basis "adjudicated outcomes accumulate for structure learning (learning band)"}
+  {:from :R17 :to :R6  :by [:codex-22 :claude-15] :basis "learned structure returns to the candidate space (R16→R6 pattern)"}
+  {:from :R16 :to :R14 :by [:claude-15] :basis "glossary: τ_eff = 1/g, g the OUTCOME-FEEDBACK selection gain — the gain chain"}
+  {:from :R3  :to :R7  :by [:claude-15] :basis "precision learns from prediction-error variance"}
+  {:from :R7  :to :R16 :by [:claude-15] :basis "precision applied wherever gating occurs"}
+  {:from :R9  :to :R2  :by [:claude-15] :basis "tag-at-birth on evidence records"}
+  {:from :R5  :to :R12 :by [:codex-22] :basis "Layer 1 compares predicted G with the model's own later scores"}
+  {:from :R16 :to :R1  :by [:codex-22] :basis "the witness feeds the next belief (direct)"}
+  {:from :R5  :to :R14 :by [:codex-22] :basis "scores enter the temperature-governed choice"}
+  {:from :R1  :to :R14 :by [:codex-22] :basis "belief uncertainty is an input to the dial"}
+  {:from :R2  :to :R7  :by [:codex-22] :basis "precision keyed to observation features"}
+  {:from :R11 :to :R13 :by [:codex-22] :basis "codex's post-selection construction reading; its quoted phrase is not in the source"}
+  {:from :R13 :to :R16 :by [:codex-22] :basis "the witness consumes the constructed cascade"}
+ {:from :R20 :to :R14 :by [:codex-22 :claude-15] :basis "chartered, not implemented (sec-catalog:370)" :status :chartered}]
+ ;; Routes observed by WM-RUN2 and drawn distinguishably in Figure 4 as of
+ ;; 2026-08-31. The six receipt hops remain distinct from the two mediator hops
+ ;; exposed by endpoint pairing, and from the original :edges population.
+ :route-measured-drawn
+ [{:from :R20 :to :R12
+   :measurement :wm-run2
+   :via "futon2.report.war-machine/scan-r12-apparatus"
+   :basis "WM-RUN2 scan preamble: interoception feeds the R12 apparatus observation."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}
+  {:from :R12 :to :R2
+   :measurement :wm-run2
+   :via "futon2.aif.observation/observe"
+   :basis "WM-RUN2 scan preamble: calibrated scan data feeds the observation vector."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}
+  {:from :R2 :to :R7
+   :measurement :wm-run2
+   :via "futon2.aif.precision/update-precision-state"
+   :basis "WM-RUN2 route abstraction, triangulated by the isolated node simulation; endpoint pairing decomposed it through R3a."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}
+  {:from :R2 :to :R3a
+   :measurement :pairing-decomposition
+   :via "futon2.aif.free-energy/compute-prediction-error"
+   :basis "R2/R7 pairing: R2's 14-channel observation is projected by R3a before R7; no direct R2-to-R7 call exists."
+   :receipt "futon2/holes/labs/wm-contract/pair/R2-R7-delivery.edn"}
+  {:from :R3a :to :R7
+   :measurement :pairing-decomposition
+   :via "futon2.aif.precision/update-precision-state"
+   :basis "R2/R7 pairing: R7 consumes the 8-channel post-R3a prediction-error projection."
+   :receipt "futon2/holes/labs/wm-contract/pair/R2-R7-delivery.edn"}
+  {:from :R3 :to :R8
+   :measurement :wm-run2
+   :via "futon2.aif.free-energy/compute-variational-free-energy"
+   :basis "WM-RUN2: belief-update prediction errors feed the present-fit free-energy calculation."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}
+  {:from :R6 :to :R14
+   :measurement :wm-run2
+   :via "futon2.report.war-machine/invoke-strategic-selection"
+   :basis "WM-RUN2 and R5/R14 pairing: selection forwards R5's ranked score field into commitment-temperature diagnostics."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}
+  {:from :R14 :to :TRACE
+   :measurement :wm-run2
+   :via "futon2.aif.trace/write-trace!"
+   :basis "WM-RUN2 exhaust: the selection result is written to the TRACE assurance store."
+   :receipt "futon2/holes/labs/wm-contract/tick-run-record-2026-08-30.edn"}]
+ :drawn-not-derivable
+ [{:from :R8  :to :R5  :by [:claude-15 :codex-22] :reason "R8's text: the present-fit score is no substitute for the action score"}
+  {:from :R10 :to :R8  :by [:claude-15 :codex-22] :reason "the scheduler is not an input to F"}
+  {:from :R15 :to :R16 :by [:claude-15 :codex-22] :reason "the stated feedback runs R16→R15"}
+  {:from :R7  :to :R14 :by [:codex-22] :reason "R14 consumes belief uncertainty and diagnostic pressure, not the registry"}
+  {:from :R12 :to :R7  :by [:codex-22] :reason "no sentence says calibration updates precision"}
+  {:from :R6  :to :R13 :by [:codex-22] :reason "under the candidate-space R6 the set feeds R4/R5; the cascade is constructed after selection"}
+  {:from :R11 :to :R16 :by [:codex-22] :reason "arbitration's output is not an actuation command; derived route R11→R14→R13→R16"}]
+ :decisions
+ {:r4-r8-q-o-pi-into-f-pi {:grounds :code :by "claude-20" :at "2026-09-01"
+                          :statement "R4->R8: the forward model's per-candidate predictive distribution is the thing F_pi scores. Realised in code behind the F_pi flags, and never drawn."
+                          :adds [[:R4 :R8]]
+                          :retires []
+                          :label "Q(o|pi)"
+                          :condition "FUTON_WM_TRACE_POLICY_DETAILS=1 on the PREVIOUS tick and FUTON_WM_FPI_DARK=1 on this one; both default off"
+                          :basis "I2 slices (a)/(b1)/(c), and every hop of the chain followed rather than the two ends matched. compute-efe calls fm/predict at efe.clj:602 and attaches the whole result as :prediction at efe.clj:832; rank-actions maps compute-efe over every candidate at efe.clj:917. strip-ranked-action persists :prediction-mean, :prediction-variance and :prediction-variance-status from [:prediction :next-observation ...] at trace.clj:138-149, under *persist-policy-trace-details?* only. f-pi-dark-readback hands exactly those three keys to policy-free-energy/f-pi-vector at war_machine.clj:296-306, and f-pi-for-candidate reads mean and variance per channel at policy_free_energy.clj:100-144. In the registry :forward-model defines :Q-o-pi at R4 and :policy-free-energy imports it at R8."
+                          :note "THE EDGE IS DRAWN WITHIN A TICK AND THE CODE PERFORMS IT ACROSS ONE, which a reader of the figure cannot see. B.9's F_pi is the free energy of observations already made under pi; the WM scores the PREVIOUS tick's persisted per-candidate predictions against THIS tick's observation, joined by action identity (type + target). So the Q(o|pi) crossing this edge is one tick old. The registry's other across-tick carry is drawn the same way -- :belief-state imports :mu-next, drawn as R3->R1 -- so the figure has no vocabulary for the distinction and this note is where it is recorded; a reader who takes the edge as within-tick has the wiring right and the timing wrong. SECOND IMPORT, ALREADY DRAWN: :policy-free-energy also imports :o, and that pair [:R2 :R8] is already added by :r2-r8-o-realised-undrawn on a different basis (o into eps). One drawn edge now stands for two distinct symbol-grain imports; no new pair is owed, and the label on that edge names the eps path only."}
+  :r8-r6-f-pi-into-posterior {:grounds :code :by "claude-20" :at "2026-09-01"
+                          :statement "R8->R6: the per-policy free energy F_pi is subtracted in the policy posterior. Realised in code behind FUTON_WM_FPI_POSTERIOR=1 and never drawn."
+                          :adds [[:R8 :R6]]
+                          :retires []
+                          :label "F_pi"
+                          :condition "FUTON_WM_FPI_POSTERIOR=1, which refuses to run without FUTON_WM_FPI_DARK=1 and FUTON_WM_TRACE_POLICY_DETAILS=1; and complete F_pi coverage of the admissible field on the tick"
+                          :basis "RUN9 / stage S4 (futon2 9867157), pointers verified here. f-pi-posterior-opts joins the dark readback against wm-admissible -- the can-execute? filter select-action actually receives -- at war_machine.clj:5095-5096, and the result is passed as :f-pi-opts at war_machine.clj:5105. select-action threads it into strategic-recommendation (policy.clj:490-531; signature at policy.clj:356-357), which selects :f-pi-policy-posterior?, :f-pi-values and :f-pi-scaling into softmax-weights at policy.clj:418-421. There the F_pi term is subtracted from ln E - G/tau at policy.clj:172-201, unscaled. The flag's preconditions are at war_machine.clj:123-155. In the registry :policy-free-energy defines :F-pi at R8 and :policy-posterior imports it at R6."
+                          :note "WHY THIS EDGE AND NOT THE RETIRED F. Before RUN9 the symbol :F was defined at R8 and imported by NO equation in the registry -- one of exactly three such symbols (:F, :u, :Delta-F), and the only one that was neither terminal nor a diagnostic output. That is what J2 retired. F_pi is the replacement Joe's condition named, and this pair is the edge that carries it: the first R8-defined symbol other than eps that another equation reads. It does not revive the drawn R8->R5, which D1 recorded as carrying no data and which is still empty -- R5 recomputes its own score and reads neither F nor F_pi. THE CONDITION IS NOT DECORATIVE: on the only run that has exercised the flag (runs/2026-09-01-s4/, four ticks) F_pi entered the posterior on three, and the second tick declined with :incomplete-coverage at 1 of 145 candidates uncovered and selected exactly as it would have without the flag. Coverage is complete-or-off by decision, because imputing 0.0 for an uncovered candidate would hand it the posterior -- F_pi runs -19.716..-18.962 within a tick. WHAT THE EDGE MOVES: the RECORDED posterior, measured at 133 of 145 ranks moved with the argmax unchanged. It does not reach the enacted action, because the live path replaces :action with the strategic selector's pick at war_machine.clj:5152-5155 -- a property of this selection boundary that predates F_pi and applies to the whole R6 row, not a limit of this edge."
+}
+  :r2-r7-superseded-by-eps {:grounds :code :by "claude-cli" :at "2026-09-01"
+                            :statement "R7's precision imports the prediction errors, not the observation. Retire the R2->R7 that D5f added and record R8->R7 in its place."
+                            :retires [[:R2 :R7]]
+                            :adds [[:R8 :R7]]
+                            :label "eps"
+                            :basis "C10 (worklist row, :done, reviewed by claude-20, found reviewing D5f), verified against the code. update-channel-precision takes [channel-id channel-state new-error observed ...] (precision.clj:116-135). new-error is appended to the error history and its variance becomes variance-component; observed goes only to need-component-for. Under the default :salience-mode :separate the precision IS the bounded variance-component alone, and observed leaves separately as :salience. So at symbol grain R7 imports eps."
+                            :note "This retires an ADDITION, not a drawn edge -- the first of its kind. D5f added [:R2 :R7] and its own :note flagged exactly this grain objection, that update-precision-state receives raw-errors rather than the observation; C10 confirmed it independently and this entry acts on it. The [:R2 :R7] in :derived-undrawn and :route-measured-drawn is untouched: at ROUTE grain the hop is real and both runs record it. What is retired is the claim that R7 imports o."}
+  :j1-r7-r14-conflation {:by "joe" :at "2026-09-01" :grounds :ruling
+                         :statement "J1 ruling: the drawn R7->R14 was a conflation of two precision-like scalars (R7's channel precision; the selection gain that sets tau). Answer: no, it was not an intended formalism variant. The theory-aligned policy precision (gamma = 1/beta, Friston 2017 eq. 2.7) is to be pursued instead -- worklist H3, I1."
+                         :retires [] :adds []
+                         :basis "Joe, 2026-09-01, on the J1 walk-through (TN-edge-review-aif-wiring.md section 6); code evidence in :r7-r14-conflates-two-precisions (D4)."}
+  :r13-r4-depth-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                                  :statement "R13->R4: the depth parameterises the forward model, on runs that reach horizon >= 2. Realised in code and never drawn."
+                                  :adds [[:R13 :R4]]
+                                  :retires []
+                                  :label "T"
+                                  :condition "horizon >= 2"
+                                  :basis "Both pointers verified. compute-efe calls fm/predict-multi-horizon at efe.clj:607-609, guarded by (and horizon-steps (>= horizon-steps 2)); predict-multi-horizon (forward_model.clj:279-292) takes that K and chains predict K times, each step feeding the previous step's predicted observation and belief forward. Below the guard only fm/predict runs (efe.clj:602) and no depth reaches the model."
+                                  :note "TWO THINGS THE ROW DOES NOT ESTABLISH. (1) The live condition is stricter than the recorded one: wm-horizon-steps is 3 only when the anticipation snapshot has loaded events, else nil (war_machine.clj:4485-4487), so on the live path the edge exists when anticipation has events, not merely when someone passes a horizon. :condition carries the code-level guard from efe.clj because that is what the acceptance asked for. (2) Whether either recorded run exercised it is NOT FOUND: neither tick-run-record-2026-08-30.edn nor tick-run-record-2026-08-31.edn carries horizon-steps or events-loaded?, so the records cannot answer it either way. This is the only conditional edge in :decisions, and the figure draws it exactly like the unconditional ones apart from the title -- two states, one rendering, the same shape claude-1 opened D0b for. Left for the reviewer to judge whether that warrants its own row."}
+  :r8-r3-eps-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                               :statement "R8->R3: the prediction errors feed the belief update. Realised at the equation level and never drawn; the route record orders it the other way."
+                               :adds [[:R8 :R3]]
+                               :retires []
+                               :label "eps"
+                               :basis "C448/C452, verified with the mechanism rather than the observation alone. The dependency: eps is computed at war_machine.clj:4375-4379 (fe/compute-prediction-error), precision-weighted at :4382-4388, synthesised into belief events at :4392-4428, and consumed by apply-arena-belief-events at :4429-4431. So eps reaches R3 inside the microstep loop."
+                               :note "WHY THE ROUTE RECORD DISAGREES, and it is not a discrepancy to reconcile but a difference in what the two records measure. R8 the BOX covers two quantities: the prediction errors eps (computed at :4375-4379, inside the loop, before R3 consumes them) and the free energy F (computed at :4450-4451, after the loop). The route stamps :R8 only at the F computation (:4452). Worse for a naive reading, the :R7 and :R3 tags at :4447-4449 are emitted AFTER the loop has already returned (recur at :4445), retroactively, for work done inside it. So the tag ORDER R7, R3, R8 records where the tags were placed, not where the values flowed. A route record is a sequence of instrumented calls; a dependency DAG is a relation between imports. Neither is wrong; they are not the same object, and reading one as the other is what put R8 after R3."}
+  :r2-r7-o-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                             :statement "R2->R7: the observation reaches the precision update, through the prediction errors. Realised and recorded in both runs; not in the drawn :edges."
+                             :adds [[:R2 :R7]]
+                             :retires []
+                             :label "o"
+                             :basis "C452, pointer verified: at war_machine.clj:4375-4379 the observation is read per channel into fe/compute-prediction-error, and at :4382-4384 precision/update-precision-state is called with prec-state and those raw-errors. The observation reaches R7 on this path, and no :edges row draws it."
+                             :note "This row is weaker than the other five D5 additions and a reviewer should weigh rejecting it. (1) GRAIN: update-precision-state receives raw-errors, NOT observation -- at symbol grain R7 imports the errors, and this file already records the finer path, with :route-measured-drawn R2->R3a stating in terms that 'no direct R2-to-R7 call exists'. The edge stands at ROUTE grain, which is the same distinction D6 records: the route record is not the dependency DAG. (2) REDUNDANCY: unlike D5a-D5e, which added pairs absent from the registry, [:R2 :R7] is ALREADY present in both :derived-undrawn and :route-measured-drawn, so the figure now draws this pair three times over. The acceptance asked for the entry and it is recorded, but :decisions may be the wrong home for a fact the registry already carries twice."}
+  :r1-r3-mu-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                              :statement "R1->R3: the belief update reads the prior belief. Realised in code and never drawn, though its write-back leg is."
+                              :adds [[:R1 :R3]]
+                              :retires []
+                              :label "mu"
+                              :basis "C452, both pointers verified and the chain between them followed. wm-belief-pre is built at war_machine.clj:4289-4294; its descendant enters the belief-update loop as `belief` at :4364-4366; at :4429-4431 belief' is (apply-arena-belief-events belief events), and that function takes the prior belief-state as its first argument and passes it to belief/update-belief-batch (:204-210). The update reads mu."
+                              :note "Unlike the other D5 rows, the omission here is one-sided rather than total: the figure DOES draw R3->R1 (the update writing the belief back), and does not draw R1->R3 (the update reading it). That is why the gap is easy to miss -- the loop looks closed. A reviewer may hold that a belief recurrence is understood rather than drawn; the standard (TN section 1) is that a drawn wiring match the imports the equations force, which is why it is recorded rather than assumed away."}
+  :r6-r4-pi-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                              :statement "R6->R4: the forward model predicts over a policy. Realised in code and never drawn."
+                              :adds [[:R6 :R4]]
+                              :retires []
+                              :label "pi"
+                              :basis "C452, both pointers verified. rank-actions (efe.clj:903-921) maps compute-efe over each candidate action at :917, and compute-efe passes that action into fm/predict at :602 and, when horizon-steps >= 2, into fm/predict-multi-horizon at :607-609. A policy does reach the forward model, and the figure does not draw it."
+                              :note "Which R6 this is matters, and the registry holds both senses. Under R6 AS CANDIDATE SPACE the edge is realised, and that is the reading :derived-undrawn already records ('the kernel predicts over a candidate action'). Under R6 AS THE Q(pi) NODE -- which V3 verified at policy.clj:300-438 -- it is not realised, because scoring runs over candidates BEFORE selection produces Q(pi): the same phase-order argument D3c used to retire R6->R13, pointing the other way. Recorded on the candidate-space reading; a reviewer who holds R6 to the Q(pi) sense should reject this row, not amend it."}
+  :r14-r6-tau-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                                :statement "R14->R6: the temperature divides every policy score. Realised in code and never drawn."
+                                :adds [[:R14 :R6]]
+                                :retires []
+                                :label "tau"
+                                :basis "C452, both pointers verified and the dispatch between them followed. war_machine.clj:4574-4583 calls policy/select-action with :selection-boundary :strategic-recommendation at :4577 and :temperature-opts at :4581; policy.clj:383-386 dispatches on that boundary to strategic-recommendation; and there tau is computed at policy.clj:243 and divides every controller score at :244-246 (scores = -G/tau + log-prior). The selection is temperature-weighted on the live path, and the figure does not draw it."
+                                :note "Honest subtlety for the reviewer: tau is computed INSIDE R6's own function from the selection gain, not handed across as a value from an R14 box. Whether that counts as a realised edge or as R6 computing its own temperature is a reading, not a measurement -- C452 treats it as realised because R6's scores depend on tau however it arrives. The reverse leg is separate and already recorded: R16->R14 under :derived-undrawn as the gain chain. Distinct from D4, where R7's Pi does NOT reach tau at all."}
+  :r1-r8-mu-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                              :statement "R1->R8: the belief feeds the prediction the error is taken against. Realised in code and never drawn."
+                              :adds [[:R1 :R8]]
+                              :retires []
+                              :label "mu"
+                              :basis "C452, both pointers verified and the chain between them followed. wm-belief-pre is built at war_machine.clj:4289-4294, bootstrapped from stack annotations and reconciled against (:mu-post prev-trace-record) when carry is on. Its descendant enters the belief-update loop as the initial `belief` at :4364-4366, and each iteration passes that belief to belief/predict-observation at :4368-4374; the resulting predictions are the second argument to fe/compute-prediction-error at :4375-4379. So mu reaches eps through the prediction, and the figure does not draw it."}
+  :r2-r8-o-realised-undrawn {:grounds :code :by "claude-cli" :at "2026-09-01"
+                             :statement "R2->R8: the observation feeds the prediction error. Realised in code and never drawn."
+                             :retires []
+                             :adds [[:R2 :R8]]
+                             :label "o"
+                             :basis "C452, both pointers verified. The observation is bound at war_machine.clj:4221 (obs/observe scan-data) and route-tagged :R2 at :4222; it is read at :4375-4379, where (get observation ch 0.0) is passed to fe/compute-prediction-error for each channel with a likelihood. That is o entering eps, the R2->R8 import, and the figure does not draw it."
+                             :note "The pair is also added by :r2-r3-shortcut (D2), which reached it from the other direction -- as the path the drawn R2->R3 abbreviates. Both attributions are kept; this entry is the one carrying the label and the C452 basis. Beware war_machine.clj:4223, free-energy from compute-controller-diagnostics: it also reads the observation but is the controller diagnostic, not eps (claude-1's D1 note)."}
+  :r7-r14-conflates-two-precisions {:grounds :code :by "claude-cli" :at "2026-09-01"
+                                    :statement "R7->R14 as drawn is not realised: the temperature is modulated by the engineering selection gain, not by R7's channel precision. Retire the edge as drawn."
+                                    :retires [[:R7 :R14]]
+                                    :adds []
+                                    :basis "C448/C451, and here the code names the distinction rather than merely lacking the edge. selection_gain.clj:1-15 says it outright: the selection gain is 'the policy-scale sibling of R7's channel precision... It is not Friston's variational policy precision: its learning signal is realised controller performance, not expected free energy under the policy posterior.' The wiring agrees: strategic-recommendation (policy.clj:234-248) takes [ranked-actions g-totals log-priors selection-gain temperature-opts habit-prior-stats no-op-entry] and computes tau at :242-243 from g-totals and selection-gain -- no precision argument exists in the signature. R7's precision-state never leaves the belief-update microstep loop in war_machine.clj: initialised from the prior trace at :4332-4334, updated at :4382-4388, used to weight errors at :4388, threaded at :4442-4445; select-action's argument list at :4574-4583 contains no precision term."
+                                    :note "Scope: this retires the DRAWN edge as unrealised. Whether Pi->tau was ever intended as a formalism variant (precision-modulated temperature) is J1 and is Joe's to rule on; nothing here forecloses it. The two quantities are both precision-like scalars read from the prior trace, which is what makes the drawing plausible and the conflation easy."}
+  :r6-r13-supplied-independently {:grounds :code :by "claude-cli" :at "2026-09-01"
+                                  :statement "R6->R13 is drawn, but the depth T is already fixed before selection runs and selection produces no depth. Retire it on code evidence, alongside :r6-r14-order which retires the same pair as an ordering preference."
+                                  :retires [[:R6 :R13]]
+                                  :adds []
+                                  :basis "C448/C451, verified by phase order rather than by absence alone: wm-horizon-steps (the only live depth value) is bound from the anticipation snapshot at war_machine.clj:4485-4487 and consumed at :4519 into wm-efe-opts, while policy/select-action -- the R6 step, route-tagged at :4584 -- is not called until :4574-4583, 89 lines and one phase later. Its arguments are wm-admissible plus :selection-gain, :selection-boundary, :habit-prior-stats and :temperature-opts: no depth goes in and no depth comes out. R6 cannot feed R13 here because T is settled before R6 exists."
+                                  :note "Deliberately a SECOND entry retiring [:R6 :R13] rather than an edit to :r6-r14-order. That entry is Joe's ruling about ordering (target first, then construct the cascade); this one is a code-backed correction. Different grounds, and a reader needs both -- which is why gen_live_topology now lists every decision retiring an edge instead of the last one to claim it (control 4i)."}
+  :r14-r16-no-tau-reader {:grounds :code :by "claude-cli" :at "2026-09-01"
+                          :statement "R14->R16 is drawn but no temperature reaches actuation. Retire it."
+                          :retires [[:R14 :R16]]
+                          :adds []
+                          :basis "C448/C451, verified and stronger than stated there. (1) The WM tick's route-tag vocabulary is exactly :R2 :R3 :R5 :R6 :R7 :R8 :R12 :R14 :R20 :TRACE -- R16 never appears in the route at all, so the drawn edge is not an abbreviated hop either. (2) war_machine.clj contains no call to close-loop! or enact!; judge records :decision at :4784-4790 and stops, so the R14 side and the R16 side are not even in the same process. (3) close-loop! (enact.clj:287-316) takes [judgement tick] and chooses the FIRST passing act gate from (:ranked-actions judgement); no temperature, tau or gain value is an input to that choice."
+                          :note "Trap for the next reader: grepping selection-gain in enact.clj DOES hit -- selection-gain-fold-of at :225-241 and the escrow feed at :213-270. That machinery runs the other way, producing the coverage-delta-G that feeds gamma, i.e. R16->R14, already recorded under :derived-undrawn as the gain chain. It is not evidence for the drawn direction. Same shape as claude-1's note on D1, where a different binding named free-energy IS read but is not R8's F."}
+  :r13-r14-no-dependency {:grounds :code :by "claude-cli" :at "2026-09-01"
+                          :statement "R13->R14 is drawn but no depth value reaches the temperature. Retire it."
+                          :retires [[:R13 :R14]]
+                          :adds []
+                          :basis "C451 (holes/labs/wm-contract/C451-unexplained-drawn-edges.md), verified exhaustively rather than by sampling: `wm-horizon-steps` -- the only live depth value on this path -- occurs exactly twice in war_machine.clj, bound from the anticipation snapshot at :4485-4487 and consumed at :4519 as :horizon-steps inside wm-efe-opts. It reaches scoring (R4/R5), never the dial. On the R14 side, effective-temperature takes exactly two arguments, g-totals and selection-gain (policy.clj:73-80); neither carries depth. Grepping horizon/depth across policy.clj and selection_gain.clj returns only prose matches. Absent in theory as well as in code (C451)."
+                          :note "A code-backed correction, not a ruling."}
+  :r2-r3-shortcut {:grounds :code :by "claude-cli" :at "2026-09-01"
+                   :statement "The drawn R2->R3 abbreviates an implemented path through two other boxes: R3 never reads the observation. Retire it as drawn and record the two dependencies it stands for."
+                   :retires [[:R2 :R3]]
+                   :adds [[:R2 :R8] [:R8 :R3]]
+                   :basis "C448 (holes/labs/wm-contract/C448-TN-edge-review-discovery.md) and C451, verified against the code: the observation enters compute-prediction-error at war_machine.clj:4368-4379, precision/update-precision-state weights those errors at :4382-4388, belief events are synthesised from the weighted error at :4392-4428, and R3's apply-arena-belief-events consumes those events at :4429-4431. Between :4392 and :4432 the token `observation` occurs only inside a comment -- no code there reads it. The route tags confirm the abbreviation runs the other way in the record: :R7 at :4448 then :R3 at :4449, with :R8 tagged only at :4452 once F is computed, so the route record is not the dependency order (see D6)."
+                   :note "A code-backed correction, not a ruling: whether the figure should draw the abbreviation is Joe's."}
+  :r6-r14-order {:grounds :ruling :value :target-first
+                 :by "joe" :at "2026-08-30"
+                 :statement "select the target first, then construct the cascade to match"
+                 :derived-control-path [:R6 :R5 :R14 :R13 :R16]
+                 :retires [[:R5 :R6] [:R6 :R13] [:R11 :R16]]
+                 :adds [[:R11 :R14] [:R14 :R13] [:R13 :R16]]}}}

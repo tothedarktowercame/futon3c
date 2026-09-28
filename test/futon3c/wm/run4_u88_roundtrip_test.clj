@@ -40,6 +40,8 @@
 (def auth {"authorization" (str "Bearer " token)})
 (def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"})
 (def template-path "holes/labs/wm-contract/runs/RUN4-U88-deployment-2026-09-10/server-config.disabled.edn")
+(def control-map-fixture-path
+  "test/fixtures/run4/control-map-edges@p4ng-e508eceb.edn")
 (defn- with-service [f]
   (let [root (.toFile (java.nio.file.Files/createTempDirectory "u88-roundtrip" (make-array java.nio.file.attribute.FileAttribute 0)))
         t (edn/read-string (slurp template-path))
@@ -48,6 +50,9 @@
         write-local (fn [p v] (io/make-parents (io/file root p)) (spit (io/file root p) (pr-str v)))
         hash-local #(digest/sha256 (slurp (io/file root %)))]
     (try
+      (is (= (get-in t [:reserved-unwired :control-map-sha256])
+             (digest/sha256 (slurp control-map-fixture-path)))
+          "recorded control-map fixture must match the deployment pin")
       (doseq [p (conj (into (:source-allowlist t) (:pin-allowlist t)) manifest-ref)]
         (io/make-parents (io/file root p))
         (io/copy (io/file (:authority-root t) p) (io/file root p)))
@@ -56,6 +61,7 @@
             parser-path (io/file root "parser/futon2/holes/missions/M-u88-contextual-preferences.md")
             _ (io/make-parents parser-path)
             _ (spit parser-path mission-text)
+            _ (.mkdirs (io/file root "parser/futon2/.git"))
             mission (first (:missions (missions/load-missions (.getPath (io/file root "parser")))))
             pin-ref (first (:pin-allowlist t))
             pin (update (read-local pin-ref) :sources #(mapv (fn [p] (assoc p :sha256 (hash-local (:path p)))) %))
@@ -68,7 +74,7 @@
             stores (into {} (for [[k _] (:stores t)] [k (.getPath (doto (io/file root (str "store-" (name k))) .mkdirs))]))
             cm (get-in t [:reserved-unwired :control-map-ref])
             _ (io/make-parents (io/file root cm))
-            _ (io/copy (io/file (get-in t [:reserved-unwired :control-map-root]) cm) (io/file root cm))
+            _ (io/copy (io/file control-map-fixture-path) (io/file root cm))
             t (-> t (assoc :authority-root (.getPath root) :stores stores)
                   (assoc-in [:manifest :sha256] (hash-local manifest-ref))
                   (assoc-in [:reserved-unwired :control-map-root] (.getPath root)))
@@ -97,20 +103,23 @@
             core
             (fn [opts]
               (reset! seen-opts opts)
-              (let [action {:type :advance-mission :target "M-u88-contextual-preferences"}
-                    judgment {:decision {:action {:type :no-op}}
-                              :ranked-actions [{:rank 1 :action action}]
-                              :admissible-actions [{:rank 1 :action action}]}
-                    selected (full-runner/resolve-pinned-selection
-                              opts judgment (select-keys opts (keys casting)))
-                    identity (:identity selected)]
+              (let [requested (:run4/requested-pin opts)
+                    requested-identity (:identity requested)
+                    ;; Admission names the digest :pin-sha256; the runner
+                    ;; returns the task pin itself, whose digest is :sha256.
+                    identity (-> requested-identity
+                                 (assoc :sha256 (:pin-sha256 requested-identity))
+                                 (dissoc :pin-sha256))
+                    attestation ((:run4-trusted-boundary-fn opts)
+                                 {:pin-digest (:pin-sha256 requested-identity)
+                                  :operator-selection (:operator-selection requested)})]
                 {:attempt-id "worker-internal-attempt"
                  :outcome :grounded-change
                  :checkpoints
                  {:selection {:judgment {:outcome :ok}
                               :ground {:kind :wm-judgement :run4/task-pin identity
                                        :run4/operator-selection
-                                       (:provenance selected)}}
+                                       {:authority-attestation attestation}}}
                   :construction {:judgment {:run4/task-pin identity}
                                  :ground {:kind :decision-pinned-construction
                                           :run4/task-pin identity}}
