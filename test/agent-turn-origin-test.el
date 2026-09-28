@@ -303,3 +303,39 @@
       (should (equal "park-crash"
                      (alist-get 'source-ref
                                 (alist-get 'harness (car payloads)))))))))
+
+(ert-deftest p12-5-1c-operator-turn-starts-new-unified-turn ()
+  (with-temp-buffer
+    (let ((payloads
+           (p12-5-1c-with-segment-capture
+             (setq agent-turn-origin-current
+                   '(:kind "harness" :actor "parked-resume" :source-id "park-1"))
+             (claude-repl--emit-assistant-segment-evidence! "chain" nil)
+             (setq agent-turn-origin-current '(:kind "operator" :actor "joe"))
+             (claude-repl--emit-user-turn-evidence! "joe speaks")
+             (claude-repl--emit-assistant-segment-evidence! "reply" nil))))
+      (let* ((rows (seq-filter (lambda (p) (equal "assistant"
+                                                 (alist-get 'role (alist-get 'body p))))
+                               payloads))
+             (chain (alist-get 'body (car rows)))
+             (reply (alist-get 'body (cadr rows))))
+        (should (= 2 (length rows)))
+        (should (= 0 (alist-get 'segment-index reply)))
+        (should (equal (alist-get 'id (cadr rows))
+                       (alist-get 'unified-turn-id reply)))
+        (should-not (equal (alist-get 'unified-turn-id chain)
+                           (alist-get 'unified-turn-id reply)))))))
+
+(ert-deftest p12-5-1c-harness-turn-keeps-unified-turn ()
+  (with-temp-buffer
+    (let ((payloads
+           (p12-5-1c-with-segment-capture
+             (setq agent-turn-origin-current
+                   '(:kind "harness" :actor "parked-resume" :source-id "park-1"))
+             (claude-repl--emit-assistant-segment-evidence! "one" nil)
+             (claude-repl--emit-user-turn-evidence! "wake")
+             (claude-repl--emit-assistant-segment-evidence! "two" nil))))
+      (let ((rows (seq-filter (lambda (p) (equal "assistant"
+                                                (alist-get 'role (alist-get 'body p))))
+                              payloads)))
+        (should (= 1 (alist-get 'segment-index (alist-get 'body (cadr rows)))))))))

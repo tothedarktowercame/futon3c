@@ -822,6 +822,13 @@ session isolation between buffers."
   (if (and (stringp agent-chat--session-id)
            (not (string-empty-p agent-chat--session-id)))
       (progn
+        ;; An operator turn starts a new unified turn: in a park chain the
+        ;; previous one may never reach a final segment.
+        (when (or (equal "operator" (plist-get agent-turn-origin-current :kind))
+                  (equal "joe" (plist-get agent-turn-origin-current :actor)))
+          (setq agent-chat--unified-turn-id nil
+                agent-chat--segment-index 0
+                agent-chat--unified-segments nil))
         (when (fboundp 'agent-chat--flush-banked-assistant-before-operator)
           (agent-chat--flush-banked-assistant-before-operator
            (lambda (banked)
