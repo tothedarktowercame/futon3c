@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-rates-observe-g28-test
+(ns futon3c.diagramprover.wm-wire-producer-rates-observe-g28
   "Producer for the [:r6-sourced-rates :r6-cascade-lane :measurement] wire.
   Runs the real wm-cd/cascade-lane over wm-wire-rates-support's problem with
   ten real pinned C3 subjects admitted through the real store and reader,

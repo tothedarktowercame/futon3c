@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r9-selection-law-decision-per-policy-argmax-test-lit-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-r9-selection-law-decision-per-policy-argmax-test-lit
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]

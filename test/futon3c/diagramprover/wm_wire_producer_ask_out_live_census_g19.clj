@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-ask-out-live-census-g19-test
+(ns futon3c.diagramprover.wm-wire-producer-ask-out-live-census-g19
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]

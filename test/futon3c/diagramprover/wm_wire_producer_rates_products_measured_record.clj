@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-rates-products-measured-record-test
+(ns futon3c.diagramprover.wm-wire-producer-rates-products-measured-record
   (:require [clojure.edn :as edn] [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]

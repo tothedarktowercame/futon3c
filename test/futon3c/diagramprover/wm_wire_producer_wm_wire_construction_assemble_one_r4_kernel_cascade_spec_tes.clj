@@ -1,4 +1,4 @@
-(ns futon3c.diagramprover.wm-wire-producer-wm-wire-construction-assemble-one-r4-kernel-cascade-spec-tes-test
+(ns futon3c.diagramprover.wm-wire-producer-wm-wire-construction-assemble-one-r4-kernel-cascade-spec-tes
   "Producer for the [:construction-assemble-one :r4-kernel :cascade-spec] wire.
   Runs the real assemble -> assemble-one over cascade-decision-test's tick-1
   sources, then efe/rank-cascade-actions with the :cascade-spec option
