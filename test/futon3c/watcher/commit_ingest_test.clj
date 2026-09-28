@@ -131,12 +131,13 @@
                                   "abc^:holes/missions/M-demo.md" "# One\nold\n# Two\nsame"
                                   ""))
                   artifact-activation/submit-work!
-                  (fn [_ artifact text]
-                    (swap! submitted conj [artifact text]) :submitted)
+                  (fn [store artifact text]
+                    (swap! submitted conj [artifact text store]) :submitted)
                   artifact-activation/submit-error!
                   (fn [& args] (swap! errors conj args) :submitted)]
-      (sut/process-doc-section-activations! "/repo" commit))
+      (sut/process-doc-section-activations! "/repo" commit :the-store))
     (is (= 1 (count @submitted)))
+    (is (= :the-store (nth (first @submitted) 2)) "records go to the given store, never nil")
     (is (= "One" (some-> @submitted ffirst :id (str/split #":") (nth 2))))
     (is (= "# One\nnew" (second (first @submitted))))
     (is (empty? @errors))))
@@ -164,7 +165,7 @@
                   artifact-activation/submit-error!
                   (fn [_ artifact _ error]
                     (swap! errors conj [artifact error]) :submitted)]
-      (sut/process-doc-section-activations! "/repo" {:sha "abc" :ts 1}))
+      (sut/process-doc-section-activations! "/repo" {:sha "abc" :ts 1} :the-store))
     (is (= 20 (count @submitted)))
     (is (= :section-cap-exceeded (get-in @errors [0 1 :reason])))
     (is (= 22 (get-in @errors [0 1 :count])))))
@@ -282,3 +283,19 @@
           (is (every? :ok? (sut/post-hyperedges! items)))
           (is (nil? @@missing-at) "a 500 does not mark the route missing"))))
     (reset! @missing-at nil)))
+
+(deftest doc-section-query-is-the-new-paragraph-only
+  ;; An entry appended under a long heading: only the new paragraph is queried.
+  (let [submitted (atom [])
+        old "## INSTANTIATE\n\n**P1 done.** first entry\n\n**P2 done.** second entry"
+        new (str old "\n\n**P3 done.** third entry")]
+    (with-redefs [sut/files-changed (fn [& _] ["holes/missions/M-x.md"])
+                  sut/run-git (fn [_ _ spec] (if (str/starts-with? spec "abc^:") old new))
+                  artifact-activation/submit-work!
+                  (fn [_ artifact text] (swap! submitted conj text) :submitted)]
+      (sut/process-doc-section-activations! "/repo" {:sha "abc" :ts 1} :the-store))
+    (is (= ["**P3 done.** third entry"] @submitted))))
+
+(deftest doc-section-hook-without-a-live-backend-refuses
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Evidence backend unavailable"
+                        (artifact-activation/live-backend))))

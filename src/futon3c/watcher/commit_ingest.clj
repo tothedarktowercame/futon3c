@@ -271,7 +271,9 @@
    submit one weak-activation job per changed section. Processing is called
    only from the background hook. At most 20 sections are submitted; a larger
    change also gets one typed cap record so omission is durable and visible."
-  [repo commit]
+  ([repo commit] (process-doc-section-activations!
+                   repo commit (artifact-activation/live-backend)))
+  ([repo commit store]
   (let [sha (:sha commit)
         observed-at (commit-observed-at commit)
         sections (->> (filter activation-doc-path? (files-changed repo sha))
@@ -282,24 +284,25 @@
                                        (artifact-activation/changed-sections
                                         old-text new-text)))))
                       vec)]
-    (doseq [{:keys [path heading start-line end-line text]}
-            (take max-doc-sections-per-commit sections)]
+    (doseq [{:keys [path heading start-line end-line text changed-text]}
+            (take max-doc-sections-per-commit sections)
+            :let [query (if (str/blank? changed-text) text changed-text)]]
       (artifact-activation/submit-work!
-       nil
+       store
        {:kind :doc-section
         :id (str sha ":" path ":" heading ":" start-line "-" end-line)
         :observed-at observed-at}
-       text))
+       query))
     (when (> (count sections) max-doc-sections-per-commit)
       (artifact-activation/submit-error!
-       nil
+       store
        {:kind :doc-section
         :id (str sha ":doc-sections:section-cap")
         :observed-at observed-at}
        ""
        {:reason :section-cap-exceeded
         :message "More than 20 changed sections in one commit"
-        :count (count sections)}))))
+        :count (count sections)})))))
 
 (defn submit-doc-section-activations!
   "Queue section discovery for one futon3c commit. Git reads and retrievals
@@ -307,7 +310,12 @@
   [repo repo-label commit]
   (when (= "futon3c" repo-label)
     (artifact-activation/submit-task!
-     #(process-doc-section-activations! repo commit))))
+     #(try (process-doc-section-activations! repo commit)
+           ;; The executor would otherwise drop the exception with the Future.
+           (catch Throwable t
+             (binding [*out* *err*]
+               (println "[artifact-activation] doc sections failed"
+                        (:sha commit) (.getMessage t))))))))
 
 ;; ---------- substrate-2 query ----------
 

@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.pattern-search :as pattern-search]
+            [futon3c.evidence.backend]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as evidence-store])
   (:import [java.nio.charset StandardCharsets]
@@ -64,18 +65,44 @@
                :text (str/join "\n" (subvec lines index (inc end-index)))}))
           (range (count headings)) headings)))
 
+(defn- paragraphs [text]
+  (->> (str/split (str text) #"\n\s*\n")
+       (map str/trim)
+       (remove str/blank?)))
+
 (defn changed-sections
   "Return NEW-TEXT sections that are new or changed. Identity for comparison
    is heading plus text digest, deliberately excluding line numbers so a pure
-   line shift does not create an activation."
+   line shift does not create an activation. Each carries :changed-text, the
+   paragraphs not present anywhere in OLD-TEXT: mission files keep entries as
+   bold paragraphs under one long heading (INSTANTIATE is thousands of lines),
+   and MiniLM reads only the first few hundred tokens of a query, so querying
+   the whole section would retrieve the same patterns for every entry."
   [old-text new-text]
-  (let [old-signatures (->> (markdown-sections old-text)
+  (let [old-sections (markdown-sections old-text)
+        old-signatures (->> old-sections
                             (map (juxt :heading (comp sha256-text :text)))
-                            set)]
+                            set)
+        old-paragraphs (set (mapcat (comp paragraphs :text) old-sections))]
     (->> (markdown-sections new-text)
          (remove #(contains? old-signatures
                              [(:heading %) (sha256-text (:text %))]))
-         vec)))
+         (mapv (fn [section]
+                 (assoc section :changed-text
+                        (str/join "\n\n" (remove old-paragraphs
+                                                   (paragraphs (:text section))))))))))
+
+(defn live-backend
+  "The serving JVM's futon1b evidence backend, as promise-history resolves it.
+   A nil store would fall through to the in-memory default store and the
+   record would never reach futon1b, so this throws when none is configured."
+  []
+  (or (when-let [v (some-> (find-ns 'futon3c.dev) (ns-resolve '!evidence-store))]
+        (let [candidate @(var-get v)]
+          (when (satisfies? futon3c.evidence.backend/EvidenceBackend candidate)
+            candidate)))
+      (throw (ex-info "Evidence backend unavailable"
+                      {:reason :evidence-backend-unavailable}))))
 
 (defn- file-sha256 [file]
   (let [f (io/file file)
