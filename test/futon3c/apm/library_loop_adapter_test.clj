@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-loop-adapter-test
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -17,7 +18,7 @@
                                        (make-array FileAttribute 0)))))
 
 (defn- sh! [cwd & args]
-  (let [result (apply shell/sh (concat args [:dir (str cwd)]))]
+  (let [result (apply shell/sh (concat args [:dir (str cwd) :env (git-fixture/environment)]))]
     (when-not (zero? (:exit result))
       (throw (ex-info "test-command-failed" (assoc result :args args))))
     (str/trim (:out result))))

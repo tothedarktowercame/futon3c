@@ -1,5 +1,6 @@
 (ns futon3c.transport.test-registry-http-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
@@ -19,7 +20,7 @@
        "wait, do not re-dispatch."))
 
 (defn- git! [root & args]
-  (apply shell/sh (concat args [:dir root])))
+  (apply shell/sh (concat args [:dir root :env (git-fixture/environment)])))
 
 (defn- write! [root path content]
   (let [file (io/file root path)]

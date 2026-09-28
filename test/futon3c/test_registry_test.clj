@@ -1,5 +1,6 @@
 (ns futon3c.test-registry-test
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.evidence.backend]
             [futon3c.evidence.store :as store]
@@ -436,7 +437,7 @@
 ;; --- scope guard (zai-1's ruling, 2026-09-17) -------------------------------
 
 (defn- git! [root & args]
-  (apply shell/sh (concat args [:dir root])))
+  (apply shell/sh (concat args [:dir root :env (git-fixture/environment)])))
 
 (defn- temp-repo []
   (let [dir (str (Files/createTempDirectory "scope-repo-" (make-array FileAttribute 0)))]

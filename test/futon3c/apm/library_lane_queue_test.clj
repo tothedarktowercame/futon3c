@@ -1,7 +1,7 @@
 (ns futon3c.apm.library-lane-queue-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.library-lane-runner :as runner]
@@ -100,7 +100,7 @@
       (finally (delete-tree! root)))))
 
 (defn- git [repo & args]
-  (apply shell/sh (concat ["git" "-C" repo] args)))
+  (apply git-fixture/git-result repo args))
 
 (deftest dry-run-short-circuits-exactly-at-bank
   (let [root (corpus "a")

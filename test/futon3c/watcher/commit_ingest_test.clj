@@ -1,11 +1,11 @@
 (ns futon3c.watcher.commit-ingest-test
   (:require [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
             [futon3c.agency.registry :as registry]
-            [futon3c.watcher.commit-ingest :as sut]))
+            [futon3c.watcher.commit-ingest :as sut]
+            [futon3c.test-support.git-fixture :as git-fixture]))
 
 (deftest cold-start-cursor-asks-store-for-one-latest-commit
   (let [seen-url (atom nil)]
@@ -51,19 +51,20 @@
     (.mkdirs)))
 
 (defn- run-git! [repo & args]
-  (let [{:keys [exit err]} (apply sh "git" "-C" (.getPath repo) args)]
+  (let [{:keys [exit err]} (apply git-fixture/git-result repo args)]
     (is (zero? exit) err)))
 
 (defn- fixture-repo-with-mission-commit []
   (let [repo (tmp-dir)
         f (io/file repo "src/demo.clj")]
     (run-git! repo "init")
-    (run-git! repo "config" "user.email" "agent@example.test")
-    (run-git! repo "config" "user.name" "Agent Test")
     (.mkdirs (.getParentFile f))
     (spit f "(ns demo)\n")
     (run-git! repo "add" ".")
-    (run-git! repo "commit" "-m" "Implement demo" "-m" "Mission: E-mealy-style-transducer")
+    (run-git! repo "-c" "user.name=Agent Test" "-c" "user.email=agent@example.test"
+              "commit" "-m" "Implement demo" "-m" "Mission: E-mealy-style-transducer")
+    (run-git! repo "show" "-s" "--format=%an" "HEAD")
+    (run-git! repo "show" "-s" "--format=%ae" "HEAD")
     repo))
 
 (defn- delete-tree! [root]

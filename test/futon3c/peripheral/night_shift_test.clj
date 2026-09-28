@@ -1,5 +1,6 @@
 (ns futon3c.peripheral.night-shift-test
-  (:require [clojure.java.io :as io]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -10,7 +11,8 @@
 
 (defn- sh!
   [& argv]
-  (let [{:keys [exit err] :as result} (apply shell/sh argv)]
+  (let [{:keys [exit err] :as result}
+        (apply shell/sh (concat argv [:env (git-fixture/environment)]))]
     (when-not (zero? exit)
       (throw (ex-info "command failed" {:argv argv :result result :stderr err})))
     result))
@@ -29,11 +31,10 @@
         remote (str repo "-origin.git")
         app-file (io/file repo "README.md")]
     (sh! "git" "init" repo)
-    (sh! "git" "-C" repo "config" "user.email" "night-shift@example.com")
-    (sh! "git" "-C" repo "config" "user.name" "Night Shift")
     (spit app-file "hello\n")
     (sh! "git" "-C" repo "add" "README.md")
-    (sh! "git" "-C" repo "commit" "-m" "seed")
+    (sh! "git" "-C" repo "-c" "user.name=Night Shift"
+         "-c" "user.email=night-shift@example.com" "commit" "-m" "seed")
     (sh! "git" "init" "--bare" remote)
     (sh! "git" "-C" repo "remote" "add" "origin" remote)
     {:repo repo

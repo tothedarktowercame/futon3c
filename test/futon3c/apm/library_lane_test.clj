@@ -1,7 +1,7 @@
 (ns futon3c.apm.library-lane-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.library-lane :as lane]
@@ -68,7 +68,7 @@
       (finally (delete-tree! root)))))
 
 (defn- git [repo & args]
-  (apply shell/sh (concat ["git" "-C" repo] args)))
+  (apply git-fixture/git-result repo args))
 
 (defn- runner-fixture []
   (let [root (temp-dir "library-runner-corpus-")]

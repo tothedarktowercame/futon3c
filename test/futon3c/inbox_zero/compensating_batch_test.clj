@@ -18,11 +18,13 @@
       (.mkdir (io/file remote))
       (git! root "init" "-q" "-b" "main")
       (git! remote "init" "--bare" "-q")
+      ;; The batch executor creates commits after the fixture baseline.
       (git! root "config" "user.name" "Batch fixture")
       (git! root "config" "user.email" "batch@example.invalid")
       (doseq [path paths] (io/make-parents root path) (spit (io/file root path) "base\n"))
       (git! root "add" "notes")
-      (git! root "commit" "-qm" "base")
+      (git! root "-c" "user.name=Batch fixture" "-c" "user.email=batch@example.invalid"
+            "commit" "-qm" "base")
       (git! root "remote" "add" "origin" remote)
       (git! root "push" "-qu" "origin" "main")
       (doseq [path paths] (spit (io/file root path) "reviewed fixture work\n"))

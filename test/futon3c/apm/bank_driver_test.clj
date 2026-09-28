@@ -1,5 +1,6 @@
 (ns futon3c.apm.bank-driver-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -11,7 +12,7 @@
 (def verify-id (apply str (repeat 64 "a")))
 
 (defn- sh [dir & argv]
-  (apply shell/sh (concat (map str argv) [:dir (str dir)])))
+  (apply shell/sh (concat (map str argv) [:dir (str dir) :env (git-fixture/environment)])))
 
 (defn- git [repo & args]
   (apply sh repo "git" "-C" (str repo) args))

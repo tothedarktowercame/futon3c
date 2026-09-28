@@ -1,5 +1,6 @@
 (ns futon3c.test-registry-sqlite-cli-test
-  (:require [clojure.java.io :as io]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
             [futon3c.evidence.http-backend :as http-backend]
@@ -15,7 +16,7 @@
   (doseq [f (reverse (file-seq dir))] (io/delete-file f true)))
 
 (defn- run-command! [dir & args]
-  (let [result (apply shell/sh (concat args [:dir (str dir)]))]
+  (let [result (apply shell/sh (concat args [:dir (str dir) :env (git-fixture/environment)]))]
     (when-not (zero? (:exit result))
       (throw (ex-info "fixture command failed" {:args args :result result})))
     result))

@@ -1,18 +1,18 @@
 (ns futon3c.inbox-zero.board-consumer-integration-test
   "Real Git regression in a disposable repository; no live watcher writes."
   (:require [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3.inbox-zero.watcher :as watcher]
-            [futon3c.inbox-zero.board-consumer :as consumer])
+            [futon3c.inbox-zero.board-consumer :as consumer]
+            [futon3c.test-support.git-fixture :as git-fixture])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]
            [java.util Date]))
 
 (defn git! [root & args]
-  (let [r (apply shell/sh (concat ["git" "-C" root] args))]
+  (let [r (apply git-fixture/git-result root args)]
     (when-not (zero? (:exit r)) (throw (ex-info "Test Git failed" r)))
     (:out r)))
 
@@ -26,11 +26,13 @@
     (try
       (.mkdir repo)
       (git! root "init" "-q")
+      ;; The consumer under test creates the promoted commit.
       (git! root "config" "user.name" "Inbox zero test")
       (git! root "config" "user.email" "inbox-zero-test@example.invalid")
       (spit (io/file repo "README.md") "base\n")
       (git! root "add" "README.md")
-      (git! root "commit" "-qm" "fixture baseline")
+      (git! root "-c" "user.name=Inbox zero test" "-c" "user.email=inbox-zero-test@example.invalid"
+            "commit" "-qm" "fixture baseline")
       (spit (io/file repo "README.md") "base\ncompleted fixture work\n")
       (let [old (Date/from (.minusSeconds (Instant/now) (* 48 3600)))
             observations (watcher/observe-repo {:records {}} {:path root :label "repo"} old)

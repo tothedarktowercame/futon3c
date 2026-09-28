@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"):
+    os.environ.pop(key, None)
 
 SCRIPT = Path(__file__).with_name("e2_decision_trace.py")
 SPEC = importlib.util.spec_from_file_location("e2_decision_trace_tested", SCRIPT)

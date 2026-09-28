@@ -1,5 +1,5 @@
 (ns futon3c.apm.apparatus-pin-test
-  (:require [clojure.java.shell :as shell]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -12,7 +12,7 @@
                                   (make-array FileAttribute 0))))
 
 (defn git [repository & args]
-  (apply shell/sh (concat ["git" "-C" repository] args)))
+  (apply git-fixture/git-result repository args))
 
 (defn write-file! [repository path content]
   (let [file (java.io.File. repository path)]

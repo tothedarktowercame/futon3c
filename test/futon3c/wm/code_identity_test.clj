@@ -1,8 +1,8 @@
 (ns futon3c.wm.code-identity-test
   (:require [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [futon3c.wm.code-identity :as identity]))
+            [futon3c.wm.code-identity :as identity]
+            [futon3c.test-support.git-fixture :as git-fixture]))
 
 (use-fixtures :each (fn [f] (identity/reset-for-test!) (f)))
 
@@ -21,7 +21,7 @@
     (is (= record (:identity (identity/status))))))
 
 (defn- git! [root & args]
-  (let [{:keys [exit err]} (apply shell/sh "git" "-C" root args)]
+  (let [{:keys [exit err]} (apply git-fixture/git-result root args)]
     (when-not (zero? exit) (throw (ex-info "fixture git failed" {:args args :err err})))))
 
 (defn- fixture-repo []
@@ -30,10 +30,9 @@
     (io/make-parents source)
     (spit source "(ns futon2.aif.full-loop-runner)\n(def fixture-loaded true)\n")
     (git! (.getPath root) "init" "-q")
-    (git! (.getPath root) "config" "user.email" "test@example.invalid")
-    (git! (.getPath root) "config" "user.name" "Test")
     (git! (.getPath root) "add" identity/production-runner)
-    (git! (.getPath root) "commit" "-qm" "fixture")
+    (git! (.getPath root) "-c" "user.name=Test" "-c" "user.email=test@example.invalid"
+          "commit" "-qm" "fixture")
     {:root root :source source}))
 
 (deftest recorded-loader-captures-clean-basis-and-refuses-dirty-or-outside

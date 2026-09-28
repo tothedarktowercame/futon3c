@@ -19,7 +19,8 @@
      (require '[clojure.test :as t]
               '[futon3c.peripheral.street-sweeper-test])
      (t/run-tests 'futon3c.peripheral.street-sweeper-test)"
-  (:require [babashka.http-client]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [babashka.http-client]
             [cheshire.core]
             [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
@@ -38,7 +39,7 @@
 
 (defn- sh!
   [dir & args]
-  (let [r (apply shell/sh (concat args [:dir dir]))]
+  (let [r (apply shell/sh (concat args [:dir dir :env (git-fixture/environment)]))]
     (when-not (zero? (:exit r))
       (throw (ex-info (str "command failed: " (str/join " " args))
                       {:args args :dir dir :out (:out r) :err (:err r)})))

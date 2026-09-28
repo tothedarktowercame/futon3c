@@ -1,5 +1,6 @@
 (ns futon3c.peripheral.problem-test
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell]
             [clojure.string :as str]
@@ -2272,19 +2273,18 @@
 ;; Exercises the real git-backed measurer against a throwaway repository, so it
 ;; does not depend on futon3c's own working-tree state.
 (defn- git! [dir & args]
-  (let [{:keys [exit err]} (apply clojure.java.shell/sh
-                                  (concat ["git" "-C" (str dir)] args))]
+  (let [{:keys [exit err]} (apply git-fixture/git-result dir args)]
     (assert (zero? exit) (str "git " (pr-str args) " failed: " err))))
 
 (defn- throwaway-harness-repo []
   (let [dir (.toFile (Files/createTempDirectory
                       "harness-scope" (make-array FileAttribute 0)))]
     (git! dir "init" "-q")
-    (git! dir "config" "user.email" "t@t")
-    (git! dir "config" "user.name" "t")
     (io/make-parents (io/file dir "src" "code.clj"))
     (spit (io/file dir "src" "code.clj") "(ns code)\n")
-    (git! dir "add" "-A") (git! dir "commit" "-q" "-m" "harness code")
+    (git! dir "add" "-A")
+    (git! dir "-c" "user.name=t" "-c" "user.email=t@t"
+          "commit" "-q" "-m" "harness code")
     dir))
 
 (deftest harness-revision-is-the-harness-paths-commit-not-repository-head

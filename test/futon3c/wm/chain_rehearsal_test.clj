@@ -15,7 +15,8 @@
             [futon3c.wm.code-identity :as identity]
             [futon3c.wm.runner-service :as service]
             [futon3c.wm.ordinary-click-budget :as budget]
-            [futon3c.wm.machinery-execution-cohort :as cohort]))
+            [futon3c.wm.machinery-execution-cohort :as cohort]
+            [futon3c.test-support.git-fixture :as git-fixture]))
 
 (use-fixtures :each (fn [f] (with-redefs [cohort/apply-binding identity] (f))))
 
@@ -27,7 +28,7 @@
   "/home/joe/code/futon2/checks/wm_click_resource_observer.clj")
 
 (defn- git! [root & args]
-  (let [{:keys [exit err]} (apply shell/sh "git" "-C" root args)]
+  (let [{:keys [exit err]} (apply git-fixture/git-result root args)]
     (when-not (zero? exit)
       (throw (ex-info "fixture git failed" {:args args :err err})))))
 
@@ -59,10 +60,9 @@
     (io/make-parents source)
     (spit source body)
     (git! (.getPath root) "init" "-q")
-    (git! (.getPath root) "config" "user.email" "test@example.invalid")
-    (git! (.getPath root) "config" "user.name" "Test")
     (git! (.getPath root) "add" identity/production-runner)
-    (git! (.getPath root) "commit" "-qm" "fixture runner")
+    (git! (.getPath root) "-c" "user.name=Test" "-c" "user.email=test@example.invalid"
+          "commit" "-qm" "fixture runner")
     {:root root :source source}))
 
 (defn- resolver [sym]

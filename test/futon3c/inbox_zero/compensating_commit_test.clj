@@ -1,15 +1,15 @@
 (ns futon3c.inbox-zero.compensating-commit-test
   (:require [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3.inbox-zero.promote-exec :as executor]
             [futon3c.inbox-zero.board-consumer :as consumer]
-            [futon3c.inbox-zero.compensating-commit :as comp])
+            [futon3c.inbox-zero.compensating-commit :as comp]
+            [futon3c.test-support.git-fixture :as git-fixture])
   (:import [java.nio.file Files] [java.nio.file.attribute FileAttribute]))
 
 (defn git! [root & args]
-  (let [r (apply shell/sh (concat ["git" "-C" root] args))]
+  (let [r (apply git-fixture/git-result root args)]
     (when-not (zero? (:exit r)) (throw (ex-info "Fixture Git failed" r)))
     (str/trim (:out r))))
 
@@ -18,11 +18,13 @@
         root (.getPath dir) path (io/file dir "README.md")]
     (try
       (git! root "init" "-q")
+      ;; The code under test creates the compensating commit.
       (git! root "config" "user.name" "Compensation fixture")
       (git! root "config" "user.email" "fixture@example.invalid")
       (spit path "base\n")
       (git! root "add" "README.md")
-      (git! root "commit" "-qm" "base")
+      (git! root "-c" "user.name=Compensation fixture" "-c" "user.email=fixture@example.invalid"
+            "commit" "-qm" "base")
       (let [base (git! root "rev-parse" "HEAD") records (atom [])]
         (spit path "reviewed work\n")
         (let [snapshot (atom {:records {}})

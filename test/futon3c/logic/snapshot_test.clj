@@ -1,6 +1,7 @@
 (ns futon3c.logic.snapshot-test
   "Tests for `futon3c.logic.snapshot` state-snapshot-witness siblings."
-  (:require [clojure.java.io :as io]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.evidence.store :as estore]
@@ -18,7 +19,7 @@
 
 (defn- sh!
   [& args]
-  (let [{:keys [exit out err]} (apply shell/sh args)]
+  (let [{:keys [exit out err]} (apply shell/sh (concat args [:env (git-fixture/environment)]))]
     (is (zero? exit)
         (str "command failed: " (pr-str args) "\n" err))
     out))
@@ -28,11 +29,12 @@
   (let [dir (temp-dir "snapshot-repo-")
         path (.getAbsolutePath dir)]
     (sh! "git" "init" path)
-    (sh! "git" "-C" path "config" "user.email" "snapshot-test@example.com")
-    (sh! "git" "-C" path "config" "user.name" "Snapshot Test")
     (spit (io/file dir "tracked.txt") "tracked\n")
     (sh! "git" "-C" path "add" "tracked.txt")
-    (sh! "git" "-C" path "commit" "-m" "init")
+    (sh! "git" "-C" path "-c" "user.name=Snapshot Test"
+         "-c" "user.email=snapshot-test@example.com" "commit" "-m" "init")
+    (sh! "git" "-C" path "show" "-s" "--format=%an" "HEAD")
+    (sh! "git" "-C" path "show" "-s" "--format=%ae" "HEAD")
     (spit (io/file dir "stashed.txt") "stashed\n")
     (sh! "git" "-C" path "add" "stashed.txt")
     (sh! "git" "-C" path "stash" "push" "-m" "snapshot-test-stash")

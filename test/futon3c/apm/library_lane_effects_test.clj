@@ -1,6 +1,6 @@
 (ns futon3c.apm.library-lane-effects-test
-  (:require [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.library-lane-effects :as sut])
@@ -14,7 +14,7 @@
   (doseq [file (reverse (file-seq (io/file root)))] (.delete file)))
 
 (defn- git [repo & args]
-  (apply shell/sh (concat ["git" "-C" repo] args)))
+  (apply git-fixture/git-result repo args))
 
 (defn- fixture []
   (let [root (temp-dir "library-effects-test-")

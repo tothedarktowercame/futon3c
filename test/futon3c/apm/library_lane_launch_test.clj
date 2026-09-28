@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-lane-launch-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.test-support.git-fixture :as git-fixture]
+            [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
@@ -17,7 +18,7 @@
   (str (Files/createTempDirectory prefix (make-array FileAttribute 0))))
 
 (defn- sh [dir & argv]
-  (apply shell/sh (concat (map str argv) [:dir (str dir)])))
+  (apply shell/sh (concat (map str argv) [:dir (str dir) :env (git-fixture/environment)])))
 
 (defn- git [repo & argv]
   (apply sh repo "git" "-C" repo argv))
