@@ -92,3 +92,38 @@
         (is (= "act:d" (get-in result [:disclosures 0 :id])))
         (is (every? #(= "GET" (first %)) @calls))
         (is (every? nil? (map #(nth % 2) @calls)))))))
+
+(deftest source-jobs-route-follows-history-cursor
+  ;; The woken row is on the second page; reading one page would give :none.
+  (let [fake-request
+        (fn [_ _ path _]
+          (cond
+            (str/ends-with? path "/turn%3Ajoe") operator
+            (str/ends-with? path "/turn%3Aagent") parked-predecessor
+            (str/includes? path "cursor-id=c1") {:entries [(woken ["job:late"])]}
+            (str/includes? path "tags=promise-history")
+            {:entries [] :next-cursor {:at "2026-09-28T00:00:00Z" :id "c1"}}
+            :else (throw (ex-info "unexpected request" {:path path}))))]
+    (with-redefs [store/request! fake-request
+                  http/standing-disclosures-for-job (constantly [])]
+      (let [response ((handler) {:request-method :get
+                                 :uri "/api/alpha/operator-turn/source-jobs"
+                                 :query-string "evidence=turn%3Ajoe"})
+            result (json/parse-string (:body response) true)]
+        (is (= ["job:late"] (:source-jobs result)) (pr-str result))))))
+
+(deftest source-jobs-route-refuses-repeated-cursor
+  (let [fake-request
+        (fn [_ _ path _]
+          (cond
+            (str/ends-with? path "/turn%3Ajoe") operator
+            (str/ends-with? path "/turn%3Aagent") parked-predecessor
+            (str/includes? path "tags=promise-history")
+            {:entries [] :next-cursor {:at "2026-09-28T00:00:00Z" :id "same"}}
+            :else (throw (ex-info "unexpected request" {:path path}))))]
+    (with-redefs [store/request! fake-request]
+      (let [response ((handler) {:request-method :get
+                                 :uri "/api/alpha/operator-turn/source-jobs"
+                                 :query-string "evidence=turn%3Ajoe"})]
+        (is (= 409 (:status response)))
+        (is (str/includes? (:body response) "truncated-input"))))))

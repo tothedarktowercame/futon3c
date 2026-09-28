@@ -9828,6 +9828,28 @@
           entry
           (recur (:evidence/in-reply-to entry) (inc depth)))))))
 
+(defn- woken-history!
+  "Every promise/woken row of SESSION, following cursors to exhaustion. A page
+   cap or a malformed cursor is a typed refusal, never a silent :none."
+  [base session]
+  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")
+        base-path (str "/api/alpha/evidence?tags=promise-history&type="
+                       (enc "promise/woken") "&session-id=" (enc session)
+                       "&limit=1000")]
+    (loop [path base-path pages 0 rows [] seen #{}]
+      (let [response (rule-record-store/request! base "GET" path nil)
+            rows (into rows (:entries response))
+            cursor (:next-cursor response)]
+        (cond
+          (nil? cursor) rows
+          (or (>= (inc pages) 20) (contains? seen cursor)
+              (not (string? (:at cursor))) (not (string? (:id cursor))))
+          (throw (ex-info "Park history exceeded its page cap"
+                          {:reason :truncated-input :rows (count rows)}))
+          :else (recur (str base-path "&cursor-at=" (enc (:at cursor))
+                            "&cursor-id=" (enc (:id cursor)))
+                       (inc pages) rows (conj seen cursor)))))))
+
 (defn standing-disclosures-for-job
   "Read JOB-ID's disclosure audit population and return standing choices."
   [job-id]
@@ -9858,15 +9880,7 @@
                             (some-> source-ref str (str/starts-with? "park-")))
                     (str (or (get-in previous [:evidence/origin :source-id])
                              source-ref))))
-        history (if park-id
-                  (:entries
-                   (rule-record-store/request!
-                    base "GET"
-                    (str "/api/alpha/evidence?tags=promise-history&session-id="
-                         (java.net.URLEncoder/encode
-                          (str (:evidence/session-id operator)) "UTF-8")
-                         "&limit=1000") nil))
-                  [])
+        history (if park-id (woken-history! base (:evidence/session-id operator)) [])
         resolved (operator-turn-source/source-jobs-for-turn
                   (assoc operator :chain/previous-agent-id (:evidence/id previous))
                   previous history)
@@ -9886,7 +9900,8 @@
                                   :ok true))
         (catch clojure.lang.ExceptionInfo e
           (let [reason (or (:reason (ex-data e)) :store-failure)]
-            (json-response (if (= :turn-chain-not-found reason) 404 500)
+            (json-response (case reason :turn-chain-not-found 404
+                             :truncated-input 409 500)
                            {:ok false :reason reason})))
         (catch Throwable e
           (json-response 500 {:ok false :reason :store-failure
