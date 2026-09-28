@@ -24,9 +24,9 @@
      :expected :no-admitted-interpretation},
     :evidence
     {:warrant-id
-     "test-registry-704cec2bfa3b74d71848b59adb26c66a14db713e7d321c85e05dcc6aa5339365",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:34.060283598Z"}},
+     "test-registry-dcb3528ab19210b00cdba8d7e6f7414f2c41441feca132e7dde694cd74e5215f",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.830688264Z"}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test/the-real-reader-receives-the-published-value,
    :note
@@ -43,9 +43,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-76e985ad391f9544d6d9f5ddd1cb4bae8f70dbafb64b320792f6e9ef07f06653",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:33.154553180Z"}},
+     "test-registry-8c5bd60ab0133218f28e2c6c5e64f31325a9a07016bc912662130ad5ebc1d48a",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:53.119646944Z"}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/the-real-reader-receives-the-published-value,
    :note
@@ -62,9 +62,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-2048c2a48f4151678d12dfcae3d6db01b8f61f0cee44933f36b9416146f0d13f",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:40:51.267050612Z"}},
+     "test-registry-7f0ccebaf44914a653bab3642dae8d5569bbb94ede910f1bafccc498fc45799e",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.346393528Z"}},
    :test
    futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test/the-real-reader-receives-the-published-value,
    :note
@@ -139,7 +139,7 @@
    :test
    futon3c.diagramprover.wm-wire-clock-in-r1-outer-cascade-clock-lineage-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."}
   {:wire
    [:construction-assemble-one
     :r13-family-parameters
@@ -154,9 +154,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f8ca6d96b873cfc2b1b2585bd25d007ef104cc62c4e10e234dd5c2464baebd85",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:25:23.293996302Z"}},
+     "test-registry-2d80b7546c64a45ae12d84fb04cae7c42bffa0ea6150eb0eef16db7aaebc1f1e",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.731890528Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test/the-observed-handoff}
   {:wire
@@ -173,9 +173,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8c9e42fced0751ae2f2f6b2f4572feeedb683a12643ed29b6075175f26fa7492",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.180851203Z"}},
+     "test-registry-aa706113f917083af404c1516c8698c3ef0eb58de21450156a2aea9948b4d800",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.430553572Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/the-observed-handoff}
   {:wire [:construction-assemble-one :r4-kernel :cascade-spec],
@@ -189,13 +189,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-16e85320e194532a23687ba65b5614a673b360ee42abcb645fa9551b0cb94412",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:33.159359219Z"}},
+     "test-registry-8e60e82cc49e8b310e572c0f473fef834f4e93e4b291f6216d53f1a69e23a1ac",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:51.637837710Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-cascade-spec-test/the-observed-handoff,
    :note
-   "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record."}
+   "Real assemble -> assemble-one over cascade-decision-test's tick-1 sources (construction-support/assembled), then rank-cascade-actions with the same :cascade-spec option cascade-lane forwards. Reader end: output metadata [:cascade-scoring :spec-in], retained before transformation; :spec is a different derived record. The values are read from the producer record."}
   {:wire
    [:construction-assemble-one
     :r4-kernel
@@ -210,9 +210,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8f8aedd7161dbb1f24d7383c4406bacdae687a5b272b2a3fd34d6a9b13818509",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:56.370278088Z"}},
+     "test-registry-2e37979f6d8d64170c99155d5028a4508ef76fb4824876ebbf24e98c39043cce",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.742884813Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/the-observed-handoff}
   {:wire
@@ -229,9 +229,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6c89b1dde234e1ead340cf874e82f51cd3c146078e1bf1c0b4aaeb0dc6dbce0b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:09.956575803Z"}},
+     "test-registry-63e9b68d8c985ec6f868b4ec33f4cb06b1dc1b1fd4615a70db18485862197eba",
+     :git-head "91e73def9bee3d89b9be274463b908e3c23dbe7b",
+     :ran-at "2026-09-28T19:00:34.673448353Z"}},
    :test
    futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test/the-observed-handoff}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
@@ -270,38 +270,21 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f42fb457e7237214f600847aa0f25e25114dbfa23bb167fb9e53a6946e519561",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:32.772331621Z"}},
-   :record
-   {:path
-    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
-    :sha256
-    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa",
-    :why
-    "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); historical construction metadata predates the nested-receipt fix. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input.",
-    :writer-path
-    [:decision
-     :selection-certificate
-     :candidates
-     0
-     :id
-     :construction-receipt],
-    :reader-path
-    [:decision
-     :selection-certificate
-     :candidate-derivations
-     :C1
-     :candidate-payload-sha256]},
+     "test-registry-8e789bb07238b63e4c682cfcc11051dd3ae3e58466f40508ca56cd6e7bb78af8",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.421256275Z"}},
+   :record nil,
    :test
    futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/the-observed-handoff,
    :note
-   "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry."}
+   "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry. The values are read from the producer record `construction-live-digest`."}
   {:wire [:dispatch :clock-in :mission-id],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire [:eligibility :r1-outer-cascade :eligible],
    :status :witnessed-hermetically,
    :second-layer
@@ -349,9 +332,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-7753acee04ec7ec361ad03b80193c5c0d713d4627a0b8a0ab78e267baea11211",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:25:23.163287118Z"}},
+     "test-registry-59b0c27da53dafddadea032fc00014d84484022680bc1594e741c7e8a0f90cb7",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.920337706Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/flight-ada87008/flight-ada87008.edn",
@@ -409,13 +392,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-69f2548ba7c9e6987dd6b5251f1b1ec7f4cfcbe16d99c9ae99b9058fc0ec3009",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.178379094Z"}},
+     "test-registry-177cfd3ee0772cbe276188aeb857607c5ee97bae97805c1c490934385341ebc6",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:09:59.834124909Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test/the-real-reader-receives-the-published-value,
    :note
-   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
+   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling. The values are read from the producer record `ask-out-live-census`."}
   {:wire [:flight-click-wants :flight-judge-opts :wants],
    :status :witnessed-hermetically,
    :second-layer
@@ -427,13 +410,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-aa1913d6eb7f981415416732caf6a844a8f895e51d0e3cdff6f456fd0785498b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:39:38.657089637Z"}},
+     "test-registry-ebf962284e48e0eeb209ec2a2997137b2e6f06bb463a83a5bc5dadd56c0b61d0",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:00.740005961Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test/the-real-reader-receives-the-published-value,
    :note
-   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
+   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling. The values are read from the producer record `ask-out-live-census`."}
   {:wire [:flight-click-wants :tick-flight-assembly :universe],
    :status :witnessed-hermetically,
    :second-layer
@@ -445,13 +428,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-a9b8c2eb522d8cab1d408e8732996c9b7e3664838481c2cdf34925961b92ed65",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.948658717Z"}},
+     "test-registry-54531916b29be957ed53291af852ad5e97a16ce2c2787a9e9265318781583dc0",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.044398038Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test/the-real-reader-receives-the-published-value,
    :note
-   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
+   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling. The values are read from the producer record `ask-out-live-census`."}
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :witnessed-hermetically,
    :second-layer
@@ -463,13 +446,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-2751c8e0595f60f394d9d1242768b56c1091e6d2e6fd1d90bdf2972868c51dc2",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.667750955Z"}},
+     "test-registry-14e7e557d1b7699740cfce0cbf033751f01c0b938b5e2c51aaed3c23fb1011ae",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:01.453444715Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test/the-real-reader-receives-the-published-value,
    :note
-   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
+   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling. The values are read from the producer record `ask-out-live-census`."}
   {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
    :status :verified,
    :second-layer
@@ -481,13 +464,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-31b3a27b3074a65474476ddd8f457c74a114f255aeb40d8a26204f0cd25e9ff0",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.070597168Z"}},
+     "test-registry-1bb1f1469efcaf7e73f9029fd6d63049b6990f323c45222ba5313f4b5f087e38",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.639239651Z"}},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-d00574c8.edn",
     :sha256
-    "68e531b462d535983ea5114a8da370daec943a3b4283b6b87831e63ecf9eadd8",
+    "b26d4c3cc98009b1f7a828cd2355f6b01bb03feaeda8f03bf43a8a94f0292e34",
     :why
     "Plan placement and completed flight target; ask refusals sometimes retain target. Click summaries omit target; enactments do not dispatch; reading entries omit issued target.",
     :writer-path [:plan :placement :target],
@@ -506,9 +489,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-12abad84cf020aee638cfd58559567abaaacee81c5a3ad295434171eb1d00e6e",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.776698234Z"}},
+     "test-registry-9cc72395807580260fbfbbcbe07e5499c0dd2cdf6024b506d0f92a7e6d570da6",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.828157961Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test/the-target-reaches-the-reader}
   {:wire
@@ -523,9 +506,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-9f8c6fd11c638821d6a5fe00e2c1ad7d7551f12b7bee9c2f0e28eaac8956d03d",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:32.473561854Z"}},
+     "test-registry-f4699bb52bd44c03117bd20e718fc934fc505522c433b896e371ac72fcb66f90",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.643840978Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-run [:target {:record :flight}]],
@@ -539,9 +522,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-a2837bb920824dbc6ec7a8fca7459ace8b9e4c49409ce8f3675a0007fa362051",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.166051934Z"}},
+     "test-registry-a5361825f07e627a95cbc0a50c4ad90e9510e0dae44f0d4b0af70b1147125186",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:54.324896598Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :loop-test :target-source],
@@ -560,9 +543,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-e65f37ba313abc635ca6c6391c24a19f9dc576236dec0f8a59505f39b445f7e5",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:32:54.050907562Z"}},
+     "test-registry-2c92f26b253cf4703a750a8a8fb0e906aee0c9457f24c96a44f9a8148e500db6",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.155795577Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test/the-target-reaches-the-reader}
   {:wire
@@ -579,9 +562,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3ed724a1a78efca3e82957a0ecea159fa50330077ec7f1ac0f2361a6a301c2d6",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:17.767469811Z"}},
+     "test-registry-064589c7dc4736a13079891c58b0a5a6c7d3e5f2d18013408d8792a254e9a61f",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:52.839842241Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r2-flight-read [:target {:record :flight}]],
@@ -595,9 +578,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-e0e5f0b9a560f39fba4f1b7b4624de6a3daa407b0a8815dcc15d58d54e670d39",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.564142708Z"}},
+     "test-registry-240a7b6491dff0f973d731783b4b268125bdb6cb5919f8900d84c480b2b0911a",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.358609651Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r9-close-cause [:target {:record :flight}]],
@@ -611,9 +594,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f8f89224e734c4db57e6baee75cd3b915d1ca2caeda94948392662715f22cbff",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.871528507Z"}},
+     "test-registry-4ca598114cc5e5801714d5ad66b71b224db58803cd4c0aa369ab55fcde67bf60",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.323223750Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test/the-target-reaches-the-reader}
   {:wire
@@ -628,9 +611,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b8f361771137f67f11c8f3e57dc1e6f82d8571b4dc7aff3d1f5f129383037a3f",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.548948453Z"}},
+     "test-registry-c1fd4fcdde596c10d6cf7cbb45cd4827ab17fc6f840d3f67ef965870004eea52",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:53.360085414Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/the-target-reaches-the-reader}
   {:wire
@@ -647,13 +630,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-62668f5aaf30bb741cd7615a7e36ff20897fc5dc306e1d8d7581e3dde0464e02",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.956224147Z"}},
+     "test-registry-b4026faae6712d35562bbdc68970bfdf7de1e1ebe020be2250dc85c272b0a7d9",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:54.431077092Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-judge-opts-temporal-inspect-temporal-previous-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire [:flight-record-summary :click-reason-test :failure],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -675,9 +658,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-5a887000b2e3300959dbec89a8ba7c4db5543675bbae7f145c9d03cfdec0c360",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.882184113Z"}},
+     "test-registry-77f3e46df13ca947e03ef25d7ed9572276c179b15406f63601bddf8113946151",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:15:05.836011059Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/the-clicks-selection-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-record-click :failure],
@@ -691,9 +674,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-018864df52fb115ea9f9b2a27b7e9f52a458053fef5f9fec0045c4908960a257",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.076258661Z"}},
+     "test-registry-24183be943ed199927f90611fd5bec988011523ab64232c3a685acfa1f5dcbd9",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:15:46.414769715Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-run :chosen],
@@ -707,11 +690,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-d43c02517b0f5e2c51652996951713e2e4c5bb43892326a963c7534a0af60aec",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:21.255280302Z"}},
+     "test-registry-e40172a271565f86c446ea1d34fe101c1b00fb196c711678b28463174f2228ac",
+     :git-head "87d37872f7dc8b7a0c40d1191b250ac393d88b84",
+     :ran-at "2026-09-28T20:10:54.138441141Z"}},
    :test
-   futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire [:flight-run :flight-driver-summary :needs],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -736,13 +721,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f3ad691d73fc3a7f858b36b685f64aea5ba20f078f129652f95495f893a0d213",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.247741124Z"}},
+     "test-registry-4c1c6d7237c664cde27d7540559dc3b3876b101c5a2438b9d13eb7e19bab4076",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.253567688Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-run-flight-judge-opts-temporal-receipt-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier-publication-paths`."}
   {:wire
    [:flight-run
     :flight-steps-source
@@ -760,7 +745,9 @@
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-loop-entry-loop-plan-trigger-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -780,13 +767,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-fd4a5a97fae56d5dc04ef123be5705e907e955e73d6226166c6e6688012374b4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.877150462Z"}},
+     "test-registry-0d21517c88142bdf179fb8ff3488cb83eb348d45ac0fdf42e52cb2559f441938",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:44.719083507Z"}},
    :test
    futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value,
    :note
-   "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence."}
+   "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps remain absent in the produced belief; they are not wire evidence. The values are read from the producer record `fold-in-observe`."}
   {:wire [:r0-enact-step :flight-run :record-path],
    :status :witnessed-hermetically,
    :second-layer
@@ -798,13 +785,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-34a825835d1bd472aba13ff1346f34d1cfef710fc358e6f342ce7cd9c95f682c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.161210954Z"}},
+     "test-registry-bf6262d945d37c3ecd497603d9359f7b273f48b3ec9ed9252ef2dc15c1d20306",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:44.921112830Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-record-path-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire [:r0-enact-step :flight-run :temporal-receipt],
    :status :witnessed-hermetically,
    :second-layer
@@ -816,13 +803,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-65cae4a52fd0a445c06b2649978e55162ad8c97c346bf7e28542e498e5e90483",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:11.859975923Z"}},
+     "test-registry-36dd0107b096fd25440ca4b87c6da3a0149a846c8f096a72f7364394f963ef44",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:44.828335951Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-flight-run-temporal-receipt-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier-publication-paths`."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
    :second-layer
@@ -940,9 +927,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-413b77afa38d606982f8b092fc30635cdae5f59e18026d44123f2db7417e35f0",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:25:23.560598755Z"}},
+     "test-registry-816ed54951067013466e59ca70b3d33914b23859beb3d873466394c8f84254d8",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:15:46.211872864Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-chosen-target-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :draw-seed],
@@ -972,26 +959,34 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3aeaffe04110a104d9af0f6025072a011a3e4e7817fa96f388d59945c4bad03c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:33.268915537Z"}},
+     "test-registry-87b989fbb9136f2323482d6d54e9e9ae01525474d194459ee9b84406258cb368",
+     :git-head "b8b1b49c4e8c45ef34955049f83e5f4a0d8f4dcb",
+     :ran-at "2026-09-28T18:58:30.494335921Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-target-selection-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :flight-plan :chosen-target],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-chosen-target-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :flight-plan :draw-seed],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-draw-seed-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :flight-plan :target-selection],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-plan-target-selection-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :loop-plan :chosen-target],
    :status :witnessed-hermetically,
    :second-layer
@@ -1003,11 +998,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f86335233c3cc80a8887db4614d01a184b7b0cb40bb92a92fdb257442d0f56a2",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.474653151Z"}},
+     "test-registry-a63523637169a59ec0dbf008902641c9c695e69ab03cfa5cb02b74e75c280d99",
+     :git-head "e4dec42c7e6320aa6b3977e7c7604deab82ca588",
+     :ran-at "2026-09-28T19:02:42.188315861Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-chosen-target-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :loop-plan :draw-seed],
    :status :witnessed-hermetically,
    :second-layer
@@ -1019,11 +1016,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-74aaabb7414cc2234f110871f2f76edeea899222004ced206bc1143388162e96",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:41.056751200Z"}},
+     "test-registry-d02826ffcf4da3ad86967c84fad8ca8cb49db9848a3c33463b44e7f05ec7f34e",
+     :git-head "b8b1b49c4e8c45ef34955049f83e5f4a0d8f4dcb",
+     :ran-at "2026-09-28T18:58:30.101357265Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-draw-seed-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :loop-plan :target-selection],
    :status :witnessed-hermetically,
    :second-layer
@@ -1035,11 +1034,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-418bfcda1babf8dfc0d0f4899fd259078611c904075e0851a3b3cfeb2a3760c2",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:30:32.864625470Z"}},
+     "test-registry-8589a893bfd21d7a7bbc579a736d39c10bc9c86ca3c8b82735b8b39face2a0b6",
+     :git-head "91e73def9bee3d89b9be274463b908e3c23dbe7b",
+     :ran-at "2026-09-28T19:01:37.995024870Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-loop-plan-target-selection-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :loop-test :draw-seed],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1049,7 +1050,9 @@
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-chosen-target-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-outer-cascade :r1-test :draw-seed],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1059,7 +1062,9 @@
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-r1-test-target-selection-test/the-writers-value-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed plan-observe producer record."}
   {:wire [:r1-target-field :r1-outer-cascade :next-step],
    :status :witnessed-hermetically,
    :second-layer
@@ -1071,13 +1076,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-441dc1b6fbd942a646a6db0a0c7a7e8458bfacc0e491ca524a70da8ae2473421",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.661504473Z"}},
+     "test-registry-6b4d9fb6ae4cf4590d1e01380848fea558d915995a73e04ed204a57acf0522af",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.113977965Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-target-field-r1-outer-cascade-next-step-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."}
   {:wire
    [:r1-token-initialization
     :r1-token-temporal
@@ -1092,13 +1097,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b56536a069e2ece16f7ba441b02c07a144531f0b90cddc31a87a28e1b0c1d6fa",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.566583065Z"}},
+     "test-registry-af15f5e0e512ec25f71228d04f4ac55d034bcb3ccc978fe8b5087bfa5c8c8dd8",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.154012749Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-initialization-r1-token-temporal-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
-   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
+   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."}
   {:wire
    [:r1-token-legacy
     :r1-token-initialization
@@ -1113,13 +1118,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-80c74bed8dc6b8ba41eaf42ace2e252b5365255aac9ae4c4ef53c7b19bfd9091",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.248801079Z"}},
+     "test-registry-f0046f7bd84773c20c2109b8b710bc5f167a85badbdab548bb1018d14ad65167",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.415218594Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-legacy-r1-token-initialization-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
-   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
+   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."}
   {:wire
    [:r1-token-temporal
     :r9-decision
@@ -1134,13 +1139,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-110cdf5aa15ea833eba65fa4f04d5f05f1ee4afbd82a160ca1fd05de9789e9fb",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:30:32.673203630Z"}},
+     "test-registry-23afe7bc178b3177ea1abe7592fe538afdd59c9feb228e4c2b1c59c3ea36f3f9",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.516497079Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-token-temporal-r9-decision-continuation-belief-test/the-real-reader-produces-the-writers-belief,
    :note
-   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
+   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."}
   {:wire
    [:r10-observe-publication :r0-enact-step :publication-observed],
    :status :witnessed-hermetically,
@@ -1158,13 +1163,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-16c0cb5f03021c38419d84d0b2a066290c979ad17be305a86a694022ffa72285",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.961325133Z"}},
+     "test-registry-90ebba189fcde109436e8d6ec2d744b0b8fdaa84c0695d88134a50e056b478da",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.644913303Z"}},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r0-test-publication-observed-test/the-test-box-consumes-the-writers-present-observation,
    :note
-   "flight_enact_test drives the real observe-publication-fn (enact-fn's default, no override) over a fixture whose target HAS a repair obligation discharged on a real persist-run-record!-written run record; the present value {:observed true :at \"run-pub\" :evidence {:repair/id \"occ-t\" :status :receipt-committed ...}} crosses into the test's assertion. No live record carries both ends, so witnessed hermetically."}
+   "flight_enact_test drives the real observe-publication-fn (enact-fn's default, no override) over a fixture whose target HAS a repair obligation discharged on a real persist-run-record!-written run record; the present value {:observed true :at \"run-pub\" :evidence {:repair/id \"occ-t\" :status :receipt-committed ...}} crosses into the test's assertion. No live record carries both ends, so witnessed hermetically. The values are read from the producer record."}
   {:wire
    [:r10-observe-publication :r1-outer-cascade :publication-observed],
    :status :witnessed-hermetically,
@@ -1177,13 +1182,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b6567f0c23198a2ac8c3ced28c5adbdf1ee8392aa768d910385c926f0bd7d2d0",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:39:38.246068324Z"}},
+     "test-registry-0f4413ddbf34b2a013459d3117184e0eedc7684b233ea82feba1ebe77bd1e94a",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:45.534613086Z"}},
    :test
    futon3c.diagramprover.wm-wire-r10-observe-publication-r1-outer-cascade-publication-observed-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."}
   {:wire [:r10-observe-publication :r10-test :publication-observed],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1203,13 +1208,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-333bd97ad1c5582594a03e25e22cf499a7c671496f51499c7907844b88c0ba1f",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:18.355233048Z"}},
+     "test-registry-460a038def141a3ae0b83372f5d6dd7d6205fd33cffe2e97a475ebbf4b5c1672",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:11:44.940396473Z"}},
    :test
    futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/the-judge-produces-the-received-value,
    :note
-   "Reader produces :policy-depth-used (3 -> 4); not cascade family T. The cascade-horizon remains sourced independently from cascade-sources."}
+   "Reader produces :policy-depth-used (3 -> 4); not cascade family T. The cascade-horizon remains sourced independently from cascade-sources. The values are read from the producer record `fold-in-observe`."}
   {:wire
    [:r13-sources-horizon
     :construction-assemble
@@ -1224,11 +1229,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-aac2da12a13f22096f10e42244d59d7e6843780402675358c8cbfbeb73dd1fea",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:17.852256212Z"}},
+     "test-registry-357186278d727dcad13d1be9b596b3a62174b23bd57d4023af074bd667f707f1",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.150624554Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire
    [:r14-precision-carry
     :r14-selection-posterior
@@ -1266,14 +1273,10 @@
      :expected :precision-consumption-mismatch},
     :evidence
     {:warrant-id
-     "test-registry-eb6167dd87c952d97d287bdee829e57e5d6c0f19e92c0a5dc599621acd3b9651",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:55.884834009Z"}},
-   :record
-   {:path
-    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
-    :sha256
-    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"},
+     "test-registry-0bce5839951b62339ddcd89e517df9aa4ed5ed10b4ca62315e6bf0cc8862a39d",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:51.727564644Z"}},
+   :record nil,
    :test
    futon3c.diagramprover.wm-wire-r14-precision-carry-r9-decision-beta-test/the-carried-beta-reaches-the-decision}
   {:wire
@@ -1512,13 +1515,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6e2427522b3b2f5017c443b05772af2c52a1dc055f42c96c0cd8869bf1532672",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.349217491Z"}},
+     "test-registry-404ad4f893075c0177693bc7268ec2145370d09aef8f6b1ae4158f425be1a696",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:35.019950924Z"}},
    :test
    futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/the-judge-produces-the-received-value,
    :note
-   "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation."}
+   "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation. The values are read from the producer record `fold-in-observe`."}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :witnessed-hermetically,
    :second-layer
@@ -1530,11 +1533,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f22c20d9225230bc96322552df18b736060851bd99dee44861d60cee56493167",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.856013367Z"}},
+     "test-registry-8075e5d5ca3138f10c579ee5cc5b9355cd6ca3ce700e0a5b0806d5d67874b94c",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.669207861Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire [:r3-flight-ask :r3-test :library-root],
    :status :witnessed-hermetically,
    :second-layer
@@ -1546,11 +1551,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-956a4b89aaf1c7c0a3e3ce9748144fc3aa539ee0f08f599f017b7bfe643d73cb",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.545443117Z"}},
+     "test-registry-d8eab3518c704789c62a1f8f6a3a3ddd9efdc47d8eafef6c57af09c07c1bb2dd",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.119565926Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire
    [:r3a-prediction-error
     :r7-weighted-error
@@ -1637,7 +1644,9 @@
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test/the-writer-reaches-the-reader}
+   futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test/the-writer-reaches-the-reader,
+   :note
+   "Writer and reader values come from the content-addressed small-observe producer record."}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -1668,9 +1677,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ea6fc2f8880f86824645fb24196e7de3183bf56d4d319d1f59275432860b2725",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:18.349966908Z"}},
+     "test-registry-024bf32c95b2e476d1e19873e4194b2b9e36f0627b8b7f7c1994fd22c3b2597d",
+     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
+     :ran-at "2026-09-28T20:56:03.050057007Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
    :note
@@ -1686,9 +1695,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-750b3949679e6e5df7366a3cc50910af4e444ae20dde152610094a37d80a81af",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.551972301Z"}},
+     "test-registry-04402784fc6310068dde59b6625eb646ec85a6192050b90d32d484d5c741183d",
+     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
+     :ran-at "2026-09-28T20:56:03.556230461Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/the-reader-receives-the-kernel-value,
    :note
@@ -1726,9 +1735,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-aec0656cb2d8714a2779de7a08aad7e7c6fd7ffeec2b81b0ccdf82885084b9cc",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:39:37.862708343Z"}},
+     "test-registry-beebe602b5d1dea645159a5529226a466a71b665eaa30069b755dc24be4c252b",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.241129977Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
@@ -1742,9 +1751,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-e07b3e9c64609a77f5e5d0fc5ea1f1f54f4c985f6b23e92c59761763e650c2b9",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.546545488Z"}},
+     "test-registry-8dd786d79504f496cd2c3a44941c96b14f97cc3d3991d75a0a179fa597923899",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.245986810Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -1761,9 +1770,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-0ef8e198bad2acdbe9cbfd61092151acfd0c61ed4f67c8176540aae927803578",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.256306582Z"}},
+     "test-registry-c51c5c848ce7b218f87329acb915f2807e189c58d129c73e01eb5c0d7f60ccbd",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.449031423Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-test :measurement],
@@ -1777,9 +1786,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-14d8d2a285fae4f8a96e304e310fdfecf7259016a7983fb1aa21ad7e5f81390c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:39:37.861408539Z"}},
+     "test-registry-8d0330392ac8f172d08b10d5eb7e59c82662e964352d0becb2f5168b35289e55",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.415628406Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
@@ -1797,9 +1806,9 @@
      :expected :no-measured-rates},
     :evidence
     {:warrant-id
-     "test-registry-21b9df7b75aa88c33f26cf555e5c7c29c436fbea14f32dfe1d86d4f3d231bbbd",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.451571688Z"}},
+     "test-registry-8e546ca1ca15c23e3645966a43b4ffa2af0a8f0ca99efeb5eb8e0854418a2553",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.019161182Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-measurement-test/the-writers-measurement-reaches-the-reader}
   {:wire
@@ -1816,13 +1825,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-4034046f24e5ad0d5f83461ef7f4f122f5d42b878f2eed457f6c28a403ba294e",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:09.862024271Z"}},
+     "test-registry-8123410306dc7c7ee1f19053fab85a4cd5edc78f79ed4b29f5460fb2003c6918",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.453211581Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-rates-test/the-sourced-rates-reach-measured-a-version,
    :note
-   "Writer: observation_rates.clj sourced-rates (:rates {token {:false-neg r :false-pos r}}). Reader: war_machine.clj measured-a-version qualifies them to [target token] on the measured-A record. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a."}
+   "Writer: observation_rates.clj sourced-rates (:rates {token {:false-neg r :false-pos r}}). Reader: war_machine.clj measured-a-version qualifies them to [target token] on the measured-A record. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a. The values are read from the producer record `rates-products-measured-record`."}
   {:wire
    [:r6-sourced-rates
     :r9-measured-a-version
@@ -1838,13 +1847,13 @@
      :expected :sourcing-refused},
     :evidence
     {:warrant-id
-     "test-registry-1c114f6493d5de670e951a05e52aacd0ff4cab8d88cb7d2fecf9349791fc1760",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.659161962Z"}},
+     "test-registry-49c03ef9e43b6702a679989021dfaaba5807e29f85e37b6eced5498af67a671c",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.028605083Z"}},
    :test
    futon3c.diagramprover.wm-wire-r6-sourced-rates-r9-measured-a-version-status-test/the-sourced-status-reaches-measured-a-version,
    :note
-   "Writer: observation_rates.clj sourced-rates (:status :sourced). Reader: war_machine.clj measured-a-version (:6361): a :sourced status produces the measured-A record, anything else {:status :absent :reason :sourcing-refused}. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a."}
+   "Writer: observation_rates.clj sourced-rates (:status :sourced). Reader: war_machine.clj measured-a-version (:6361): a :sourced status produces the measured-A record, anything else {:status :absent :reason :sourcing-refused}. Hermetic: the producer's return is persisted nowhere and no tick record here carries :measured-a. The values are read from the producer record `c2-measured-live-records-read`."}
   {:wire [:r7-flight-call :flight-run :increment],
    :status :witnessed-hermetically,
    :second-layer
@@ -1856,9 +1865,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ff6ceb2e757a821cc6355fb4619a7be3c6a3cc1a2c22c5eae2ff3727e9a11bc4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.247697739Z"}},
+     "test-registry-a7e7cfcc71c5305f92de9545cd294bd619f41571ba339e32ce87af1eff8273af",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.134288785Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-flight-call-flight-run-increment-test/the-writers-increment-reaches-the-enactments-entry}
   {:wire [:r7-flight-call :r7-call-test :wc],
@@ -1882,13 +1891,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-d46c60562257aa0e83d72430b6bb4a4ba4edce44384028937515391f47b38076",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.464323825Z"}},
+     "test-registry-6438679b62dc99a687763ed494a57a1d7d3402d51f3f0095fee60c826cf513a4",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:35.822630720Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-r1-outer-cascade-enactment-records-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."}
   {:wire [:r7-fold :r7-selection :enactment-records],
    :status :witnessed-hermetically,
    :second-layer
@@ -1918,9 +1927,9 @@
      :expected :no-enactment-fold},
     :evidence
     {:warrant-id
-     "test-registry-fce48ab719a023f11618af8032c4fa3ac4a9dca2f795be33de6627680b9284e5",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:32:54.451116839Z"}},
+     "test-registry-c2f44eee59b8dbd8da82704f3c8b60132d498ad172517a0972e53fea70668421",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:02.153156460Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
   {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
@@ -1934,13 +1943,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-eafb1eb93a725259106ad0bf2ebd8d1ac437d355c85acd37b0e7ced2c08a9d6a",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:56.155481204Z"}},
+     "test-registry-224b2c1003b38ca084aae7b7c8f552bea306ff5ef2259da4ea3d013dec2281a9",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.672474166Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/the-real-reader-produces-the-received-value,
    :note
-   "Reconcile returns the carried posterior for surviving entities; absence is nil at the reader door and produces the fresh prior."}
+   "Reconcile returns the carried posterior for surviving entities; absence is nil at the reader door and produces the fresh prior. The values are read from the producer record `fold-out-simple`."}
   {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
    :status :witnessed-hermetically,
    :second-layer
@@ -1952,13 +1961,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-730b31f1c87df82c0612d44914e212f4734e2b3aeb97e5a362a2d27f5a5d18e2",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:21.082391481Z"}},
+     "test-registry-acd870dbfb29d78aeb3b96f6b8bcfdca6a62de0cf7ed1895392fa2f58c88ecd6",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:35.914436540Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/the-real-reader-produces-the-received-value,
    :note
-   "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader."}
+   "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader. The values are read from the producer record `fold-out-simple`."}
   {:wire
    [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
    :status :witnessed-hermetically,
@@ -1972,13 +1981,13 @@
      :expected :malformed-prediction-triple},
     :evidence
     {:warrant-id
-     "test-registry-af53896787795d2f317bc181c5e297c4d29c41a75365ff6adc3cd0db25808052",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.556342774Z"}},
+     "test-registry-d9ff3a5cd33c694f2031c0f7ff97f734f11d95489db4af03fef589f5840a5723",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.224102380Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/the-real-reader-produces-the-received-value,
    :note
-   "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission."}
+   "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission. The values are read from the producer record `fold-out-simple`."}
   {:wire [:r7-fold-call :r3a-predict-observation :loop-belief],
    :status :witnessed-hermetically,
    :second-layer
@@ -1990,13 +1999,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-1e43ab62325b1f0f3cb333cb1b56d60211ac011c1f410a6562547f68e980aab8",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:18.051484510Z"}},
+     "test-registry-aa6ce2a3ab6532776614ed361f17f6988987758e0c5ccc06075e94d6dad6e65f",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:16:26.232641752Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r3a-predict-observation-loop-belief-test/real-judge-hands-belief-to-real-predictor,
    :note
-   "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls."}
+   "The inspected live records lack the predictor's input end. Run the real judge with hermetic external input ports; observe its loop belief at the real three-argument predictor, execute that reader, and compare both carrier and prediction. Missing/different carriers are negative controls. The values are read from the measured-cleanup producer record."}
   {:wire [:r7-fold-call :r9-decision :conditioning-steps],
    :status :witnessed-hermetically,
    :second-layer
@@ -2009,13 +2018,13 @@
      :expected :no-flight-records},
     :evidence
     {:warrant-id
-     "test-registry-f1ebc0bf39b93e5d04b81cf3bc939366799d415e0ccff7de5915d31131f92b26",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:40:50.876459191Z"}},
+     "test-registry-76c78928622d48f91b980b84ed622b7317114f5b6bcbb2172c30981bdeb220c5",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:54.822905112Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test/the-real-reader-produces-the-received-value,
    :note
-   "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update."}
+   "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update. The values are read from the producer record `fold-out-decision`."}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
    :status :witnessed-hermetically,
    :second-layer
@@ -2027,13 +2036,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f83fd1066e4e4c216fc5c0ed607f52caec3921fd07d24b300eb36d717ab53864",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.046118218Z"}},
+     "test-registry-b6c7a60206fdfe27576fee1331a555f4a219447d26765ebe29b6897f5672175d",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:52.960087603Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test/the-real-reader-produces-the-received-value,
    :note
-   "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry."}
+   "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry. The values are read from the producer record `fold-out-decision`."}
   {:wire [:r7-increment :r7-call-test :delta],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -2119,13 +2128,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6cbd7960bfae98c2fefd3b5fb2e958100e223e796f3f04daaddcb0fa1546763d",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.351937847Z"}},
+     "test-registry-8c89aa58b73f0e93f0072998864877104078013b803665bf22c2434196b23f34",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.417788391Z"}},
    :test
    futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-produced-input-is-received,
    :note
-   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."}
+   "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim. The values are read from the producer record `outer-inputs-observe`."}
   {:wire [:r8-overlap :r8-test :pair-overlap],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -2173,9 +2182,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-0d8be91fb2d27befa6780f9a3f903e46d74ab58987fdbc51d119f8ff32486b47",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:17.047246701Z"}},
+     "test-registry-ef8508f46241aa7af616b86088f5cf927549fdc5f3debae98f78ce089fc6a1ac",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:12:36.128801537Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test/the-close-cause-reaches-finding-failure-cause}
   {:wire [:r9-close-cause :r9-finding-store :failure-cause],
@@ -2189,9 +2198,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b6001bbc89cc82636cb147435420bd35fc04a001493152d2bcda3c42b0fdaf5b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.575407824Z"}},
+     "test-registry-affa043c6f55666590004a29f6d0c8da958c6ee17f540387ff9872d252c2dc57",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:26.119756367Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
   {:wire [:r9-decision :flight-conditioning-step :measured-a],
@@ -2206,13 +2215,13 @@
      :expected :no-measured-a},
     :evidence
     {:warrant-id
-     "test-registry-fb1b02bc41ea3bbbfa643113ba824823dd0c0c2e8e8097dc7688d6b9a1eb7d6f",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.757836273Z"}},
+     "test-registry-fb3af8c18fe3e04c0970cb3dd1028a96fb75b920a3ec41c4e195193df6e64271",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.930116992Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test/the-observed-handoff,
    :note
-   "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately."}
+   "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately. Values come from the content-addressed measured-tick-observe producer record."}
   {:wire [:r9-decision :flight-record-click :kind],
    :status :witnessed-hermetically,
    :second-layer
@@ -2224,27 +2233,11 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6535b3c08cc40d835b8cad75076dbc3887d0071de9996a125a87b7be9a73571e",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:21.850400706Z"}},
+     "test-registry-42f9df59ed9e17aef15e2ffc3cc1a880b43da8c5f487c6989357728c0197c260",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.546783451Z"}},
    :test
-   futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/the-observed-handoff,
-   :note
-   {:kind :two-record-live-pair,
-    :flight
-    {:path "holes/labs/M-wm-wiring/spike/flight-ffcd772b.edn",
-     :sha256
-     "998565fb0a341077ae5b9341d977a9c5bf6db6ea0cf33fead1e00c630f4e2575",
-     :reader-path [:flight :clicks 0 :abstention :kind]},
-    :tick
-    {:path
-     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-25-flight-ffcd772b-click-1.edn",
-     :sha256
-     "8ab0db5d770085f17bb341293a92424149bf2388ae7a6dd3e724887c9a44eba2",
-     :writer-path [:decision :abstention :targets],
-     :target "M-autoclock-in"},
-    :why
-    "Same click, :universe-not-admitted at both ends; neither has [:decision :kind]. Two records do not meet the one-record VERIFIED definition."}}
+   futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/the-observed-handoff}
   {:wire [:r9-decision :gate-refusal-test :kind],
    :status :witnessed-hermetically,
    :second-layer
@@ -2256,13 +2249,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-a08230a5a037abfe5905f42520d9c61ae97bab9df1565e0c977aadf76b8e9d83",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.573039344Z"}},
+     "test-registry-6dd315fc8f487bfadb256c68ea2a0b421b3db1d00003ccdd2643b5ac99c2907a",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.332585266Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-gate-refusal-test-kind-test/the-gate-refusal-kind-reaches-the-box,
    :note
-   "Writer: war_machine.clj cascade-decision-admitted -> decision-gate/emit! (\"Inadmissible decision\", :reason). Reader: futon2 gate-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
+   "Writer: war_machine.clj cascade-decision-admitted -> decision-gate/emit! (\"Inadmissible decision\", :reason). Reader: futon2 gate-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture. The values are read from the producer record `c2-refusal-box`."}
   {:wire
    [:r9-decision :r4-kernel [:cascade-belief {:record :rank-state}]],
    :status :witnessed-hermetically,
@@ -2275,13 +2268,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-0c9780d3f01b9cfdf1b2bd33c516d01bdb3341ee3d410c1e8c8dbc8bb97215a0",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:56.171874027Z"}},
+     "test-registry-ef668be9466131efaa71ae9a9291d3808a19513624faeb34abc4bef92467fe0a",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:26.234469393Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test/the-real-reader-produces-the-writers-belief,
    :note
-   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
+   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."}
   {:wire
    [:r9-decision
     :r4-rank-dispatch
@@ -2296,13 +2289,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-cadddc62bb2642e77950dca185c4466474ce3c668daaa34e04a48a750f7a1ea0",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:32:53.951441205Z"}},
+     "test-registry-e38b68b9ae8689bfe48dfc44b42cdb7fb9f5447cc0c82e401af07fa1d6aed88b",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:26.522129362Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test/the-real-reader-produces-the-writers-belief,
    :note
-   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes."}
+   "Real writer and reader; the value is read from the reader's returned receipt or its scoring evaluation, never from the wrapper argument. The helper carry witness uses the retaining branch; overrides have distinct output scopes. The values are read from the producer record `token-input-observe`."}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
    :second-layer
@@ -2330,7 +2323,7 @@
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-read-kind-test/the-real-reader-handoff,
    :note
-   "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind."}
+   "Real cascade-decision emits live-c-refused from refused Live-C input. Tamper its exception data before the real runner judge-refusal path; read selection sorry judge-refusal kind. The values are read from the producer record `selection-out-refusal`."}
   {:wire [:r9-decision :r9-judge-refusal-test :kind],
    :status :witnessed-hermetically,
    :second-layer
@@ -2342,13 +2335,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3c93ac00642e48cc683afd3aeb2a82b834ea98d762f93f446b509a5c721e9ad3",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.976559024Z"}},
+     "test-registry-c47272b267464b63cdfe98e7b1e957293a2c183578fb88a4c0c30c0e42427d49",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:07:53.213855162Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-decision-r9-judge-refusal-test-kind-test/the-judge-refusal-kind-reaches-the-box,
    :note
-   "Writer: war_machine.clj cascade-decision-admitted's :live-c guard (\"cascade decision refused\", :kind). Reader: futon2 judge-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture."}
+   "Writer: war_machine.clj cascade-decision-admitted's :live-c guard (\"cascade decision refused\", :kind). Reader: futon2 judge-refusal-abstention-test, driven by the real writer since futon2 7a3b61eda. Test box: witnessed by wrapping the writer var, never by a fixture. The values are read from the producer record `c2-refusal-box`."}
   {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
    :status :verified,
    :second-layer
@@ -2389,9 +2382,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-98a84c620c69d0d84c605acf66b36b1eca3bef44a2fb308e9bd696a4a05c86c4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.968111380Z"}},
+     "test-registry-fd1bc4120096cb4d46c402922eda1bce77f1c98401af2d94307e6104a1076c5d",
+     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
+     :ran-at "2026-09-28T20:57:04.329447283Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/the-reader-receives-the-kernel-value,
    :note
@@ -2418,9 +2411,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-466f4d253416790d3014e9b82b93eacfa48187056f9d3c0e19a6d0252bbeeae5",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.763559840Z"}},
+     "test-registry-ee44919857e4eed60bdd9a55e3e2d9c7ce5ac657f01741c1908b6d7f72b8cb9a",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:27.038980413Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test/the-abstentions-outcome-reaches-the-failure-classifier}
   {:wire
@@ -2438,13 +2431,13 @@
      :expected :unmeasured-class},
     :evidence
     {:warrant-id
-     "test-registry-8cb56a522b912bf2cb0b1398726b976456ca5e21dbfa5c630a88403ae3260687",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:41.152882072Z"}},
+     "test-registry-d8da9f8b4ce71184852c059f148141142fa54c597519cb3b5c5dae9b498dde58",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:06:52.434709383Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test/the-observed-handoff,
    :note
-   "Measurement is consumed by the real target-local/read and unmeasured-class check, not retained on the step; no downstream recorded measurement end (second-layer item)."}
+   "Measurement is consumed by the real target-local/read and unmeasured-class check, not retained on the step; no downstream recorded measurement end (second-layer item). Values come from the content-addressed measured-tick-observe producer record."}
   {:wire
    [:r9-measured-a-version
     :flight-conditioning-step
@@ -2452,7 +2445,9 @@
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
    :test
-   futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test/the-observed-handoff}
+   futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test/the-observed-handoff,
+   :note
+   "Values come from the content-addressed measured-tick-observe producer record."}
   {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
    :status :witnessed-hermetically,
    :second-layer {:absent :no-second-layer-test},
@@ -2469,9 +2464,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-5abd279c65b19c59dc3e00cab84556f8cb2bde6931ed4b189b3b65897ab94ac4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.080322732Z"}},
+     "test-registry-cf1ea8c98ba97051ebc36df85ca03ebf6790d179d9f1ddf8910820d985aa6d54",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:26.047928320Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test/the-phase-kind-reaches-the-failure-classifier}
   {:wire [:r9-selection-law :r0-enact-step :candidate],
@@ -2486,9 +2481,9 @@
      :expected :no-decision},
     :evidence
     {:warrant-id
-     "test-registry-8082f9b59e402171db6ec12d734d77f7a58cbfa815544363fb3cff6b63031f05",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:30:33.266488332Z"}},
+     "test-registry-e18037510cf6fcdf1e69ca020851de13c223a703e1a9021a7320954ab5661bd0",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:15:46.054738559Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
   {:wire [:r9-selection-law :r7-increment :candidate],
@@ -2502,13 +2497,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3f60d7969ea8dd94f21d2717b9cb24ed20427c45014df98267a96fb095b7e27d",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:21.246963320Z"}},
+     "test-registry-ebd8d2cfa817f719f4f9c3a26a674032d24187194cf4a077021b36b67048787d",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:26.319594435Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test/the-real-reader-handoff,
    :note
-   "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed."}
+   "Real selector candidate into increment record-id. Policy-key is a separate argument and stays unchanged; a missing candidate can still count delta 1 with passing W_c, source unfixed. The values are read from the producer record `selection-out-observe`."}
   {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
    :status :witnessed-hermetically,
    :second-layer
@@ -2520,9 +2515,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-39073f41ca32d13231903218c3d3967d0cacdd100b5c921426f28023336f854c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.272494107Z"}},
+     "test-registry-b01f83520748d99a648d3f753c57de0485e4a2e60b9df03a6e49a5f2c362bb70",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:58.649550299Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-decision-per-policy-argmax-test/the-posterior-mode-reaches-the-decision}
   {:wire [:r9-selection-law :r9-test :candidate],
@@ -2584,13 +2579,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-372df758ebe062caea10cbfc5fbea63fc0784360822e919cd889c1764a2d2b79",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:32:54.055993945Z"}},
+     "test-registry-8ed13b592c63debf46668deb62ac557fb26424416ffa925c4da45b2161875030",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:25.945845360Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/the-real-reader-handoff,
    :note
-   "WIRE-23-C1 declares the executable checker site. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
+   "WIRE-23-C1 declares the executable checker site. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join. The values are read from the producer record `selection-out-observe`."}
   {:wire
    [:run-chosen-summary
     :r0-enact-step
@@ -2605,9 +2600,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-62d313169b6fafb2d10fd604693a305458a702af36d7dddbc3292ec23e31ad77",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.876664711Z"}},
+     "test-registry-473adcda82fb09481502cb9e8664848e009c50036b3e6109244fb903d5f311d8",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:59.621228029Z"}},
    :test
    futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/the-chosen-precedence-reaches-enact-fn,
    :note
@@ -2626,9 +2621,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3071b13f16084b9a010aca6f8541ff0ba1c79d2aec47949adefd111ee4fb2934",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.374224696Z"}},
+     "test-registry-23489a1ea306e96f2630ad8deebfe8358eaf5a357a8f004a8808e3dd8c0770bf",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:10:01.942002891Z"}},
    :test
    futon3c.diagramprover.wm-wire-run-record-publication-r10-observe-publication-repair-publication-test/the-run-records-publication-reaches-the-reader}
   {:wire
@@ -2645,13 +2640,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-2d3493784d6a4ea792fb1fbb8e55bf4478a69a8b21659e957fe3de32ddb2b2c4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.959489384Z"}},
+     "test-registry-2a6e6d54c9d172e7f47a12af2dfe7b079106e49066ed9b8a539c05816d125ea9",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:25.955097272Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-cursor-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:temporal-finalize
     :temporal-envelope
@@ -2666,13 +2661,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-932b7e5f759da6f93688f1a5f2c554ed9d351755b40c5fa6b34f80f9d1998236",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.781761713Z"}},
+     "test-registry-2c0f49b3272fa1f7ebc319c673efe83b8c5b0a00b0ae7c3992186c390f101985",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:25.960583914Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-posterior-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:temporal-finalize
     :temporal-envelope
@@ -2687,13 +2682,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-4e6770a28e899376c66085c6e4b462d32eab509bb4b9dc7e14b5744bd3e9f8ff",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.863094172Z"}},
+     "test-registry-e30fd419e5ed492a4d8c08e99a9e1fb5570f86e397de5b0a4d38aece3f453a07",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:13:25.522002560Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-envelope-temporal-receipt-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier-publication-paths`."}
   {:wire
    [:temporal-finalize
     :temporal-write-once
@@ -2708,13 +2703,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-3daa37a7bebaa726c648c741ece68d83d55ddb2bce18d7f5ec70e791f6e8f472",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.061876212Z"}},
+     "test-registry-473ad79c3e17ac0912a15fa18d9012fb9b378f6a60c6e14ebe3fe941334c1dc7",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:17.738104264Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-finalize-temporal-write-once-temporal-receipt-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier-publication-paths`."}
   {:wire
    [:temporal-inspect
     :r1-token-input
@@ -2729,13 +2724,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ce5a1ee3000afef0c945bbada60e30abe78e43127e06a3458c3474600b9169ca",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.762141467Z"}},
+     "test-registry-45b623269e97132c406c2378028585c7a8bb10083d69024428660d96b9e34099",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:17.813031102Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-input-temporal-previous-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:temporal-inspect
     :r1-token-temporal
@@ -2750,13 +2745,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-c40b9af5f9a500c6e926e34704e646b85dd598559e5f14ed5a769433f07280f6",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.273387267Z"}},
+     "test-registry-4e706f320df48185335506bc29194848e4541ffe095614733195579996a5ef5a",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.214954593Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-inspect-r1-token-temporal-temporal-previous-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:temporal-write-once
     :temporal-read-receipt
@@ -2772,13 +2767,13 @@
      :expected :temporal-record-digest-mismatch},
     :evidence
     {:warrant-id
-     "test-registry-94fca4c869cc8aa6f70a11ed4558f124456f06dc088a9a118696ad27205ad807",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.745923803Z"}},
+     "test-registry-2d1289511869df6db687db5ca6c6921f26209314ee907a6fbb61fa7cf82a9e62",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.135123233Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-digest-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:temporal-write-once
     :temporal-read-receipt
@@ -2794,13 +2789,13 @@
      :expected :temporal-record-unreadable},
     :evidence
     {:warrant-id
-     "test-registry-c28573cd7ec9516b9f611606ba11926746efb40e7bf61e44ef768ddcb5fd13e9",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:16:11.472108114Z"}},
+     "test-registry-527e94d68a02f9325395268151df3f531d91076991ea96a968d928d1c3644b75",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.514590561Z"}},
    :test
    futon3c.diagramprover.wm-wire-temporal-write-once-temporal-read-receipt-record-path-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire [:tick-flight-assembly :construction-assemble-one :universes],
    :status :witnessed-hermetically,
    :second-layer
@@ -2852,13 +2847,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-9fcd6aca4c882c9e8b9f5ebcc166ed737ce94259e5c12c773b906e5757076c50",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:32.758613164Z"}},
+     "test-registry-f4b3c9bd275078487deacaa6938b7b964fc220fd93ceac6ec02faf84c9fc45b5",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.115113190Z"}},
    :test
    futon3c.diagramprover.wm-wire-token-belief-stage-r1-token-initialization-initialization-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire
    [:token-belief-stage
     :token-initialization-observations
@@ -2873,13 +2868,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-977e0a2f4decf829ef7603feb3e976fd6a699c514660dd0bb5103e0c8e6701d1",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:32.969005667Z"}},
+     "test-registry-29f8f014f52c6d64d577c87dd7ede8a37e7e29d4b17236f434a24a5caf5f24da",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.915700138Z"}},
    :test
    futon3c.diagramprover.wm-wire-token-belief-stage-token-initialization-observations-initialization-test/real-courier-reaches-reader,
    :note
-   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed."}
+   "MAP-2B-TEMPORAL: real writer and reader with isolated publication; no live temporal record claimed. The values are read from the producer record `temporal-courier`."}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :witnessed-hermetically,
    :second-layer
@@ -2891,13 +2886,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6a94a1d31b0512a873a43769be40e570e88c9b86325e99ff154bea32710eb4cd",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:33.058735881Z"}},
+     "test-registry-698ff1100147c0107720c342d4c311d423bb832dd63d9a205758ff15a13b954f",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:17.224431346Z"}},
    :test
    futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value,
    :note
-   "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
+   "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict. The values are read from the producer record `fold-in-observe`."}
   {:wire [:wc-checker :r7-increment :wc-verdict],
    :status :witnessed-hermetically,
    :second-layer
@@ -2909,13 +2904,13 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-d2ff354d01fab4f84ab373605f9b754db031fa5621b376ff069048c1a0be3806",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:32.647549738Z"}},
+     "test-registry-301b9c3902601289ad40155769e1b27cd308e0a1149dce6a9b2bc5f354a8f4b0",
+     :git-head "da0d11da42e9c26a46d7d1b5fe26d0a1b11e9263",
+     :ran-at "2026-09-28T20:14:18.531770295Z"}},
    :test
    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/the-real-reader-handoff,
    :note
-   "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
+   "WIRE-23-C1 declares the executable checker site. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0. The values are read from the producer record `selection-out-observe`."}
   {:wire [:wc-checker :r7-test :wc-verdict],
    :status :witnessed-hermetically,
    :second-layer
@@ -2927,9 +2922,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-af84cf5527eb799d4f596826dd2a35107f6fbe70b5bbb63255dd737833034b77",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:32.483404165Z"}},
+     "test-registry-4766d8bfebfec4d530c4cae52582188f4ff367834f25f955d079cc1e23f611cf",
+     :git-head "8562da42bd6f2eb4fb1a771d66c410bb29d6ba0f",
+     :ran-at "2026-09-28T20:08:58.821037606Z"}},
    :test
    futon2.aif.selection-reads-fold-test/real-checker-verdict-into-increment,
    :note
