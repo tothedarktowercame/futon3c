@@ -87,13 +87,16 @@
    (when-not (try (Instant/parse t) true (catch Exception _ false))
      (throw (ex-info "Invalid obligations instant" {:reason :invalid-as-of})))
    (let [started-at (str (Instant/now))
-         history-page (evidence-pages base "promise-history" t mode :promise-history)
-         outcome-page (evidence-pages base "promise-outcome" t mode :promise-outcomes)
+         ;; The declaration below names these same values, so it describes the
+         ;; query that ran rather than a second copy of it.
+         history-tag "promise-history"
+         outcome-tag "promise-outcome"
+         outcome-types [:promise/fulfilled :promise/lapsed :promise/fulfilment-check]
+         history-page (evidence-pages base history-tag t mode :promise-history)
+         outcome-page (evidence-pages base outcome-tag t mode :promise-outcomes)
          history (:rows history-page)
          outcomes (->> (:rows outcome-page)
-                       (filter #(contains? #{:promise/fulfilled :promise/lapsed
-                                             :promise/fulfilment-check}
-                                           (:evidence/type %))) vec)
+                       (filter #(contains? (set outcome-types) (:evidence/type %))) vec)
          endpoint (str "agent:" agent-id)
          agreement-page (hyperedge-page base :agreement/record endpoint t mode :agreements)
          agreement-edges (:rows agreement-page)
@@ -131,13 +134,11 @@
          {:question {:agent agent-id :at-or-cutoff t
                      :kinds #{:promise :agreement} :mode mode}
           :sources
-          [{:kind :evidence :filter {:tags ["promise-history"]}
+          [{:kind :evidence :filter {:tags [history-tag]}
             :rows-fetched (count history) :rows-used (count history)
             :pages (:pages history-page) :page-limit page-limit :complete? true}
            {:kind :evidence
-            :filter {:tags ["promise-outcome"]
-                     :types [:promise/fulfilled :promise/lapsed
-                             :promise/fulfilment-check]}
+            :filter {:tags [outcome-tag] :types outcome-types}
             :rows-fetched (count (:rows outcome-page)) :rows-used (count outcomes)
             :pages (:pages outcome-page) :page-limit page-limit :complete? true}
            {:kind :hyperedge
