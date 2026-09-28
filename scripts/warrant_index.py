@@ -252,7 +252,7 @@ def reach_record(db, namespaces, reach_dir, root=None):
         run = latest.get(namespace)
         if not run:
             answers.append({'namespace': namespace,
-                            'skipped': 'files differ from the run'})
+                            'skipped': 'no passing run recorded'})
             continue
         try:
             text_sha = hashlib.sha256((run['payload-text'] or '').encode()).hexdigest()
@@ -262,9 +262,9 @@ def reach_record(db, namespaces, reach_dir, root=None):
             files = recorded_files(run, payload, root)
             if payload.get('warrant?') is not True or not files:
                 raise ValueError('not a passing warrant')
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as error:
             answers.append({'namespace': namespace,
-                            'skipped': 'files differ from the run'})
+                            'skipped': 'entry cannot be read: ' + str(error)})
             continue
         file_current = all(Path(path).is_file()
                            and hashlib.sha256(Path(path).read_bytes()).hexdigest() == expected
