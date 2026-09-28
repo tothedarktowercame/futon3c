@@ -20,7 +20,10 @@
             [futon3c.agency.registry :as registry]))
 (use-fixtures :once hermetic/with-hermetic-stores)
 (def base "holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/")
-(def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-12"})
+(def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"})
+(def declared-roster
+  (into {} (map (fn [seat] [seat {:status "idle" :invoke-ready? true}])
+                (distinct (vals casting)))))
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "paired-history-" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- delete! [root] (doseq [f (reverse (file-seq root))] (io/delete-file f true)))
 (defn- read-edn [p] (edn/read-string (slurp p)))
@@ -85,13 +88,14 @@
 (def fixture-core
 (fn [opts]
               (let [execution (close-fixture-cohort! (:execution-cohort opts))
-                    action {:type :advance-mission :target "M-u88-contextual-preferences"}
-                    judgment {:decision {:action {:type :no-op}}
-                              :ranked-actions [{:rank 1 :action action}]
-                              :admissible-actions [{:rank 1 :action action}]}
-                    selected (full-runner/resolve-pinned-selection
-                              opts judgment (select-keys opts (keys casting)))
-                    identity (:identity selected)]
+                    requested (:run4/requested-pin opts)
+                    requested-identity (:identity requested)
+                    identity (-> requested-identity
+                                 (assoc :sha256 (:pin-sha256 requested-identity))
+                                 (dissoc :pin-sha256))
+                    attestation ((:run4-trusted-boundary-fn opts)
+                                 {:pin-digest (:pin-sha256 requested-identity)
+                                  :operator-selection (:operator-selection requested)})]
                 {:attempt-id "attempt-001"
                  :execution-identity (select-keys execution [:kind :id])
                  :execution-provenance (dissoc execution :outcome)
@@ -100,7 +104,7 @@
                  {:selection {:judgment {:outcome :ok}
                               :ground {:kind :wm-judgement :run4/task-pin identity
                                        :run4/operator-selection
-                                       (:provenance selected)}}
+                                       {:authority-attestation attestation}}}
                   :construction {:judgment {:run4/task-pin identity}
                                  :ground {:kind :decision-pinned-construction
                                           :run4/task-pin identity}}
@@ -135,6 +139,19 @@
             materialize deployment/materialize
             captured (atom nil)]
         (is (= :awaiting-validation (get-in bundle [:classification :repair-status])))
+        (let [qualified
+              (cohort/closed-execution-qualified
+               {:preregistration (get-in hist [:roots :cohort-preregistration])
+                :data-root (get-in hist [:roots :cohort-data-root])
+                :cohort-id (get-in bundle [:projection :cohort :cohort-id])
+                :sha256 (get-in bundle [:projection :cohort :sha256])}
+               (get-in bundle [:projection :runner-attempt/id]))]
+          (is (= {:kind :pre-enriched-fold
+                  :source-revision "72d9beba7252ae362635d77fd81d213e6e22378d"
+                  :boundary "9dd4fd8dc1f20a842b65b975762df60f4296e83d"}
+                 (:recorded-contract qualified)))
+          (is (= {:absent :recorded-before-fold-contract}
+                 (:fold-output qualified))))
         (with-redefs [u/template-path (str base "server-config.disabled.edn")
                       deployment/materialize
                       (fn [text deps]
@@ -156,7 +173,8 @@
              (registry/reset-registry!)
              (registry/register-agent! {:agent-id {:id/value "war-machine" :id/type :apparatus}
                                        :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}})
-             (binding [full-runner/*wm-status-reporting?* false]
+             (binding [full-runner/*wm-status-reporting?* false
+                      runner/*roster-fn* (constantly declared-roster)]
                (with-redefs-fn {#'full-runner/run-opportunity-core! fixture-core}
                  (fn []
                    (let [req {:run4-series-ref (get-in cfg [:run4 :series :manifest-ref])}
@@ -201,15 +219,24 @@
                        (materialize text (merge dependencies historical-deps)))
                      full-runner/run-opportunity!
                      (fn [opts]
-                       (actual (merge opts (ft/isolated-runner-opts)
-                                      {:cohort? true
-                                       :roster-fn (fn [_] {:zai-2 {:status "idle" :invoke-ready? true}
-                                                           :codex-12 {:status "idle" :invoke-ready? true}
-                                                           :codex-17 {:status "idle" :invoke-ready? true}})
-                                       :repair-open-fn
-                                       #(repair/open-obligations
-                                         (get-in historical-deps
-                                                 [:historical-action :repair-root]))})))]
+                       (let [repair-root (get-in historical-deps [:historical-action :repair-root])
+                             target (first (repair/open-obligations repair-root))
+                             action {:type :revalidate-historical-repair
+                                     :target (:repair/id target)
+                                     :repair-obligation target}]
+                         (actual (merge opts (ft/isolated-runner-opts) casting
+                                        {:cohort? true
+                                         :roster-fn (constantly declared-roster)
+                                         :judge-fn
+                                         (constantly
+                                          {:judgement {:decision
+                                                       {:action action
+                                                        :controller-score 1.0
+                                                        :selection-law
+                                                        {:applied :cascade-selection-posterior
+                                                         :posterior [[action 1.0]]}}}})
+                                         :repair-open-fn
+                                         #(repair/open-obligations repair-root)}))))]
          (with-redefs-fn
           {(ns-resolve 'futon3c.wm.run4-u88-roundtrip-test 'delete-tree!)
            (fn [_] nil)}
@@ -222,7 +249,8 @@
             (registry/register-agent! {:agent-id {:id/value "war-machine" :id/type :apparatus}
                                        :type :wm :invoke-fn nil :capabilities []
                                        :metadata {:apparatus? true}})
-            (binding [full-runner/*wm-status-reporting?* false]
+            (binding [full-runner/*wm-status-reporting?* false
+                      runner/*roster-fn* (constantly declared-roster)]
               (let [req {:run4-series-ref (get-in cfg [:run4 :series :manifest-ref])}
                     started-result (service/step! cfg u/auth req)
                     _ (is (= :completed
@@ -281,7 +309,8 @@
               (registry/register-agent! {:agent-id {:id/value "war-machine" :id/type :apparatus}
                                          :type :wm :invoke-fn nil :capabilities []
                                          :metadata {:apparatus? true}})
-              (binding [full-runner/*wm-status-reporting?* false]
+              (binding [full-runner/*wm-status-reporting?* false
+                        runner/*roster-fn* (constantly declared-roster)]
                 (with-redefs [full-runner/run-opportunity-core! fixture-core]
                   (let [req {:run4-series-ref (get-in cfg [:run4 :series :manifest-ref])}
                         start (service/step! cfg u/auth req)]
