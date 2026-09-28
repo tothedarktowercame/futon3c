@@ -9536,6 +9536,121 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- disclosure-withdrawal-routing-id [withdrawal-id]
+  (str "invoke-disclosure-withdrawal-"
+       (UUID/nameUUIDFromBytes (.getBytes (str withdrawal-id)
+                                           StandardCharsets/UTF_8))))
+
+(defn route-disclosure-withdrawal!
+  "Create one durable bell job for WITHDRAWAL. A replay sees the deterministic
+   job id in the hot ledger or archive and never submits another turn."
+  [config disclosure withdrawal]
+  (let [job-id (disclosure-withdrawal-routing-id (:id withdrawal))
+        existing (or (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+                     (read-commission-archive job-id))]
+    (if existing
+      {:job-id job-id :existing? true}
+      (let [prompt (str "Disclosure " (:id disclosure) " was withdrawn by its "
+                        "orchestrator. Withdrawal: " (:id withdrawal)
+                        ". Choice: " (:chosen disclosure)
+                        ". Reason: " (:reason withdrawal))
+            author (:author disclosure)
+            caller (:author withdrawal)
+            evidence-store (evidence-store-for-config config)
+            created (create-invoke-job!
+                     {:evidence-store evidence-store :requested-job-id job-id
+                      :agent-id author :prompt prompt :caller caller :surface "bell"
+                      :bellback-of (:source-job disclosure) :mode :brief})
+            run-job (fn [] (run-invoke-job! {:job-id created :agent-id author
+                                             :prompt prompt :caller caller
+                                             :surface "bell"
+                                             :evidence-store evidence-store}))]
+        (try
+          (.submit invoke-executor
+                   ^Runnable
+                   (fn [] (record-bell-completion-delivery!
+                           created caller (run-job))))
+          {:job-id created :existing? false}
+          (catch Throwable e
+            (finalize-invoke-job! created "failed" "invoke-submit-failed"
+                                  (.getMessage e) {:ok false} nil)
+            (throw e)))))))
+
+(defn- withdrawal-record-from-edge [edge]
+  (try (pattern-card-record/hyperedge->record edge)
+       (catch clojure.lang.ExceptionInfo _ nil)))
+
+(defn handle-disclosure-withdraw [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
+              target (some-> (or (:target payload) (get payload "target")) str)
+              reason (or (:reason payload) (get payload "reason"))
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              target-edge (disclosure-cli/read-act! base target)
+              _ (when-not (= :disclosure/choice (:hx/type target-edge))
+                  (throw (ex-info "Disclosure target not found"
+                                  {:reason :unknown-disclosure})))
+              disclosure (disclosure-record/hyperedge->record target-edge)
+              edges (->> (coordination-ledger/recent-mesh-edges 1000)
+                         (filter #(and (= (:source-job disclosure) (:edge-id %))
+                                       (= :invoke (:kind %))))
+                         (mapv disclosure-edge))
+              _ (when (empty? edges)
+                  (throw (ex-info "No invoke edge" {:reason :orchestrator-unknown})))
+              _ (when (< 1 (count edges))
+                  (throw (ex-info "Ambiguous invoke edge"
+                                  {:reason :orchestrator-ambiguous})))
+              edge (first edges)
+              record {:kind :act/withdrawal :author caller :target target
+                      :status :effective :basis {:kind :dispatch-edge}
+                      :reason reason :at (str (Instant/now))
+                      :act/stamp (act-stamp/stamp
+                                  caller caller
+                                  {:dispatch-edge (:evidence/id edge)} :declared)
+                      :act/harness (act-harness/plain
+                                    "route:futon3c.disclosure/withdraw")}
+              _ (disclosure-record/validate-withdrawal-against-source!
+                 (assoc record :id "act:pending-mint") disclosure edges)
+              prior (keep withdrawal-record-from-edge
+                          (disclosure-cli/withdrawals-for! base target))
+              same (some #(when (and (= caller (:author %))
+                                     (= reason (:reason %))) %) prior)
+              _ (when (and (seq prior) (nil? same))
+                  (throw (ex-info "Disclosure was already withdrawn"
+                                  {:reason :already-withdrawn})))
+              result (if same
+                       {:receipt {:ok true :hx/id (:id same) :existing? true
+                                  :verified? true}
+                        :record same}
+                       (disclosure-cli/write-withdrawal!
+                        base record (str "disclosure-withdrawal:" target ":" caller ":"
+                                         (disclosure-record/sha256-text reason))))
+              routing (try
+                        (route-disclosure-withdrawal!
+                         config disclosure (:record result))
+                        (catch Throwable e {:error (.getMessage e)}))]
+          (json-response 200
+                         (merge result {:ok true
+                                        :routed (boolean (:job-id routing))
+                                        :routing-job-id (:job-id routing)}
+                                (when-let [error (:error routing)]
+                                  {:routing-error error}))))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (or (:reason (ex-data e)) :invalid-withdrawal)
+                status (case reason
+                         :unknown-disclosure 404
+                         :not-the-orchestrator 403
+                         (:orchestrator-unknown :orchestrator-ambiguous
+                          :already-withdrawn) 409
+                         400)]
+            (json-response status {:ok false :reason reason})))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- promise-creation [inputs promise-id]
   (some (fn [row]
           (when (and (contains? obligations/creation-types (:evidence/type row))
@@ -10091,6 +10206,9 @@
 
       (and (= :post method) (= "/api/alpha/disclosure" uri))
       (handle-disclosure request)
+
+      (and (= :post method) (= "/api/alpha/disclosure/withdraw" uri))
+      (handle-disclosure-withdraw request config)
 
       (and (= :post method) (= "/api/alpha/promise/release" uri))
       (handle-promise-release request)

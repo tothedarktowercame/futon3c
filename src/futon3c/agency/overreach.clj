@@ -18,13 +18,15 @@
   "Adapt a plain stamped act RECORD. TARGET-SIGNER is required when the target
    is another act; selections default it to their exact-seat agent."
   ([record] (record->act record nil))
-  ([record target-signer]
+  ([record target-signer] (record->act record target-signer nil))
+  ([record target-signer target-kind]
    {:act/id (:id record)
     :act/kind (:kind record)
     :act/rule-id (:rule-id record)
     :act/at (:at record)
     :act/effect-status (:status record)
     :act/dispatch-edge (get-in record [:act/stamp :authority :dispatch-edge])
+    :act/target-kind target-kind
     :act/target-signer (or target-signer
                            (when (= :pattern-card/selection (:kind record))
                              (:agent record)))
@@ -115,7 +117,9 @@
       (if (and (map? authority) (contains? authority :interpretation))
         (overreach act :interpretation-as-grant {:authority authority})
         (if (contains? authority :dispatch-edge)
-          (if (and (= :disclosure/choice (:act/kind act))
+          (if (and (or (= :disclosure/choice (:act/kind act))
+                       (and (= :act/withdrawal (:act/kind act))
+                            (= :disclosure/choice (:act/target-kind act))))
                    (= (:dispatch-edge authority) (:act/dispatch-edge act)))
             (try
               (act-stamp/validate! stamp #{:dispatch-edge})

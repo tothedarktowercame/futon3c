@@ -8,7 +8,8 @@
    second report or packet."
   (:require [clojure.string :as str]
             [futon3c.agency.act-harness :as act-harness]
-            [futon3c.agency.act-stamp :as act-stamp])
+            [futon3c.agency.act-stamp :as act-stamp]
+            [futon3c.agency.pattern-card-record :as withdrawal-record])
   (:import [java.nio.charset StandardCharsets]
            [java.security MessageDigest]
            [java.time Instant]))
@@ -137,6 +138,31 @@
                    (get-in disclosure [:act/stamp :authority]))
         (refuse! :authority-not-dispatch-edge :act/stamp))
       disclosure)))
+
+(defn validate-withdrawal-against-source!
+  "Validate a dispatch-edge withdrawal of DISCLOSURE against its unique invoke
+   EDGE. Shape validation alone grants nothing; this join proves that the
+   signer is the stored orchestrator and that the target belongs to the job."
+  [withdrawal disclosure edge]
+  (let [withdrawal (withdrawal-record/validate-withdrawal withdrawal)
+        disclosure (validate! disclosure)
+        edges (cond (nil? edge) [] (map? edge) [edge]
+                    (sequential? edge) edge :else [])
+        matches (filterv #(invoke-edge-for? (:source-job disclosure) %) edges)]
+    (when (empty? matches) (refuse! :orchestrator-unknown :source-job))
+    (when (< 1 (count matches)) (refuse! :orchestrator-ambiguous :source-job))
+    (let [edge (first matches)
+          signer (get-in withdrawal [:act/stamp :signer])]
+      (when-not (= (:target withdrawal) (:id disclosure))
+        (refuse! :unknown-disclosure :target))
+      (when-not (= signer (edge-value edge :edge/from :from))
+        (refuse! :not-the-orchestrator :author))
+      (when-not (= (:author withdrawal) signer)
+        (refuse! :not-the-orchestrator :author))
+      (when-not (= {:dispatch-edge (edge-id edge)}
+                   (get-in withdrawal [:act/stamp :authority]))
+        (refuse! :authority-not-dispatch-edge :act/stamp))
+      withdrawal)))
 
 (defn- affected-endpoint [{:keys [kind id]}]
   (str (name kind) ":" id))

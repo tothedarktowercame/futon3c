@@ -156,9 +156,18 @@
         disclosure {:act/id "act:disclosure" :act/kind :disclosure/choice
                     :act/at in-time :act/dispatch-edge "edge-evidence-1"
                     :act/stamp dispatch-stamp}
+        withdrawal (assoc disclosure :act/id "act:withdrawal"
+                          :act/kind :act/withdrawal
+                          :act/target-kind :disclosure/choice)
+        unrelated-withdrawal (assoc withdrawal :act/target-kind :offer/record)
         unrelated (assoc disclosure :act/id "act:deploy" :act/kind :deploy)]
     (is (= :authorised
            (:classification (overreach/classify-act disclosure []))))
+    (is (= :authorised
+           (:classification (overreach/classify-act withdrawal []))))
     (is (= :authority-kind-not-allowed
            (get-in (overreach/classify-act unrelated [])
+                   [:finding :finding/reason])))
+    (is (= :authority-kind-not-allowed
+           (get-in (overreach/classify-act unrelated-withdrawal [])
                    [:finding :finding/reason])))))

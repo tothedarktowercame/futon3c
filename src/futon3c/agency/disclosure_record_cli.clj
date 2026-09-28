@@ -2,6 +2,7 @@
   "Minted storage seam and HTTP CLI for disclosed choices."
   (:require [clojure.string :as str]
             [futon3c.agency.disclosure-record :as disclosure]
+            [futon3c.agency.pattern-card-record :as withdrawal-record]
             [futon3c.agency.rule-record :as store])
   (:import [java.net URLEncoder]
            [java.time Instant]))
@@ -79,6 +80,45 @@
         (refuse! :readback-mismatch :receipt))
       {:receipt (assoc receipt :verified? true :system-as-of system-as-of)
        :record stored})))
+
+(defn read-act! [base id]
+  (try
+    (store/request! base "GET"
+                    (str "/api/alpha/hyperedge/"
+                         (URLEncoder/encode (str id) "UTF-8")) nil)
+    (catch clojure.lang.ExceptionInfo e
+      (if (= 404 (:status (ex-data e))) nil (throw e)))))
+
+(defn withdrawals-for! [base target]
+  (:hyperedges
+   (store/request! base "GET"
+                   (str "/api/alpha/hyperedges?type=act%2Fwithdrawal&end="
+                        (URLEncoder/encode target "UTF-8")
+                        "&limit=1000&include-total=false") nil)))
+
+(defn withdrawal-payload [record idempotency-key]
+  (when-not (and (string? idempotency-key) (not (str/blank? idempotency-key)))
+    (refuse! :invalid-idempotency-key :idempotency-key))
+  (when (contains? record :id)
+    (refuse! :caller-assigned-storage-field :id))
+  (-> (withdrawal-record/record->hyperedge (assoc record :id pending-id))
+      (dissoc :hx/id)
+      (assoc :hx/mint-id true :hx/idempotency-key idempotency-key)))
+
+(defn write-withdrawal! [base record idempotency-key]
+  (let [write-payload (withdrawal-payload record idempotency-key)
+        receipt (store/request! base "POST" "/api/alpha/hyperedge" write-payload)
+        id (:hx/id receipt)]
+    (when-not (and (:ok receipt) (string? id) (str/starts-with? id "act:"))
+      (refuse! :missing-minted-receipt :receipt))
+    (let [stored-edge (some #(when (= id (:hx/id %)) %)
+                            (withdrawals-for! base (:target record)))
+          stored (some-> stored-edge withdrawal-record/hyperedge->record)]
+      (when-not stored (refuse! :readback-missing :receipt))
+      (when-not (= (dissoc write-payload :hx/mint-id :hx/idempotency-key)
+                   (-> (withdrawal-record/record->hyperedge stored) (dissoc :hx/id)))
+        (refuse! :readback-mismatch :receipt))
+      {:receipt (assoc receipt :verified? true) :record stored})))
 
 (defn- usage []
   (str "Usage: disclosure-record-cli --source-job JOB --unspecified TEXT "

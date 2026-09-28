@@ -17,7 +17,9 @@
 (defn- act-id? [value]
   (and (text? value) (str/starts-with? value "act:")))
 
-(defn- validate-common [record expected-kind]
+(defn- validate-common
+  ([record expected-kind] (validate-common record expected-kind #{:grant :operator}))
+  ([record expected-kind allowed-authority-kinds]
   (when-not (map? record) (refuse! :invalid-record :record))
   (when-not (= expected-kind (:kind record))
     (refuse! :wrong-record-kind :kind))
@@ -32,8 +34,8 @@
   ;; Historical records predate P4's act stamp and remain readable. New write
   ;; paths require the stamp before minting.
   (when (contains? record :act/stamp)
-    (act-stamp/validate! (:act/stamp record)))
-  record)
+    (act-stamp/validate! (:act/stamp record) allowed-authority-kinds))
+  record))
 
 (defn validate-selection
   "Return a valid plain selection record or throw a typed ex-info refusal."
@@ -51,7 +53,7 @@
   ([record target-record]
    (when (= :interpretation (:kind record))
      (refuse! :interpretation-not-effect :kind))
-   (validate-common record withdrawal-type)
+   (validate-common record withdrawal-type #{:grant :operator :dispatch-edge})
    (when (and (:reverses record) (not (act-id? (:target record))))
      (refuse! :reversal-missing-target :target))
    (when-not (act-id? (:target record)) (refuse! :missing-target :target))
@@ -60,13 +62,18 @@
      (refuse! :invalid-reverses :reverses))
    (when-not (contains? #{:effective :provisional} (:status record))
      (refuse! :invalid-status :status))
-   (when-not (contains? #{:self :grant :provisional-interpretation}
+   (when-not (contains? #{:self :grant :provisional-interpretation :dispatch-edge}
                         (get-in record [:basis :kind]))
      (refuse! :invalid-basis :basis))
    (when (and target-record
               (= :self (get-in record [:basis :kind]))
               (not= (:author record) (:author target-record)))
      (refuse! :not-author :author))
+   (when (and (contains? record :reason)
+              (not (and (string? (:reason record))
+                        (not (str/blank? (:reason record)))
+                        (<= (count (:reason record)) 4096))))
+     (refuse! :invalid-reason :reason))
    record))
 
 (defn record->hyperedge
