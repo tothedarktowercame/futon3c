@@ -837,42 +837,75 @@ the current \"Cooked for\" line."
   (and (stringp value)
        (string-match-p "\\`\\(?:\\$[^[:space:]>]+\\)?> \\'" value)))
 
-(defun agent-chat--fetch-prompt-line ()
-  "Fetch the exact-seat prompt-line, or nil on any unavailable condition."
+(defvar-local agent-chat--prefetched-prompt-line nil
+  "Prompt fetched in the background at turn start, applied at turn end.")
+
+(defun agent-chat--prompt-line-url ()
+  "Return the exact-seat prompt-line URL, or nil when it must not be fetched."
   (when (and agent-chat-prompt-line-enabled
              (stringp agent-chat--agent-id)
              (not (string-empty-p agent-chat--agent-id))
              (stringp agent-chat--session-id)
              (not (string-empty-p agent-chat--session-id))
              (not (equal agent-chat--session-id "pending")))
-    (let* ((base (string-remove-suffix "/" agent-chat-agency-base-url))
-           (url-request-method "GET")
-           (url (format "%s/api/alpha/prompt-line?agent=%s&session=%s"
-                        base
-                        (url-hexify-string agent-chat--agent-id)
-                        (url-hexify-string agent-chat--session-id)))
-           (timeout (max 0.01 (min 0.3 (or agent-chat-prompt-line-timeout 0.3))))
-           response-buffer)
+    (format "%s/api/alpha/prompt-line?agent=%s&session=%s"
+            (string-remove-suffix "/" agent-chat-agency-base-url)
+            (url-hexify-string agent-chat--agent-id)
+            (url-hexify-string agent-chat--session-id))))
+
+(defun agent-chat--parse-prompt-line-response ()
+  "Return the valid prompt in the current HTTP response buffer, or nil."
+  (goto-char (point-min))
+  (when (and (boundp 'url-http-response-status)
+             (eql url-http-response-status 200)
+             (re-search-forward "\r?\n\r?\n" nil t))
+    ;; The body arrives as raw UTF-8 octets; decode before parsing
+    ;; or a pattern id such as 象/诺必践 renders as mojibake.
+    (let* ((json-object-type 'alist)
+           (payload (json-read-from-string
+                     (decode-coding-string
+                      (buffer-substring-no-properties (point) (point-max))
+                      'utf-8)))
+           (prompt (alist-get 'prompt payload)))
+      (when (agent-chat--valid-prompt-line-p prompt)
+        prompt))))
+
+(defun agent-chat--fetch-prompt-line ()
+  "Fetch the exact-seat prompt-line, or nil on any unavailable condition."
+  (when-let* ((url (agent-chat--prompt-line-url)))
+    (let ((url-request-method "GET")
+          (timeout (max 0.01 (min 0.3 (or agent-chat-prompt-line-timeout 0.3))))
+          response-buffer)
       (unwind-protect
           (when (setq response-buffer
                       (url-retrieve-synchronously url t t timeout))
             (with-current-buffer response-buffer
-              (goto-char (point-min))
-              (when (and (boundp 'url-http-response-status)
-                         (= url-http-response-status 200)
-                         (re-search-forward "\r?\n\r?\n" nil t))
-                ;; The body arrives as raw UTF-8 octets; decode before parsing
-                ;; or a pattern id such as 象/诺必践 renders as mojibake.
-                (let* ((json-object-type 'alist)
-                       (payload (json-read-from-string
-                                 (decode-coding-string
-                                  (buffer-substring-no-properties (point) (point-max))
-                                  'utf-8)))
-                       (prompt (alist-get 'prompt payload)))
-                  (when (agent-chat--valid-prompt-line-p prompt)
-                    prompt)))))
+              (agent-chat--parse-prompt-line-response)))
         (when (buffer-live-p response-buffer)
           (kill-buffer response-buffer))))))
+
+(defun agent-chat--prefetch-prompt-line! ()
+  "Fetch the prompt line in the background; turn end applies it without waiting.
+The server renders the previous turn's retrieval, which is already known when a
+turn starts, so fetching then lets the prompt land with the turn-end flair."
+  (setq agent-chat--prefetched-prompt-line nil)
+  (when-let* ((url (agent-chat--prompt-line-url)))
+    (let ((chat-buffer (current-buffer))
+          (url-request-method "GET"))
+      (condition-case nil
+          (url-retrieve
+           url
+           (lambda (status)
+             (let ((prompt (and (not (plist-get status :error))
+                                (condition-case nil
+                                    (agent-chat--parse-prompt-line-response)
+                                  (error nil)))))
+               (kill-buffer (current-buffer))
+               (when (and prompt (buffer-live-p chat-buffer))
+                 (with-current-buffer chat-buffer
+                   (setq agent-chat--prefetched-prompt-line prompt)))))
+           nil t t)
+        (error nil)))))
 
 (defun agent-chat--prompt-line ()
   "Return the fetched prompt, failing soft to the historical plain prompt."
@@ -921,9 +954,12 @@ text-face overlays were removed, painting everything prompt-face orange
        rear-nonsticky (face read-only)))))
 
 (defun agent-chat--refresh-prompt-line! ()
-  "Redraw the live prompt with the current prompt-line render, keeping input.
+  "Redraw the live prompt with the prefetched prompt line, keeping input.
 The prompt is drawn once when the buffer opens and messages insert above it,
-so without this the prefix would never change.  The new prompt is inserted
+so without this the prefix would never change.  No network call here: the value
+was fetched at turn start, so the prompt changes in the same redisplay as the
+turn-end flair (Joe, 2026-09-28).  If the prefetch has not arrived, the prompt
+is left as it is.  The new prompt is inserted
 before the old one and the old one then deleted, so the input marker, point and
 window points all end up after the new prompt with typed input untouched."
   (when (and (markerp agent-chat--prompt-marker)
@@ -934,8 +970,10 @@ window points all end up after the new prompt with typed input untouched."
                  (save-excursion
                    (goto-char start)
                    (eql (agent-chat--prompt-end-at-point) end)))
-        (let ((new (agent-chat--prompt-line)))
-          (unless (equal new (buffer-substring-no-properties start end))
+        (let ((new agent-chat--prefetched-prompt-line))
+          (setq agent-chat--prefetched-prompt-line nil)
+          (unless (or (null new)
+                      (equal new (buffer-substring-no-properties start end)))
             (let ((inhibit-read-only t)
                   (face (get-text-property start 'face)))
               (save-excursion
@@ -2652,6 +2690,7 @@ operator input arriving while they run is queued for the next turn."
                   (or agent-chat--agent-id agent-name "agent")
                   agent-chat--turn-counter))
     (agent-chat-start-turn-commit-window!)
+    (agent-chat--prefetch-prompt-line!)
     (setq agent-chat--turn-start-time (float-time))
     (setq agent-chat--pending-turn-origin origin)
     (redisplay)

@@ -823,31 +823,60 @@ counted; a fresh one is kept for inspection."
 
 (ert-deftest agent-chat-turn-end-redraws-prompt-prefix-keeping-input ()
   (with-temp-buffer
-    (let ((prompt "> "))
-      (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
-                 (lambda () prompt)))
-        (agent-chat-test--init-buffer)
-        (insert "abc")
-        (setq prompt "$~x/y> ")
-        (agent-chat--insert-turn-end-flair 3)
-        (goto-char (point-max))
-        (should (equal "$~x/y> abc"
-                       (buffer-substring-no-properties
-                        (line-beginning-position) (point-max))))
-        (should (equal "abc" (buffer-substring-no-properties
-                              agent-chat--input-start (point-max))))
-        (should (= (point) (point-max)))
-        (let ((start (marker-position agent-chat--prompt-marker)))
-          (should (equal "$~x/y> " (buffer-substring-no-properties
-                                    start agent-chat--input-start)))
-          (dotimes (i 7) (should (get-text-property (+ start i) 'read-only))))
-        (should-not (get-text-property agent-chat--input-start 'read-only))
-        ;; A later turn with no pattern returns to the plain prompt.
-        (setq prompt "> ")
-        (agent-chat--insert-turn-end-flair 4)
-        (goto-char (point-max))
-        (should (equal "> abc" (buffer-substring-no-properties
-                                (line-beginning-position) (point-max))))
-        (should (equal "abc" (buffer-substring-no-properties
-                              agent-chat--input-start (point-max))))
-        (should (= 1 (how-many "^Cooked for 4s" (point-min) (point-max))))))))
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "> ")))
+      (agent-chat-test--init-buffer))
+    (insert "abc")
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () (error "turn end must not fetch")))
+              ((symbol-function 'url-retrieve-synchronously)
+               (lambda (&rest _) (error "turn end must not fetch"))))
+      (setq agent-chat--prefetched-prompt-line "$~x/y> ")
+      (agent-chat--insert-turn-end-flair 3)
+      (goto-char (point-max))
+      (should (equal "$~x/y> abc"
+                     (buffer-substring-no-properties
+                      (line-beginning-position) (point-max))))
+      (should (equal "abc" (buffer-substring-no-properties
+                            agent-chat--input-start (point-max))))
+      (should (null agent-chat--prefetched-prompt-line))
+      (let ((start (marker-position agent-chat--prompt-marker)))
+        (should (equal "$~x/y> " (buffer-substring-no-properties
+                                  start agent-chat--input-start)))
+        (dotimes (i 7) (should (get-text-property (+ start i) 'read-only))))
+      (should-not (get-text-property agent-chat--input-start 'read-only))
+      ;; No prefetched value (not arrived, or failed): the prompt stays as is.
+      (agent-chat--insert-turn-end-flair 4)
+      (goto-char (point-max))
+      (should (equal "$~x/y> abc" (buffer-substring-no-properties
+                                   (line-beginning-position) (point-max))))
+      ;; A later turn with no pattern returns to the plain prompt.
+      (setq agent-chat--prefetched-prompt-line "> ")
+      (agent-chat--insert-turn-end-flair 5)
+      (goto-char (point-max))
+      (should (equal "> abc" (buffer-substring-no-properties
+                              (line-beginning-position) (point-max))))
+      (should (equal "abc" (buffer-substring-no-properties
+                            agent-chat--input-start (point-max))))
+      (should (= 1 (how-many "^Cooked for 5s" (point-min) (point-max)))))))
+
+(ert-deftest agent-chat-prefetch-stores-prompt-without-blocking ()
+  (with-temp-buffer
+    (setq agent-chat--agent-id "claude-17"
+          agent-chat--session-id "s1")
+    (let (callback)
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url cb &rest _) (setq callback cb) nil)))
+        (agent-chat--prefetch-prompt-line!))
+      ;; Nothing is stored until the response arrives.
+      (should (functionp callback))
+      (should (null agent-chat--prefetched-prompt-line))
+      (let ((chat (current-buffer)))
+        (with-current-buffer (generate-new-buffer " *p7a1c-prefetch*")
+          (set-buffer-multibyte nil)
+          (setq-local url-http-response-status 200)
+          (insert "HTTP/1.1 200 OK\r\n\r\n"
+                  (encode-coding-string "{\"prompt\":\"$~象/诺必践> \"}" 'utf-8))
+          (funcall callback nil))
+        (should (equal "$~象/诺必践> "
+                       (buffer-local-value 'agent-chat--prefetched-prompt-line chat)))))))
