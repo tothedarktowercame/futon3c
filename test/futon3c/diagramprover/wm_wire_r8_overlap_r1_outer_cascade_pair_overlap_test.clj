@@ -1,40 +1,56 @@
 (ns futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-outer-record-products-15a :as products]
-            [futon3c.diagramprover.wm-wire-outer-inputs-support :as support]))
-(defn check [] (support/observe :pair-overlap :none))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
+
+(def reader-field :pair-overlap)
+(def producer (delay (producer-record/record "outer-inputs-observe")))
+(defn- wire-fields [] (get-in @producer [:fields :wires reader-field]))
+(defn check []
+  (let [fields (wire-fields)]
+    {:writer (:writer fields) :reader (:reader fields)}))
 (def wire {:wire [:r8-overlap :r1-outer-cascade :pair-overlap]
-           :kind :witnessed-hermetically :test `the-produced-input-is-received :check check
-           :second-layer {:test `recorded-input-does-not-change-mixed-selection
+           :kind :witnessed-hermetically
+           :test 'futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/the-produced-input-is-received
+           :check check
+           :second-layer {:test 'futon3c.diagramprover.wm-wire-r8-overlap-r1-outer-cascade-pair-overlap-test/recorded-input-does-not-change-mixed-selection
                           :kind :record :product [:target-selection :inputs :pair-overlap]
                           :intervention :before-reader}
-           :live-records-read support/live-records-read
-           :note "Real writer through outer-cascade/select's :target-selection :inputs; recording only, :law-uses [:eligible :delta-g]. Clock uses serialized durable props with HTTP isolated, not a production read-back claim."})
+           :live-records-read []
+           :note "Writer and reader values and intervention relations come from the content-addressed outer-inputs-observe producer record."})
+
 (deftest the-produced-input-is-received
-  (let [o (check)]
-    (is (w/received? o) (pr-str o))
-    (is (:unchanged-law? o))
-    ;; futon2 5217cb619 (HG2-Ib): the selection law reads :eligible and the
-    ;; per-entry :delta-g; this input is still recorded only.
-    (is (= [:eligible :delta-g] (get-in o [:record :law-uses])))))
+  (let [fields (wire-fields)
+        value (check)]
+    (is (some? (:writer value)) "writer")
+    (is (not (w/typed-absence? (:writer value))) "writer-typed-absence")
+    (is (w/received? value) (str "writer-reader " (pr-str value)))
+    (is (true? (:unchanged-law? fields)) "unchanged-law?")
+    (is (= [:eligible :delta-g] (:law-uses fields)) "law-uses")))
+
 (deftest typed-absence-at-the-reader-door-is-not-received
-  (let [o (support/observe :pair-overlap :absent)]
-    (is (not (w/received? o)))
-    (is (= {:absent :writer-unavailable} (:reader o)))
-    (is (:unchanged-law? o))))
+  (let [result (get-in (wire-fields) [:interventions :absent])]
+    (is (false? (:received? result)) "absent received?")
+    (is (= {:absent :writer-unavailable} (:reader result)) "absent reader")
+    (is (true? (:unchanged-law? result)) "absent unchanged-law?")))
+
 (deftest missing-input-is-recorded-without-changing-choice
-  (let [o (support/observe :pair-overlap :missing)]
-    (is (not (w/received? o)))
-    (is (= {:absent :no-such-key-on-entry} (:reader o)))
-    (is (:unchanged-law? o))))
+  (let [result (get-in (wire-fields) [:interventions :missing])]
+    (is (false? (:received? result)) "missing received?")
+    (is (= {:absent :no-such-key-on-entry} (:reader result))
+        "missing reader")
+    (is (true? (:unchanged-law? result)) "missing unchanged-law?")))
+
 (deftest changed-value-at-the-reader-door-is-not-the-writers
-  (let [o (support/observe :pair-overlap :different)]
-    (is (some? (:reader o)))
-    (is (not (w/received? o)))
-    (is (:unchanged-law? o))))
+  (let [result (get-in (wire-fields) [:interventions :different])]
+    (is (true? (:reader-present? result)) "different reader-present?")
+    (is (false? (:received? result)) "different received?")
+    (is (true? (:unchanged-law? result)) "different unchanged-law?")))
+
 (deftest pinned-live-records-lack-the-reader-end
-  (is (support/live-reader-absent?)))
+  (is (true? (get-in @producer [:fields :live-reader-absent?]))))
 
 (deftest recorded-input-does-not-change-mixed-selection
-  (products/assert-record-products :pair-overlap))
+  (doseq [[relation passed?] (get-in @producer [:fields :second-layer reader-field])]
+    (testing (name relation)
+      (is (true? passed?) (str relation " relation failed")))))
