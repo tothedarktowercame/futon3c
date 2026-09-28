@@ -75,3 +75,27 @@
   (is (= :caller-assigned-storage-field
          (reason #(cli/selection-payload
                    (assoc-in selection-request [:record :act/harness] harness) harness)))))
+
+(deftest write-selection-verifies-through-system-as-of-list
+  (let [payload (cli/selection-payload selection-request harness)
+        id "act:minted-selection"
+        listed (-> payload
+                   (dissoc :hx/mint-id :hx/idempotency-key :hx/valid-time)
+                   (assoc :hx/id id))
+        calls (atom [])]
+    (with-redefs [store/request!
+                  (fn [_ method path body]
+                    (swap! calls conj [method path body])
+                    (cond
+                      (= method "POST") {:ok true :hx/id id :minted? true}
+                      (re-find #"type=pattern-card%2Fselection" path)
+                      {:hyperedges [listed]}
+                      (re-find #"type=act%2Fwithdrawal" path)
+                      {:hyperedges []}
+                      :else (throw (ex-info "unexpected fake request" {:path path}))))]
+      (let [result (cli/write-selection! "http://store" selection-request harness)]
+        (is (= id (get-in result [:receipt :hx/id])))
+        (is (true? (get-in result [:receipt :verified?])))
+        (is (= id (get-in result [:card-as-of :active :id])))
+        (is (every? #(re-find #"system-as-of=" (second %))
+                    (filter #(= "GET" (first %)) @calls)))))))
