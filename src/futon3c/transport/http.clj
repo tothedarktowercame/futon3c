@@ -6021,6 +6021,29 @@
          :agent-activity activity}))
     (catch Throwable _ nil)))
 
+(defn invoke-done-event
+  "Build the backwards-compatible successful terminal event."
+  [result prompt]
+  (cond-> {:type "done"
+           :ok true
+           :result (:result result)
+           :session-id (:session-id result)}
+    (:invoke-meta result) (assoc :invoke-meta (:invoke-meta result))
+    (string? prompt) (assoc :prompt-line prompt)))
+
+(defn- this-turn-prompt-line
+  [agent-id session-id effective-prompt response-text surface]
+  (when (= "emacs-repl" (str surface))
+    (try
+      (when-let [f (some-> (find-ns 'futon3c.dev)
+                            (ns-resolve 'context-retrieval-for-delivery!))]
+        (f {:agent-id (str agent-id)
+            :session-id (str session-id)
+            :prompt-str (str effective-prompt)
+            :response-text (str response-text)
+            :bb-opts nil}))
+      (catch Throwable _ nil))))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
@@ -6088,12 +6111,9 @@
                         (do
                           (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                                  (or ev-opts []))
-                          (sink-fn (cond-> {:type "done"
-                                            :ok true
-                                            :result (:result result)
-                                            :session-id sid}
-                                     (:invoke-meta result)
-                                     (assoc :invoke-meta (:invoke-meta result)))))
+                          (let [prompt-line (this-turn-prompt-line
+                                             agent-id sid effective-prompt (:result result) surface)]
+                            (sink-fn (invoke-done-event result prompt-line))))
                         (let [err (:error result)
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]

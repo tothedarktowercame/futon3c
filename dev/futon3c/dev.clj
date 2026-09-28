@@ -71,7 +71,9 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
+            [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.pattern-search :as pattern-search]
+            [futon3c.agency.turn-prompt-delivery :as turn-prompt-delivery]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
             [futon3c.runtime.incidents :as incidents]
@@ -987,11 +989,12 @@
                       (merge {:width 60 :slot 2 :no-display true :async? true} bb-opts)))
     (catch Throwable _ nil)))
 
-(defn- context-retrieval!
+(defn- perform-context-retrieval!
   "Post-turn context retrieval: search futon3a patterns against the A->B
    protopattern, emit evidence, notify desktop, update HUD lookback.
    Fire-and-forget — call from a future."
-  [{:keys [agent-id session-id prompt-str response-text turn-counter bb-opts]}]
+  [{:keys [agent-id session-id prompt-str response-text turn-counter bb-opts
+            publish-ready!]}]
   (try
     (let [user-msg (extract-user-message prompt-str)
           response-preview (subs (or response-text "") 0 (min 200 (count (or response-text ""))))
@@ -1006,6 +1009,12 @@
               evidence-id (str "e-" (UUID/randomUUID))
               _ (pattern-card-provider/observe-results!
                  agent-id session-id result-map observed-at evidence-id :provisional)
+              _ (when publish-ready!
+                  (publish-ready!
+                   (:prompt (prompt-line/render!
+                             {:agent-id (str agent-id)
+                              :session-id (str session-id)
+                              :surface "emacs-repl"}))))
               eid (or (emit-context-evidence! agent-id session-id turn-n proto-text
                                               result-map evidence-id)
                       (str "t" turn-n))
@@ -1034,7 +1043,70 @@
           (project-context-hud! bb-opts))))
     (catch Throwable t
       (println (str "[context] retrieval error: " (.getMessage t)))
-      (flush))))
+      (flush))
+    (finally
+      (when publish-ready! (publish-ready! nil)))))
+
+(defonce ^:private !delivery-turn-count (atom 0))
+(defonce ^:private !context-retrieval-runs (atom {}))
+
+(defn- context-retrieval-key [{:keys [agent-id session-id prompt-str response-text]}]
+  [(str agent-id) (str session-id) (hash [(str prompt-str) (str response-text)])])
+
+(defn- retrieval-run
+  [key]
+  (loop []
+    (let [current @!context-retrieval-runs
+          now (System/currentTimeMillis)
+          cleaned (into {} (remove (fn [[_ v]]
+                                     (and (:done-at v) (> (- now (:done-at v)) 10000)))) current)]
+      (cond
+        (not= cleaned current)
+        (if (compare-and-set! !context-retrieval-runs current cleaned)
+          (recur)
+          (recur))
+
+        (get current key)
+        [false (get current key)]
+
+        :else
+        (let [run {:ready (promise)}]
+          (if (compare-and-set! !context-retrieval-runs current (assoc current key run))
+            [true run]
+            (recur)))))))
+
+(defn- context-retrieval!
+  "Run one retrieval per exact turn input. Concurrent delivery and legacy
+   post-turn callers share its cache publication and its single evidence write."
+  [{:keys [publish-ready!] :as opts}]
+  (let [key (context-retrieval-key opts)
+        [owner? run] (retrieval-run key)
+        ready (:ready run)]
+    (if owner?
+      (try
+        (perform-context-retrieval!
+         (assoc opts :publish-ready! (fn [value]
+                                        (deliver ready value)
+                                        (when publish-ready! (publish-ready! value)))))
+        (finally
+          (deliver ready nil)
+          (swap! !context-retrieval-runs update key assoc :done-at (System/currentTimeMillis))))
+      (when publish-ready!
+        (publish-ready! @ready)))))
+
+(defn context-retrieval-for-delivery!
+  "Start or join this turn's retrieval and wait at most 150ms for cache
+   publication. Evidence, notification and HUD work continue asynchronously."
+  [{:keys [agent-id] :as opts}]
+  (turn-prompt-delivery/await-ready!
+   {:analysis-seat? (prompt-line/analysis-seat? agent-id)
+    :timeout-ms 150
+    :worker (fn [publish!]
+              (context-retrieval!
+               (assoc opts
+                      :turn-counter (or (:turn-counter opts) !delivery-turn-count)
+                      :publish-ready! publish!)))}))
+
 (defonce !irc-sys (atom nil))
 (defonce !f3c-sys (atom nil))
 (defonce !tickle (atom nil))
