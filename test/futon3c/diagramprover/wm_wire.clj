@@ -4,7 +4,7 @@
   defined once, in futon3c.diagramprover.wm-wire-ledger-test's docstring."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [futon3c.test-registry :as registry]
+            [futon3c.test-registry.local-port :as local-port]
             [futon3c.test-registry.sqlite-backend :as sqlite])
   (:import [java.security MessageDigest]))
 
@@ -50,19 +50,55 @@
       sqlite/default-path))
 
 (defn latest-local-run
-  "Return the newest local run for namespace after verifying its registry
-  chain. A namespace absent from the local store is a normal typed absence."
-  [namespace]
-  (let [backend (sqlite/sqlite-backend (warrant-store-path))]
-    (if-let [entry (sqlite/latest-run-for-namespace backend namespace)]
-      (last (registry/read-chain! backend (:evidence/id entry)))
-      {:record/type :absent :reason :no-local-record :namespace namespace})))
+  "Ask the registry's one currentness operation for NAMESPACE in REPO.
+  The operation may durably request, but never executes or waits for, a run."
+  [namespace repo]
+  ((:current-or-request (local-port/implementation (warrant-store-path)))
+   {:namespace namespace :repo repo}))
+
+(defn- source-repo [v]
+  (when-let [url (some-> (:file (meta v)) io/resource)]
+    (let [source (.getCanonicalPath (io/file (.toURI url)))]
+      (or (some (fn [[repo root]]
+                  (when (.startsWith source (str root java.io.File/separator)) repo))
+                [["futon2" "/home/joe/code/futon2"]
+                 ["futon3c" "/home/joe/code/futon3c"]])
+          (loop [dir (.getParentFile (io/file source))]
+            (when dir
+              (let [dotgit (io/file dir ".git")]
+                (cond
+                  (.isFile dotgit)
+                  (let [pointer (slurp dotgit)]
+                    (cond
+                      (.contains pointer "/home/joe/code/futon2/.git/") "futon2"
+                      (.contains pointer "/home/joe/code/futon3c/.git/") "futon3c"
+                      :else nil))
+                  (.isDirectory dotgit)
+                  (when (#{"futon2" "futon3c"} (.getName dir)) (.getName dir))
+                  :else (recur (.getParentFile dir))))))))))
+
+(defn- warrant-evidence [answer]
+  (cond
+    (= :current (:status answer))
+    {:warrant-id (:entry-id answer) :git-head (:git-head answer) :ran-at (:ran-at answer)}
+
+    (and (= :missing (:status answer)) (= :no-current-warrant (:kind answer)))
+    (let [{:keys [reason request-id run-requested-at found-entry-id request-state]} (:data answer)]
+      {:absent (if (= :stale reason) :stale-warrant :no-warrant)
+       :request-id request-id :request-state request-state
+       :run-requested-at run-requested-at :found-id found-entry-id})
+
+    (= :missing (:status answer))
+    {:absent :no-warrant :found-id (get-in answer [:data :found-entry-id])
+     :lookup-reason (:kind answer) :detail (get-in answer [:data :reason])}
+
+    :else {:absent :warrant-lookup-failed :lookup answer}))
 
 (defn second-layer
   "Resolve a declaration independently of its execution evidence. Product paths
   address the test's reader observation (or the returned product itself).
-  Callers supply registry/Git reads so admission fixtures need neither service."
-  [{:keys [wire] :as r} {:keys [allowed-nses latest last-commit ancestor? record-only?]}]
+  Callers supply the registry lookup so admission fixtures need no local store."
+  [{:keys [wire] :as r} {:keys [allowed-nses lookup record-only?]}]
   (if-let [{:keys [test kind product intervention expected] :as d} (:second-layer r)]
     (let [n (when (symbol? test) (some-> test namespace symbol))
           v (when (and n (find-ns n)) (ns-resolve n (symbol (name test))))
@@ -76,14 +112,10 @@
         (fail! :malformed-second-layer))
       (when (and (record-only? wire) (not= :record kind))
         (fail! :computational-use-still-to-do))
-      (let [run (latest (str n)) p (:payload run)
-            id (:evidence/id run) pin (:git-head p) revision (last-commit v)
-            evidence (cond
-                       (not (true? (:warrant? p)))
-                       {:absent :no-warrant :found-id id :lookup-reason (:reason run)}
-                       (not (and revision pin (ancestor? revision pin)))
-                       {:absent :stale-warrant :found-id id :git-head pin :test-revision revision}
-                       :else {:warrant-id id :git-head pin :test-revision revision :ran-at (:ran-at p)})]
+      (let [repo (source-repo v)
+            evidence (if repo
+                       (warrant-evidence (lookup (str n) repo))
+                       {:absent :test-repository-unknown :source-file (:file (meta v))})]
         {:declared (assoc d :test (symbol (str (ns-name (:ns (meta v)))) (str (:name (meta v)))))
          :evidence evidence}))
     {:absent :no-second-layer-test}))

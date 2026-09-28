@@ -56,8 +56,6 @@
             [futon3c.diagramprover.wm-wire-r9-decision-r4-rank-dispatch-cascade-belief-test]
             [futon3c.diagramprover.wm-wire-r9-decision-r4-kernel-cascade-belief-test]
             [clojure.edn :as edn]
-            [clojure.string :as str]
-            [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is testing]]
@@ -466,23 +464,6 @@
 (defn registered []
   (into {} (for [n wire-test-nses :let [wire @(ns-resolve n 'wire)]] [(:wire wire) wire])))
 
-(def ^:private repo-roots ["/home/joe/code/futon3c" "/home/joe/code/futon2"])
-
-(defn- var-repo-path
-  "The var's source file as {:root <repository root> :rel <path inside it>},
-   resolved through the classpath; nil when the file is not on the classpath
-   or not inside a git repository."
-  [v]
-  (when-let [url (some-> (:file (meta v)) io/resource)]
-    (let [f (io/file (.toURI url))
-          root (loop [d (.getParentFile f)]
-                 (cond (nil? d) nil
-                       (.exists (io/file d ".git")) d
-                       :else (recur (.getParentFile d))))]
-      (when root
-        {:root (.getPath root)
-         :rel (str (.relativize (.toPath root) (.toPath f)))}))))
-
 (defn second-layer-context [model]
   (let [;; A :to-do read finding makes a wire record-only when the map says the
         ;; reader does not make the read yet (a design intention). A :to-do that
@@ -502,19 +483,7 @@
         explicit (set (for [b (:boxes model) f (:attribution-findings b)
                             :when (= :to-do (:kind f))] (:wire f)))]
     {:allowed-nses (set wire-test-nses)
-     :latest (memoize w/latest-local-run)
-     ;; A var's (:file (meta v)) is classpath-relative ("futon3c/diagramprover/x.clj",
-     ;; or a futon2 test path for the futon2-side wrappers); git needs the path
-     ;; inside the var's own repository. WIRE-26-C found every declared witness
-     ;; :stale-warrant with :test-revision nil because the bare path matched
-     ;; nothing at the futon3c root. Resolve the file on the classpath, walk up
-     ;; to its .git, and run git there; ancestry is checked in the same way.
-     :last-commit (fn [v]
-                    (when-let [{:keys [root rel]} (var-repo-path v)]
-                      (let [r (sh/sh "git" "-C" root "log" "-1" "--format=%H" "--" rel)]
-                        (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))))
-     :ancestor? (fn [a b] (boolean (some (fn [root] (zero? (:exit (sh/sh "git" "-C" root "merge-base" "--is-ancestor" a b))))
-                                        repo-roots)))
+     :lookup (memoize w/latest-local-run)
      :record-only? (fn [[_ reader field :as wire]]
                      (or (explicit wire)
                          (some #(and (= reader (:box/id %)) (= field (:field %))
@@ -616,13 +585,30 @@
            :second-layer {:test `second-layer-admission-is-separate-from-declaration
                           :kind :value-varying :product [:derived] :intervention :before-reader}}
         opts {:allowed-nses #{'futon3c.diagramprover.wm-wire-ledger-test}
-              :latest (constantly {:evidence/id "witness" :payload {:warrant? true :git-head "new"}})
-              :last-commit (constantly "old") :ancestor? = :record-only? (constantly false)}]
-    (is (= "witness" (get-in (w/second-layer r (assoc opts :ancestor? (constantly true)))
+              :lookup (constantly {:status :current :entry-id "witness"
+                                   :git-head "new" :ran-at "then"})
+              :record-only? (constantly false)}]
+    (is (= "witness" (get-in (w/second-layer r opts)
                              [:evidence :warrant-id])))
-    (is (= {:absent :stale-warrant :found-id "witness" :git-head "new" :test-revision "old"}
-           (:evidence (w/second-layer r opts))))
-    (is (= :no-warrant (get-in (w/second-layer r (assoc opts :latest (constantly nil))) [:evidence :absent])))
+    (is (= {:absent :stale-warrant :request-id 7 :request-state :queued
+            :run-requested-at "now" :found-id "witness"}
+           (:evidence
+            (w/second-layer
+             r (assoc opts :lookup
+                      (constantly {:status :missing :kind :no-current-warrant
+                                   :data {:reason :stale :request-id 7
+                                          :request-state :queued
+                                          :run-requested-at "now"
+                                          :found-entry-id "witness"}}))))))
+    (is (= :no-warrant
+           (get-in
+            (w/second-layer
+             r (assoc opts :lookup
+                      (constantly {:status :missing :kind :no-current-warrant
+                                   :data {:reason :absent :request-id 8
+                                          :request-state :queued
+                                          :run-requested-at "now"}})))
+            [:evidence :absent])))
     (is (= {:absent :no-second-layer-test} (w/second-layer (dissoc r :second-layer) opts)))
     (doseq [test ['futon3c.diagramprover.wm-wire-ledger-test/nonexistent
                  'futon3c.diagramprover.wm-wire-ledger-test/ledger]]
