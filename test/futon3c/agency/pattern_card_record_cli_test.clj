@@ -99,3 +99,25 @@
         (is (= id (get-in result [:card-as-of :active :id])))
         (is (every? #(re-find #"system-as-of=" (second %))
                     (filter #(= "GET" (first %)) @calls)))))))
+
+(deftest a-stranded-stored-record-does-not-block-readback
+  (let [payload (cli/selection-payload selection-request harness)
+        id "act:minted-selection"
+        listed (-> payload
+                   (dissoc :hx/mint-id :hx/idempotency-key :hx/valid-time)
+                   (assoc :hx/id id))
+        ;; as act:cb9bff2a… was stored: no :at in props, no valid time returned
+        stranded (-> listed
+                     (assoc :hx/id "act:stranded")
+                     (update :hx/props dissoc :at))]
+    (with-redefs [store/request!
+                  (fn [_ method path _]
+                    (cond
+                      (= method "POST") {:ok true :hx/id id :minted? true}
+                      (re-find #"type=pattern-card%2Fselection" path)
+                      {:hyperedges [stranded listed]}
+                      :else {:hyperedges []}))]
+      (let [result (cli/write-selection! "http://store" selection-request harness)]
+        (is (= id (get-in result [:card-as-of :active :id])))
+        (is (= [{:hx/id "act:stranded" :reason :missing-at}]
+               (:unreadable result)))))))

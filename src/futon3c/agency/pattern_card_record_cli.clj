@@ -92,10 +92,21 @@
        (URLEncoder/encode system-as-of "UTF-8")
        "&valid-as-of=" (URLEncoder/encode valid-as-of "UTF-8")))
 
-(defn- list-records! [base type system-as-of valid-as-of]
-  (->> (store/request! base "GET" (list-path type system-as-of valid-as-of) nil)
-       :hyperedges
-       (mapv record/hyperedge->record)))
+(defn- read-stored [hyperedge]
+  (try {:record (record/hyperedge->record hyperedge)}
+       (catch clojure.lang.ExceptionInfo e
+         {:unreadable {:hx/id (:hx/id hyperedge) :reason (:reason (ex-data e))}})))
+
+(defn- list-records!
+  "Stored records of TYPE, and the ids of stored documents that do not map to a
+   valid record. One malformed record (e.g. act:cb9bff2a…, minted before :at
+   was kept in props) must not make the whole seat unreadable."
+  [base type system-as-of valid-as-of]
+  (let [read (->> (store/request! base "GET" (list-path type system-as-of valid-as-of) nil)
+                  :hyperedges
+                  (mapv read-stored))]
+    {:records (into [] (keep :record) read)
+     :unreadable (into [] (keep :unreadable) read)}))
 
 (defn- minted-id! [receipt]
   (let [id (:hx/id receipt)]
@@ -106,8 +117,10 @@
 (defn- verified-result! [base payload receipt seat at]
   (let [id (minted-id! receipt)
         system-as-of (str (Instant/now))
-        selections (list-records! base :pattern-card/selection system-as-of at)
-        withdrawals (list-records! base :act/withdrawal system-as-of at)
+        sel (list-records! base :pattern-card/selection system-as-of at)
+        wd (list-records! base :act/withdrawal system-as-of at)
+        selections (:records sel)
+        withdrawals (:records wd)
         stored (some #(when (= id (:id %)) %) (concat selections withdrawals))]
     (when-not stored (refuse! :readback-missing :receipt))
     (when-not (= (dissoc payload :hx/mint-id :hx/idempotency-key)
@@ -116,7 +129,8 @@
     {:receipt (assoc receipt :verified? true :system-as-of system-as-of)
      :record stored
      :card-as-of (acts/card-as-of (concat selections withdrawals)
-                                  (:agent seat) (:session seat) at)}))
+                                  (:agent seat) (:session seat) at)
+     :unreadable (into (:unreadable sel) (:unreadable wd))}))
 
 (defn write-selection! [base request harness]
   (let [payload (selection-payload request harness)

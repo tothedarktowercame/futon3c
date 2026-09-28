@@ -21,7 +21,7 @@
   (when-not (= expected-kind (:kind record))
     (refuse! :wrong-record-kind :kind))
   (when-not (act-id? (:id record)) (refuse! :invalid-act-id :id))
-  (when-not (contains? record :at) (refuse! :missing-at :at))
+  (when (nil? (:at record)) (refuse! :missing-at :at))
   (try
     (Instant/parse (:at record))
     (catch Exception _ (refuse! :invalid-at :at)))
