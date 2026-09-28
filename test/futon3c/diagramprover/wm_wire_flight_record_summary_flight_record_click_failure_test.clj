@@ -15,81 +15,15 @@
   through full-loop-runner/run-opportunity! in hermetic stores, and the
   run record it writes — which now carries :failure — is read by
   record-summary (the writer's var) and kept by record-click (the
-  reader's var)."
-  (:require [futon3c.diagramprover.wm-wire-summary-products :as products]
-            [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
-            [futon2.aif.flight :as flight]
-            [futon2.aif.flight-runner :as fr]
-            [futon2.aif.full-loop-runner :as runner]
-            [futon2.aif.hermetic-repair-fixture :as hermetic]
-            [futon2.aif.learning-trial-ledger :as learning-ledger]
-            [futon2.aif.trace :as trace]
-            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
-            [futon3c.diagramprover.wm-wire :as w]))
-
-(defn- runner-opts
-  "The r9 wire's isolated options, with a judge that fails selection by
-  throwing THROW-FN's exception."
-  [throw-fn]
-  (merge (hermetic/runner-repair-options)
-         r9-support/hermetic-runner-defaults
-         {:cohort? false :author "zai-5" :reviewer "codex-7" :repair-reviewer "codex-1"
-          :phase-log-fn (fn [_])
-          :roster-fn (fn [_] {:zai-5 {:status "idle" :invoke-ready? true}
-                              :codex-7 {:status "idle" :invoke-ready? true}
-                              :codex-1 {:status "idle" :invoke-ready? true}})
-          :refresh-fn (fn [])
-          :substrate-preflight-fn (fn [_] {:route :test})
-          :code-state-fn (fn [] {:repo "/futon2" :git-sha "head" :git-dirty? false :repo-heads {}})
-          :mode-flags-fn (fn [] {}) :version-stamp-fn identity :mission-fn (fn [t] {:id t})
-          :repair-open-fn (constantly [])
-          :repair-system-record-fn (fn [m] {:repair/id "repair-wire-1" :repair/class (:repair-class m)})
-          :r16-park-fn (fn [_ _] {:ok true :id "park-wire" :status :parked})
-          :delivery-qa-fn (fn [_ _] {:morning-brief/addendum-id "qa-wire"})
-          :queue-fn identity
-          :judge-fn (fn [_] (throw (throw-fn)))
-          :construct-fn (fn [& _] (throw (ex-info "no construction expected" {})))}))
-
-(defn- run-record
-  "The run record run-opportunity! writes for a judge that throws
-  THROW-FN's exception, in temp stores."
-  [throw-fn]
-  (with-redefs-fn {#'trace/default-trace-dir (w/tmp-dir "wire-trace")
-                   #'runner/default-run-record-dir (w/tmp-dir "wire-run-records")
-                   #'learning-ledger/default-root (w/tmp-dir "wire-learning")}
-    #(binding [runner/*wm-status-reporting?* false]
-       (edn/read-string (slurp (:run-record (runner/run-opportunity! (runner-opts throw-fn))))))))
+  reader's var). The values are read from the producer record."
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
 (def eighth-run-record
   ;; a live run record written before WM-CLICK-REASON-I: no :failure key
   {:path (str w/spike-dir "/flight-ada87008/tick-run-record-2026-09-26-flight-ada87008-click-1.edn")
    :sha256 "df01831c24a7042d66b6ef2c38d82cdfbd0994a03b5539f3112db7dc41894970"})
-
-(defn- substrate-throw []
-  (ex-info "substrate-2 mission registry unreachable" {}
-           (java.net.ConnectException. "Connection refused")))
-
-(defn- other-throw []
-  (ex-info "the judge's model returned no parseable decision" {}))
-
-(defn observe
-  "The run record for THROW-FN read by record-summary, kept by
-  record-click: {:writer the summary's :failure, :reader the click
-  entry's :failure, :record-failure the run record's :failure}."
-  [throw-fn]
-  (let [record (run-record throw-fn)
-        summary (fr/record-summary "M-t" "click-1" record)
-        e (first (:clicks (flight/record-click
-                           (flight/start {:target "M-t" :chosen-because {:kind :requested}}
-                                         {:kind :a-exits :repo "futon3c" :path "p" :read-text (fn [& _] "")}
-                                         {:id "flight-wire"})
-                           (merge summary {:wants [:t/b] :before {} :after {}}))))]
-    {:writer (:failure summary)
-     :reader (:failure e)
-     :record-failure (:failure record)}))
-
-(defn check [] (observe substrate-throw))
 
 (def live-records-read
   (let [p #(str w/spike-dir "/" %)]
@@ -102,6 +36,10 @@
      {:paths (mapv p ["flight-278b6988.edn" "flight-7f89646a.edn" "flight-e70b4baf.edn"
                       "flight-d00574c8.edn" "flight-ffcd772b.edn" "flight-6cda5ee8.edn"])
       :why "every other flight record: the click entries carry no :failure"}]))
+
+(defn data [] (:fields (producer-record/record "wm-wire-flight-record-summary-flight-record-click-failure-te")))
+
+(defn check [] (:positive (data)))
 
 (def wire
   {:wire [:flight-record-summary :flight-record-click :failure]
@@ -128,13 +66,7 @@
   ;; the pinned eighth run record, read through the same vars
   (is (= (:sha256 eighth-run-record) (w/sha256-file (:path eighth-run-record))))
   (let [record (w/read-record (:path eighth-run-record))
-        summary (fr/record-summary "M-autoclock-in" "click-1" record)
-        e (first (:clicks (flight/record-click
-                           (flight/start {:target "M-autoclock-in" :chosen-because {:kind :requested}}
-                                         {:kind :a-exits :repo "futon3c" :path "p" :read-text (fn [& _] "")}
-                                         {:id "flight-wire"})
-                           (merge summary {:wants [:t/b] :before {} :after {}}))))
-        o {:writer (:failure summary) :reader (:failure e)}]
+        o (:absent (data))]
     (is (not (contains? record :failure)) "the live record predates the field")
     (is (= {:absent :failure-not-on-run-record} (:writer o)))
     (is (w/typed-absence? (:reader o)))
@@ -142,7 +74,7 @@
 
 (deftest a-different-failure-fails-the-wire
   (let [o (check)
-        other (observe other-throw)]
+        other (:different (data))]
     (is (some? (:reader other)))
     (is (not (w/typed-absence? (:reader other))))
     (is (not= (:writer o) (:reader other)))
@@ -158,17 +90,11 @@
 (deftest summary-field-is-recorded-without-changing-progress
   ;; flight/record-click:426,429 stores the fields; :409-413 determines
   ;; progress from wants/before/after. run!:577 delegates that decision.
-  (let [[a b] (products/products :record-click :failure)
-        ra (:record a) rb (:record b)]
-    (is (= (dissoc (:carrier a) :failure) (dissoc (:carrier b) :failure)))
-    (is (= (get-in a [:carrier :failure]) (get-in ra [:clicks 0 :failure])))
-    (is (= (get-in b [:carrier :failure]) (get-in rb [:clicks 0 :failure])))
-    (is (not= (get-in ra [:clicks 0 :failure]) (get-in rb [:clicks 0 :failure])))
-    (is (= (update ra :clicks #(mapv (fn [c] (dissoc c :failure)) %))
-           (update rb :clicks #(mapv (fn [c] (dissoc c :failure)) %))))
-    (is (= :no-progress (:status ra) (:status rb)))
-    (is (= 1 (count (:clicks ra)) (count (:clicks rb))))
-    
-    (println :summary-product :record-click :failure
-             (pr-str [(get-in ra [:clicks 0 :failure]) (get-in rb [:clicks 0 :failure])])
-             :status [(:status ra) (:status rb)])))
+  (let [s (:summary (data))]
+    (is (:carriers-without-field-equal? s))
+    (is (:a-copied? s))
+    (is (:b-copied? s))
+    (is (:values-differ? s))
+    (is (:records-without-field-equal? s))
+    (is (= [:no-progress :no-progress] (:statuses s)))
+    (is (= [1 1] (:click-counts s)))))
