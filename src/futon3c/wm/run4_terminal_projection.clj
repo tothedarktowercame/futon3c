@@ -87,13 +87,23 @@
         construction-pin (get-in result [:checkpoints :construction :judgment :run4/task-pin])
         pin (or selection-pin construction-pin)]
     (when run4-present?
-      (when (or (and selection-present? (not (pin? selection-pin)))
-                (and construction-present? (not (pin? construction-pin))))
-        (refuse! :malformed-returned-evidence))
-      (when-not (and (nonblank? click-id) (nonblank? (:run/id result))
-                     (nonblank? (:attempt-id result)) (keyword? (:outcome result))
-                     (map? (:checkpoints result)) (map? (:data result)) (pin? pin))
-        (refuse! :malformed-returned-evidence))
+      ;; The refusal names the fields that failed, so a reader of the refusal
+      ;; does not have to rerun the click to learn which one it was.
+      (when-let [failed (seq (cond-> []
+                               (and selection-present? (not (pin? selection-pin)))
+                               (conj :selection-task-pin)
+                               (and construction-present? (not (pin? construction-pin)))
+                               (conj :construction-task-pin)))]
+        (refuse! :malformed-returned-evidence {:failed (vec failed)}))
+      (when-let [failed (seq (cond-> []
+                               (not (nonblank? click-id)) (conj :click-id)
+                               (not (nonblank? (:run/id result))) (conj :run/id)
+                               (not (nonblank? (:attempt-id result))) (conj :attempt-id)
+                               (not (keyword? (:outcome result))) (conj :outcome)
+                               (not (map? (:checkpoints result))) (conj :checkpoints)
+                               (not (map? (:data result))) (conj :data)
+                               (not (pin? pin)) (conj :task-pin)))]
+        (refuse! :malformed-returned-evidence {:failed (vec failed)}))
       (when (and selection-pin construction-pin (not= selection-pin construction-pin))
         (refuse! :conflicting-task-pin-checkpoints))
       (let [run-record-path (:run-record result)]

@@ -87,6 +87,25 @@
                 (:reason (try (sut/persist! projections "click-1" bad-result) nil
                               (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
 
+(deftest malformed-returned-evidence-names-the-fields-that-failed
+  (fixture
+   (fn [{:keys [projections result]}]
+     (let [refusal (fn [click-id r]
+                     (try (sut/persist! projections click-id r) nil
+                          (catch clojure.lang.ExceptionInfo e
+                            (select-keys (ex-data e) [:reason :failed]))))]
+       (is (= {:reason :malformed-returned-evidence :failed [:attempt-id]}
+              (refusal "click-1" (dissoc result :attempt-id))))
+       (is (= {:reason :malformed-returned-evidence :failed [:outcome :data]}
+              (refusal "click-1" (-> result (assoc :outcome "grounded-change")
+                                     (dissoc :data)))))
+       (is (= {:reason :malformed-returned-evidence :failed [:selection-task-pin]}
+              (refusal "click-1" (assoc-in result
+                                           [:checkpoints :selection :ground :run4/task-pin]
+                                           {:sha256 "bad"}))))
+       (is (= {:reason :malformed-returned-evidence :failed [:click-id]}
+              (refusal "" result)))))))
+
 (deftest validated-and-hashed-run-record-is-one-byte-snapshot
   (fixture
    (fn [{:keys [result run-record]}]
