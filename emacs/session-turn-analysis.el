@@ -30,6 +30,9 @@ no lexical cues; `never' records structure without requesting interpretation."
   (make-hash-table :test #'equal)
   "Sessions already told once that inferred withdrawals lack a grant.")
 
+(defconst session-mode-withdrawal-notice-max-attempts 5
+  "Maximum publication or REPL-delivery attempts for one withdrawal outcome.")
+
 (defconst session-mode-turn-interpretation-version 3
   "Version of the delegated interpretation brief and its withdraw semantics.")
 
@@ -534,8 +537,110 @@ bell was accepted, not that the turn was interpreted.")
              (effect-id (or (plist-get (plist-get body :record) :id)
                             (plist-get body :effect-id))))
         `((fragment_id . ,fragment-id) (status . ,status)
-          (reason . ,reason) (effect_id . ,effect-id)
+          (reason . ,(or reason :null)) (effect_id . ,(or effect-id :null))
           (idempotency_key . ,idempotency-key))))))
+
+(defun session-mode--withdrawal-notice (outcome)
+  "Return the fixed notice alist for OUTCOME, or nil when it has no notice."
+  (let ((status (alist-get 'status outcome))
+        (reason (alist-get 'reason outcome))
+        (effect-id (alist-get 'effect_id outcome)))
+    (cond
+     ((and (= (or status 0) 200) (stringp effect-id)
+           (string-prefix-p "act:" effect-id))
+      `((kind . "effect") (effect_id . ,effect-id)
+        (text . ,(format "withdraw inferred: effect %s (undo to reverse)" effect-id))))
+     ((and (= (or status 0) 403) (equal reason "no-grant"))
+      '((kind . "no-grant") (text . "withdraw inferred: off (no grant)")))
+     ((and (= (or status 0) 422)
+           (member reason '("target-unresolved" "target-not-visible")))
+      '((kind . "unresolved")
+        (text . "withdraw inferred: unresolved (no target)"))))))
+
+(defun session-mode--withdrawal-seat-buffer (record)
+  "Return the live buffer matching RECORD's exact agent and session."
+  (let ((agent (alist-get 'agent_id record))
+        (session (alist-get 'session_id record)))
+    (cl-find-if
+     (lambda (buffer)
+       (and (buffer-live-p buffer)
+            (local-variable-p 'agent-chat--agent-id buffer)
+            (local-variable-p 'agent-chat--session-id buffer)
+            (equal agent (buffer-local-value 'agent-chat--agent-id buffer))
+            (equal session (buffer-local-value 'agent-chat--session-id buffer))))
+     (buffer-list))))
+
+(defun session-mode--notice-attempt-failed! (outcome attempts-key reason-key reason)
+  "Record one failed delivery on OUTCOME, bounded by the configured maximum."
+  (let ((attempts (1+ (or (alist-get attempts-key outcome) 0))))
+    (session-mode--alist-set! outcome attempts-key attempts)
+    (when (>= attempts session-mode-withdrawal-notice-max-attempts)
+      (session-mode--alist-set! outcome reason-key reason))))
+
+(defun session-mode--alist-set! (alist key value)
+  "Set KEY to VALUE in ALIST in place, including when KEY is new."
+  (if-let ((cell (assq key alist)))
+      (setcdr cell value)
+    (nconc alist (list (cons key value))))
+  value)
+
+(defun session-mode--deliver-withdrawal-notice! (record outcome)
+  "Publish and display OUTCOME once. Return non-nil when OUTCOME changed."
+  (when-let ((notice (session-mode--withdrawal-notice outcome)))
+    (let ((changed nil)
+          (now (lambda () (format-time-string "%FT%TZ" nil t))))
+      (when (and (not (alist-get 'header_notice_published_at outcome))
+                 (not (alist-get 'header_notice_give_up_reason outcome)))
+        (let* ((payload `((caller . "xiang")
+                          (agent . ,(alist-get 'agent_id record))
+                          (session . ,(alist-get 'session_id record))
+                          (notice-id . ,(alist-get 'idempotency_key outcome))
+                          (kind . ,(alist-get 'kind notice))))
+               (payload (if-let ((effect-id (alist-get 'effect_id notice)))
+                            (append payload `((effect-id . ,effect-id)))
+                          payload))
+               (response
+                (condition-case err
+                    (if (fboundp 'agent-chat-evidence-request-json)
+                        (agent-chat-evidence-request-json
+                         "POST"
+                         (format "%s/api/alpha/turn-notice"
+                                 (string-remove-suffix "/" agent-chat-agency-base-url))
+                         3 payload)
+                      (list :status 0 :error "HTTP helper unavailable"))
+                  (error (list :status 0 :error (error-message-string err)))))
+               (status (or (plist-get response :status) 0)))
+          (if (<= 200 status 299)
+              (session-mode--alist-set!
+               outcome 'header_notice_published_at (funcall now))
+            (session-mode--notice-attempt-failed!
+             outcome 'header_notice_attempts 'header_notice_give_up_reason
+             (format "http-%s%s" status
+                     (if-let ((error (plist-get response :error)))
+                         (format ":%s" error) ""))))
+          (setq changed t)))
+      (when (and (not (alist-get 'repl_notice_delivered_at outcome))
+                 (not (alist-get 'repl_notice_give_up_reason outcome)))
+        (if-let ((buffer (session-mode--withdrawal-seat-buffer record)))
+            (condition-case err
+                (with-current-buffer buffer
+                  (if (fboundp 'agent-chat-insert-message)
+                      (progn
+                        (agent-chat-insert-message "system" (alist-get 'text notice))
+                        (session-mode--alist-set!
+                         outcome 'repl_notice_delivered_at (funcall now)))
+                    (session-mode--notice-attempt-failed!
+                     outcome 'repl_notice_attempts 'repl_notice_give_up_reason
+                     "insert-helper-unavailable")))
+              (error
+               (session-mode--notice-attempt-failed!
+                outcome 'repl_notice_attempts 'repl_notice_give_up_reason
+                (error-message-string err))))
+          (session-mode--notice-attempt-failed!
+           outcome 'repl_notice_attempts 'repl_notice_give_up_reason
+           "no-matching-buffer"))
+        (setq changed t))
+      changed)))
 
 (defun session-mode--process-withdrawals (path)
   "Apply newly analysed withdraw interpretations for operator record PATH.
@@ -558,7 +663,7 @@ health and never retries a failed route call."
              (existing (alist-get 'withdrawal_effects record))
              (existing (if (eq existing :null) nil (append existing nil)))
              (done (mapcar (lambda (outcome) (alist-get 'fragment_id outcome)) existing))
-             outcomes)
+             outcomes changed)
         (when operator-p
           (dolist (pair (session-mode--withdrawal-fragments analysis))
             (unless (member (car pair) done)
@@ -573,8 +678,13 @@ health and never retries a failed route call."
                   (message "象: inferred withdrawals are off until Joe's grant exists"))
                 (push outcome outcomes))))
           (when outcomes
-            (setf (alist-get 'withdrawal_effects record)
-                  (vconcat (append existing (nreverse outcomes))))
+            (setq existing (append existing (nreverse outcomes))
+                  changed t))
+          (dolist (outcome existing)
+            (when (session-mode--deliver-withdrawal-notice! record outcome)
+              (setq changed t)))
+          (when changed
+            (setf (alist-get 'withdrawal_effects record) (vconcat existing))
             (session-mode--write-analysis-record path record)))))))
 
 (defun session-mode--handle-reap-output (path out)
