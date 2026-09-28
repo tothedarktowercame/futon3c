@@ -13,7 +13,7 @@
             [futon2.aif.flight :as flight] [futon2.aif.flight-runner :as fr]
             [futon2.aif.full-loop-runner :as runner]
             [futon2.aif.wm.construction-inputs :as construction-inputs]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.report.cascade-decision-test :as decision-fixture]
             [futon2.report.observation-labels-consume-test :as population]
             [futon3c.transport.http :as http]
@@ -53,7 +53,7 @@
                         :receipt (get-in proposals [:interpretation-receipts pattern-id]))
         request {:target target-id :want {:token document}}
         validated (wi/validate-response request response
-                    {:sources sources :constraints [] :admit #'wm/admit-cascade-problem
+                    {:sources sources :constraints [] :admit #'wm-cd/admit-cascade-problem
                      :code-root (str (io/file fixture-root "want-interp-library"))})]
     (assert (= :valid (:status validated)) (pr-str validated))
     (wi/publish! root (wi/issue! root request) response validated)
@@ -132,7 +132,7 @@
         (let [sources (published (str (io/file root "interpretations")))
               changed (changed-sources sources mutation)
               assembled (cp/assemble {:targets [target-id] :sources changed})
-              result (wm/cascade-decision assembled
+              result (wm-cd/cascade-decision assembled
                        (-> decision-fixture/live-c-opts
                            (assoc :observation-labels-path (#'population/path))
                            (update-in [:focus-inputs :relations] conj

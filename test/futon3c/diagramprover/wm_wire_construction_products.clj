@@ -6,7 +6,7 @@
             [futon2.aif.efe :as efe]
             [futon2.aif.locator-fixtures :as loc]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-construction-support :as support]))
 
 (def assembled
@@ -18,7 +18,7 @@
             (update-in @assembled [:problems 0 :cascade-problem field]
                        #(support/change field % mutation)) @assembled)
         p (get-in a [:problems 0 :cascade-problem])
-        family (#'wm/cascade-family-parameters (:problems a))
+        family (#'wm-cd/cascade-family-parameters (:problems a))
         spec (if (#{:want :cascade-spec} field)
                (update (:cascade-spec p) :want #(support/change :want % mutation))
                (:cascade-spec p))
@@ -44,7 +44,7 @@
                              (fn [state candidates opts]
                                (let [r (real-rank state candidates opts)]
                                  (reset! ranked-product (mapv :controller-score r)) r))]
-                 (wm/cascade-decision a fixture/live-c-opts))
+                 (wm-cd/cascade-decision a fixture/live-c-opts))
         d (:decision result)]
     {:scores @ranked-product
      :posterior (vec (sort (vals (get-in d [:selection-law :posterior]))))

@@ -6,7 +6,7 @@
             [futon2.aif.order-kernel-test :as order]
             [futon2.aif.policy-prefix-admission :as admission]
             [futon2.aif.policy-prefix-evidence :as prefix]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-rates-support :as rates]))
 
 (def target "selection-wire")
@@ -32,7 +32,7 @@
     (let [action (:action (first @ranked))
           interpretations (update-vals order/pat
                             #(assoc % :transition {:status :interpreted :produces (:produces %)}))
-          ma (wm/measured-a-version
+          ma (wm-cd/measured-a-version
                [{:target target :cascade-problem {:locators {:w {:class :C3}}}}]
                {target (select-keys @rates/admitted-view [:labels :subjects :prior])})
           record {:decision {:measured-a ma :initial-belief-receipt {:value {#{} 1}}

@@ -10,7 +10,7 @@
             [futon2.aif.cascade-equivalence :as equivalence]
             [futon2.aif.efe :as efe]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def live-records-read
@@ -103,7 +103,7 @@
 
 (defn family [field mutation]
   (let [a (carrier field mutation)
-        r (#'wm/cascade-family-parameters (:problems a))]
+        r (#'wm-cd/cascade-family-parameters (:problems a))]
     {:writer (get-in @assembled [:problems 0 :cascade-problem field])
      :reader (get r field) :family r}))
 
@@ -116,7 +116,7 @@
                                  (reset! observed {:want (get-in opts [:cascade-spec :want])
                                                    :receipts (mapv :construction-receipt candidates)})
                                  (rank state candidates opts))]
-                   (wm/cascade-decision a fixture/live-c-opts))
+                   (wm-cd/cascade-decision a fixture/live-c-opts))
                  (catch clojure.lang.ExceptionInfo e {:refusal (ex-data e)}))
         receipt? (= field :construction-receipt)
         writer (if receipt?

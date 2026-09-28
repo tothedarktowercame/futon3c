@@ -3,7 +3,7 @@
             [futon2.aif.efe :as efe]
             [futon2.aif.locator-fixtures :as loc]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-construction-support :as support]))
@@ -63,7 +63,7 @@
                                      (reset! scores (into (sorted-map)
                                                          (map (juxt #(get-in % [:action :target]) :controller-score) ranked)))
                                      ranked))]
-                     (wm/cascade-decision supplied opts)))
+                     (wm-cd/cascade-decision supplied opts)))
         posterior (get-in decision [:selection-law :posterior])]
     {:scores @scores
      :posterior (into (sorted-map) (map (fn [[c p]] [(:target c) p]) posterior))

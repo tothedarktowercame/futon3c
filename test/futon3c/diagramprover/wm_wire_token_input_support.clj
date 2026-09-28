@@ -7,7 +7,7 @@
             [futon2.aif.token-belief-predecessor :as predecessor]
             [futon2.aif.token-initialization-policy :as policy]
             [futon2.report.cascade-decision-test :as decision-fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def live-records-read
@@ -104,7 +104,7 @@
                  (when (= hop :decision-kernel)
                    (swap! read-calls inc) (reset! consumed (incoming r))) r)))}
           #(try
-             (let [r (wm/cascade-decision
+             (let [r (wm-cd/cascade-decision
                       assembled (assoc decision-fixture/live-c-opts
                                        :cascade-habit-path fixture/absent-habit-path
                                        :token-belief-context {:occurrence-id "p5-wire"}))]

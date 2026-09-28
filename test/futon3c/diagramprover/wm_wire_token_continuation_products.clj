@@ -2,7 +2,7 @@
   "Second-layer readbacks; no changes to the first-layer shared support."
   (:require [clojure.edn :as edn]
             [futon2.aif.efe :as efe]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-token-input-support :as support]))
 
 (defn receipt-product [hop mutation]
@@ -21,10 +21,10 @@
     q))
 
 (defn decision-product [mutation]
-  (let [calls (atom []) inputs (atom nil) real-decision wm/cascade-decision
+  (let [calls (atom []) inputs (atom nil) real-decision wm-cd/cascade-decision
         real-rank efe/rank-actions
         r (with-redefs [support/mutate mixed-belief
-                        wm/cascade-decision
+                        wm-cd/cascade-decision
                         (fn [assembled opts]
                           (reset! inputs {:assembled assembled :opts opts})
                           (real-decision assembled opts))

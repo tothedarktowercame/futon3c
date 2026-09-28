@@ -3,14 +3,14 @@
   (:require [clojure.edn :as edn]
             [futon2.aif.flight :as flight]
             [futon2.aif.flight-runner :as runner]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-publication-support :as publication]
             [futon3c.diagramprover.wm-wire-rates-support :as rates]))
 
 (defn pair [field]
   (let [target "M-conditioning"
         increment (:writer (publication/increment-observe identity))
-        ma (wm/measured-a-version
+        ma (wm-cd/measured-a-version
             [{:target target :cascade-problem {:locators {:done {:class :C3}}}}]
             {target (select-keys @rates/admitted-view [:labels :subjects :prior])})
         record {:decision {:chosen {:target target :candidate :candidate/a

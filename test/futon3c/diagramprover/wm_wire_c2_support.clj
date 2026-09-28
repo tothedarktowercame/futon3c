@@ -22,7 +22,7 @@
             [futon2.aif.gate-refusal-abstention-test :as gate-test]
             [futon2.aif.judge-refusal-abstention-test :as judge-test]
             [futon2.aif.observation-rates :as rates]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-selection-out-support :as selout]))
 
@@ -141,7 +141,7 @@
                             :different (case field
                                          :status (assoc v :status :sourcing-refused-differently)
                                          :rates (assoc-in v [:rates :t :false-neg] 1/2)))))]
-          (wm/measured-a-version
+          (wm-cd/measured-a-version
            [{:target measured-target :cascade-problem {:locators {:t {:class :C4}}}}]
            {measured-target {:labels labels
                              :subjects (frequencies (map :token-class labels))}}))]
@@ -174,10 +174,10 @@
         test-var (if (= which :judge)
                    #'judge-test/the-real-judge-refusal-is-the-ticks-typed-abstention
                    #'gate-test/the-real-gate-refusal-is-the-ticks-typed-abstention)
-        real wm/cascade-decision
+        real wm-cd/cascade-decision
         written (atom nil)
         reports (atom [])]
-    (with-redefs [wm/cascade-decision
+    (with-redefs [wm-cd/cascade-decision
                   (fn [& args]
                     (try
                       (apply real args)

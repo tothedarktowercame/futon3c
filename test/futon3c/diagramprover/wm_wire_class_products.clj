@@ -5,11 +5,11 @@
             [futon2.aif.focus-receipt :as focus]
             [futon2.aif.efe :as efe]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (defn class-product [hop changed?]
-  (let [classify focus/classify-target model @#'wm/class-observation-model
+  (let [classify focus/classify-target model @#'wm-cd/class-observation-model
         rank efe/rank-actions calls (atom []) carrier (atom nil)
         assembled (cp/assemble {:targets [fixture/tick-1-target]
                                 :sources (loc/locate-all fixture/tick-1-sources)})
@@ -21,7 +21,7 @@
                (if (= hop :class)
                  (let [r (if changed? (assoc r :class :associated) r)]
                    (reset! carrier (:class r)) r) r)))
-           #'wm/class-observation-model
+           #'wm-cd/class-observation-model
            (fn [inputs]
              (let [inputs (if (and (= hop :target-class) changed?)
                             (update inputs :target-class #(update-vals % (constantly :related))) inputs)]
@@ -37,7 +37,7 @@
                                     :opts (-> opts
                                               (update :prediction-context dissoc :occurrence-id)
                                               (update :observation-model dissoc :target-class))}})) r))}
-          #(wm/cascade-decision assembled fixture/live-c-opts))]
+          #(wm-cd/cascade-decision assembled fixture/live-c-opts))]
     {:carrier @carrier :scores (:scores (first @calls))
      :calls (count @calls) :controls (:controls (first @calls))
      :beta (get-in result [:decision :selection-law :beta])}))

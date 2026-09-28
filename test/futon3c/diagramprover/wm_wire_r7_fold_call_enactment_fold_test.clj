@@ -31,7 +31,7 @@
             [futon2.aif.scoring-input-receipts :as receipts]
             [futon2.aif.ticket-queue :as ticket-queue]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def pkey [:pattern-cascade "M-t" [:p/a] {}])
@@ -56,7 +56,7 @@
         tmp (w/tmp-dir "wire-fold-judge")]
     (with-redefs-fn {#'mr/load-missions (fn [& _] {:missions []})
                      #'mr/load-tickets (fn [& _] {:tickets []})
-                     #'wm/select-and-record-cascade!
+                     #'wm-cd/select-and-record-cascade!
                      (fn [_ opts] (reset! captured opts) (throw (ex-info "stop" {::stop true})))}
       #(try (wm/judge {} {:cascade-sources-dir tmp :cascade-proposals-dir tmp
                           :repair-obligations-root tmp
@@ -78,7 +78,7 @@
                             {:cascade-habit-path (str (io/file (w/tmp-dir "wire-fold-habit") "absent.edn"))})
                (not= :none fold) (assoc :enactment-fold fold))]
     (binding [receipts/*habit-reads* reads]
-      (wm/select-and-record-cascade! assembled opts))
+      (wm-cd/select-and-record-cascade! assembled opts))
     (:receipt (first (filter #(= :joint-selection (:purpose %)) @reads)))))
 
 (defn observe

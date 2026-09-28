@@ -6,7 +6,7 @@
             [futon2.aif.enactment-habit :as habit]
             [futon2.aif.selection-reads-fold-test :as fold-test]
             [futon2.report.cascade-decision-test :as fixture]
-            [futon2.report.war-machine :as wm]))
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]))
 
 (defn decision-product [reverse?]
   (let [select policy/select-action-cascades written (atom nil) scores (atom nil)
@@ -21,7 +21,7 @@
                                     rs (mapv #(assoc %1 :controller-score %2) ranked gs)
                                     d (select rs opts)]
                                 (reset! scores gs) (reset! written d) d))]
-                 (wm/cascade-decision assembled
+                 (wm-cd/cascade-decision assembled
                   (assoc fixture/live-c-opts :cascade-habit-path "resources/fixtures/d-token-carry/absent-habit.edn")))
         d (:decision result)]
     {:scores @scores

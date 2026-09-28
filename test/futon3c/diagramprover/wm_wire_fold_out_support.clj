@@ -2,7 +2,7 @@
   "Judge handoffs: observe arguments at real readers, alter the carrier, and
   inspect reader-produced values. External input ports are hermetic."
   (:require [clojure.edn :as edn] [clojure.java.io :as io]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.report.cascade-decision-test :as fixture]
             [futon2.aif.locator-fixtures :as loc]
             [futon2.aif.belief :as belief]
@@ -124,11 +124,11 @@
   (measured/with-tick
     (fn [root file record]
       (let [f (write-flight! root file record)
-            real @#'wm/cascade-decision-admitted
+            real @#'wm-cd/cascade-decision-admitted
             seen (atom nil) habit-reads (atom [])
             result (binding [receipts/*habit-reads* habit-reads]
                      (with-redefs-fn
-                       {#'wm/cascade-decision-admitted
+                       {#'wm-cd/cascade-decision-admitted
                         (fn [assembled opts]
                           (let [value (get opts kind)
                                 changed (case mutation

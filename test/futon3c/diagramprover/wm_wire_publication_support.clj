@@ -19,7 +19,7 @@
             [futon2.aif.mission-reading :as mr]
             [futon2.aif.observation-rates :as rates]
             [futon2.aif.want-interpretation :as wi]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon2.aif.flight-enact-test :as enact-test]
             [futon3c.diagramprover.wm-wire :as w]
             [futon3c.diagramprover.wm-wire-enact-driver :as driver]))
@@ -85,7 +85,7 @@
                            (let [r (apply source args)]
                              (reset! written (:measurement r))
                              (update r :measurement tamper)))]
-             (wm/measured-a-version
+             (wm-cd/measured-a-version
               problems
               {measurement-target {:labels ls
                                    :subjects (frequencies (map :token-class ls))}}))]
@@ -157,7 +157,7 @@
                                (fn [& args]
                                  (reset! received (nth args 3))
                                  (apply source args))]
-                   (wm/measured-a-version
+                   (wm-cd/measured-a-version
                     [problem]
                     {locator-target {:labels ls
                                      :subjects (frequencies (map :token-class ls))}}))]

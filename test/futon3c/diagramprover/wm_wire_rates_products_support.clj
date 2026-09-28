@@ -4,7 +4,7 @@
             [futon2.aif.click-measurement-test :as click]
             [futon2.aif.observation-rates :as rates]
             [futon2.aif.efe :as efe]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire-rates-support :as fixture]))
 
 (defn changed-rates [rs]
@@ -36,7 +36,7 @@
   (let [source rates/sourced-rates]
     (with-redefs [rates/sourced-rates
                   (fn [& args] (update (apply source args) field mutate))]
-      (wm/measured-a-version
+      (wm-cd/measured-a-version
        [{:target "rates-wire" :cascade-problem fixture/problem}]
        {"rates-wire" (select-keys @fixture/admitted-view [:labels :subjects :prior])}))))
 

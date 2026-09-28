@@ -13,7 +13,7 @@
             [futon2.aif.observation-rates :as rates]
             [futon2.aif.efe :as efe]
             [futon2.aif.cascade-free-energy :as fe]
-            [futon2.report.war-machine :as wm]
+            [futon2.report.war-machine :as wm] [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]))
 
 (def problem
@@ -55,7 +55,7 @@
 (defn lane
   ([] (lane @admitted-view))
   ([view]
-   (wm/cascade-lane problem {:through :R5
+   (wm-cd/cascade-lane problem {:through :R5
                             :observation-labels (select-keys view [:labels :subjects :prior])})))
 
 (defn measurement [lane-result]
