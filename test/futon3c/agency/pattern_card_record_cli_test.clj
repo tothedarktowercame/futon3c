@@ -159,3 +159,19 @@
         (is (= id (get-in result [:card-as-of :active :id])))
         (is (= [{:hx/id "act:stranded" :reason :missing-at}]
                (:unreadable result)))))))
+
+(deftest own-acts-grant-covers-the-executor-not-the-signer
+  ;; codex-5 executes a withdrawal signed as claude-17 of claude-17's card.
+  ;; The own-acts grant is codex-5's only for codex-5's acts.
+  (let [borrowed {:executor "codex-5" :signer "claude-17"
+                  :authority {:grant grant-id} :executor-basis :declared}]
+    (with-redefs [store/request! (fn [_ _ path _]
+                                   (if (re-find #"own-acts" path) grant
+                                       (throw (ex-info "unexpected" {:path path}))))]
+      (is (= :not-own-act
+             (try (cli/authorize! "http://store" borrowed :act/withdrawal
+                                  "claude-17" "2026-09-28T11:30:00Z")
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (:grant-reason (ex-data e))))))
+      (is (= stamp (cli/authorize! "http://store" stamp :act/withdrawal
+                                   "claude-17" "2026-09-28T11:30:00Z"))))))

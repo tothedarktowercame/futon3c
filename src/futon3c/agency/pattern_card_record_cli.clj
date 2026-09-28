@@ -151,7 +151,10 @@
     (when-let [grant-id (get-in validated [:authority :grant])]
       (let [leaf (grant-hyperedge! base grant-id)
             answer (grant-record/grant-covers?
-                    (grant-records! base leaf) (:signer validated) target at
+                    ;; The grant must cover the party that acts. Checking the
+                    ;; signer let an executor sign as another agent and use
+                    ;; the own-acts grant on that agent's acts.
+                    (grant-records! base leaf) (:executor validated) target at
                     {:leaf-id grant-id :target-signer target-signer})]
         (when-not (= :granted (:status answer))
           (throw (ex-info "No grant covers the pattern-card act"
