@@ -9770,6 +9770,12 @@
                       (map str (get-in % [:evidence/body :source-jobs]))))
        vec))
 
+(defn- negation-declines! [base]
+  (evidence-all-pages!
+   base (str "/api/alpha/evidence?tags=negation&type="
+             (java.net.URLEncoder/encode "interpretation/negation-decline" "UTF-8")
+             "&limit=1000")))
+
 (defn read-disclosure-audit-inputs [job-id]
   (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
         job (disclosure-audit-job job-id)]
@@ -9786,6 +9792,12 @@
           ;; P12-5-2 stores 象's negation readings as interpretation/negation
           ;; evidence bound to their source jobs (DERIVE-2 item 16).
           interpretations (job-negation-interpretations! base job-id)
+          interpretation-ids (set (map :evidence/id interpretations))
+          declines (->> (negation-declines! base)
+                        (filter #(contains? interpretation-ids
+                                            (get-in % [:evidence/body
+                                                       :interpretation-id])))
+                        vec)
           routing-jobs (into []
                              (keep (comp disclosure-audit-routing-job
                                          disclosure-audit/routing-job-id :id))
@@ -9798,11 +9810,12 @@
                                (concat (map :id disclosures)
                                        (map :id withdrawals) cited-stored)))]
       {:job job-id :report-text report-text :disclosures disclosures
-       :withdrawals withdrawals :interpretations interpretations
+       :withdrawals withdrawals :interpretations interpretations :declines declines
        :routing-jobs routing-jobs :stored-act-ids stored-act-ids
        :basis {:rows {:disclosures (count disclosures)
                       :withdrawals (count withdrawals)
                       :interpretations (count interpretations)
+                      :declines (count declines)
                       :routing-jobs (count routing-jobs)
                       :stored-acts (count stored-act-ids)}
                :report-text-available? (contains? job :result)
@@ -9983,13 +9996,15 @@
               target (:id disclosure)
               reason (str "Joe's negation: " fragment)
               withdrawal-body {:caller orchestrator :target target :reason reason}
+              decline-body {:caller orchestrator :interpretation-id interpretation-id
+                            :reason "Joe's negation is not accepted"}
               prompt (str "Joe said verbatim: " (pr-str fragment) "\n"
                           "Disclosure " target ": " (:chosen disclosure) "\n"
                           "Interpretation: " interpretation-id "\n"
                           "To withdraw it, POST /api/alpha/disclosure/withdraw with exactly:\n"
                           (json/generate-string withdrawal-body) "\n"
-                          "To decline, reply in text. Decline is recorded in P12-5-6; "
-                          "for now reply in text.")
+                          "To decline, POST /api/alpha/interpretation/negation/decline "
+                          "with exactly:\n" (json/generate-string decline-body))
               evidence-store (evidence-store-for-config config)
               created (create-invoke-job!
                        {:evidence-store evidence-store :requested-job-id job-id
@@ -10128,6 +10143,79 @@
                              :idempotency-conflict 409
                              :turn-chain-not-found 409
                              :truncated-input 409
+                             500)
+                           {:ok false :reason reason})))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
+(defn- negation-decline-id [interpretation-id]
+  (str "interpretation-negation-decline:"
+       (UUID/nameUUIDFromBytes
+        (.getBytes (str interpretation-id) StandardCharsets/UTF_8))))
+
+(defn- effective-disclosure-withdrawal? [base target]
+  (some (fn [edge]
+          (let [record (withdrawal-record-from-edge edge)]
+            (= :effective (or (:status record) (get-in edge [:hx/props :status])))))
+        (audit-list-hyperedges base :act/withdrawal target)))
+
+(defn handle-negation-decline [request]
+  (let [body (parse-json-map (read-body request))
+        caller (some-> (:caller body) str)
+        interpretation-id (some-> (:interpretation-id body) str)
+        reason (:reason body)]
+    (cond
+      (not (map? body)) (json-response 400 {:ok false :reason :invalid-json})
+      (or (str/blank? caller) (str/blank? interpretation-id))
+      (json-response 400 {:ok false :reason :missing-field})
+      (or (not (string? reason)) (str/blank? reason))
+      (json-response 400 {:ok false :reason :blank-reason})
+      :else
+      (try
+        (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              interpretation (or (existing-evidence! base interpretation-id)
+                                 (throw (ex-info "Unknown negation interpretation"
+                                                 {:reason :unknown-interpretation})))
+              routing-id (negation-routing-id interpretation-id)
+              routing-entry (or (existing-evidence! base routing-id)
+                                (throw (ex-info "Unknown negation routing"
+                                                {:reason :unknown-routing})))
+              routing (:evidence/body routing-entry)
+              _ (when-not (and (= :routed (:status routing))
+                               (= caller (:orchestrator routing)))
+                  (throw (ex-info "Caller is not the routed orchestrator"
+                                  {:reason :not-orchestrator})))
+              target (:target routing)
+              _ (when (effective-disclosure-withdrawal? base target)
+                  (throw (ex-info "Disclosure already withdrawn"
+                                  {:reason :already-withdrawn})))
+              entry (origin/stamp
+                     {:evidence/id (negation-decline-id interpretation-id)
+                      :evidence/type :interpretation/negation-decline
+                      :evidence/claim-type :observation
+                      :evidence/subject {:ref/type :evidence :ref/id interpretation-id}
+                      :evidence/author caller
+                      :evidence/in-reply-to interpretation-id
+                      :evidence/session-id (:evidence/session-id interpretation)
+                      :evidence/at (str (Instant/now))
+                      :evidence/tags [:interpretation :negation :decline]
+                      :evidence/body {:interpretation-id interpretation-id
+                                      :target target
+                                      :source-job (:source-job routing)
+                                      :reason reason}}
+                     (origin/harness "negation-decline" interpretation-id)
+                     "futon3c.transport.http")
+              result (write-negation-interpretation! base entry)]
+          (json-response (if (:existing? result) 200 201)
+                         {:ok true :existing? (:existing? result)
+                          :entry (:entry result)}))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (json-response (case reason
+                             (:unknown-interpretation :unknown-routing) 404
+                             :not-orchestrator 403
+                             (:already-withdrawn :idempotency-conflict) 409
                              500)
                            {:ok false :reason reason})))
         (catch Throwable e
@@ -10678,6 +10766,9 @@
 
       (and (= :post method) (= "/api/alpha/interpretation/negation" uri))
       (handle-negation-interpretation request config)
+
+      (and (= :post method) (= "/api/alpha/interpretation/negation/decline" uri))
+      (handle-negation-decline request)
 
       (and (= :get method) (= "/api/alpha/prompt-line" uri))
       (let [params (parse-query-params request)

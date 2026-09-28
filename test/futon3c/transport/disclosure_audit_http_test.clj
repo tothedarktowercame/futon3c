@@ -42,6 +42,8 @@
             {:hyperedges [(disclosure/->hyperedge d)]}
             (str/includes? path "type=act%2Fwithdrawal")
             {:hyperedges [(withdrawal/record->hyperedge w)]}
+            (str/includes? path "type=interpretation%2Fnegation-decline")
+            {:entries []}
             (str/includes? path "type=interpretation%2Fnegation")
             {:entries []}
             (str/ends-with? path "act%3Agrant")
@@ -84,6 +86,8 @@
             (str/includes? path "type=disclosure%2Fchoice")
             {:hyperedges [(disclosure/->hyperedge d)]}
             (str/includes? path "type=act%2Fwithdrawal") {:hyperedges []}
+            (str/includes? path "type=interpretation%2Fnegation-decline")
+            {:entries []}
             (and (str/includes? path "type=interpretation%2Fnegation")
                  (str/includes? path "cursor-id=n1"))
             (do (swap! pages inc)

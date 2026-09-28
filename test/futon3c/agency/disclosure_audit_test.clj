@@ -27,6 +27,23 @@
              :interpretation-id "interpretation:1"}]
            (:findings result)))))
 
+(deftest decline-clears-only-its-own-interpretation-finding
+  (let [interpretation {:id "interpretation:1" :intent :withdraw :target "act:d1"}
+        other {:id "interpretation:other" :intent :withdraw :target "act:d1"}
+        decline {:id "decline:1" :interpretation-id "interpretation:1"}
+        result (audit/audit {:job "invoke:j" :report-text "" :disclosures [d1]
+                             :withdrawals [] :routing-jobs []
+                             :stored-act-ids ["act:d1"]
+                             :interpretations [interpretation other]
+                             :declines [decline]})]
+    (is (= [{:reason :negation-declined :disclosure-id "act:d1"
+             :interpretation-id "interpretation:1" :decline-id "decline:1"}]
+           (:declined result)))
+    (is (= ["interpretation:other"]
+           (mapv :interpretation-id
+                 (filter #(= :negation-without-effect (:reason %))
+                         (:findings result)))))))
+
 (deftest missing-and-misdirected-routing-are-findings
   (doseq [jobs [[] [(assoc route2 :agent-id "other")]
                 [(assoc route2 :bellback-of "invoke:other")]]]

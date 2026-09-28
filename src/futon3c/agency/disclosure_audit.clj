@@ -30,9 +30,11 @@
 
 (defn audit
   "Audit one job snapshot. Inputs are already-read plain records."
-  [{:keys [job report-text disclosures withdrawals interpretations routing-jobs
+  [{:keys [job report-text disclosures withdrawals interpretations declines routing-jobs
            stored-act-ids]}]
   (let [withdrawals-by-target (group-by withdrawal-target withdrawals)
+        declines-by-interpretation
+        (group-by #(value % :interpretation-id) declines)
         routing-by-id (into {} (map (juxt #(or (:job-id %) (:id %)) identity)
                                      routing-jobs))
         statuses (mapv (fn [d]
@@ -45,9 +47,20 @@
                         :let [did (record-id d)]
                         i interpretations
                         :when (and (negates? i did)
-                                   (empty? (get withdrawals-by-target did)))]
+                                   (empty? (get withdrawals-by-target did))
+                                   (empty? (get declines-by-interpretation
+                                                (record-id i))))]
                     {:reason :negation-without-effect
                      :disclosure-id did :interpretation-id (record-id i)})
+        declined (for [d disclosures
+                       :let [did (record-id d)]
+                       i interpretations
+                       decline (get declines-by-interpretation (record-id i))
+                       :when (and (negates? i did)
+                                  (empty? (get withdrawals-by-target did)))]
+                   {:reason :negation-declined :disclosure-id did
+                    :interpretation-id (record-id i)
+                    :decline-id (record-id decline)})
         unrouted (for [d disclosures
                        w (get withdrawals-by-target (record-id d))
                        :let [wid (record-id w)
@@ -60,4 +73,5 @@
                     :withdrawal-id wid :expected-job-id expected})]
     {:job job
      :disclosures statuses
+     :declined (vec declined)
      :findings (vec (concat unrecorded negations unrouted))}))
