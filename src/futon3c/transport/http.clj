@@ -9459,10 +9459,12 @@
         (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
               promise-id (some-> (or (:promise-id payload) (get payload "promise-id")) str)
               role (some-> (or (:role payload) (get payload "role")) name keyword)
-              at (str (or (:at payload) (get payload "at") (Instant/now)))
-              at-instant (try (Instant/parse at)
-                              (catch Throwable _
-                                (throw (ex-info "Invalid release time" {:reason :invalid-at}))))
+              ;; A release takes effect now. A caller-chosen time could place an
+              ;; abandonment before the deadline and hide that the debt lapsed.
+              _ (when (or (contains? payload :at) (contains? payload "at"))
+                  (throw (ex-info "Release time is set by the server"
+                                  {:reason :caller-supplied-at})))
+              at-instant (Instant/now)
               _ (when-not (and (not (str/blank? caller)) (not (str/blank? promise-id))
                                (contains? #{:creditor :debtor} role))
                   (throw (ex-info "Invalid promise release" {:reason :invalid-request})))

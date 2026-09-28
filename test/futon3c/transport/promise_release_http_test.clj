@@ -25,8 +25,7 @@
 (defn handler [] (http/make-handler {:registry (fix/mock-registry) :patterns (fix/mock-patterns)}))
 (defn request [caller role]
   {:request-method :post :uri "/api/alpha/promise/release"
-   :body (json/generate-string {:caller caller :promise-id "p" :role role
-                                :at "2026-09-28T12:00:00Z"})})
+   :body (json/generate-string {:caller caller :promise-id "p" :role role})})
 (defn body [r] (json/parse-string (:body r) true))
 
 (defn run-write [caller role input]
@@ -95,3 +94,17 @@
     (is (= 200 (:status (:response
                          (run-write "debtor" "debtor"
                                     (assoc (inputs) :promise-history [creation']))))))))
+
+(deftest caller-cannot-backdate-a-release
+  (let [writes (atom 0)]
+    (with-redefs-fn
+      {#'reader/read-inputs (fn [& _] (inputs))
+       #'futon3c.transport.http/promise-release-grant-id (fn [& _] "act:grant")
+       #'history/record! (fn [& _] (swap! writes inc))}
+      #(let [r ((handler) {:request-method :post :uri "/api/alpha/promise/release"
+                           :body (json/generate-string
+                                  {:caller "debtor" :promise-id "p" :role "debtor"
+                                   :at "2026-09-01T00:00:00Z"})})]
+         (is (= 400 (:status r)))
+         (is (= "caller-supplied-at" (:reason (body r))))))
+    (is (zero? @writes))))
