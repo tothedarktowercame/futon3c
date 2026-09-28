@@ -92,6 +92,7 @@
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
             [futon3c.agency.operator-turn-source :as operator-turn-source]
+            [futon3c.agency.negation-interpretation :as negation-interpretation]
             [futon3c.agency.answer-population :as answer-population]
             [futon3c.agency.grant-record :as grant-record]
             [futon3c.agency.rule-record :as rule-record-store]
@@ -9907,6 +9908,112 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(defn- negation-interpretation-id [operator-evidence-id fragment-id]
+  (str "interpretation-negation:"
+       (UUID/nameUUIDFromBytes
+        (.getBytes (str operator-evidence-id "\u0000" fragment-id)
+                   StandardCharsets/UTF_8))))
+
+(defn- interpretation-identity [entry]
+  (select-keys entry [:evidence/id :evidence/type :evidence/claim-type
+                      :evidence/subject :evidence/author :evidence/in-reply-to
+                      :evidence/session-id :evidence/tags :evidence/body]))
+
+(defn- existing-evidence! [base evidence-id]
+  (try
+    (evidence-entry! base evidence-id)
+    (catch clojure.lang.ExceptionInfo e
+      (if (= 404 (:status (ex-data e))) nil (throw e)))))
+
+(defn- write-negation-interpretation! [base entry]
+  (if-let [stored (existing-evidence! base (:evidence/id entry))]
+    (if (= (interpretation-identity entry) (interpretation-identity stored))
+      {:entry stored :existing? true}
+      (throw (ex-info "Negation interpretation idempotency conflict"
+                      {:reason :idempotency-conflict})))
+    (do
+      (rule-record-store/request! base "POST" "/api/alpha/evidence" entry)
+      (let [stored (evidence-entry! base (:evidence/id entry))]
+        (when-not (= (interpretation-identity entry)
+                     (interpretation-identity stored))
+          (throw (ex-info "Negation interpretation readback mismatch"
+                          {:reason :store-failure})))
+        {:entry stored :existing? false}))))
+
+(defn handle-negation-interpretation [request]
+  (let [body (parse-json-map (read-body request))
+        required [:caller :operator-evidence-id :fragment-id :fragment-text
+                  :analysis-version]
+        missing (some #(when (or (nil? (get body %))
+                                 (and (string? (get body %))
+                                      (str/blank? (get body %)))) %)
+                      required)]
+    (cond
+      (nil? body)
+      (json-response 400 {:ok false :reason :invalid-json})
+
+      missing
+      (json-response 400 {:ok false :reason :missing-field :field missing})
+
+      (not= "xiang" (str (:caller body)))
+      (json-response 403 {:ok false :reason :not-interpreter})
+
+      :else
+      (try
+        (let [base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              operator (evidence-entry! base (:operator-evidence-id body))
+              origin-kind (some-> operator :evidence/origin :kind name)
+              _ (when-not (= "operator" origin-kind)
+                  (throw (ex-info "Evidence is not an operator turn"
+                                  {:reason :not-operator-turn})))
+              source (read-operator-turn-source-jobs (:operator-evidence-id body))
+              resolution (negation-interpretation/resolve-negation-target
+                          (select-keys body [:fragment-id :fragment-text :target])
+                          (:disclosures source))
+              id (negation-interpretation-id (:operator-evidence-id body)
+                                             (:fragment-id body))
+              interpretation-body
+              (cond-> {:source-jobs (:source-jobs source)
+                       :basis (:basis source)
+                       :resolution (:resolution resolution)
+                       :intent :withdraw
+                       :fragment-id (:fragment-id body)
+                       :fragment-text (:fragment-text body)
+                       :analysis-version (:analysis-version body)}
+                (:target resolution) (assoc :target (:target resolution))
+                (:candidates resolution) (assoc :candidates (:candidates resolution)))
+              entry (origin/stamp
+                     {:evidence/id id
+                      :evidence/type :interpretation/negation
+                      :evidence/claim-type :interpretation
+                      :evidence/subject {:ref/type :evidence
+                                         :ref/id (:operator-evidence-id body)}
+                      :evidence/author "xiang"
+                      :evidence/in-reply-to (:operator-evidence-id body)
+                      :evidence/session-id (:evidence/session-id operator)
+                      :evidence/at (str (Instant/now))
+                      :evidence/tags [:interpretation :negation]
+                      :evidence/body interpretation-body}
+                     (origin/harness "negation-interpretation"
+                                     (:operator-evidence-id body))
+                     "futon3c.transport.http")
+              result (write-negation-interpretation! base entry)]
+          (json-response (if (:existing? result) 200 201)
+                         {:ok true :existing? (:existing? result)
+                          :entry (:entry result)}))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (json-response (case reason
+                             :not-operator-turn 403
+                             :idempotency-conflict 409
+                             :turn-chain-not-found 409
+                             :truncated-input 409
+                             500)
+                           {:ok false :reason reason})))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- promise-creation [inputs promise-id]
   (some (fn [row]
           (when (and (contains? obligations/creation-types (:evidence/type row))
@@ -10448,6 +10555,9 @@
 
       (and (= :get method) (= "/api/alpha/operator-turn/source-jobs" uri))
       (handle-operator-turn-source-jobs request)
+
+      (and (= :post method) (= "/api/alpha/interpretation/negation" uri))
+      (handle-negation-interpretation request)
 
       (and (= :get method) (= "/api/alpha/prompt-line" uri))
       (let [params (parse-query-params request)
