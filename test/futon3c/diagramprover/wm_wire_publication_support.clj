@@ -228,7 +228,11 @@
   (let [dir (w/tmp-dir "wire-run-record-")]
     (try
       (let [saved (#'runner/persist-run-record!
-                   {:run-record-dir dir} "wire-pub" "2026-09-26T00:00:00Z"
+                   {:run-record-dir dir
+                    ;; the runner has no built-in renderer; this wire does
+                    ;; not read scan output
+                    :scan-render-fn (fn [& _] nil)}
+                   "wire-pub" "2026-09-26T00:00:00Z"
                    {:outcome :offline-no-selection
                     :repair/publication publication-entries})
             file (:run-record saved)
