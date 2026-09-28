@@ -14,7 +14,8 @@
 (defonce ^:private !state (atom nil))
 
 (defn- path [] (or *path-override* (config/env "FUTON3C_FOLLOWUP_PATH") default-path))
-(defn- empty-state [] {:queued {} :leased {} :terminal {} :dedupe {}})
+(defn- empty-state [] {:queued {} :leased {} :terminal {} :dedupe {}
+                       :history-outbox {}})
 (defn- migrate-dedupe [s]
   (let [outstanding (into #{} (concat (map :followup-id (mapcat val (:queued s)))
                                         (keys (:leased s))))]
@@ -27,11 +28,13 @@
 (defn- ensure! []
   (history/capture! :followup (fn []
   (when-not @!state
-    (capture/reset-state! :followup !state (persist! (load-state))))
+    (capture/reset-state! :followup !state (persist! (load-state)))
+    (history/register-pending! (vals (:history-outbox @!state)))
+    (when (seq (:history-outbox @!state)) (history/drain! !state persist!)))
   @!state)))
 (defn clear! []
   (history/capture! :followup (fn [] (capture/reset-state! :followup !state (empty-state)) (persist! @!state))))
-(defn snapshot [] (ensure!) @!state)
+(defn snapshot [] (ensure!) (dissoc @!state :history-outbox))
 (defn- seat-key [agent session] [(str agent) (str session)])
 (defn- release-dedupe [s item]
   (if item (update s :dedupe dissoc (:dedupe-key item)) s))
@@ -48,22 +51,34 @@
         before (history-items old)
         requeued (into {} (filter (fn [[_ item]]
                                    (and requeue-at (>= requeue-at (:lease-deadline-ms item))))
-                                 (:leased old)))]
-    (persist! @!state)
+                                 (:leased old)))
+        allocator (history/allocator-snapshot)
+        transitions
+        (vec (for [[id [state item]] (history-items new)
+                   :let [[prior prior-item] (get before id)]
+                   :when (and (or (not= prior state) (not= prior-item item))
+                              (not (and (= :queued state) (contains? requeued id))))]
+               [(case state
+                  :queued (if prior :promise/followup-requeued :promise/followup-enqueued)
+                  :leased :promise/followup-dequeued
+                  :terminal :promise/followup-terminal)
+                item]))]
+    (doseq [[type item] transitions :when (= :promise/followup-enqueued type)]
+      (history/stage! !state type item now (select-keys item [:state :reason])))
+    (try (persist! @!state)
+         (catch Throwable e
+           (reset! !state old) (history/restore-allocator! allocator)
+           (capture/drain!)
+           (throw e)))
+    (when history/*after-outbox-persist* (history/*after-outbox-persist*))
+    (history/drain! !state persist!)
     ;; Expiry can requeue and immediately lease the same item in one swap.
     ;; Preserve that intermediate transition as well as the final committed state.
     (doseq [[_ item] requeued]
       (history/record! :promise/followup-requeued item requeue-at))
     ;; Compare committed states, never emit from a retryable swap function.
-    (doseq [[id [state item]] (history-items new)
-            :let [[prior prior-item] (get before id)]
-            :when (and (or (not= prior state) (not= prior-item item))
-                       (not (and (= :queued state) (contains? requeued id))))]
-      (history/record! (case state
-                         :queued (if prior :promise/followup-requeued :promise/followup-enqueued)
-                         :leased :promise/followup-dequeued
-                         :terminal :promise/followup-terminal)
-                       item now (select-keys item [:state :reason])))
+    (doseq [[type item] transitions :when (not= :promise/followup-enqueued type)]
+      (history/record! type item now (select-keys item [:state :reason])))
     new))
 
 (defn enqueue!

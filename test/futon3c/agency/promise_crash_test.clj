@@ -79,29 +79,34 @@
       (restart! dir)
       (finally (delete-tree! dir)))))
 
-(deftest park-made-persist-before-history-currently-disagrees
+(deftest park-made-persist-before-history-drains-after-restart
   (let [report (crash-report "park-made")]
-    (is (false? (:equal? report)) (pr-str report))
-    (is (:readable? report))
-    (is (= [:no-history] (mapv :reason (:issues report))) (pr-str report))
-    (is (= #{[:parked :records] [:parked :index] [:parked :coalesced]}
-           (difference-roots report)) (pr-str report))))
-
-(deftest park-released-persist-before-history-currently-disagrees
-  (let [report (crash-report "park-released")]
-    (is (false? (:equal? report)) (pr-str report))
+    (is (:equal? report) (pr-str report))
     (is (:readable? report))
     (is (empty? (:issues report)) (pr-str report))
-    (is (= #{[:parked :records] [:parked :index]}
-           (difference-roots report)) (pr-str report))))
+    (is (empty? (:differences report)) (pr-str report))))
 
-(deftest followup-enqueued-persist-before-history-currently-disagrees
-  (let [report (crash-report "followup-enqueued")]
-    (is (false? (:equal? report)) (pr-str report))
+(deftest park-released-persist-before-history-drains-after-restart
+  (let [report (crash-report "park-released")]
+    (is (:equal? report) (pr-str report))
     (is (:readable? report))
-    (is (= [:no-history] (mapv :reason (:issues report))) (pr-str report))
-    (is (= #{[:followup :queued] [:followup :dedupe]}
-           (difference-roots report)) (pr-str report))))
+    (is (empty? (:issues report)) (pr-str report))
+    (is (empty? (:differences report)) (pr-str report))))
+
+(deftest followup-enqueued-persist-before-history-drains-after-restart
+  (let [report (crash-report "followup-enqueued")]
+    (is (:equal? report) (pr-str report))
+    (is (:readable? report))
+    (is (empty? (:issues report)) (pr-str report))
+    (is (empty? (:differences report)) (pr-str report))))
+
+(deftest append-before-outbox-removal-replays-as-existing
+  (let [report (crash-report "park-made-after-append")]
+    (is (:equal? report) (pr-str report))
+    (is (= 1 (count (filter #{:promise/park-made} (:history-types report))))
+        (pr-str report))
+    (is (= (count (:history-ids report)) (count (set (:history-ids report))))
+        (pr-str report))))
 
 (deftest truncated-park-is-preserved-but-currently-disagrees
   (let [report (truncated-report "control-park" "parked.edn")]

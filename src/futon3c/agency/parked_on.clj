@@ -48,7 +48,8 @@
 (defonce ^:private !parked (atom nil))
 
 (defn- empty-state []
-  {:records {} :index {} :coalesced {} :ready-inbox {} :leased {}})
+  {:records {} :index {} :coalesced {} :ready-inbox {} :leased {}
+   :history-outbox {}})
 
 ;; Default lease duration for a popped ready item (ms). After this without an
 ;; ACK, the sweep returns the item to the front of its queue for redelivery.
@@ -89,12 +90,19 @@
   (try
     (atomic-file/write! (store-path) (pr-str (dissoc state :just-released)))
     (catch Exception e
-      (binding [*out* *err*]
-        (println (str "[parked-on] persist failed: " (.getMessage e))))))
+      (throw (ex-info "Park state persist failed"
+                      {:reason :state-persist-failed :path (store-path)} e))))
   state)
 
 (defn- ensure! []
-  (history/capture! :parked (fn [] (when (nil? @!parked) (capture/reset-state! :parked !parked (load-state))) @!parked)))
+  (history/capture! :parked
+    (fn []
+      (when (nil? @!parked)
+        (capture/reset-state! :parked !parked (load-state))
+        (history/register-pending! (vals (:history-outbox @!parked)))
+        (when (seq (:history-outbox @!parked))
+          (history/drain! !parked persist!)))
+      @!parked)))
 
 (defn clear!
   "Reset the store (tests/dev)."
@@ -103,7 +111,7 @@
   (capture/reset-state! :parked !parked (empty-state))
   (persist! (empty-state)))))
 
-(defn snapshot [] (ensure!) (dissoc @!parked :just-released))
+(defn snapshot [] (ensure!) (dissoc @!parked :just-released :history-outbox))
 
 ;; ---------------------------------------------------------------------------;;
 ;; Ready-inbox + lease/ack (E-park-delivery-losses bugs 2-3)
@@ -341,18 +349,33 @@
   (if-not (contains? (:index @!parked) dep-id)
     {:released [] :released-records []} ; nothing parked on this dep — cheap no-op, no swap/disk write
     (let [[old new] (capture/swap-vals-state! :parked !parked #(apply-completion % dep-id result now-ms))
-          fired (:just-released new)]
+          fired (:just-released new)
+          allocator (history/allocator-snapshot)]
       (when (seq fired)
         (capture/swap-state! :parked !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
-      (persist! @!parked)
       (doseq [rid (get-in old [:index dep-id])
               :let [rec (get-in old [:records rid])]
               :when (and rec (not (:released? rec)))]
-        (history/record! :promise/dependency-terminated rec now-ms {:dep-id dep-id :result result})
-        (when (and (not (get-in new [:records rid]))
-                   (not (pos? (get-in rec [:budget :resumes-left] 1))))
-          (history/record! :promise/budget-exhausted rec now-ms)))
-      (doseq [rec fired] (wake-and-release! rec resume! now-ms))
+        (history/stage! !parked :promise/dependency-terminated rec now-ms
+                        {:dep-id dep-id :result result}))
+      (doseq [rec fired]
+        (when resume! (history/stage! !parked :promise/woken rec now-ms))
+        (history/stage! !parked :promise/released rec now-ms))
+      (try (persist! @!parked)
+           (catch Throwable e
+             (reset! !parked old) (history/restore-allocator! allocator)
+             (capture/drain!)
+             (throw e)))
+      (when history/*after-outbox-persist* (history/*after-outbox-persist*))
+      (history/drain! !parked persist!)
+      (doseq [rid (get-in old [:index dep-id])
+              :let [rec (get-in old [:records rid])]
+              :when (and rec (not (:released? rec))
+                         (not (get-in new [:records rid]))
+                         (not (pos? (get-in rec [:budget :resumes-left] 1))))]
+        (history/record! :promise/budget-exhausted rec now-ms))
+      (doseq [rec fired]
+        (when resume! (resume! rec)))
       {:released (mapv :id fired)
        :released-records (mapv #(dissoc % :just-released) fired)})))))
 
@@ -397,12 +420,22 @@
              :coalesce-key coalesce-key})]
     (cond
       (and (empty? awaiting) (not timer-due-ms))
-      (do (history/record! :promise/park-made rec now-ms)
+      (let [before @!parked allocator (history/allocator-snapshot)]
+        (history/stage! !parked :promise/park-made rec now-ms)
+        (try (persist! @!parked)
+             (catch Throwable e
+               (reset! !parked before) (history/restore-allocator! allocator)
+               (capture/drain!)
+               (throw e)))
+          (when history/*after-outbox-persist* (history/*after-outbox-persist*))
+          (history/drain! !parked persist!)
           (wake-and-release! rec resume! now-ms)
           {:id rid :status :released-immediately})
 
       :else
-      (let [chosen-id (atom nil)
+      (let [before @!parked
+            allocator (history/allocator-snapshot)
+            chosen-id (atom nil)
             active? (atom false)]
         (capture/swap-state! :parked !parked
                (fn [st]
@@ -423,9 +456,15 @@
                                  (assoc-in [:records rid] rec)
                                  (update :index index-add rid awaiting))
                        coalesce-key (assoc-in [:coalesced coalesce-key] rid))))))
-        (persist! @!parked)
         (when @active?
-          (history/record! :promise/park-made (assoc rec :id @chosen-id) now-ms))
+          (history/stage! !parked :promise/park-made (assoc rec :id @chosen-id) now-ms))
+        (try (persist! @!parked)
+             (catch Throwable e
+               (reset! !parked before) (history/restore-allocator! allocator)
+               (capture/drain!)
+               (throw e)))
+        (when history/*after-outbox-persist* (history/*after-outbox-persist*))
+        (history/drain! !parked persist!)
         ;; Reconcile only a live record. A duplicate whose first entry already
         ;; released shares that entry's delivery and must not queue another.
         (when (and @active? ledger-lookup)

@@ -5646,10 +5646,15 @@
         (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
         (json-response 200 (assoc result :ok true)))
         (catch clojure.lang.ExceptionInfo e
-          (if (:promise-record/refusal (ex-data e))
+          (cond
+            (:promise-record/refusal (ex-data e))
             (json-response 400 {:ok false :error "invalid-promise-record"
                                 :reason (:reason (ex-data e)) :message (.getMessage e)})
-            (throw e)))))))
+
+            (= :state-persist-failed (:reason (ex-data e)))
+            (json-response 503 {:ok false :error "state-persist-failed"})
+
+            :else (throw e)))))))
 
 (defn- handle-park-complete
   "POST /api/alpha/park/complete — mark an arbitrary parked-on dependency complete."

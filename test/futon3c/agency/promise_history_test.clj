@@ -1,6 +1,7 @@
 (ns futon3c.agency.promise-history-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.promise-history :as history]
+            [futon3c.agency.atomic-file :as atomic-file]
             [futon3c.agency.promise-outcome]
             [futon3c.agency.parked-on :as park]
             [futon3c.agency.followup-queue :as queue]
@@ -142,3 +143,49 @@
         (Thread/sleep 300)
         (is (= 2 @calls) "a sweep runs again once the interval has passed"))
       (finally (reset! last-ms (first saved)) (reset! pending (second saved))))))
+
+(deftest outbox-drain-is-idempotent-and-shares-the-chain-allocator
+  (let [state (atom {:history-outbox {}})
+        persisted (atom nil)
+        persist! #(reset! persisted %)
+        rec {:id "park:allocator" :agent "agent" :session "session"
+             :awaiting #{"job"} :arrived {}}]
+    (history/stage! state :promise/park-made rec 1000)
+    ;; An old-path transition allocated while sequence 1 is pending must reserve 2.
+    (history/record! :promise/deadline-expired rec 2000)
+    (history/drain-now! state persist!)
+    (history/drain-now! state persist!)
+    (is (history/await-writes! 5000))
+    (let [entries (->> (rows)
+                       (filter #(= "park:allocator"
+                                  (get-in % [:evidence/body :history/promise-id])))
+                       (sort-by #(get-in % [:evidence/body :history/promise-sequence])))]
+      (is (= 2 (count entries)))
+      (is (= [1 2] (mapv #(get-in % [:evidence/body :history/promise-sequence]) entries)))
+      (is (= 2 (count (set (map :evidence/id entries)))))
+      (is (empty? (:history-outbox @state)))
+      (is (empty? (:history-outbox @persisted))))))
+
+(deftest failed-authority-persist-enqueues-no-history
+  (let [before (count (:order @*evidence*))]
+    (with-redefs [atomic-file/write! (fn [& _] (throw (java.io.IOException. "read only")))]
+      (is (= :state-persist-failed
+             (try (park/park! request {:now-ms 1000}) nil
+                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))
+    (is (history/await-writes! 5000))
+    (is (= before (count (:order @*evidence*))))))
+
+(deftest chain-check-types-a-durable-pending-predecessor
+  (let [pending {:evidence/id "promise-history:pending"
+                 :evidence/type :promise/park-made
+                 :evidence/body {:history/promise-id "park:pending"
+                                 :history/promise-sequence 1}}
+        later {:evidence/id "promise-history:later"
+               :evidence/type :promise/woken
+               :evidence/body {:history/format 3
+                               :history/promise-id "park:pending"
+                               :history/promise-sequence 2
+                               :history/predecessor {:sequence 1
+                                                     :id "promise-history:pending"
+                                                     :type :promise/park-made}}}]
+    (is (= :pending (:reason (first (history/check-chains [later] [pending])))))))

@@ -8,7 +8,10 @@
 (def snapshot-keys
   {:parked #{:records :index :coalesced :ready-inbox :leased}
    :followup #{:queued :leased :terminal :dedupe}})
-(def exclusions {:parked {:just-released "Transient handoff, excluded by snapshot and persist!"}})
+(def exclusions
+  {:parked {:just-released "Transient handoff, excluded by snapshot and persist!"
+            :history-outbox "Persistence metadata, replayed by promise-history"}
+   :followup {:history-outbox "Persistence metadata, replayed by promise-history"}})
 (def ^:dynamic *capture* nil)
 
 (defn clean [store state]

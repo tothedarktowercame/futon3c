@@ -228,6 +228,19 @@
       (is (= 400 (:status response)))
       (is (= error (:error body))))))
 
+(deftest park-state-persist-failure-is-503
+  (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                               parked-on/park!
+                               (fn [& _]
+                                 (throw (ex-info "disk refused"
+                                                 {:reason :state-persist-failed})))]
+                   ((var-get #'http/handle-park)
+                    {:body (json/generate-string {:agent "codex-5"
+                                                  :awaiting ["job"]})} nil))
+        body (json/parse-string (:body response) true)]
+    (is (= 503 (:status response)))
+    (is (= "state-persist-failed" (:error body)))))
+
 (deftest parked-background-record-does-not-defer-within-turn-finalization
   (testing "background parks are excluded from /parked more-pending"
     (let [response (with-redefs [http/parked-on-enabled? (constantly true)

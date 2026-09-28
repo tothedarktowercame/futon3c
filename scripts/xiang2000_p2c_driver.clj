@@ -98,19 +98,28 @@
       (initialise!)
       (case scenario
         "park-made"
-        (with-redefs [history/record! (fn [& _] (block-at-boundary! (:ready (paths dir))))]
+        (binding [history/*after-outbox-persist*
+                  (fn [] (block-at-boundary! (:ready (paths dir))))]
           (park/park! park-request {:now-ms 1000}))
+
+        "park-made-after-append"
+        (binding [history/*after-outbox-append*
+                  (fn [_] (block-at-boundary! (:ready (paths dir))))]
+          (park/park! park-request {:now-ms 1000})
+          (history/await-writes! 30000))
 
         "park-released"
         (let [id (:id (park/park! park-request {:now-ms 1000}))]
           (when-not (history/await-writes! 10000)
             (throw (ex-info "Park-made history did not drain" {:id id})))
-          (with-redefs [history/record! (fn [& _] (block-at-boundary! (:ready (paths dir))))]
+          (binding [history/*after-outbox-persist*
+                    (fn [] (block-at-boundary! (:ready (paths dir))))]
             (park/note-completion! "dep-p2c" {:ok true}
                                    {:now-ms 2000 :resume! (fn [_])})))
 
         "followup-enqueued"
-        (with-redefs [history/record! (fn [& _] (block-at-boundary! (:ready (paths dir))))]
+        (binding [history/*after-outbox-persist*
+                  (fn [] (block-at-boundary! (:ready (paths dir))))]
           (followup/enqueue! followup-request))
 
         "control-park"
@@ -139,6 +148,8 @@
         dir
         (fn [evidence]
           (let [live {:parked (park/snapshot) :followup (followup/snapshot)}
+                _ (when-not (history/await-writes! 10000)
+                    (throw (ex-info "Restart outbox did not drain" {})))
                 entries (vec (backend/-all evidence))
                 corrupt-files (->> (.listFiles (io/file dir))
                                    (map #(.getName ^java.io.File %))
@@ -146,6 +157,8 @@
                                    sort vec)
                 report (assoc (replay/compare-state entries live)
                               :readable? true
+                              :history-ids (mapv :evidence/id entries)
+                              :history-types (mapv :evidence/type entries)
                               :corruption-stats (atomic-file/stats)
                               :corrupt-files corrupt-files)]
             (spit result (pr-str report)))))
