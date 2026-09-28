@@ -9236,7 +9236,7 @@
       (json-response 400 {:ok false :reason :unexpected-effect-id})
 
       :else
-      (let [result (turn-notice/publish! payload)]
+      (let [result (turn-notice/publish! (dissoc payload :caller))]
         (json-response 200 {:ok true :result result})))))
 
 (defn- pattern-card-refusal [throwable]
@@ -9457,6 +9457,12 @@
 
 (declare required-pattern-card-field!)
 
+(defn- publish-agreement-notice!
+  [agent session evidence-id kind fields]
+  (turn-notice/publish!
+   (merge {:agent agent :session session :notice-id (str evidence-id) :kind kind}
+          fields)))
+
 (defn handle-agreement
   "Verify an operator acceptance, resolve it against exact-seat visible offers,
    and mint the immutable agreement."
@@ -9499,16 +9505,29 @@
               resolution (agreement-record/resolve-acceptance visible parsed)]
           (cond
             existing
-            (json-response 200 {:ok true :record existing
-                                :receipt {:ok true :hx/id (:id existing)
-                                          :no-op? true :verified? true}})
+            (do
+              (publish-agreement-notice!
+               agent session evidence-id "agreement-accepted"
+               {:agreement-id (:id existing)
+                :offer-id (:agreement/offer existing)
+                :option-id (:agreement/option-id existing)})
+              (json-response 200 {:ok true :record existing
+                                  :receipt {:ok true :hx/id (:id existing)
+                                            :no-op? true :verified? true}}))
 
             (:refused resolution)
-            (json-response 409 {:ok false :reason (get-in resolution [:refused :reason])})
+            (let [reason (get-in resolution [:refused :reason])]
+              (publish-agreement-notice!
+               agent session evidence-id "agreement-refused" {:reason reason})
+              (json-response 409 {:ok false :reason reason}))
 
             (:ambiguous resolution)
-            (json-response 409 {:ok false :reason :ambiguous
-                                :candidates (get-in resolution [:ambiguous :candidates])})
+            (let [candidates (get-in resolution [:ambiguous :candidates])]
+              (publish-agreement-notice!
+               agent session evidence-id "agreement-ambiguous"
+               {:candidates candidates})
+              (json-response 409 {:ok false :reason :ambiguous
+                                  :candidates candidates}))
 
             :else
             (let [{:keys [offer option]} (:accept resolution)
@@ -9522,6 +9541,11 @@
                   key (str (:id offer) ":" (:option/id option) ":" evidence-id)
                   result (agreement-cli/write! base {:record record :idempotency-key key} offer)]
               (offer-provider/clear! agent session (:id offer))
+              (publish-agreement-notice!
+               agent session evidence-id "agreement-accepted"
+               {:agreement-id (get-in result [:record :id])
+                :offer-id (:id offer)
+                :option-id (:option/id option)})
               (json-response 200 (assoc result :ok true)))))
         (catch clojure.lang.ExceptionInfo e
           (let [reason (:reason (ex-data e))]

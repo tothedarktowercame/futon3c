@@ -7,6 +7,7 @@
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.registry :as registry]
             [futon3c.agency.rule-record :as store]
+            [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http])
   (:import [java.time Instant]))
@@ -67,7 +68,12 @@
    :body (json/generate-string {:agent "agent-a" :session "session-a"
                                 :text text :evidence-id evidence-id})})
 (defn response-body [r] (json/parse-string (:body r) true))
+(defn header
+  ([] (header "agent-a" "session-a"))
+  ([agent session]
+   (#'http/wrap-surface-header "body" "emacs-repl" "joe" agent nil session)))
 (use-fixtures :each (fn [f] (offer-provider/reset-cache!) (prompt-line/reset-registry!)
+                      (turn-notice/reset-state!)
                       (offer-provider/register!)
                       (with-redefs [registry/get-agent
                                     (fn [agent] {:agent/id agent
@@ -90,6 +96,7 @@
           (let [r ((handler) (req "yes" (:evidence/id entry)))]
             (is (= 403 (:status r)))
             (is (= "evidence-not-operator-turn" (:reason (response-body r))))
+            (is (not (str/includes? (header) "agreement ")))
             (is (empty? (filter #(= "POST" (first %)) @calls)))))))))
 
 (deftest ambiguity-and-withdrawal-write-nothing
@@ -100,6 +107,10 @@
       (with-redefs [store/request! request!]
         (let [r ((handler) (req "yes" "e:yes"))]
           (is (= 409 (:status r))) (is (= "ambiguous" (:reason (response-body r))))
+          (is (not (str/includes? (header "other" "session-a") "agreement ambiguous:")))
+          (is (str/includes?
+               (header)
+               "agreement ambiguous: ask Joe one short question naming which (act:offer-a 1, act:offer-a 2, act:offer-b 1)"))
           (is (empty? (filter #(= "POST" (first %)) @calls))))))
     (let [w {:hx/id "act:w" :hx/type :act/withdrawal
              :hx/props {:author "agent-a" :target "act:offer-a" :status :effective
@@ -109,6 +120,7 @@
       (with-redefs [store/request! request!]
         (let [r ((handler) (req "yes act:offer-a" "e:named"))]
           (is (= 409 (:status r))) (is (= "unknown-offer" (:reason (response-body r))))
+          (is (str/includes? (header) "agreement refused: unknown-offer"))
           (is (empty? (filter #(= "POST" (first %)) @calls))))))))
 
 (deftest accept-clears-prompt-and-replay-is-idempotent
@@ -120,13 +132,31 @@
     (with-redefs [store/request! request!]
       (let [first-r ((handler) (req "yes 2" "e:yes"))
             first-body (response-body first-r)
-            replay ((handler) (req "yes 2" "e:yes"))
-            second-r ((handler) (req "yes act:offer-a 2" "e:second"))]
+            replay ((handler) (req "yes 2" "e:yes"))]
         (is (= 200 (:status first-r)))
         (is (= {:description "two"} (get-in first-body [:record :agreement/scope])))
         (is (nil? (offer-provider/provider {:agent-id "agent-a" :session-id "session-a"})))
         (is (= (get-in first-body [:record :id]) (get-in (response-body replay) [:record :id])))
         (is (true? (get-in (response-body replay) [:receipt :no-op?])))
-        (is (= 409 (:status second-r)))
-        (is (= "unknown-offer" (:reason (response-body second-r))))
+        (is (str/includes?
+             (header)
+             (str "agreement " (get-in first-body [:record :id])
+                  ": you offered act:offer-a, Joe accepted option 2")))
+        (is (not (str/includes? (header) "agreement ")))
+        (let [second-r ((handler) (req "yes act:offer-a 2" "e:second"))]
+          (is (= 409 (:status second-r)))
+          (is (= "unknown-offer" (:reason (response-body second-r)))))
         (is (= 1 (count (filter #(= "POST" (first %)) @calls))))))))
+
+(deftest ambiguous-notice-renders-at-most-six-candidates
+  (turn-notice/publish!
+   {:agent "agent-a" :session "session-a" :notice-id "e:eight"
+    :kind "agreement-ambiguous"
+    :candidates (mapv (fn [n] {:offer-id (str "act:offer-" n)
+                               :option-id (str n)})
+                      (range 1 9))})
+  (let [h (header)]
+    (doseq [n (range 1 7)]
+      (is (str/includes? h (str "act:offer-" n " " n))))
+    (is (not (str/includes? h "act:offer-7 7")))
+    (is (not (str/includes? h "act:offer-8 8")))))
