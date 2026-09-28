@@ -2841,7 +2841,10 @@ continues through the ordinary agent send path unchanged."
            (format "undo: %s restored (reversal %s)"
                    (or pattern "pattern card") (or reversal "unknown"))))
         t)
-       ((eql status 409)
+       ;; 409 also means an idempotency conflict; only an ambiguous answer
+       ;; is handled here, anything else goes to the agent unchanged.
+       ((and (eql status 409)
+             (equal "ambiguous" (format "%s" (plist-get body :reason))))
         (agent-chat--insert-undo-line
          (format "undo: ambiguous; name one effect: %s"
                  (mapconcat #'identity (plist-get body :effects) ", ")))

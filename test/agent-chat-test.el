@@ -266,6 +266,7 @@
 (ert-deftest agent-chat-undo-failures-fall-through-unchanged ()
   (dolist (case '(("undo" . (:status 422 :json (:reason "nothing-to-undo")))
                   ("undo" . :timeout)
+                  ("undo" . (:status 409 :json (:reason "idempotency-conflict")))
                   ("undo that" . (:status 200 :json nil))
                   ("Undo it" . (:status 200 :json nil))))
     (with-temp-buffer
