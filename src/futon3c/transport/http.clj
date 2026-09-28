@@ -9966,7 +9966,13 @@
               _ (when-not (= "operator" origin-kind)
                   (throw (ex-info "Evidence is not an operator turn"
                                   {:reason :not-operator-turn})))
-              source (read-operator-turn-source-jobs (:operator-evidence-id body))
+              ;; DERIVE-2 item 16.1: a turn with no preceding agent turn has no
+              ;; source job; it is stored as :target-unresolved, not refused.
+              source (try (read-operator-turn-source-jobs (:operator-evidence-id body))
+                          (catch clojure.lang.ExceptionInfo e
+                            (if (= :turn-chain-not-found (:reason (ex-data e)))
+                              {:source-jobs [] :basis :no-agent-turn :disclosures []}
+                              (throw e))))
               resolution (negation-interpretation/resolve-negation-target
                           (select-keys body [:fragment-id :fragment-text :target])
                           (:disclosures source))

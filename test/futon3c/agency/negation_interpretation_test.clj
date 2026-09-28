@@ -106,3 +106,23 @@
   (let [response ((handler) (request (dissoc base-body :fragment-id)))]
     (is (= 400 (:status response)))
     (is (= "missing-field" (:reason (json/parse-string (:body response) true))))))
+
+(deftest route-stores-unresolved-when-no-agent-turn-precedes
+  ;; DERIVE-2 item 16.1: such a turn is stored as :target-unresolved.
+  (let [stored (atom nil)
+        fake-store
+        (fn [_ method path body]
+          (cond
+            (and (= method "GET") (str/ends-with? path "turn%3Ajoe")) operator
+            (and (= method "GET") @stored) @stored
+            (= method "GET") (throw (ex-info "missing" {:status 404}))
+            (= method "POST") (do (reset! stored body)
+                                  {:ok true :evidence/id (:evidence/id body)})))]
+    (with-redefs [store/request! fake-store
+                  http/read-operator-turn-source-jobs
+                  (fn [_] (throw (ex-info "no chain" {:reason :turn-chain-not-found})))]
+      (let [result (parse-response ((handler) (request base-body)))]
+        (is (= 201 (:status result)) (pr-str result))
+        (is (= "target-unresolved"
+               (get-in result [:entry :evidence/body :resolution])))
+        (is (= "no-agent-turn" (get-in result [:entry :evidence/body :basis])))))))
