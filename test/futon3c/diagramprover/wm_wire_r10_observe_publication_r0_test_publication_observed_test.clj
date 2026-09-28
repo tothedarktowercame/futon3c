@@ -28,7 +28,7 @@
   fixture that makes a present value cross; the wire is re-kinded.)"
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-publication-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
 (def present-observation
   "The value the real observe-publication-fn writes for the test's
@@ -37,12 +37,14 @@
    :evidence {:status :receipt-committed :repair/id "occ-t" :repair/discharged? true}})
 
 (def live-records-read
-  [(assoc support/flight-278b6988
-          :why "its one enactment is {:absent :no-dispatch-configured}: no enactment record was written, so no :publication-observed on either end")
-   (assoc support/click-001-enactment
-          :why "the hand-authored exemplar enactment (claude-10, 2026-09-24) predates H-publish: it carries no :publication-observed")])
+  [{:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn"
+    :sha256 "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"
+    :why "its one enactment is {:absent :no-dispatch-configured}: no enactment record was written, so no :publication-observed on either end"}
+   {:path "holes/labs/M-futon-seams/exemplar/click-001-enactment.edn"
+    :sha256 "e51063896e2a42096718d902e0b4dfe0e4652323de0b42848c2c0cf318bf6c89"
+    :why "the hand-authored exemplar enactment (claude-10, 2026-09-24) predates H-publish: it carries no :publication-observed"}])
 
-(defn check [] (support/r0-test-observe identity))
+(defn check [] (:fields (producer-record/record "publication-r0-test-observe")))
 
 (def wire
   {
@@ -53,7 +55,7 @@
    :test `the-test-box-consumes-the-writers-present-observation
    :check check
    :live-records-read live-records-read
-   :note "flight_enact_test drives the real observe-publication-fn (enact-fn's default, no override) over a fixture whose target HAS a repair obligation discharged on a real persist-run-record!-written run record; the present value {:observed true :at \"run-pub\" :evidence {:repair/id \"occ-t\" :status :receipt-committed ...}} crosses into the test's assertion. No live record carries both ends, so witnessed hermetically."})
+   :note "flight_enact_test drives the real observe-publication-fn (enact-fn's default, no override) over a fixture whose target HAS a repair obligation discharged on a real persist-run-record!-written run record; the present value {:observed true :at \"run-pub\" :evidence {:repair/id \"occ-t\" :status :receipt-committed ...}} crosses into the test's assertion. No live record carries both ends, so witnessed hermetically. The values are read from the producer record."})
 
 (deftest the-test-box-consumes-the-writers-present-observation
   (let [{:keys [writer reader report-type] :as o} (check)]
@@ -70,7 +72,7 @@
   ;; assertion, which fails on it — the value in the test's own report is
   ;; the forged one, not a restated literal.
   (let [forged {:observed true :at "run-pub" :evidence {:repair/id "forged"}}
-        {:keys [writer reader report-type]} (support/r0-test-observe (constantly forged))]
+        {:keys [writer reader report-type]} (:different (check))]
     (is (= present-observation writer))
     (is (= forged reader) "the assertion consumed the writer's (tampered) value")
     (is (= :fail report-type) "and the test failed on it, as it must")))
@@ -80,7 +82,7 @@
   ;; reaches the test's assertion and fails there — the reader does not
   ;; receive.
   (let [absent {:absent :no-repair-obligation-for-target :target "M-t"}
-        {:keys [writer reader report-type] :as o} (support/r0-test-observe (constantly absent))]
+        {:keys [writer reader report-type] :as o} (:absent (check))]
     (is (= present-observation writer))
     (is (= absent reader))
     (is (= :fail report-type))
