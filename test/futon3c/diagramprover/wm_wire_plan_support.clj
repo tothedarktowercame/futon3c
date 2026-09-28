@@ -9,7 +9,7 @@
             [futon2.aif.outer-cascade :as cascade]
             [futon2.aif.outer-loop :as outer]
             [futon3c.diagramprover.wm-wire :as w]
-            [wm-scheduled-run :as scheduled]))
+            [futon2.wm-trigger :as scheduled]))
 
 (def field
   {:considered [{:target "M-a" :kind :mission :repo "futon2" :path "M-a.md"}

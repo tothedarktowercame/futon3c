@@ -7,8 +7,9 @@
   which the flight path (flight-plan!) passes to outer-loop/plan-from-field!
   and so to the reader. -main itself is not drivable hermetically (it runs
   a scheduled tick: trace writes, evidence emit), so the writer's value is
-  observed by a real call of wm-scheduled-run/trigger-from-env's 1-arity —
-  the exact form -main calls. The reader is outer-cascade/select (built by
+  observed by a real call of futon2.wm-trigger/trigger-from-env's 1-arity —
+  the function wm-scheduled-run/trigger-from-env is defined as (futon2's
+  wm-scheduled-run-flight-test checks they are the same object). The reader is outer-cascade/select (built by
   H-T-CALLER-I, futon2 3b449beb..b66369d3, after the map at 06d451d6 marked
   the box :not-built): it records the given :trigger on
   [:target-selection :trigger], with {:absent :no-trigger} when none is
@@ -22,10 +23,10 @@
   (:require [clojure.test :refer [deftest is]]
             [futon2.aif.outer-cascade :as oc]
             [futon3c.diagramprover.wm-wire :as w]
-            [wm-scheduled-run]))
+            [futon2.wm-trigger]))
 
 (defn- trigger-from-env [getenv]
-  (@(ns-resolve 'wm-scheduled-run 'trigger-from-env) getenv))
+  (@(ns-resolve 'futon2.wm-trigger 'trigger-from-env) getenv))
 
 (def field
   "A minimal field with one eligible target (select's input shape)."
