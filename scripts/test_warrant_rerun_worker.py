@@ -46,6 +46,24 @@ class WorkerTest(unittest.TestCase):
         with w.connect(self.db) as db: row=db.execute("SELECT state,entry_id FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
         self.assertEqual(("done","entry-example-test"),row); self.assertEqual("None",self.envout.read_text().strip())
         self.assertEqual(1,self.calls.read_text().count("start"))
+    def test_done_writes_a_dependency_record_and_other_states_do_not(self):
+        seen=[]; original=w.write_reach_record
+        w.write_reach_record=lambda db,ns,d: seen.append((ns,d)) or '{"skipped": "stub"}'
+        try:
+            args=self.args(); args.reach_dir=str(self.root/"reach")
+            rid=self.queue(); w.run_pass(args)
+            with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
+            self.assertEqual(("done",'reach: {"skipped": "stub"}'),row)
+            self.assertEqual([("example-test",str(self.root/"reach"))],seen)
+            self.runner.write_text("#!/bin/sh\nexit 7\n"); rid=self.queue("other-test"); w.run_pass(args)
+            with w.connect(self.db) as db: self.assertEqual("failed",db.execute("SELECT state FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()[0])
+            self.assertEqual(1,len(seen))
+        finally: w.write_reach_record=original
+    def test_a_failing_record_step_leaves_the_request_done(self):
+        args=self.args(); args.reach_dir=str(self.root/"reach")
+        rid=self.queue(); w.run_pass(args)  # the real step, against the fixture's reduced schema
+        with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()
+        self.assertEqual("done",row[0]); self.assertTrue(row[1].startswith("reach: "))
     def test_failure_without_run(self):
         self.runner.write_text("#!/bin/sh\nexit 1\n"); self.runner.chmod(0o755); rid=self.queue(); w.run_pass(self.args())
         with w.connect(self.db) as db: row=db.execute("SELECT state,detail FROM warrant_rerun_requests WHERE request_id=?",(rid,)).fetchone()

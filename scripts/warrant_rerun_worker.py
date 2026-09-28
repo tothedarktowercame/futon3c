@@ -108,7 +108,23 @@ def finish(db_path, request_id, state, entry=None, detail=None):
         db.execute("UPDATE warrant_rerun_requests SET state=?,entry_id=?,detail=?,finished_at=? WHERE request_id=?",
                    (state, entry, detail, datetime.datetime.now(datetime.timezone.utc).isoformat(), request_id))
 
-def process_one(db_path, request_id, runner, log_dir):
+REACH_DIR = "/home/joe/code/storage/test-registry/reach-records"
+
+def write_reach_record(db_path, namespace, reach_dir):
+    """Record what the new warrant depends on, by definition
+    (NOTE-warrant-definition-rule.md). warrant_index writes it only while the
+    live files still equal the ones the run saw. Returns the line it printed,
+    or the error; a failure here never changes the request's state."""
+    script = str(Path(__file__).resolve().parent / "warrant_index.py")
+    try:
+        result = subprocess.run([sys.executable, script, "--db", db_path, "reach-record",
+                                 "--ns", namespace, "--reach-dir", reach_dir],
+                                env=clean_git_env(), text=True, capture_output=True, timeout=300)
+        return (result.stdout.strip() or result.stderr.strip())[:300]
+    except (OSError, subprocess.SubprocessError) as error:
+        return "reach-record error: %r" % (error,)
+
+def process_one(db_path, request_id, runner, log_dir, reach_dir=None):
     with connect(db_path) as db:
         row = db.execute("SELECT namespace,repo,requested_at FROM warrant_rerun_requests WHERE request_id=?",
                          (request_id,)).fetchone()
@@ -150,7 +166,9 @@ def process_one(db_path, request_id, runner, log_dir):
     # do not compare.)
     entry = after[0] if after and (previous is None or after[0] != previous[0]) else None
     if entry and after[2] and after[3] == head:
-        finish(db_path, request_id, "done", entry=entry)
+        finish(db_path, request_id, "done", entry=entry,
+               detail=("reach: " + write_reach_record(db_path, namespace, reach_dir)
+                       if reach_dir else None))
     elif entry and not after[2] and ":scope-not-committed" in (after[4] or ""):
         # The registration refused because a file the test loads was edited
         # while it ran. The test result says nothing either way; the request
@@ -168,10 +186,10 @@ def process_one(db_path, request_id, runner, log_dir):
         finish(db_path, request_id, "failed", entry=entry,
                detail=f"runner exit {code}: {last}" if last else f"runner exit {code}")
 
-def guarded(db_path, request_id, runner, log_dir):
+def guarded(db_path, request_id, runner, log_dir, reach_dir=None):
     """An error in one request fails that request; it never leaves it running."""
     try:
-        process_one(db_path, request_id, runner, log_dir)
+        process_one(db_path, request_id, runner, log_dir, reach_dir)
     except Exception as error:  # noqa: BLE001
         finish(db_path, request_id, "failed", detail="worker error: %r" % (error,))
 
@@ -182,12 +200,15 @@ def run_pass(args):
         if not ids: return
         seen.update(ids)
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-            list(pool.map(lambda i: guarded(args.db, i, args.runner, args.log_dir), ids))
+            list(pool.map(lambda i: guarded(args.db, i, args.runner, args.log_dir,
+                                            getattr(args, "reach_dir", None)), ids))
 
 def main(argv=None):
     p = argparse.ArgumentParser(); p.add_argument("--db", default=DEFAULT_DB)
     p.add_argument("--parallel", type=int, default=1); p.add_argument("--runner", default=DEFAULT_RUNNER)
     p.add_argument("--log-dir", default="/tmp/warrant-rerun-logs")
+    p.add_argument("--reach-dir", default=REACH_DIR,
+                   help="where dependency records are written; empty string writes none")
     mode = p.add_mutually_exclusive_group(required=True); mode.add_argument("--once", action="store_true")
     mode.add_argument("--watch", type=float)
     args = p.parse_args(argv)

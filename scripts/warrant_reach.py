@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -95,7 +96,11 @@ def analysis_report(loaded, cache_path=None):
             raise RuntimeError(process.stdout + process.stderr) from error
         if cached:
             cached.parent.mkdir(parents=True, exist_ok=True)
-            cached.write_text(json.dumps(report, sort_keys=True))
+            # Written whole under another name, then renamed: a parallel
+            # reader never sees a partly written report.
+            partial = cached.with_name(f'{cached.name}.{os.getpid()}.partial')
+            partial.write_text(json.dumps(report, sort_keys=True))
+            os.replace(partial, cached)
         reports.append(report)
     return {
         'findings': [item for report in reports for item in report.get('findings', [])],
