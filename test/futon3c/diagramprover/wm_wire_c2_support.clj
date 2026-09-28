@@ -24,6 +24,7 @@
             [futon2.aif.observation-rates :as rates]
              [futon2.aif.wm.cascade-decision :as wm-cd]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
             [futon3c.diagramprover.wm-wire-selection-out-support :as selout]))
 
 ;; ---------------------------------------------------------------------------
@@ -177,23 +178,40 @@
         real wm-cd/cascade-decision
         written (atom nil)
         reports (atom [])]
-    (with-redefs [wm-cd/cascade-decision
-                  (fn [& args]
-                    (try
-                      (apply real args)
-                      (catch clojure.lang.ExceptionInfo e
-                        (reset! written (get (ex-data e) field))
-                        (throw (ex-info (ex-message e)
-                                        (case mutation
-                                          :none (ex-data e)
-                                          :absent (dissoc (ex-data e) field)
-                                          :different (assoc (ex-data e) field
-                                                              :different-refusal-kind)))))))
-                  t/report (fn [m] (swap! reports conj m))]
-      (test-var))
+    (binding [runner/*runtime-defaults* r9-support/hermetic-runner-defaults]
+      (with-redefs [wm-cd/cascade-decision
+                    (fn [& args]
+                      (try
+                        (apply real args)
+                        (catch clojure.lang.ExceptionInfo e
+                          (reset! written (get (ex-data e) field))
+                          (throw (ex-info (ex-message e)
+                                          (case mutation
+                                            :none (ex-data e)
+                                            :absent (dissoc (ex-data e) field)
+                                            :different (assoc (ex-data e) field
+                                                                :different-refusal-kind)))))))
+                    t/report (fn [m] (swap! reports conj m))]
+        (test-var)))
+    (when-let [failure (some #(when (and (= :error (:type %))
+                                         (= :missing-runtime-default
+                                            (some-> % :actual ex-data :failure-kind)))
+                                (:actual %))
+                             @reports)]
+      (throw failure))
     (let [report (first (filter #(#{:pass :fail} (:type %)) @reports))
           form (:actual report)
           equality (if (= 'not (first form)) (second form) form)]
       {:writer @written
        :reader (last equality)
        :report-type (:type report)})))
+
+(t/deftest refusal-box-surfaces-a-missing-runtime-default
+  (with-redefs [r9-support/hermetic-runner-defaults nil]
+    (let [failure (try
+                    (refusal-box :judge :none)
+                    nil
+                    (catch clojure.lang.ExceptionInfo e e))]
+      (t/is (= :missing-runtime-default (:failure-kind (ex-data failure))))
+      (t/is (= :scan-render-fn
+               (:missing-default (ex-data failure)))))))

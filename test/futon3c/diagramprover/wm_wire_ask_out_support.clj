@@ -19,6 +19,7 @@
             [futon3c.transport.http :as http]
             [futon3c.wm.runner-service :as service]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r9-support :as r9-support]
             [futon3c.diagramprover.wm-wire-target-support :as target]
             [futon3c.diagramprover.wm-wire-measured-support :as measured]))
 
@@ -139,7 +140,9 @@
                                       (assoc (first (get-in decision-fixture/live-c-opts [:focus-inputs :relations]))
                                              :target target-id))))
               saved (#'runner/persist-run-record!
-                      {:run-record-dir root} "offline-ask-step" "2026-09-26T00:00:00Z"
+                      (merge {:run-record-dir root}
+                             r9-support/hermetic-runner-defaults)
+                      "offline-ask-step" "2026-09-26T00:00:00Z"
                       {:outcome :offline-no-selection
                        :checkpoints {:selection {:judgment {:controller-decision (:decision result)}}}})
               record (edn/read-string (slurp (:run-record saved)))
