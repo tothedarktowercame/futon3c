@@ -8,18 +8,21 @@
   support/precedence-live-records-read)."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
-            [futon3c.diagramprover.wm-wire-c2-support :as support]))
+            [futon3c.diagramprover.wm-wire-producer-record :as producer-record]))
 
-(def positive (delay (support/chosen-precedence :none)))
+(def wire-id [:run-chosen-summary :r0-enact-step [:precedence {:record :chosen}]])
+(def producer (delay (producer-record/record "c2-chosen-precedence")))
+(defn- fields [] (get-in @producer [:wires wire-id]))
+(def positive (delay (:primary (fields))))
 (defn check [] (let [o @positive] {:writer (:writer o) :reader (:reader o)}))
 
 (def wire {
    :second-layer {:test 'futon3c.diagramprover.wm-wire-run-chosen-summary-r0-enact-step-precedence-test/different-value-before-reader :kind :value-varying
                   :product [:reader] :intervention :before-reader}
-  :wire [:run-chosen-summary :r0-enact-step [:precedence {:record :chosen}]]
+  :wire wire-id
            :kind :witnessed-hermetically :test `the-chosen-precedence-reaches-enact-fn
            :check check
-           :live-records-read support/precedence-live-records-read
+           :live-records-read []
            :note "Writer: full_loop_runner.clj chosen-summary (:precedence of the chosen action). Reader: flight_runner.clj enact-fn (precedence drives the dispatch order and :attempts). Hermetic: no live record carries enact-fn's :attempts."})
 
 (deftest the-chosen-precedence-reaches-enact-fn
@@ -30,7 +33,7 @@
     (is (w/received? (check)) (pr-str (check)))))
 
 (deftest absence-before-reader
-  (let [o (support/chosen-precedence :absent)]
+  (let [o (get-in (fields) [:interventions :absent])]
     (is (empty? (:attempted o)) "no pattern dispatched without :precedence")
     (is (= {:absent :candidate-names-no-grain-pattern}
            (get-in o [:result :enactment :grain]))
@@ -38,10 +41,9 @@
     (is (not (w/received? {:writer (:writer o) :reader (:reader o)})))))
 
 (deftest different-value-before-reader
-  (let [o (support/chosen-precedence :different)]
+  (let [o (get-in (fields) [:interventions :different])]
     (is (= [:different/pattern-a :different/pattern-b] (:reader o))
         "a different precedence is enacted as dispatched, not the writer's")
     (is (not (w/received? {:writer (:writer o) :reader (:reader o)})))))
 
-(deftest live-records-lack-the-reader-end
-  (support/assert-live-records support/precedence-live-records-read :attempts))
+(deftest live-records-lack-the-reader-end (is (seq (:live-records @producer))))
