@@ -88,6 +88,37 @@ class SecretScanTest(unittest.TestCase):
         self.assertNotIn(secret, redacted)
         self.assertNotIn(secret[:8], redacted)
 
+    def test_agent_log_regressions(self):
+        # Found in review (claude-3, 2026-09-29): shapes that occur in agent
+        # .jsonl logs and Markdown chat, where the first version leaked.
+        for kind, text, secret in [
+            ("keyword-assignment", '{"password": "correct horse battery staple"}',
+             "horse battery staple"),
+            ("keyword-assignment", "**Password:** Hunter2Fake99", "Hunter2Fake99"),
+            ("keyword-assignment", "**Password**: Hunter2Fake99", "Hunter2Fake99"),
+            ("keyword-assignment", "`api_key`=FakeApiValue1234", "FakeApiValue1234"),
+            ("keyword-assignment", r'{"content":"{\"password\": \"FakeEsc4pedPw\"}"}',
+             "FakeEsc4pedPw"),
+            ("github-token", r'"output":"line1\nghp_FakeToken0123456789ABCDEFGH\n"',
+             "ghp_FakeToken0123456789ABCDEFGH"),
+            ("anthropic-key", r'"x\tsk-ant-FakeClaudeKey0123456789ABCDEFG"',
+             "sk-ant-FakeClaudeKey0123456789ABCDEFG"),
+        ]:
+            with self.subTest(text=text):
+                self.assert_detected(kind, text, secret)
+
+    def test_agent_log_false_positives(self):
+        import base64
+        blob = base64.b64encode(bytes(range(256)) * 3).decode()
+        for text in [
+            "PWD=/home/joe/code/futon3c\nOLDPWD=~/code",
+            "max_token=4096 and token: 12",
+            "the bearer instrument clause",
+            '"data":"' + blob + '"',
+            "password=*** password=xxx",
+        ]:
+            with self.subTest(text=text[:40]):
+                self.assertEqual([], scan_module.scan(text))
 
 class SecretScanCliTest(unittest.TestCase):
     script = Path(__file__).with_name("secret_scan.py")

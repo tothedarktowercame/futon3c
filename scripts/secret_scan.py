@@ -5,6 +5,9 @@ This standard-library-only file detects common private-key blocks, cloud and
 service tokens, JWTs, bearer credentials, URL passwords, values assigned to
 secret-like keywords, and long high-entropy tokens.  It deliberately ignores
 Git/SHA hashes, UUIDs, paths, job identifiers, placeholders, and ordinary prose.
+It reads secrets as they appear in agent session logs as well as plain text:
+JSON-escaped strings in .jsonl files (\\"password\\": ..., a token after \\n),
+quoted passphrases with spaces, and Markdown labels such as **Password:**.
 A bare password with no label or recognizable structure cannot be distinguished
 reliably from an ordinary word and is therefore not detected.
 
@@ -40,6 +43,11 @@ class _Rule:
     group: int | str = 0
 
 
+def _start(chars: str) -> str:
+    """Left boundary: not preceded by CHARS, or preceded by a \\n/\\t/\\r escape."""
+    return rf"(?:(?<=\\[ntr])|(?<![{chars}]))"
+
+
 _RULES = (
     _Rule(
         "private-key",
@@ -49,14 +57,14 @@ _RULES = (
             re.DOTALL,
         ),
     ),
-    _Rule("aws-access-key", re.compile(r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])")),
-    _Rule("github-token", re.compile(r"(?<![A-Za-z0-9_])(?:gh[opusr]_[A-Za-z0-9]{20,255}|github_pat_[A-Za-z0-9_]{20,255})(?![A-Za-z0-9_])")),
-    _Rule("anthropic-key", re.compile(r"(?<![A-Za-z0-9_-])sk-ant-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])")),
-    _Rule("openai-key", re.compile(r"(?<![A-Za-z0-9_-])(?:sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,})(?![A-Za-z0-9_-])")),
-    _Rule("slack-token", re.compile(r"(?<![A-Za-z0-9-])xox[abprs]-[A-Za-z0-9-]{10,}(?![A-Za-z0-9-])")),
-    _Rule("google-api-key", re.compile(r"(?<![A-Za-z0-9_-])AIza[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])")),
-    _Rule("jwt", re.compile(r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?![A-Za-z0-9_-])")),
-    _Rule("bearer", re.compile(r"(?i)(?:authorization\s*:\s*)?bearer\s+(?P<value>[A-Za-z0-9._~+/-]{8,})"), "value"),
+    _Rule("aws-access-key", re.compile(_start("A-Z0-9") + r"(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])")),
+    _Rule("github-token", re.compile(_start("A-Za-z0-9_") + r"(?:gh[opusr]_[A-Za-z0-9]{20,255}|github_pat_[A-Za-z0-9_]{20,255})(?![A-Za-z0-9_])")),
+    _Rule("anthropic-key", re.compile(_start("A-Za-z0-9_-") + r"sk-ant-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])")),
+    _Rule("openai-key", re.compile(_start("A-Za-z0-9_-") + r"(?:sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,})(?![A-Za-z0-9_-])")),
+    _Rule("slack-token", re.compile(_start("A-Za-z0-9-") + r"xox[abprs]-[A-Za-z0-9-]{10,}(?![A-Za-z0-9-])")),
+    _Rule("google-api-key", re.compile(_start("A-Za-z0-9_-") + r"AIza[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])")),
+    _Rule("jwt", re.compile(_start("A-Za-z0-9_-") + r"eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?![A-Za-z0-9_-])")),
+    _Rule("bearer", re.compile(r"(?i)(?:authorization\s*:\s*)?bearer\s+(?P<value>(?=[A-Za-z._~+/-]*[0-9])[A-Za-z0-9._~+/-]{8,})"), "value"),
     _Rule(
         "url-credentials",
         re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s/@:]+:(?P<password>[^\s/@]+)@[^\s/]+"),
@@ -64,16 +72,21 @@ _RULES = (
     ),
 )
 
+# The label may be JSON-quoted, JSON-escaped (\" inside a .jsonl string) or
+# wrapped in Markdown emphasis (**Password:**).  The value itself is read by
+# _keyword_span, so a quoted value runs to its closing quote, spaces included.
 _KEYWORD = re.compile(
     r"(?ix)"
-    r"(?:"
-    r"\"?(?:[A-Za-z0-9]+[_-])*"
-    r"(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\"?"
-    r")\s*[:=]\s*"
-    r"(?P<quote>[\"']?)"
-    r"(?P<value>[^\s,;\}\]]+)"
+    r"(?P<em>[*_]{1,3})?(?:\\?[\"'`])?(?:[A-Za-z0-9]+[_-])*"
+    r"(?P<keyword>password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)"
+    r"(?:\\?[\"'`])?(?(em)[*_]{0,3})\s*[:=](?(em)[*_]{0,3})\s*"
+    r"(?P<quote>\\?[\"'`])?"
 )
-_HIGH_ENTROPY = re.compile(r"(?<![A-Za-z0-9+/_=-])[A-Za-z0-9+/_=-]{32,}(?![A-Za-z0-9+/_=-])")
+_UNQUOTED_VALUE = re.compile(r"[^\s,;\}\]\\\"'`]+")
+_HIGH_ENTROPY = re.compile(_start("A-Za-z0-9+/_=-") + r"[A-Za-z0-9+/_=-]{32,}(?![A-Za-z0-9+/_=-])")
+# Longer runs are encoded payloads (images, archives), not credentials; keys long
+# enough to exceed this (PEM blocks, JWTs) have their own structural rules.
+_HIGH_ENTROPY_MAX = 256
 _PLACEHOLDERS = re.compile(
     r"(?i)^(?:<redacted>|\*{3,}|x{3,}|change(?:me)?|changeme\??|none|null|n/?a|placeholder|example)$"
 )
@@ -81,16 +94,26 @@ _HEX = re.compile(r"^[0-9a-fA-F]+$")
 _UUID = re.compile(r"(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
-def _keyword_span(match: Match[str]) -> tuple[int, int] | None:
-    value = match.group("value")
+def _keyword_span(text: str, match: Match[str]) -> tuple[int, int] | None:
+    start = match.end()
     quote = match.group("quote")
-    if quote and value.endswith(quote):
-        value = value[:-1]
-    value = value.rstrip("\"'")
-    if not value or _PLACEHOLDERS.fullmatch(value):
+    # A quoted value runs to the same closing quote (escaped the same way), so
+    # a passphrase with spaces is redacted whole.  Without a closing quote on
+    # the same line, fall back to the unquoted reading.
+    end = text.find(quote, start) if quote else -1
+    if end < 0 or "\n" in text[start:end]:
+        value_match = _UNQUOTED_VALUE.match(text, start)
+        end = value_match.end() if value_match else start
+    value = text[start:end]
+    if not value.strip() or _PLACEHOLDERS.fullmatch(value.strip()):
         return None
-    start = match.start("value")
-    return start, start + len(value)
+    # A working directory (PWD=/home/…, OLDPWD=~/…) is a path, not a password.
+    if value.startswith(("/", "~")):
+        return None
+    # max_token=4096, token: 12: counts, not credentials.
+    if match.group("keyword").lower() == "token" and value.isdigit():
+        return None
+    return start, end
 
 
 def _entropy(value: str) -> float:
@@ -101,6 +124,8 @@ def _entropy(value: str) -> float:
 
 def _high_entropy_candidate(text: str, match: Match[str]) -> bool:
     value = match.group(0)
+    if len(value) > _HIGH_ENTROPY_MAX:
+        return False
     if _HEX.fullmatch(value) and (7 <= len(value) <= 40 or len(value) == 64):
         return False
     if _UUID.fullmatch(value):
@@ -146,7 +171,7 @@ def scan(text: str) -> list[Finding]:
             start, end = match.span(rule.group)
             found.append(Finding(rule.kind, start, end))
     for match in _KEYWORD.finditer(text):
-        span = _keyword_span(match)
+        span = _keyword_span(text, match)
         if span:
             found.append(Finding("keyword-assignment", *span))
     for match in _HIGH_ENTROPY.finditer(text):
