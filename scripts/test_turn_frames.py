@@ -220,5 +220,33 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual(frag["combined"], "ask-action")
 
 
+class ReviewCases(unittest.TestCase):
+    """Planted in review (claude-17)."""
+
+    @staticmethod
+    def _turn(i, at):
+        return {"evidence/type": "coordination", "evidence/id": f"t{i}", "evidence/at": at,
+                "evidence/origin": {"kind": "operator"},
+                "evidence/body": {"event": "chat-turn", "role": "user", "text": f"turn {i}"}}
+
+    @staticmethod
+    def _row(at):
+        return {"evidence/type": "coordination", "evidence/id": "x" + at, "evidence/at": at,
+                "evidence/body": {"event": "chat-turn", "role": "assistant", "text": "r"}}
+
+    def test_limit_keeps_the_window_ending_at_the_next_turn(self):
+        rows = [self._turn(1, "2026-09-29T10:00:00Z"), self._row("2026-09-29T10:05:00Z"),
+                self._turn(2, "2026-09-29T11:00:00Z"), self._row("2026-09-29T11:05:00Z")]
+        frames = tf.build_frames(rows, {}, "s", limit=1)
+        self.assertEqual(["2026-09-29T10:05:00Z"], [h["at"] for h in frames[0]["happened"]])
+
+    def test_mixed_fraction_precision_orders_by_instant(self):
+        # 3-digit and 9-digit fractions both occur in the live store.
+        rows = [self._turn(1, "2026-09-29T10:00:00.840Z"),
+                self._row("2026-09-29T10:00:00.840500000Z"),
+                self._turn(2, "2026-09-29T10:00:00.841Z")]
+        self.assertEqual([1, 0], [len(f["happened"]) for f in tf.build_frames(rows, {}, "s")])
+
+
 if __name__ == "__main__":
     unittest.main()

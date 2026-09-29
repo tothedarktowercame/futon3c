@@ -27,6 +27,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -108,6 +109,15 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
 
 
 # ---------------------------------------------------------------- helpers
+
+def at_key(row):
+    """Sortable instant for evidence/at. The store mixes 3- and 9-digit
+    fractions ("...00.840Z", "...00.840123456Z"), which sort wrongly as
+    strings: 'Z' sorts after every digit. Pad the fraction to 9 digits."""
+    at = row.get("evidence/at") or ""
+    m = re.match(r"(.*T\d\d:\d\d:\d\d)(?:\.(\d+))?Z$", at)
+    return f"{m.group(1)}.{(m.group(2) or '').ljust(9, '0')[:9]}Z" if m else at
+
 
 def body_of(row):
     b = row.get("evidence/body")
@@ -196,16 +206,16 @@ def find_fragment(sentences, fragment_id):
 
 def build_frames(rows, analyses, session_id=None, limit=None):
     """Pure frame assembly from evidence rows + loaded analyses."""
-    rows = sorted(rows, key=lambda r: r.get("evidence/at") or "")
-    turns = [r for r in rows if is_operator_turn(r)]
-    if limit:
-        turns = turns[:limit]
+    rows = sorted(rows, key=at_key)
+    all_turns = [r for r in rows if is_operator_turn(r)]
+    # --limit cuts the frames, not the windows: the last frame shown still
+    # ends at the next operator turn.
+    turns = all_turns[:limit] if limit else all_turns
 
     frames = []
     for i, turn in enumerate(turns):
-        start = turn.get("evidence/at") or ""
-        end = (turns[i + 1].get("evidence/at")
-               if i + 1 < len(turns) else None)
+        start = at_key(turn)
+        end = at_key(all_turns[i + 1]) if i + 1 < len(all_turns) else None
         eid = turn.get("evidence/id")
         b = body_of(turn)
 
@@ -303,7 +313,7 @@ def build_frames(rows, analyses, session_id=None, limit=None):
         for r in rows:
             if is_operator_turn(r):
                 continue
-            at = r.get("evidence/at") or ""
+            at = at_key(r)
             if at < start:
                 continue
             if end is not None and at >= end:
@@ -311,7 +321,7 @@ def build_frames(rows, analyses, session_id=None, limit=None):
             happened.append({"at": r.get("evidence/at"),
                              "type": r.get("evidence/type"),
                              "summary": summarize_row(r)})
-        happened.sort(key=lambda h: h["at"] or "")
+        # rows is already in at_key order, so happened is too
 
         frames.append({
             "turn": {"evidence_id": eid,
