@@ -8,7 +8,11 @@
 (def harness-sources
   #{"auto-bellback" "auto" "system" "cron" "heartbeat" "apm-harvest"
     "claude-loop" "parked-resume" "continuation" "followup" "inbox-zero"
-    "apm-store-repair" "kimi-work-target"})
+    "apm-store-repair" "kimi-work-target"
+    ;; Unregistered scheduler scripts that bell seats via agency_send --from.
+    ;; apm-lean: scripts/solve-loop.py, topology-contract/topology-build-loop.sh
+    ;; and topology-supervisor.sh.  Without these their turns read Origin: unknown.
+    "solve-loop" "topology-build-loop" "topology-supervisor"})
 (defn source
   "Classify known routing context at dispatch time. A known harness surface wins
    over a caller named joe. Registered-agent? describes the routing registry,

@@ -18,6 +18,9 @@
           [["joe" "emacs-repl" false :operator]
            ["claude-17" "bell" true :agent]
            ["joe" "parked-resume" false :harness]
+           ["solve-loop" "bell" false :harness]
+           ["topology-build-loop" "bell" false :harness]
+           ["topology-supervisor" "bell" false :harness]
            ["nobody" "bell" false :unknown]]]
     (let [db (memory)
           source (origin/source {:caller caller :surface surface :registered-agent? registered?})
