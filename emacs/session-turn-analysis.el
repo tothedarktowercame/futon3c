@@ -226,8 +226,7 @@ The addressed agent has already received the original turn and is out of scope."
       (when redaction-kinds
         (display-warning
          'session-mode
-         (format "Redacted %d secret(s) (%s) from your turn before capture; the turn itself still reached %s unredacted."
-                 (length redaction-kinds)
+         (format "Redacted secrets (%s) from your turn before capture; the turn itself still reached %s unredacted."
                  (string-join redaction-kinds ", ")
                  (or agent-chat--agent-id "the addressed agent"))
          :warning))
