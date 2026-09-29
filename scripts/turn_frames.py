@@ -119,6 +119,67 @@ def at_key(row):
     return f"{m.group(1)}.{(m.group(2) or '').ljust(9, '0')[:9]}Z" if m else at
 
 
+IBOL_VERBS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ibol_verbs.json")
+_IRREGULAR = {"make": ["made"], "run": ["ran"], "write": ["wrote", "written"], "find": ["found"],
+              "go": ["went", "gone"], "take": ["took", "taken"], "tell": ["told"], "lose": ["lost"],
+              "hold": ["held"], "break": ["broke", "broken"], "read": [], "build": ["built"],
+              "put": [], "come": ["came"], "keep": ["kept"], "see": ["saw", "seen"], "hang": ["hung"]}
+
+
+def _forms(word):
+    """A verb's common English forms: base, -s, -ed, -ing, plus irregular pasts."""
+    if not re.fullmatch(r"[a-z]+", word):
+        return [word]
+    stem_e = word[:-1] if word.endswith("e") and not word.endswith("ee") else word
+    out = {word, word + ("es" if word.endswith(("s", "sh", "ch", "x")) else "s"),
+           stem_e + "ing", (word + "d") if word.endswith("e") else word + "ed"}
+    if word.endswith("y") and len(word) > 2 and word[-2] not in "aeiou":
+        out |= {word[:-1] + "ies", word[:-1] + "ied"}
+    if re.fullmatch(r"[^aeiou]*[aeiou][bdgmnpt]", word):   # stop -> stopped, run -> running
+        out |= {word + word[-1] + "ed", word + word[-1] + "ing"}
+    out |= set(_IRREGULAR.get(word, []))
+    return sorted(out, key=len, reverse=True)
+
+
+def load_operators(path=IBOL_VERBS):
+    """[(compiled regex, operator dict, phrase)], longest phrases first."""
+    with open(path, encoding="utf-8") as fh:
+        table = json.load(fh)["operators"]
+    rules = []
+    for op in table:
+        for phrase in op["verbs"]:
+            first, _, rest = phrase.partition(" ")
+            alts = "|".join(re.escape(f) for f in _forms(first.lower()))
+            tail = (r"\s+" + r"\s+".join(re.escape(w) for w in rest.split())) if rest else ""
+            rx = re.compile(r"(?<![\w'])(?:%s)%s(?![\w'])" % (alts, tail), re.I)
+            rules.append((rx, op, phrase))
+    rules.sort(key=lambda r: -len(r[2]))
+    return rules
+
+
+def operator_hits(text, rules, cues):
+    """IBOL operator words in TEXT, each with the 象 cue span containing it.
+
+    CUES: [(start, end, intent)] in TEXT's offsets. A hit inside a cue is the
+    intersection Joe asked for (2026-09-29): the operational word within 象's
+    phrase. agree is True when the chip's intent is the cue's intent."""
+    taken, hits = [], []
+    for rx, op, phrase in rules:
+        for m in rx.finditer(text or ""):
+            a, b = m.span()
+            if any(a < y and x < b for x, y in taken):
+                continue       # a longer phrase already claimed these words
+            taken.append((a, b))
+            cue = next((c for c in cues if c[0] <= a and b <= c[1]), None)
+            hits.append({"start": a, "end": b, "text": m.group(0), "chip": op["chip"],
+                         "ibol": op["ibol"], "chip_intent": op["intent"],
+                         "cue_intent": cue[2] if cue else None,
+                         "cue_text": text[cue[0]:cue[1]] if cue else None,
+                         "agree": bool(cue) and cue[2] == op["intent"]})
+    hits.sort(key=lambda h: h["start"])
+    return hits
+
+
 def body_of(row):
     b = row.get("evidence/body")
     return b if isinstance(b, dict) else {}
@@ -212,7 +273,31 @@ def find_fragment(sentences, fragment_id):
 
 # ---------------------------------------------------------------- frame building
 
-def build_frames(rows, analyses, session_id=None, limit=None):
+def _operators_for(entry, turn_text, rules):
+    """Operator hits on 象's source text when there is a reading (its cue
+    offsets are in that text), else on the turn text with no cues."""
+    if not rules:
+        return {"hits": [], "cues_without_operator": []}
+    analysis = (entry or {}).get("analysis") or {}
+    source = analysis.get("source_text")
+    if not source:
+        return {"hits": operator_hits(turn_text or "", rules, []), "cues_without_operator": []}
+    cues = []
+    for s in analysis.get("sentences", []):
+        for frag in s.get("fragments", []):
+            for c in frag.get("display_cues") or []:
+                a, b = c.get("start"), c.get("end")
+                if isinstance(a, int) and isinstance(b, int) and source[a:b] == c.get("text"):
+                    cues.append((a, b, frag.get("intent")))
+    hits = operator_hits(source, rules, cues)
+    # 象's marks holding no operational word: under the intersection rule
+    # these would not be underlined at all.
+    bare = [{"text": source[a:b], "intent": i} for a, b, i in cues
+            if not any(a <= h["start"] and h["end"] <= b for h in hits)]
+    return {"hits": hits, "cues_without_operator": bare}
+
+
+def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=None):
     """Pure frame assembly from evidence rows + loaded analyses."""
     rows = sorted(rows, key=at_key)
     all_turns = [r for r in rows if is_operator_turn(r)]
@@ -336,6 +421,7 @@ def build_frames(rows, analyses, session_id=None, limit=None):
                      "at": turn.get("evidence/at"),
                      "text": b.get("text")},
             "parse": {"status": status, "fragments": fragments_out},
+            "operators": _operators_for(entry, b.get("text"), operator_rules),
             "patterns": {"matched": matched, "rejected": rejected,
                          "proposed_by_parent": proposed},
             "happened": happened,
@@ -355,6 +441,7 @@ def main(argv=None):
     rows = fetch_evidence(args.session_id, base=args.base)
     analyses = load_analyses(args.session_id, analysis_dir=args.analysis_dir)
     frames = build_frames(rows, analyses, session_id=args.session_id,
+                          operator_rules=load_operators(),
                           limit=args.limit)
     for f in frames:
         f.pop("_join", None)

@@ -122,6 +122,37 @@ JSON null and false both read as nil."
 
 ;;; ---------------------------------------------------------------- rendering
 
+(defun turn-stepper--render-operators (operators)
+  "Render IBOL operator words and how they meet 象's marks.
+A word inside one of 象's marks is the intersection: the operational
+content of that mark.  Marks with no operator word are listed after."
+  (let ((hits (turn-stepper--aget (quote hits) operators))
+        (bare (turn-stepper--aget (quote cues_without_operator) operators)))
+    (concat
+     (if (null hits)
+         "  (no operator words)\n"
+       (mapconcat
+        (lambda (h)
+          (let ((cue (turn-stepper--aget (quote cue_intent) h)))
+            (format "  %-12s %-18s %s\n"
+                    (turn-stepper--aget (quote ibol) h)
+                    (format "\"%s\"" (turn-stepper--aget (quote text) h))
+                    (cond ((null cue) "outside 象's marks")
+                          ((eq (turn-stepper--aget (quote agree) h) t)
+                           (format "in 象 %s \"%s\" (agrees)" cue
+                                   (turn-stepper--aget (quote cue_text) h)))
+                          (t (format "in 象 %s \"%s\"; chip says %s" cue
+                                     (turn-stepper--aget (quote cue_text) h)
+                                     (turn-stepper--aget (quote chip_intent) h)))))))
+        hits ""))
+     (when bare
+       (concat "  象 marks with no operator word:\n"
+               (mapconcat (lambda (c)
+                            (format "    %s \"%s\"\n"
+                                    (turn-stepper--aget (quote intent) c)
+                                    (turn-stepper--aget (quote text) c)))
+                          bare ""))))))
+
 (defun turn-stepper--render-parse (parse)
   "Render the PARSE section of a frame's parse alist as a string."
   (let ((status (turn-stepper--aget (quote status) parse))
@@ -242,6 +273,9 @@ carries that information."
                  'turn-stepper-heading t
                  'face '(:weight bold))
      (format "%s\n\n" (or (turn-stepper--aget (quote text) turn) "(no text)"))
+     (propertize "OPERATORS\n" 'face '(:weight bold))
+     (turn-stepper--render-operators (turn-stepper--aget (quote operators) frame))
+     "\n"
      (propertize "PARSE\n" 'face '(:weight bold))
      (turn-stepper--render-parse parse)
      "\n\n"

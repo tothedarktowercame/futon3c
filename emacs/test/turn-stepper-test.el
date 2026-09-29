@@ -146,3 +146,13 @@
     (let ((pos (turn-stepper--goto-turn-in-buffer
                 "Please keep the underlines on old turns" (current-buffer))))
       (should (= pos 6)))))
+
+(ert-deftest turn-stepper-renders-operators ()
+  (let ((out (turn-stepper--render-operators
+              '((hits . (((ibol . "KEYPRESS") (text . "wait") (cue_intent . "constrain")
+                          (cue_text . "I refuse to wait") (agree . nil) (chip_intent . "defer"))
+                         ((ibol . "LOOK") (text . "look for") (cue_intent . nil) (agree . nil))))
+                (cues_without_operator . (((intent . "clarify") (text . "is that"))))))))
+    (should (string-match-p "KEYPRESS.*\"wait\".*chip says defer" out))
+    (should (string-match-p "LOOK.*outside 象's marks" out))
+    (should (string-match-p "clarify \"is that\"" out))))

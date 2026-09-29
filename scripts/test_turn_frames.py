@@ -258,5 +258,33 @@ class RowNames(unittest.TestCase):
              "evidence/body": '{"event" "context-retrieval"}'})["event"])
 
 
+class Operators(unittest.TestCase):
+    rules = tf.load_operators()
+
+    def test_inflections_and_longest_phrase(self):
+        text = "we stopped and checked whether it runs"
+        got = [(h["text"], h["ibol"]) for h in tf.operator_hits(text, self.rules, [])]
+        # "checked whether" is LOOK, not Q-RAY "checked" + stray "whether"
+        self.assertEqual([("stopped", "WALL"), ("checked whether", "LOOK"), ("runs", "GO")], got)
+
+    def test_no_match_inside_a_word(self):
+        self.assertEqual([], tf.operator_hits("the testament of a bellwether", self.rules, []))
+
+    def test_intersection_with_a_cue(self):
+        text = "I refuse to wait"
+        hits = tf.operator_hits(text, self.rules, [(0, len(text), "constrain")])
+        self.assertEqual([("refuse", "constrain", True), ("wait", "constrain", False)],
+                         [(h["text"], h["cue_intent"], h["agree"]) for h in hits])
+
+    def test_cue_without_an_operator_is_listed(self):
+        entry = {"analysis": {"source_text": "is that so? look for it",
+                              "sentences": [{"fragments": [
+                                  {"intent": "clarify", "display_cues": [{"start": 0, "end": 7, "text": "is that"}]},
+                                  {"intent": "clarify", "display_cues": [{"start": 12, "end": 20, "text": "look for"}]}]}]}}
+        ops = tf._operators_for(entry, None, self.rules)
+        self.assertEqual([{"text": "is that", "intent": "clarify"}], ops["cues_without_operator"])
+        self.assertTrue(ops["hits"][0]["agree"])
+
+
 if __name__ == "__main__":
     unittest.main()
