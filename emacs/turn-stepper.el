@@ -305,17 +305,38 @@ carries that information."
                                    (length turn-stepper--frames)))
   (turn-stepper--display-current))
 
+(defvar agent-chat-user-speaker)
+
+(defun turn-stepper--operator-prefix ()
+  "How an operator turn's first line begins in a REPL buffer."
+  (concat (if (and (boundp 'agent-chat-user-speaker) (stringp agent-chat-user-speaker))
+              agent-chat-user-speaker "joe")
+          ": "))
+
 (defun turn-stepper--goto-turn-in-buffer (turn-text buffer)
   "Scroll BUFFER to the last occurrence of (the first ~60 chars of) TURN-TEXT.
 Return non-nil when found; when not found, leave BUFFER's point unchanged
 and return nil."
   (when (and (buffer-live-p buffer) (stringp turn-text)
              (not (string-empty-p turn-text)))
-    (let ((needle (substring turn-text 0 (min 60 (length turn-text)))))
+    (let ((needle (substring turn-text 0 (min 60 (length turn-text))))
+          (prefix (turn-stepper--operator-prefix)))
       (with-current-buffer buffer
         (let ((old (point)))
           (goto-char (point-max))
-          (if (search-backward needle nil t)
+          ;; Only an occurrence on the operator's own line counts: the same
+          ;; words quoted later in an agent reply or a resume payload would
+          ;; otherwise win, being nearer the end.
+          (if (let (found)
+                (while (and (not found) (search-backward needle nil t))
+                  (when (save-excursion
+                          (let ((bol (line-beginning-position)))
+                            (and (string-prefix-p prefix
+                                                  (buffer-substring-no-properties
+                                                   bol (min (point-max) (+ bol (length prefix)))))
+                                 (<= (- (point) bol) (+ (length prefix) 12)))))
+                    (setq found t)))
+                found)
               (let ((pos (point))
                     (win (get-buffer-window buffer t)))
                 (when win (set-window-point win pos))
@@ -379,6 +400,8 @@ SOURCE is the REPL buffer the stepper is attached to."
            :buffer output
            :command (list turn-stepper-python turn-stepper-script session-id)
            :noquery t
+           ;; Keep stderr (warnings) out of the JSON on stdout.
+           :stderr (get-buffer-create " *turn-stepper-frames-stderr*")
            :sentinel
            (lambda (proc _event)
              (when (memq (process-status proc) '(exit signal))

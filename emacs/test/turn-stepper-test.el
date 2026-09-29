@@ -128,7 +128,7 @@
     (unwind-protect
         (progn
           (with-current-buffer source
-            (insert "operator: do the thing please and then report back\nagent: ok\n"))
+            (insert "joe: do the thing please and then report back\nagent: ok\n"))
           (should (turn-stepper--goto-turn-in-buffer
                    "do the thing please and then report back" source))
           (with-current-buffer source
@@ -137,3 +137,12 @@
 
 (provide 'turn-stepper-test)
 ;;; turn-stepper-test.el ends here
+
+(ert-deftest turn-stepper-visit-prefers-the-operator-line ()
+  "Planted in review (claude-17): the turn quoted later must not win."
+  (with-temp-buffer
+    (insert "joe: Please keep the underlines on old turns\n\nclaude: You said \"Please keep the underlines on old turns\"\n")
+    (goto-char (point-max))
+    (let ((pos (turn-stepper--goto-turn-in-buffer
+                "Please keep the underlines on old turns" (current-buffer))))
+      (should (= pos 6)))))
