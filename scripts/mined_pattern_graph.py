@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Build the pattern graph that the operator-turn mining implies.
 
-Reads every published *.analysis.json under the batch directories and emits
-typed, evidenced edges between library patterns.  Nothing here is written
+Reads every published *.analysis.json under the batch directories and the
+live session-turn analysis directory, and emits typed, evidenced edges between
+library patterns.  Nothing here is written
 into the flexiargs: @why stays authored, and these edges are a separate,
 regenerable layer that says where the mining put patterns next to each other.
 
@@ -23,7 +24,7 @@ authored kinds, and they are different topologies (Joe, 2026-09-27):
 @why is a list of ids; @how is prose that sometimes cites ids, so an id
 counts there only where it resolves to a library file.
 
-Usage: mined_pattern_graph.py [--batches DIR] [--library DIR] [--out FILE]
+Usage: mined_pattern_graph.py [--batches DIR] [--live DIR] [--library DIR] [--out FILE]
 Prints a component summary per cumulative edge kind.
 """
 import argparse
@@ -75,17 +76,32 @@ def pairs(xs):
     return [(xs[i], xs[j]) for i in range(len(xs)) for j in range(i + 1, len(xs))]
 
 
-def mined_edges(batches, ids):
+def analysis_inputs(batches, live):
+    """Return (path, display path, fallback session) for batch and live records."""
+    inputs = []
+    for path in sorted(glob.glob(os.path.join(batches, "*", "*.analysis.json"))):
+        rel = os.path.relpath(path, batches)
+        inputs.append((path, rel, rel.split("/")[0]))
+    if live:
+        for path in sorted(glob.glob(os.path.join(live, "turn-*.json.analysis.json"))):
+            rel = os.path.join("live", os.path.relpath(path, live))
+            inputs.append((path, rel, "live"))
+    return inputs
+
+
+def mined_edges(batches, live, ids):
     edges = collections.defaultdict(list)
     sessions = collections.defaultdict(list)
     records = 0
-    for f in sorted(glob.glob(os.path.join(batches, "*", "*.analysis.json"))):
+    for f, rel, fallback_session in analysis_inputs(batches, live):
         d = json.load(open(f))
         records += 1
         req = {}
-        if os.path.exists(d.get("request_file", "")):
-            req = json.load(open(d["request_file"]))
-        rel = os.path.relpath(f, batches)
+        request_path = os.path.expanduser(d.get("request_file", ""))
+        if request_path and not os.path.isabs(request_path):
+            request_path = os.path.join(os.path.dirname(f), request_path)
+        if os.path.exists(request_path):
+            req = json.load(open(request_path))
         turn_cites = set()
         for s in d.get("sentences", []):
             for k, fr in enumerate(s.get("fragments", [])):
@@ -103,7 +119,7 @@ def mined_edges(batches, ids):
         for a, b in pairs(turn_cites):
             edges["co-cited"].append((a, b, {"at": rel}))
         if turn_cites:
-            sessions[req.get("session_id") or rel.split("/")[0]].append(
+            sessions[req.get("session_id") or fallback_session].append(
                 (req.get("created_at") or "", rel, sorted(turn_cites)))
     for turns in sessions.values():
         turns.sort()
@@ -135,12 +151,14 @@ def components(edge_list, nodes):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--batches", default="/home/joe/code/storage/operator-turns/batches")
+    ap.add_argument("--live", default=os.path.expanduser("~/.emacs-graph/session-turn-analysis"),
+                    help="live turn analysis directory; pass an empty path to disable")
     ap.add_argument("--library", default="/home/joe/code/futon3/library")
     ap.add_argument("--out", default="/home/joe/code/storage/operator-turns/mined-pattern-graph.json")
     args = ap.parse_args()
 
     ids = library_ids(args.library)
-    edges, records = mined_edges(args.batches, ids)
+    edges, records = mined_edges(args.batches, args.live, ids)
     edges["why"] = why_edges(ids)
     edges["how"] = how_edges(ids)
 
@@ -166,9 +184,25 @@ def main():
 
     strong = [e for k in ("co-cited", "rejected-beside") for e in edges[k]]
     giant = components(strong + edges["why"] + edges["how"], list(ids))[0]
+    final_components = components(acc, list(ids))
+    component_by_pattern = {
+        pattern: index for index, component in enumerate(final_components, 1)
+        for pattern in component
+    }
+    xiang_patterns = sorted(pattern for pattern in ids if pattern.startswith("象/"))
+    xiang_components = sorted({component_by_pattern[pattern] for pattern in xiang_patterns})
+    xiang_in_giant = bool(xiang_patterns) and xiang_components == [1]
+    xiang_summary = {"patterns": xiang_patterns,
+                     "components": xiang_components,
+                     "giant_component": 1 if final_components else None,
+                     "in_giant_component": xiang_in_giant}
+    print("象 family components "
+          f"{xiang_components or 'none'}; giant component 1; "
+          f"in giant: {str(xiang_in_giant).lower()}; patterns {len(xiang_patterns)}")
     with open(args.out, "w") as fh:
         json.dump({"records": records, "patterns": len(ids), "summary": summary,
                    "giant_without_weak_edges": sorted(giant),
+                   "象_family": xiang_summary,
                    "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))},
                   fh, indent=1)
     print(f"wrote {args.out}")
