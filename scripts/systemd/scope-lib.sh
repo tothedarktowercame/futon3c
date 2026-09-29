@@ -12,7 +12,9 @@ futon_scope_sanitize() {
 futon_scope_limits() {
   case "$1" in
     cr)    printf '%s\n' 6G 8G 256 ;;
-    cx)    printf '%s\n' 4G 6G 256 ;;
+    # Codex seats compile Lean: one Mathlib-importing `lake env lean` peaks
+    # at ~6.5 GB RSS and a lean-lsp server at ~3.6 GB (2026-09-29).
+    cx)    printf '%s\n' 12G 20G 256 ;;
     cz)    printf '%s\n' 3G 4G 192 ;;
     click) printf '%s\n' 3G 4G 256 ;;
     test)  printf '%s\n' 4G 6G 512 ;;

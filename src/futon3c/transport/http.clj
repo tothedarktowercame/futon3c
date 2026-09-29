@@ -3866,6 +3866,15 @@
           (@make-fn (cond-> {:agent-id agent-id
                              :session-file session-file
                              :session-id-atom sid-atom}
+                      ;; CODEX_BIN is scripts/systemd/scoped-codex under
+                      ;; dev-zone-env: it moves the Codex process and every
+                      ;; command it runs (lake, lean) into futon-agents.slice.
+                      ;; Without it restored seats fell back to bare "codex"
+                      ;; and ran inside the server's cgroup; with 11 Lean-
+                      ;; compiling loop seats that cgroup passed memory.high
+                      ;; (71.6 of 64 GB, 2026-09-29) and throttled the Agency.
+                      (not (str/blank? (System/getenv "CODEX_BIN")))
+                      (assoc :codex-bin (System/getenv "CODEX_BIN"))
                       model (assoc :model model)
                       turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       memory-domain (assoc :memory-domain memory-domain)
