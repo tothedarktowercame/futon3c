@@ -52,12 +52,13 @@
         b (assoc a :id "b")
         h (concat (chain "a" a)
                   (chain "b" b [:promise/released "2026-09-28T11:30:00Z"
-                                 {:release/basis :explicit :release/role :creditor}]))
+                                 {:release/basis :explicit :release/role :creditor
+                                  :release/reason "Cannot proceed"}]))
         r (project h [(outcome "lapsed-a" :promise/lapsed "a" "2026-09-28T11:01:00Z")]
                    "agent-a")]
     (is (= ["a"] (mapv :obligation/id (:owes r))))
     (is (= :overdue (get-in r [:owes 0 :status])))
-    (is (= [[:released "b"]]
+    (is (= [[:voided-by-creditor "b"]]
            (mapv (juxt :status :obligation/id) (:ignored r))))))
 
 (deftest wake-and-plain-release-do-not-discharge-debt
@@ -148,11 +149,12 @@
                                     :machine-evaluable? true}}
         rows (chain "released-check" rec
                     [:promise/released "2026-09-28T11:30:00Z"
-                     {:release/basis :explicit :release/role :creditor}])
+                     {:release/basis :explicit :release/role :creditor
+                      :release/reason "Cannot proceed"}])
         r (project rows [(check "check-no" "released-check" "2026-09-28T11:01:00Z"
                                 :unfulfilled)] "a")]
     (is (empty? (:owes r)))
-    (is (= :released (get-in r [:ignored 0 :status])))))
+    (is (= :voided-by-creditor (get-in r [:ignored 0 :status])))))
 
 (deftest orphan-check-is-incomplete-without-inventing-a-row
   (let [r (project [] [(check "orphan" "missing" "2026-09-28T11:00:00Z"
@@ -196,9 +198,11 @@
   (let [rec {:id "edge" :agent "a" :beneficiary "b"
              :deadline "2026-09-28T13:00:00Z"}
         exact (project (chain "edge" rec [:promise/released t
-                                          {:release/basis :explicit :release/role :creditor}]) [] "a")
+                                          {:release/basis :explicit :release/role :creditor
+                                           :release/reason "Cannot proceed"}]) [] "a")
         later (project (chain "edge" rec [:promise/released "2026-09-28T12:00:00.001Z"
-                                          {:release/basis :explicit :release/role :creditor}]) [] "a")
+                                          {:release/basis :explicit :release/role :creditor
+                                           :release/reason "Cannot proceed"}]) [] "a")
         broken (let [rows (chain "edge" rec [:promise/woken "2026-09-28T11:00:00Z" {}])
                      row (-> (second rows)
                              (assoc-in [:evidence/body :history/promise-sequence] 3)
@@ -210,16 +214,49 @@
     (is (empty? (:owes broken)))
     (is (= :missing-transition (get-in broken [:incomplete 0 :reason])))))
 
-(deftest debtor-abandonment-and-invalid-explicit-release
+(deftest debtor-void-and-invalid-explicit-release
   (let [rec {:id "p" :agent "a" :beneficiary "b" :deadline "2026-09-29T00:00:00Z"}
         abandoned (project (chain "p" rec [:promise/released "2026-09-28T11:00:00Z"
-                                           {:release/basis :explicit :release/role :debtor}]) [] "a")
+                                           {:release/basis :explicit :release/role :debtor
+                                            :release/reason "Cannot proceed"}]) [] "a")
         invalid (project (chain "p" rec [:promise/released "2026-09-28T11:00:00Z"
-                                         {:release/basis :explicit :release/role :observer}]) [] "a")]
-    (is (= :abandoned (get-in abandoned [:ignored 0 :status])))
+                                         {:release/basis :explicit :release/role :observer
+                                          :release/reason "Cannot proceed"}]) [] "a")]
+    (is (= :voided-by-debtor (get-in abandoned [:ignored 0 :status])))
     (is (empty? (:owes abandoned)))
     (is (empty? (:owes invalid)))
     (is (= :invalid-release (get-in invalid [:incomplete 0 :reason])))))
+
+(deftest opposite-party-countersignature-settles
+  (let [rec {:id "settle" :agent "a" :beneficiary "b"
+             :deadline "2026-09-29T00:00:00Z"}
+        rows (chain "settle" rec
+                    [:promise/released "2026-09-28T11:00:00Z"
+                     {:release/basis :explicit :release/role :creditor
+                      :release/reason "Cannot proceed"}]
+                    [:promise/released "2026-09-28T11:30:00Z"
+                     {:release/basis :explicit :release/role :debtor
+                      :release/reason "Agreed" :release/countersigns "settle-2"}])
+        result (project rows [] "a")]
+    (is (empty? (:owes result)))
+    (is (= :settled (get-in result [:ignored 0 :status])))
+    (is (every? (set (get-in result [:ignored 0 :facts])) ["settle-2" "settle-3"]))))
+
+(deftest explicit-release-needs-a-reason-and-countersignature-needs-its-first-row
+  (let [rec {:id "bad-release" :agent "a" :beneficiary "b"
+             :deadline "2026-09-29T00:00:00Z"}
+        no-reason (project (chain "bad-release" rec
+                                  [:promise/released "2026-09-28T11:00:00Z"
+                                   {:release/basis :explicit :release/role :creditor}]) [] "a")
+        no-first (project (chain "bad-release" rec
+                                 [:promise/released "2026-09-28T11:00:00Z"
+                                  {:release/basis :explicit :release/role :debtor
+                                   :release/reason "Agreed"
+                                   :release/countersigns "missing"}]) [] "a")]
+    (is (= :invalid-release (get-in no-reason [:incomplete 0 :reason])))
+    (is (= :nothing-to-countersign (get-in no-first [:incomplete 0 :reason])))
+    (is (empty? (:owes no-reason)))
+    (is (empty? (:owes no-first)))))
 
 (deftest owes-and-owed-partition-and-missing-beneficiary
   (let [rec {:id "p" :agent "agent-a" :beneficiary "agent-b"

@@ -6,10 +6,13 @@
    event time is <= T applies at T; later events do not. Consequently an explicit
    release at T ends a debt at T.
 
-   A plain :promise/released row ends a wait, not a checkable debt. Only a release
-   carrying :release/basis :explicit discharges such a debt. Broken promise chains
-   are returned only in :incomplete, never projected from their surviving rows."
-  (:require [futon3c.agency.promise-history :as history])
+   A plain :promise/released row ends a wait, not a checkable debt. A reasoned
+   explicit release closes a checkable debt as a one-sided void. An explicit row
+   by the other party that cites it with :release/countersigns settles the debt.
+   Broken promise chains are returned only in :incomplete, never projected from
+   their surviving rows."
+  (:require [clojure.string :as str]
+            [futon3c.agency.promise-history :as history])
   (:import [java.time Instant]))
 
 (def creation-types #{:promise/park-made :promise/followup-enqueued})
@@ -45,18 +48,45 @@
 (defn- incomplete [pid reason & [extra]]
   (merge {:obligation/id pid :reason reason} extra))
 
+(defn- explicit-release? [row]
+  (and (= :promise/released (:evidence/type row))
+       (= :explicit (get-in row [:evidence/body :release/basis]))))
+
+(defn- release-valid? [row]
+  (and (contains? #{:creditor :debtor} (get-in row [:evidence/body :release/role]))
+       (not (str/blank? (get-in row [:evidence/body :release/reason])))))
+
+(defn- countersignature [releases]
+  (some (fn [row]
+          (when-let [target-id (get-in row [:evidence/body :release/countersigns])]
+            (let [target (some #(when (= target-id (:evidence/id %)) %) releases)]
+              (when (and target
+                         (nil? (get-in target [:evidence/body :release/countersigns]))
+                         (not= (get-in row [:evidence/body :release/role])
+                               (get-in target [:evidence/body :release/role])))
+                row))))
+        releases))
+
 (defn- promise-row [pid creation lifecycle outcomes t]
   (let [rec (:record (decode-record creation))
         criterion (:fulfilment-criterion rec)
         deadline (:deadline rec)
         checkable? (or criterion deadline)
-        explicit-releases (filterv #(and (= :promise/released (:evidence/type %))
-                                         (= :explicit (get-in % [:evidence/body :release/basis])))
-                                   lifecycle)
-        invalid-release (some #(when-not (contains? #{:creditor :debtor}
-                                                     (get-in % [:evidence/body :release/role])) %)
-                              explicit-releases)
-        explicit-release (first explicit-releases)
+        explicit-releases (filterv explicit-release? lifecycle)
+        invalid-release (some #(when-not (release-valid? %) %) explicit-releases)
+        one-sided-releases (filterv #(nil? (get-in % [:evidence/body :release/countersigns]))
+                                    explicit-releases)
+        invalid-countersignature
+        (some (fn [row]
+                (when (and (get-in row [:evidence/body :release/countersigns])
+                           (nil? (countersignature [row
+                                                   (some #(when (= (get-in row [:evidence/body :release/countersigns])
+                                                                    (:evidence/id %)) %)
+                                                         one-sided-releases)])))
+                  row))
+              explicit-releases)
+        explicit-release (first one-sided-releases)
+        countersigned (countersignature explicit-releases)
         release-role (get-in explicit-release [:evidence/body :release/role])
         plain-release (some #(when (= :promise/released (:evidence/type %)) %) lifecycle)
         fulfilled (some #(when (= :promise/fulfilled (:evidence/type %)) %) outcomes)
@@ -72,8 +102,10 @@
                                     (.isAfter ^Instant (instant (:evidence/at fulfilled))
                                               ^Instant (instant (:evidence/at check))))
         status (cond
-                 invalid-release :invalid-release
-                 explicit-release (if (= :creditor release-role) :released :abandoned)
+                 (or invalid-release invalid-countersignature) :invalid-release
+                 countersigned :settled
+                 explicit-release (if (= :creditor release-role)
+                                    :voided-by-creditor :voided-by-debtor)
                  fulfilled (if (or lapsed
                                    (and fulfilled-after-check?
                                         (contains? #{:unfulfilled :unable-to-determine}
@@ -111,8 +143,10 @@
                    :facts facts}
             check-summary (assoc :check check-summary))
      :checkable? checkable?
-     :error (when invalid-release
-              (incomplete pid :invalid-release {:record-id (:evidence/id invalid-release)}))
+     :error (when-let [bad (or invalid-release invalid-countersignature)]
+              (incomplete pid (if invalid-countersignature
+                                :nothing-to-countersign :invalid-release)
+                          {:record-id (:evidence/id bad)}))
      :check-incomplete check-incomplete
      :plain-release? (boolean plain-release)}))
 
@@ -164,7 +198,8 @@
                acc))) [] by-promise)
         promise-open (mapv :row (filter (fn [{:keys [row checkable? error]}]
                                           (and checkable? (nil? error)
-                                               (not (contains? #{:released :abandoned :completed :completed-late}
+                                               (not (contains? #{:voided-by-creditor :voided-by-debtor
+                                                                 :settled :completed :completed-late}
                                                                (:status row)))))
                                         promise-results))
         unchecked (mapv :row (filter (fn [{:keys [checkable? plain-release? error]}]
@@ -172,7 +207,8 @@
                                      promise-results))
         closed (mapv :row (filter (fn [{:keys [row checkable? error]}]
                                     (and checkable? (nil? error)
-                                         (contains? #{:released :abandoned :completed :completed-late}
+                                         (contains? #{:voided-by-creditor :voided-by-debtor
+                                                      :settled :completed :completed-late}
                                                     (:status row))))
                                   promise-results))
         visible-agreements (filter #(at-or-before? % t) agreements)
