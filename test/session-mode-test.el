@@ -992,3 +992,16 @@ agent text is left alone."
             (should (null (alist-get 'evidence_id no-id)))
             (should (equal "emacs-given" (alist-get 'evidence_id given)))))
       (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-reconcile-error-never-escapes-into-a-turn ()
+  ;; A file can vanish between listing and stat: file-attributes gives nil.
+  (let ((session-mode-turn-analysis-directory (make-temp-file "reconcile-err-" t)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "turn-gone.json"
+                                            session-mode-turn-analysis-directory)
+            (insert "{}"))
+          (cl-letf (((symbol-function 'file-attributes) (lambda (&rest _) nil))
+                    ((symbol-function 'message) #'ignore))
+            (should-not (session-mode--reconcile-withdrawal-analyses))))
+      (delete-directory session-mode-turn-analysis-directory t))))

@@ -869,7 +869,15 @@ the earlier attempt managed to write both lists before failing."
 (defun session-mode--reconcile-withdrawal-analyses ()
   "Process recent analysed withdrawal records missed by bounded job reaping.
 The newest `session-mode-analysis-reconcile-limit' records modified in the
-last `session-mode-analysis-reconcile-max-age' seconds are examined."
+last `session-mode-analysis-reconcile-max-age' seconds are examined.  It runs
+at every turn boundary, so no error may escape into the turn."
+  (condition-case err
+      (session-mode--reconcile-withdrawal-analyses-1)
+    (error (message "象: reconciliation failed: %s" (error-message-string err))
+           nil)))
+
+(defun session-mode--reconcile-withdrawal-analyses-1 ()
+  "Body of `session-mode--reconcile-withdrawal-analyses'."
   (when (file-directory-p session-mode-turn-analysis-directory)
     (let* ((cutoff (- (float-time) session-mode-analysis-reconcile-max-age))
            (paths
