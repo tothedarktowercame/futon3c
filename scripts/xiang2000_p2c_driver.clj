@@ -91,6 +91,17 @@
   (when-not (history/await-writes! 10000)
     (throw (ex-info "Initial history did not drain" {}))))
 
+(defn await-history! [message]
+  (when-not (history/await-writes! 10000)
+    (throw (ex-info message {}))))
+
+(defn prepared-ready! [now-ms]
+  (let [id (:id (park/park! park-request {:now-ms now-ms}))]
+    (await-history! "Park-made history did not drain")
+    (park/ready-push! "p2c" "p2c-session" id "P2c ready prompt" :within-turn)
+    (await-history! "Ready-enqueued history did not drain")
+    id))
+
 (defn mutate! [scenario dir]
   (with-stores
     dir
@@ -122,6 +133,35 @@
                   (fn [] (block-at-boundary! (:ready (paths dir))))]
           (followup/enqueue! followup-request))
 
+        "ready-enqueued"
+        (let [id (:id (park/park! park-request {:now-ms 1000}))]
+          (await-history! "Park-made history did not drain")
+          (binding [history/*after-outbox-persist*
+                    (fn [] (block-at-boundary! (:ready (paths dir))))]
+            (park/ready-push! "p2c" "p2c-session" id "P2c ready prompt" :within-turn)))
+
+        "ready-leased"
+        (do (prepared-ready! 1000)
+            (binding [history/*after-outbox-persist*
+                      (fn [] (block-at-boundary! (:ready (paths dir))))]
+              (park/ready-lease-one! "p2c" "p2c-session" 2000 100)))
+
+        "ready-acked"
+        (let [id (prepared-ready! 1000)]
+          (park/ready-lease-one! "p2c" "p2c-session" 2000 100)
+          (await-history! "Ready-leased history did not drain")
+          (binding [history/*after-outbox-persist*
+                    (fn [] (block-at-boundary! (:ready (paths dir))))]
+            (park/ready-ack! id)))
+
+        "ready-requeued"
+        (do (prepared-ready! 1000)
+            (park/ready-lease-one! "p2c" "p2c-session" 2000 100)
+            (await-history! "Ready-leased history did not drain")
+            (binding [history/*after-outbox-persist*
+                      (fn [] (block-at-boundary! (:ready (paths dir))))]
+              (park/sweep-leased! {:now-ms 2200})))
+
         "control-park"
         (do (park/park! park-request {:now-ms 1000})
             (when-not (history/await-writes! 10000)
@@ -150,6 +190,11 @@
           (let [live {:parked (park/snapshot) :followup (followup/snapshot)}
                 _ (when-not (history/await-writes! 10000)
                     (throw (ex-info "Restart outbox did not drain" {})))
+                ;; Re-draining an already drained outbox must be a no-op.
+                _ (history/drain-now! (var-get #'park/!parked)
+                                      (fn [state]
+                                        (atomic-file/write! (:park (paths dir))
+                                                            (pr-str state))))
                 entries (vec (backend/-all evidence))
                 corrupt-files (->> (.listFiles (io/file dir))
                                    (map #(.getName ^java.io.File %))

@@ -43,6 +43,7 @@
 
 (def ^:dynamic *heads* nil)
 (defonce ^:private !chain-cache (atom nil))
+(defonce ^:private !uncommitted-outbox-ids (atom #{}))
 (defn- chain-path []
   (or (System/getenv "FUTON3C_PROMISE_HISTORY_CHAINS_PATH")
       "/tmp/futon3c-promise-history-chains.edn"))
@@ -59,7 +60,14 @@
           tmp (Files/createTempFile (.getParent target) "promise-chains-" ".edn"
                                     (make-array java.nio.file.attribute.FileAttribute 0))]
       (try
-        (spit (.toFile tmp) (pr-str @heads))
+        ;; A staged row is not authoritative until its owning state file is
+        ;; atomically replaced. An unrelated old-path record! may persist this
+        ;; shared heads map meanwhile; omit those reservations so that a crash
+        ;; before the state replacement cannot leave a sidecar-only gap.
+        (spit (.toFile tmp)
+              (pr-str (into {} (remove (fn [[_ {:keys [id]}]]
+                                         (contains? @!uncommitted-outbox-ids id)))
+                                    @heads)))
         (Files/move tmp target (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
                                                        StandardCopyOption/REPLACE_EXISTING]))
         (finally (Files/deleteIfExists tmp))))))
@@ -134,8 +142,13 @@
    (let [entry (prepare-entry! type rec now-ms details false)
          eid (:evidence/id entry)]
      (swap! state assoc-in [:history-outbox eid] entry)
+     (swap! !uncommitted-outbox-ids conj eid)
      (swap! !counts update :pending (fnil inc 0))
      eid)))
+(defn release-reservations!
+  "Forget staged allocator reservations whose owning state persist rolled back."
+  [eids]
+  (swap! !uncommitted-outbox-ids #(reduce disj % eids)))
 (defn register-pending! [entries]
   (locking !chain-cache
     (let [heads (heads!)]
@@ -171,6 +184,7 @@
         (or (:ok result) (and existing (same-history-row? entry existing)))
         (do (swap! !counts update :written inc)
             (when *after-outbox-append* (*after-outbox-append* entry))
+            (swap! !uncommitted-outbox-ids disj eid)
             (locking !chain-cache (persist-heads! (heads!)))
             (swap! state update :history-outbox dissoc eid)
             (persist! @state)

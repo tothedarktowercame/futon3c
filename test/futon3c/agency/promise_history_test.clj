@@ -166,6 +166,36 @@
       (is (empty? (:history-outbox @state)))
       (is (empty? (:history-outbox @persisted))))))
 
+(deftest old-path-write-does-not-persist-an-uncommitted-outbox-reservation
+  (let [sidecar (java.io.File/createTempFile "p2c-sidecar" ".edn")
+        state (atom {:history-outbox {}})
+        pending {:id "park:pending-state" :agent "agent"}
+        other {:id "park:old-path-other" :agent "agent"}
+        cache @#'futon3c.agency.promise-history/!chain-cache
+        reservations @#'futon3c.agency.promise-history/!uncommitted-outbox-ids
+        saved-cache @cache
+        saved-reservations @reservations]
+    (try
+      (.delete sidecar)
+      (reset! cache {})
+      (reset! reservations #{})
+      (with-redefs [futon3c.agency.promise-history/chain-path (fn [] (str sidecar))]
+        (binding [history/*heads* nil]
+          (history/stage! state :promise/ready-enqueued pending 1000)
+          ;; This old-path transition persists the shared allocator before the
+          ;; pending promise's authoritative state has been persisted.
+          (history/record! :promise/deadline-expired other 1001)
+          (is (history/await-writes! 5000))
+          (let [heads (read-string (slurp sidecar))]
+            (is (nil? (get heads "park:pending-state"))
+                "the uncommitted outbox reservation must not reach the sidecar")
+            (is (= 1 (get-in heads ["park:old-path-other" :sequence]))))))
+      (finally
+        (history/release-reservations! (keys (:history-outbox @state)))
+        (reset! cache saved-cache)
+        (reset! reservations saved-reservations)
+        (.delete sidecar)))))
+
 (deftest failed-authority-persist-enqueues-no-history
   (let [before (count (:order @*evidence*))]
     (with-redefs [atomic-file/write! (fn [& _] (throw (java.io.IOException. "read only")))]

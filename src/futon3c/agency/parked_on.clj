@@ -113,6 +113,26 @@
 
 (defn snapshot [] (ensure!) (dissoc @!parked :just-released :history-outbox))
 
+(defn- persist-ready-transition!
+  "Stage ready-queue TRANSITIONS in the authoritative park state, persist state
+   and outbox together, then schedule the single-writer drain. OLD and ALLOCATOR
+   restore both authorities if the atomic replacement fails."
+  [old allocator transitions]
+  (let [eids (mapv (fn [[type rec now-ms details]]
+                     (history/stage! !parked type rec now-ms details))
+                   transitions)]
+    (try
+      (persist! @!parked)
+      (catch Throwable e
+        (reset! !parked old)
+        (history/release-reservations! eids)
+        (history/restore-allocator! allocator)
+        (capture/drain!)
+        (throw e)))
+    (when history/*after-outbox-persist* (history/*after-outbox-persist*))
+    (history/drain! !parked persist!)
+    @!parked))
+
 ;; ---------------------------------------------------------------------------;;
 ;; Ready-inbox + lease/ack (E-park-delivery-losses bugs 2-3)
 ;;
@@ -125,16 +145,19 @@
   "Push an assembled resume prompt for [AGENT SESSION] into the durable
    ready-inbox (FIFO). Called when a buffer-surfaced park's join completes."
   ([agent session park-id prompt]
-  (history/capture! :parked (fn []
-   (ready-push! agent session park-id prompt :within-turn))))
+   (history/capture! :parked
+     (fn [] (ready-push! agent session park-id prompt :within-turn))))
   ([agent session park-id prompt mode]
-  (history/capture! :parked (fn []
-   (ensure!)
-   (capture/swap-state! :parked !parked
+   (history/capture! :parked
+     (fn []
+       (ensure!)
+       (let [old @!parked
+             allocator (history/allocator-snapshot)]
+         (capture/swap-state!
+          :parked !parked
           (fn [st]
-            (let [already-queued?
-                  (some #(= park-id (:park-id %))
-                        (mapcat identity (vals (:ready-inbox st))))
+            (let [already-queued? (some #(= park-id (:park-id %))
+                                        (mapcat identity (vals (:ready-inbox st))))
                   already-leased? (contains? (:leased st) park-id)]
               (if (or already-queued? already-leased?)
                 st
@@ -142,12 +165,14 @@
                       item {:park-id park-id :prompt prompt
                             :mode (or mode :within-turn)}]
                   (update-in st [:ready-inbox k] (fnil conj []) item))))))
-   (let [persisted (persist! @!parked)]
-   (when (seq @(:changes capture/*capture*))
-     (history/record! :promise/ready-enqueued
-                      {:id park-id :agent (str agent) :session (str session)
-                       :prompt prompt :mode mode} (System/currentTimeMillis)))
-   persisted)))))
+         (if (= old @!parked)
+           @!parked
+           (persist-ready-transition!
+            old allocator
+            [[:promise/ready-enqueued
+              {:id park-id :agent (str agent) :session (str session)
+               :prompt prompt :mode mode}
+              (System/currentTimeMillis) {}]])))))))
 
 (defn- ready-key [agent session] [(str agent) (str session)])
 
@@ -163,6 +188,8 @@
   (history/capture! :parked (fn []
    (ensure!)
    (let [k (ready-key agent session)
+         old @!parked
+         allocator (history/allocator-snapshot)
          leased-item (atom nil)]
      (capture/swap-state! :parked !parked
             (fn [st]
@@ -179,10 +206,12 @@
                         (assoc-in [:leased (:park-id item)] leased-entry)
                         (assoc-in [:ready-inbox k] (subvec items 1))))
                   st))))
-     (persist! @!parked)
      (when-let [item @leased-item]
-       (history/record! :promise/ready-leased
-                        (assoc item :id (:park-id item) :agent (str agent) :session (str session)) now-ms))
+       (persist-ready-transition!
+        old allocator
+        [[:promise/ready-leased
+          (assoc item :id (:park-id item) :agent (str agent) :session (str session))
+          now-ms {}]]))
      @leased-item)))))
 
 (defn ready-ack!
@@ -191,7 +220,9 @@
   [park-id]
   (history/capture! :parked (fn []
   (ensure!)
-  (let [found? (atom false)
+  (let [old @!parked
+        allocator (history/allocator-snapshot)
+        found? (atom false)
         prior (get-in @!parked [:leased park-id])]
     (capture/swap-state! :parked !parked
            (fn [st]
@@ -205,9 +236,10 @@
                                                     (= park-id rid)))
                                        entries)))))
                st)))
-    (persist! @!parked)
     (when @found?
-      (history/record! :promise/ready-acked (assoc prior :id park-id) (System/currentTimeMillis)))
+      (persist-ready-transition!
+       old allocator
+       [[:promise/ready-acked (assoc prior :id park-id) (System/currentTimeMillis) {}]]))
     @found?))))
 
 (defn sweep-leased!
@@ -217,7 +249,9 @@
   ([{:keys [now-ms on-expire] :or {now-ms (System/currentTimeMillis)}}]
   (history/capture! :parked (fn []
    (ensure!)
-   (let [expired (atom [])
+   (let [old @!parked
+         allocator (history/allocator-snapshot)
+         expired (atom [])
          prior (:leased @!parked)]
      (capture/swap-state! :parked !parked
             (fn [st]
@@ -247,10 +281,14 @@
                               s'))
                           s
                           (for [e expired-entries] [(:agent e) (:session e)]))))))
-     (persist! @!parked)
+     (when (seq @expired)
+       (persist-ready-transition!
+        old allocator
+        (mapv (fn [pid]
+                [:promise/ready-requeued (assoc (get prior pid) :id pid) now-ms
+                 {:reason :lease-expired}])
+              @expired)))
      (doseq [pid @expired]
-       (history/record! :promise/ready-requeued (assoc (get prior pid) :id pid) now-ms
-                        {:reason :lease-expired})
        (when on-expire (on-expire pid)))
      {:requeued (vec @expired)})))))
 
@@ -494,7 +532,9 @@
   (history/capture! :parked (fn []
   (capture/reset-state! :parked !parked (load-state))
   ;; Return stale leased items to the FRONT of their ready-inbox for redelivery.
-  (let [stale-leased (-> @!parked :leased vals vec)
+  (let [old @!parked
+        allocator (history/allocator-snapshot)
+        stale-leased (-> @!parked :leased vals vec)
         requeued (atom 0)]
     (when (seq stale-leased)
       (capture/swap-state! :parked !parked
@@ -511,10 +551,12 @@
                        (assoc st :leased {})
                        (reverse stale-leased))))
       (reset! requeued (count stale-leased))
-      (persist! @!parked)
-      (doseq [entry stale-leased]
-        (history/record! :promise/ready-requeued (assoc entry :id (:park-id entry)) now-ms
-                         {:reason :boot-recovery})))
+      (persist-ready-transition!
+       old allocator
+       (mapv (fn [entry]
+               [:promise/ready-requeued (assoc entry :id (:park-id entry)) now-ms
+                {:reason :boot-recovery}])
+             stale-leased)))
     (let [recs (vals (:records @!parked))
           released (atom [])]
       (doseq [rec recs
