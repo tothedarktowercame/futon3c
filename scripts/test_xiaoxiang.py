@@ -131,5 +131,22 @@ class V02(unittest.TestCase):
         self.assertTrue(xx.evidence(model, "the reject"))
 
 
+class Figures(unittest.TestCase):
+    def test_sample_report_is_drawn_without_paths(self):
+        report = {"turns": 3, "agent_tokens": 100, "first_turn": 0, "last_turn": 86400 * 2,
+                  "gap_hours": 6, "gaps": [], "too_little_to_go_on": 0,
+                  "intents": {"propose": 2, "approve": 1},
+                  "files_with_secrets": {"/home/someone/.codex/x.jsonl": 3},
+                  "gap_views": {"6": [{"start": 0, "end": 30000, "hours": 8.3, "tokens": 60}],
+                                "0": [{"start": 0, "end": 30000, "hours": 8.3, "tokens": 60},
+                                      {"start": 40000, "end": 50000, "hours": 2.8, "tokens": 30}]}}
+        html = xx.figures(report)
+        self.assertEqual(3, html.count("<rect"))
+        self.assertIn("--gap-hours 0", html)
+        self.assertIn("propose", html)
+        self.assertNotIn("/home/someone", html)
+        self.assertEqual("", xx.figures(None))
+
+
 if __name__ == "__main__":
     unittest.main()

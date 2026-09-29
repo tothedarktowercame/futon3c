@@ -335,6 +335,8 @@ PAGE = """<!doctype html>
  table{border-collapse:collapse;font:0.85rem sans-serif}
  td,th{padding:.15rem .6rem;text-align:left;border-bottom:1px solid #ddd}
  td.n{text-align:right}
+ figure{margin:1.2rem 0 1.6rem;max-width:100%} figcaption{font:0.85rem/1.5 sans-serif;color:#444;margin-bottom:.3rem}
+ figure svg{border-bottom:1px solid #eee}
 </style></head><body><article>
 <h1>小象 v0.2</h1>
 <p class="subtitle">Reading intent from a turn's words alone</p>
@@ -344,6 +346,7 @@ PAGE = """<!doctype html>
 <textarea id="box" rows="3" placeholder="e.g. No, you have missed my point again."></textarea>
 <div id="out"></div>
 </section>
+__FIGURES__
 <section>
 <h2>Running it on your own logs</h2>
 <p>The download on the <a href="index.html">home page</a> is one Python file, <code>xiaoxiang-local.py</code>. It carries this model, the secret scanner and a log reader. It uses only the standard library and makes no network connections, so you can read it before you run it:</p>
@@ -427,7 +430,50 @@ def _esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def page(rows) -> str:
+SAMPLE_REPORT = os.path.expanduser("~/.local/share/xiaoxiang/sample-report.json")
+
+
+def figures(report: dict | None) -> str:
+    """The downloadable file's charts, drawn from one run of it over my logs.
+    Only dates, hours, token counts and intent counts are used: no turn text,
+    no file paths, no credential findings."""
+    if not report:
+        return ""
+    import xiaoxiang_reader as rd  # noqa: PLC0415
+    days = (report["last_turn"] - report["first_turn"]) / 86400
+    views = report.get("gap_views") or {str(report["gap_hours"]): report["gaps"]}
+    blurbs = {6: "nights and long trips", 1: "an hour or more away from the keyboard",
+              0: "every stretch between two typed turns: all agent tokens laid out over time"}
+    charts = []
+    for h, gs in sorted(views.items(), key=lambda kv: -float(kv[0])):
+        h = float(h)
+        view = {**report, "gap_hours": h, "gaps": gs}
+        total = sum(g["tokens"] for g in gs)
+        share = 100 * total / max(1, report["agent_tokens"])
+        label = f"--gap-hours {h:g}"
+        charts.append(
+            f"<figure><figcaption><code>{_esc(label)}</code>: {_esc(blurbs.get(int(h), ''))}. "
+            f"{len(gs)} bar{'s' * (len(gs) != 1)}, holding {share:.0f}% of the tokens "
+            f"agents logged.</figcaption>{rd.gap_svg(view)}</figure>")
+    classified = sum(report["intents"].values()) or 1
+    top = max(report["intents"].values(), default=1)
+    bars = "".join(
+        f"<tr><td>{_esc(k)}</td><td class=n>{n}</td><td class=n>{100 * n / classified:.0f}%</td>"
+        f"<td><span class=bar style='width:{240 * n / top:.0f}px'></span></td></tr>"
+        for k, n in report["intents"].items())
+    return f"""<section>
+<h2>What the download shows, on my own logs</h2>
+<p>These charts come from one run of the downloadable file over my last {days:.0f} days of Claude Code and Codex logs ({report['turns']} turns typed by me, {report['agent_tokens'] / 1e9:.1f} billion tokens logged by agents). Your report draws the same charts from your logs, on your machine.</p>
+<h3>Work that ran while I wasn't typing</h3>
+<p>Each bar is a stretch with no turn typed by me: its width is how long it lasted, and its height the tokens agents logged during it. Bars are scaled within each chart. Hover a bar for its dates and values.</p>
+{''.join(charts)}
+<h3>What kinds of request I make</h3>
+<p>Each typed turn, as 小象 reads it: with the accuracy shown below, so often wrong. {report['too_little_to_go_on']} turns had too little to go on and are left out.</p>
+<table class=intents>{bars}</table>
+</section>"""
+
+
+def page(rows, report: dict | None = None) -> str:
     import datetime  # noqa: PLC0415
     keep = safe_vocab(rows)
     ev = evaluate(rows)
@@ -456,6 +502,7 @@ def page(rows) -> str:
         "__CONFUSIONS__": conf, "__COLLISIONS__": coll,
         "__VOCAB__": str(model["vocab_size"]), "__MINTURNS__": str(MIN_TURNS),
         "__BUILT__": datetime.date.today().isoformat(),
+        "__FIGURES__": figures(report),
         "__MODEL__": json.dumps(model, ensure_ascii=False).replace("</", "<\\/"),
     }
     html = PAGE
@@ -532,6 +579,8 @@ def main(argv=None) -> int:
     c = sub.add_parser("classify"); c.add_argument("model"); c.add_argument("text")
     b = sub.add_parser("bundle"); b.add_argument("--dir", default=DEFAULT_DIR); b.add_argument("out")
     w = sub.add_parser("page"); w.add_argument("--dir", default=DEFAULT_DIR); w.add_argument("out")
+    w.add_argument("--report", default=SAMPLE_REPORT,
+                   help="JSON from `xiaoxiang-local.py --json`, drawn as figures (skipped if absent)")
     a = ap.parse_args(argv)
     if a.cmd == "eval":
         rows = load(a.dir)
@@ -549,7 +598,11 @@ def main(argv=None) -> int:
             fh.write(code)
         os.chmod(a.out, 0o755)
     elif a.cmd == "page":
-        html = page(load(a.dir))
+        report = None
+        if a.report and os.path.exists(a.report):
+            with open(a.report, encoding="utf-8") as fh:
+                report = json.load(fh)
+        html = page(load(a.dir), report)
         with open(a.out, "w", encoding="utf-8") as fh:
             fh.write(html)
     else:

@@ -202,7 +202,10 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
             "files_with_secrets": dict(secret_files.most_common()),
             "agent_tokens": sum(n for _, n in token_events),
             "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
-            "gap_hours": gap_hours, "gaps": gaps(turn_times, token_events, gap_hours)}
+            "gap_hours": gap_hours, "gaps": gaps(turn_times, token_events, gap_hours),
+            # The same logs at other thresholds, so one run can show all three views.
+            "gap_views": {str(h): gaps(turn_times, token_events, h)
+                          for h in sorted({GAP_HOURS, 1, 0, gap_hours}, reverse=True)}}
 
 
 def render(report: dict) -> str:
