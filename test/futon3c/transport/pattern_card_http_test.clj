@@ -40,6 +40,14 @@
     :grant/source {:id "e:joe-provisional" :author "joe"
                    :at "2026-09-28T10:00:00Z" :quote "provisional"}}})
 
+(defn- drop-nils
+  "XTDB does not store a nil-valued key; the live store reads the document
+   back without it."
+  [x]
+  (cond (map? x) (into {} (keep (fn [[k v]] (when-not (nil? v) [k (drop-nils v)]))) x)
+        (vector? x) (mapv drop-nils x)
+        :else x))
+
 (defn fake-store []
   (let [docs (atom {http/own-acts-grant-id (own-grant)})
         keys (atom {})
@@ -58,6 +66,7 @@
            (let [id (str "act:test-" (swap! next-id inc))
                  doc (-> body
                          (dissoc :hx/mint-id :hx/idempotency-key :hx/valid-time)
+                         drop-nils
                          (assoc :hx/id id))]
              (swap! docs assoc id doc)
              (swap! keys assoc key id)
@@ -187,7 +196,7 @@
           (is (= 200 (:status response)) label)
           (is (= "presentation-unknown"
                  (get-in body [:attestation :record :disposition])) label)
-          (is (nil? (get-in body [:attestation :record :presentation :ref])) label))))))
+          (is (not (contains? (get-in body [:attestation :record :presentation]) :ref)) label))))))
 
 (deftest attestation-write-failure-does-not-roll-back-selection
   (let [{:keys [request! docs]} (fake-store)

@@ -9434,20 +9434,20 @@
                         :shown-pattern-ids
                         (into [] (keep #(some-> (field % :id) str)) results)}))
                    (catch Throwable _ nil)))
-               {:ref nil :shown-pattern-ids []})
+               {:shown-pattern-ids []})
               attestation
               (try
                 (let [attester (:author selection)
                       pattern-id (:pattern-id selection)
+                      ;; Library patterns have no proposal author, so the key
+                      ;; is absent. Draft authorship awaits an authoritative
+                      ;; registry.
                       record {:kind :pattern/attestation :schema 1
                               :pattern-id pattern-id :attester attester
                               :at (:at selection)
                               :use {:kind :pattern-card-selection
                                     :ref (:id selection)}
                               :presentation presentation
-                              ;; Library patterns have no proposal author. Draft
-                              ;; authorship awaits an authoritative registry.
-                              :proposal-author nil
                               :disposition (attestation-record/disposition
                                             attester pattern-id presentation nil)
                               :act/stamp (:act/stamp selection)

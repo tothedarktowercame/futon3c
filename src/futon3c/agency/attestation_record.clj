@@ -7,9 +7,12 @@
    excluded before shown-list echo, because it remains a warrant regardless
    of exposure. Only an independently presented, non-proposer use counts.
 
-   `proposal-author` is nil for library patterns. Resolving authorship from a
-   draft candidate is deferred until there is one authoritative proposal
-   registry; this namespace never guesses from a pattern id or prose."
+   `proposal-author` is absent for library patterns. Resolving authorship from
+   a draft candidate is deferred until there is one authoritative proposal
+   registry; this namespace never guesses from a pattern id or prose.
+
+   An unknown value is an absent key, never nil: futon1b (XTDB) does not store
+   nil-valued keys, so a nil would fail the exact read-back after commit."
   (:require [clojure.string :as str]
             [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.act-stamp :as act-stamp]
@@ -19,7 +22,8 @@
 (def schema-version 1)
 (def ^:private record-keys
   #{:id :kind :schema :pattern-id :attester :at :use :presentation
-    :proposal-author :disposition :act/stamp :act/harness})
+    :disposition :act/stamp :act/harness})
+(def ^:private optional-keys #{:proposal-author})
 (def ^:private dispositions
   #{:counts :proposer-warrant :shown-list-echo :presentation-unknown})
 
@@ -50,8 +54,10 @@
   "Validate and return a closed schema-1 :pattern/attestation record."
   [record]
   (when-not (map? record) (refuse! :invalid-record :record))
-  (when-not (= record-keys (set (keys record)))
-    (refuse! :invalid-keys :record))
+  (let [ks (set (keys record))]
+    (when-not (and (every? ks record-keys)
+                   (every? (into record-keys optional-keys) ks))
+      (refuse! :invalid-keys :record)))
   (when-not (act-id? (:id record)) (refuse! :invalid-act-id :id))
   (when-not (= attestation-type (:kind record)) (refuse! :wrong-kind :kind))
   (when-not (= schema-version (:schema record)) (refuse! :unsupported-schema :schema))
@@ -65,13 +71,15 @@
                    (act-id? (:ref use)))
       (refuse! :invalid-use :use)))
   (let [p (:presentation record)]
-    (when-not (and (map? p) (= #{:ref :shown-pattern-ids} (set (keys p)))
-                   (or (nil? (:ref p)) (text? (:ref p)))
+    (when-not (and (map? p)
+                   (#{#{:shown-pattern-ids} #{:ref :shown-pattern-ids}} (set (keys p)))
+                   (or (not (contains? p :ref)) (text? (:ref p)))
                    (vector? (:shown-pattern-ids p))
                    (every? text? (:shown-pattern-ids p))
                    (or (:ref p) (empty? (:shown-pattern-ids p))))
       (refuse! :invalid-presentation :presentation)))
-  (when-not (or (nil? (:proposal-author record)) (text? (:proposal-author record)))
+  (when-not (or (not (contains? record :proposal-author))
+                (text? (:proposal-author record)))
     (refuse! :invalid-proposal-author :proposal-author))
   (when-not (contains? dispositions (:disposition record))
     (refuse! :invalid-disposition :disposition))

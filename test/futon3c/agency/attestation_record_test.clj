@@ -8,12 +8,14 @@
 
 (defn record [id pattern presentation proposal-author]
   (let [attester "agent-a"]
-    {:id id :kind :pattern/attestation :schema 1 :pattern-id pattern
+    (cond->
+     {:id id :kind :pattern/attestation :schema 1 :pattern-id pattern
      :attester attester :at "2026-09-28T12:00:00Z"
      :use {:kind :pattern-card-selection :ref (str "act:selection-" id)}
-     :presentation presentation :proposal-author proposal-author
+     :presentation presentation
      :disposition (sut/disposition attester pattern presentation proposal-author)
-     :act/stamp stamp :act/harness harness}))
+     :act/stamp stamp :act/harness harness}
+    proposal-author (assoc :proposal-author proposal-author))))
 
 (deftest disposition-and-build-plan-count
   (let [echo (record "act:echo" "pattern/x"
@@ -29,7 +31,7 @@
 (deftest exclusion-precedence-and-incoming-links
   (is (= :presentation-unknown
          (sut/disposition "xiang" "pattern/x"
-                          {:ref nil :shown-pattern-ids []} "xiang")))
+                          {:shown-pattern-ids []} "xiang")))
   (is (= :proposer-warrant
          (sut/disposition "xiang" "pattern/x"
                           {:ref "e:shown" :shown-pattern-ids ["pattern/x"]} "xiang")))
@@ -53,6 +55,16 @@
                                               {:ref "e:x" :shown-pattern-ids []} nil)
                                       :incoming-links 99))
                 nil (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))
+  (testing "an unknown value is an absent key, never nil (futon1b drops nils)"
+    (doseq [[label r] [["nil proposal author"
+                        (assoc (record "act:x" "p/x" {:ref "e:x" :shown-pattern-ids []} nil)
+                               :proposal-author nil)]
+                       ["nil presentation ref"
+                        (record "act:x" "p/x" {:ref nil :shown-pattern-ids []} nil)]]]
+      (is (thrown? clojure.lang.ExceptionInfo (sut/validate! r)) label))
+    (is (= "xiang" (:proposal-author
+                    (sut/validate! (record "act:x" "p/x"
+                                           {:ref "e:x" :shown-pattern-ids []} "xiang"))))))
   (testing "callers cannot assert a counting disposition"
     (is (= :disposition-mismatch
            (try (sut/validate! (assoc (record "act:x" "p/x"
