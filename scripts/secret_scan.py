@@ -82,6 +82,13 @@ _KEYWORD = re.compile(
     r"(?:\\?[\"'`])?(?(em)[*_]{0,3})\s*[:=](?(em)[*_]{0,3})\s*"
     r"(?P<quote>\\?[\"'`])?"
 )
+# Where a _KEYWORD match can begin: the keyword itself, reached back over the
+# characters its optional prefix may contain.  Searching only there gives the
+# same matches as _KEYWORD.finditer; running that regex from every position
+# was quadratic in long alphanumeric runs (base64 payloads in agent logs).
+_KEYWORD_WORD = re.compile(  # a lookahead, so overlapping keywords all count
+    r"(?i)(?=password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)")
+_KEYWORD_PREFIX_CHAR = re.compile(r"[A-Za-z0-9_\-*\\\"'`]")
 _UNQUOTED_VALUE = re.compile(r"[^\s,;\}\]\\\"'`]+")
 _HIGH_ENTROPY = re.compile(_start("A-Za-z0-9+/_=-") + r"[A-Za-z0-9+/_=-]{32,}(?![A-Za-z0-9+/_=-])")
 # Longer runs are encoded payloads (images, archives), not credentials; keys long
@@ -120,6 +127,24 @@ def _keyword_span(text: str, match: Match[str]) -> tuple[int, int] | None:
             len(value) >= 16 or (re.search(r"[0-9]", value) and not value.isdigit())):
         return None
     return start, end
+
+
+def _keyword_matches(text: str) -> Iterable[Match[str]]:
+    """The matches _KEYWORD.finditer(text) would return, found by trying only
+    the start positions that can reach a keyword."""
+    resume = 0
+    for word in _KEYWORD_WORD.finditer(text):
+        if word.start() < resume:
+            continue
+        start = word.start()
+        while start > resume and _KEYWORD_PREFIX_CHAR.match(text, start - 1):
+            start -= 1
+        for position in range(start, word.start() + 1):
+            match = _KEYWORD.match(text, position)
+            if match:
+                yield match
+                resume = match.end()
+                break
 
 
 def _entropy(value: str) -> float:
@@ -183,7 +208,7 @@ def scan(text: str) -> list[Finding]:
         for match in rule.pattern.finditer(text):
             start, end = match.span(rule.group)
             found.append(Finding(rule.kind, start, end))
-    for match in _KEYWORD.finditer(text):
+    for match in _keyword_matches(text):
         span = _keyword_span(text, match)
         if span:
             found.append(Finding("keyword-assignment", *span))
