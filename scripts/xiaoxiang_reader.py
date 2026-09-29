@@ -16,8 +16,11 @@ joins all three with the exported model into one standalone file.
 from __future__ import annotations
 
 import argparse
+from bisect import bisect_left, bisect_right
 from collections import Counter
+from datetime import datetime, timezone
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -31,6 +34,7 @@ from xiaoxiang import classify, evidence  # noqa: E402
 MODEL = None
 # --- end dev imports ---
 
+GAP_HOURS = 6
 CLAUDE_ROOT = "~/.claude/projects"
 CODEX_ROOT = "~/.codex/sessions"
 _INJECTED = ("<", "# AGENTS.md", "[compacted", "Caveat:")
@@ -76,6 +80,60 @@ def codex_turns(record: dict) -> list[str]:
                         if isinstance(b, dict) and b.get("type") == "input_text") if t]
 
 
+def _epoch(stamp) -> float | None:
+    try:
+        return datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def claude_tokens(record: dict) -> tuple[str, int] | None:
+    """(message key, input + cache + output tokens) for an assistant reply.
+    One reply is written as several lines with the same usage, hence the key."""
+    if record.get("type") != "assistant":
+        return None
+    message = record.get("message") or {}
+    usage = message.get("usage") if isinstance(message, dict) else None
+    if not isinstance(usage, dict):
+        return None
+    n = sum(usage.get(k) or 0 for k in ("input_tokens", "cache_creation_input_tokens",
+                                        "cache_read_input_tokens", "output_tokens"))
+    return f"{message.get('id')}/{record.get('requestId')}", n
+
+
+def codex_tokens(record: dict) -> tuple[str, int] | None:
+    """(running total, input (cached included) + output tokens) for one Codex
+    model call.  Repeated token_count events carry an unchanged running total."""
+    payload = record.get("payload")
+    if record.get("type") != "event_msg" or not isinstance(payload, dict) \
+            or payload.get("type") != "token_count" or not isinstance(payload.get("info"), dict):
+        return None
+    info = payload["info"]
+    last, total = info.get("last_token_usage") or {}, info.get("total_token_usage") or {}
+    return json.dumps(total, sort_keys=True), (last.get("input_tokens") or 0) + (last.get("output_tokens") or 0)
+
+
+def gaps(turn_times: list[float], events: list[tuple[float, int]],
+         min_hours: float = GAP_HOURS) -> list[dict]:
+    """Stretches of at least MIN_HOURS with no typed turn, and the agent tokens
+    logged inside each.  Only stretches where agents logged something are kept."""
+    times = sorted(set(turn_times))
+    events = sorted(events)
+    at = [t for t, _ in events]
+    prefix = [0]
+    for _, n in events:
+        prefix.append(prefix[-1] + n)
+    out = []
+    for a, b in zip(times, times[1:]):
+        if b - a < min_hours * 3600:
+            continue
+        i, j = bisect_right(at, a), bisect_left(at, b)
+        if prefix[j] - prefix[i] > 0:
+            out.append({"start": a, "end": b, "hours": (b - a) / 3600,
+                        "tokens": prefix[j] - prefix[i]})
+    return out
+
+
 def log_files(root: str, pattern: str, days: float | None) -> list[Path]:
     base = Path(os.path.expanduser(root))
     if not base.is_dir():
@@ -84,7 +142,9 @@ def log_files(root: str, pattern: str, days: float | None) -> list[Path]:
     return sorted(p for p in base.glob(pattern) if p.stat().st_mtime >= cutoff)
 
 
-def read(files: list[tuple[str, Path]], model: dict, progress=None) -> dict:
+def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float = 0) -> dict:
+    """SINCE (epoch seconds) drops turns and token events before it: a log
+    file picked by --days can reach back weeks before the window."""
     intents: Counter = Counter()
     secret_kinds: Counter = Counter()
     secret_files: Counter = Counter()
@@ -92,6 +152,9 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None) -> dict:
     # values.  Only a hash is kept, in memory, for the length of the run.
     distinct: dict[str, set] = {}
     turns = unsure = 0
+    turn_times: list[float] = []
+    token_events: list[tuple[float, int]] = []
+    seen_calls: set[str] = set()
     total = sum(p.stat().st_size for _, p in files) or 1
     done = 0
     for n, (source, path) in enumerate(files, 1):
@@ -110,9 +173,19 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None) -> dict:
                     continue
                 if not isinstance(record, dict):
                     continue
+                call = (claude_tokens if source == "claude" else codex_tokens)(record)
+                if call and call[1] > 0:
+                    key = f"{source}/{path}/{call[0]}" if source == "codex" else call[0]
+                    when = _epoch(record.get("timestamp"))
+                    if when is not None and when >= since and key not in seen_calls:
+                        seen_calls.add(key)
+                        token_events.append((when, call[1]))
                 for text in (claude_turns if source == "claude" else codex_turns)(record):
                     clean, _ = redact(text)
                     turns += 1
+                    when = _epoch(record.get("timestamp"))
+                    if when is not None and when >= since:
+                        turn_times.append(when)
                     if evidence(model, clean):
                         intents[classify(model, clean, 1)[0][0]] += 1
                     else:
@@ -125,7 +198,10 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None) -> dict:
             "distinct_secrets": sum(len(v) for v in distinct.values()),
             "secret_kinds": {k: {"distinct": len(distinct[k]), "occurrences": n}
                              for k, n in secret_kinds.most_common()},
-            "files_with_secrets": dict(secret_files.most_common())}
+            "files_with_secrets": dict(secret_files.most_common()),
+            "agent_tokens": sum(n for _, n in token_events),
+            "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
+            "gaps": gaps(turn_times, token_events)}
 
 
 def render(report: dict) -> str:
@@ -139,6 +215,16 @@ def render(report: dict) -> str:
         if report["too_little_to_go_on"]:
             out.append(f"  ({report['too_little_to_go_on']} turns had too little to go on)")
         out.append("")
+    if report["gaps"]:
+        g = report["gaps"]
+        in_gaps = sum(x["tokens"] for x in g)
+        out.append(f"Agent work while you weren't typing: {len(g)} gap{'s' * (len(g) != 1)} of {GAP_HOURS}+ hours "
+                   f"with agent activity, holding {in_gaps:,} of {report['agent_tokens']:,} "
+                   f"logged tokens ({100 * in_gaps / max(1, report['agent_tokens']):.0f}%).")
+        for x in sorted(g, key=lambda x: -x["tokens"])[:5]:
+            out.append(f"  {_day(x['start'])} to {_day(x['end'])}  {x['hours']:5.1f} h  "
+                       f"{x['tokens']:>14,} tokens")
+        out.append("")
     out.append(f"Suspected credentials in these logs: {report['distinct_secrets']} distinct "
                f"values, appearing {report['secrets']} times")
     for kind, n in report["secret_kinds"].items():
@@ -150,6 +236,66 @@ def render(report: dict) -> str:
     return "\n".join(out)
 
 
+def _day(t: float) -> str:
+    return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
+def gap_svg(report: dict) -> str:
+    """Mirrored bars on a date axis: width = how long the gap lasted, height =
+    tokens agents logged during it."""
+    W, H, left, right, mid, half = 1000, 300, 40, 20, 150, 110
+    t0, t1 = report["first_turn"], report["last_turn"]
+    if not report["gaps"] or t0 is None or t1 <= t0:
+        return "<p>No gaps of %d+ hours with agent activity were found.</p>" % GAP_HOURS
+    x = lambda t: left + (W - left - right) * (t - t0) / (t1 - t0)
+    top = max(g["tokens"] for g in report["gaps"])
+    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" style="width:100%;height:auto" '
+             'aria-label="Gaps in your typed activity and the tokens agents logged during each">',
+             f'<line x1="{left}" y1="{mid}" x2="{W - right}" y2="{mid}" stroke="#999" stroke-width="0.5"/>']
+    for g in report["gaps"]:
+        h = max(1.0, 2 * half * g["tokens"] / top)
+        w = max(1.5, x(g["end"]) - x(g["start"]))
+        tip = html.escape(f"{_day(g['start'])} to {_day(g['end'])} UTC: {g['hours']:.1f} h, "
+                          f"{g['tokens']:,} tokens")
+        parts.append(f'<rect x="{x(g["start"]):.1f}" y="{mid - h / 2:.1f}" width="{w:.1f}" '
+                     f'height="{h:.1f}" fill="#8a3b2e" fill-opacity="0.8"><title>{tip}</title></rect>')
+    days = max(1, round((t1 - t0) / 86400))
+    step = 86400 * max(1, round(days / 8))
+    t = t0 - t0 % 86400 + 86400
+    while t < t1:
+        parts.append(f'<text x="{x(t):.1f}" y="{H - 6}" font-size="11" text-anchor="middle" '
+                     f'fill="#666">{datetime.fromtimestamp(t, timezone.utc):%d %b}</text>')
+        t += step
+    parts.append(f'<text x="{left}" y="14" font-size="11" fill="#666">tallest bar: '
+                 f'{top:,} tokens</text></svg>')
+    return "".join(parts)
+
+
+def render_html(report: dict) -> str:
+    rows = "".join(f"<tr><td>{_day(g['start'])}</td><td>{_day(g['end'])}</td>"
+                   f"<td>{g['hours']:.1f}</td><td>{g['tokens']:,}</td></tr>"
+                   for g in sorted(report["gaps"], key=lambda g: -g["tokens"]))
+    classified = sum(report["intents"].values()) or 1
+    intents = "".join(f"<tr><td>{html.escape(k)}</td><td>{n}</td><td><span style='display:inline-block;"
+                      f"height:.6em;width:{300 * n / classified:.0f}px;background:#555'></span></td></tr>"
+                      for k, n in report["intents"].items())
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Your agent logs, read locally</title>
+<style>body{{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:2rem auto;padding:0 1rem;color:#222}}
+table{{border-collapse:collapse;font-size:13px}}td,th{{padding:.15rem .7rem;border-bottom:1px solid #ddd;text-align:left}}</style>
+</head><body><h1>Your agent logs, read locally</h1>
+<p>{report['turns']} turns you typed, in {report['files']} log files. Generated on this machine; nothing was sent anywhere.</p>
+<h2>Work that ran while you weren't typing</h2>
+{gap_svg(report)}
+<p><i>Each bar is a gap of at least {GAP_HOURS} hours between turns you typed: its width is how long the gap lasted, and its height the tokens agents logged during it (input, cached input and output). A gap in typing is not proof you were away. Hover a bar for its values.</i></p>
+<table><tr><th>from (UTC)</th><th>to</th><th>hours</th><th>tokens</th></tr>{rows}</table>
+<h2>What kinds of request you make</h2>
+<p>小象's reading, which is often wrong.</p><table>{intents}</table>
+<h2>Suspected credentials</h2>
+<p>{report['distinct_secrets']} distinct values, appearing {report['secrets']} times. Values are never shown; the terminal report lists the files.</p>
+</body></html>"""
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Read your own Claude Code and Codex logs locally: the kinds of "
@@ -158,6 +304,8 @@ def main(argv=None) -> int:
     ap.add_argument("--claude", default=CLAUDE_ROOT, help=f"default {CLAUDE_ROOT}")
     ap.add_argument("--codex", default=CODEX_ROOT, help=f"default {CODEX_ROOT}")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
+    ap.add_argument("--html", default="xiaoxiang-report.html",
+                    help="also write a page with the gap chart (default %(default)s; '' for none)")
     if MODEL is None:
         ap.add_argument("--model", required=True, help="model JSON from xiaoxiang.py export")
     a = ap.parse_args(argv)
@@ -178,10 +326,15 @@ def main(argv=None) -> int:
         print(f"\r  {n}/{total} files, {100 * share:.0f}%, about {left / 60:.0f} min left ",
               end="", file=sys.stderr, flush=True)
 
-    report = read(files, model, progress if sys.stderr.isatty() else None)
+    since = time.time() - a.days * 86400 if a.days else 0
+    report = read(files, model, progress if sys.stderr.isatty() else None, since)
     if sys.stderr.isatty():
         print(file=sys.stderr)
     print(json.dumps(report, indent=1) if a.json else render(report))
+    if a.html:
+        with open(a.html, "w", encoding="utf-8") as fh:
+            fh.write(render_html(report))
+        print(f"Wrote {a.html}: open it in a browser for the gap chart.", file=sys.stderr)
     return 0
 
 

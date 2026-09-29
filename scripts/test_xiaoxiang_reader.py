@@ -48,6 +48,39 @@ class Turns(unittest.TestCase):
             self.assertEqual([], rd.codex_turns(skipped))
 
 
+H = 3600
+
+
+class Gaps(unittest.TestCase):
+    def test_only_long_gaps_with_agent_work_are_kept(self):
+        turns = [0, 1 * H, 10 * H, 12 * H, 30 * H]
+        events = [(0.5 * H, 7), (5 * H, 100), (6 * H, 50), (11 * H, 999), (20 * H, 0)]
+        found = rd.gaps(turns, events)
+        self.assertEqual([(1 * H, 10 * H, 150)], [(g["start"], g["end"], g["tokens"]) for g in found])
+
+    def test_events_at_a_turn_belong_to_neither_side(self):
+        found = rd.gaps([0, 8 * H], [(0, 5), (8 * H, 5), (4 * H, 1)])
+        self.assertEqual([1], [g["tokens"] for g in found])
+
+    def test_claude_reply_split_over_lines_counts_once(self):
+        rec = {"type": "assistant", "timestamp": "2026-09-01T03:00:00Z", "requestId": "r1",
+               "message": {"id": "m1", "usage": {"input_tokens": 2, "cache_read_input_tokens": 90,
+                                                 "cache_creation_input_tokens": 5, "output_tokens": 3}}}
+        self.assertEqual(("m1/r1", 100), rd.claude_tokens(rec))
+        self.assertIsNone(rd.claude_tokens(claude("hi")))
+
+    def test_codex_repeated_running_total_has_the_same_key(self):
+        def ev(total, last):
+            return {"type": "event_msg", "payload": {"type": "token_count", "info": {
+                "total_token_usage": {"total_tokens": total},
+                "last_token_usage": {"input_tokens": last, "cached_input_tokens": last // 2,
+                                     "output_tokens": 1}}}}
+        a, b, c = rd.codex_tokens(ev(10, 9)), rd.codex_tokens(ev(10, 9)), rd.codex_tokens(ev(30, 19))
+        self.assertEqual(a, b)
+        self.assertNotEqual(a[0], c[0])
+        self.assertEqual(20, c[1])  # cached input is inside input_tokens, not added again
+
+
 def fake_home(root):
     """A made-up ~/.claude and ~/.codex (never real logs) with a planted secret."""
     cl = os.path.join(root, "claude", "proj")
@@ -58,9 +91,13 @@ def fake_home(root):
         for r in [claude(f"password: {SECRET}"), claude("I reject your claim"),
                   claude([{"type": "tool_result", "content": f"password={SECRET}"}]),
                   {"type": "assistant", "message": {"content": "ok"}}]:
-            fh.write(json.dumps(r) + "\n")
+            fh.write(json.dumps({**r, "timestamp": "2026-09-01T00:00:00Z"}) + "\n")
+        reply = {"type": "assistant", "timestamp": "2026-09-01T05:00:00Z", "requestId": "r",
+                 "message": {"id": "m", "usage": {"input_tokens": 400, "output_tokens": 100}}}
+        fh.write(json.dumps(reply) + "\n")
+        fh.write(json.dumps(reply) + "\n")  # the same reply, second content block
     with open(os.path.join(cx, "rollout-1.jsonl"), "w") as fh:
-        fh.write(json.dumps(codex("sounds good, go ahead")) + "\n")
+        fh.write(json.dumps({**codex("sounds good, go ahead"), "timestamp": "2026-09-01T09:00:00Z"}) + "\n")
         fh.write("not json\n")
     return os.path.join(root, "claude"), os.path.join(root, "codex")
 
@@ -82,6 +119,16 @@ class Report(unittest.TestCase):
         self.assertEqual(3, report["turns"])
         self.assertEqual(2, report["secrets"])
         self.assertEqual(1, report["distinct_secrets"])  # the same value, twice
+        self.assertEqual([500], [g["tokens"] for g in report["gaps"]])
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            files = [("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+            late = rd.read(files, self.model, since=rd._epoch("2026-09-01T04:00:00Z"))
+        self.assertEqual([], late["gaps"])  # the turns before the window are not read
+        page = rd.render_html(report)
+        self.assertIn("<rect", page)
+        self.assertNotIn(SECRET, page)
+        self.assertNotIn("reject your claim", page)
         self.assertIn("disagree", report["intents"])
         self.assertIn("approve", report["intents"])
         text = rd.render(report) + json.dumps(report)
