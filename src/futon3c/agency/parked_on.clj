@@ -118,14 +118,17 @@
    and outbox together, then schedule the single-writer drain. OLD and ALLOCATOR
    restore both authorities if the atomic replacement fails."
   [old allocator transitions]
-  (let [eids (mapv (fn [[type rec now-ms details]]
-                     (history/stage! !parked type rec now-ms details))
-                   transitions)]
+  ;; Staging is inside the rollback: a throw in stage! (as the defonce counters
+  ;; did at the P2c-2-1 reload) must not leave in-memory state changed but
+  ;; unpersisted.
+  (let [eids (atom [])]
     (try
+      (doseq [[type rec now-ms details] transitions]
+        (swap! eids conj (history/stage! !parked type rec now-ms details)))
       (persist! @!parked)
       (catch Throwable e
         (reset! !parked old)
-        (history/release-reservations! eids)
+        (history/release-reservations! @eids)
         (history/restore-allocator! allocator)
         (capture/drain!)
         (throw e)))

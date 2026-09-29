@@ -272,3 +272,13 @@ no-dep timer park resumes plainly"
       ;; The new keys should be present in the snapshot (merge tolerance).
       (is (map? (:ready-inbox (p/snapshot))))
       (is (map? (:leased (p/snapshot)))))))
+
+(deftest ready-stage-failure-rolls-back-in-memory-state
+  ;; P2c-3a review: a throw while staging the history row must not leave the
+  ;; ready inbox changed in memory but unpersisted.
+  (let [before (p/snapshot)]
+    (with-redefs [futon3c.agency.promise-history/stage!
+                  (fn [& _] (throw (ex-info "stage failed" {})))]
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (p/ready-push! "a1" "s1" "pk-stage" "prompt"))))
+    (is (= before (p/snapshot)))))
