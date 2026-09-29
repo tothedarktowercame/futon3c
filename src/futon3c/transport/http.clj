@@ -10363,15 +10363,6 @@
 (defn- release-refusal [status reason]
   (json-response status {:ok false :reason reason}))
 
-(defn- explicit-release-row [inputs promise-id evidence-id]
-  (some (fn [row]
-          (when (and (= evidence-id (:evidence/id row))
-                     (= :promise/released (:evidence/type row))
-                     (= promise-id (get-in row [:evidence/body :history/promise-id]))
-                     (= :explicit (get-in row [:evidence/body :release/basis])))
-            row))
-        (:promise-history inputs)))
-
 (defn handle-promise-release [request]
   (let [payload (parse-json-map (read-body request))]
     (if-not (map? payload)
@@ -10380,8 +10371,6 @@
         (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
               promise-id (some-> (or (:promise-id payload) (get payload "promise-id")) str)
               role (some-> (or (:role payload) (get payload "role")) name keyword)
-              reason (some-> (or (:reason payload) (get payload "reason")) str str/trim)
-              countersigns (some-> (or (:countersigns payload) (get payload "countersigns")) str)
               ;; A release takes effect now. A caller-chosen time could place an
               ;; abandonment before the deadline and hide that the debt lapsed.
               _ (when (or (contains? payload :at) (contains? payload "at"))
@@ -10389,8 +10378,7 @@
                                   {:reason :caller-supplied-at})))
               at-instant (Instant/now)
               _ (when-not (and (not (str/blank? caller)) (not (str/blank? promise-id))
-                               (contains? #{:creditor :debtor} role)
-                               (not (str/blank? reason)) (<= (count reason) 2000))
+                               (contains? #{:creditor :debtor} role))
                   (throw (ex-info "Invalid promise release" {:reason :invalid-request})))
               base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
               read-at (str (Instant/now))
@@ -10408,23 +10396,11 @@
                                       (not= :no-beneficiary (:reason %)))
                                 (:incomplete projection))
               closed (some #(when (= promise-id (:obligation/id %)) %) (:ignored projection))
-              countersigned-row (when countersigns
-                                  (explicit-release-row inputs promise-id countersigns))
-              countersign-valid? (and countersigned-row
-                                      (nil? (get-in countersigned-row
-                                                    [:evidence/body :release/countersigns]))
-                                      (not= role (get-in countersigned-row
-                                                        [:evidence/body :release/role])))
               _ (when incomplete?
                   (throw (ex-info "Promise history is incomplete"
                                   {:reason :incomplete-promise})))
-              _ (when (and countersigns (not countersign-valid?))
-                  (throw (ex-info "No opposite-party release to countersign"
-                                  {:reason :nothing-to-countersign})))
-              _ (when (and closed
-                           (or (contains? #{:completed :completed-late :settled}
-                                          (:status closed))
-                               (nil? countersigns)))
+              _ (when (and closed (contains? #{:completed :completed-late :released :abandoned}
+                                             (:status closed)))
                   (throw (ex-info "Promise is already closed" {:reason :already-closed})))
               grant-id (or (promise-release-grant-id base caller)
                            (throw (ex-info "No grant covers promise release"
@@ -10432,9 +10408,8 @@
               stamp (act-stamp/stamp caller caller {:grant grant-id} :declared)
               eid (promise-history/record!
                    :promise/released rec (.toEpochMilli at-instant)
-                   (cond-> {:release/basis :explicit :release/role role :release/by caller
-                            :release/reason reason :act/stamp stamp}
-                     countersigns (assoc :release/countersigns countersigns)))
+                   {:release/basis :explicit :release/role role :release/by caller
+                    :act/stamp stamp})
               _ (when-not (and (string? eid) (promise-history/await-writes! 5000))
                   (throw (ex-info "Promise release write was not acknowledged"
                                   {:reason :store-failure})))
@@ -10447,21 +10422,16 @@
                          (= :explicit (:release/basis body))
                          (= role (:release/role body))
                          (= caller (:release/by body))
-                         (= reason (:release/reason body))
-                         (= countersigns (:release/countersigns body))
                          (= stamp (:act/stamp body)))
             (throw (ex-info "Promise release readback mismatch" {:reason :store-failure})))
           (json-response 200 {:ok true :evidence-id eid :promise-id promise-id
-                              :status (if countersigns
-                                        :settled
-                                        (if (= :creditor role)
-                                          :voided-by-creditor :voided-by-debtor))}))
+                              :status (if (= :creditor role) :released :abandoned)}))
         (catch clojure.lang.ExceptionInfo e
           (let [reason (:reason (ex-data e))]
             (release-refusal (case reason
                                :unknown-promise 404
                                (:not-a-party :no-grant) 403
-                               (:already-closed :incomplete-promise :nothing-to-countersign) 409
+                               (:already-closed :incomplete-promise) 409
                                (:store-timeout :store-failure) 504
                                400)
                              reason)))
