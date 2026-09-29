@@ -3,7 +3,8 @@
    (§5), plus the core join semantics. No live JVM / no :7071: the ns is
    dependency-injected (resume!/ledger-lookup/now-ms)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [futon3c.agency.parked-on :as p]))
+            [futon3c.agency.parked-on :as p]
+            [futon3c.agency.promise-history :as history]))
 
 (use-fixtures :each (fn [t] (p/clear!) (t)))
 
@@ -277,7 +278,7 @@ no-dep timer park resumes plainly"
   ;; P2c-3a review: a throw while staging the history row must not leave the
   ;; ready inbox changed in memory but unpersisted.
   (let [before (p/snapshot)]
-    (with-redefs [futon3c.agency.promise-history/stage!
+    (with-redefs [history/stage!
                   (fn [& _] (throw (ex-info "stage failed" {})))]
       (is (thrown? clojure.lang.ExceptionInfo
                    (p/ready-push! "a1" "s1" "pk-stage" "prompt"))))
