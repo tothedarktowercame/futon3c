@@ -142,7 +142,8 @@ def log_files(root: str, pattern: str, days: float | None) -> list[Path]:
     return sorted(p for p in base.glob(pattern) if p.stat().st_mtime >= cutoff)
 
 
-def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float = 0) -> dict:
+def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float = 0,
+         gap_hours: float = GAP_HOURS) -> dict:
     """SINCE (epoch seconds) drops turns and token events before it: a log
     file picked by --days can reach back weeks before the window."""
     intents: Counter = Counter()
@@ -201,7 +202,7 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
             "files_with_secrets": dict(secret_files.most_common()),
             "agent_tokens": sum(n for _, n in token_events),
             "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
-            "gaps": gaps(turn_times, token_events)}
+            "gap_hours": gap_hours, "gaps": gaps(turn_times, token_events, gap_hours)}
 
 
 def render(report: dict) -> str:
@@ -218,7 +219,9 @@ def render(report: dict) -> str:
     if report["gaps"]:
         g = report["gaps"]
         in_gaps = sum(x["tokens"] for x in g)
-        out.append(f"Agent work while you weren't typing: {len(g)} gap{'s' * (len(g) != 1)} of {GAP_HOURS}+ hours "
+        h = report.get("gap_hours", GAP_HOURS)
+        out.append(f"Agent work while you weren't typing: {len(g)} gap{'s' * (len(g) != 1)}"
+                   + (f" of {h:g}+ hours" if h > 0 else " between typed turns") + " "
                    f"with agent activity, holding {in_gaps:,} of {report['agent_tokens']:,} "
                    f"logged tokens ({100 * in_gaps / max(1, report['agent_tokens']):.0f}%).")
         for x in sorted(g, key=lambda x: -x["tokens"])[:5]:
@@ -240,13 +243,19 @@ def _day(t: float) -> str:
     return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M")
 
 
+def _gap_phrase(report: dict) -> str:
+    h = report.get("gap_hours", GAP_HOURS)
+    return (f"stretch between turns you typed" if h <= 0
+            else f"gap of at least {h:g} hour{'s' * (h != 1)} between turns you typed")
+
+
 def gap_svg(report: dict) -> str:
     """Mirrored bars on a date axis: width = how long the gap lasted, height =
     tokens agents logged during it."""
     W, H, left, right, mid, half = 1000, 300, 40, 20, 150, 110
     t0, t1 = report["first_turn"], report["last_turn"]
     if not report["gaps"] or t0 is None or t1 <= t0:
-        return "<p>No gaps of %d+ hours with agent activity were found.</p>" % GAP_HOURS
+        return f"<p>No {_gap_phrase(report)} with agent activity was found.</p>"
     x = lambda t: left + (W - left - right) * (t - t0) / (t1 - t0)
     top = max(g["tokens"] for g in report["gaps"])
     parts = [f'<svg viewBox="0 0 {W} {H}" role="img" style="width:100%;height:auto" '
@@ -287,7 +296,7 @@ table{{border-collapse:collapse;font-size:13px}}td,th{{padding:.15rem .7rem;bord
 <p>{report['turns']} turns you typed, in {report['files']} log files. Generated on this machine; nothing was sent anywhere.</p>
 <h2>Work that ran while you weren't typing</h2>
 {gap_svg(report)}
-<p><i>Each bar is a gap of at least {GAP_HOURS} hours between turns you typed: its width is how long the gap lasted, and its height the tokens agents logged during it (input, cached input and output). A gap in typing is not proof you were away. Hover a bar for its values.</i></p>
+<p><i>Each bar is a {_gap_phrase(report)}: its width is how long the gap lasted, and its height the tokens agents logged during it (input, cached input and output). A gap in typing is not proof you were away. Hover a bar for its values.</i></p>
 <table><tr><th>from (UTC)</th><th>to</th><th>hours</th><th>tokens</th></tr>{rows}</table>
 <h2>What kinds of request you make</h2>
 <p>小象's reading, which is often wrong.</p><table>{intents}</table>
@@ -304,6 +313,10 @@ def main(argv=None) -> int:
     ap.add_argument("--claude", default=CLAUDE_ROOT, help=f"default {CLAUDE_ROOT}")
     ap.add_argument("--codex", default=CODEX_ROOT, help=f"default {CODEX_ROOT}")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
+    ap.add_argument("--gap-hours", type=float, default=GAP_HOURS,
+                    help="shortest stretch without a typed turn to count as a gap "
+                         "(default %(default)g; 1 for errands, 0 for every stretch "
+                         "between turns, i.e. all agent tokens laid out over time)")
     ap.add_argument("--html", default="xiaoxiang-report.html",
                     help="also write a page with the gap chart (default %(default)s; '' for none)")
     if MODEL is None:
@@ -327,7 +340,7 @@ def main(argv=None) -> int:
               end="", file=sys.stderr, flush=True)
 
     since = time.time() - a.days * 86400 if a.days else 0
-    report = read(files, model, progress if sys.stderr.isatty() else None, since)
+    report = read(files, model, progress if sys.stderr.isatty() else None, since, a.gap_hours)
     if sys.stderr.isatty():
         print(file=sys.stderr)
     print(json.dumps(report, indent=1) if a.json else render(report))

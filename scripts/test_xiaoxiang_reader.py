@@ -58,6 +58,16 @@ class Gaps(unittest.TestCase):
         found = rd.gaps(turns, events)
         self.assertEqual([(1 * H, 10 * H, 150)], [(g["start"], g["end"], g["tokens"]) for g in found])
 
+    def test_gap_hours_is_a_parameter(self):
+        turns = [0, 2 * H, 2.9 * H]
+        events = [(1 * H, 10), (2.5 * H, 5)]
+        self.assertEqual([], rd.gaps(turns, events))
+        self.assertEqual([10], [g["tokens"] for g in rd.gaps(turns, events, 1)])
+        self.assertEqual([10, 5], [g["tokens"] for g in rd.gaps(turns, events, 0)])
+        report = {"gap_hours": 0, "gaps": rd.gaps(turns, events, 0), "first_turn": 0,
+                  "last_turn": 3 * H}
+        self.assertIn("stretch between turns you typed", rd.gap_svg(report) + rd._gap_phrase(report))
+
     def test_events_at_a_turn_belong_to_neither_side(self):
         found = rd.gaps([0, 8 * H], [(0, 5), (8 * H, 5), (4 * H, 1)])
         self.assertEqual([1], [g["tokens"] for g in found])
