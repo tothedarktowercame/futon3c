@@ -147,6 +147,13 @@
                 "Please keep the underlines on old turns" (current-buffer))))
       (should (= pos 6)))))
 
+(ert-deftest turn-stepper-underlines-cues-in-parse ()
+  (let ((out (turn-stepper--underline-cues "I refuse to wait for it" '("refuse to wait" "absent"))))
+    (should (equal "I refuse to wait for it" (substring-no-properties out)))
+    (should (get-text-property 2 'face out))
+    (should-not (get-text-property 0 'face out))
+    (should-not (get-text-property 17 'face out))))
+
 (ert-deftest turn-stepper-renders-operators ()
   (let ((out (turn-stepper--render-operators
               '((hits . (((ibol . "KEYPRESS") (text . "wait") (cue_intent . "constrain")
@@ -155,4 +162,4 @@
                 (cues_without_operator . (((intent . "clarify") (text . "is that"))))))))
     (should (string-match-p "KEYPRESS.*\"wait\".*chip says defer" out))
     (should (string-match-p "LOOK.*outside 象's marks" out))
-    (should (string-match-p "clarify \"is that\"" out))))
+    (should-not (string-match-p "is that" out))))

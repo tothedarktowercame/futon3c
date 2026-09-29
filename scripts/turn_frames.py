@@ -352,6 +352,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                     fragments_out.append({
                         "sentence": s.get("id"),
                         "text": frag.get("text"),
+                        # 象's marks in this fragment, as text: the stepper
+                        # underlines them inside the fragment.
+                        "cues": [c.get("text") for c in frag.get("display_cues") or []
+                                 if isinstance(c.get("text"), str)],
                         "labels": labels,
                         "_intents": intents,
                         "_frag": frag,

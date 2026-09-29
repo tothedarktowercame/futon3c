@@ -125,9 +125,8 @@ JSON null and false both read as nil."
 (defun turn-stepper--render-operators (operators)
   "Render IBOL operator words and how they meet 象's marks.
 A word inside one of 象's marks is the intersection: the operational
-content of that mark.  Marks with no operator word are listed after."
-  (let ((hits (turn-stepper--aget (quote hits) operators))
-        (bare (turn-stepper--aget (quote cues_without_operator) operators)))
+content of that mark.  The marks themselves are underlined in PARSE."
+  (let ((hits (turn-stepper--aget (quote hits) operators)))
     (concat
      (if (null hits)
          "  (no operator words)\n"
@@ -144,14 +143,17 @@ content of that mark.  Marks with no operator word are listed after."
                           (t (format "in 象 %s \"%s\"; chip says %s" cue
                                      (turn-stepper--aget (quote cue_text) h)
                                      (turn-stepper--aget (quote chip_intent) h)))))))
-        hits ""))
-     (when bare
-       (concat "  象 marks with no operator word:\n"
-               (mapconcat (lambda (c)
-                            (format "    %s \"%s\"\n"
-                                    (turn-stepper--aget (quote intent) c)
-                                    (turn-stepper--aget (quote text) c)))
-                          bare ""))))))
+        hits "")))))
+
+(defun turn-stepper--underline-cues (text cues)
+  "Return TEXT with each of 象's CUES (strings) underlined where it occurs."
+  (let ((out (copy-sequence text)) (case-fold-search nil))
+    (dolist (cue cues out)
+      (when (and (stringp cue) (not (string-empty-p cue)))
+        (let ((i (string-search cue out)))
+          (when i
+            (add-face-text-property i (+ i (length cue))
+                                    '(:underline (:style wave :color "purple")) nil out)))))))
 
 (defun turn-stepper--render-parse (parse)
   "Render the PARSE section of a frame's parse alist as a string."
@@ -181,7 +183,9 @@ content of that mark.  Marks with no operator word are listed after."
                             labels ", ")))
              (format "  [%s] %s\n      (%s)"
                      head
-                     (or (turn-stepper--aget (quote text) frag) "")
+                     (turn-stepper--underline-cues
+                      (or (turn-stepper--aget (quote text) frag) "")
+                      (turn-stepper--aget (quote cues) frag))
                      sources)))
          fragments
          "\n")))))
