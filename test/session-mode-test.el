@@ -283,6 +283,81 @@
             (should-not (assq 'withdrawal_processing_error (json-read-file path)))))
       (delete-directory directory t))))
 
+(ert-deftest session-mode-reconcile-processes-analysis-before-first-reap ()
+  (pcase-let ((`(,directory ,path)
+               (session-mode-test--withdrawal-files
+                "operator" "act:choice" "emacs:joe-early")))
+    (unwind-protect
+        (let ((session-mode-turn-analysis-directory directory)
+              (calls 0))
+          (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                     (lambda (_method url _timeout &optional _payload)
+                       (setq calls (1+ calls))
+                       (if (string-suffix-p "/interpretation/negation" url)
+                           '(:status 201 :json (:entry (:evidence/id "interpretation:early"
+                                                       :evidence/body (:resolution "explicit-id"))))
+                         '(:status 403 :json (:reason "no-grant")))))
+                    ((symbol-function 'force-mode-line-update) #'ignore))
+            (session-mode--reconcile-withdrawal-analyses))
+          ;; Negation, provisional effect, and the resulting no-grant notice.
+          (should (= calls 3))
+          (let ((record (json-read-file path)))
+            (should (= 1 (length (alist-get 'withdrawal_effects record))))
+            (should (= 1 (length (alist-get 'negation_interpretations record))))))
+      (delete-directory directory t))))
+
+(ert-deftest session-mode-reconcile-processes-after-reap-window ()
+  (pcase-let ((`(,directory ,path)
+               (session-mode-test--withdrawal-files "operator" "act:late")))
+    (unwind-protect
+        (let ((session-mode-turn-analysis-directory directory) processed)
+          ;; Three completed `running' reaps leave no timer, but do not alter the
+          ;; record.  Reconciliation depends only on the durable analysed state.
+          (cl-letf (((symbol-function 'session-mode--handle-reap-output)
+                     (lambda (candidate _out) (push candidate processed))))
+            (session-mode--reconcile-withdrawal-analyses))
+          (should (equal processed (list path))))
+      (delete-directory directory t))))
+
+(ert-deftest session-mode-reconcile-skips-fully-processed-record ()
+  (pcase-let ((`(,directory ,path)
+               (session-mode-test--withdrawal-files "operator" "act:done")))
+    (unwind-protect
+        (let ((session-mode-turn-analysis-directory directory) processed)
+          (let ((record (json-read-file path)))
+            (setf (alist-get 'withdrawal_effects record) [((fragment_id . "s1:0"))])
+            (setf (alist-get 'negation_interpretations record) [((fragment_id . "s1:0"))])
+            (with-temp-file path (insert (json-encode record))))
+          (cl-letf (((symbol-function 'session-mode--handle-reap-output)
+                     (lambda (&rest _) (setq processed t))))
+            (session-mode--reconcile-withdrawal-analyses))
+          (should-not processed))
+      (delete-directory directory t))))
+
+(ert-deftest session-mode-reconcile-skips-record-older-than-one-day ()
+  (pcase-let ((`(,directory ,path)
+               (session-mode-test--withdrawal-files "operator" "act:old")))
+    (unwind-protect
+        (let ((session-mode-turn-analysis-directory directory) processed)
+          (set-file-times path (time-subtract (current-time) (seconds-to-time 86401)))
+          (cl-letf (((symbol-function 'session-mode--handle-reap-output)
+                     (lambda (&rest _) (setq processed t))))
+            (session-mode--reconcile-withdrawal-analyses))
+          (should-not processed))
+      (delete-directory directory t))))
+
+(ert-deftest session-mode-reconcile-runs-at-start-and-end-of-bell-turn ()
+  (let ((boundaries 0) reply)
+    (cl-letf (((symbol-function 'session-mode--reconcile-withdrawal-analyses)
+               (lambda () (setq boundaries (1+ boundaries)))))
+      (session-mode--analyze-start-turn
+       (lambda (call _agent _hooks _text _speaker _origin)
+         (funcall call "prompt" (lambda (value) (setq reply value))))
+       (lambda (_prompt callback) (funcall callback "done"))
+       "claude-17" nil "bell" "continuation" 'unsolicited))
+    (should (= boundaries 2))
+    (should (equal reply "done"))))
+
 (ert-deftest session-mode-withdraw-notice-kind-mapping-is-closed ()
   (should (equal "effect" (alist-get 'kind
                                      (session-mode--withdrawal-notice
@@ -627,7 +702,8 @@
     (let ((call #'ignore) captured)
       (session-mode--analyze-start-turn
        (lambda (actual &rest _) (setq captured actual)) call "agent" nil "No cues here" "continuation" 'unsolicited)
-      (should (eq captured call))
+      ;; The call is wrapped only to reconcile again when this bell turn ends.
+      (should (functionp captured))
       (should-not session-mode--last-analysis-request))))
 
 (ert-deftest session-mode-structure-inferred-spans-do-not-reflow ()
