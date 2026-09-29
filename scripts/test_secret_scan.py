@@ -95,12 +95,17 @@ class SecretScanTest(unittest.TestCase):
             ("keyword-assignment", '{"password": "correct horse battery staple"}',
              "horse battery staple"),
             ("keyword-assignment", "**Password:** Hunter2Fake99", "Hunter2Fake99"),
+            ("keyword-assignment", "token: FakeTok3nValue", "FakeTok3nValue"),
+            ("keyword-assignment", "password: hunter", "hunter"),
             ("keyword-assignment", "**Password**: Hunter2Fake99", "Hunter2Fake99"),
             ("keyword-assignment", "`api_key`=FakeApiValue1234", "FakeApiValue1234"),
             ("keyword-assignment", r'{"content":"{\"password\": \"FakeEsc4pedPw\"}"}',
              "FakeEsc4pedPw"),
             ("github-token", r'"output":"line1\nghp_FakeToken0123456789ABCDEFGH\n"',
              "ghp_FakeToken0123456789ABCDEFGH"),
+            # A random base64 secret that happens to contain separators still counts.
+            ("high-entropy", "q8Zr/Xk3Vt9Lm2Wp/Fh7Nc4Yb1Qs6Dj0Ga5Ru",
+             "q8Zr/Xk3Vt9Lm2Wp/Fh7Nc4Yb1Qs6Dj0Ga5Ru"),
             ("anthropic-key", r'"x\tsk-ant-FakeClaudeKey0123456789ABCDEFG"',
              "sk-ant-FakeClaudeKey0123456789ABCDEFG"),
         ]:
@@ -116,6 +121,12 @@ class SecretScanTest(unittest.TestCase):
             "the bearer instrument clause",
             '"data":"' + blob + '"',
             "password=*** password=xxx",
+            "claude/projects/-home-joe-code-futon3c/6799e67a-0da8-4bc6-829e-1ff2c07d50c8_subagents",
+            "holes/labs/M-Kimi-2000/P12-5-0-operator-negation-discovery",
+            "PYTHONPATH=futon3c/scripts/secret-scan-Local-Logs-7d-2026",
+            "{:token :apm/no-producer} {:token :wm/r13a}",
+            "the completion token: none, and per token: |x|",
+            "futon3/GetText/SomeThing/Path/Here",
         ]:
             with self.subTest(text=text[:40]):
                 self.assertEqual([], scan_module.scan(text))

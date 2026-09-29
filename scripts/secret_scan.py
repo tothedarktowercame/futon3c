@@ -91,6 +91,7 @@ _PLACEHOLDERS = re.compile(
     r"(?i)^(?:<redacted>|\*{3,}|x{3,}|change(?:me)?|changeme\??|none|null|n/?a|placeholder|example)$"
 )
 _HEX = re.compile(r"^[0-9a-fA-F]+$")
+_WORDLIKE = re.compile(r"[a-z]+[0-9]*|(?:[A-Z][a-z]{2,})+[0-9]*|[A-Z]{1,4}|[0-9]+|[0-9a-f]+")
 _UUID = re.compile(r"(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
@@ -110,8 +111,13 @@ def _keyword_span(text: str, match: Match[str]) -> tuple[int, int] | None:
     # A working directory (PWD=/home/…, OLDPWD=~/…) is a path, not a password.
     if value.startswith(("/", "~")):
         return None
-    # max_token=4096, token: 12: counts, not credentials.
-    if match.group("keyword").lower() == "token" and value.isdigit():
+    # An EDN/Clojure map key ({:token :foo/bar}) names a field, not a secret.
+    if match.start("keyword") and text[match.start("keyword") - 1] == ":":
+        return None
+    # "token" is also an ordinary word (max_token=4096, "per token: n"), so a
+    # token value must look like one: a digit that is not the whole value, or length.
+    if match.group("keyword").lower() == "token" and not (
+            len(value) >= 16 or (re.search(r"[0-9]", value) and not value.isdigit())):
         return None
     return start, end
 
@@ -125,6 +131,13 @@ def _entropy(value: str) -> float:
 def _high_entropy_candidate(text: str, match: Match[str]) -> bool:
     value = match.group(0)
     if len(value) > _HIGH_ENTROPY_MAX:
+        return False
+    # Paths and hyphenated identifiers (claude/projects/-home-joe-code/6799e67a-…,
+    # M-futon-seams) join ordinary words; a random token split the same way
+    # gives mixed-case fragments.  Skip when most segments read as words.
+    segments = [part for part in re.split(r"[/_\-.=+]", value) if part]
+    wordlike = [part for part in segments if _WORDLIKE.fullmatch(part)]
+    if len(segments) >= 3 and len(wordlike) >= 0.6 * len(segments):
         return False
     if _HEX.fullmatch(value) and (7 <= len(value) <= 40 or len(value) == 64):
         return False
