@@ -29,6 +29,52 @@ no lexical cues; `never' records structure without requesting interpretation."
                     (file-name-directory (or load-file-name buffer-file-name))))
 (defvar-local session-mode--last-analysis-request nil)
 
+(defcustom session-mode-secret-scan-script
+  (expand-file-name "../scripts/secret_scan.py"
+                    (file-name-directory (or load-file-name buffer-file-name)))
+  "Path to the standalone scanner applied before an operator turn is captured.
+This protects the capture record, the analysis seat 象, and public feeds built
+from capture records.  The agent addressed by the operator has already received
+the turn; preventing that delivery is outside this capture-time safeguard."
+  :type 'string
+  :group 'session-mode)
+
+(defun session-mode--redact-secrets (text)
+  "Return (REDACTED . KINDS) after scanning TEXT with the standalone tool.
+KINDS contains distinct redaction kinds in first-seen order.  Signal a
+`user-error' without including TEXT when the scanner cannot establish a safe
+result; an unscanned turn must not be recorded or dispatched to 象."
+  (unless (and (stringp session-mode-secret-scan-script)
+               (file-readable-p session-mode-secret-scan-script))
+    (user-error "Secret scan failed closed: scanner script is missing or unreadable"))
+  (let ((python (executable-find "python3")))
+    (unless python
+      (user-error "Secret scan failed closed: python3 is unavailable"))
+    (let ((output (generate-new-buffer " *session-secret-scan*")) status)
+      (unwind-protect
+          (progn
+            (with-temp-buffer
+              (insert (or text ""))
+              (setq status
+                    (call-process-region
+                     (point-min) (point-max) python nil (list output nil) nil
+                     session-mode-secret-scan-script)))
+            (cond
+             ((equal status 0) (cons text nil))
+             ((equal status 1)
+              (with-current-buffer output
+                (let ((redacted (buffer-string)) kinds)
+                  (goto-char (point-min))
+                  (while (re-search-forward "\\[REDACTED:\\([^]]+\\)\\]" nil t)
+                    (cl-pushnew (match-string-no-properties 1) kinds :test #'equal))
+                  (unless kinds
+                    (user-error "Secret scan failed closed: scanner reported findings without redactions"))
+                  (cons redacted (nreverse kinds)))))
+             (t
+              (user-error "Secret scan failed closed: scanner exited with status %s"
+                          status))))
+        (kill-buffer output)))))
+
 (defvar session-mode--withdrawal-disabled-messaged-sessions
   (make-hash-table :test #'equal)
   "Sessions already told once that inferred withdrawals lack a grant.")
@@ -131,8 +177,18 @@ A block runs to a closing >>> or, failing that, to the end of the turn."
   "Persist TEXT's structure before requesting interpretation; return its path.
 A leading surface marker is stripped first, so `source_text' and every offset
 computed against it describe what the operator said rather than how it
-reached the buffer. The surface itself is kept in the record's metadata."
-  (let* ((split (agent-chat-split-surface-marker text))
+reached the buffer. The surface itself is kept in the record's metadata.
+Secrets are redacted before parsing, storage, analysis dispatch, or publication.
+The addressed agent has already received the original turn and is out of scope."
+  (let* ((text-scan (session-mode--redact-secrets text))
+         (original-scan (and original-text
+                             (session-mode--redact-secrets original-text)))
+         (redaction-kinds (delete-dups
+                           (append (copy-sequence (cdr text-scan))
+                                   (copy-sequence (cdr original-scan)))))
+         (text (car text-scan))
+         (original-text (and original-scan (car original-scan)))
+         (split (agent-chat-split-surface-marker text))
          (surface (car split))
          (text (session-mode--elide-quotes (cdr split)))
          (original-text (and original-text
@@ -151,6 +207,7 @@ reached the buffer. The surface itself is kept in the record's metadata."
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
+                      (secrets_redacted . ,(vconcat redaction-kinds))
                       ;; `agent-chat--start-turn' runs :before-send before it
                       ;; calls us, so this is the acknowledged operator row,
                       ;; not an id reconstructed from text later.
@@ -165,7 +222,16 @@ reached the buffer. The surface itself is kept in the record's metadata."
             (let ((coding-system-for-write 'utf-8-unix))
               (insert (json-encode (append record metadata)))))
         (error (delete-file path) (signal (car err) (cdr err))))
-      (setq session-mode--last-analysis-request path))))
+      (setq session-mode--last-analysis-request path)
+      (when redaction-kinds
+        (display-warning
+         'session-mode
+         (format "Redacted %d secret(s) (%s) from your turn before capture; the turn itself still reached %s unredacted."
+                 (length redaction-kinds)
+                 (string-join redaction-kinds ", ")
+                 (or agent-chat--agent-id "the addressed agent"))
+         :warning))
+      path)))
 
 (defun session-mode--analysis-instruction (path)
   "Give the current receiving agent a bounded task tied to PATH."

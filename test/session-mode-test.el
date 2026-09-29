@@ -56,6 +56,88 @@
                            "emacs-operator-1"))))
       (delete-directory session-mode-turn-analysis-directory t))))
 
+(defconst session-mode-test--fake-aws-key "AKIAFAKE1234567890XY")
+
+(defun session-mode-test--record-json (text &optional original-text)
+  "Record TEXT and return its decoded JSON object."
+  (let ((json-object-type 'alist)
+        (json-array-type 'list))
+    (json-read-file (session-mode--record-turn text nil original-text))))
+
+(ert-deftest session-mode-secret-redaction-precedes-recording-and-warns-safely ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-secret-test-" t))
+        warnings)
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (cl-letf (((symbol-function 'display-warning)
+                     (lambda (_type message &rest _)
+                       (push message warnings))))
+            (let* ((text (format "my key is %s please" session-mode-test--fake-aws-key))
+                   (record (session-mode-test--record-json text text))
+                   (source (alist-get 'source_text record))
+                   (original (alist-get 'original_text record)))
+              (should (string-match-p "\\[REDACTED:aws-access-key\\]" source))
+              (should (string-match-p "\\[REDACTED:aws-access-key\\]" original))
+              (dotimes (index (- (length session-mode-test--fake-aws-key) 7))
+                (let ((part (substring session-mode-test--fake-aws-key index (+ index 8))))
+                  (should-not (string-match-p (regexp-quote part) source))
+                  (should-not (string-match-p (regexp-quote part) original))
+                  (should-not (string-match-p (regexp-quote part) (car warnings)))))
+              (should (equal '("aws-access-key")
+                             (alist-get 'secrets_redacted record)))
+              (should (= 1 (length warnings)))
+              (should (string-match-p "aws-access-key" (car warnings))))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-clean-turn-is-unchanged-and-silent ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-clean-test-" t))
+        warnings)
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (cl-letf (((symbol-function 'display-warning)
+                     (lambda (&rest args) (push args warnings))))
+            (let ((record (session-mode-test--record-json "A clean operator turn.")))
+              (should (equal "A clean operator turn." (alist-get 'source_text record)))
+              (should (equal "A clean operator turn." (alist-get 'original_text record)))
+              (should (equal nil (alist-get 'secrets_redacted record)))
+              (should-not warnings))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-secret-scan-fails-closed-before-record-or-dispatch ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-fail-closed-" t))
+        (session-mode-secret-scan-script "/definitely/missing/secret_scan.py")
+        (session-mode-analysis-agent "xiang")
+        dispatches)
+    (unwind-protect
+        (cl-letf (((symbol-function 'session-mode--dispatch-analysis)
+                   (lambda (&rest args) (push args dispatches))))
+          (should-error
+           (session-mode-record-external-turn
+            "unscanned text" "claude-3" "session-3" "turn-3")
+           :type 'user-error)
+          (should-not dispatches)
+          (should-not (directory-files session-mode-turn-analysis-directory nil "^turn-")))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-secret-redaction-precedes-sentence-offsets ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-offset-test-" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let* ((text (format "First sentence. My key is %s. Final sentence."
+                               session-mode-test--fake-aws-key))
+                 (record (session-mode-test--record-json text))
+                 (source (alist-get 'source_text record))
+                 (sentences (alist-get 'sentences record))
+                 (last-sentence (car (last sentences)))
+                 (start (alist-get 'start last-sentence))
+                 (end (alist-get 'end last-sentence)))
+            (should (equal "Final sentence." (substring source start end)))
+            (should (equal "Final sentence." (alist-get 'text last-sentence)))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
 (defun session-mode-test--withdrawal-files (origin target &optional evidence-id text)
   "Return (DIRECTORY RECORD-PATH), containing one analysed withdraw TARGET."
   (let* ((directory (make-temp-file "withdraw-reap-test-" t))
