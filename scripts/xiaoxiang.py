@@ -345,6 +345,28 @@ PAGE = """<!doctype html>
 <div id="out"></div>
 </section>
 <section>
+<h2>Running it on your own logs</h2>
+<p>The download on the <a href="index.html">home page</a> is one Python file, <code>xiaoxiang-local.py</code>. It carries this model, the secret scanner and a log reader. It uses only the standard library and makes no network connections, so you can read it before you run it:</p>
+<pre>python3 xiaoxiang-local.py --days 7</pre>
+<p>It reads Claude Code sessions in <code>~/.claude/projects</code> and Codex sessions in <code>~/.codex/sessions</code>, then prints a summary and writes <code>xiaoxiang-report.html</code>, a page that stays on your machine. The report has three parts.</p>
+<h3>1. What kinds of request you make</h3>
+<p>Each turn you typed is classified with the model on this page. Only your own turns count. Tool results, subagent traffic, text the tools add by themselves (environment context, <code>AGENTS.md</code>, slash-command wrappers, compaction summaries) and messages passed between agents are skipped. Before a turn is classified, anything the secret scanner flags in it is removed.</p>
+<h3>2. Credentials sitting in the logs</h3>
+<p>The scanner looks for private keys, cloud and API keys (AWS, GitHub, Anthropic, OpenAI, Slack, Google), JWTs, bearer tokens, passwords in URLs, <code>password = &hellip;</code> style assignments, and long random-looking strings. The report gives counts by kind, both as distinct values and as total appearances, because logs repeat themselves. It lists the files that hold them, and it never prints a value. It is a heuristic: some findings will be test fixtures or false alarms, and it will miss some real secrets.</p>
+<h3>3. Work that ran while you weren't typing</h3>
+<p>This part draws the chart on the home page from your own logs. Each bar is a stretch with no turn typed by you: its width is how long it lasted, and its height the tokens agents logged during it (input, cached input and output). Claude replies written over several log lines, and Codex's repeated token events, are counted once.</p>
+<p>By default a gap must last at least 6 hours, which finds nights and long trips. <code>--gap-hours</code> changes that: <code>--gap-hours 1</code> also finds an hour out at the shops, and <code>--gap-hours 0</code> keeps every stretch between two typed turns, which lays all of your agents' tokens out over time. A gap in typing does not show that you were away, since you may have been reading.</p>
+<h3>Options</h3>
+<table>
+<tr><td><code>--days N</code></td><td>only the last N days (log files and the turns and tokens inside them)</td></tr>
+<tr><td><code>--gap-hours H</code></td><td>shortest gap to draw (default 6)</td></tr>
+<tr><td><code>--html FILE</code></td><td>where to write the report page (default <code>xiaoxiang-report.html</code>; <code>--html ''</code> for none)</td></tr>
+<tr><td><code>--json</code></td><td>print the report as JSON</td></tr>
+<tr><td><code>--claude DIR</code>, <code>--codex DIR</code></td><td>read logs from somewhere else</td></tr>
+</table>
+<p>It is not fast: it reads every line of every log, at roughly five minutes per gigabyte on my machine. <code>--days</code> keeps it short.</p>
+</section>
+<section>
 <h2>How well it does</h2>
 <p>Trained and tested on __FRAGMENTS__ labelled fragments from __TURNS__ of my turns, with __INTENTS__ intents. Each test holds out whole turns (__FOLDS__-fold cross-validation), so no fragment is scored by a model that saw its neighbours.</p>
 <ul>
