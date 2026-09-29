@@ -780,15 +780,50 @@ health and never retries a failed route call."
           (when (seq-some #'session-mode--withdrawal-notice-pending-p existing)
             (push path session-mode--withdrawal-pending-paths)))))))
 
+(defun session-mode--set-withdrawal-processing-error (path value)
+  "Set or (VALUE nil) remove `withdrawal_processing_error' on record PATH.
+Best effort: a record that cannot be read is reported by `message'."
+  (condition-case err
+      (let* ((record (with-temp-buffer
+                       (let ((coding-system-for-read 'utf-8))
+                         (insert-file-contents path))
+                       (json-parse-buffer :object-type 'alist :array-type 'array
+                                          :null-object :null :false-object :false)))
+             (present (assq 'withdrawal_processing_error record)))
+        (cond
+         (value
+          (setf (alist-get 'withdrawal_processing_error record) value)
+          (session-mode--write-analysis-record path record))
+         (present
+          (session-mode--write-analysis-record
+           path (assq-delete-all 'withdrawal_processing_error record)))))
+    (error (message "象: could not record processing error on %s: %s"
+                    (file-name-base path) (error-message-string err)))))
+
 (defun session-mode--handle-reap-output (path out)
-  "Handle successful analysis reap OUT for PATH without coupling side effects."
+  "Handle successful analysis reap OUT for PATH without coupling side effects.
+A failure to process withdrawals is written onto the record and leaves the
+analysis health failing; it is not discarded."
   (when (string-match-p "analyzed" out)
-    (condition-case nil
-        (session-mode--process-withdrawals path)
-      (error nil))
-    (session-mode--retry-pending-withdrawal-notices path)
-    (session-mode--set-analysis-health
-     'ok (format "%s: analysed" (file-name-base path)))))
+    (let ((failure
+           (condition-case err
+               (progn (session-mode--process-withdrawals path) nil)
+             (error err))))
+      (if failure
+          (progn
+            (session-mode--set-withdrawal-processing-error
+             path `((at . ,(format-time-string "%FT%TZ" nil t))
+                    (error . ,(symbol-name (car failure)))
+                    (message . ,(truncate-string-to-width
+                                 (error-message-string failure) 500))))
+            (message "象: withdrawal processing failed for %s: %s"
+                     (file-name-base path) (error-message-string failure)))
+        (session-mode--set-withdrawal-processing-error path nil))
+      (session-mode--retry-pending-withdrawal-notices path)
+      (session-mode--set-analysis-health
+       (if failure 'failing 'ok)
+       (format "%s: %s" (file-name-base path)
+               (if failure "withdrawal processing failed" "analysed"))))))
 
 (defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.

@@ -260,13 +260,28 @@
       (delete-directory directory-a t)
       (delete-directory directory-b t))))
 
-(ert-deftest session-mode-withdraw-reap-error-does-not-change-analysis-health ()
-  (let ((session-mode--analysis-health nil))
-    (cl-letf (((symbol-function 'session-mode--process-withdrawals)
-               (lambda (_path) (error "route failed")))
-              ((symbol-function 'force-mode-line-update) #'ignore))
-      (session-mode--handle-reap-output "/tmp/turn-stable.json" "1 analyzed"))
-    (should (eq session-mode--analysis-health 'ok))))
+(ert-deftest session-mode-withdraw-reap-error-is-recorded-and-cleared ()
+  ;; P12-5-9: the error was discarded and health said ok.
+  (pcase-let ((`(,directory ,path)
+               (session-mode-test--withdrawal-files "operator" "seat-active-card")))
+    (unwind-protect
+        (let ((session-mode--analysis-health nil) (fail t))
+          (cl-letf (((symbol-function 'session-mode--process-withdrawals)
+                     (lambda (_path) (when fail (error "route failed"))))
+                    ((symbol-function 'session-mode--retry-pending-withdrawal-notices)
+                     #'ignore)
+                    ((symbol-function 'message) #'ignore)
+                    ((symbol-function 'force-mode-line-update) #'ignore))
+            (session-mode--handle-reap-output path "1 analyzed")
+            (should (eq session-mode--analysis-health 'failing))
+            (let ((err (alist-get 'withdrawal_processing_error
+                                  (json-read-file path))))
+              (should (equal "route failed" (alist-get 'message err))))
+            (setq fail nil)
+            (session-mode--handle-reap-output path "1 analyzed")
+            (should (eq session-mode--analysis-health 'ok))
+            (should-not (assq 'withdrawal_processing_error (json-read-file path)))))
+      (delete-directory directory t))))
 
 (ert-deftest session-mode-withdraw-notice-kind-mapping-is-closed ()
   (should (equal "effect" (alist-get 'kind
