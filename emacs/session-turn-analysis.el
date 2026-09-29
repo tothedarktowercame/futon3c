@@ -444,16 +444,6 @@ answer is \"still running\" and nothing is written."
   :type 'integer
   :group 'session-mode)
 
-(defcustom session-mode-analysis-reconcile-max-age (* 24 60 60)
-  "Maximum age in seconds of a turn record considered by reconciliation."
-  :type 'integer
-  :group 'session-mode)
-
-(defcustom session-mode-analysis-reconcile-limit 50
-  "Maximum number of recent turn records examined by one reconciliation."
-  :type 'integer
-  :group 'session-mode)
-
 (defconst session-mode--dispatch-reaper
   (expand-file-name "../scripts/turn_dispatch_reap.py"
                     (file-name-directory (or load-file-name buffer-file-name)))
@@ -835,72 +825,6 @@ analysis health failing; it is not discarded."
        (format "%s: %s" (file-name-base path)
                (if failure "withdrawal processing failed" "analysed"))))))
 
-(defun session-mode--withdrawal-processing-pending-p (path)
-  "Return non-nil when analysed record PATH has an unprocessed withdraw fragment.
-Both the provisional effect outcome and the durable negation interpretation
-must exist for every fragment.  A recorded processing error is retried even if
-the earlier attempt managed to write both lists before failing."
-  (let* ((json-object-type 'alist)
-         (json-array-type 'list)
-         (analysis-path (concat path ".analysis.json"))
-         (record (and (file-exists-p analysis-path)
-                      (with-temp-buffer
-                        (insert-file-contents path)
-                        (json-parse-buffer :object-type 'alist :array-type 'list
-                                           :null-object :null :false-object :false))))
-         (analysis (and record (json-read-file analysis-path))))
-    (when (and record (equal (alist-get 'analysis_status record) "analyzed"))
-      (let* ((fragments (mapcar #'car (session-mode--withdrawal-fragments analysis)))
-             (effect-rows (alist-get 'withdrawal_effects record))
-             (effect-rows (unless (eq effect-rows :null) effect-rows))
-             (negation-rows (alist-get 'negation_interpretations record))
-             (negation-rows (unless (eq negation-rows :null) negation-rows))
-             (effects (mapcar (lambda (row) (alist-get 'fragment_id row))
-                              effect-rows))
-             (negations (mapcar (lambda (row) (alist-get 'fragment_id row))
-                                negation-rows)))
-        (and fragments
-             (or (assq 'withdrawal_processing_error record)
-                 (seq-some (lambda (id)
-                             (or (not (member id effects))
-                                 (not (member id negations))))
-                           fragments)))))))
-
-(defun session-mode--reconcile-withdrawal-analyses ()
-  "Process recent analysed withdrawal records missed by bounded job reaping.
-The newest `session-mode-analysis-reconcile-limit' records modified in the
-last `session-mode-analysis-reconcile-max-age' seconds are examined.  It runs
-at every turn boundary, so no error may escape into the turn."
-  (condition-case err
-      (session-mode--reconcile-withdrawal-analyses-1)
-    (error (message "象: reconciliation failed: %s" (error-message-string err))
-           nil)))
-
-(defun session-mode--reconcile-withdrawal-analyses-1 ()
-  "Body of `session-mode--reconcile-withdrawal-analyses'."
-  (when (file-directory-p session-mode-turn-analysis-directory)
-    (let* ((cutoff (- (float-time) session-mode-analysis-reconcile-max-age))
-           (paths
-            (seq-filter
-             (lambda (path)
-               (and (not (string-suffix-p ".analysis.json" path))
-                    (>= (float-time
-                         (file-attribute-modification-time (file-attributes path)))
-                        cutoff)))
-             (directory-files session-mode-turn-analysis-directory t
-                              "\\`turn-.*\\.json\\'")))
-           (paths (sort paths
-                        (lambda (a b)
-                          (time-less-p
-                           (file-attribute-modification-time (file-attributes b))
-                           (file-attribute-modification-time (file-attributes a)))))))
-      (dolist (path (seq-take paths session-mode-analysis-reconcile-limit))
-        (condition-case err
-            (when (session-mode--withdrawal-processing-pending-p path)
-              (session-mode--handle-reap-output path "analyzed (reconciled)"))
-          (error (message "象: reconciliation could not inspect %s: %s"
-                          (file-name-base path) (error-message-string err))))))))
-
 (defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
@@ -1132,51 +1056,41 @@ state -- never silently complete."
 
 (defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
   "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
-  ;; Turn boundaries drive reconciliation.  This advice sees ordinary turns,
-  ;; parked resumes and bells, whereas an independent periodic timer would run
-  ;; even while the system is otherwise idle.
-  (session-mode--reconcile-withdrawal-analyses)
-  (let* ((original-call call)
-         (call (lambda (prompt callback)
-                 (funcall original-call prompt
-                          (lambda (&rest values)
-                            (session-mode--reconcile-withdrawal-analyses)
-                            (apply callback values))))))
-    (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
-                  (equal speaker agent-chat-user-speaker)
-                  (not (agent-chat--walkie-command-p (string-trim text)))))
-        (funcall original call agent-name hooks text speaker origin)
-      (let* ((marked (session-mode--split-failure-marker text))
+  (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
+                (equal speaker agent-chat-user-speaker)
+                (not (agent-chat--walkie-command-p (string-trim text)))))
+      (funcall original call agent-name hooks text speaker origin)
+    (let* ((marked (session-mode--split-failure-marker text))
            (failed (cdr marked)))
-        (funcall
-         original
-         (lambda (sent callback)
-           (let ((path nil) (prompt sent) (buffer (current-buffer)))
-             (condition-case err
-                 (progn
-                   (setq path (session-mode--record-turn sent failed text))
-                   ;; Never ask a seat to interpret a turn addressed to itself. It
-                   ;; arrives as work while the same words are arriving as
-                   ;; conversation, and the seat cannot tell which of the two it
-                   ;; is answering.
-                   (when (and path session-mode-analysis-agent
-                              (not (equal session-mode-analysis-agent
-                                          agent-chat--agent-id)))
-                     (session-mode--dispatch-analysis path))
-                   (when (and (not session-mode-analysis-agent)
-                              (or failed (session-mode--analysis-requested-p
-                                          (session-mode--structure-turn sent))))
-                     (setq prompt (concat sent (session-mode--analysis-instruction path)
-                                          (when failed
-                                            "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))
-               (error (display-warning 'session-mode
-                                       (format "Turn structure was NOT recorded: %s" (error-message-string err)))))
-             (funcall call prompt
-                      (lambda (response)
-                        (when (and path (buffer-live-p buffer))
-                          (with-current-buffer buffer (session-mode--display-analysis path)))
-                        (funcall callback response)))))
-         agent-name hooks (car marked) speaker origin)))))
+     (funcall
+     original
+     (lambda (sent callback)
+       (let ((path nil) (prompt sent) (buffer (current-buffer)))
+         (condition-case err
+             (progn
+               (setq path (session-mode--record-turn sent failed text))
+               ;; Never ask a seat to interpret a turn addressed to itself. It
+               ;; arrives as work while the same words are arriving as
+               ;; conversation, and the seat cannot tell which of the two it
+               ;; is answering.
+               (when (and path session-mode-analysis-agent
+                          (not (equal session-mode-analysis-agent
+                                      agent-chat--agent-id)))
+                 (session-mode--dispatch-analysis path))
+               (when (and (not session-mode-analysis-agent)
+                          (or failed (session-mode--analysis-requested-p
+                                      (session-mode--structure-turn sent))))
+                 (setq prompt (concat sent (session-mode--analysis-instruction path)
+                                      (when failed
+                                        "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))
+           (error (display-warning 'session-mode
+                                   (format "Turn structure was NOT recorded: %s" (error-message-string err)))))
+         (funcall call prompt
+                  (lambda (response)
+                    (when (and path (buffer-live-p buffer))
+                      (with-current-buffer buffer (session-mode--display-analysis path)))
+                    (funcall callback response)))))
+     agent-name hooks (car marked) speaker origin))))
 
 (with-eval-after-load 'agent-chat
   (advice-add 'agent-chat--start-turn :around #'session-mode--analyze-start-turn))
