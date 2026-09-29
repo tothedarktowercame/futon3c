@@ -994,14 +994,15 @@ agent text is left alone."
       (delete-directory session-mode-turn-analysis-directory t))))
 
 (ert-deftest session-mode-reconcile-error-never-escapes-into-a-turn ()
-  ;; A file can vanish between listing and stat: file-attributes gives nil.
+  ;; Any error in listing (here, an unreadable directory) must not escape.
   (let ((session-mode-turn-analysis-directory (make-temp-file "reconcile-err-" t)))
     (unwind-protect
         (progn
           (with-temp-file (expand-file-name "turn-gone.json"
                                             session-mode-turn-analysis-directory)
             (insert "{}"))
-          (cl-letf (((symbol-function 'file-attributes) (lambda (&rest _) nil))
+          (cl-letf (((symbol-function 'directory-files)
+                     (lambda (&rest _) (error "Permission denied")))
                     ((symbol-function 'message) #'ignore))
             (should-not (session-mode--reconcile-withdrawal-analyses))))
       (delete-directory session-mode-turn-analysis-directory t))))
