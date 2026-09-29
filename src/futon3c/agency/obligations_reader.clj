@@ -72,8 +72,12 @@
       (truncated! source 1 (count rows)))
     {:rows rows :pages 1}))
 
-(defn- read-offer [base id t mode]
-  (let [{:keys [rows]} (hyperedge-page base :offer/record id t mode :offers)]
+(defn- read-offer
+  "An offer's ends are its author, seat and addressee, not its own id, so it is
+   listed through the offeror's agent endpoint and picked out by id."
+  [base id offeror t mode]
+  (let [{:keys [rows]} (hyperedge-page base :offer/record (str "agent:" offeror)
+                                       t mode :offers)]
     (some #(when (= id (:hx/id %)) %) rows)))
 
 (defn read-inputs
@@ -110,9 +114,12 @@
                       agreement-edges)
          agreements (vec (keep :record mapped))
          offer-ids (vec (distinct (map :agreement/offer agreements)))
+         offeror-by-offer (into {} (map (juxt :agreement/offer :agreement/offeror))
+                                agreements)
          offer-mapped (mapv (fn [id]
                               (try
-                                (if-let [edge (read-offer base id t mode)]
+                                (if-let [edge (read-offer base id (offeror-by-offer id)
+                                                          t mode)]
                                   {:record (offer/hyperedge->record edge) :fetched? true}
                                   {:issue {:obligation/id id :reason :unknown-offer :record-id id}})
                                 (catch Exception e

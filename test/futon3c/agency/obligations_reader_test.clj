@@ -115,3 +115,53 @@
         (is (empty? (:agreements result)))
         (is (= :unreadable-agreement
                (get-in result [:reader-incomplete 0 :reason])))))))
+
+(deftest agreement-offer-is-found-through-the-offerors-endpoint
+  ;; Live 2026-09-29: an offer's ends are its author, seat and addressee, never
+  ;; its own id, so looking it up by end=<offer id> found nothing and Joe's
+  ;; accepted agreement never reached P9. The fake store answers `end` as
+  ;; futon1b does: an edge matches only if the end is one of its endpoints.
+  ;; Shapes are the live act:104d037c… offer and act:ba40d9aa… agreement.
+  (let [scope {:description "doc"}
+        offer {:hx/id "act:offer" :hx/type :offer/record
+               :hx/endpoints ["agent:claude-17" "session:s" "agent:joe"]
+               :hx/props {:act/harness {:kind :none :basis :producer-context
+                                        :source-ref "route:futon3c.offer"}
+                          :act/stamp {:executor "claude-17" :signer "claude-17"
+                                      :authority {:grant "act:grant"}
+                                      :executor-basis :declared}
+                          :author "claude-17" :at "2026-09-28T10:00:00Z"
+                          :addressee "joe"
+                          :options [{:option/id "document" :option/label "Write it"
+                                     :option/scope scope}]
+                          :offer/schema 1
+                          :seat {:agent "claude-17" :session "s"}}}
+        agreement {:hx/id "act:agreement" :hx/type :agreement/record
+                   :hx/endpoints ["act:offer" "agent:claude-17" "agent:joe" "emacs-e"]
+                   :hx/props {:agreement/acceptance-evidence "emacs-e"
+                              :act/harness {:kind :none :basis :producer-context
+                                            :source-ref "route:futon3c.agreement"}
+                              :agreement/offer "act:offer" :agreement/schema 1
+                              :act/stamp {:executor "joe" :signer "joe"
+                                          :authority {:operator true}
+                                          :executor-basis :session-bound}
+                              :agreement/offeror "claude-17" :agreement/acceptor "joe"
+                              :agreement/at "2026-09-28T11:00:00Z"
+                              :agreement/option-id "document"
+                              :agreement/scope scope}}
+        edges [offer agreement]]
+    (binding [reader/*request!*
+              (fn [_ _ path _]
+                (if (str/includes? path "/hyperedges?")
+                  (let [q (java.net.URLDecoder/decode path "UTF-8")
+                        type (keyword (second (re-find #"type=([^&]+)" q)))
+                        end (second (re-find #"end=([^&]+)" q))]
+                    {:hyperedges (filterv #(and (= type (:hx/type %))
+                                                (some #{end} (:hx/endpoints %)))
+                                          edges)})
+                  (empty-response path)))]
+      (let [result (reader/read-inputs "http://store" "claude-17" t :current)]
+        (is (= ["act:agreement"] (mapv :id (:agreements result))))
+        (is (= 1 (get-in result [:basis :population :sources 3 :rows-used])))
+        (is (empty? (filter #(= :unknown-offer (:reason %))
+                            (get-in result [:basis :reader-incomplete]))))))))
