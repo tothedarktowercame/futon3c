@@ -89,6 +89,8 @@
             [futon3c.agency.disclosure-record :as disclosure-record]
             [futon3c.agency.disclosure-record-cli :as disclosure-cli]
             [futon3c.agency.disclosure-audit :as disclosure-audit]
+            [futon3c.agency.blocker-escalation-record :as blocker-record]
+            [futon3c.agency.blocker-escalation-record-cli :as blocker-cli]
             [futon3c.agency.obligations :as obligations]
             [futon3c.agency.obligations-reader :as obligations-reader]
             [futon3c.agency.operator-turn-source :as operator-turn-source]
@@ -9616,6 +9618,119 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+(declare evidence-entry!)
+
+(defn- evidence-pattern-id [entry]
+  (some-> (or (:pattern-id entry) (get-in entry [:evidence/body :selected])
+              (get-in entry [:evidence/subject :ref/id]))
+          str (str/replace #"^:" "")))
+
+(defn- blocker-evidence! [base evidence-id]
+  (try (evidence-entry! base evidence-id)
+       (catch clojure.lang.ExceptionInfo e
+         (if (= 404 (:status (ex-data e))) nil (throw e)))))
+
+(defn- blocker-idempotency-key [record]
+  (str "blocker-escalation:"
+       (UUID/nameUUIDFromBytes
+        ;; One escalation act per assignee/job. An exact replay reads that act;
+        ;; changed content reaches the same key and is a typed conflict.
+        (.getBytes (pr-str (select-keys record [:source-job :author]))
+                   StandardCharsets/UTF_8))))
+
+(defn- blocker-routing-job-id [act-id]
+  (str "invoke-blocker-escalation-"
+       (UUID/nameUUIDFromBytes (.getBytes (str act-id) StandardCharsets/UTF_8))))
+
+(defn route-blocker-escalation!
+  "Route BLOCKER once to its agent orchestrator; Joe remains on his own surface."
+  [config blocker outcome]
+  (if (= "joe" (:orchestrator blocker))
+    {:status :joe-orchestrator-pending}
+    (let [job-id (blocker-routing-job-id (:id blocker))
+          existing (or (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+                       (read-commission-archive job-id))]
+      (if existing
+        {:status :routed :job-id job-id :existing? true}
+        (let [prompt (str (:blocker blocker) "\nPattern tried: " (:pattern-id blocker)
+                          "\nPUR outcome: " outcome
+                          "\nSource job: " (:source-job blocker))
+              evidence-store (evidence-store-for-config config)
+              created (create-invoke-job!
+                       {:evidence-store evidence-store :requested-job-id job-id
+                        :agent-id (:orchestrator blocker) :prompt prompt
+                        :caller (:author blocker) :surface "bell"
+                        :bellback-of (:source-job blocker) :mode :brief})
+              run-job #(run-invoke-job! {:job-id created
+                                         :agent-id (:orchestrator blocker)
+                                         :prompt prompt :caller (:author blocker)
+                                         :surface "bell" :evidence-store evidence-store})]
+          (.submit invoke-executor
+                   ^Runnable #(record-bell-completion-delivery!
+                               created (:author blocker) (run-job)))
+          {:status :routed :job-id created :existing? false})))))
+
+(defn handle-blocker-escalation [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not (map? payload)
+      (json-response 400 {:ok false :reason :invalid-json})
+      (try
+        (let [caller (some-> (or (:caller payload) (get payload "caller")) str)
+              source-job (some-> (or (:source-job payload)
+                                     (get payload "source-job")) str)
+              edge (unique-disclosure-source-edge! source-job)
+              edge-body (:evidence/body edge)
+              _ (when-not (= caller (:edge/to edge-body))
+                  (throw (ex-info "Caller is not job assignee"
+                                  {:reason :not-the-assignee})))
+              psr-id (some-> (or (:psr-id payload) (get payload "psr-id")) str)
+              pur-id (some-> (or (:pur-id payload) (get payload "pur-id")) str)
+              base (or (System/getenv "FUTON1B_URL") "http://127.0.0.1:7073")
+              psr (blocker-evidence! base psr-id)
+              pur (blocker-evidence! base pur-id)
+              psr-pattern (some-> psr evidence-pattern-id)
+              pur-pattern (some-> pur evidence-pattern-id)
+              outcome (get-in pur [:evidence/body :outcome])
+              outcome-name (some-> outcome str (str/replace #"^:" "") str/lower-case)
+              valid? (and psr pur
+                          (= :pattern-selection
+                             (let [v (:evidence/type psr)]
+                               (if (keyword? v) v (parse-keyword v))))
+                          (= :pattern-outcome
+                             (let [v (:evidence/type pur)]
+                               (if (keyword? v) v (parse-keyword v))))
+                          (= caller (:evidence/author psr) (:evidence/author pur))
+                          (not (str/blank? psr-pattern)) (= psr-pattern pur-pattern)
+                          (not (str/blank? outcome-name))
+                          (not= "success" outcome-name))]
+          (when-not valid?
+            (throw (ex-info "Pattern unblock attempt is not established"
+                            {:reason :pattern-unblock-untried})))
+          (let [record {:kind :escalation/blocker :schema 1
+                        :source-job source-job :author caller
+                        :orchestrator (:edge/from edge-body)
+                        :blocker (or (:blocker payload) (get payload "blocker"))
+                        :at (str (Instant/now)) :psr-id psr-id :pur-id pur-id
+                        :pattern-id psr-pattern
+                        :act/stamp (act-stamp/stamp
+                                    caller caller
+                                    {:dispatch-edge (:evidence/id edge)} :declared)
+                        :act/harness (act-harness/plain
+                                      "route:futon3c.escalation.blocker")}
+                _ (blocker-record/validate! (assoc record :id "act:pending-mint"))
+                result (blocker-cli/write! base record
+                                           (blocker-idempotency-key record))
+                routing (route-blocker-escalation! config (:record result) outcome)]
+            (json-response 200 (assoc result :ok true :routing routing))))
+        (catch clojure.lang.ExceptionInfo e
+          (let [reason (:reason (ex-data e))]
+            (if (= :pattern-unblock-untried reason)
+              (json-response 422 {:ok false :reason reason})
+              (disclosure-refusal e))))
+        (catch Throwable e
+          (json-response 500 {:ok false :reason :store-failure
+                              :message (.getMessage e)}))))))
+
 (defn- disclosure-withdrawal-routing-id [withdrawal-id]
   (disclosure-audit/routing-job-id withdrawal-id))
 
@@ -10807,6 +10922,9 @@
 
       (and (= :post method) (= "/api/alpha/disclosure" uri))
       (handle-disclosure request)
+
+      (and (= :post method) (= "/api/alpha/escalation/blocker" uri))
+      (handle-blocker-escalation request config)
 
       (and (= :post method) (= "/api/alpha/disclosure/withdraw" uri))
       (handle-disclosure-withdraw request config)
