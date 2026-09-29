@@ -197,12 +197,16 @@ def evaluate(rows, k: int = 5, seed: bool = True) -> dict:
 
 
 def _scanner():
+    """secret_scan.scan from the file beside this one.  Fails closed: without
+    the scanner no vocabulary is built, so a copy of this file on its own
+    cannot export or publish unchecked text."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     try:
         import secret_scan  # noqa: PLC0415
-        return secret_scan.scan
-    except ImportError:
-        return None
+    except ImportError as e:
+        raise RuntimeError("secret_scan.py must sit beside xiaoxiang.py; "
+                           "refusing to build a vocabulary without it") from e
+    return secret_scan.scan
 
 
 def tainted_words(text: str, scan=None) -> set[str]:
@@ -452,11 +456,13 @@ def main(argv=None) -> int:
         json.dump(result, sys.stdout, indent=1, ensure_ascii=False); print()
     elif a.cmd == "export":
         rows = load(a.dir)
+        model = export(rows, safe_vocab(rows))
         with open(a.out, "w", encoding="utf-8") as fh:
-            json.dump(export(rows, safe_vocab(rows)), fh, ensure_ascii=False)
+            json.dump(model, fh, ensure_ascii=False)
     elif a.cmd == "page":
+        html = page(load(a.dir))
         with open(a.out, "w", encoding="utf-8") as fh:
-            fh.write(page(load(a.dir)))
+            fh.write(html)
     else:
         with open(a.model, encoding="utf-8") as fh:
             model = json.load(fh)

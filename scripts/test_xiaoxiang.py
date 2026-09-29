@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import xiaoxiang as xx  # noqa: E402
@@ -72,6 +73,27 @@ class Export(unittest.TestCase):
         rows.append({"turn": "t9", "text": "OK.", "intent": "continue"})
         found = xx.collisions(rows, {"ok"})
         self.assertEqual([{"text": "ok", "intents": {"approve": 4, "continue": 1}}], found)
+
+
+class FailClosed(unittest.TestCase):
+    def test_no_scanner_means_no_vocabulary(self):
+        real_import = __import__
+
+        def no_secret_scan(name, *args, **kwargs):
+            if name == "secret_scan":
+                raise ImportError("absent")
+            return real_import(name, *args, **kwargs)
+
+        rows = [{"turn": f"t{i}", "text": "please continue", "intent": "continue"}
+                for i in range(4)]
+        saved = sys.modules.pop("secret_scan", None)
+        try:
+            with unittest.mock.patch("builtins.__import__", no_secret_scan):
+                with self.assertRaises(RuntimeError):
+                    xx.safe_vocab(rows)
+        finally:
+            if saved is not None:
+                sys.modules["secret_scan"] = saved
 
 
 class V02(unittest.TestCase):
