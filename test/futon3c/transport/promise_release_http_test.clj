@@ -7,8 +7,11 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]))
 
+;; The route stamps releases with the server clock (03c00013), so a fixed
+;; deadline expires in real time: 2026-09-29T00:00Z did, and every run after
+;; it saw a lapsed promise (409). Keep the deadline ahead of now.
 (def rec {:id "p" :agent "debtor" :beneficiary "creditor"
-          :deadline "2026-09-29T00:00:00Z"
+          :deadline (str (.plus (java.time.Instant/now) (java.time.Duration/ofDays 30)))
           :fulfilment-criterion {:kind :job-terminal-ok :job-id "j"
                                  :machine-evaluable? true}})
 (defn history-row [id type n previous details]
