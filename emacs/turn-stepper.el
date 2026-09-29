@@ -106,6 +106,18 @@ JSON null and false both read as nil."
     (let ((data (json-read-from-string json-string)))
       (if (listp data) data (list data)))))
 
+(defun turn-stepper--ready-frames (frames)
+  "FRAMES without the newest turns 象 has not read yet.
+Those turns are still in progress (no reading, no reply), so they are
+left out until a refresh finds them read.  An older turn 象 never read
+stays, shown as missing."
+  (let ((rev (reverse frames)))
+    (while (and rev (not (equal "analyzed"
+                                (turn-stepper--aget
+                                 (quote status) (turn-stepper--aget (quote parse) (car rev))))))
+      (setq rev (cdr rev)))
+    (nreverse rev)))
+
 (defun turn-stepper--clamp-index (index count)
   "Clamp INDEX into [0, COUNT-1]; return 0 when COUNT is not positive."
   (if (<= count 0) 0 (max 0 (min index (1- count)))))
@@ -447,7 +459,8 @@ SOURCE is the REPL buffer the stepper is attached to."
                    (if (zerop (process-exit-status proc))
                        (let ((frames
                               (with-current-buffer (process-buffer proc)
-                                (turn-stepper--parse-frames (buffer-string)))))
+                                (turn-stepper--ready-frames
+                                 (turn-stepper--parse-frames (buffer-string))))))
                          (puthash session-id frames turn-stepper--cache)
                          (turn-stepper--open session-id source
                                              (1- (length frames))))

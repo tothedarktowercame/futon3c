@@ -163,3 +163,10 @@
     (should (string-match-p "KEYPRESS.*\"wait\".*chip says defer" out))
     (should (string-match-p "LOOK.*outside 象's marks" out))
     (should-not (string-match-p "is that" out))))
+
+(ert-deftest turn-stepper-drops-unread-newest-turns ()
+  (let ((f (lambda (st) `((parse . ((status . ,st)))))))
+    (should (equal (list (funcall f "missing") (funcall f "analyzed"))
+                   (turn-stepper--ready-frames
+                    (list (funcall f "missing") (funcall f "analyzed")
+                          (funcall f "missing") (funcall f "missing")))))))
