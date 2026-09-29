@@ -250,6 +250,7 @@ The addressed agent has already received the original turn and is out of scope."
            "For pattern alignment, compare the full passage and target to the pattern context/IF/THEN, never match on the intent label alone. "
            "Suggested intents: %s. "
            "Intent withdraw means the operator ends or takes back an earlier act, his own or an agent's; it is not disagreement or redirection. "
+           "The record may carry a happened_summary field: a machine-added note of what the agent did while answering this turn (first reply lines and commits with line counts). It is context for reading the turn, not the operator's words. "
            "For a withdraw fragment, set target to the named act id when the turn names one; set it to seat-active-card only when the turn refers to this/the pattern/card in the current seat; otherwise set target to null. Never guess a withdrawal target. "
            "A withdraw label is an interpretation only and terminates nothing. This brief is interpretation version %d. "
            "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "
@@ -1183,6 +1184,132 @@ state -- never silently complete."
                               (format "Analysis dispatch to %s failed: %s"
                                       agent (error-message-string err)))))))
 
+;;; --- What the agent did (reply-end context for 象) ------------------------
+
+(defconst session-mode--happened-commit-cap 20
+  "Most commits listed in a turn's happened summary before \"…and K more\".")
+
+(defun session-mode--git-numstat (repo sha)
+  "Return `git show --numstat --format= SHA' output for REPO, or nil.
+Line counts only; the diff itself is never read."
+  (let ((default-directory (file-name-as-directory (expand-file-name repo))))
+    (with-temp-buffer
+      (when (zerop (call-process "git" nil t nil
+                                 "show" "--numstat" "--format=" sha))
+        (buffer-string)))))
+
+(defun session-mode--summarize-numstat (text)
+  "Summarize git numstat TEXT as (ADDED REMOVED FILES).
+Binary lines (\"-\" counts) add to FILES but not to the line counts."
+  (let ((added 0) (removed 0) (files 0))
+    (dolist (line (split-string (or text "") "\n" t))
+      (when (string-match "\\`\\([0-9-]+\\)\t\\([0-9-]+\\)\t" line)
+        (cl-incf files)
+        (unless (equal (match-string 1 line) "-")
+          (cl-incf added (string-to-number (match-string 1 line))))
+        (unless (equal (match-string 2 line) "-")
+          (cl-incf removed (string-to-number (match-string 2 line))))))
+    (list added removed files)))
+
+(defun session-mode--commit-summary-line (commit)
+  "One summary line for COMMIT alist: repo, short sha, subject, line counts.
+Never includes diff text."
+  (let* ((repo (or (alist-get 'repo commit) "?"))
+         (sha (or (alist-get 'sha commit) ""))
+         (short (substring sha 0 (min 8 (length sha))))
+         (subject (or (alist-get 'subject commit) ""))
+         (numstat (and (alist-get 'repo-path commit)
+                       (not (string-empty-p sha))
+                       (session-mode--git-numstat
+                        (alist-get 'repo-path commit) sha))))
+    (if numstat
+        (let ((sums (session-mode--summarize-numstat numstat)))
+          (format "- %s %s %s (+%d -%d over %d files)"
+                  repo short subject (nth 0 sums) (nth 1 sums) (nth 2 sums)))
+      (format "- %s %s %s" repo short subject))))
+
+(defun session-mode--turn-commits-snapshot ()
+  "Commits made since turn start, computed from `agent-chat--turn-git-heads'.
+Reads the same snapshot `agent-chat-finish-turn-commits' will use, but does
+NOT clear it: the turn-commits evidence emit runs after the reply callback
+and must still see the heads."
+  (when (and (boundp 'agent-chat--turn-git-heads)
+             agent-chat--turn-git-heads
+             (fboundp 'agent-chat--git-head)
+             (fboundp 'agent-chat--git-commits-after))
+    (cl-loop for (repo . old-head) in agent-chat--turn-git-heads
+             for new-head = (agent-chat--git-head repo)
+             when (and new-head (not (equal old-head new-head)))
+             append (agent-chat--git-commits-after repo old-head))))
+
+(defun session-mode--turn-happened-summary (response)
+  "Build the \"What the agent did\" block for the reply RESPONSE.
+First reply lines plus one line per commit made during the turn."
+  (let* ((lines (split-string (or response "") "\n"))
+         (first5 (cl-subseq lines 0 (min 5 (length lines))))
+         (commits (session-mode--turn-commits-snapshot))
+         (shown (cl-subseq commits
+                           0 (min session-mode--happened-commit-cap
+                                  (length commits))))
+         (more (- (length commits) (length shown))))
+    (concat
+     "What the agent did (machine-added context for reading the turn):\n"
+     "Reply begins:\n"
+     (mapconcat #'identity first5 "\n")
+     "\nCommits during the turn (any repo; not necessarily the agent's own):\n"
+     (if shown
+         (concat (mapconcat #'session-mode--commit-summary-line shown "\n")
+                 (when (> more 0)
+                   (format "\n…and %d more" more)))
+       "(none)"))))
+
+(defun session-mode--record-add-field (path key value)
+  "Add KEY/VALUE to the JSON record at PATH, preserving existing fields."
+  (let* ((json-object-type 'alist)
+         (json-array-type 'list)
+         (json-false :json-false)
+         (json-null nil)
+         (record (json-read-from-string
+                  (with-temp-buffer
+                    (insert-file-contents path)
+                    (buffer-string)))))
+    (setf (alist-get key record) value)
+    (with-temp-file path
+      (let ((coding-system-for-write 'utf-8-unix))
+        (insert (json-encode record))))))
+
+(defun session-mode--dispatch-analysis-after-reply (path response)
+  "Attach a what-happened summary to the record at PATH, then dispatch it.
+Runs when the agent's reply to the operator turn arrives, not at send time:
+象 reads the turn together with what the agent did in it.  A failure while
+building or storing the summary warns once and still dispatches the turn."
+  (when (and path session-mode-analysis-agent
+             (not (equal session-mode-analysis-agent
+                         agent-chat--agent-id)))
+    (let ((summary
+           (condition-case err
+               (session-mode--turn-happened-summary response)
+             (error
+              (display-warning
+               'session-mode
+               (format "象 happened-summary failed (%s); dispatching without it"
+                       (error-message-string err))
+               :warning)
+              nil))))
+      (when summary
+        (condition-case err
+            (session-mode--record-add-field path 'happened_summary summary)
+          (error
+           (display-warning
+            'session-mode
+            (format "象 happened-summary could not be stored (%s); dispatching without it"
+                    (error-message-string err))
+            :warning))))
+      (session-mode--dispatch-analysis path))))
+
+(defvar agent-chat--agent-id)
+(defvar agent-chat--turn-git-heads)
+
 (defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
   "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
   (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
@@ -1198,14 +1325,9 @@ state -- never silently complete."
          (condition-case err
              (progn
                (setq path (session-mode--record-turn sent failed text))
-               ;; Never ask a seat to interpret a turn addressed to itself. It
-               ;; arrives as work while the same words are arriving as
-               ;; conversation, and the seat cannot tell which of the two it
-               ;; is answering.
-               (when (and path session-mode-analysis-agent
-                          (not (equal session-mode-analysis-agent
-                                      agent-chat--agent-id)))
-                 (session-mode--dispatch-analysis path))
+               ;; Dispatch to 象 happens when the agent's REPLY arrives (see
+               ;; the callback below), not here: 象 should read the turn
+               ;; together with what the agent did in it.
                (when (and (not session-mode-analysis-agent)
                           (or failed (session-mode--analysis-requested-p
                                       (session-mode--structure-turn sent))))
@@ -1217,7 +1339,9 @@ state -- never silently complete."
          (funcall call prompt
                   (lambda (response)
                     (when (and path (buffer-live-p buffer))
-                      (with-current-buffer buffer (session-mode--display-analysis path)))
+                      (with-current-buffer buffer
+                        (session-mode--dispatch-analysis-after-reply path response)
+                        (session-mode--display-analysis path)))
                     (funcall callback response)))))
      agent-name hooks (car marked) speaker origin))))
 
