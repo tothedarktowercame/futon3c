@@ -248,5 +248,15 @@ class ReviewCases(unittest.TestCase):
         self.assertEqual([1, 0], [len(f["happened"]) for f in tf.build_frames(rows, {}, "s")])
 
 
+class RowNames(unittest.TestCase):
+    def test_rows_without_an_event_are_named_by_tag_or_edn(self):
+        self.assertEqual("invoke-start", tf.summarize_row(
+            {"evidence/type": "coordination", "evidence/tags": ["invoke", "dev", "claude-17", "invoke-start"],
+             "evidence/body": '{"prompt-preview" "x"}'})["event"])
+        self.assertEqual("context-retrieval", tf.summarize_row(
+            {"evidence/type": "coordination", "evidence/tags": ["invoke", "dev", "context-retrieval", "futon3a"],
+             "evidence/body": '{"event" "context-retrieval"}'})["event"])
+
+
 if __name__ == "__main__":
     unittest.main()

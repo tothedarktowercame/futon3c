@@ -179,7 +179,15 @@ def summarize_row(row):
                 "fragment-text": b.get("fragment-text"),
                 "target": b.get("target")}
     # any other row: type + at only (caller adds at); give a hint if text exists
-    s = {"event": b.get("event") or t}
+    # Many rows carry their kind only in evidence/tags (invoke-start,
+    # clock-decision, context-retrieval...), and some bodies are EDN strings.
+    raw = row.get("evidence/body")
+    event = b.get("event")
+    if not event and isinstance(raw, str):
+        m = re.search(r'"event" "([^"]+)"', raw)
+        event = m.group(1) if m else None
+    tags = [x for x in (row.get("evidence/tags") or []) if x not in ("invoke", "dev")]
+    s = {"event": event or (tags[-1] if tags else t)}
     if isinstance(b.get("text"), str):
         s["text"] = b["text"][:120]
     return s
