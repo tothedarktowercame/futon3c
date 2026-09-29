@@ -41,8 +41,11 @@
    :sha "326826ac"})
 (def allocated
   "Five of the eighth grant (unspent, claude-5) plus ten granted to claude-8
-   on 2026-09-24 for overnight use at claude-8's discretion."
-  15)
+   on 2026-09-24 for overnight use at claude-8's discretion, plus twenty
+   granted to claude-1 on 2026-09-29 (\"OK let's run 20 ticks, you can do
+   repairs between them\"; recorded in the same document's section \"Joe's
+   grant to claude-1, 2026-09-29\", futon2 1e49a67a)."
+  35)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
