@@ -1338,10 +1338,18 @@ building or storing the summary warns once and still dispatches the turn."
                                    (format "Turn structure was NOT recorded: %s" (error-message-string err)))))
          (funcall call prompt
                   (lambda (response)
-                    (when (and path (buffer-live-p buffer))
-                      (with-current-buffer buffer
-                        (session-mode--dispatch-analysis-after-reply path response)
-                        (session-mode--display-analysis path)))
+                    ;; Nothing here may stop the reply reaching the REPL.
+                    (condition-case err
+                        (if (buffer-live-p buffer)
+                            (with-current-buffer buffer
+                              (session-mode--dispatch-analysis-after-reply path response)
+                              (session-mode--display-analysis path))
+                          ;; Buffer gone: the turn still goes to 象, without a summary.
+                          (when path (session-mode--dispatch-analysis path)))
+                      (error (display-warning
+                              'session-mode
+                              (format "象 dispatch after reply failed: %s; the record stays `requested'"
+                                      (error-message-string err)))))
                     (funcall callback response)))))
      agent-name hooks (car marked) speaker origin))))
 

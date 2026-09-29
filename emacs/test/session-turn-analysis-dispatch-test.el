@@ -114,5 +114,27 @@ Returns the list of events in order.  SUMMARY-FN replaces
       (should (string-match-p "c20" summary))
       (should-not (string-match-p "c21" summary)))))
 
+(ert-deftest session-turn-analysis-test-dispatch-error-keeps-the-reply ()
+  "Planted in review (claude-17): a failing dispatch must not swallow the reply.
+The dispatch now runs inside the reply callback, so an error there would
+stop the agent's reply from reaching the REPL."
+  (let ((reached nil))
+    (cl-letf ((session-mode-turn-tags-mode t)
+              (session-mode-analysis-agent "象")
+              (agent-chat--agent-id "claude-17")
+              (agent-chat-user-speaker "joe")
+              ((symbol-function 'session-mode--split-failure-marker) (lambda (text) (cons text nil)))
+              ((symbol-function 'agent-chat--walkie-command-p) (lambda (&rest _) nil))
+              ((symbol-function 'session-mode--record-turn) (lambda (&rest _) "/tmp/fake-turn.json"))
+              ((symbol-function 'session-mode--turn-happened-summary) (lambda (_) nil))
+              ((symbol-function 'session-mode--dispatch-analysis) (lambda (&rest _) (error "no python")))
+              ((symbol-function 'session-mode--display-analysis) (lambda (&rest _) nil))
+              ((symbol-function 'display-warning) (lambda (&rest _) nil)))
+      (session-mode--analyze-start-turn
+       (lambda (call &rest _) (funcall call "PROMPT" (lambda (r) (setq reached r))))
+       (lambda (_sent callback) (funcall callback "REPLY"))
+       "claude" nil "do the thing" "joe" 'operator))
+    (should (equal reached "REPLY"))))
+
 (provide 'session-turn-analysis-dispatch-test)
 ;;; session-turn-analysis-dispatch-test.el ends here
