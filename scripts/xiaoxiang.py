@@ -13,6 +13,7 @@ the point is to measure where.
   xiaoxiang.py export [--dir DIR] OUT.json  model with a filtered vocabulary
   xiaoxiang.py classify MODEL.json "text"   top intents for one fragment
   xiaoxiang.py page OUT.html                web page: live classifier + results
+  xiaoxiang.py bundle OUT.py                one standalone file for other people
 
 Evaluation holds out whole turns, so no fragment is scored by a model that saw
 another fragment of the same turn.  Labels are 象's and are not human-approved;
@@ -441,12 +442,73 @@ def page(rows) -> str:
     return html
 
 
+def _body(source: str, stop: str | None = None) -> list[str]:
+    """Source lines after the module docstring, without the shebang or the
+    __future__ import, cut at the line starting with STOP."""
+    import ast  # noqa: PLC0415
+    tree = ast.parse(source)
+    first = tree.body[0]
+    skip = first.end_lineno if isinstance(first, ast.Expr) and isinstance(
+        getattr(first, "value", None), ast.Constant) else 0
+    lines = source.splitlines()[skip:]
+    if stop:
+        lines = lines[:next(i for i, l in enumerate(lines) if l.startswith(stop))]
+    return [l for l in lines if not l.startswith(("#!", "from __future__"))]
+
+
+def bundle(rows) -> str:
+    """One standalone file: secret_scan (verbatim up to its CLI), the parts of
+    this module the classifier needs, the log reader, and the exported model."""
+    import ast  # noqa: PLC0415
+    here = os.path.dirname(os.path.abspath(__file__))
+    _scanner()  # fail closed before building anything
+    model = export(rows, safe_vocab(rows))
+
+    def read(name):
+        with open(os.path.join(here, name), encoding="utf-8") as fh:
+            return fh.read()
+
+    mine = read("xiaoxiang.py")
+    wanted = {"CJK", "WORD", "tokens", "classify", "evidence"}
+    parts = []
+    for node in ast.parse(mine).body:
+        names = ({node.name} if isinstance(node, ast.FunctionDef) else
+                 {t.id for t in getattr(node, "targets", []) if isinstance(t, ast.Name)})
+        if names & wanted:
+            parts.append(ast.get_source_segment(mine, node))
+    reader = read("xiaoxiang_reader.py")
+    doc = ast.get_docstring(ast.parse(reader))
+    body = _body(reader)
+    a = body.index("# --- dev imports (removed in the bundle) ---")
+    b = body.index("# --- end dev imports ---")
+    body[a:b + 1] = ["MODEL = " + repr(model)]
+    return "\n".join([
+        "#!/usr/bin/env python3",
+        '"""小象 (xiaoxiang) v' + model["version"] + ": " + doc + "\n\nRun: python3 xiaoxiang-local.py [--days N] [--json]",
+        "Standard library only; no network access.  Built " + __import__("datetime").date.today().isoformat() + '."""',
+        "from __future__ import annotations",
+        "",
+        "# ---- secret_scan: classical secret detector ----",
+        *_body(read("secret_scan.py"), stop="def _read_inputs"),
+        "# ---- 小象 classifier ----",
+        "import math",
+        "import re",
+        "",
+        "\n\n".join(parts),
+        "",
+        "# ---- log reader ----",
+        *body,
+        "",
+    ])
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     e = sub.add_parser("eval"); e.add_argument("--dir", default=DEFAULT_DIR)
     x = sub.add_parser("export"); x.add_argument("--dir", default=DEFAULT_DIR); x.add_argument("out")
     c = sub.add_parser("classify"); c.add_argument("model"); c.add_argument("text")
+    b = sub.add_parser("bundle"); b.add_argument("--dir", default=DEFAULT_DIR); b.add_argument("out")
     w = sub.add_parser("page"); w.add_argument("--dir", default=DEFAULT_DIR); w.add_argument("out")
     a = ap.parse_args(argv)
     if a.cmd == "eval":
@@ -459,6 +521,11 @@ def main(argv=None) -> int:
         model = export(rows, safe_vocab(rows))
         with open(a.out, "w", encoding="utf-8") as fh:
             json.dump(model, fh, ensure_ascii=False)
+    elif a.cmd == "bundle":
+        code = bundle(load(a.dir))
+        with open(a.out, "w", encoding="utf-8") as fh:
+            fh.write(code)
+        os.chmod(a.out, 0o755)
     elif a.cmd == "page":
         html = page(load(a.dir))
         with open(a.out, "w", encoding="utf-8") as fh:
