@@ -14,7 +14,7 @@
             [futon3c.wm.run4-series-service :as series]
             [futon3c.wm.runner-service :as runner]
             [futon3c.agency.registry :as registry]))
-(use-fixtures :once hermetic/with-hermetic-stores)
+(use-fixtures :once hermetic/with-hermetic-stores ft/with-hermetic-traces)
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- delete-tree! [root]
   (doseq [file (reverse (file-seq root))]

@@ -18,7 +18,7 @@
             [futon3c.wm.runner-service :as runner]
             [futon3c.wm.run4-u88-roundtrip-test :as u]
             [futon3c.agency.registry :as registry]))
-(use-fixtures :once hermetic/with-hermetic-stores)
+(use-fixtures :once hermetic/with-hermetic-stores ft/with-hermetic-traces)
 (def base "holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/")
 (def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"})
 (def declared-roster

@@ -1,12 +1,17 @@
 (ns futon3c.wm.run4-historical-verification-test
-  (:require [clojure.test :refer [deftest is]] [clojure.java.io :as io]
+  (:require [clojure.test :refer [deftest is use-fixtures]] [clojure.java.io :as io]
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-action :as action]
             [futon3c.wm.run4-historical-qualification :as qualification]
-            [futon3c.wm.run4-historical-verification :as v]))
+            [futon3c.wm.run4-historical-verification :as v]
+            [futon2.test-support.runner-fixture :as runner-fixture]))
+
+;; The runner writes its selection trace and morning-brief items to the live
+;; futon2 roots unless redirected (2026-09-28 leak from run4-real-paired-test).
+(use-fixtures :once runner-fixture/with-hermetic-traces)
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- write! [f x] (spit f (str (pr-str x) "\n")) f)
 (defn- declared-effective-configuration [opts]
