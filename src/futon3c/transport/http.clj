@@ -9660,7 +9660,7 @@
                        {:evidence-store evidence-store :requested-job-id job-id
                         :agent-id (:orchestrator blocker) :prompt prompt
                         :caller (:author blocker) :surface "bell"
-                        :bellback-of (:source-job blocker) :mode :brief})
+                        :bellback-of (:source-job blocker) :mode :work})
               run-job #(run-invoke-job! {:job-id created
                                          :agent-id (:orchestrator blocker)
                                          :prompt prompt :caller (:author blocker)
@@ -9701,8 +9701,12 @@
                                (if (keyword? v) v (parse-keyword v))))
                           (= caller (:evidence/author psr) (:evidence/author pur))
                           (not (str/blank? psr-pattern)) (= psr-pattern pur-pattern)
-                          (not (str/blank? outcome-name))
-                          (not= "success" outcome-name))]
+                          ;; PUR outcomes are free-form (mostly nil or maps), so
+                          ;; "not success" would pass a map describing a solve.
+                          ;; Require an explicit failure token (DERIVE-2 item 18.1).
+                          (string? outcome)
+                          (contains? #{"failure" "failed" "blocked" "partial"}
+                                     outcome-name))]
           (when-not valid?
             (throw (ex-info "Pattern unblock attempt is not established"
                             {:reason :pattern-unblock-untried})))

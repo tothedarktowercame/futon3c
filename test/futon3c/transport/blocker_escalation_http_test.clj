@@ -84,6 +84,12 @@
             request-body [edge] 422]
            ["success" {"psr:1" psr "pur:1" (assoc-in pur [:evidence/body :outcome] "success")}
             request-body [edge] 422]
+           ["map outcome describing a solve"
+            {"psr:1" psr "pur:1" (assoc-in pur [:evidence/body :outcome]
+                                         {:classification "SOLVED"})}
+            request-body [edge] 422]
+           ["free-text outcome" {"psr:1" psr "pur:1" (assoc-in pur [:evidence/body :outcome] "worked")}
+            request-body [edge] 422]
            ["not assignee" {"psr:1" psr "pur:1" pur}
             (assoc request-body :caller "other") [edge] 403]
            ["missing edge" {"psr:1" psr "pur:1" pur} request-body [] 409]
