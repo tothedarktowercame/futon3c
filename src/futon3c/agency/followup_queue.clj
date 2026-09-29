@@ -62,23 +62,28 @@
                   :queued (if prior :promise/followup-requeued :promise/followup-enqueued)
                   :leased :promise/followup-dequeued
                   :terminal :promise/followup-terminal)
-                item]))]
-    (doseq [[type item] transitions :when (= :promise/followup-enqueued type)]
-      (history/stage! !state type item now (select-keys item [:state :reason])))
-    (try (persist! @!state)
-         (catch Throwable e
-           (reset! !state old) (history/restore-allocator! allocator)
-           (capture/drain!)
-           (throw e)))
+                item]))
+        all-transitions
+        (vec (concat
+              (for [[_ item] requeued]
+                [:promise/followup-requeued item requeue-at])
+              (for [[type item] transitions] [type item now])))
+        eids (atom [])]
+    ;; Staging belongs to the same rollback region as the authoritative write.
+    (try
+      (doseq [[type item event-ms] all-transitions]
+        (swap! eids conj
+               (history/stage! !state type item event-ms
+                               (select-keys item [:state :reason]))))
+      (persist! @!state)
+      (catch Throwable e
+        (reset! !state old)
+        (history/release-reservations! @eids)
+        (history/restore-allocator! allocator)
+        (capture/drain!)
+        (throw e)))
     (when history/*after-outbox-persist* (history/*after-outbox-persist*))
     (history/drain! !state persist!)
-    ;; Expiry can requeue and immediately lease the same item in one swap.
-    ;; Preserve that intermediate transition as well as the final committed state.
-    (doseq [[_ item] requeued]
-      (history/record! :promise/followup-requeued item requeue-at))
-    ;; Compare committed states, never emit from a retryable swap function.
-    (doseq [[type item] transitions :when (not= :promise/followup-enqueued type)]
-      (history/record! type item now (select-keys item [:state :reason])))
     new))
 
 (defn enqueue!

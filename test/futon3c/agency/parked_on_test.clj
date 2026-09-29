@@ -283,3 +283,16 @@ no-dep timer park resumes plainly"
       (is (thrown? clojure.lang.ExceptionInfo
                    (p/ready-push! "a1" "s1" "pk-stage" "prompt"))))
     (is (= before (p/snapshot)))))
+
+(deftest completion-stage-failure-rolls-back-budget-retraction
+  (let [id (:id (p/park! {:agent "a1" :session "s1" :surface "test"
+                           :awaiting ["dep-stage"] :payload "payload"
+                           :budget {:resumes-left 0}}
+                          {:now-ms 1000}))
+        before (p/snapshot)]
+    (with-redefs [history/stage!
+                  (fn [& _] (throw (ex-info "stage failed" {})))]
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (p/note-completion! "dep-stage" {:ok true} {:now-ms 2000}))))
+    (is (= before (p/snapshot)))
+    (is (contains? (:records (p/snapshot)) id))))

@@ -1,7 +1,8 @@
 (ns futon3c.agency.followup-queue-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is use-fixtures]]
-            [futon3c.agency.followup-queue :as queue]))
+            [futon3c.agency.followup-queue :as queue]
+            [futon3c.agency.promise-history :as history]))
 
 (use-fixtures :each
   (fn [f]
@@ -66,6 +67,15 @@
     (is (empty? (:dedupe (queue/snapshot))))
     (is (empty? (:dedupe (edn/read-string (slurp path)))))
     (is (= :queued (:status (queue/enqueue! request))))))
+
+(deftest terminal-stage-failure-rolls-back-followup-state
+  (let [id (:id (queue/enqueue! request))
+        before (queue/snapshot)]
+    (with-redefs [history/stage!
+                  (fn [& _] (throw (ex-info "stage failed" {})))]
+      (is (thrown? clojure.lang.ExceptionInfo (queue/cancel! id :test))))
+    (is (= before (queue/snapshot)))
+    (is (some #(= id (:followup-id %)) (mapcat val (:queued (queue/snapshot)))))))
 
 (deftest store-repair-uses-existing-dedupe-and-session-lease
   (let [r (assoc request :type :apm-store-repair :dedupe-key ["hold" "session-1"])

@@ -162,6 +162,37 @@
                       (fn [] (block-at-boundary! (:ready (paths dir))))]
               (park/sweep-leased! {:now-ms 2200})))
 
+        "budget-exhausted"
+        (do (park/park! (assoc park-request :budget {:resumes-left 0}) {:now-ms 1000})
+            (await-history! "Park-made history did not drain")
+            (binding [history/*after-outbox-persist*
+                      (fn [] (block-at-boundary! (:ready (paths dir))))]
+              (park/note-completion! "dep-p2c" {:ok true} {:now-ms 2000})))
+
+        "deadline-expired"
+        (do (park/park! (assoc park-request :deadline-ms 1500) {:now-ms 1000})
+            (await-history! "Park-made history did not drain")
+            (binding [history/*after-outbox-persist*
+                      (fn [] (block-at-boundary! (:ready (paths dir))))]
+              (park/sweep-deadlines! {:now-ms 2000 :resume! (fn [_])})))
+
+        "followup-terminal"
+        (let [id (:id (followup/enqueue! followup-request))]
+          (await-history! "Followup-enqueued history did not drain")
+          (binding [history/*after-outbox-persist*
+                    (fn [] (block-at-boundary! (:ready (paths dir))))]
+            (followup/cancel! id :p2c-crash-probe)))
+
+        "followup-requeued"
+        (do (followup/enqueue! followup-request)
+          (await-history! "Followup-enqueued history did not drain")
+          (with-redefs-fn {#'followup/lease-ms 0}
+            #(followup/lease-one! "p2c" "p2c-session" (constantly true)))
+          (await-history! "Followup-dequeued history did not drain")
+          (binding [history/*after-outbox-persist*
+                    (fn [] (block-at-boundary! (:ready (paths dir))))]
+            (followup/lease-one! "p2c" "p2c-session" (constantly true))))
+
         "control-park"
         (do (park/park! park-request {:now-ms 1000})
             (when-not (history/await-writes! 10000)

@@ -113,7 +113,7 @@
 
 (defn snapshot [] (ensure!) (dissoc @!parked :just-released :history-outbox))
 
-(defn- persist-ready-transition!
+(defn- persist-parked-transitions!
   "Stage ready-queue TRANSITIONS in the authoritative park state, persist state
    and outbox together, then schedule the single-writer drain. OLD and ALLOCATOR
    restore both authorities if the atomic replacement fails."
@@ -170,7 +170,7 @@
                   (update-in st [:ready-inbox k] (fnil conj []) item))))))
          (if (= old @!parked)
            @!parked
-           (persist-ready-transition!
+           (persist-parked-transitions!
             old allocator
             [[:promise/ready-enqueued
               {:id park-id :agent (str agent) :session (str session)
@@ -210,7 +210,7 @@
                         (assoc-in [:ready-inbox k] (subvec items 1))))
                   st))))
      (when-let [item @leased-item]
-       (persist-ready-transition!
+       (persist-parked-transitions!
         old allocator
         [[:promise/ready-leased
           (assoc item :id (:park-id item) :agent (str agent) :session (str session))
@@ -240,7 +240,7 @@
                                        entries)))))
                st)))
     (when @found?
-      (persist-ready-transition!
+      (persist-parked-transitions!
        old allocator
        [[:promise/ready-acked (assoc prior :id park-id) (System/currentTimeMillis) {}]]))
     @found?))))
@@ -285,7 +285,7 @@
                           s
                           (for [e expired-entries] [(:agent e) (:session e)]))))))
      (when (seq @expired)
-       (persist-ready-transition!
+       (persist-parked-transitions!
         old allocator
         (mapv (fn [pid]
                 [:promise/ready-requeued (assoc (get prior pid) :id pid) now-ms
@@ -372,13 +372,6 @@
      (assoc state :just-released [])
      rids)))
 
-(defn- wake-and-release! [rec resume! now-ms]
-  (try
-    (when resume!
-      (history/record! :promise/woken rec now-ms)
-      (resume! rec))
-    (finally (history/record! :promise/released rec now-ms))))
-
 (defn note-completion!
   "Fold dep DEP-ID (terminal, carrying RESULT) into every record awaiting it.
    Fires RESUME! exactly once for each record whose join just completed (budget
@@ -394,27 +387,25 @@
           allocator (history/allocator-snapshot)]
       (when (seq fired)
         (capture/swap-state! :parked !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
-      (doseq [rid (get-in old [:index dep-id])
-              :let [rec (get-in old [:records rid])]
-              :when (and rec (not (:released? rec)))]
-        (history/stage! !parked :promise/dependency-terminated rec now-ms
-                        {:dep-id dep-id :result result}))
-      (doseq [rec fired]
-        (when resume! (history/stage! !parked :promise/woken rec now-ms))
-        (history/stage! !parked :promise/released rec now-ms))
-      (try (persist! @!parked)
-           (catch Throwable e
-             (reset! !parked old) (history/restore-allocator! allocator)
-             (capture/drain!)
-             (throw e)))
-      (when history/*after-outbox-persist* (history/*after-outbox-persist*))
-      (history/drain! !parked persist!)
-      (doseq [rid (get-in old [:index dep-id])
-              :let [rec (get-in old [:records rid])]
-              :when (and rec (not (:released? rec))
-                         (not (get-in new [:records rid]))
-                         (not (pos? (get-in rec [:budget :resumes-left] 1))))]
-        (history/record! :promise/budget-exhausted rec now-ms))
+      (let [affected (for [rid (get-in old [:index dep-id])
+                           :let [rec (get-in old [:records rid])]
+                           :when (and rec (not (:released? rec)))] rec)
+            exhausted (filterv #(and (not (get-in new [:records (:id %)]))
+                                     (not (pos? (get-in % [:budget :resumes-left] 1))))
+                               affected)
+            transitions
+            (vec (concat
+                  (for [rec affected]
+                    [:promise/dependency-terminated rec now-ms
+                     {:dep-id dep-id :result result}])
+                  (mapcat (fn [rec]
+                            (cond-> []
+                              resume! (conj [:promise/woken rec now-ms {}])
+                              true (conj [:promise/released rec now-ms {}])))
+                          fired)
+                  (for [rec exhausted]
+                    [:promise/budget-exhausted rec now-ms {}])))]
+        (persist-parked-transitions! old allocator transitions))
       (doseq [rec fired]
         (when resume! (resume! rec)))
       {:released (mapv :id fired)
@@ -462,16 +453,13 @@
     (cond
       (and (empty? awaiting) (not timer-due-ms))
       (let [before @!parked allocator (history/allocator-snapshot)]
-        (history/stage! !parked :promise/park-made rec now-ms)
-        (try (persist! @!parked)
-             (catch Throwable e
-               (reset! !parked before) (history/restore-allocator! allocator)
-               (capture/drain!)
-               (throw e)))
-          (when history/*after-outbox-persist* (history/*after-outbox-persist*))
-          (history/drain! !parked persist!)
-          (wake-and-release! rec resume! now-ms)
-          {:id rid :status :released-immediately})
+        (persist-parked-transitions!
+         before allocator
+         (cond-> [[:promise/park-made rec now-ms {}]]
+           resume! (conj [:promise/woken rec now-ms {}])
+           true (conj [:promise/released rec now-ms {}])))
+        (when resume! (resume! rec))
+        {:id rid :status :released-immediately})
 
       :else
       (let [before @!parked
@@ -497,15 +485,11 @@
                                  (assoc-in [:records rid] rec)
                                  (update :index index-add rid awaiting))
                        coalesce-key (assoc-in [:coalesced coalesce-key] rid))))))
-        (when @active?
-          (history/stage! !parked :promise/park-made (assoc rec :id @chosen-id) now-ms))
-        (try (persist! @!parked)
-             (catch Throwable e
-               (reset! !parked before) (history/restore-allocator! allocator)
-               (capture/drain!)
-               (throw e)))
-        (when history/*after-outbox-persist* (history/*after-outbox-persist*))
-        (history/drain! !parked persist!)
+        (if @active?
+          (persist-parked-transitions!
+           before allocator
+           [[:promise/park-made (assoc rec :id @chosen-id) now-ms {}]])
+          (persist! @!parked))
         ;; Reconcile only a live record. A duplicate whose first entry already
         ;; released shares that entry's delivery and must not queue another.
         (when (and @active? ledger-lookup)
@@ -554,7 +538,7 @@
                        (assoc st :leased {})
                        (reverse stale-leased))))
       (reset! requeued (count stale-leased))
-      (persist-ready-transition!
+      (persist-parked-transitions!
        old allocator
        (mapv (fn [entry]
                [:promise/ready-requeued (assoc entry :id (:park-id entry)) now-ms
@@ -587,12 +571,27 @@
                                       (:timer-due-ms r) (>= now-ms (:timer-due-ms r))
                                       (not (some #{(:id r)} (map :id expired))))) recs)]
     (when (or (seq expired) (seq timers))
+      (let [old @!parked
+            allocator (history/allocator-snapshot)]
       (capture/swap-state! :parked !parked (fn [st]
                        (reduce (fn [s r] (forget-record s (:id r)))
                                st (concat expired timers))))
-      (persist! @!parked))
+      (persist-parked-transitions!
+       old allocator
+       (vec
+        (concat
+         (mapcat (fn [r]
+                   (let [expired-r (assoc r :deadline-expired? true)]
+                     (cond-> [[:promise/deadline-expired r now-ms {}]]
+                       resume! (conj [:promise/woken expired-r now-ms {}])
+                       true (conj [:promise/released expired-r now-ms {}]))))
+                 expired)
+         (mapcat (fn [r]
+                   (cond-> []
+                     resume! (conj [:promise/woken r now-ms {}])
+                     true (conj [:promise/released r now-ms {}])))
+                 timers))))))
     (doseq [r expired]
-      (history/record! :promise/deadline-expired r now-ms)
       (when on-expire (on-expire r))
       ;; Deadline BACKSTOP semantics (E-park-delivery-losses finding 6): expiry
       ;; WAKES the parked agent with its payload, marked :deadline-expired? so
@@ -600,6 +599,6 @@
       ;; case 5 specified expire-without-resume ("force-terminate"), but a
       ;; backstop that terminates silently reproduces the exact silent-wait
       ;; failure the protocol exists to close — semantics changed 2026-07-13.
-      (wake-and-release! (assoc r :deadline-expired? true) resume! now-ms))
-    (doseq [r timers] (wake-and-release! r resume! now-ms))
+      (when resume! (resume! (assoc r :deadline-expired? true))))
+    (doseq [r timers] (when resume! (resume! r)))
     {:expired (mapv :id expired) :timer-fired (mapv :id timers)}))))

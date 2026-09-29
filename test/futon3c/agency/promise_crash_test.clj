@@ -117,6 +117,23 @@
         (is (= (count (:history-ids report)) (count (set (:history-ids report))))
             "draining the recovered outbox twice must not duplicate a row")))))
 
+(deftest remaining-transitions-persist-before-history-drain-after-restart
+  (doseq [[scenario event]
+          [["budget-exhausted" :promise/budget-exhausted]
+           ["deadline-expired" :promise/deadline-expired]
+           ["followup-terminal" :promise/followup-terminal]
+           ["followup-requeued" :promise/followup-requeued]]]
+    (testing scenario
+      (let [report (crash-report scenario)]
+        (is (:equal? report) (pr-str report))
+        (is (:readable? report) (pr-str report))
+        (is (empty? (:issues report)) (pr-str report))
+        (is (empty? (:differences report)) (pr-str report))
+        (is (= 1 (count (filter #{event} (:history-types report))))
+            (pr-str report))
+        (is (= (count (:history-ids report)) (count (set (:history-ids report))))
+            "draining the recovered outbox twice must not duplicate a row")))))
+
 (deftest append-before-outbox-removal-replays-as-existing
   (let [report (crash-report "park-made-after-append")]
     (is (:equal? report) (pr-str report))
