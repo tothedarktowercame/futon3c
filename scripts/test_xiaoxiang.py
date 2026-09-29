@@ -74,5 +74,40 @@ class Export(unittest.TestCase):
         self.assertEqual([{"text": "ok", "intents": {"approve": 4, "continue": 1}}], found)
 
 
+class V02(unittest.TestCase):
+    def test_capitalised_names_are_dropped_and_i_forms_kept(self):
+        rows = [{"turn": f"t{i}", "text": f"Then Rob said yes and I'm glad {w}",
+                 "intent": "report"} for i, w in enumerate(["x", "y", "z", "w"])]
+        names = xx.proper_nouns(rows)
+        self.assertIn("rob", names)
+        self.assertNotIn("i'm", names)
+        keep = xx.safe_vocab(rows, exclude=set())
+        self.assertFalse(any("rob" in t.split() for t in keep))
+        self.assertIn("said yes", keep)
+
+    def test_excluded_words_and_possessives_are_dropped(self):
+        rows = [{"turn": f"t{i}", "text": "ask joe and joe's team", "intent": "report"}
+                for i in range(4)]
+        keep = xx.safe_vocab(rows, exclude={"joe"})
+        self.assertFalse(any(w in ("joe", "joe's") for t in keep for w in t.split()))
+
+    def test_seed_cue_decides_a_rare_rejection(self):
+        rows = [{"turn": f"t{i}", "text": t, "intent": c}
+                for i in range(6) for t, c in [("your plan works for me", "approve"),
+                                               ("i think we should add tests", "propose")]]
+        self.assertNotEqual("disagree", xx.NaiveBayes().fit(rows + [
+            {"turn": "t9", "text": "x", "intent": "disagree"}], seed=False)
+            .predict("I reject your claim"))
+        self.assertEqual("disagree", xx.NaiveBayes().fit(rows + [
+            {"turn": "t9", "text": "x", "intent": "disagree"}]).predict("I reject your claim"))
+
+    def test_only_common_words_is_no_evidence(self):
+        rows = [{"turn": f"t{i}", "text": f"the {w}", "intent": "report"}
+                for i, w in enumerate(["cat", "dog", "fish", "bird", "cow"] * 5)]
+        model = json.loads(json.dumps(xx.export(rows, xx.safe_vocab(rows, exclude=set()))))
+        self.assertEqual([], xx.evidence(model, "the the"))
+        self.assertTrue(xx.evidence(model, "the reject"))
+
+
 if __name__ == "__main__":
     unittest.main()

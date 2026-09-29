@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""小象 (xiaoxiang) v0.1 -- a classical intent classifier for operator turns.
+"""小象 (xiaoxiang) v0.2 -- a classical intent classifier for operator turns.
 
 象 labels Joe's real turns in futon1b's world: each fragment of a turn gets one
 of ~26 intents (propose, explain, approve, report-problem, ...).  小象 learns to
 predict those labels from the fragment's words alone, with no model service and
 no store, so it can run on anyone's logs.  v0.1 is multinomial naive Bayes over
-word unigrams and bigrams (CJK as character bigrams).  It is expected to do
-poorly; the point of v0.1 is to measure where.
+word unigrams and bigrams (CJK as character bigrams), plus a small hand-written
+table of general English speech-act cues (SEED).  It is expected to do poorly;
+the point is to measure where.
 
   xiaoxiang.py eval  [--dir DIR]            grouped held-out evaluation
   xiaoxiang.py export [--dir DIR] OUT.json  model with a filtered vocabulary
@@ -42,6 +43,24 @@ MIN_TURNS = 3
 CJK = "一-鿿㐀-䶿"
 WORD = re.compile(r"[a-z][a-z']*|[%s]+" % CJK)
 IDLIKE = re.compile(r"\d|^[a-f0-9]{8,}$")
+EXCLUDE_FILE = os.path.expanduser("~/.config/xiaoxiang/exclude.txt")
+# A token in at least this share of fragments ("i", "the", "your") is common:
+# it shifts the scores but is not evidence for an intent on its own.
+COMMON_SHARE = 0.04
+
+# Hand-written, general English speech-act cues: prior knowledge, not learned
+# from anyone's logs.  Each token of each phrase gets SEED_WEIGHT pseudo-counts
+# for its intent.  Kept small; every entry is a word or phrase whose force is
+# the same in any conversation.
+SEED_WEIGHT = 5
+SEED = {
+    "disagree": ["i reject", "reject", "i disagree", "disagree", "that's wrong",
+                 "wrong", "incorrect", "i object", "not right"],
+    "approve": ["i agree", "agree", "sounds good", "looks good", "that's right",
+                "approved", "go ahead", "great"],
+    "report-problem": ["doesn't work", "not working", "broken", "failed", "fails", "bug"],
+    "ask-action": ["could you", "can you", "would you"],
+}
 
 
 def tokens(text: str) -> list[str]:
@@ -87,15 +106,31 @@ class NaiveBayes:
         self.totals: Counter = Counter()
         self.vocab: set[str] = set()
 
-    def fit(self, rows, keep=None):
+    def fit(self, rows, keep=None, seed=True):
+        df: Counter = Counter()
         for r in rows:
             self.prior[r["intent"]] += 1
-            for t in tokens(r["text"]):
+            toks = tokens(r["text"])
+            df.update(set(toks))
+            for t in toks:
                 if keep is None or t in keep:
                     self.counts[r["intent"]][t] += 1
                     self.totals[r["intent"]] += 1
                     self.vocab.add(t)
+        if seed:
+            for intent, phrases in SEED.items():
+                for phrase in phrases:
+                    for t in tokens(phrase):
+                        self.counts[intent][t] += SEED_WEIGHT
+                        self.totals[intent] += SEED_WEIGHT
+                        self.vocab.add(t)
+        n = max(1, len(rows))
+        self.common = {t for t, c in df.items() if c / n >= COMMON_SHARE and t in self.vocab}
         return self
+
+    def evidence(self, text: str) -> list[str]:
+        """Known tokens that are not common: what the prediction rests on."""
+        return [t for t in tokens(text) if t in self.vocab and t not in self.common]
 
     def scores(self, text: str) -> dict[str, float]:
         n = sum(self.prior.values())
@@ -119,17 +154,20 @@ def fold_of(turn: str, k: int) -> int:
     return int(hashlib.sha256(turn.encode()).hexdigest(), 16) % k
 
 
-def evaluate(rows, k: int = 5) -> dict:
-    """k-fold cross-validation grouped by turn."""
-    gold, pred = [], []
+def evaluate(rows, k: int = 5, seed: bool = True) -> dict:
+    """k-fold cross-validation grouped by turn.  Accuracy counts every
+    fragment; `answered` is the share with any uncommon known token, where the
+    page gives a prediction instead of saying it has too little to go on."""
+    gold, pred, answered = [], [], []
     for i in range(k):
         train = [r for r in rows if fold_of(r["turn"], k) != i]
         test = [r for r in rows if fold_of(r["turn"], k) == i]
-        model = NaiveBayes().fit(train)
+        model = NaiveBayes().fit(train, seed=seed)
         majority = model.prior.most_common(1)[0][0]
         for r in test:
             gold.append(r["intent"])
             pred.append(model.predict(r["text"]) if model.vocab else majority)
+            answered.append(bool(model.evidence(r["text"])))
     labels = sorted(set(gold))
     acc = sum(g == p for g, p in zip(gold, pred)) / len(gold)
     per = {}
@@ -146,7 +184,10 @@ def evaluate(rows, k: int = 5) -> dict:
     return {
         "fragments": len(gold), "turns": len({r["turn"] for r in rows}),
         "intents": len(labels), "folds": k,
-        "accuracy": acc,
+        "accuracy": acc, "seed": seed,
+        "answered": sum(answered) / len(gold),
+        "accuracy_answered": (sum(g == p for g, p, a in zip(gold, pred, answered) if a)
+                              / max(1, sum(answered))),
         "macro_f1": sum(v["f1"] for v in per.values()) / len(per),
         "majority_baseline": {"intent": majority_label, "accuracy": majority_n / len(gold)},
         "per_intent": per,
@@ -180,11 +221,39 @@ def tainted_words(text: str, scan=None) -> set[str]:
     return bad
 
 
-def safe_vocab(rows) -> set[str]:
-    """Tokens seen in >= MIN_TURNS distinct turns, not id-like, not tainted."""
+def proper_nouns(rows, min_count: int = 3, share: float = 0.7) -> set[str]:
+    """Words capitalised mid-sentence in at least SHARE of their uses: names of
+    people and places, mostly.  First-person forms and 1-2 letter words are
+    exempt.  Learned from the logs, so the code carries no list of names."""
+    cap: Counter = Counter()
+    low: Counter = Counter()
+    for r in rows:
+        for sentence in re.split(r"(?<=[.!?])\s+", r["text"]):
+            for w in re.findall(r"[A-Za-z][A-Za-z']*", sentence)[1:]:
+                (cap if w[0].isupper() else low)[w.lower()] += 1
+    return {w for w, c in cap.items()
+            if c >= min_count and c / (c + low[w]) >= share
+            and len(w) > 2 and not re.match(r"i'", w)}
+
+
+def excluded_words(path: str = EXCLUDE_FILE) -> set[str]:
+    """One word per line from a local file kept outside the repository, for
+    names the capitalisation rule misses."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return {line.strip().lower() for line in fh if line.strip()}
+    except OSError:
+        return set()
+
+
+def safe_vocab(rows, exclude: set[str] | None = None) -> set[str]:
+    """Tokens seen in >= MIN_TURNS distinct turns, not id-like, not tainted,
+    not a proper noun or an excluded word (nor containing one, possessives
+    included)."""
     scan = _scanner()
     turns_by_tok: dict[str, set] = defaultdict(set)
-    tainted: set[str] = set()
+    tainted: set[str] = proper_nouns(rows) | (excluded_words() if exclude is None else exclude)
+    tainted |= {w + "'s" for w in tainted}
     for r in rows:
         tainted |= tainted_words(r["text"], scan)
         for t in set(tokens(r["text"])):
@@ -219,11 +288,18 @@ def collisions(rows, keep: set[str], max_words: int = 3) -> list[dict]:
 def export(rows, keep: set[str]) -> dict:
     model = NaiveBayes().fit(rows, keep=keep)
     return {
-        "name": "xiaoxiang", "version": "0.1", "alpha": model.alpha,
+        "name": "xiaoxiang", "version": "0.2", "alpha": model.alpha,
         "prior": dict(model.prior), "totals": dict(model.totals),
         "vocab_size": len(model.vocab),
+        "common": sorted(model.common),
         "counts": {c: dict(v) for c, v in model.counts.items()},
     }
+
+
+def evidence(model: dict, text: str) -> list[str]:
+    vocab = {t for c in model["counts"].values() for t in c}
+    common = set(model["common"])
+    return [t for t in tokens(text) if t in vocab and t not in common]
 
 
 def classify(model: dict, text: str, n: int = 3) -> list[tuple[str, float]]:
@@ -245,7 +321,7 @@ def classify(model: dict, text: str, n: int = 3) -> list[tuple[str, float]]:
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>小象 v0.1: reading intent from a turn's words</title>
+<title>小象 v0.2: reading intent from a turn's words</title>
 <link rel="stylesheet" href="tufte.css">
 <style>
  #box{width:100%;max-width:38rem;font:1rem/1.4 sans-serif;padding:.5rem;box-sizing:border-box}
@@ -255,11 +331,11 @@ PAGE = """<!doctype html>
  td,th{padding:.15rem .6rem;text-align:left;border-bottom:1px solid #ddd}
  td.n{text-align:right}
 </style></head><body><article>
-<h1>小象 v0.1</h1>
+<h1>小象 v0.2</h1>
 <p class="subtitle">Reading intent from a turn's words alone</p>
 <section>
 <p>象 (<em>xiàng</em>, elephant) reads the turns I type to software agents and labels each fragment with what it is doing: proposing, explaining, approving, reporting a problem, and so on. 小象 (<em>little elephant</em>) is a classical model that tries to recover those labels from the words alone, with no language model and no database, so that it can run on anyone's logs.</p>
-<p>Version 0.1 is deliberately simple: naive Bayes over words and word pairs. It is expected to do poorly, and the point is to measure where. Try a sentence:</p>
+<p>It is deliberately simple: naive Bayes over words and word pairs, plus a short hand-written list of general English speech-act cues (below). It is expected to do poorly, and the point is to measure where. Try a sentence:</p>
 <textarea id="box" rows="3" placeholder="e.g. No, you have missed my point again."></textarea>
 <div id="out"></div>
 </section>
@@ -267,7 +343,7 @@ PAGE = """<!doctype html>
 <h2>How well it does</h2>
 <p>Trained and tested on __FRAGMENTS__ labelled fragments from __TURNS__ of my turns, with __INTENTS__ intents. Each test holds out whole turns (__FOLDS__-fold cross-validation), so no fragment is scored by a model that saw its neighbours.</p>
 <ul>
-<li>Accuracy: <b>__ACC__%</b>, against __MAJ__% for always guessing <em>__MAJLABEL__</em>.</li>
+<li>Accuracy: <b>__ACC__%</b>, against __MAJ__% for always guessing <em>__MAJLABEL__</em>, and __ACC0__% without the hand-written cues.</li>
 <li>Macro-averaged F1 over intents: <b>__F1__</b>. Rare intents are mostly never predicted.</li>
 </ul>
 <p>The labels are 象's own readings, and none has yet been confirmed by me. So some errors below are the model's, and some are disagreement between labellers.</p>
@@ -279,13 +355,20 @@ PAGE = """<!doctype html>
 <p>The same short text labelled with different intents. No classifier that reads only the words can get all of these right; they need context.</p>
 <table><tr><th>text</th><th>labels</th></tr>__COLLISIONS__</table>
 </section>
-<section><p>Model: __VOCAB__ tokens, each seen in at least __MINTURNS__ separate turns, with identifiers and anything a secret scanner flags removed. Built __BUILT__.</p></section>
+<section>
+<h3>Hand-written cues</h3>
+<p>Words whose force is the same in any conversation, added as pseudo-counts (__SEEDW__ each) rather than learned. Version 0.1 read &ldquo;I reject your claim&rdquo; as approval: &ldquo;reject&rdquo; occurs in only four of my fragments, three of them about papers or ideas being rejected, so it never entered the model, and the decision rested on &ldquo;I&rdquo; and &ldquo;your&rdquo;.</p>
+<table><tr><th>intent</th><th>cues</th></tr>__SEEDLIST__</table>
+<p>When a sentence contains only very common words, the page says so instead of guessing.</p>
+</section>
+<section><p>Model: __VOCAB__ tokens, each seen in at least __MINTURNS__ separate turns, with identifiers, names of people and places, and anything a secret scanner flags removed. Built __BUILT__.</p></section>
 </article>
 <script>
 const M = __MODEL__;
 const CJK = /[\\u4e00-\\u9fff\\u3400-\\u4dbf]/;
 const WORD = /[a-z][a-z']*|[\\u4e00-\\u9fff\\u3400-\\u4dbf]+/g;
 const VOCAB = new Set(); for (const c in M.counts) for (const t in M.counts[c]) VOCAB.add(t);
+const COMMON = new Set(M.common);
 function tokens(text){
   const out=[], words=[];
   for (const p of (text.toLowerCase().match(WORD)||[])) {
@@ -300,13 +383,14 @@ function classify(text){
   const s={}; for (const c in M.prior){ const d=(M.totals[c]||0)+M.alpha*M.vocab_size; let v=Math.log(M.prior[c]/total);
     for (const t of toks) v+=Math.log((((M.counts[c]||{})[t])||0)+M.alpha)-Math.log(d); s[c]=v; }
   const m=Math.max(...Object.values(s)); let z=0; for(const c in s) z+=Math.exp(s[c]-m);
-  return {known:toks.length, ranked:Object.keys(s).map(c=>[c,Math.exp(s[c]-m)/z]).sort((a,b)=>b[1]-a[1]).slice(0,3)};
+  return {known:toks.filter(t=>!COMMON.has(t)).length, ranked:Object.keys(s).map(c=>[c,Math.exp(s[c]-m)/z]).sort((a,b)=>b[1]-a[1]).slice(0,3)};
 }
 const box=document.getElementById('box'), out=document.getElementById('out');
 box.addEventListener('input',()=>{ const t=box.value.trim(); if(!t){out.innerHTML='';return;}
   const r=classify(t);
   out.innerHTML = r.ranked.map(([c,p])=>`<div>${(100*p).toFixed(0)}% <b>${c}</b><span class="bar" style="width:${Math.round(200*p)}px"></span></div>`).join('')
-    + (r.known ? '' : '<div><em>None of these words are in the model; this is just the prior.</em></div>');
+    ;
+  if (!r.known) out.innerHTML = '<div><em>Too little to go on: only very common words are known.</em></div>' + out.innerHTML.replace(/<div>/g,'<div style="opacity:.35">');
 });
 </script></body></html>
 """
@@ -320,6 +404,7 @@ def page(rows) -> str:
     import datetime  # noqa: PLC0415
     keep = safe_vocab(rows)
     ev = evaluate(rows)
+    ev0 = evaluate(rows, seed=False)
     model = export(rows, keep)
     per = "".join(
         f"<tr><td>{_esc(c)}</td><td class=n>{v['support']}</td>"
@@ -334,7 +419,10 @@ def page(rows) -> str:
     subs = {
         "__FRAGMENTS__": str(ev["fragments"]), "__TURNS__": str(ev["turns"]),
         "__INTENTS__": str(ev["intents"]), "__FOLDS__": str(ev["folds"]),
-        "__ACC__": f"{100 * ev['accuracy']:.0f}",
+        "__ACC__": f"{100 * ev['accuracy']:.1f}",
+        "__ACC0__": f"{100 * ev0['accuracy']:.1f}", "__SEEDW__": str(SEED_WEIGHT),
+        "__SEEDLIST__": "".join(f"<tr><td>{_esc(i)}</td><td>{_esc(', '.join(ps))}</td></tr>"
+                                for i, ps in SEED.items()),
         "__MAJ__": f"{100 * ev['majority_baseline']['accuracy']:.0f}",
         "__MAJLABEL__": _esc(ev["majority_baseline"]["intent"]),
         "__F1__": f"{ev['macro_f1']:.2f}", "__PERINTENT__": per,
@@ -372,6 +460,8 @@ def main(argv=None) -> int:
     else:
         with open(a.model, encoding="utf-8") as fh:
             model = json.load(fh)
+        if not evidence(model, a.text):
+            print("too little to go on: only common words are known")
         for intent, p in classify(model, a.text):
             print(f"{p:.2f}  {intent}")
     return 0
