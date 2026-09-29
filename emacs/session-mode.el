@@ -787,6 +787,7 @@ corrections override the vocabulary and remain recorded as human labels."
 
 (defvar-local session-mode--draft-tag-overlays nil)
 (defvar-local session-mode--sent-tag-overlays nil)
+(defvar session-mode--past-tag-overlays)      ; session-turn-analysis.el
 (defvar-local session-mode--tag-timer nil)
 (defvar-local session-mode--draft-tags nil
   "Current draft's distinct cue tags, in passage order.")
@@ -898,7 +899,13 @@ Use the real inserted span, including any agent-chat text transformations."
             (setq session-mode--last-operator-region
                   (cons (copy-marker (+ (marker-position start) (length name) 2) t)
                         (copy-marker (- (marker-position agent-chat--prompt-marker) 2) nil)))
-            (mapc #'delete-overlay session-mode--sent-tag-overlays)
+            ;; The previous turn keeps its underlines: they move to the past
+            ;; list instead of being deleted, so an earlier turn can still be
+            ;; cited by its marks (Joe, 2026-09-29).
+            (if (boundp 'session-mode--past-tag-overlays)
+                (setq session-mode--past-tag-overlays
+                      (append session-mode--sent-tag-overlays session-mode--past-tag-overlays))
+              (mapc #'delete-overlay session-mode--sent-tag-overlays))
             (setq session-mode--sent-tag-overlays
                   (cdr (session-mode--paint-turn-tags
                         (+ (marker-position start) (length name) 2)
@@ -947,7 +954,9 @@ Kept separate from full session markup so typing never triggers retrieval."
     (remove-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation t)
     (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
     (session-mode--cancel-tag-timer)
-    (mapc #'delete-overlay (append session-mode--draft-tag-overlays session-mode--sent-tag-overlays))
+    (mapc #'delete-overlay (append session-mode--draft-tag-overlays session-mode--sent-tag-overlays
+                                   (bound-and-true-p session-mode--past-tag-overlays)))
+    (when (boundp 'session-mode--past-tag-overlays) (setq session-mode--past-tag-overlays nil))
     (setq session-mode--draft-tag-overlays nil session-mode--sent-tag-overlays nil
           session-mode--draft-tags nil)))
 

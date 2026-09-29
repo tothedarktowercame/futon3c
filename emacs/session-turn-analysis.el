@@ -349,26 +349,90 @@ Existing phrase assignments, including human corrections, always take precedence
                 ;; Refresh makes repeated callbacks idempotent and removes
                 ;; legacy full-interpretation underlines before painting cues.
                 (session-mode--refresh-sent-tags)
-                (dolist (sentence (alist-get 'sentences data))
-                  (dolist (fragment (alist-get 'fragments sentence))
-                    ;; No fallback for old results lacking explicit display cues.
-                    (dolist (cue (alist-get 'display_cues fragment))
-                      (let ((start (alist-get 'start cue)) (end (alist-get 'end cue))
-                            (intent (alist-get 'intent fragment)))
-                        (when (and (integerp start) (integerp end) (<= 0 start) (< start end)
-                                   (<= end (length source))
-                                   (<= (- end start) 80)
-                                   (<= (length (split-string (alist-get 'text cue))) 8)
-                                   (equal (substring source start end) (alist-get 'text cue)))
-                          (let ((ov (make-overlay (+ base start) (+ base end))))
-                            (overlay-put ov 'session-mode-turn-tag intent)
-                            (overlay-put ov 'face '(:underline (:style wave :color "purple")))
-                            (overlay-put ov 'priority 31)
-                            (overlay-put ov 'session-mode-inferred t)
-                            (overlay-put ov 'help-echo
-                                         (session-mode--fragment-help fragment (alist-get 'labeller data)))
-                            (push ov session-mode--sent-tag-overlays))))))))))
+                (setq session-mode--sent-tag-overlays
+                      (append (session-mode--paint-analysis-cues data source base)
+                              session-mode--sent-tag-overlays)))))
         (error (message "Turn analysis display failed: %s" (error-message-string err)))))))
+
+(defun session-mode--paint-analysis-cues (data source base)
+  "Underline DATA's validated display cues; SOURCE starts at buffer position BASE.
+Return the overlays made."
+  (let (made)
+    (dolist (sentence (alist-get 'sentences data))
+      (dolist (fragment (alist-get 'fragments sentence))
+        ;; No fallback for old results lacking explicit display cues.
+        (dolist (cue (alist-get 'display_cues fragment))
+          (let ((start (alist-get 'start cue)) (end (alist-get 'end cue))
+                (intent (alist-get 'intent fragment)))
+            (when (and (integerp start) (integerp end) (<= 0 start) (< start end)
+                       (<= end (length source))
+                       (<= (- end start) 80)
+                       (<= (length (split-string (alist-get 'text cue))) 8)
+                       (equal (substring source start end) (alist-get 'text cue))
+                       (<= (+ base end) (point-max)))
+              (let ((ov (make-overlay (+ base start) (+ base end))))
+                (overlay-put ov 'session-mode-turn-tag intent)
+                (overlay-put ov 'face '(:underline (:style wave :color "purple")))
+                (overlay-put ov 'priority 31)
+                (overlay-put ov 'session-mode-inferred t)
+                (overlay-put ov 'help-echo
+                             (session-mode--fragment-help fragment (alist-get 'labeller data)))
+                (push ov made)))))))
+    made))
+
+(defvar-local session-mode--past-tag-overlays nil
+  "Underlines on earlier operator turns, painted from their stored readings.")
+
+(defun session-mode-repaint-past-turns ()
+  "Underline every earlier operator turn in this buffer that 象 has read.
+Only the latest turn is underlined as it is sent; this paints the rest from
+the analysis files of this buffer's session, finding each turn by its text
+on a line that begins with the operator's speaker label.  Read-only: no
+record is written.  Returns the number of turns painted."
+  (interactive)
+  (mapc #'delete-overlay session-mode--past-tag-overlays)
+  (setq session-mode--past-tag-overlays nil)
+  (let ((session (bound-and-true-p agent-chat--session-id))
+        (speaker (concat (or (bound-and-true-p agent-chat-user-speaker) "joe") ": "))
+        (latest (and session-mode--last-analysis-request
+                     (concat session-mode--last-analysis-request ".analysis.json")))
+        (json-object-type 'alist) (json-array-type 'list)
+        (painted 0))
+    (unless session (user-error "This buffer has no agent session id"))
+    (dolist (result (directory-files session-mode-turn-analysis-directory t
+                                     "\\`turn-[^.]+\\.json\\.analysis\\.json\\'"))
+      (unless (equal result latest)     ; the latest turn has its own overlays
+        (condition-case nil
+            (let* ((record (json-read-file (string-remove-suffix ".analysis.json" result))))
+              (when (equal (alist-get 'session_id record) session)
+                (let* ((data (json-read-file result))
+                       (source (alist-get 'source_text data)))
+                  (when (and (equal (alist-get 'status data) "analyzed")
+                             (stringp source) (not (string-empty-p source)))
+                    (save-excursion
+                      (goto-char (point-min))
+                      (let (found)
+                        (while (and (not found) (search-forward source nil t))
+                          (let ((beg (match-beginning 0)))
+                            ;; The turn's first line starts with "joe: ", possibly
+                            ;; followed by voxterm's surface marker.
+                            (when (save-excursion
+                                    (goto-char beg)
+                                    (let ((bol (line-beginning-position)))
+                                      (and (string-prefix-p speaker
+                                                            (buffer-substring-no-properties
+                                                             bol (min (point-max) (+ bol (length speaker)))))
+                                           (<= (- beg bol) (+ (length speaker) 12)))))
+                              (setq found beg))))
+                        (when found
+                          (setq painted (1+ painted))
+                          (setq session-mode--past-tag-overlays
+                                (append (session-mode--paint-analysis-cues data source found)
+                                        session-mode--past-tag-overlays)))))))))
+          (error nil))))
+    (when (called-interactively-p 'interactive)
+      (message "Underlined %d earlier turn%s" painted (if (= painted 1) "" "s")))
+    painted))
 
 (defun session-mode-inspect-turn-analysis ()
   "Open the latest structural record or completed agent interpretation."
