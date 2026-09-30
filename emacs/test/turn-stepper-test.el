@@ -318,3 +318,83 @@ times and then stops, rather than never (futon1b busy) or forever."
           (should (= 3 fetches)))
       (delete-other-windows)
       (kill-buffer buf))))
+
+(defun turn-stepper-test--mixed-repo ()
+  "Scratch repo: base 10:00, then this session's, another seat's and an
+unsigned commit, each touching its own file."
+  (let* ((root (make-temp-file "ts-code" t))
+         (repo (expand-file-name "r" root))
+         (process-environment (append '("GIT_AUTHOR_NAME=A" "GIT_AUTHOR_EMAIL=a@x"
+                                        "GIT_COMMITTER_NAME=A" "GIT_COMMITTER_EMAIL=a@x"
+                                        "CLAUDE_CODE_SESSION_ID=")
+                                      process-environment)))
+    (make-directory repo)
+    (let ((default-directory (file-name-as-directory repo)))
+      (call-process "git" nil nil nil "init" "-q")
+      (cl-loop for (tm file msg) in
+               '(("10:00" "base" "base")
+                 ("10:10" "mine" "mine\n\nAgent-Session: S")
+                 ("10:11" "theirs" "theirs\n\nAgent-Session: OTHER")
+                 ("10:12" "joes" "joe at a terminal"))
+               do (with-temp-file (expand-file-name file repo) (insert tm))
+               (call-process "git" nil nil nil "add" file)
+               (let ((process-environment
+                      (append (list (format "GIT_COMMITTER_DATE=2026-09-29T%s:00Z" tm)
+                                    (format "GIT_AUTHOR_DATE=2026-09-29T%s:00Z" tm))
+                              process-environment)))
+                 (call-process "git" nil nil nil "commit" "-q" "-m" msg))))
+    root))
+
+(defun turn-stepper-test--mixed-plan (root)
+  (let ((turn-stepper-code-root root))
+    (car (turn-stepper--rewind-plan
+          '((turn . ((at . "2026-09-29T10:05:00Z")))
+            (happened . (((summary . ((event . "turn-commits")
+                                      (commits . (((repo . "r"))))))))))
+          nil))))
+
+(ert-deftest turn-stepper-R-reverts-only-this-sessions-commits ()
+  "Planted: another seat's commit and an unsigned one sit in the same window."
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (p (turn-stepper-test--mixed-plan root))
+         (repo (plist-get p :path)))
+    (unwind-protect
+        (progn
+          (should (= 3 (length (plist-get p :commits))))
+          (should (= 1 (length (turn-stepper--own-commits p "S"))))
+          (should (equal 1 (plist-get (turn-stepper--revert p "S") :reverted)))
+          (should-not (file-exists-p (expand-file-name "mine" repo)))
+          (should (file-exists-p (expand-file-name "theirs" repo)))
+          (should (file-exists-p (expand-file-name "joes" repo))))
+      (delete-directory root t))))
+
+(ert-deftest turn-stepper-R-refuses-a-dirty-checkout ()
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (p (turn-stepper-test--mixed-plan root))
+         (repo (plist-get p :path)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "theirs" repo) (insert "mid-edit"))
+          (should (plist-get (turn-stepper--revert p "S") :refused))
+          (should (file-exists-p (expand-file-name "mine" repo))))
+      (delete-directory root t))))
+
+(ert-deftest turn-stepper-R-aborts-a-conflict ()
+  "A later commit edits the same file: the revert conflicts and is aborted."
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (repo (expand-file-name "r" root)))
+    (unwind-protect
+        (let ((default-directory (file-name-as-directory repo))
+              (process-environment (append '("GIT_AUTHOR_NAME=A" "GIT_AUTHOR_EMAIL=a@x"
+                                             "GIT_COMMITTER_NAME=A" "GIT_COMMITTER_EMAIL=a@x"
+                                             "CLAUDE_CODE_SESSION_ID="
+                                             "GIT_COMMITTER_DATE=2026-09-29T10:13:00Z")
+                                           process-environment)))
+          (with-temp-file (expand-file-name "mine" repo) (insert "changed later"))
+          (call-process "git" nil nil nil "commit" "-qam" "later edit")
+          (let* ((p (turn-stepper-test--mixed-plan root))
+                 (head (turn-stepper--git repo "rev-parse" "HEAD")))
+            (should (plist-get (turn-stepper--revert p "S") :refused))
+            (should (equal head (turn-stepper--git repo "rev-parse" "HEAD")))
+            (should (string-empty-p (turn-stepper--git repo "status" "--porcelain")))))
+      (delete-directory root t))))

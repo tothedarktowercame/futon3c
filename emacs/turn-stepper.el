@@ -673,7 +673,8 @@ Frames are cached per session; use `g' in the stepper to refresh."
 (defun turn-stepper--rewind-plan (frame next-at)
   "Per repo: the pin at FRAME's start and the commits up to NEXT-AT.
 Returns a list of plists (:repo :path :pin :end :commits), commits as
-\"SHA<TAB>AUTHOR<TAB>SUBJECT\" lines oldest first."
+\"SHA<TAB>AUTHOR<TAB>AGENT-SESSION<TAB>SUBJECT\" lines oldest first; the
+session is the commit's Agent-Session trailer, empty when unsigned."
   (let ((at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame))))
     (delq nil
           (mapcar
@@ -687,13 +688,62 @@ Returns a list of plists (:repo :path :pin :end :commits), commits as
                        :commits (and (not (equal pin end))
                                      (split-string
                                       (or (turn-stepper--git path "log" "--reverse" "--first-parent"
-                                                             "--format=%h%x09%an%x09%s"
+                                                             "--format=%H%x09%an%x09%(trailers:key=Agent-Session,valueonly,separator=%x2C)%x09%s"
                                                              (concat pin ".." end))
                                           "")
                                       "\n" t))))))
            (turn-stepper--frame-repos frame)))))
 
 (defvar-local turn-stepper--rewind-plan nil)
+(defvar-local turn-stepper--rewind-session nil)
+
+(defun turn-stepper--own-commits (plan-entry session)
+  "Full shas in PLAN-ENTRY signed by SESSION, newest first."
+  (let (out)
+    (dolist (c (plist-get plan-entry :commits) out)
+      (pcase-let ((`(,sha ,_ ,sess . ,_) (split-string c "\t")))
+        (when (and session (equal sess session)) (push sha out))))))
+
+(defun turn-stepper--revert (plan-entry session)
+  "Revert PLAN-ENTRY's commits signed by SESSION as new commits.
+Returns (:repo R :reverted N) or (:repo R :refused WHY)."
+  (let* ((path (plist-get plan-entry :path))
+         (repo (plist-get plan-entry :repo))
+         (shas (turn-stepper--own-commits plan-entry session)))
+    (cond
+     ((null shas) (list :repo repo :refused "no commits signed by this session"))
+     ((not (string-empty-p (or (turn-stepper--git path "status" "--porcelain"
+                                                  "--untracked-files=no")
+                               "?")))
+      (list :repo repo :refused "uncommitted edits in the checkout"))
+     ((not (apply #'turn-stepper--git path "revert" "--no-edit" shas))
+      (turn-stepper--git path "revert" "--abort")
+      (list :repo repo :refused "revert conflicted; aborted, nothing changed"))
+     (t (list :repo repo :reverted (length shas))))))
+
+(defun turn-stepper-rewind-apply ()
+  "Revert this session's commits in each repo of the rewind view."
+  (interactive)
+  (let* ((plan turn-stepper--rewind-plan)
+         (session turn-stepper--rewind-session)
+         (todo (cl-remove-if-not (lambda (p) (turn-stepper--own-commits p session)) plan)))
+    (if (null todo)
+        (message "Nothing to revert: no commit in this window is signed by this session")
+      (when (yes-or-no-p
+             (format "Revert %s? "
+                     (mapconcat (lambda (p) (format "%d commit(s) in %s"
+                                                    (length (turn-stepper--own-commits p session))
+                                                    (plist-get p :repo)))
+                                todo ", ")))
+        (message "%s"
+                 (mapconcat (lambda (p)
+                              (let ((r (turn-stepper--revert p session)))
+                                (if (plist-get r :reverted)
+                                    (format "%s: reverted %d" (plist-get r :repo)
+                                            (plist-get r :reverted))
+                                  (format "%s: refused (%s)" (plist-get r :repo)
+                                          (plist-get r :refused)))))
+                            todo "; "))))))
 
 (defun turn-stepper-rewind ()
   "Show what rewinding to the start of the current frame's turn would undo."
@@ -703,6 +753,7 @@ Returns a list of plists (:repo :path :pin :end :commits), commits as
          (next-at (and next (turn-stepper--aget 'at (turn-stepper--aget 'turn next))))
          (at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame)))
          (plan (turn-stepper--rewind-plan frame next-at))
+         (session turn-stepper--session-id)
          (buf (get-buffer-create "*象 rewind*")))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
@@ -716,14 +767,24 @@ Returns a list of plists (:repo :path :pin :end :commits), commits as
                                         (substring (plist-get p :pin) 0 12))
                                 'turn-stepper-rewind p 'face 'bold))
             (dolist (c (plist-get p :commits))
-              (insert (propertize (concat "  would undo  " (replace-regexp-in-string "\t" "  " c) "\n")
-                                  'turn-stepper-rewind p)))
+              (pcase-let ((`(,sha ,author ,sess ,subject) (split-string c "\t")))
+                (insert (propertize
+                         (format "  %-10s %s  %s  %s\n"
+                                 (cond ((equal sess session) "R undoes")
+                                       ((string-empty-p (or sess "")) "unsigned")
+                                       (t "other seat"))
+                                 (substring sha 0 8) author subject)
+                         'turn-stepper-rewind p))))
             (insert "\n")))
-        (insert "Commits by any seat in the window are listed: the repos are shared.\n"
+        (insert "Every commit in the window is listed: the repos are shared.  R reverts\n"
+                "only commits signed by this session (Agent-Session trailer), newest\n"
+                "first, as new commits; other seats' and unsigned commits are left alone.\n"
                 "Uncommitted edits are not covered.\n"
-                "On a repo's lines: w = read-only worktree at the pin, d = diff pin..end, q = quit\n"))
+                "w = read-only worktree at the pin, d = diff pin..end (on a repo's lines),\n"
+                "R = revert this session's commits in every repo listed, q = quit\n"))
       (turn-stepper-rewind-mode)
-      (setq turn-stepper--rewind-plan plan)
+      (setq turn-stepper--rewind-plan plan
+            turn-stepper--rewind-session session)
       (goto-char (point-min)))
     (pop-to-buffer buf)))
 
@@ -763,6 +824,7 @@ Returns a list of plists (:repo :path :pin :end :commits), commits as
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "w") #'turn-stepper-rewind-worktree)
     (define-key map (kbd "d") #'turn-stepper-rewind-diff)
+    (define-key map (kbd "R") #'turn-stepper-rewind-apply)
     (define-key map (kbd "q") #'quit-window)
     map))
 
