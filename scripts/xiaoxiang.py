@@ -201,6 +201,154 @@ def segment(text: str) -> list[dict]:
     return merged
 
 
+# The reply key of AGENTS.md's "Reply proforma" section (23 marks), copied
+# in table order: mark -> 象 intent.  "Gist:" as an opening word is also
+# accepted (mark null, intent gist).
+REPLY_KEY = {
+    "㊥": "gist", "㊭": "propose", "㊣": "approve", "🈚": "disagree",
+    "㊟": "qualify", "🈖": "explain", "🈯": "clarify", "㊢": "report",
+    "㊩": "report-problem", "㊬": "verify", "🈹": "retract",
+    "🈳": "unresolved", "🈲": "constrain", "🈸": "ask-action",
+    "㊯": "delegate", "㊝": "prioritize", "㊮": "collect", "🈕": "extend",
+    "🈰": "continue", "🈝": "defer", "🈘": "redirect", "㊫": "explore",
+    "🈡": "withdraw",
+}
+
+_FENCE = "```"
+_STRUCTURAL = (re.compile(r"^\s*\|"), re.compile(r"^\s*(?:[-*+]|\d+\.)\s"))
+_TARGET_OPEN = {"(": ")", "[": "]"}
+
+
+def _balanced(text: str, i: int) -> int:
+    """End index (exclusive) of the bracket span opening at i, balanced."""
+    close = _TARGET_OPEN[text[i]]
+    depth = 0
+    for j in range(i, len(text)):
+        if text[j] in _TARGET_OPEN:
+            depth += 1
+        elif text[j] in (")", "]"):
+            depth -= 1
+            if depth == 0:
+                return j + 1
+    return -1
+
+
+def _paragraphs(text: str) -> list[tuple[int, int]]:
+    """(start, end) spans of the reply's paragraphs, in order.
+
+    Blocks split on blank lines; a fenced code block is atomic; a table,
+    list or fence that directly follows prose inside one blank-line block
+    becomes its own paragraph (never merged into the marked paragraph
+    above it).
+    """
+    spans = []
+    lines = text.splitlines(keepends=True)
+    block_start = None
+    in_fence = False
+    prev_was_prose = False
+
+    def flush(end):
+        nonlocal block_start, prev_was_prose
+        if block_start is not None:
+            spans.append((block_start, end))
+        block_start = None
+        prev_was_prose = False
+
+    at = 0
+    for line in lines:
+        stripped = line.strip()
+        if in_fence:
+            at += len(line)
+            if stripped.startswith(_FENCE):
+                in_fence = False
+                flush(at)
+            continue
+        if stripped.startswith(_FENCE):
+            flush(at)
+            block_start = at
+            in_fence = True
+            at += len(line)
+            continue
+        if not stripped:
+            flush(at)
+            at += len(line)
+            continue
+        structural = any(p.match(line) for p in _STRUCTURAL)
+        if structural and block_start is not None and prev_was_prose:
+            flush(at)
+        if block_start is None:
+            block_start = at
+        prev_was_prose = not structural
+        at += len(line)
+    flush(len(text))
+    return [(a, b) for a, b in spans if text[a:b].strip()]
+
+
+def _parse_mark(par: str):
+    """(mark, intent, target, body_offset) for one paragraph's text, or None.
+
+    The paragraph is marked only if its FIRST non-space character is a key
+    mark, optionally wrapped in ** bold **.  After the mark: optional
+    bold close, optional spaces, an optional single intent word (skipped),
+    then an optional balanced () or [] target span.
+    """
+    i = 0
+    n = len(par)
+    while i < n and par[i].isspace():
+        i += 1
+    bold_open = par.startswith("**", i)
+    if bold_open:
+        i += 2
+    if i >= n or par[i] not in REPLY_KEY:
+        return None
+    mark = par[i]
+    i += 1
+    if par.startswith("**", i):
+        i += 2
+    while i < n and par[i] == " ":
+        i += 1
+    # an optional single intent word (e.g. "Report") is allowed and skipped
+    m = re.match(r"[A-Za-z][A-Za-z-]*\b", par[i:])
+    if m:
+        i += m.end()
+        while i < n and par[i] == " ":
+            i += 1
+    target = None
+    if i < n and par[i] in _TARGET_OPEN:
+        end = _balanced(par, i)
+        if end > 0:
+            target = par[i + 1:end - 1]
+    return mark, REPLY_KEY[mark], target
+
+
+def parse_reply(text: str) -> list[dict]:
+    """Records of a marked agent reply, one per paragraph: {"id": "a3",
+    "start", "end", "text", "mark", "intent", "target"}.
+
+    A paragraph is marked only when its first non-space character is a
+    REPLY_KEY mark (optionally inside ** bold **); a first paragraph
+    starting "Gist:" is intent gist with mark null; anything else carries
+    mark/intent/target null.  Offsets are unicode codepoints, zero-based,
+    end-exclusive, text[start:end] == text exactly.  Deterministic.
+    """
+    out = []
+    for k, (a, b) in enumerate(_paragraphs(text), start=1):
+        par = text[a:b]
+        pa = a + (len(par) - len(par.lstrip()))
+        pb = b - (len(par) - len(par.rstrip()))
+        body = text[pa:pb]
+        parsed = _parse_mark(body)
+        if parsed:
+            mark, intent, target = parsed
+        elif k == 1 and body.startswith("Gist:"):
+            mark, intent, target = None, "gist", None
+        else:
+            mark, intent, target = None, None, None
+        out.append({"id": f"a{k}", "start": pa, "end": pb, "text": body,
+                    "mark": mark, "intent": intent, "target": target})
+    return out
+
+
 def seg_eval(directory: str) -> dict:
     """Compare segment() with 象's fragments over the published analyses.
 
@@ -782,6 +930,7 @@ def main(argv=None) -> int:
     b = sub.add_parser("bundle"); b.add_argument("--dir", default=DEFAULT_DIR); b.add_argument("out")
     g = sub.add_parser("segment"); g.add_argument("text")
     v = sub.add_parser("seg-eval"); v.add_argument("--dir", default=DEFAULT_DIR)
+    r = sub.add_parser("reply"); r.add_argument("file", help="FILE or - for stdin")
     w = sub.add_parser("page"); w.add_argument("--dir", default=DEFAULT_DIR); w.add_argument("out")
     w.add_argument("--report", default=SAMPLE_REPORT,
                    help="JSON from `xiaoxiang-local.py --json`, drawn as figures (skipped if absent)")
@@ -798,6 +947,9 @@ def main(argv=None) -> int:
             json.dump(model, fh, ensure_ascii=False)
     elif a.cmd == "segment":
         json.dump(segment(a.text), sys.stdout, indent=1, ensure_ascii=False); print()
+    elif a.cmd == "reply":
+        data = sys.stdin.read() if a.file == "-" else open(a.file, encoding="utf-8").read()
+        json.dump(parse_reply(data), sys.stdout, indent=1, ensure_ascii=False); print()
     elif a.cmd == "seg-eval":
         json.dump(seg_eval(a.dir), sys.stdout, indent=1, ensure_ascii=False); print()
     elif a.cmd == "bundle":

@@ -241,5 +241,100 @@ class Segment(unittest.TestCase):
                 self.assertEqual(f["text"], t[f["start"]:f["end"]])
 
 
+class ParseReply(unittest.TestCase):
+    """The marked-reply parser: marks, targets, offsets, blocks."""
+
+    def test_reply_key_matches_agents_md(self):
+        # the 23 marks of AGENTS.md's key, in table order
+        expected = {"㊥": "gist", "㊭": "propose", "㊣": "approve",
+                    "🈚": "disagree", "㊟": "qualify", "🈖": "explain",
+                    "🈯": "clarify", "㊢": "report", "㊩": "report-problem",
+                    "㊬": "verify", "🈹": "retract", "🈳": "unresolved",
+                    "🈲": "constrain", "🈸": "ask-action", "㊯": "delegate",
+                    "㊝": "prioritize", "㊮": "collect", "🈕": "extend",
+                    "🈰": "continue", "🈝": "defer", "🈘": "redirect",
+                    "㊫": "explore", "🈡": "withdraw"}
+        self.assertEqual(expected, xx.REPLY_KEY)
+
+    def test_all_23_marks_parse_with_their_intents(self):
+        reply = "\n\n".join(f"{mark} ({intent}-target) para {i}"
+                             for i, (mark, intent) in enumerate(sorted(xx.REPLY_KEY.items()), 1))
+        recs = xx.parse_reply(reply)
+        self.assertEqual(23, len(recs))
+        for rec, (mark, intent) in zip(recs, sorted(xx.REPLY_KEY.items())):
+            self.assertEqual(mark, rec["mark"])
+            self.assertEqual(intent, rec["intent"])
+            self.assertEqual(f"{intent}-target", rec["target"])
+
+    def test_offsets_exact_with_table_list_and_fence(self):
+        reply = ("㊥ Gist: two findings.\n\n"
+                 "㊢ Report (the segmenter): added segment().\n"
+                 "| a | b |\n|---|---|\n| 1 | 2 |\n\n"
+                 "㊟ (the offsets) checks pass:\n"
+                 "- exact offsets\n- no overlap\n\n"
+                 "㊬ Verify (the run): the block below is intact\n"
+                 "```\ncode; stays (whole)\n\nstill code\n```\n\n"
+                 "Unmarked closing paragraph.")
+        recs = xx.parse_reply(reply)
+        self.assertEqual(["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"],
+                         [r["id"] for r in recs])
+        at = -1
+        for r in recs:
+            self.assertEqual(reply[r["start"]:r["end"]], r["text"])
+            self.assertGreaterEqual(r["start"], at)
+            at = r["end"]
+        # the table is its own unmarked paragraph; the fenced block keeps
+        # its blank line and contents
+        # the table (a3) and the list (a5) are their own unmarked paragraphs
+        self.assertEqual([None, None], [recs[2]["mark"], recs[2]["intent"]])
+        self.assertEqual([None, None], [recs[4]["mark"], recs[4]["intent"]])
+        # the fenced block (a7) keeps its blank line and contents, unmarked
+        self.assertIn("code; stays (whole)\n\nstill code", recs[6]["text"])
+        self.assertEqual(None, recs[6]["mark"])
+
+    def test_target_extraction(self):
+        cases = [
+            ("㊟ (x) body", "x"),
+            ("㊟ [x] body", "x"),
+            ("**㊟ (x)** body", "x"),
+            ("㊢ Report (x): body", "x"),
+            ("㊟ (a (b) c) body", "a (b) c"),
+            ("㊟ no target here", None),
+            ("㊟ [a [b] c] body", "a [b] c"),
+        ]
+        for text, target in cases:
+            rec = xx.parse_reply(text)[0]
+            self.assertEqual(target, rec["target"], text)
+            self.assertEqual(text, rec["text"])
+
+    def test_mark_in_the_middle_does_not_mark(self):
+        text = "Ordinary opening words ㊟ (x) and more"
+        rec = xx.parse_reply(text)[0]
+        self.assertEqual(None, rec["mark"])
+        self.assertEqual(None, rec["intent"])
+        self.assertEqual(None, rec["target"])
+
+    def test_gist_first_paragraph(self):
+        rec = xx.parse_reply("Gist: the short version.\n\nBody.")[0]
+        self.assertEqual("gist", rec["intent"])
+        self.assertEqual(None, rec["mark"])
+        # Gist: only counts on the first paragraph
+        recs = xx.parse_reply("㊥ x\n\nGist: not the first")
+        self.assertEqual(None, recs[1]["intent"])
+
+    def test_unmarked_paragraph_all_null(self):
+        rec = xx.parse_reply("Just words.")[0]
+        self.assertEqual({"id": "a1", "mark": None, "intent": None, "target": None},
+                         {k: rec[k] for k in ("id", "mark", "intent", "target")})
+
+    def test_empty_string(self):
+        self.assertEqual([], xx.parse_reply(""))
+
+    def test_deterministic(self):
+        text = "㊥ Gist: one.\n\n㊟ (two) two.\n\n🈸 (three) three?"
+        self.assertEqual(xx.parse_reply(text), xx.parse_reply(text))
+
+
+
 if __name__ == "__main__":
     unittest.main()
