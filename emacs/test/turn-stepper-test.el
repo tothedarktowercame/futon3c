@@ -496,3 +496,50 @@ load, so r and R were undefined after a reload.  Simulate an old map."
           (should (string-match-p "no commits of this session to revert" turn-stepper-test--sent))
           (should-not (string-match-p "reply two" (with-current-buffer repl (buffer-string)))))
       (kill-buffer repl) (kill-buffer rw))))
+
+(ert-deftest turn-stepper-follows-its-repl-window ()
+  "Joe 2026-09-30: switching the REPL's window to another REPL hides the
+stepper; switching back shows it again."
+  (let ((repl (get-buffer-create "*claude-repl:a*"))
+        (other (get-buffer-create "*claude-repl:b*"))
+        (buf (get-buffer-create turn-stepper-buffer-name))
+        (turn-stepper--hidden-anchor nil))
+    (unwind-protect
+        (progn
+          (delete-other-windows)
+          (switch-to-buffer repl)
+          (with-current-buffer buf (setq turn-stepper--source-buffer repl))
+          (should (turn-stepper--show-window buf repl))
+          (should (get-buffer-window buf))
+          ;; Same window, another REPL: the stepper goes.
+          (set-window-buffer (get-buffer-window repl) other)
+          (turn-stepper--follow-source)
+          (should-not (get-buffer-window buf))
+          ;; Back to its REPL: it returns, beside it.
+          (set-window-buffer (get-buffer-window other) repl)
+          (turn-stepper--follow-source)
+          (should (get-buffer-window buf))
+          (should (eq (window-buffer (window-in-direction turn-stepper-window-side
+                                                          (get-buffer-window repl)))
+                      buf)))
+      (delete-other-windows)
+      (mapc #'kill-buffer (list repl other buf)))))
+
+(ert-deftest turn-stepper-other-windows-do-not-hide-it ()
+  "Planted: a buffer switch in some unrelated window must not hide the stepper."
+  (let ((repl (get-buffer-create "*claude-repl:a*"))
+        (other (get-buffer-create "*scratch-x*"))
+        (buf (get-buffer-create turn-stepper-buffer-name))
+        (turn-stepper--hidden-anchor nil))
+    (unwind-protect
+        (progn
+          (delete-other-windows)
+          (switch-to-buffer repl)
+          (let ((below (split-window-below)))
+            (with-current-buffer buf (setq turn-stepper--source-buffer repl))
+            (turn-stepper--show-window buf repl)
+            (set-window-buffer below other)
+            (turn-stepper--follow-source)
+            (should (get-buffer-window buf))))
+      (delete-other-windows)
+      (mapc #'kill-buffer (list repl other buf)))))

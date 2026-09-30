@@ -68,6 +68,9 @@ The value is passed to `display-buffer-in-side-window'."
 
 (defvar agent-chat--pending-process)
 
+(defvar turn-stepper--hidden-anchor nil
+  "The REPL window whose buffer switch hid the stepper, or nil.")
+
 (defvar turn-stepper--reload-failed nil
   "Non-nil while the stepper reopens its old frames after a failed reload.")
 
@@ -463,15 +466,48 @@ showing it anywhere else (another frame, a frame side window) is closed."
     ;; The action function is called directly, not through `display-buffer':
     ;; when the split fails, display-buffer falls back to taking over some
     ;; other window (another REPL), which is worse than not showing at all.
-    (or keep
-        (display-buffer-in-direction
-         buffer `((window . ,anchor) (direction . ,turn-stepper-window-side)
-                  (window-width . ,turn-stepper-window-width)))
-        (display-buffer-in-direction
-         buffer `((window . ,anchor) (direction . below)))
-        (progn (message "turn-stepper: no room beside %s; not shown"
-                        (if (buffer-live-p source) (buffer-name source) "the REPL"))
-               nil))))
+    (let ((w (or keep
+                 (display-buffer-in-direction
+                  buffer `((window . ,anchor) (direction . ,turn-stepper-window-side)
+                           (window-width . ,turn-stepper-window-width)))
+                 (display-buffer-in-direction
+                  buffer `((window . ,anchor) (direction . below)))
+                 (progn (message "turn-stepper: no room beside %s; not shown"
+                                 (if (buffer-live-p source) (buffer-name source) "the REPL"))
+                        nil))))
+      (when w
+        (set-window-parameter w 'turn-stepper-anchor anchor)
+        (setq turn-stepper--hidden-anchor nil))
+      w)))
+
+;; The stepper belongs to its REPL (Joe, 2026-09-30): when the REPL's window
+;; switches to another buffer, the stepper window goes; when that window
+;; shows the REPL again, it comes back.
+
+(defun turn-stepper--follow-source (&optional _frame)
+  "Hide or re-show the stepper as its REPL leaves or returns to its window."
+  (let* ((buf (get-buffer turn-stepper-buffer-name))
+         (source (and buf (buffer-local-value 'turn-stepper--source-buffer buf))))
+    (when (buffer-live-p source)
+      (dolist (w (get-buffer-window-list buf nil t))
+        (let ((anchor (window-parameter w 'turn-stepper-anchor)))
+          (when (and anchor
+                     (not (and (window-live-p anchor) (eq (window-buffer anchor) source))))
+            (when (window-live-p anchor) (setq turn-stepper--hidden-anchor anchor))
+            (ignore-errors (delete-window w)))))
+      (when (and (window-live-p turn-stepper--hidden-anchor)
+                 (eq (window-buffer turn-stepper--hidden-anchor) source)
+                 (not (get-buffer-window buf t)))
+        (let ((anchor turn-stepper--hidden-anchor))
+          (setq turn-stepper--hidden-anchor nil)
+          (with-selected-window anchor
+            (turn-stepper--show-window buf source)))))))
+
+(defun turn-stepper--follow-source-soon (frame)
+  ;; Deferred: changing windows from inside the redisplay hook is unsafe.
+  (run-at-time 0 nil #'turn-stepper--follow-source frame))
+
+(add-hook 'window-buffer-change-functions #'turn-stepper--follow-source-soon)
 
 (defcustom turn-stepper-reload-retries 3
   "Times a failed reload is retried (futon1b busy is usually brief)."
