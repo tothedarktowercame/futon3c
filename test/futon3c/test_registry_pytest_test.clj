@@ -145,8 +145,33 @@
               (is (some #(str/starts-with? % "FAILED test/test_thing.py::test_failing")
                         (:outcomes (get bad-payload :results)))
                   (pr-str (:outcomes (get bad-payload :results))))
-              ;; check-record! does NOT report currency for a non-warrant: it
-              ;; refuses :not-a-warrant before any closure/env comparison.
-              (is (= :not-a-warrant (:reason (check bad [])))))))
+              ;; check-record! still refuses a non-warrant, before any
+              ;; closure/env comparison — the case a careless refactor of
+              ;; check-record! into a mode would break.
+              (is (= :not-a-warrant (:reason (check bad []))))
+              ;; check-currency!: the failing record can still be shown
+              ;; UNCHANGED, returning its recorded results/outcomes.
+              (let [currency (registry/check-currency!
+                              backend {:entry-id (:evidence/id bad) :repo-root root
+                                       :changed-paths []})]
+                (is (true? (:current? currency)) (pr-str currency))
+                (is (= 1 (get-in currency [:results :failures])))
+                (is (some #(str/starts-with? % "FAILED test/test_thing.py::test_failing")
+                          (:outcomes (:results currency)))))
+              ;; PLANTED: edit the module the failing test imports -> stale,
+              ;; naming the path; revert, edit an unrelated file -> current.
+              (write "src/mymod.py" "VALUE = 3\n")
+              (let [r (registry/check-currency!
+                       backend {:entry-id (:evidence/id bad) :repo-root root
+                                :changed-paths ["src/mymod.py"]})]
+                (is (= :environment-mismatch (:reason r)) (pr-str r))
+                (is (= ["src/mymod.py"] (get-in r [:details :changed-files]))))
+              (write "src/mymod.py" "VALUE = 1\n")
+              (write "unrelated/notes.md" "n3\n")
+              (let [r (registry/check-currency!
+                       backend {:entry-id (:evidence/id bad) :repo-root root
+                                :changed-paths ["unrelated/notes.md"]})]
+                (is (true? (:current? r)) (pr-str r))
+                (is (= ["unrelated/notes.md"] (:outside-closure r)))))))
         (finally
           (doseq [f (reverse (file-seq dir))] (io/delete-file f true)))))))

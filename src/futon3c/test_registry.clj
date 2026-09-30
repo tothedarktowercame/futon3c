@@ -985,42 +985,105 @@
     (record-namespace-run! options row)
     row))
 
+(defn- read-verified-run!
+  "The half of checking that check-record! and check-currency! share BEFORE
+  they differ: read and verify the chain, the run envelope, the intent
+  binding and the timestamps; capture the CURRENT scope and env fingerprint;
+  re-hash the recorded closure; locate the log object. Throws the same typed
+  refusals check-record! always threw for these. Currency facts, not
+  warrant judgements — no gate here depends on the run having passed."
+  [backend entry-id repo-root changed-paths]
+  (let [chain (read-chain! backend entry-id) run (:payload (last chain))
+        _ (when-not (= :run (:kind run)) (fail! :not-a-run-record {}))
+        intent (when (>= (count chain) 2) (:payload (nth chain (- (count chain) 2))))
+        _ (when-not (and (= :intent (:kind intent))
+                         (= (select-keys intent [:run/id :author :ran-at :code-sha :test-sha :command :env-fingerprint :scope])
+                            (select-keys run [:run/id :author :ran-at :code-sha :test-sha :command :env-fingerprint :scope])))
+            (fail! :missing-or-mismatched-run-intent {}))
+        _ (when-not (and (nonblank? (:author run))
+                         (not (.isBefore (Instant/parse (:finished-at run)) (Instant/parse (:ran-at run)))))
+            (fail! :invalid-run-time {}))
+        _ (when-not (and (vector? changed-paths) (every? nonblank? changed-paths))
+            (fail! :review-diff-required {}))
+        capture-options (merge (:scope run) {:repo-root repo-root :command (:command run)})
+        current (capture-code capture-options)
+        covered (set (concat (keys (:code-files run)) (keys (:test-files run))
+                             (map :path (:load-closure run))))
+        env (fingerprint capture-options)
+        ;; Closure check WITHOUT rerunning tests or builds: re-hash the
+        ;; RECORDED closure files. Sound because the closure was recorded
+        ;; in the run JVM after the tests (dynamic requires included), so
+        ;; any newly-loaded source implies a change to an already-recorded
+        ;; closure file. A changed closure file refuses naming the FILES; a
+        ;; changed path outside manifests and closure is :outside-closure.
+        closure-changed (closure-diff (closure-shas (:load-closure run))
+                                      (current-closure-shas repo-root (:load-closure run)))
+        log (:log-artifact run)
+        ;; The ledger holds the object under its own sha, so it cannot have
+        ;; moved; the recorded path is the fallback for pre-ledger records.
+        log-file (ledger/locate log)]
+    {:chain chain :run run :current current :env env
+     :closure-changed closure-changed :outside-closure (vec (sort (remove covered changed-paths)))
+     :log log :log-file log-file :recorded-reader (get run :reader-version 0)}))
+
+(defn- refute-if-drifted!
+  "The SHARED currency comparison — everything that can make a record stale
+  regardless of whether its tests passed: declared scope shas, the load
+  closure, the env fingerprint, the log object and its digest, and the
+  results/log reparse. Throws the typed refusals; returns nil when current.
+  check-record! and check-currency! run exactly this, so a failing record is
+  held to the same standard as a warrant — this can only ever say current,
+  never successful."
+  [repo-root {:keys [run current env closure-changed log log-file recorded-reader]}]
+  (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
+    (fail! :stale-sha
+           {:current current
+            :scope-drift
+            (classify-scope-drift
+             repo-root
+             (merge (:code-files run) (:test-files run))
+             (merge (:code-files current) (:test-files current)))}))
+  (when (seq closure-changed)
+    (fail! :environment-mismatch {:changed-files closure-changed
+                                  :next-action :rerun-the-declared-namespace}))
+  (when-not (= env (:env-fingerprint run))
+    (let [[expected observed] (data/diff (:env-fingerprint run) env)]
+      (fail! :environment-mismatch {:expected-only expected :observed-only observed
+                                    :next-action :reconcile-test-environment})))
+  ;; A ledger that cannot lose objects still has to say so when one is
+  ;; gone, rather than dereferencing nil (zai-1 ruling, 2026-09-17).
+  (when (nil? log-file)
+    (fail! :log-object-missing {:sha256 (:sha256 log)
+                                :ledger (or (:ledger log) (str ledger/default-root))
+                                :recorded-path (:path log)
+                                :next-action :re-register-the-run}))
+  ;; Reachable only if the ledger itself was edited: an object's name is
+  ;; its content, so bytes that do not hash to it did not arrive by put!.
+  (when-not (= (:sha256 log) (file-sha log-file))
+    (fail! :log-mismatch {:sha256 (:sha256 log) :observed (file-sha log-file)}))
+  (let [reparsed (parse-command-results (:command run) (get-in run [:results :exit])
+                                        (slurp log-file)
+                                        (get-in run [:results :duration-ms]))]
+    (when-not (= (:results run) reparsed)
+      ;; Say WHAT differs. On a v0 record the refusal cannot by itself
+      ;; separate a reader change from a doctored record, so the reader
+      ;; needs the diff and the log to adjudicate (zai-1 review).
+      (let [[recorded-only observed-only] (data/diff (:results run) reparsed)
+            detail {:recorded-only recorded-only :observed-only observed-only}]
+        (if (< recorded-reader reader-version)
+          (fail! :parser-superseded (merge detail
+                                           {:recorded-reader-version recorded-reader
+                                            :reader-version reader-version
+                                            :next-action :re-register-the-run}))
+          (fail! :results-log-mismatch detail))))))
+
 (defn check-record!
   "Cheap relative to execution, but hashes actual scope, resolved dependencies
   and log bytes. Caller supplies the review diff; no author-chosen diff waiver."
   [backend {:keys [entry-id repo-root changed-paths]}]
   (try
-    (let [chain (read-chain! backend entry-id) run (:payload (last chain))
-          _ (when-not (= :run (:kind run)) (fail! :not-a-run-record {}))
-          intent (when (>= (count chain) 2) (:payload (nth chain (- (count chain) 2))))
-          _ (when-not (and (= :intent (:kind intent))
-                           (= (select-keys intent [:run/id :author :ran-at :code-sha :test-sha :command :env-fingerprint :scope])
-                              (select-keys run [:run/id :author :ran-at :code-sha :test-sha :command :env-fingerprint :scope])))
-              (fail! :missing-or-mismatched-run-intent {}))
-          _ (when-not (and (nonblank? (:author run))
-                           (not (.isBefore (Instant/parse (:finished-at run)) (Instant/parse (:ran-at run)))))
-              (fail! :invalid-run-time {}))
-          _ (when-not (and (vector? changed-paths) (every? nonblank? changed-paths))
-              (fail! :review-diff-required {}))
-          capture-options (merge (:scope run) {:repo-root repo-root :command (:command run)})
-          current (capture-code capture-options)
-          covered (set (concat (keys (:code-files run)) (keys (:test-files run))
-                               (map :path (:load-closure run))))
-          outside-closure (vec (sort (remove covered changed-paths)))
-          env (fingerprint capture-options)
-          ;; Closure check WITHOUT rerunning tests or builds: re-hash the
-          ;; RECORDED closure files. Sound because the closure was recorded
-          ;; in the run JVM after the tests (dynamic requires included), so
-          ;; any newly-loaded source implies a change to an already-recorded
-          ;; closure file. A changed closure file refuses naming the FILES; a
-          ;; changed path outside manifests and closure is :outside-closure.
-          closure-changed (closure-diff (closure-shas (:load-closure run))
-                                        (current-closure-shas repo-root (:load-closure run)))
-          log (:log-artifact run)
-          ;; The ledger holds the object under its own sha, so it cannot have
-          ;; moved; the recorded path is the fallback for pre-ledger records.
-          log-file (ledger/locate log)
-          recorded-reader (get run :reader-version 0)]
+    (let [{:keys [chain run] :as facts}
+          (read-verified-run! backend entry-id repo-root changed-paths)]
       ;; Recorded facts first, and never as a reader question: a run whose
       ;; tests failed, whose inputs moved under it, or that produced no
       ;; closure never warranted anything, and no reader upgrade changes that.
@@ -1035,58 +1098,45 @@
                                :next-action :fix-the-run-not-the-record}))
       ;; Only this gate reads the log, so only this gate can be superseded.
       (when-not (command-successful? (:command run) (:results run))
-        (if (< recorded-reader reader-version)
-          (fail! :parser-superseded {:recorded-reader-version recorded-reader
+        (if (< (:recorded-reader facts) reader-version)
+          (fail! :parser-superseded {:recorded-reader-version (:recorded-reader facts)
                                      :reader-version reader-version
                                      :results (:results run)
                                      :next-action :re-register-the-run})
           (fail! :unsupported-results {:results (:results run)})))
-      (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
-        (fail! :stale-sha
-               {:current current
-                :scope-drift
-                (classify-scope-drift
-                 repo-root
-                 (merge (:code-files run) (:test-files run))
-                 (merge (:code-files current) (:test-files current)))}))
-      (when (seq closure-changed)
-        (fail! :environment-mismatch {:changed-files closure-changed
-                                      :next-action :rerun-the-declared-namespace}))
-      (when-not (= env (:env-fingerprint run))
-        (let [[expected observed] (data/diff (:env-fingerprint run) env)]
-          (fail! :environment-mismatch {:expected-only expected :observed-only observed
-                                        :next-action :reconcile-test-environment})))
-      ;; A ledger that cannot lose objects still has to say so when one is
-      ;; gone, rather than dereferencing nil (zai-1 ruling, 2026-09-17).
-      (when (nil? log-file)
-        (fail! :log-object-missing {:sha256 (:sha256 log)
-                                    :ledger (or (:ledger log) (str ledger/default-root))
-                                    :recorded-path (:path log)
-                                    :next-action :re-register-the-run}))
-      ;; Reachable only if the ledger itself was edited: an object's name is
-      ;; its content, so bytes that do not hash to it did not arrive by put!.
-      (when-not (= (:sha256 log) (file-sha log-file))
-        (fail! :log-mismatch {:sha256 (:sha256 log) :observed (file-sha log-file)}))
-      (let [reparsed (parse-command-results (:command run) (get-in run [:results :exit])
-                                            (slurp log-file)
-                                            (get-in run [:results :duration-ms]))]
-        (when-not (= (:results run) reparsed)
-          ;; Say WHAT differs. On a v0 record the refusal cannot by itself
-          ;; separate a reader change from a doctored record, so the reader
-          ;; needs the diff and the log to adjudicate (zai-1 review).
-          (let [[recorded-only observed-only] (data/diff (:results run) reparsed)
-                detail {:recorded-only recorded-only :observed-only observed-only}]
-            (if (< recorded-reader reader-version)
-              (fail! :parser-superseded (merge detail
-                                               {:recorded-reader-version recorded-reader
-                                                :reader-version reader-version
-                                                :next-action :re-register-the-run}))
-              (fail! :results-log-mismatch detail)))))
+      (refute-if-drifted! repo-root facts)
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id
        :checked-at (str (Instant/now)) :diff-paths changed-paths
-       :outside-closure outside-closure})
+       :outside-closure (:outside-closure facts)})
     (catch Exception e (if (:record/type (ex-data e)) (ex-data e)
-                          (refusal :record-unavailable {:error (.getMessage e)})))))
+                         (refusal :record-unavailable {:error (.getMessage e)})))))
+
+(defn check-currency!
+  "Is a registered RUN record still CURRENT — the same scope + load-closure +
+  env-fingerprint + log comparison check-record! applies to warrants, WITHOUT
+  warrant semantics: the tests may have failed. Joe's pytest goal is never
+  rerunning an unchanged test file, and ~20% of mfuton files carry
+  pre-existing failures among the suite's slowest; check-record! refuses
+  those :not-a-warrant before any comparison, so without this a failing file
+  could never be shown unchanged. Answer when current: {:current? true
+  :results <the recorded results, :outcomes included> ...}; refusals are the
+  same typed ones (:stale-sha, :environment-mismatch, :log-*, ...). It CANNOT
+  mint a warrant — nothing here looks at success — so a current failing
+  record stays a failing record (its :warrant? stays false; use
+  check-record! for warrant questions). A separate function rather than a
+  mode of check-record!: the warrant gate is not an option to bypass but a
+  different question, and callers must be able to see which one they asked."
+  [backend {:keys [entry-id repo-root changed-paths]}]
+  (try
+    (let [facts (read-verified-run! backend entry-id repo-root changed-paths)
+          run (:run facts)]
+      (refute-if-drifted! repo-root facts)
+      {:current? true :record run :results (:results run)
+       :chain-length (count (:chain facts)) :entry-id entry-id
+       :checked-at (str (Instant/now)) :diff-paths changed-paths
+       :outside-closure (:outside-closure facts)})
+    (catch Exception e (if (:record/type (ex-data e)) (ex-data e)
+                         (refusal :record-unavailable {:error (.getMessage e)})))))
 
 (def default-namespace-scan-limit
   "How many registry entries a namespace lookup scans, newest first. A bound on
