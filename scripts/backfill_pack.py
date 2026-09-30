@@ -98,6 +98,9 @@ an optional "candidates" key holding what would go in <id>.json.candidates.json,
 "more_searches" list. The template of the first turn is included below as the example. Do not
 write any file yourself: return the array; the publisher runs the validator.
 
+A rejection is {"id": "family/pattern", "query": "MOVE" or "SUBJECT", "reason": "why it does
+not fit, from its text"}; a citation is {"id": ..., "rationale": "why it fits"}.
+
 Do NOT count characters. Leave out "start" and "end" on fragments and display cues:
 quote the fragment's text exactly as it appears in the turn (and each cue's text exactly
 as it appears in its fragment), and the publisher finds the offsets. A quote that does
@@ -266,6 +269,12 @@ def place_offsets(element, record):
         lo, hi = spans[sentence["id"]]
         cursor = lo
         for frag in sentence.get("fragments") or []:
+            # The template shows pattern_refs with "rationale" and gives no
+            # shape for rejections, so readers write "rationale" there too;
+            # the validator's field is "reason".
+            for rej in frag.get("pattern_rejections") or []:
+                if not rej.get("reason") and rej.get("rationale"):
+                    rej["reason"] = rej.pop("rationale")
             text = frag.get("text") or ""
             if source[frag.get("start", -1):frag.get("end", -1)] != text or not text:
                 at = source.find(text, cursor, hi) if text else -1
