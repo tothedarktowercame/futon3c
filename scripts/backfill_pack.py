@@ -97,6 +97,11 @@ that `python3 scripts/session_turn_analysis.py template DIR/<id>.json` returns o
 an optional "candidates" key holding what would go in <id>.json.candidates.json, and the optional
 "more_searches" list. The template of the first turn is included below as the example. Do not
 write any file yourself: return the array; the publisher runs the validator.
+
+Do NOT count characters. Leave out "start" and "end" on fragments and display cues:
+quote the fragment's text exactly as it appears in the turn (and each cue's text exactly
+as it appears in its fragment), and the publisher finds the offsets. A quote that does
+not occur verbatim is refused.
 """
 
 
@@ -245,6 +250,40 @@ CLOSED_INTENTS = frozenset("""report-problem explain report clarify qualify appr
     ask-action continue verify explore retract withdraw""".split())
 
 
+def place_offsets(element, record):
+    """Fill fragment and cue offsets from their quoted text.
+
+    Readers quote text; counting characters by hand is where a batched
+    reader spent its turn (kimi-3, 2026-09-30).  A fragment's text is found
+    inside its sentence, searching forward from the previous fragment of the
+    same sentence; a cue's text is found inside its fragment.  Offsets a
+    reader did give are replaced when they do not match the text.  Text that
+    cannot be found raises ValueError, and the validator still has the last
+    word on everything else."""
+    source = record["source_text"]
+    spans = {s["id"]: (s["start"], s["end"]) for s in record["sentences"]}
+    for sentence in element.get("sentences") or []:
+        lo, hi = spans[sentence["id"]]
+        cursor = lo
+        for frag in sentence.get("fragments") or []:
+            text = frag.get("text") or ""
+            if source[frag.get("start", -1):frag.get("end", -1)] != text or not text:
+                at = source.find(text, cursor, hi) if text else -1
+                if at < 0:
+                    at = source.find(text, lo, hi) if text else -1
+                if at < 0:
+                    raise ValueError(f"{sentence['id']}: fragment text not in sentence: {text[:40]!r}")
+                frag["start"], frag["end"] = at, at + len(text)
+            cursor = frag["end"]
+            for cue in frag.get("display_cues") or []:
+                ctext = cue.get("text") or ""
+                if source[cue.get("start", -1):cue.get("end", -1)] != ctext or not ctext:
+                    at = source.find(ctext, frag["start"], frag["end"]) if ctext else -1
+                    if at < 0:
+                        raise ValueError(f"{sentence['id']}: cue not in fragment: {ctext[:40]!r}")
+                    cue["start"], cue["end"] = at, at + len(ctext)
+
+
 def publish(directory, answer_path, order=()):
     """Publish each element through the validator; never overwrite.
 
@@ -276,6 +315,12 @@ def publish(directory, answer_path, order=()):
             # session_turn_analysis accepts any label; the backfill does not.
             entry.update({"published": False,
                           "reason": "intent not on the closed list: " + ", ".join(map(str, off))})
+            results.append(entry)
+            continue
+        try:
+            place_offsets(element, json.load(open(request, encoding="utf-8")))
+        except (OSError, ValueError, KeyError) as error:
+            entry.update({"published": False, "reason": f"offsets: {error}"})
             results.append(entry)
             continue
         payload = {k: v for k, v in element.items()

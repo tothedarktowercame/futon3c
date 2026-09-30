@@ -177,6 +177,20 @@ class Publish(unittest.TestCase):
         self.assertFalse(os.path.exists(
             os.path.join(self.block, "agent-1-turn-2.json.analysis.json")))
 
+    def test_offsets_are_placed_from_quoted_text(self):
+        # review case (claude-17): readers quote text, the publisher counts
+        good = self.valid()
+        frag = good["sentences"][0]["fragments"][0]
+        del frag["start"], frag["end"]
+        frag["display_cues"] = [{"text": "harness work"}]
+        proc, summary = self.run_publish([good])
+        self.assertEqual(1, summary["published"], summary)
+        wrong = self.valid()
+        wrong["turn_id"] = "agent-1-turn-1"
+        wrong["sentences"][0]["fragments"][0]["text"] = "words that are not there"
+        proc, summary = self.run_publish([wrong])
+        self.assertIn("not in sentence", summary["turns"][0]["reason"])
+
     def test_existing_analysis_not_overwritten(self):
         _proc, first = self.run_publish([self.valid()])
         self.assertEqual(1, first["published"])
