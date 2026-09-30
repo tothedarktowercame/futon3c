@@ -4652,6 +4652,7 @@ RESPOND WITH ONLY:
                                              :mcp-server mcp-server
                                              :timeout-ms timeout-ms
                                              :cwd cwd
+                                             :agent-id aid-val
                                              :on-event on-event
                                              :on-runtime-event on-runtime-event
                                              :on-process-started

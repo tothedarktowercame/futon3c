@@ -72,6 +72,7 @@
             [futon3c.test-registry.local-store :as registry-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-context :as agent-context]
             [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.turn-notice :as turn-notice]
@@ -1945,6 +1946,13 @@
                            (str (get-in before [:jobs job-id :state])))
                          (= "running" (get-in after [:jobs job-id :state]))))]
       (when started?
+        (let [job (get-in after [:jobs job-id])
+              aid (:agent-id job)]
+          (agent-context/write-job-context-safely!
+           {:agent-id aid
+            :job-id job-id
+            :caller (:caller job)}
+           reg/get-agent))
         (when-let [controller (configured-invoke-ingress-controller)]
           (invoke-ingress/start-execution! controller job-id)))
       started?)))

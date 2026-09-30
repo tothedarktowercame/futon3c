@@ -17,6 +17,7 @@
   (:require [clojure.java.io :as io]
             [clojure.set :as cset]
             [clojure.string :as str]
+            [futon3c.agency.agent-context :as agent-context]
             [futon.notions :as notions]
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
@@ -218,8 +219,10 @@
 
 (defn- run-command
   "Execute a shell command and return {:exit N :out string :err string}."
-  [cwd command timeout-ms]
+  [cwd command timeout-ms agent-id session-id]
   (let [pb (ProcessBuilder. ^java.util.List ["bash" "-c" command])
+        _ (when agent-id
+            (.putAll (.environment pb) (agent-context/agent-env agent-id session-id)))
         _ (.directory pb (io/file cwd))
         _ (.redirectErrorStream pb false)
         proc (.start pb)
@@ -248,13 +251,13 @@
 (defn- tool-bash
   "Execute a bash command. Args: [command] or [command {:timeout-ms N}].
    Used by :bash, :bash-test, :bash-git, :bash-deploy."
-  [cwd default-timeout args]
+  [cwd default-timeout args agent-id session-id]
   (let [command (first args)
         opts (when (map? (second args)) (second args))
         timeout (or (:timeout-ms opts) default-timeout)]
     (if (str/blank? command)
       {:ok false :error "Command must be a non-blank string"}
-      (let [result (run-command cwd command timeout)]
+      (let [result (run-command cwd command timeout agent-id session-id)]
         (if (zero? (:exit result))
           {:ok true :result result}
           {:ok true :result result})))))
@@ -331,7 +334,7 @@
 (defn- tool-bash-readonly
   "Execute a read-only bash command. Rejects commands that mutate state.
    Args: [command] or [command {:timeout-ms N}]."
-  [cwd default-timeout args]
+  [cwd default-timeout args agent-id session-id]
   (let [command (str (first args))]
     (if-let [reason (readonly-rejection command)]
       {:ok false
@@ -340,7 +343,7 @@
                    "pipes are fine. Rewrite the command without the mutating "
                    "part, or report that the work needs a writable peripheral. "
                    "Do not retry variants of the same command.")}
-      (tool-bash cwd default-timeout args))))
+      (tool-bash cwd default-timeout args agent-id session-id))))
 
 ;; =============================================================================
 ;; HTTP tool
@@ -1086,11 +1089,16 @@
         :write          (tool-write cwd args)
 
         ;; Command tools
-        :bash           (tool-bash cwd timeout args)
-        :bash-readonly  (tool-bash-readonly cwd timeout args)
-        :bash-test      (tool-bash cwd timeout args)
-        :bash-git       (tool-bash cwd timeout args)
-        :bash-deploy    (tool-bash cwd timeout args)
+        :bash           (tool-bash cwd timeout args (:agent-id config)
+                                   (when-let [f (:session-id-fn config)] (f)))
+        :bash-readonly  (tool-bash-readonly cwd timeout args (:agent-id config)
+                                            (when-let [f (:session-id-fn config)] (f)))
+        :bash-test      (tool-bash cwd timeout args (:agent-id config)
+                                  (when-let [f (:session-id-fn config)] (f)))
+        :bash-git       (tool-bash cwd timeout args (:agent-id config)
+                                  (when-let [f (:session-id-fn config)] (f)))
+        :bash-deploy    (tool-bash cwd timeout args (:agent-id config)
+                                  (when-let [f (:session-id-fn config)] (f)))
 
         ;; Network tools
         :web-fetch      (tool-web-fetch args)

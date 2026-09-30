@@ -6,6 +6,7 @@
    stdout until the matching `result` event. Callers keep the cold invoke path as
    fallback; this namespace only manages warm process lifecycle."
   (:require [cheshire.core :as json]
+            [futon3c.agency.agent-context :as agent-context]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.job-tree :as job-tree]
@@ -448,6 +449,7 @@
              (.redirectInput java.lang.ProcessBuilder$Redirect/PIPE)
              (.redirectOutput java.lang.ProcessBuilder$Redirect/PIPE)
              (.redirectError java.lang.ProcessBuilder$Redirect/PIPE))
+        _ (.putAll (.environment pb) (agent-context/agent-env aid session-id))
         _ (when-let [d (cwd/resolve-cwd cwd)] (.directory pb (io/file d)))
         proc (.start pb)
         stderr (atom [])

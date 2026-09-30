@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.agency.agent-context :as agent-context]
             [futon3c.util.cwd :as cwd]
             [futon3c.agents.codex-activity :as codex-activity]))
 
@@ -352,8 +353,10 @@
    :timeout-ms is the bound actually applied (nil when unbounded).
    Returns {:exit :timed-out? :timeout-ms :session-id :text :error-text
             :stderr :raw-output :execution}."
-  [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
+  [cmd prompt-str {:keys [timeout-ms cwd agent-id session-id on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
+        _ (when agent-id
+            (.putAll (.environment pb) (agent-context/agent-env agent-id session-id)))
         _ (when-let [d (cwd/resolve-cwd cwd)]
             (.directory pb (io/file d)))
         emit-runtime! (fn [evt]
@@ -576,7 +579,7 @@
    process. Previously the only values were captured at registration, which
    made caller-supplied bounds unable to extend anything and made model/effort
    pins invisible to the CLI (README-agency-cap.md)."
-  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
            mcp-server
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
@@ -610,6 +613,8 @@
                  :as stream-result}
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
                                                    :cwd cwd
+                                                   :agent-id agent-id
+                                                   :session-id session-id
                                                    :on-event on-event
                                                    :on-runtime-event on-runtime-event
                                                    :on-process-started on-process-started
@@ -645,6 +650,7 @@
                                        :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd
+                                                           :agent-id agent-id
                                                            :on-event on-event
                                                            :on-runtime-event on-runtime-event
                                                            :on-process-started on-process-started
