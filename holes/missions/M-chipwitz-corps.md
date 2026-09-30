@@ -1,6 +1,15 @@
 # Mission: ChipWitz Corps — the warranted-work control layer
 
-**Status:** IDENTIFY (chartered 2026-06-11 from a live motivating example)
+**Status:** OPEN — IDENTIFY (chartered 2026-06-11 from a live motivating example)
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The mission's DERIVE section states a numeric warrant threshold and an observable rule distinguishing a determining warrant from a merely compatible pattern.
+- [ ] A typed PXR record schema exists for PSR and PUR events with choice-point references, and its tests pass.
+- [ ] A pilot-flow test shows a findable warrant producing a PSR and autonomous proceed before any operator question is surfaced.
+- [ ] `futon3c.aif.calibration` reads a `:pxr` evidence kind and reports warranted-work outcomes from paired PSR/PUR records.
+- [ ] A no-warrant pilot event creates a typed sorry-mining candidate that points back to the operator question and failed warrant search.
+- [ ] The mission names the `library/corps/` disciplines this layer operationalizes and links each to its protocol or guard.
 **Owner:** Joe + fable-1 (ground control); develops as-we-go alongside the WM pilot loop
 **Cross-ref:** `futon0/holes/missions/M-futonzero-generative.md` (the evaluation
 half rides FutonZero), `futon3/library/peripherals/pilot-plus-ground-control.flexiarg`,

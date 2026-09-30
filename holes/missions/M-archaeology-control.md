@@ -1,4 +1,4 @@
-**Status:** INSTANTIATE complete (2026-04-29) for three sibling artifact-classes; deferred siblings recorded in scope-out.
+**Status:** CLOSED — INSTANTIATE complete (2026-04-29) for three sibling artifact-classes; deferred siblings recorded in scope-out.
 **Home-repo:** futon3c
 **Family:** `archaeology-control` (structural-law-inventory.sexp:200)
 **Sibling:** [M-invariant-queue-extend](M-invariant-queue-extend.md) — same apparatus (probe / boundary / canary)

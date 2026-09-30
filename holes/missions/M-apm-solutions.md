@@ -1,5 +1,13 @@
 # Mission: APM Solutions — Expository Prelim Tutor
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The proof-state regression for `a01J06` has a test that reproduces the pre-created/symlinked `.edn` cache loss and passes with the state retained.
+- [ ] The conductor's execute-record parser accepts the documented heading variants without entering a missing-full-record redispatch loop, with passing tests in the conductor test namespace.
+- [ ] The first serious `:medium` slice records bridge-step checks, multipart proof status, and the sharpened blocker taxonomy in each produced solution artifact.
+- [ ] The APM manifest records a terminal Pass-1 result for all 489 problems, with partial and timed-out results distinguished from complete solutions.
+- [ ] A `:hard`-lane run demonstrates the documented agentic-breakpoint pause, operator intervention, and resume path without losing the proof context.
 
 **Date:** 2026-03-28 (IDENTIFY), 2026-03-29 (MAP→INSTANTIATE, all gates pass)
 **Status:** INSTANTIATE (all 6 gates pass, bonus rounds in progress)

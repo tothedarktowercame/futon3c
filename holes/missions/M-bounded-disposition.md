@@ -1,4 +1,12 @@
-**Status:** INSTANTIATE complete (2026-04-29) for the stash slice; siblings handed to Codex via GitHub issue.
+**Status:** OPEN — INSTANTIATE complete (2026-04-29) for the stash slice; siblings handed to Codex via GitHub issue.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] `bounded-disposition/stash` and its vocabulary, parser, bounds, inventory entry, and probe tests are present. (evidence: `src/futon3c/logic/archaeology.clj`, `test/futon3c/logic/archaeology_test.clj`, and `docs/structural-law-inventory.sexp`)
+- [x] `futon3/library/invariant-coherence/bounded-disposition.flexiarg` records the reusable shape and the stash/branch/mission-document examples. (evidence: `futon3/library/invariant-coherence/bounded-disposition.flexiarg`)
+- [x] Separate scope-bounded handoffs for the branch and mission-document siblings were opened as required by completion criterion 4. (evidence: this mission's 2026-04-29 checkpoint)
+- [ ] The stash pre-commit binding runs both `obsolescence-recognition/autostash` and `bounded-disposition/stash`, and a test or executable check demonstrates refusal on an over-bound or overdue undecided stash.
+- [ ] The boot-time binding runs `bounded-disposition/stash` and exposes its typed result without requiring manual tap registration.
 **Home-repo:** futon3c
 **Family:** `archaeology-control` (structural-law-inventory.sexp:200) — same as M-archaeology-control. Different shape.
 **Sibling missions:** [M-archaeology-control](M-archaeology-control.md) (subsumption-witness shape; obsolescence-recognition/* siblings); [M-invariant-queue-extend](M-invariant-queue-extend.md) (apparatus).

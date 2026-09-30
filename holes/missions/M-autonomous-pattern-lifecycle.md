@@ -1,5 +1,12 @@
 # Mission: Autonomous Pattern Lifecycle
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] An agent completes Gate A without manual `!psr`/`!pur` commands, and the evidence store contains matching PSR and PUR records with pattern, agent, and session continuity.
+- [ ] A Gate B evidence record contains candidate G scores, temperature, probabilities, the suggested pattern, and either adherence or a justified deviation.
+- [ ] A five-or-more-session Gate C record shows PUR outcomes changing a pattern's precision prior and that changed prior affecting a later suggestion.
+- [ ] A Gate D session record shows temperature adaptation, an abstention event at the configured threshold, and the agent's explicit logged choice.
 
 Date: 2026-03-09
 Status: READY

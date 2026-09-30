@@ -1,4 +1,4 @@
-Status: open
+**Status:** CLOSED — open; all four DOCUMENT exit criteria met and the mission records “Mission COMPLETE 2026-05-03.”
 
 > **2026-05-04 reopen.** Closed 2026-05-04 morning after a 20-item DOCUMENT
 > QA-pass walk. Operator review of the integrated war-machine output

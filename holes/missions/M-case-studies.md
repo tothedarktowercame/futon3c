@@ -1,5 +1,16 @@
 # M-case-studies — one problem at a time, to 100%
 
+**Status:** OPEN — Drafted 2026-08-11; awaiting Joe's edit and greenlight.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The case-loop start conditions are recorded as satisfied: batch-2 adjudicated on master, the hardening change landed, and Joe's case-1 greenlight is present.
+- [ ] The historical evidence manifest has digestible per-problem process texts for the solved corpus, with source transcripts left read-only.
+- [ ] The mining research output records independently convergent situation-class candidates and keeps every unassayed candidate out of the memory store.
+- [ ] At least one mined deposit passes the documented validation and zai-1 with/without teachability assay before entering the store.
+- [ ] The first active case closes with a report containing its route, interventions, memory fingerprints, counterfactual, observed glue, and deposited obstruction-to-resolution evidence.
+- [ ] The cumulative case record reports corpus closure percentage and per-case intervention, reuse, one-pass-after-build, and time-to-close metrics toward 100%.
+
 **Drafted 2026-08-11 by ams-claude-1 from Joe's strategy rethink; awaiting
 Joe's edit and greenlight. Supersedes batch mode (batches 1/2/2r closed
 the channel question: null at current coverage, verdict pre-registered
