@@ -398,3 +398,12 @@ unsigned commit, each touching its own file."
             (should (equal head (turn-stepper--git repo "rev-parse" "HEAD")))
             (should (string-empty-p (turn-stepper--git repo "status" "--porcelain")))))
       (delete-directory root t))))
+
+(ert-deftest turn-stepper-reload-adds-new-keys ()
+  "Planted in review (claude-17): Joe's Emacs had the maps from the first
+load, so r and R were undefined after a reload.  Simulate an old map."
+  (let ((turn-stepper-mode-map (make-sparse-keymap))
+        (turn-stepper-rewind-mode-map (make-sparse-keymap)))
+    (load (locate-library "turn-stepper.el") nil t)
+    (should (eq (lookup-key turn-stepper-mode-map (kbd "r")) #'turn-stepper-rewind))
+    (should (eq (lookup-key turn-stepper-rewind-mode-map (kbd "R")) #'turn-stepper-rewind-apply))))

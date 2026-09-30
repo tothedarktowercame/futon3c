@@ -309,16 +309,16 @@ carries that information."
 
 ;;; ---------------------------------------------------------------- mode
 
-(defvar turn-stepper-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "n") #'turn-stepper-next)
-    (define-key map (kbd "p") #'turn-stepper-previous)
-    (define-key map (kbd "g") #'turn-stepper-refresh)
-    (define-key map (kbd "q") #'quit-window)
-    (define-key map (kbd "RET") #'turn-stepper-visit-turn)
-    (define-key map (kbd "r") #'turn-stepper-rewind)
-    map)
+(defvar turn-stepper-mode-map (make-sparse-keymap)
   "Keymap for `turn-stepper-mode'.")
+;; Bound outside the defvar so that reloading the file (Joe's Emacs loads
+;; this checkout live) adds new keys; a defvar keeps the old map.
+(define-key turn-stepper-mode-map (kbd "n") #'turn-stepper-next)
+(define-key turn-stepper-mode-map (kbd "p") #'turn-stepper-previous)
+(define-key turn-stepper-mode-map (kbd "g") #'turn-stepper-refresh)
+(define-key turn-stepper-mode-map (kbd "q") #'quit-window)
+(define-key turn-stepper-mode-map (kbd "RET") #'turn-stepper-visit-turn)
+(define-key turn-stepper-mode-map (kbd "r") #'turn-stepper-rewind)
 
 (define-derived-mode turn-stepper-mode special-mode "象-Stepper"
   "Major mode for the operator-turn frame stepper."
@@ -820,13 +820,11 @@ Returns (:repo R :reverted N) or (:repo R :refused WHY)."
       (diff-mode) (setq buffer-read-only t) (goto-char (point-min)))
     (pop-to-buffer b)))
 
-(defvar turn-stepper-rewind-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "w") #'turn-stepper-rewind-worktree)
-    (define-key map (kbd "d") #'turn-stepper-rewind-diff)
-    (define-key map (kbd "R") #'turn-stepper-rewind-apply)
-    (define-key map (kbd "q") #'quit-window)
-    map))
+(defvar turn-stepper-rewind-mode-map (make-sparse-keymap))
+(define-key turn-stepper-rewind-mode-map (kbd "w") #'turn-stepper-rewind-worktree)
+(define-key turn-stepper-rewind-mode-map (kbd "d") #'turn-stepper-rewind-diff)
+(define-key turn-stepper-rewind-mode-map (kbd "R") #'turn-stepper-rewind-apply)
+(define-key turn-stepper-rewind-mode-map (kbd "q") #'quit-window)
 
 (define-derived-mode turn-stepper-rewind-mode special-mode "象-rewind"
   "What rewinding a turn would undo, per repo.")
