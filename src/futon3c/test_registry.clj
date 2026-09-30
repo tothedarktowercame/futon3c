@@ -315,10 +315,62 @@
                                            (sha value) (none :unset))]))}]
     (assoc parts :sha256 (sha parts))))
 
+(defn- tool-version-on-path
+  "The PATH-resolved PROG and its --version, or nil when PROG is not on PATH."
+  [repo-root prog]
+  (let [env (effective-environment)
+        r (shell/sh "which" prog :dir repo-root :env env)]
+    (when (zero? (:exit r))
+      (let [path (str/trim (:out r))
+            v (shell/sh path "--version" :dir repo-root :env env)]
+        {:path path :version (str/trim (str (:out v) (:err v)))}))))
+
+(defn- python-fingerprint*
+  "Python/pytest fingerprint. Chosen pins, and why:
+
+  - The interpreter executable's bytes and `--version` string: the runner is
+    whatever venv the command names, and a rebuilt venv must stale the record.
+  - The installed package set of THAT interpreter's environment as sorted
+    name==version strings from importlib.metadata (hashed, and listed). A
+    venv's dists are immutable-by-convention exactly like an ~/.m2 jar
+    (see immutable-artifact-roots), so dist metadata pins the installed
+    bytes without re-hashing every site-packages file. Compiled extensions
+    under site-packages are NOT individually hashed: they belong to a dist
+    whose name==version is pinned, and hashing a numpy/torch-sized tree per
+    registration is not cheap. Repo-local .so bindings are pinned instead by
+    the LOAD CLOSURE (audit hook on ctypes.dlopen in the pytest plugin) —
+    an in-place rebuild of those is an input change, which is a closure
+    question, not a fingerprint question.
+  - Environment keys as today (hashed) plus PYTHONPATH and MFUTON_HOME, and
+    the PATH-resolved lake/lean versions when present on PATH (the mfuton
+    tests shell out to them; nil means not installed, which is comparable)."
+  [{:keys [repo-root command]}]
+  (let [python (first command)
+        run (fn [argv] (let [r (apply shell/sh (concat argv [:dir repo-root :env (effective-environment)]))]
+                         (str/trim (str (:out r) (:err r)))))
+        package-program "import importlib.metadata as m\nprint(\"\\n\".join(sorted(f\"{d.metadata['Name']}=={d.version}\" for d in m.distributions())))"
+        packages (vec (remove str/blank? (str/split-lines (run [python "-c" package-program]))))
+        parts {:toolchain {:python-version (run [python "--version"])
+                           :executable {:path python :sha256 (file-sha python)}
+                           :packages packages
+                           :packages-sha256 (sha packages)}
+               :lake (tool-version-on-path repo-root "lake")
+               :lean (tool-version-on-path repo-root "lean")
+               :environment (into (sorted-map)
+                                  (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS"
+                                             "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"
+                                             "PYTHONPATH" "MFUTON_HOME" "PATH"]]
+                                    [key (if-let [value (get (effective-environment) key)]
+                                           (sha value) (none :unset))]))}]
+    (assoc parts :sha256 (sha parts))))
+
+(declare lean-command? python-command? runner-root)
+
 (defn fingerprint [options]
-  (if (= "lake" (first (:command options)))
-    (lean-fingerprint* options)
-    (fingerprint* options)))
+  (cond
+    (lean-command? (:command options)) (lean-fingerprint* options)
+    (python-command? (:command options)) (python-fingerprint* options)
+    :else (fingerprint* options)))
 
 (defn test-namespace-of
   "The single declared test namespace (validate-command! enforces exactly one -n)."
@@ -343,13 +395,19 @@
 
 (def ^:private runner-source-suffix "futon3c/test_registry/runner.clj")
 
+(def ^:private pytest-plugin-source-suffix
+  "test-registry-runner/pytest/futon3c_pytest_registry_plugin.py")
+
 (defn instrument?
   "True for a closure entry that is the registry's runner rather than
   anything the run was measuring."
   [entry]
   (let [entry-ns (str (:ns entry)) path (str (:path entry))]
     (or (= runner-namespace entry-ns)
-        (str/ends-with? path runner-source-suffix))))
+        (str/ends-with? path runner-source-suffix)
+        ;; The pytest plugin is filtered out by the plugin itself; this also
+        ;; heals a record written by a hand-run that did load it.
+        (str/ends-with? path pytest-plugin-source-suffix))))
 
 (defn- entry->closure
   [{:keys [ns url]} base-path]
@@ -457,13 +515,33 @@
 
 (defn lean-command? [command] (= "lake" (first command)))
 
+(defn python-command?
+  "A pytest command names its interpreter as an absolute path to a python
+  binary (validate-command! enforces the rest of the shape), so dispatch is
+  the basename starting with `python` — /tmp/mfs-venv/bin/python,
+  /usr/bin/python3.12, a .venv/bin/python all qualify; `lake` and `clojure`
+  never do."
+  [command]
+  (let [p (first command)]
+    (and (string? p) (str/starts-with? p "/")
+         (str/starts-with? (last (str/split p #"/")) "python"))))
+
+(def pytest-plugin-module "futon3c_pytest_registry_plugin")
+
+(defn pytest-plugin-dir
+  "The pytest plugin shipped beside the Clojure runner library."
+  []
+  (str (io/file (runner-root) "pytest")))
+
 (defn compute-closure
   "Clojure: the runner's out-file, written in the run JVM after the tests.
-  Lean: the import closure of the built module."
+  Lean: the import closure of the built module.
+  Pytest: the plugin's out-file, written in the run process at session end."
   [{:keys [repo-root command]} out-file]
-  (if (lean-command? command)
-    (lean-closure {:repo-root repo-root} (last command))
-    (closure-from-entries (edn/read-string (slurp out-file)) repo-root)))
+  (cond
+    (lean-command? command) (lean-closure {:repo-root repo-root} (last command))
+    (python-command? command) (closure-from-entries (edn/read-string (slurp out-file)) repo-root)
+    :else (closure-from-entries (edn/read-string (slurp out-file)) repo-root)))
 
 (defn closure-shas
   "Pure: closure entries -> {path sha256}. Testable without shelling out."
@@ -633,6 +711,52 @@
        (zero? (:exit results)) (pos? (:jobs results))
        (zero? (:error-count results))))
 
+(defn parse-pytest-results
+  "Pytest summary results from the final `==== N passed, M failed in X.XXs ====`
+  line (the LAST such line: the registry runs pytest with -rA, whose short
+  test summary precedes it and would otherwise double-match). Missing
+  categories on a parsed line count as 0. :outcomes carries the per-test
+  `-rA` short-summary lines (PASSED/FAILED/ERROR/SKIPPED node ids) when
+  present, so a FAILING run's record still names which tests failed — the
+  point of registering failing runs is that an unchanged failing file need
+  not be rerun either. An unparsable summary takes the (none :unparsed)
+  route like the Clojure parser."
+  [exit log duration-ms]
+  (let [summary (last (filter #(re-find #"\d+ (?:passed|failed|errors?|skipped)\b" %)
+                            (str/split-lines log)))
+        counts (when summary
+                 (into {} (comp (map (fn [[_ n kind]]
+                                       (cond
+                                         (re-matches #"errors?" kind) [:errors (parse-long n)]
+                                         (#{"passed" "failed" "skipped"} kind) [(keyword kind) (parse-long n)])))
+                                (remove nil?))
+                       (re-seq #"(\d+) (passed|failed|errors?|skipped)" summary)))
+        seconds (some->> summary (re-find #"in (\d+(?:\.\d+)?)s") second parse-double)]
+    (if (and summary (map? counts) ((complement empty?) counts))
+      {:exit exit
+       :tests (reduce + 0 (keep counts [:passed :failed :errors :skipped]))
+       :passed (or (:passed counts) 0)
+       :failures (or (:failed counts) 0)
+       :errors (or (:errors counts) 0)
+       :skipped (or (:skipped counts) 0)
+       :log-duration-ms (when seconds (long (Math/round (* seconds 1000))))
+       :outcomes (vec (keep #(first (re-find #"^(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS) (.+)$" %))
+                            (str/split-lines log)))
+       :duration-ms duration-ms}
+      {:exit exit :tests (none :unparsed) :passed (none :unparsed)
+       :failures (none :unparsed) :errors (none :unparsed) :skipped (none :unparsed)
+       :duration-ms duration-ms})))
+
+(defn pytest-successful?
+  "A pytest run warranted: exit 0, at least one test collected and run, zero
+  failures, zero errors. Skips do not block (recorded in :skipped); an
+  xpass/xfailed-only parse still names them in :outcomes."
+  [results]
+  (and (every? #(and (integer? %) (not (neg? %)))
+               ((juxt :exit :tests :passed :failures :errors :skipped :duration-ms) results))
+       (zero? (:exit results)) (pos? (:tests results))
+       (zero? (:failures results)) (zero? (:errors results))))
+
 (def reader-version
   "How this build reads a run. Bump when a change makes records written by an
   earlier registry unreadable on their own terms — the log parser's output
@@ -652,11 +776,18 @@
   reported, requires a bump; a comment or docstring edit costs nothing. This
   is a DISCIPLINE, not a mechanism — nothing but the editor's judgement trips
   it, which is the price of not refusing every Clojure warrant over a comment
-  (zai-1 ruling, 2026-09-17)."
+  (zai-1 ruling, 2026-09-17). The pytest plugin
+  (test-registry-runner/pytest/futon3c_pytest_registry_plugin.py) is pinned
+  the same way and excluded from closures by `instrument?`. The 2026-09-30
+  pytest runner addition did NOT bump: no record written before it carries a
+  pytest command, so nothing earlier becomes unreadable."
   1)
 
 (defn command-successful? [command results]
-  (if (lean-command? command) (lean-successful? results) (successful? results)))
+  (cond
+    (lean-command? command) (lean-successful? results)
+    (python-command? command) (pytest-successful? results)
+    :else (successful? results)))
 
 (def runner-alias :futon3c.test-registry/runner)
 
@@ -666,7 +797,11 @@
            [\"-v\" <ns/var>] for a spot-check. Namespace-bound: never the whole
            suite. The registry executes it through futon3c.test-registry.runner
            (see execution-command); records keep this logical command.
-  Lean:    [\"lake\" \"build\" <Dotted.Module>], one module target."
+  Lean:    [\"lake\" \"build\" <Dotted.Module>], one module target.
+  Pytest:  [\"<abs path to a python>\" \"-m\" \"pytest\" <one test file, repo-
+           relative>]. One file per record, never a directory or the whole
+           suite; the interpreter is named absolutely because the fingerprint
+           pins THAT venv's packages (a bare `python` would drift with PATH)."
   [command]
   (cond
     (and (vector? command) (every? nonblank? command) (lean-command? command))
@@ -674,6 +809,17 @@
       (when-not (and (= "build" build) (nil? more) (nonblank? module)
                      (re-matches #"[A-Za-z_][A-Za-z0-9_']*(\.[A-Za-z_][A-Za-z0-9_']*)*" module))
         (fail! :invalid-lean-module {:command command})))
+
+    (and (vector? command) (every? nonblank? command) (python-command? command))
+    (let [[_ m pytest test-file & more] command]
+      (when-not (and (= "-m" m) (= "pytest" pytest) (nil? more)
+                     (nonblank? test-file)
+                     (str/ends-with? test-file ".py")
+                     (not (str/starts-with? test-file "-"))
+                     (not (.isAbsolute (io/file test-file)))
+                     (not (str/includes? test-file "..")))
+        (fail! :invalid-pytest-command
+               {:command command :next-action :one-repo-relative-pytest-file-per-record})))
 
     (not (and (vector? command) (every? nonblank? command)
               (= "clojure" (first command))
@@ -699,10 +845,15 @@
   "The argv actually executed. Clojure runs the declared alias's classpath with
   the registry runner's alias appended: it adds the runner library as a local
   dependency and its :main-opts replace the declared runner. The closure
-  out-file is the last argument. Lean runs as declared."
+  out-file is the last argument. Lean runs as declared. Pytest runs the named
+  file with -rA (per-test outcomes in the log) and the registry plugin -p'd
+  in; the plugin is found via PYTHONPATH and told where to write by
+  run-process!'s environment."
   [command closure-out]
-  (if (lean-command? command)
-    command
+  (cond
+    (lean-command? command) command
+    (python-command? command) (into command ["-p" pytest-plugin-module "-rA"])
+    :else
     (let [config (pr-str {:aliases {runner-alias
                                     {:extra-deps {'futon3c/test-registry-runner {:local/root (runner-root)}}
                                      :main-opts ["-m" "futon3c.test-registry.runner"]}}})]
@@ -711,9 +862,10 @@
           (conj (str closure-out))))))
 
 (defn parse-command-results [command exit log duration-ms]
-  (if (lean-command? command)
-    (parse-lean-results exit log duration-ms)
-    (parse-results exit log duration-ms)))
+  (cond
+    (lean-command? command) (parse-lean-results exit log duration-ms)
+    (python-command? command) (parse-pytest-results exit log duration-ms)
+    :else (parse-results exit log duration-ms)))
 
 (defn closure-out-file
   "Where the runner writes a run's load closure: beside its log."
@@ -722,11 +874,20 @@
 
 (defn run-process!
   "Execute the LOGICAL command (see execution-command) with its log beside the
-  closure out-file, and parse results by command kind."
+  closure out-file, and parse results by command kind. A pytest run also gets
+  the plugin's directory PREPENDED to PYTHONPATH (preserving whatever the
+  caller set, e.g. mfuton's <repo>/src) plus the repo root and closure
+  out-file the plugin reads, as environment variables."
   [root command log-file]
   (let [builder (ProcessBuilder. ^java.util.List (execution-command command (closure-out-file log-file)))
         _ (.directory builder (io/file root))
         _ (.putAll (.environment builder) (effective-environment))
+        _ (when (python-command? command)
+            (let [env (.environment builder)
+                  existing (get env "PYTHONPATH")]
+              (.put env "PYTHONPATH" (str (pytest-plugin-dir) java.io.File/pathSeparator (or existing "")))
+              (.put env "FUTON3C_REGISTRY_REPO_ROOT" (str (.getCanonicalPath (io/file root))))
+              (.put env "FUTON3C_REGISTRY_CLOSURE_OUT" (str (closure-out-file log-file)))))
         _ (.redirectErrorStream builder true)
         _ (.redirectOutput builder (io/file log-file))
         start (System/nanoTime) process (.start builder) exit (.waitFor process)]
