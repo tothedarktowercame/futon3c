@@ -1,13 +1,34 @@
 #!/bin/sh
-# Sign each commit with the committing agent session, so a turn's own
-# commits can be told from other seats' in a shared checkout (M-象-2000:
-# rewinding a turn undoes only its own commits). Agents do nothing: the
-# session id is already in their environment. A commit with no session id
-# (Joe at a terminal) is left unsigned. This hook never blocks a commit.
-#   $1 = message file, $2 = source (message|template|merge|squash|commit)
+# Sign each commit with the agent that made it, so the 象 stepper's rewind
+# can undo one turn's (or one dispatch's) commits in a shared checkout
+# (M-象-2000; Joe 2026-09-30: all agents sign). Agents do nothing: identity
+# comes from the environment and from the job context Agency writes.
+#   Agent-Session  the committing session (Claude: CLAUDE_CODE_SESSION_ID;
+#                  others: FUTON_AGENT_SESSION_ID or the job context)
+#   Agent-Id       FUTON_AGENT_ID (set by Agency on every agent process)
+#   Agency-Job     the job being run, from ~/.futon/agent-context/<id>.json
+#   Dispatched-By  <caller agent>/<caller session> of that job, when known
+# A commit with none of these (Joe at a terminal) stays unsigned. This hook
+# never blocks a commit.   $1 = message file
 msg="$1"
-sid="${CLAUDE_CODE_SESSION_ID:-${FUTON_AGENT_SESSION_ID:-}}"
-[ -n "$sid" ] || exit 0
-git interpret-trailers --in-place --if-exists addIfDifferent \
-  --trailer "Agent-Session: $sid" "$msg" 2>/dev/null || true
+agent="${FUTON_AGENT_ID:-}"
+ctx=""
+[ -n "$agent" ] && ctx="${FUTON_AGENT_CONTEXT_DIR:-$HOME/.futon/agent-context}/$agent.json"
+field() {
+  [ -n "$ctx" ] && [ -r "$ctx" ] || return 0
+  python3 -c 'import json,sys
+try: v=json.load(open(sys.argv[1])).get(sys.argv[2])
+except Exception: v=None
+print(v or "")' "$ctx" "$1" 2>/dev/null
+}
+sid="${CLAUDE_CODE_SESSION_ID:-${FUTON_AGENT_SESSION_ID:-$(field session)}}"
+job="$(field job)"
+caller="$(field caller)"
+csess="$(field caller_session)"
+add() { git interpret-trailers --in-place --if-exists addIfDifferent \
+          --trailer "$1: $2" "$msg" 2>/dev/null || true; }
+[ -n "$sid" ] && add Agent-Session "$sid"
+[ -n "$agent" ] && add Agent-Id "$agent"
+[ -n "$job" ] && add Agency-Job "$job"
+[ -n "$caller" ] && add Dispatched-By "$caller${csess:+/$csess}"
 exit 0
