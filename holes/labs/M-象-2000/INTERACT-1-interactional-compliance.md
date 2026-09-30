@@ -89,6 +89,7 @@ the scene that accepts it, and the bad case the scene plants.
 | I11 | R17–R19: one history; as-of; exists(t, x) | Stepper, r/R, turn_frames (tonight) | Done as a view and as git rewind, and the REPL cut sends the notice. Remaining: `a` in the stepper is an as-of query at this frame ("what was open, granted and in force"), which combines I1, I3 and I10 at one time. | The scene steps back three frames and asserts that the ledger, grants and rules all read at that frame's time. Bad case: any one of the three read at "now". |
 | I12 | R29: communications among parts of the program are acts | P19 not built | 象 reads agent turns as well as operator turns (promises made in prose, design claims with their qualifications). The stepper shows them in the frame. | Run over the M-象-2000 MAP turns; the "only by correction" qualification is listed (P19's own acceptance). Bad case: a promise stated only in prose not listed in I1. |
 | I13 | R3: correctness conditions generated from the program text | xiang_acceptance.py (6 checks), xiang-trace rules (4) | The checks run on each new event (the elephantKanren loop), not on demand. A violation lights 象's modeline segment with the rule name, and clicking it opens `*象 trace check*`. | Plant a reply end with no dispatch; the modeline shows it within one event. Bad case: an open step (<15 min) reported as a violation. |
+| I14 | R20, R25 (rules over history), and the seam with the War Machine: Joe's "a large connected component that we can use to feed the war machine" | `mined_pattern_graph.py` (giant component, met 433005ff); M-象-cascade criteria 2 and 6 (induced rule, loaded by the WM in a plan-only run), at IDENTIFY since 2026-09-28; E-象-2000-wm-seam | In the stepper, each pattern cited in a frame shows whether it is in the giant component, its @why/@how neighbours, and, once M-象-cascade has one, its induced guard/produces rule with held-out hit counts and whether the WM loader admits it. `c` on a pattern opens that view. | A frame citing a pattern that is outside the component shows it as outside. Bad case: a proposal (a `?` candidate) shown as a library pattern the WM could load; claude-8's S1 says only library patterns can be cited. |
 
 ## Suggested order for Kimi
 
@@ -102,6 +103,9 @@ every later acceptance depends on it.
 3. I1, I2 (the ledger and promises), then I9 (the standing rule loop).
 4. I3, I4, I6, I10 (read-mostly views of built records).
 5. I5 (explicit path only), I12.
+5a. I14 in two steps: the component view now; the rule column when
+    M-象-cascade criterion 2 has produced a rule (that mission is at IDENTIFY,
+    awaiting Joe).
 6. I7 and I8 wait for Joe's decisions on P15/P16.
 
 ## Deferred, with re-arm conditions (war-room/wr-26)
