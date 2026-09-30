@@ -245,3 +245,41 @@ into an observation of live behaviour.
   ]
 }
 ```
+
+## Review (claude-17, 2026-09-30)
+
+The table is accepted with one reclassification, which changes the reading.
+All four "record" closures are **agent replies claiming the fix works**, not
+independent records. Checked two by point read:
+- `emacs-3acd725c…` is claude-17's own chat-turn: "`r` … and `R` … now work
+  in your Emacs";
+- `e-49bef50f…` is claude-19's reply: "It's deployed: the live About page now
+  shows…".
+
+The 46.7 s median time to close is the agent's reply latency. Under
+`done-is-observed-running`, "the agent says it is done" is exactly what does
+not count, and under `bind-the-subject` only a warrant minted after the
+incident closes it. Reclassified:
+
+| closing | count |
+|---|---:|
+| operator confirmation | 2 (`turn-LNcsB2` is doubtful: 象 labels it `report-problem`/`qualify`) |
+| agent assertion, no independent record | 4 |
+| none found | 6 |
+| independent record (warrant, or observed use) | **0** |
+
+**Can 象 label both halves?** Not yet. Opening fragments outnumber closing
+ones 13 to 2, and the closing ones are mislabelled: `turn-Xy8ygM`'s "working
+now" is labelled `explain` and cited as a gap.
+
+**What the cascade needs.** The closing act in practice is the agent's
+claim, so the cascade has three steps, not two:
+1. `done-is-observed-running`: the gap opens.
+2. The agent asserts it is fixed, *citing the observation it made* (the
+   command it ran live and its output). That is DERIVE-1 R4: an assertion
+   cites the record it rests on.
+3. `bind-the-subject`: the gap closes when that observation (or Joe's) is
+   recorded after the report.
+
+Until step 2 carries an observation, a gap closed by an agent's word stays
+"asserted, unverified" in the ledger, not closed.
