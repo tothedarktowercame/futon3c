@@ -1,13 +1,21 @@
 # M-codex-sorry-loop — the learning loop on a second runner and a second work class
 
 Date: 2026-07-28
-Status: **CHARTERED at Joe's direction** (this conversation: "produce a
+**Status:** OPEN — **CHARTERED at Joe's direction** (this conversation: "produce a
 codex-verbose version…, turn on memory use, add an outer loop for mining
 the codex transcripts, and get codex set to work patching the sorries").
 Window: **4 days** (the zai quota window; codex ≈97% free). Owner:
 claude-6 (ground control for this lane; architecture, review, wiring).
 Dual payoff: a demo that the memory system is runner-model-portable, and
 material progress on Joe's prelim-completion project.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The APM corpus has no transitive `sorryAx` in any problem proof.
+- [ ] Every formal problem statement has a reviewed faithfulness audit against its original exam text.
+- [ ] The full provenance ledger publishes interventions and misdispatches alongside successful runs.
+- [ ] A fresh held-out BPM problem completes the untouched API-driven loop without mining contamination.
+- [ ] The continuous meters record the Codex lane's receipts and mined-memory connectivity.
 
 ## Grounding facts (recon 2026-07-28, all verified live)
 

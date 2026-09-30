@@ -1,5 +1,13 @@
 # Mission: CYDER — Cybernetic Development Environment that Rocks
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [x] `test/futon3c/cyder_test.clj` passes its Phase 0 registry and lifecycle coverage. (evidence: Phase 0 Status records 17 tests and 41 assertions)
+- [ ] Every long-running server, bridge, daemon, peripheral, and state machine registers with the process registry.
+- [ ] Every registered process is inspectable and stoppable through `/api/alpha/processes`.
+- [ ] The process surface lists all registered processes by REPL-like or infrastructure layer.
+- [ ] A REPL-like process can be attached to, observed, stepped when supported, and detached without disruption.
 
 ## Status: IN-PROGRESS — Phase 0 done (audit + registration, 17 tests, 2026-03-01). Phase 1 (ops surface) scoped, not yet started.
 

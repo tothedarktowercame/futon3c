@@ -1,11 +1,20 @@
 # M-dionysus-winddown — get everything off the laptop, safely and usably
 
-**Status:** HEAD complete; IDENTIFY complete; MAP substantially complete (2026-08-14)
+**Status:** OPEN — HEAD complete; IDENTIFY complete; MAP substantially complete (2026-08-14)
 **Gate:** operator-decision — placement and sensitivity of raw session history (`~/.claude`, `~/.codex`): live mirror on a Linode, encrypted archive, or offline copy?
 **Gate:** operator-decision — one-shot `futon1b/migration/` export to a second site now (buys safety before the deadline) vs building the continuous replication `README-federate.md` specifies (buys the right thing, slower)?
 **Gate:** operator-input — FTS5 storage budget for indexing the Evidence Landscape, once MAP Q6 has a real entry count rather than an extrapolation.
 
 Deadline: **2026-08-28** (~14 days from HEAD).
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Every registered corpus verifies on at least two non-laptop sites.
+- [ ] A Dionysus `turn-commits` event is retrievable by `turn-id` from the Evidence Landscape on a non-laptop node.
+- [ ] `/api/alpha/evidence/text-search` returns results from a populated non-laptop FTS5 index.
+- [ ] A point-in-time recovery copy exists separately from all live mirrors.
+- [ ] A written reconciliation shows that Dionysus can be wiped without losing data.
+- [ ] Every broadened-scope asset is recorded as recoverable or usable, and the repo census is at inbox zero.
 
 ---
 

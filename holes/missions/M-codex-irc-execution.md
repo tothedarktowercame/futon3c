@@ -1,6 +1,6 @@
 # M-codex-irc-execution — Guaranteed IRC Execution Contract for Codex
 
-**Status:** DONE (2026-03-08)
+**Status:** CLOSED — DONE (2026-03-08)
 
 ## 1. IDENTIFY
 

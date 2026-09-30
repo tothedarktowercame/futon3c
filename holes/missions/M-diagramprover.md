@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-Status: active — programme of work adopted 2026-08-02 (see §Programme of Work below)
+**Status:** OPEN — active — programme of work adopted 2026-08-02 (see §Programme of Work below)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -152,19 +152,13 @@ into the diagram.
   proofs remain the primary product.
 - **Web UI** — all interaction is via REPL, Drawbridge, and Emacs.
 
-## Completion Criteria
+## Acceptance checklist (2026-09-30)
 
-1. **Sorry boundary atlas** exists as queryable EDN with blocker-type clustering
-   and cross-problem impact links for ≥100 problems.
-2. **Bayesian model A** (Beta-Binomial) is implemented and ranks interventions.
-   Ranking is validated against manual expert ranking on ≥20 sorry boundaries.
-3. **At least one targeted Mathlib extension** has been written based on the
-   model's recommendation and has closed ≥3 sorry across different problems
-   in a re-run.
-4. **TPG or LeanDojo** (whichever is available first) has been pointed at ≥10
-   sorry boundaries and has closed ≥2 that the conductor alone could not.
-5. **Pattern library has grown** from the initial 12 to ≥20 patterns, with at
-   least 4 extracted automatically from TPG programs or LeanDojo traces.
+- [ ] A **sorry boundary atlas** exists as queryable EDN with blocker-type clustering and cross-problem impact links for ≥100 problems.
+- [ ] **Bayesian model A** (Beta-Binomial) ranks interventions and agrees with manual expert ranking on ≥20 sorry boundaries.
+- [ ] A model-recommended Mathlib extension closes at least three sorries across different problems in a rerun.
+- [ ] **TPG or LeanDojo** attempts at least 10 sorry boundaries and closes at least two that the conductor alone could not.
+- [ ] The pattern library contains at least 20 patterns, including four extracted automatically from TPG programs or LeanDojo traces.
 
 ## Owner and Dependencies
 

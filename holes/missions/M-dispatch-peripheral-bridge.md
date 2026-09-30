@@ -1,5 +1,5 @@
 # Mission: Dispatch–Peripheral Bridge
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

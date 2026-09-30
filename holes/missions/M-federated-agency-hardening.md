@@ -1,11 +1,20 @@
 # M-federated-agency-hardening -- routing + healing per federation point
 
 Date: 2026-06-15
-Status: IDENTIFY — diagnosis recorded (Checkpoint 1). Cross-box federation routing
+**Status:** OPEN — IDENTIFY — diagnosis recorded (Checkpoint 1). Cross-box federation routing
 is not yet populating proxies; remote agents currently arrive as local phantoms.
 Sibling: `M-agency-hardening.md` (CLOSED 2026-06-12 — the local/IRC layer; named
 `M-kangaroo` warm-pouch as a deferred successor). This mission is the **federation**
 layer: making Agency correct across boxes.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] A laptop agent is invoked over the WS uplink while the reverse SSH tunnel is absent. (evidence: Checkpoint CP-F-verify, job `invoke-1783960316834-17-01c56302`)
+- [ ] Federation reconnects and restores the roster after either endpoint reboots without operator action.
+- [ ] Proxy rows report their remote site and distinguish presence from invocability.
+- [ ] Proxy status reflects the home agent's live state rather than the last synchronization tick.
+- [ ] Cross-site callers are recorded with site-qualified identities.
+- [ ] The obsolete `oxf=http://127.0.0.1:17070` peer entry is removed after the uplink soak verifies tunnel retirement.
 
 ## Motivation / the principle (Joe, 2026-06-15)
 
