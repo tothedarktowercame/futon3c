@@ -99,7 +99,11 @@
         (reset! index-atom before-index)
         (delete-tree! dir)))))
 
-(deftest persistence-error-reaches-mutation-caller-and-rolls-back-memory
+(deftest persistence-error-is-surfaced-by-the-flush-and-memory-leads-disk
+  ;; 2026-09-30: persistence is coalesced off the event path, so the mutation
+  ;; returns and the write outcome surfaces on the flush. Memory deliberately
+  ;; leads disk until a successful write; no rollback (later events may be in
+  ;; the atom by the time a background write fails).
   (let [dir (temp-dir)
         ledger-atom (var-get #'http/!invoke-jobs-ledger)
         index-atom (var-get #'http/!active-invoke-job-index)
@@ -113,13 +117,15 @@
       (with-redefs-fn {#'http/invoke-jobs-store-path
                        (constantly (.getAbsolutePath dir))}
         (fn []
-          (testing "the update does not report success or retain unpersisted state"
+          (testing "the mutation itself returns without waiting on the write"
+            (#'http/update-invoke-jobs-ledger! #(assoc % :next-seq 1)))
+          (testing "the flush surfaces the persistence failure"
             (is (thrown-with-msg?
                  clojure.lang.ExceptionInfo
                  #"persistence failed"
-                 (#'http/update-invoke-jobs-ledger!
-                  #(assoc % :next-seq 1))))
-            (is (= old @ledger-atom)))))
+                 (#'http/flush-invoke-jobs-ledger!)))
+            (is (= 1 (:next-seq @ledger-atom))
+                "memory leads disk; the update survives the failed write"))))
       (finally
         (reset! ledger-atom before-ledger)
         (reset! index-atom before-index)
@@ -142,16 +148,20 @@
         (fn []
           (#'http/persist-invoke-jobs-ledger! old)
           (let [failure (try
+                          (#'http/update-invoke-jobs-ledger!
+                           #(-> %
+                                (assoc :next-seq 2)
+                                (assoc-in [:jobs "new"] {:state "queued"})
+                                (update :job-order conj "new")))
+                          ;; The flush runs on this thread, so the stage hook
+                          ;; still simulates a post-rename directory-force
+                          ;; failure for the synchronous write.
                           (with-bindings
                             {#'http/*invoke-jobs-persist-stage-hook*
                              (fn [stage _]
                                (when (= :renamed stage)
                                  (throw (ex-info "directory force failed" {}))))}
-                            (#'http/update-invoke-jobs-ledger!
-                             #(-> %
-                                  (assoc :next-seq 2)
-                                  (assoc-in [:jobs "new"] {:state "queued"})
-                                  (update :job-order conj "new"))))
+                            (#'http/flush-invoke-jobs-ledger!))
                           nil
                           (catch clojure.lang.ExceptionInfo e e))
                 disk (edn/read-string (slurp target))]

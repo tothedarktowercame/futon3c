@@ -442,9 +442,16 @@
   "Indirection for delivery-recorder lookup (test seam)."
   resolve-delivery-recorder)
 
+;; Forward refs: reset-invoke-jobs! must also clear the coalesced-flush state
+;; (defined near persist-invoke-jobs-ledger!) so a reloaded/leaked flusher
+;; thread cannot write a stale dirty ledger after a test rebinds the store.
+(declare ^:private !invoke-ledger-flush-state invoke-ledger-flush-gate)
+
 (defn reset-invoke-jobs!
   "Test/dev helper: clear in-memory invoke-job ledger so next access reloads from disk."
   []
+  (locking invoke-ledger-flush-gate
+    (reset! !invoke-ledger-flush-state {:gen 0 :dirty? false :prompt? false :error nil}))
   (reset! !invoke-jobs-ledger nil)
   (reset! !active-invoke-job-index nil))
 
@@ -734,6 +741,159 @@
         (finally
           (Files/deleteIfExists tmp))))))
 
+;; ---------- coalesced ledger persistence (2026-09-30 invoke-jobs write storm) ----------
+;; kimi-5 measured every invoke-job event rewriting and fsyncing the WHOLE
+;; ledger (~49 MB at the time) under invoke-jobs-writer-lock — ~6 events per
+;; job, ~3 s each — so dispatch and polling waited behind the write. The event
+;; path now only marks the ledger dirty; ONE flusher thread persists the
+;; LATEST in-memory ledger at most once per *invoke-ledger-flush-interval-ms*
+;; (default 1.5 s), and a transition into a terminal job state requests a
+;; prompt flush that skips the coalescing wait, so a done/failed job reaches
+;; disk within the flush bound. The atomic tmp+fsync+rename write itself is
+;; unchanged — only how often it runs. DURABILITY: a hard crash can now lose
+;; at most the last interval's worth of ledger events; recover-inflight-jobs
+;; already folds a lost non-terminal job back to a terminal failure on
+;; restart, so the loss is the same class as a worker death.
+
+(declare invoke-job-terminal-state?)
+
+(def ^:dynamic *invoke-ledger-flush-interval-ms*
+  "Coalescing window for background ledger writes. Tests may rebind (root
+   bindings are visible to the flusher thread)."
+  1500)
+
+(def ^:dynamic *invoke-ledger-write!*
+  "Seam for tests: the durable write the flusher performs. Defaults to the
+   atomic persist; with-redefs sets the ROOT binding, which the flusher
+   thread sees."
+  persist-invoke-jobs-ledger!)
+
+(defonce ^:private !invoke-ledger-flush-state
+  ;; {:gen int — bumped by every flush request; :dirty? bool — a persist is
+  ;;  owed; :prompt? bool — skip the coalescing wait; :error Throwable —
+  ;;  outcome of the most recent attempt}. The generation prevents a
+  ;;  lost-dirty race: a write that finishes while NEWER events have already
+  ;;  marked the ledger dirty must not clear that flag.
+  (atom {:gen 0 :dirty? false :prompt? false :error nil}))
+
+(defonce ^:private invoke-ledger-flush-gate (Object.))
+(defonce ^:private !invoke-ledger-flusher-thread (atom nil))
+
+(defn- invoke-ledger-flusher-loop
+  []
+  (try
+    (loop []
+      (let [wait-for-work
+            (fn []
+              (locking invoke-ledger-flush-gate
+                (when-not (or (:dirty? @!invoke-ledger-flush-state)
+                              (:prompt? @!invoke-ledger-flush-state))
+                  (.wait invoke-ledger-flush-gate 10000))))]
+        (wait-for-work)
+        ;; Coalescing window: unless a prompt (terminal) flush was requested,
+        ;; sit out the interval so a burst of events merges into ONE write.
+        (locking invoke-ledger-flush-gate
+          (when-not (:prompt? @!invoke-ledger-flush-state)
+            (.wait invoke-ledger-flush-gate
+                   (long *invoke-ledger-flush-interval-ms*)))))
+      (let [st @!invoke-ledger-flush-state]
+        (if-not (:dirty? st)
+          ;; Spurious wake or prompt without work: clear the flag rather than
+          ;; spinning on it.
+          (when (:prompt? st)
+            (swap! !invoke-ledger-flush-state assoc :prompt? false))
+          (let [gen (:gen st)
+                snapshot @!invoke-jobs-ledger]
+            (try
+              (*invoke-ledger-write!* snapshot)
+              (swap! !invoke-ledger-flush-state
+                     (fn [s]
+                       (if (= (:gen s) gen)
+                         ;; no newer request landed during the write: clean
+                         (assoc s :dirty? false :prompt? false :error nil)
+                         ;; newer events are owed a write: keep dirty
+                         (assoc s :error nil))))
+              (catch Throwable t
+                ;; The write failed. The mutation that caused it has long
+                ;; returned; surface the outcome here and on the next flush
+                ;; attempt, and let the NEXT ledger event retry. Memory is
+                ;; deliberately NOT rolled back: later events may already be
+                ;; in the atom, and a stale rollback would clobber them.
+                (swap! !invoke-ledger-flush-state
+                       (fn [s]
+                         (if (= (:gen s) gen)
+                           (assoc s :dirty? false :prompt? false :error t)
+                           (assoc s :error t))))
+                (binding [*out* *err*]
+                  (prn (str "[invoke-ledger-flusher] ledger write failed; "
+                            "will retry on next ledger change: "
+                            (or (.getMessage t) (str t))))))))))
+      (recur))
+    (catch Throwable t
+      (binding [*out* *err*]
+        (prn (str "[invoke-ledger-flusher] loop died: " t))))))
+
+(defn- ensure-invoke-ledger-flusher!
+  []
+  (locking invoke-ledger-flush-gate
+    (when-not (and @!invoke-ledger-flusher-thread
+                   (.isAlive ^Thread @!invoke-ledger-flusher-thread))
+      (let [t (Thread. ^Runnable invoke-ledger-flusher-loop)]
+        (.setName t "invoke-ledger-flusher")
+        (.setDaemon t true)
+        (reset! !invoke-ledger-flusher-thread t)
+        (.start t)))))
+
+(defn- request-invoke-ledger-flush!
+  "Event-path persistence: mark the ledger dirty and RETURN without writing.
+  The flusher thread persists the latest ledger at most once per interval;
+  PROMPT? (a terminal job transition) asks it to skip the coalescing wait."
+  ([] (request-invoke-ledger-flush! false))
+  ([prompt?]
+   (swap! !invoke-ledger-flush-state
+          (fn [s] (assoc s :gen (inc (long (or (:gen s) 0)))
+                            :dirty? true
+                            :prompt? (boolean (or prompt? (:prompt? s))))))
+   (ensure-invoke-ledger-flusher!)
+   (locking invoke-ledger-flush-gate
+     (.notifyAll invoke-ledger-flush-gate))
+   nil))
+
+(defn flush-invoke-jobs-ledger!
+  "Synchronously persist the current ledger NOW and surface the write's
+  outcome. Used by tests and by anything that must know persistence succeeded
+  (the background flusher reports failures only via its log and
+  :error). Throws whatever the write throws; on failure the in-memory ledger
+  is left untouched (memory leads disk until a successful write)."
+  []
+  (let [snapshot @!invoke-jobs-ledger]
+    (when snapshot
+      (try
+        (*invoke-ledger-write!* snapshot)
+        (swap! !invoke-ledger-flush-state
+               (fn [s] (assoc s :dirty? false :prompt? false :error nil)))
+        ;; A background write may have been mid-flight with an OLDER snapshot
+        ;; whose rename can still land after ours, regressing the file. Queue
+        ;; one more asynchronous write of the (current, latest) ledger so the
+        ;; disk converges on the newest state.
+        (request-invoke-ledger-flush! false)
+        (catch Throwable t
+          (swap! !invoke-ledger-flush-state
+                 (fn [s] (assoc s :dirty? false :prompt? false :error t)))
+          (throw t))))))
+
+(defn- any-newly-terminal-job?
+  "Did this transition move a job into a terminal state (or add one already
+  terminal)? Only then does the event path request a prompt flush."
+  [before after]
+  (some (fn [[job-id after-job]]
+          (when-let [state (some-> (:state after-job) str)]
+            (when (invoke-job-terminal-state? state)
+              (let [before-state (some-> (get-in before [:jobs job-id :state]) str)]
+                (or (nil? before-state)
+                    (not (invoke-job-terminal-state? before-state)))))))
+        (:jobs after)))
+
 (defn- validate-invoke-jobs-ledger!
   [ledger]
   (let [required {:version integer?
@@ -850,14 +1010,12 @@
     (ensure-invoke-jobs-ledger!)
     (let [[before updated] (swap-vals! !invoke-jobs-ledger
                                        (comp compact-invoke-jobs-ledger f))]
-      (try
-        (persist-invoke-jobs-ledger! updated)
-        (rebuild-active-invoke-job-index! updated)
-        (catch Throwable t
-          (let [authoritative (if (:committed? (ex-data t)) updated before)]
-            (reset! !invoke-jobs-ledger authoritative)
-            (rebuild-active-invoke-job-index! authoritative))
-          (throw t))))))
+      ;; 2026-09-30: persistence is coalesced off the event path
+      ;; (request-invoke-ledger-flush!). A terminal transition asks the
+      ;; flusher to skip the coalescing wait. Persistence failures no longer
+      ;; throw here; they surface on the next flush attempt.
+      (request-invoke-ledger-flush! (any-newly-terminal-job? before updated))
+      (rebuild-active-invoke-job-index! updated))))
 
 (defn- update-invoke-jobs-ledger-vals!
   "Like update-invoke-jobs-ledger!, but returns [ledger-before ledger-after].
@@ -872,15 +1030,10 @@
     (ensure-invoke-jobs-ledger!)
     (let [[before after] (swap-vals! !invoke-jobs-ledger
                                      (comp compact-invoke-jobs-ledger f))]
-      (try
-        (persist-invoke-jobs-ledger! after)
-        (rebuild-active-invoke-job-index! after)
-        [before after]
-        (catch Throwable t
-          (let [authoritative (if (:committed? (ex-data t)) after before)]
-            (reset! !invoke-jobs-ledger authoritative)
-            (rebuild-active-invoke-job-index! authoritative))
-          (throw t))))))
+      ;; Coalesced persistence — see update-invoke-jobs-ledger!.
+      (request-invoke-ledger-flush! (any-newly-terminal-job? before after))
+      (rebuild-active-invoke-job-index! after)
+      [before after])))
 
 (defn- trim-stream-event
   "Compact a live invoke event for the durable job ledger. Text is
@@ -1216,7 +1369,6 @@
            "\nDetails: /api/alpha/invoke/jobs/" job-id))))
 
 (declare inbox-agent?)
-(declare invoke-job-terminal-state?)
 
 (defn- inbox-completion-bellback?
   "A pull-only caller needs a completion inbox record even when the worker's
