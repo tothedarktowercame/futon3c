@@ -101,6 +101,11 @@ write any file yourself: return the array; the publisher runs the validator.
 A rejection is {"id": "family/pattern", "query": "MOVE" or "SUBJECT", "reason": "why it does
 not fit, from its text"}; a citation is {"id": ..., "rationale": "why it fits"}.
 
+Relations: each fragment's "relations" is a non-empty list drawn ONLY from: context, condition,
+contrast, action, rationale, goal, dependency. (Not "evidence", "constraint", "method",
+"result", "problem" or "sequence": the validator refuses those. Supporting evidence is
+"rationale"; a constraint is "condition"; a step to take is "action".)
+
 Display cues: at most 8 words each, and all the cues in one sentence together may mark at most
 half of that sentence's words (a 17-word sentence allows 8 marked words). Most of each sentence
 stays unmarked; the validator refuses more.
