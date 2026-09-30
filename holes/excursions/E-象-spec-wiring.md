@@ -90,7 +90,7 @@ above).
 5. **Translation.** Pattern text to box, which is the part M-diagramprover
    lists as missing. Only after steps 2 to 4 show what a box needs to hold.
 
-Steps 2 to 5 are not started.
+Step 2 is done below. Steps 3 to 5 are not started.
 
 ## Pilot: intent, as stated by Joe
 
@@ -206,6 +206,58 @@ dangling output, the free k, and the missing Lean box.
 - The check was done by eye. Two ports were not traced, and one finding came
   from claude-1's account of files I did not read. A checker over a written
   diagram (step 4) removes that dependence.
+
+## Step 2: ports for five real patterns, written by hand (2026-09-30)
+
+The five patterns in the pilot's reading, ports taken from each flexiarg's own
+text in `futon3/library`. "External" means no pattern among the five produces
+it.
+
+| Pattern | Inputs | Outputs |
+|---|---|---|
+| `futon-theory/mission-scoping` | a mission document (external: the file) | success criteria (1 to 5), scope-in, scope-out, owner, dependencies |
+| `futon-theory/mission-lifecycle` | success criteria and scope (for scoped); owner and clear dependencies (for active); a cited blocker (for blocked); evidence and a reviewer (for done) | mission state, with time and agent |
+| `war-machine/advanceability` | mission is open; open-hole count | admissible target, or a nag to the operator |
+| `orchestration/consent-gate` | an action classed as outward or irreversible; operator approval | consent event with an id the action cites |
+| `coordination/intent-to-mission-binding` | a task; mission reference; success criteria; mission is active | a task bound to a mission |
+
+**Do they compose?**
+
+| From → to | Result |
+|---|---|
+| scoping → lifecycle | Yes. Four of scoping's five outputs are the stated requirements of lifecycle's first two transitions. Scope-out is consumed by nothing |
+| scoping, lifecycle → intent-binding | Yes. Success criteria from scoping, "mission is active" from lifecycle's state |
+| lifecycle → advanceability | Partly. "Open" has to be read off lifecycle's state, and the two use different vocabularies (`:greenfield … :done` against IDENTIFY … INSTANTIATE). Open-hole count has no producer |
+| advanceability → consent-gate | No. Advanceability produces a target; the gate takes an action. A box that turns a target into a classed action is missing |
+
+Inputs left open across the five: the mission document, the task, the
+open-hole count, evidence and reviewer, the action and its classification,
+operator approval. The last is external by design. The others are the list of
+what a cascade over these five would still have to be given.
+
+**Against the mined graph.** Among these five the graph has two links:
+lifecycle–advanceability (co-cited) and lifecycle–consent-gate (consecutive
+turns). Ports give three that the graph lacks (scoping–lifecycle,
+scoping–binding, lifecycle–binding), and
+`coordination/intent-to-mission-binding`, which the graph has no links for
+and refused as a seed, connects to two of the others. Ports give no direct
+link for lifecycle–consent-gate.
+
+**What this says about the slot reading above.** It needs two corrections.
+- Inputs are not in IF. IF names a situation ("you are defining a mission").
+  The typed requirements sit inside THEN, as preconditions of what THEN says
+  to do. So a box's inputs have to be read from THEN.
+- HOWEVER was "the input otherwise left open" in two of five (advanceability:
+  a mission with no holes; binding: free-form intent with no mission). In the
+  other three it is a caveat about the pattern's own limits. Where it does
+  fit, it reads as the bad case a check should be tested against.
+
+**What the flexiarg format lacks for this use.** Nothing marks which phrases
+in THEN are things required and which are things produced, and patterns name
+the same thing differently (mission phases). Both were resolved here by my
+reading, which is the step a translator would have to do.
+
+Limits: five patterns, one reader, no second reading to compare against.
 
 ## Appendix: pooling and the fixed-point question (side measurement)
 
