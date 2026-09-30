@@ -2738,6 +2738,29 @@
     (json-response 400 {:record/type :test-registry/refusal
                         :reason :invalid-json})))
 
+(defn handle-test-registry-currency
+  "POST /api/alpha/test-registry/currency — is this run record still current,
+  WITHOUT warrant semantics: a record whose tests failed can be shown
+  unchanged (returns its recorded results/outcomes) so a consumer can skip
+  rerunning an unchanged failing file. Mirrors /check's shape; never answers
+  the warrant question."
+  [request config]
+  (if-let [payload (parse-json-map (read-body request))]
+    (try
+      (let [currency! (requiring-resolve 'futon3c.test-registry/check-currency!)
+            result (currency! (test-registry-store-for-config config)
+                              (select-keys payload [:entry-id :repo-root :changed-paths]))]
+        (json-response
+         200
+         {:currency result
+          :meaning (str "recorded inputs unchanged, not the run's verdict; "
+                        ":current? true with :results is a skip-rerun answer, "
+                        "never a warrant.")}))
+      (catch Throwable throwable
+        (json-response 500 (local-store-refusal throwable :currency-endpoint-failed))))
+    (json-response 400 {:record/type :test-registry/refusal
+                        :reason :invalid-json})))
+
 (defn handle-test-registry-latest
   "GET /api/alpha/test-registry/latest?namespace=<ns>[&limit=<n>] — which record
   covers a namespace (AR-42); or ?command=<edn vector> — which record covers an
@@ -11122,6 +11145,9 @@
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)
+
+      (and (= :post method) (= "/api/alpha/test-registry/currency" uri))
+      (handle-test-registry-currency request config)
 
       (and (= :post method) (= "/api/alpha/test-registry/run" uri))
       (handle-test-registry-run request config)

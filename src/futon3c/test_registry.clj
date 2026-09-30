@@ -2010,6 +2010,11 @@
                              (assoc options :namespace-ledger-file
                                     (namespace-ledger-path options)))
         "check" (check-record! backend options)
+        ;; Currency, not warrant: the same comparison for a record whose
+        ;; tests failed (claude-4 requisition 2026-09-30). Exit-code rule
+        ;; needs no case here: a currency refusal is a refusal map
+        ;; (:warrant? false), a current answer carries no :warrant?.
+        "currency" (check-currency! backend options)
         ("latest-for-namespace" "latest-for-command")
         (local-latest backend operation options)
         "review" (review! backend options)

@@ -95,6 +95,24 @@
           (is (= 1 (get-in latest [:payload :results :failures])))
           (is (= :local-sqlite (:resolved-by latest))))
 
+        ;; currency: the FAILING record can be shown current (its recorded
+        ;; results returned) and stale on drift, while check keeps refusing
+        ;; it :not-a-warrant (claude-4 requisition 2026-09-30).
+        (let [failed-id (:evidence/id
+                         (registry/run-cli-operation
+                          "latest-for-namespace"
+                          (assoc options :namespace "demo.core-test")))
+              copts (assoc options :entry-id failed-id
+                           :changed-paths [])
+              current (registry/run-cli-operation "currency" copts)]
+          (is (true? (:current? current)) (pr-str current))
+          (is (= 1 (get-in current [:results :failures])))
+          (spit (io/file dir "src/demo/core.clj") "(ns demo.core)\n(defn answer [] 40)\n")
+          (is (= :stale-sha (:reason (registry/run-cli-operation "currency" copts))))
+          (spit (io/file dir "src/demo/core.clj") "(ns demo.core)\n(defn answer [] 42)\n")
+          (is (true? (:current? (registry/run-cli-operation "currency" copts))))
+          (is (= :not-a-warrant (:reason (registry/run-cli-operation "check" copts)))))
+
         (with-redefs [http-backend/make-http-backend
                       (fn [& _] (throw (ex-info "network backend constructed" {})))]
           (let [missing (registry/run-cli-operation
