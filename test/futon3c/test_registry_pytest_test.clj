@@ -193,3 +193,78 @@
               (is (= :not-a-warrant (:reason (check killed [])))))))
         (finally
           (doseq [f (reverse (file-seq dir))] (io/delete-file f true)))))))
+
+(deftest ^:slow out-of-repo-closure-inputs-are-pinned-by-content
+  ;; claude-4 requisition 2026-09-30: a closure entry whose path resolves
+  ;; (through symlinks) OUTSIDE the repo is pinned by its content sha and
+  ;; exempt from committed-scope, like ~/.m2 jars; in-repo entries —
+  ;; including a symlink to another in-repo file — keep today's rule.
+  (when-let [python @pytest-python]
+    (let [dir (.toFile (Files/createTempDirectory "registry-ext-" (make-array FileAttribute 0)))
+          ext (.toFile (Files/createTempDirectory "registry-ext-out-" (make-array FileAttribute 0)))
+          root (str dir)
+          backend (atom {:entries {} :order []})
+          check (fn [f run changed]
+                  (f backend {:entry-id (:evidence/id run) :repo-root root :changed-paths changed}))]
+      (try
+        (let [write (fn [d path text] (let [f (io/file d path)] (io/make-parents f) (spit f text)))]
+          (write dir "src/mymod.py" "VALUE = 1\n")
+          (write dir "data/data.txt" "v1\n")
+          ;; the external sibling: OUTSIDE the repo, reached through a symlink
+          (write ext "target.txt" "ext-v1\n")
+          (Files/createSymbolicLink (.toPath (io/file dir "linked"))
+                                    (.toPath ext) (make-array FileAttribute 0))
+          ;; a symlink INSIDE the repo to another in-repo file: in-repo rule
+          (.mkdirs (io/file dir "inrepo"))
+          (Files/createSymbolicLink (.toPath (io/file dir "inrepo/alias.txt"))
+                                    (.toPath (io/file dir "data/data.txt"))
+                                    (make-array FileAttribute 0))
+          (write dir "test/test_ext.py"
+                 (str "import pathlib\n"
+                      "import mymod\n\n"
+                      "def test_one():\n"
+                      "    assert mymod.VALUE == 1\n"
+                      "    assert pathlib.Path('linked/target.txt').read_text().strip() == 'ext-v1'\n"
+                      "    assert pathlib.Path('inrepo/alias.txt').read_text().strip() == 'v1'\n"))
+          (write dir "conftest.py"
+                 "import sys, os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))\n")
+          (sh root "git" "init" "-q") (sh root "git" "add" ".")
+          (sh root "git" "-c" "user.email=t@t" "-c" "user.name=t" "commit" "-qm" "fixture")
+          (let [opts {:repo-root root :command [python "-m" "pytest" "test/test_ext.py"]
+                      :code-paths ["conftest.py"] :test-paths ["test/test_ext.py"]
+                      :author "author" :artifact-dir (str root "/.artifacts")
+                      :ledger-root (str root "/.ledger")}
+                run (registry/register-run! backend opts)
+                payload (:payload run)
+                paths (set (map :path (:load-closure payload)))]
+            ;; a. register -> warrant, external path listed as exempted.
+            (is (true? (:warrant? payload)) (pr-str (select-keys payload [:warrant? :postcheck])))
+            (is (= ["linked/target.txt"] (:external-closure-paths payload)) (pr-str (:external-closure-paths payload)))
+            (is (contains? paths "linked/target.txt") (pr-str paths))
+            ;; d. the in-repo symlink is NOT exempt (resolves back inside).
+            (is (contains? paths "inrepo/alias.txt") (pr-str paths))
+            (is (not (some #(= % "inrepo/alias.txt") (:external-closure-paths payload))))
+            ;; b. PLANTED: edit the EXTERNAL target -> both checks stale,
+            ;; naming the LINK path (the sha is re-hashed through it).
+            (write ext "target.txt" "ext-v2\n")
+            (let [r (check registry/check-record! run [])
+                  c (check registry/check-currency! run [])]
+              (is (= :environment-mismatch (:reason r)) (pr-str r))
+              (is (= ["linked/target.txt"] (get-in r [:details :changed-files])))
+              (is (= :environment-mismatch (:reason c)) (pr-str c))
+              (is (= ["linked/target.txt"] (get-in c [:details :changed-files]))))
+            (write ext "target.txt" "ext-v1\n")
+            (is (true? (:warrant? (check registry/check-record! run []))))
+            ;; c. PLANTED: an uncommitted IN-repo closure file still refuses
+            ;; the warrant — the case a too-broad exemption breaks.
+            (write dir "src/mymod.py" "VALUE = 1  # uncommitted edit\n")
+            (let [bad (registry/register-run! backend opts)
+                  bad-payload (:payload bad)]
+              (is (not (true? (:warrant? bad-payload))))
+              (is (= :scope-not-committed (:reason (:postcheck bad-payload))) (pr-str (:postcheck bad-payload)))
+              (is (contains? (set (get-in bad-payload [:postcheck :details :paths])) "src/mymod.py")))
+            (write dir "src/mymod.py" "VALUE = 1\n")
+            (is (true? (:warrant? (:payload (registry/register-run! backend opts)))))))
+        (finally
+          (doseq [f (reverse (file-seq dir))] (io/delete-file f true))
+          (doseq [f (reverse (file-seq ext))] (io/delete-file f true)))))))

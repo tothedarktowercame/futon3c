@@ -194,6 +194,26 @@
                  nil)))
            paths))))
 
+(defn- resolves-outside-repo?
+  "True when PATH, resolved through symlinks, leaves REPO-ROOT. The join
+  point for the out-of-repo closure-input rule (claude-4 requisition,
+  2026-09-30): a checkout can carry an untracked symlink to a sibling
+  project (mfuton-share/tools/leanpy -> ~/code/mfuton-linux-binding/lean.py)
+  whose files are committed in THEIR repo, but the checkout's own git will
+  never see them, so the committed-scope rule as written refuses every
+  warrant that reads through the link. An out-of-repo closure entry is
+  therefore pinned by its recorded CONTENT SHA and exempted from the
+  committed-scope rule — the ~/.m2 reasoning of immutable-artifact-roots,
+  applied to a path class rather than a directory list. Safe because
+  currency re-hashes the recorded path through the link: editing the target
+  still stales the record (closure-diff names the LINK path). In-repo
+  entries (including a symlink to another in-repo file, which resolves
+  back inside) keep today's rule exactly."
+  [repo-root path]
+  (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file path)) path (io/file repo-root path))))
+        base (.toPath (.getCanonicalFile (io/file repo-root)))]
+    (not (.startsWith (.toPath f) base))))
+
 (defn- require-committed-scope!
   [repo-root paths stage]
   (when-let [offenders (seq (uncommitted-scope repo-root paths))]
@@ -942,8 +962,13 @@
         ;; record can state. The registry already treats an unusable closure
         ;; this way ("No closure means no warrant; the run record is still
         ;; appended") — zai-1 review, 2026-09-17.
+        external-closure-paths (when (vector? closure)
+                                 (vec (sort (filter #(resolves-outside-repo? repo-root %)
+                                                    (map :path closure)))))
         closure-uncommitted (when (vector? closure)
-                              (seq (uncommitted-scope repo-root (map :path closure))))
+                              (seq (uncommitted-scope
+                                    repo-root (remove (set external-closure-paths)
+                                                      (map :path closure)))))
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
         ;; HEAD is provenance, not part of the declared input scope.
@@ -962,6 +987,8 @@
                                                            :next-action :fix-the-ledger-and-re-register})))
                               :execution/stable? stable?
                               :execution/post-code (:code post)
+                              :external-closure-paths (when (seq external-closure-paths)
+                                                        external-closure-paths)
                               :runner-sha (when (vector? closure-entries)
                                             (runner-sha closure-entries repo-root))
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
