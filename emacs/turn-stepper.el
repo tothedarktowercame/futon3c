@@ -66,6 +66,9 @@ The value is passed to `display-buffer-in-side-window'."
 
 ;;; ---------------------------------------------------------------- state
 
+(defvar turn-stepper--reload-failed nil
+  "Non-nil while the stepper reopens its old frames after a failed reload.")
+
 (defvar turn-stepper--cache (make-hash-table :test 'equal)
   "Session id -> list of frames (most recent fetch).")
 
@@ -504,10 +507,11 @@ current frame on screen instead of a loading message."
                        ;; Put back what was showing; a busy evidence store
                        ;; must not cost the frames already read.
                        (when (gethash session-id turn-stepper--cache)
-                         (turn-stepper--open session-id source
+                         (let ((turn-stepper--reload-failed t))
+                          (turn-stepper--open session-id source
                                              (turn-stepper--index-after-reload
                                               session-id (length (gethash session-id turn-stepper--cache)))
-                                             t))))
+                                             t)))))
                  (when (buffer-live-p output)
                    (kill-buffer output))))))))
     proc))

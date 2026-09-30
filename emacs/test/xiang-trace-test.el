@@ -8,6 +8,7 @@
 (defvar agent-chat--session-id nil)
 (defvar agent-chat-user-speaker nil)
 (defvar agent-chat--turn-git-heads nil)
+(defvar turn-stepper--reload-failed nil)
 
 (defun xiang-trace-test--ev (kind path &optional session age &rest props)
   "An event AGE seconds old (default an hour, so steps are overdue)."
@@ -138,6 +139,15 @@ turn and dispatching it are stubbed beneath the recorders."
                                  (reverse xiang-trace--events))))
           (should (equal '(("dispatch → reading or failure" "t1.json" open))
                          (xiang-trace-violations xiang-trace--events))))
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-failed-reload-is-not-a-reload ()
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil))
+    (unwind-protect
+        (progn
+          (let ((turn-stepper--reload-failed t)) (xiang-trace--on-stepper-open "s"))
+          (should (eq 'stepper-reload-failed (plist-get (car xiang-trace--events) :kind))))
       (delete-file xiang-trace-file))))
 
 (provide 'xiang-trace-test)

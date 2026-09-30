@@ -85,8 +85,13 @@ Each is a plist (:at SECONDS :kind SYMBOL :path STR :session STR ...).")
              (string-match "\\(turn-[A-Za-z0-9]+\\)" detail))
     (xiang-trace-record 'failed (concat (match-string 1 detail) ".json") :detail detail)))
 
+(defvar turn-stepper--reload-failed)
+
 (defun xiang-trace--on-stepper-open (session-id &rest _)
-  (xiang-trace-record 'stepper-reloaded nil :session session-id))
+  ;; Reopening the old frames after a failed reload is not a reload.
+  (xiang-trace-record (if (bound-and-true-p turn-stepper--reload-failed)
+                          'stepper-reload-failed 'stepper-reloaded)
+                      nil :session session-id))
 
 (defun xiang-trace-enable ()
   "Attach the recorders."
