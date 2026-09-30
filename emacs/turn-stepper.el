@@ -316,6 +316,7 @@ carries that information."
     (define-key map (kbd "g") #'turn-stepper-refresh)
     (define-key map (kbd "q") #'quit-window)
     (define-key map (kbd "RET") #'turn-stepper-visit-turn)
+    (define-key map (kbd "r") #'turn-stepper-rewind)
     map)
   "Keymap for `turn-stepper-mode'.")
 
@@ -600,6 +601,147 @@ Frames are cached per session; use `g' in the stepper to refresh."
                             (1- (length (gethash session-id
                                                  turn-stepper--cache))))
       (turn-stepper--start-fetch session-id source))))
+
+;;; ---------------------------------------------------------------- rewind
+;; Rewinding a turn, first as a view.  Each repo's state at the start of a
+;; turn is its last commit before the turn's time (on the first-parent line
+;; of HEAD), so the pin is derived from git's own history rather than
+;; recorded; what the turn changed is pin..(last commit before the next
+;; turn).  Commits by other seats in the same window are included, because
+;; the repos are shared -- the view says so rather than pretending otherwise.
+;; Uncommitted edits are not covered.
+
+(defcustom turn-stepper-code-root "~/code/"
+  "Directory holding the repos named in turn-commits rows."
+  :type 'directory :group 'turn-stepper)
+
+(defcustom turn-stepper-rewind-dir "/tmp/xiang-rewind/"
+  "Where read-only worktrees at a pin are created."
+  :type 'directory :group 'turn-stepper)
+
+(defun turn-stepper--git (repo &rest args)
+  "Run git ARGS in REPO; trimmed stdout, or nil on failure."
+  (with-temp-buffer
+    (let ((default-directory (file-name-as-directory repo)))
+      (when (and (file-directory-p repo)
+                 (zerop (apply #'call-process "git" nil '(t nil) nil args)))
+        (string-trim (buffer-string))))))
+
+(defun turn-stepper--last-commit-before (repo at)
+  "Last first-parent commit of HEAD in REPO committed before AT, or nil."
+  (let ((sha (turn-stepper--git repo "rev-list" "-1" "--first-parent"
+                                (concat "--before=" at) "HEAD")))
+    (and sha (not (string-empty-p sha)) sha)))
+
+(defun turn-stepper--frame-repos (frame)
+  "Repo names with commits recorded in FRAME's turn-commits rows."
+  (let (repos)
+    (dolist (h (turn-stepper--aget 'happened frame))
+      (let ((s (turn-stepper--aget 'summary h)))
+        (when (equal (turn-stepper--aget 'event s) "turn-commits")
+          (dolist (c (turn-stepper--aget 'commits s))
+            (let ((r (turn-stepper--aget 'repo c)))
+              (when r (cl-pushnew r repos :test #'equal)))))))
+    (nreverse repos)))
+
+(defun turn-stepper--rewind-plan (frame next-at)
+  "Per repo: the pin at FRAME's start and the commits up to NEXT-AT.
+Returns a list of plists (:repo :path :pin :end :commits), commits as
+\"SHA<TAB>AUTHOR<TAB>SUBJECT\" lines oldest first."
+  (let ((at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame))))
+    (delq nil
+          (mapcar
+           (lambda (repo)
+             (let* ((path (expand-file-name repo turn-stepper-code-root))
+                    (pin (turn-stepper--last-commit-before path at))
+                    (end (if next-at (turn-stepper--last-commit-before path next-at)
+                           (turn-stepper--git path "rev-parse" "HEAD"))))
+               (when (and pin end)
+                 (list :repo repo :path path :pin pin :end end
+                       :commits (and (not (equal pin end))
+                                     (split-string
+                                      (or (turn-stepper--git path "log" "--reverse" "--first-parent"
+                                                             "--format=%h%x09%an%x09%s"
+                                                             (concat pin ".." end))
+                                          "")
+                                      "\n" t))))))
+           (turn-stepper--frame-repos frame)))))
+
+(defvar-local turn-stepper--rewind-plan nil)
+
+(defun turn-stepper-rewind ()
+  "Show what rewinding to the start of the current frame's turn would undo."
+  (interactive)
+  (let* ((frame (nth turn-stepper--index turn-stepper--frames))
+         (next (nth (1+ turn-stepper--index) turn-stepper--frames))
+         (next-at (and next (turn-stepper--aget 'at (turn-stepper--aget 'turn next))))
+         (at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame)))
+         (plan (turn-stepper--rewind-plan frame next-at))
+         (buf (get-buffer-create "*象 rewind*")))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (format "Rewind to the start of the turn at %s\n" at))
+        (insert (format "Window: %s → %s\n\n" at (or next-at "now")))
+        (if (null plan)
+            (insert "No commits in this turn's window: nothing to rewind in git.\n")
+          (dolist (p plan)
+            (insert (propertize (format "%s  pin %s\n" (plist-get p :repo)
+                                        (substring (plist-get p :pin) 0 12))
+                                'turn-stepper-rewind p 'face 'bold))
+            (dolist (c (plist-get p :commits))
+              (insert (propertize (concat "  would undo  " (replace-regexp-in-string "\t" "  " c) "\n")
+                                  'turn-stepper-rewind p)))
+            (insert "\n")))
+        (insert "Commits by any seat in the window are listed: the repos are shared.\n"
+                "Uncommitted edits are not covered.\n"
+                "On a repo's lines: w = read-only worktree at the pin, d = diff pin..end, q = quit\n"))
+      (turn-stepper-rewind-mode)
+      (setq turn-stepper--rewind-plan plan)
+      (goto-char (point-min)))
+    (pop-to-buffer buf)))
+
+(defun turn-stepper--rewind-at-point ()
+  (or (get-text-property (point) 'turn-stepper-rewind)
+      (user-error "Not on a repo's lines")))
+
+(defun turn-stepper-rewind-worktree ()
+  "Open a detached, read-only worktree of the repo at point, at its pin."
+  (interactive)
+  (let* ((p (turn-stepper--rewind-at-point))
+         (dir (expand-file-name (format "%s-%s" (plist-get p :repo)
+                                        (substring (plist-get p :pin) 0 12))
+                                turn-stepper-rewind-dir)))
+    (unless (file-directory-p dir)
+      (make-directory turn-stepper-rewind-dir t)
+      (unless (turn-stepper--git (plist-get p :path) "worktree" "add" "--detach"
+                                 dir (plist-get p :pin))
+        (user-error "git worktree add failed for %s" (plist-get p :repo))))
+    (let ((b (dired dir)))
+      (with-current-buffer b (setq buffer-read-only t))
+      b)))
+
+(defun turn-stepper-rewind-diff ()
+  "Show pin..end for the repo at point: everything the rewind would undo."
+  (interactive)
+  (let* ((p (turn-stepper--rewind-at-point))
+         (out (turn-stepper--git (plist-get p :path) "diff" "--stat" "-p"
+                                 (plist-get p :pin) (plist-get p :end)))
+         (b (get-buffer-create (format "*象 rewind diff %s*" (plist-get p :repo)))))
+    (with-current-buffer b
+      (let ((inhibit-read-only t)) (erase-buffer) (insert (or out "")))
+      (diff-mode) (setq buffer-read-only t) (goto-char (point-min)))
+    (pop-to-buffer b)))
+
+(defvar turn-stepper-rewind-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "w") #'turn-stepper-rewind-worktree)
+    (define-key map (kbd "d") #'turn-stepper-rewind-diff)
+    (define-key map (kbd "q") #'quit-window)
+    map))
+
+(define-derived-mode turn-stepper-rewind-mode special-mode "象-rewind"
+  "What rewinding a turn would undo, per repo.")
 
 (provide 'turn-stepper)
 ;;; turn-stepper.el ends here

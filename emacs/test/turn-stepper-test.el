@@ -245,3 +245,47 @@ fallback replaced other REPLs' windows in Joe's frames."
           (should-not (get-buffer-window buf)))
       (delete-other-windows)
       (kill-buffer buf) (kill-buffer src) (kill-buffer other))))
+
+(defun turn-stepper-test--repo-with-commits ()
+  "A scratch repo with commits at 10:00, 10:10 and 10:20 UTC."
+  (let* ((root (make-temp-file "ts-code" t))
+         (repo (expand-file-name "r" root))
+         (process-environment (append '("GIT_AUTHOR_NAME=A" "GIT_AUTHOR_EMAIL=a@x"
+                                        "GIT_COMMITTER_NAME=A" "GIT_COMMITTER_EMAIL=a@x")
+                                      process-environment)))
+    (make-directory repo)
+    (let ((default-directory (file-name-as-directory repo)))
+      (call-process "git" nil nil nil "init" "-q")
+      (dolist (tm '("10:00" "10:10" "10:20"))
+        (with-temp-file (expand-file-name "f" repo) (insert tm))
+        (call-process "git" nil nil nil "add" "f")
+        (let ((process-environment
+               (append (list (format "GIT_COMMITTER_DATE=2026-09-29T%s:00Z" tm)
+                             (format "GIT_AUTHOR_DATE=2026-09-29T%s:00Z" tm))
+                       process-environment)))
+          (call-process "git" nil nil nil "commit" "-q" "-m" (concat "at " tm)))))
+    root))
+
+(ert-deftest turn-stepper-rewind-pin-and-window ()
+  "The pin is the last commit before the turn; the window runs to the next turn.
+Planted: a commit AFTER the next turn (10:20) must not be listed."
+  (let* ((root (turn-stepper-test--repo-with-commits))
+         (turn-stepper-code-root root)
+         (frame '((turn . ((at . "2026-09-29T10:05:00Z")))
+                  (happened . (((summary . ((event . "turn-commits")
+                                            (commits . (((repo . "r")))))))))))
+         (plan (turn-stepper--rewind-plan frame "2026-09-29T10:15:00Z"))
+         (p (car plan)))
+    (unwind-protect
+        (progn
+          (should (= 1 (length plan)))
+          (should (equal "at 10:00" (turn-stepper--git (plist-get p :path) "log" "-1"
+                                                       "--format=%s" (plist-get p :pin))))
+          (should (equal '("at 10:10") (mapcar (lambda (c) (car (last (split-string c "\t"))))
+                                               (plist-get p :commits)))))
+      (delete-directory root t))))
+
+(ert-deftest turn-stepper-rewind-nothing-without-commits ()
+  (should-not (turn-stepper--rewind-plan '((turn . ((at . "2026-09-29T10:05:00Z")))
+                                           (happened . nil))
+                                         nil)))
