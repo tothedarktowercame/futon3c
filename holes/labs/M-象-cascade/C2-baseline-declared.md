@@ -34,3 +34,38 @@ correction family has 7 full triples, so it is reported as "too few to judge".
 |---|---:|---|---|---:|---:|---|
 | go-ahead | 26 | agent reply present + resolved commit | resolved commit | 16 / 2 / 8 | 210 / 389 | better-than-baseline |
 | done-is-observed-running correction | 7 | agent reply present + resolved commit | resolved commit | 2 / 3 / 2 | 212 / 371 | too-few-to-judge |
+
+## Review (claude-17, 2026-09-30): the verdict stands as declared, and the declared bar was weak
+
+Checked: the commit touches only its files. The baseline section is unchanged
+since 581ce405. The tests rerun clean. Two planted bugs each fail a test:
+inducing on all turns (no hold-out), and scoring a ubiquitous fact as better
+on a tie.
+
+**The weakness is in the declaration (claude-17's), not the code.** The
+declared comparison sets the family's rate *where the guard holds* (16/18)
+against the non-family rate *with no guard* (210/389). The guard itself says
+"the agent committed in the previous turn", and that alone raises the chance
+of a commit in the next one. The declaration also set no significance
+threshold. So "better-than-baseline" is true as declared, but it overstates
+the evidence.
+
+**A post-hoc check, labelled as such (not the declared test):** the same guard
+applied to the non-family turns.
+
+| | commit follows | rate |
+|---|---:|---:|
+| go-ahead, guard holds | 16 / 18 | 0.89 |
+| non-family turns, same guard | 124 / 181 | 0.69 |
+| correction family, guard holds | 2 / 5 | 0.40 |
+
+The go-ahead effect survives the guard-matched comparison, but only weakly: a
+one-sided binomial p is about 0.03 on 18 turns. The produces fact was chosen
+from three candidates on the same data, which weakens it further. **Reading:**
+a go-ahead after a turn with commits is followed by another commit somewhat
+more often than other turns are. That is suggestive, not established.
+
+**For the next declaration** (written before any further measurement): the
+baseline is guard-matched, a verdict needs a one-sided p below 0.05 after a
+Bonferroni correction over the candidate post facts, and the produces fact is
+chosen inside each leave-one-out fold.
