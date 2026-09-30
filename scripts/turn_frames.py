@@ -198,6 +198,23 @@ def is_operator_turn(row):
     return (row.get("evidence/origin") or {}).get("kind") == "operator"
 
 
+def is_legacy_operator_turn(row, accepted_texts, session_id=None):
+    """A pre-origin Joe turn explicitly vouched for by a local exact text.
+
+    ACCEPTED_TEXTS is opt-in and defaults absent in build_frames, so ordinary
+    stepper/frame callers retain the origin-stamped rule above.
+    """
+    if not accepted_texts or row.get("evidence/origin"):
+        return False
+    b = body_of(row)
+    return (row.get("evidence/type") == "coordination"
+            and row.get("evidence/author") == "joe"
+            and (session_id is None or row.get("evidence/session-id") == session_id)
+            and b.get("event") == "chat-turn"
+            and b.get("role") == "user"
+            and (b.get("text") or "").strip() in accepted_texts)
+
+
 def negation_rows_for(row_index, turn_evidence_id):
     """interpretation/negation rows that point at this turn."""
     out = []
@@ -306,10 +323,14 @@ def _operators_for(entry, turn_text, rules):
     return {"hits": hits, "cues_without_operator": bare}
 
 
-def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=None):
+def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=None,
+                 legacy_operator_texts=None):
     """Pure frame assembly from evidence rows + loaded analyses."""
     rows = sorted(rows, key=at_key)
-    all_turns = [r for r in rows if is_operator_turn(r)]
+    operator_turn = lambda row: (is_operator_turn(row)
+                                 or is_legacy_operator_turn(
+                                     row, legacy_operator_texts, session_id))
+    all_turns = [r for r in rows if operator_turn(r)]
     # --limit cuts the frames, not the windows: the last frame shown still
     # ends at the next operator turn.
     turns = all_turns[:limit] if limit else all_turns
@@ -417,7 +438,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # happened rows: everything that is not an operator turn in the window
         happened = []
         for r in rows:
-            if is_operator_turn(r):
+            if operator_turn(r):
                 continue
             at = at_key(r)
             if at < start:

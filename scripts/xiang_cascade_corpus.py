@@ -19,12 +19,13 @@ from collections import Counter
 from pathlib import Path
 
 import xiang_cascade_d0 as d0
+import turn_frames
 
 
 REPO_ROOT = Path("/home/joe/code")
 HERE = Path(__file__).resolve().parent
 DEFAULT_RECORDS = Path(os.path.expanduser("~/.emacs-graph/session-turn-analysis"))
-DEFAULT_OUTPUT = REPO_ROOT / "futon3c/holes/labs/M-象-cascade/corpus-c1.jsonl"
+DEFAULT_OUTPUT = REPO_ROOT / "futon3c/holes/labs/M-象-cascade/corpus-c4.jsonl"
 DEFAULT_CACHE = Path("/tmp/xiang-cascade-c1-frames")
 
 
@@ -34,41 +35,76 @@ def instant(value):
     return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def cache_path(cache_dir: Path, session_id: str) -> Path:
-    digest = hashlib.sha256(session_id.encode()).hexdigest()[:16]
+def cache_path(cache_dir: Path, session_id: str, legacy_texts=None) -> Path:
+    identity = session_id
+    if legacy_texts is not None:
+        identity += "\0legacy-v1\0" + "\0".join(sorted(legacy_texts))
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:16]
     return cache_dir / f"{digest}.json"
 
 
-def load_session_frames(session_id, cache_dir=DEFAULT_CACHE, sleeper=time.sleep):
+def load_session_frames(session_id, cache_dir=DEFAULT_CACHE, sleeper=time.sleep,
+                        legacy_texts=None):
     """Read cached frames, else invoke turn_frames.py once (one 504 retry)."""
     cache_dir.mkdir(parents=True, exist_ok=True)
-    path = cache_path(cache_dir, session_id)
+    path = cache_path(cache_dir, session_id, legacy_texts)
     if path.exists():
         return {"frames": json.loads(path.read_text(encoding="utf-8")), "source": "cache"}
-    command = [sys.executable, str(HERE / "turn_frames.py"), session_id]
     attempts = 0
     while True:
         attempts += 1
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-        if result.returncode == 0:
-            frames = json.loads(result.stdout)
+        try:
+            if legacy_texts is None:
+                command = [sys.executable, str(HERE / "turn_frames.py"), session_id]
+                result = subprocess.run(command, capture_output=True, text=True, check=False)
+                if result.returncode:
+                    raise RuntimeError(f"{result.stdout}\n{result.stderr}")
+                frames = json.loads(result.stdout)
+            else:
+                evidence = turn_frames.fetch_evidence(session_id)
+                analyses = turn_frames.load_analyses(session_id)
+                frames = turn_frames.build_frames(
+                    evidence, analyses, session_id=session_id,
+                    operator_rules=turn_frames.load_operators(),
+                    legacy_operator_texts=legacy_texts)
+                for frame in frames:
+                    frame.pop("_join", None)
             temporary = path.with_suffix(".tmp")
             temporary.write_text(json.dumps(frames, ensure_ascii=False, sort_keys=True), encoding="utf-8")
             os.replace(temporary, path)
             return {"frames": frames, "source": "store"}
-        combined = f"{result.stdout}\n{result.stderr}"
-        if "504" in combined and attempts == 1:
-            sleeper(60)
-            continue
-        reason = "store-504" if "504" in combined else "frames-read-failed"
-        return {"missing": reason, "detail": combined.strip()[-500:]}
+        except Exception as error:
+            combined = str(error)
+            if "504" in combined and attempts == 1:
+                sleeper(60)
+                continue
+            reason = "store-504" if "504" in combined else "frames-read-failed"
+            return {"missing": reason, "detail": combined.strip()[-500:]}
 
 
 def family_rows(records=DEFAULT_RECORDS):
+    live_gap = d0.cited_occurrences(records, d0.CORRECTION_IDS)
+    live_gap.pop("turn-2GmY4p", None)
     return {
         "go-ahead": d0.occurrences(records, d0.GO_AHEAD_IDS),
-        "observed-running-correction": d0.cited_occurrences(records, d0.CORRECTION_IDS),
+        "live-gap": live_gap,
     }
+
+
+def unique_operator_texts(records, session_id):
+    """Exact local texts occurring once in this session's operator records."""
+    counts = Counter()
+    for path in records.glob("turn-*.json"):
+        if path.name.endswith((".analysis.json", ".candidates.json")):
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        text = (record.get("source_text") or "").strip()
+        if record.get("session_id") == session_id and text:
+            counts[text] += 1
+    return {text for text, count in counts.items() if count == 1}
 
 
 def find_frame(frames, row):
@@ -89,6 +125,12 @@ def find_frame(frames, row):
             distance, index = min(timed)
             if distance <= 60 and sum(1 for d, _ in timed if d == distance) == 1:
                 return index, "event-time"
+    text = (row["base"].get("source_text") or "").strip()
+    if text:
+        exact = [i for i, frame in enumerate(frames)
+                 if (frame.get("turn", {}).get("text") or "").strip() == text]
+        if len(exact) == 1:
+            return exact[0], "source-text"
     return None, None
 
 
@@ -217,7 +259,11 @@ def main():
     rows = family_rows(args.records)
     sessions = sorted({row["base"].get("session_id") for family in rows.values()
                        for row in family.values() if row["base"].get("session_id")})
-    frame_results = {sid: load_session_frames(sid, args.cache) for sid in sessions}
+    frame_results = {
+        sid: load_session_frames(
+            sid, args.cache,
+            legacy_texts=unique_operator_texts(args.records, sid))
+        for sid in sessions}
     entries = assemble(rows, frame_results)
     write_jsonl(entries, args.output)
     print(json.dumps(summarize(entries), indent=2, sort_keys=True))

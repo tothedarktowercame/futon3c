@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import xiang_cascade_corpus as corpus
+import turn_frames
 
 
 def frame(eid, at, commits=None, reply=False):
@@ -81,6 +82,40 @@ class CorpusTest(unittest.TestCase):
         corpus.write_jsonl(entries, one)
         corpus.write_jsonl(entries, two)
         self.assertEqual(one.read_bytes(), two.read_bytes())
+
+    def write_record(self, name, session, text):
+        (self.root / f"{name}.json").write_text(json.dumps(
+            {"session_id": session, "source_text": text}), encoding="utf-8")
+
+    def legacy_row(self, session, text):
+        return {"evidence/type": "coordination", "evidence/author": "joe",
+                "evidence/session-id": session,
+                "evidence/body": {"event": "chat-turn", "role": "user", "text": text}}
+
+    def test_duplicate_local_text_does_not_admit_legacy_row(self):
+        self.write_record("turn-a", "s", "same")
+        self.write_record("turn-b", "s", "same")
+        accepted = corpus.unique_operator_texts(self.root, "s")
+        self.assertNotIn("same", accepted)
+        self.assertFalse(turn_frames.is_legacy_operator_turn(
+            self.legacy_row("s", "same"), accepted, "s"))
+
+    def test_same_text_from_another_session_is_not_admitted(self):
+        self.write_record("turn-a", "s1", "same")
+        accepted = corpus.unique_operator_texts(self.root, "s1")
+        self.assertFalse(turn_frames.is_legacy_operator_turn(
+            self.legacy_row("s2", "same"), accepted, "s1"))
+
+    def test_skewed_turn_joins_by_unique_exact_text(self):
+        row = turn_row(at="2026-09-30T00:00:00Z", evidence=None)
+        row["base"]["source_text"] = "exact"
+        frames = [frame("a", "2026-09-30T00:01:31Z"),
+                  frame("b", "2026-09-30T00:03:00Z")]
+        frames[0]["turn"]["text"] = "exact"
+        self.assertEqual((0, "source-text"), corpus.find_frame(frames, row))
+        frames.append(frame("c", "2026-09-30T00:04:00Z"))
+        frames[2]["turn"]["text"] = "exact"
+        self.assertEqual((None, None), corpus.find_frame(frames, row))
 
 
 if __name__ == "__main__":
