@@ -950,19 +950,28 @@
              :mission/purs (or (g :mission/purs) [])}
       gates (assoc :mission/gates gates))))
 
-(defn- fetch-substrate-2-missions
-  "Query futon1a for all current `code/v05/mission-doc` hyperedges and
-   return them as MissionEntry-shaped maps. Returns nil if substrate-2
-   is unreachable; build-inventory falls back to filesystem scan in
-   that case."
+;; Inventory reads come from several callers (HTTP routes, the stack
+;; generator), about every 30 s. Each fetch is a whole-table hyperedge scan in
+;; futon1b (~10 s for props only, ~25 s for whole documents on 2026-09-30),
+;; and the previous 5 s timeout meant it never succeeded: every call left
+;; futon1b scanning for nobody while build-inventory fell back to the
+;; filesystem. Now one fetch at a time, the result shared for
+;; `substrate-cache-ms`, and after a failure the filesystem fallback is used
+;; for `substrate-backoff-ms` before futon1b is asked again.
+(def ^:private substrate-cache-ms (* 2 60 1000))
+(def ^:private substrate-backoff-ms (* 2 60 1000))
+(defonce ^:private !substrate-missions (atom {}))
+(defonce ^:private substrate-fetch-lock (Object.))
+
+(defn- fetch-substrate-2-missions*
   []
   (try
     (let [url (str futon1a-url
                    "/api/alpha/hyperedges?type=" mission-doc-hyperedge-type
-                   "&limit=500&include-total=false")
+                   "&limit=500&include-total=false&fields=hx/props")
           resp (http/get url {:headers {"Accept" "application/json"}
                               :throw false
-                              :timeout 5000})]
+                              :timeout 30000})]
       (when (= 200 (:status resp))
         (let [parsed (json/parse-string (:body resp) true)
               hxes (:hyperedges parsed)]
@@ -971,6 +980,23 @@
                (filter some?)
                (mapv hyperedge-props->mission-entry)))))
     (catch Exception _ nil)))
+
+(defn- fetch-substrate-2-missions
+  "Query futon1a for all current `code/v05/mission-doc` hyperedges and
+   return them as MissionEntry-shaped maps. Returns nil if substrate-2
+   is unreachable (or was within the last `substrate-backoff-ms`);
+   build-inventory falls back to filesystem scan in that case."
+  []
+  (locking substrate-fetch-lock
+    (let [now (System/currentTimeMillis)
+          {:keys [v at failed-at]} @!substrate-missions]
+      (cond
+        (and at (< (- now at) substrate-cache-ms)) v
+        (and failed-at (< (- now failed-at) substrate-backoff-ms)) nil
+        :else
+        (if-let [fresh (fetch-substrate-2-missions*)]
+          (do (reset! !substrate-missions {:v fresh :at now}) fresh)
+          (do (swap! !substrate-missions assoc :failed-at now) nil))))))
 
 (defn build-inventory
   "Build the full cross-repo mission inventory.

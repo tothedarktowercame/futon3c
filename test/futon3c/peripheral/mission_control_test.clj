@@ -6,7 +6,8 @@
    2. Peripheral: lifecycle (start/step/stop), evidence emission
    3. Integration: portfolio review across real repo data
    4. VERIFY: backward verification (←), invariant checks, real-data validation"
-  (:require [clojure.java.io :as io]
+  (:require [babashka.http-client]
+            [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -979,3 +980,36 @@
       (is (map? (:summary result)))
       (is (number? (:total (:summary result))))
       (is (string? (:detected-at result))))))
+
+
+(deftest substrate-missions-fetch-is-shared-cached-and-backs-off
+  (let [cache @#'mcb/!substrate-missions
+        fetch-var #'mcb/fetch-substrate-2-missions
+        calls (atom 0)
+        results (atom [[{:mission/id "m1"}] nil])]
+    (reset! cache {})
+    (with-redefs-fn {#'mcb/fetch-substrate-2-missions*
+                     (fn [] (swap! calls inc)
+                       (let [r (first @results)] (swap! results rest) r))}
+      (fn []
+        (is (= [{:mission/id "m1"}] (fetch-var)))
+        (testing "a second call inside the cache window does not fetch"
+          (is (= [{:mission/id "m1"}] (fetch-var)))
+          (is (= 1 @calls)))
+        (testing "after expiry a failed fetch returns nil (filesystem fallback)"
+          (swap! cache assoc :at 0)
+          (is (nil? (fetch-var)))
+          (is (= 2 @calls)))
+        (testing "within the backoff futon1b is not asked again"
+          (is (nil? (fetch-var)))
+          (is (= 2 @calls)))))
+    (reset! cache {})))
+
+(deftest substrate-missions-fetch-asks-only-for-props-with-a-reachable-timeout
+  (let [seen (atom nil)]
+    (with-redefs [babashka.http-client/get
+                  (fn [url opts] (reset! seen [url (:timeout opts)])
+                    {:status 200 :body "{\"hyperedges\": []}"})]
+      (#'mcb/fetch-substrate-2-missions*)
+      (is (str/includes? (first @seen) "&fields=hx/props"))
+      (is (<= 30000 (second @seen))))))
