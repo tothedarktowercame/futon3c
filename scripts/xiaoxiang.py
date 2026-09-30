@@ -346,6 +346,15 @@ def parse_reply(text: str) -> list[dict]:
             mark, intent, target = None, None, None
         out.append({"id": f"a{k}", "start": pa, "end": pb, "text": body,
                     "mark": mark, "intent": intent, "target": target})
+    # An unmarked paragraph (a table, a list, a continuation) belongs under the
+    # nearest marked paragraph before it; "under" names that paragraph.
+    last = None
+    for record in out:
+        if record["mark"] or record["intent"]:
+            last = record["id"]
+            record["under"] = None
+        else:
+            record["under"] = last
     return out
 
 

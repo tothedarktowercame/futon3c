@@ -336,5 +336,10 @@ class ParseReply(unittest.TestCase):
 
 
 
+    def test_unmarked_paragraph_names_the_marked_one_it_sits_under(self):
+        text = "plain opener\n\n㊢ (a) did it.\n\n- one\n- two\n\n| x |\n|---|\n\n🈸 (b) ok?"
+        got = [(r["id"], r["under"]) for r in xx.parse_reply(text)]
+        self.assertEqual([("a1", None), ("a2", None), ("a3", "a2"), ("a4", "a2"), ("a5", None)], got)
+
 if __name__ == "__main__":
     unittest.main()
