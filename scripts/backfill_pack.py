@@ -238,6 +238,13 @@ def build_pack(directory, turn_ids, out_path, docs=None, xlate=None, lib=LIB):
             "bytes": len(body.encode()), "words": len(body.split())}
 
 
+# The backfill's closed list (the packet's "Intents: closed list").  The live
+# validator takes any label, which is how the older batches reached 634 labels.
+CLOSED_INTENTS = frozenset("""report-problem explain report clarify qualify approve
+    disagree collect constrain extend propose prioritize redirect defer delegate
+    ask-action continue verify explore retract withdraw""".split())
+
+
 def publish(directory, answer_path, order=()):
     """Publish each element through the validator; never overwrite.
 
@@ -260,6 +267,15 @@ def publish(directory, answer_path, order=()):
         entry = {"turn": tid}
         if os.path.exists(analysis_path):
             entry.update({"published": False, "reason": "analysis already exists"})
+            results.append(entry)
+            continue
+        off = sorted({f.get("intent") for sent in element.get("sentences") or []
+                      for f in sent.get("fragments") or []
+                      if f.get("intent") not in CLOSED_INTENTS})
+        if off:
+            # session_turn_analysis accepts any label; the backfill does not.
+            entry.update({"published": False,
+                          "reason": "intent not on the closed list: " + ", ".join(map(str, off))})
             results.append(entry)
             continue
         payload = {k: v for k, v in element.items()

@@ -167,6 +167,16 @@ class Publish(unittest.TestCase):
             os.path.join(self.block, "agent-1-turn-2.json.analysis.json")))
         self.assertIn("reason", summary["turns"][1])
 
+    def test_off_list_intent_is_refused(self):
+        # review case (claude-17): the validator itself accepts any label
+        bad = self.valid()
+        bad["sentences"][0]["fragments"][0]["intent"] = "vibes"
+        proc, summary = self.run_publish([bad])
+        self.assertEqual(0, summary["published"])
+        self.assertIn("closed list", summary["turns"][0]["reason"])
+        self.assertFalse(os.path.exists(
+            os.path.join(self.block, "agent-1-turn-2.json.analysis.json")))
+
     def test_existing_analysis_not_overwritten(self):
         _proc, first = self.run_publish([self.valid()])
         self.assertEqual(1, first["published"])
