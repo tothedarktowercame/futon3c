@@ -421,3 +421,78 @@ load, so r and R were undefined after a reload.  Simulate an old map."
     (load (locate-library "turn-stepper.el") nil t)
     (should (eq (lookup-key turn-stepper-mode-map (kbd "r")) #'turn-stepper-rewind))
     (should (eq (lookup-key turn-stepper-rewind-mode-map (kbd "R")) #'turn-stepper-rewind-apply))))
+
+(defvar turn-stepper-test--sent nil)
+
+(defun turn-stepper-test--repl ()
+  "A fake REPL: two operator turns, replies, a prompt; RET records the input."
+  (let ((b (generate-new-buffer "*claude-repl:test*")))
+    (with-current-buffer b
+      (insert "joe: first turn\nclaude: reply one\njoe: second turn, the one to rewind\nclaude: reply two\n> ")
+      (setq-local agent-chat--pending-process nil)
+      (let ((map (make-sparse-keymap)))
+        (define-key map (kbd "RET")
+                    (lambda () (interactive)
+                      (setq turn-stepper-test--sent
+                            (buffer-substring-no-properties
+                             (save-excursion (goto-char (point-max)) (line-beginning-position))
+                             (point-max)))))
+        (use-local-map map)))
+    b))
+
+(defun turn-stepper-test--rewind-buffer (source plan)
+  (let ((b (get-buffer-create "*象 rewind test*")))
+    (with-current-buffer b
+      (turn-stepper-rewind-mode)
+      (setq turn-stepper--rewind-plan plan
+            turn-stepper--rewind-session "S"
+            turn-stepper--rewind-context
+            (list :first 5 :last 5 :at "2026-09-30T02:40:00Z" :source source
+                  :text "second turn, the one to rewind")))
+    b))
+
+(ert-deftest turn-stepper-R-cuts-the-repl-and-tells-the-agent ()
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (plan (list (turn-stepper-test--mixed-plan root)))
+         (repl (turn-stepper-test--repl))
+         (rw (turn-stepper-test--rewind-buffer repl plan))
+         (turn-stepper-test--sent nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t))
+                  ((symbol-function 'quit-window) #'ignore))
+          (with-current-buffer rw (turn-stepper-rewind-apply))
+          (with-current-buffer repl
+            (should (string-match-p "reply one" (buffer-string)))
+            (should-not (string-match-p "second turn\\|reply two" (buffer-string))))
+          (should (string-match-p "\\`\\(> \\)?Operator reverted frame 5 (from the turn at 2026-09-30T02:40:00Z): 1 commit(s) reverted in r"
+                                  turn-stepper-test--sent)))
+      (kill-buffer repl) (kill-buffer rw) (delete-directory root t))))
+
+(ert-deftest turn-stepper-R-refused-revert-leaves-the-repl-alone ()
+  "Planted: a revert that is refused must not cut the REPL or tell the agent."
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (plan (list (turn-stepper-test--mixed-plan root)))
+         (repl (turn-stepper-test--repl))
+         (rw (turn-stepper-test--rewind-buffer repl plan))
+         (before (with-current-buffer repl (buffer-string)))
+         (turn-stepper-test--sent nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t)))
+          (with-temp-file (expand-file-name "r/mine" root) (insert "mid-edit"))
+          (with-current-buffer rw (turn-stepper-rewind-apply))
+          (should (equal before (with-current-buffer repl (buffer-string))))
+          (should-not turn-stepper-test--sent))
+      (kill-buffer repl) (kill-buffer rw) (delete-directory root t))))
+
+(ert-deftest turn-stepper-R-without-commits-still-cuts ()
+  "A turn with no commits (Joe's \"say hi\") still rewinds the REPL."
+  (let* ((repl (turn-stepper-test--repl))
+         (rw (turn-stepper-test--rewind-buffer repl nil))
+         (turn-stepper-test--sent nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t))
+                  ((symbol-function 'quit-window) #'ignore))
+          (with-current-buffer rw (turn-stepper-rewind-apply))
+          (should (string-match-p "no commits of this session to revert" turn-stepper-test--sent))
+          (should-not (string-match-p "reply two" (with-current-buffer repl (buffer-string)))))
+      (kill-buffer repl) (kill-buffer rw))))

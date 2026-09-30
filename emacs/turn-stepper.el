@@ -66,6 +66,8 @@ The value is passed to `display-buffer-in-side-window'."
 
 ;;; ---------------------------------------------------------------- state
 
+(defvar agent-chat--pending-process)
+
 (defvar turn-stepper--reload-failed nil
   "Non-nil while the stepper reopens its old frames after a failed reload.")
 
@@ -670,8 +672,9 @@ Frames are cached per session; use `g' in the stepper to refresh."
               (when r (cl-pushnew r repos :test #'equal)))))))
     (nreverse repos)))
 
-(defun turn-stepper--rewind-plan (frame next-at)
-  "Per repo: the pin at FRAME's start and the commits up to NEXT-AT.
+(defun turn-stepper--rewind-plan (frame next-at &optional repos)
+  "Per repo: the pin at FRAME's start and the commits up to NEXT-AT (nil: now).
+REPOS defaults to the repos in FRAME's turn-commits rows.
 Returns a list of plists (:repo :path :pin :end :commits), commits as
 \"SHA<TAB>AUTHOR<TAB>AGENT-SESSION<TAB>SUBJECT\" lines oldest first; the
 session is the commit's Agent-Session trailer, empty when unsigned."
@@ -692,10 +695,41 @@ session is the commit's Agent-Session trailer, empty when unsigned."
                                                              (concat pin ".." end))
                                           "")
                                       "\n" t))))))
-           (turn-stepper--frame-repos frame)))))
+           (or repos (turn-stepper--frame-repos frame))))))
 
 (defvar-local turn-stepper--rewind-plan nil)
 (defvar-local turn-stepper--rewind-session nil)
+(defvar-local turn-stepper--rewind-context nil
+  "Plist for the rewind view: :first :last (1-based frames), :at, :text, :source.")
+
+(defun turn-stepper--cut-repl (source text)
+  "Cut SOURCE back to just before the operator turn whose text is TEXT.
+Everything from that turn's line to the end goes; the prompt is redrawn.
+Returns non-nil when the turn was found and cut."
+  (let ((pos (turn-stepper--goto-turn-in-buffer text source)))
+    (when pos
+      (with-current-buffer source
+        (let ((inhibit-read-only t))
+          (save-excursion
+            (goto-char pos)
+            (delete-region (line-beginning-position) (point-max))))
+        (when (fboundp 'agent-chat--ensure-prompt-markers!)
+          (agent-chat--ensure-prompt-markers!))
+        (goto-char (point-max)))
+      t)))
+
+(defun turn-stepper--rewind-notice (ctx results)
+  "The follow-up turn telling the agent what was rewound.
+CTX is the rewind context; RESULTS the per-repo revert results."
+  (let ((first (plist-get ctx :first)) (last (plist-get ctx :last)))
+    (format "Operator reverted %s (from the turn at %s)%s. The REPL buffer was cut back to before that turn; treat those turns as withdrawn."
+            (if (= first last) (format "frame %d" first) (format "frames %d-%d" first last))
+            (plist-get ctx :at)
+            (if results
+                (concat ": " (mapconcat (lambda (r) (format "%d commit(s) reverted in %s"
+                                                            (plist-get r :reverted) (plist-get r :repo)))
+                                        results ", "))
+              "; there were no commits of this session to revert"))))
 
 (defun turn-stepper--own-commits (plan-entry session)
   "Full shas in PLAN-ENTRY signed by SESSION, newest first."
@@ -733,44 +767,71 @@ Returns (:repo R :reverted N) or (:repo R :refused WHY)."
      (t (list :repo repo :reverted (length shas))))))
 
 (defun turn-stepper-rewind-apply ()
-  "Revert this session's commits: in the repo at point, else in every repo listed."
+  "Rewind: revert this session's commits, cut the REPL back, tell the agent.
+Reverts every repo listed.  If any revert is refused, stops there: the
+REPL is not cut and the agent is not told, so the two never disagree."
   (interactive)
-  (let* ((here (get-text-property (point) 'turn-stepper-rewind))
-         (plan (if here (list here) turn-stepper--rewind-plan))
+  (let* ((plan turn-stepper--rewind-plan)
          (session turn-stepper--rewind-session)
+         (ctx turn-stepper--rewind-context)
+         (source (plist-get ctx :source))
          (todo (cl-remove-if-not (lambda (p) (turn-stepper--own-commits p session)) plan)))
-    (if (null todo)
-        (message "Nothing to revert: no commit in this window is signed by this session")
-      (when (yes-or-no-p
-             (format "Revert %s? "
-                     (mapconcat (lambda (p) (format "%d commit(s) in %s"
-                                                    (length (turn-stepper--own-commits p session))
-                                                    (plist-get p :repo)))
-                                todo ", ")))
-        (message "%s"
-                 (mapconcat (lambda (p)
-                              (let ((r (turn-stepper--revert p session)))
-                                (if (plist-get r :reverted)
-                                    (format "%s: reverted %d" (plist-get r :repo)
-                                            (plist-get r :reverted))
-                                  (format "%s: refused (%s)" (plist-get r :repo)
-                                          (plist-get r :refused)))))
-                            todo "; "))))))
+    (unless (buffer-live-p source)
+      (user-error "The REPL buffer for this session is gone"))
+    (when (process-live-p (buffer-local-value 'agent-chat--pending-process source))
+      (user-error "The agent is mid-turn; rewind when it has finished"))
+    (when (yes-or-no-p
+           (format "Rewind %s: %s; cut %s back to before the turn at %s and tell the agent? "
+                   (let ((f (plist-get ctx :first)) (l (plist-get ctx :last)))
+                     (if (= f l) (format "frame %d" f) (format "frames %d-%d" f l)))
+                   (if todo
+                       (concat "revert "
+                               (mapconcat (lambda (p) (format "%d commit(s) in %s"
+                                                              (length (turn-stepper--own-commits p session))
+                                                              (plist-get p :repo)))
+                                          todo ", "))
+                     "no commits to revert")
+                   (buffer-name source) (plist-get ctx :at)))
+      (let* ((results (mapcar (lambda (p) (turn-stepper--revert p session)) todo))
+             (refused (cl-remove-if-not (lambda (r) (plist-get r :refused)) results)))
+        (cond
+         (refused
+          (message "Rewind stopped, REPL untouched: %s"
+                   (mapconcat (lambda (r) (format "%s refused (%s)" (plist-get r :repo)
+                                                  (plist-get r :refused)))
+                              refused "; ")))
+         ((not (turn-stepper--cut-repl source (plist-get ctx :text)))
+          (message "Reverted, but the turn was not found in %s; REPL not cut, agent not told"
+                   (buffer-name source)))
+         (t
+          (quit-window)
+          (with-current-buffer source
+            (goto-char (point-max))
+            (insert (turn-stepper--rewind-notice ctx results))
+            (call-interactively (key-binding (kbd "RET"))))))))))
 
 (defun turn-stepper-rewind ()
   "Show what rewinding to the start of the current frame's turn would undo."
   (interactive)
   (let* ((frame (nth turn-stepper--index turn-stepper--frames))
-         (next (nth (1+ turn-stepper--index) turn-stepper--frames))
-         (next-at (and next (turn-stepper--aget 'at (turn-stepper--aget 'turn next))))
+         (later (nthcdr turn-stepper--index turn-stepper--frames))
+         (next-at nil)                  ; a rewind to turn N undoes N onward
          (at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame)))
-         (plan (turn-stepper--rewind-plan frame next-at))
+         (plan (turn-stepper--rewind-plan
+                frame nil (delete-dups (apply #'append (mapcar #'turn-stepper--frame-repos later)))))
          (session turn-stepper--session-id)
+         (ctx (list :first (1+ turn-stepper--index) :last (length turn-stepper--frames)
+                    :at at :source turn-stepper--source-buffer
+                    :text (turn-stepper--aget 'text (turn-stepper--aget 'turn frame))))
          (buf (get-buffer-create "*象 rewind*")))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
         (erase-buffer)
-        (insert (format "Rewind to the start of the turn at %s\n" at))
+        (insert (format "Rewind frame%s to the start of the turn at %s\n"
+                        (if (= (plist-get ctx :first) (plist-get ctx :last))
+                            (format " %d" (plist-get ctx :first))
+                          (format "s %d-%d" (plist-get ctx :first) (plist-get ctx :last)))
+                        at))
         (insert (format "Window: %s → %s\n\n" at (or next-at "now")))
         (if (null plan)
             (insert "No commits in this turn's window: nothing to rewind in git.\n")
@@ -793,10 +854,12 @@ Returns (:repo R :reverted N) or (:repo R :refused WHY)."
                 "first, as new commits; other seats' and unsigned commits are left alone.\n"
                 "Uncommitted edits are not covered.\n"
                 "w = read-only worktree at the pin, d = diff pin..end (on a repo's lines),\n"
-                "R = revert this session's commits (in the repo at point, else all), q = quit\n"))
+                "R = rewind: revert this session's commits, cut the REPL back to before\n"
+                "    this turn, and tell the agent which frames were reverted.  q = quit\n"))
       (turn-stepper-rewind-mode)
       (setq turn-stepper--rewind-plan plan
-            turn-stepper--rewind-session session)
+            turn-stepper--rewind-session session
+            turn-stepper--rewind-context ctx)
       (goto-char (point-min)))
     (pop-to-buffer buf)))
 
