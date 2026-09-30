@@ -433,9 +433,16 @@ If the turn text is not found in the REPL buffer, say so and do not move."
   "Show BUFFER in one window only, split off beside SOURCE's window.
 The stepper belongs to the REPL it reads, not to the frame: a window
 showing it anywhere else (another frame, a frame side window) is closed."
-  (let* ((src-win (and (buffer-live-p source)
-                       (or (get-buffer-window source)
-                           (get-buffer-window source 'visible))))
+  (let* ((src-wins (and (buffer-live-p source)
+                        (get-buffer-window-list source nil 'visible)))
+         ;; A REPL shown in several frames: stay beside the copy that
+         ;; already has the stepper, else use the selected frame's.
+         (src-win (or (seq-find (lambda (w)
+                                  (let ((n (window-in-direction turn-stepper-window-side w)))
+                                    (and n (eq (window-buffer n) buffer))))
+                                src-wins)
+                      (and (buffer-live-p source) (get-buffer-window source))
+                      (car src-wins)))
          (anchor (or src-win (selected-window)))
          (keep (window-in-direction turn-stepper-window-side anchor)))
     (unless (and keep (eq (window-buffer keep) buffer)
@@ -447,13 +454,18 @@ showing it anywhere else (another frame, a frame side window) is closed."
             (delete-window w)
           ;; The only window of its frame: show something else there.
           (error (with-selected-window w (switch-to-prev-buffer w 'kill))))))
+    ;; The action function is called directly, not through `display-buffer':
+    ;; when the split fails, display-buffer falls back to taking over some
+    ;; other window (another REPL), which is worse than not showing at all.
     (or keep
-        (display-buffer
-         buffer
-         `(display-buffer-in-direction
-           (window . ,anchor)
-           (direction . ,turn-stepper-window-side)
-           (window-width . ,turn-stepper-window-width))))))
+        (display-buffer-in-direction
+         buffer `((window . ,anchor) (direction . ,turn-stepper-window-side)
+                  (window-width . ,turn-stepper-window-width)))
+        (display-buffer-in-direction
+         buffer `((window . ,anchor) (direction . below)))
+        (progn (message "turn-stepper: no room beside %s; not shown"
+                        (if (buffer-live-p source) (buffer-name source) "the REPL"))
+               nil))))
 
 (defun turn-stepper--start-fetch (session-id source &optional quiet)
   "Run turn_frames.py asynchronously for SESSION-ID.
@@ -484,10 +496,18 @@ current frame on screen instead of a loading message."
                          (puthash session-id frames turn-stepper--cache)
                          (turn-stepper--open session-id source
                                              (turn-stepper--index-after-reload
-                                              session-id (length frames))))
-                     (message "turn-stepper: turn_frames.py failed: %s"
-                              (with-current-buffer (process-buffer proc)
-                                (string-trim (buffer-string)))))
+                                              session-id (length frames))
+                                             quiet))
+                     (progn
+                       (message "turn-stepper: reload failed (%s); frames kept"
+                                (turn-stepper--last-error-line))
+                       ;; Put back what was showing; a busy evidence store
+                       ;; must not cost the frames already read.
+                       (when (gethash session-id turn-stepper--cache)
+                         (turn-stepper--open session-id source
+                                             (turn-stepper--index-after-reload
+                                              session-id (length (gethash session-id turn-stepper--cache)))
+                                             t))))
                  (when (buffer-live-p output)
                    (kill-buffer output))))))))
     proc))
@@ -521,8 +541,19 @@ a closed stepper stays closed."
 
 (add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
-(defun turn-stepper--open (session-id source &optional index)
-  "Open (or reuse) the stepper buffer on frame INDEX for SESSION-ID."
+(defun turn-stepper--last-error-line ()
+  "Last non-empty line the frames script wrote to stderr."
+  (let ((b (get-buffer " *turn-stepper-frames-stderr*")))
+    (or (and b (with-current-buffer b
+                 (car (last (seq-remove
+                             (lambda (l) (or (string-empty-p (string-trim l))
+                                             (string-prefix-p "Process " l)))
+                             (split-string (buffer-string) "\n"))))))
+        "no error output")))
+
+(defun turn-stepper--open (session-id source &optional index quiet)
+  "Open (or reuse) the stepper buffer on frame INDEX for SESSION-ID.
+QUIET re-renders without touching windows (a reload of a visible stepper)."
   (let ((frames (gethash session-id turn-stepper--cache))
         (buf (get-buffer-create turn-stepper-buffer-name)))
     (with-current-buffer buf
@@ -533,7 +564,8 @@ a closed stepper stays closed."
             turn-stepper--index (turn-stepper--clamp-index
                                  (or index 0) (length frames)))
       (turn-stepper--display-current))
-    (turn-stepper--show-window buf source)
+    (unless (and quiet (get-buffer-window buf t))
+      (turn-stepper--show-window buf source))
     buf))
 
 (defun turn-stepper-refresh ()
@@ -541,8 +573,10 @@ a closed stepper stays closed."
   (interactive)
   (unless turn-stepper--session-id
     (user-error "No session attached to this stepper"))
+  ;; Keep the current frame on screen while reloading.
   (turn-stepper--start-fetch turn-stepper--session-id
-                             turn-stepper--source-buffer))
+                             turn-stepper--source-buffer
+                             (and turn-stepper--frames t)))
 
 ;;; ---------------------------------------------------------------- entry
 

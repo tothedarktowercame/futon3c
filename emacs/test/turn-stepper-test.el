@@ -226,3 +226,22 @@ second window must end as ONE window, right of the REPL it reads."
           (should (= 1 (length fetched))))
       (delete-other-windows)
       (kill-buffer buf) (delete-file rec))))
+
+(ert-deftest turn-stepper-never-takes-over-another-window ()
+  "Planted in review (claude-17): with no room to split, display-buffer's
+fallback replaced other REPLs' windows in Joe's frames."
+  (let ((src (get-buffer-create " *ts-repl*"))
+        (other (get-buffer-create " *ts-other*"))
+        (buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (progn
+          (delete-other-windows)
+          (switch-to-buffer other)
+          (set-window-buffer (split-window nil nil 'right) src)
+          (cl-letf (((symbol-function 'display-buffer-in-direction) (lambda (&rest _) nil)))
+            (should-not (turn-stepper--show-window buf src)))
+          (should (get-buffer-window other))
+          (should (get-buffer-window src))
+          (should-not (get-buffer-window buf)))
+      (delete-other-windows)
+      (kill-buffer buf) (kill-buffer src) (kill-buffer other))))
