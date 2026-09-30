@@ -10,15 +10,25 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
-            [futon3c.transport.encyclopedia :as enc])
+            [futon3c.transport.encyclopedia :as enc]
+            [futon3c.agency.agent-context :as agent-context])
   (:import [java.time Instant]))
 
 ;; =============================================================================
 ;; Fixtures
 ;; =============================================================================
 
+;; Jobs here run for fake agents (agent-fast, agent-slow, ...); their job
+;; context must not land in the real ~/.futon/agent-context, which the commit
+;; hook reads. alter-var-root, not binding: the writes happen on job threads.
+(defn- with-temp-agent-context [f]
+  (let [dir (str (System/getProperty "java.io.tmpdir") "/agent-context-test-" (random-uuid))
+        old agent-context/*context-root*]
+    (alter-var-root #'agent-context/*context-root* (constantly dir))
+    (try (f) (finally (alter-var-root #'agent-context/*context-root* (constantly old))))))
+
 (use-fixtures
-  :each mesh-fixtures/with-store
+  :each with-temp-agent-context mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (clock-store/reset-store!)
