@@ -1020,6 +1020,27 @@ text-face overlays were removed, painting everything prompt-face orange
        read-only "Agent REPL prompt is read-only; type after its final \"> \""
        rear-nonsticky (face read-only)))))
 
+(defun agent-chat-beginning-of-line (&optional n)
+  "Move to the start of the input, as C-a does in `shell-mode'.
+On the prompt line with point after the prompt, go to just after the
+prompt (`agent-chat--input-start'), and stay there if already there.
+With point inside the prompt, or on any other line, behave as
+`move-beginning-of-line', so the prompt text itself is still reachable by
+moving into it first.  N as for `move-beginning-of-line'.
+
+A command rather than a `field' property on the prompt: a field would
+also constrain `line-beginning-position' and `beginning-of-line', which
+`agent-chat--refresh-prompt-line!' uses to find where the prompt starts."
+  (interactive "^p")
+  (let ((input-start (and (markerp agent-chat--input-start)
+                          (marker-position agent-chat--input-start))))
+    (if (and input-start
+             (or (null n) (= n 1))
+             (>= (point) input-start)
+             (= (line-number-at-pos (point)) (line-number-at-pos input-start)))
+        (goto-char input-start)
+      (move-beginning-of-line n))))
+
 (defun agent-chat--refresh-prompt-line! (&optional prompt)
   "Redraw the live prompt with the prefetched prompt line, keeping input.
 The prompt is drawn once when the buffer opens and messages insert above it,

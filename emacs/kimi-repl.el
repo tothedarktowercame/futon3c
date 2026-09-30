@@ -322,6 +322,7 @@ must never break buffer setup."
   (make-sparse-keymap))
 
 (define-key kimi-repl-mode-map (kbd "RET") #'kimi-repl-send-input)
+(define-key kimi-repl-mode-map (kbd "C-a") #'agent-chat-beginning-of-line)
 (define-key kimi-repl-mode-map (kbd "C-l") #'recenter-top-bottom)
 (define-key kimi-repl-mode-map (kbd "C-c C-c") #'agent-chat-interrupt)
 (define-key kimi-repl-mode-map (kbd "C-c C-k") #'kimi-repl-clear)

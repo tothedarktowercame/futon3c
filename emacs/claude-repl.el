@@ -1337,6 +1337,7 @@ CALLBACK is called with the final response text on completion."
   (make-sparse-keymap))
 
 (define-key claude-repl-mode-map (kbd "RET") #'claude-repl-send-input)
+(define-key claude-repl-mode-map (kbd "C-a") #'agent-chat-beginning-of-line)
 (define-key claude-repl-mode-map (kbd "C-l") #'recenter-top-bottom)
 (define-key claude-repl-mode-map (kbd "C-c C-c") #'agent-chat-interrupt)
 (define-key claude-repl-mode-map (kbd "C-c C-k") #'claude-repl-clear)
