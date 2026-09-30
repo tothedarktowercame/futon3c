@@ -335,13 +335,18 @@
          :exception (.getName (class t))}))))
 
 (defn reingest-mission-scopes!
-  "Run the same scope-lane mechanics as scripts/mission-scope-reingest.sh:
-   re-detect with futon6 Python, then ingest each binder in-process through the
-   Drawbridge-safe mission-scope ingest entry point, refresh the mission's
-   substrate-2 RECORD (status/provenance/sha256), then broadcast an update
+  "Refresh the mission's substrate-2 RECORD (status/provenance/sha256), then
+   run the same scope-lane mechanics as scripts/mission-scope-reingest.sh:
+   re-detect with futon6 Python, ingest each binder in-process through the
+   Drawbridge-safe mission-scope ingest entry point, then broadcast an update
    frame for Emacs-side refreshers."
   [{:keys [stem path]}]
-  (let [detected (detect-mission-scopes! path)
+  ;; the record refresh goes FIRST: it is one cheap upsert, and at the end it
+  ;; was lost whenever the scope work below blew the 180 s maintenance cap
+  ;; (2026-09-30 03:20, M-self-documenting-stack stayed stale and a WM click
+  ;; re-selected finished work)
+  (let [record (refresh-mission-record! stem path)
+        detected (detect-mission-scopes! path)
         binders (scope-tree-binders stem)
         ingest-start (now-ms)
         binder-reports (mapv (fn [binder]
@@ -349,7 +354,6 @@
                                 :out (ingest-scope-binder! stem binder)})
                              binders)
         ingest-ms (- (now-ms) ingest-start)
-        record (refresh-mission-record! stem path)
         broadcast? (broadcast-mission-scopes-updated! stem)]
     {:mission stem
      :path path

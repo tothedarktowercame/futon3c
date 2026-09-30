@@ -410,7 +410,11 @@
 (deftest scope-lane-reingest-detects-ingests-and-broadcasts
   (testing "manual script mechanics are preserved without shelling to Drawbridge"
     (let [calls (atom [])]
-      (with-redefs-fn {#'sut/detect-mission-scopes!
+      (with-redefs-fn {#'sut/refresh-mission-record!
+                       (fn [stem path]
+                         (swap! calls conj [:record stem path])
+                         {:status :ok})
+                       #'sut/detect-mission-scopes!
                        (fn [path]
                          (swap! calls conj [:detect path])
                          {:duration-ms 7})
@@ -431,7 +435,10 @@
           (let [report (sut/reingest-mission-scopes!
                         {:stem "M-scope-lane"
                          :path "/home/joe/code/futon3c/holes/missions/M-scope-lane.md"})]
-            (is (= [[:detect "/home/joe/code/futon3c/holes/missions/M-scope-lane.md"]
+            ;; the record refresh comes first, so a scope-work timeout
+            ;; cannot lose it (2026-09-30 03:20)
+            (is (= [[:record "M-scope-lane" "/home/joe/code/futon3c/holes/missions/M-scope-lane.md"]
+                    [:detect "/home/joe/code/futon3c/holes/missions/M-scope-lane.md"]
                     [:binders "M-scope-lane"]
                     [:ingest "M-scope-lane" "eightfold-phase"]
                     [:ingest "M-scope-lane" "map-item"]
