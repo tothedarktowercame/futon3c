@@ -1,7 +1,7 @@
 # M-typed-bells — type the coordination channel; make ArSE populate by construction
 
 Date: 2026-06-11
-Status: **COMPLETE through DOCUMENT; flag-gated OFF by default** (2026-06-11). Full lifecycle
+**Status:** CLOSED — **COMPLETE through DOCUMENT; flag-gated OFF by default** (2026-06-11). Full lifecycle
 IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE→review→DOCUMENT. Codex authored (`b4ed15f`),
 Claude owner reviewed independently (author≠reviewer) — diff read against TB-1…7/D1–D6, tests +
 clj-kondo re-run; PASS. Watch-item carried into DOCUMENT as

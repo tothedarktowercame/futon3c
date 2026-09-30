@@ -1,6 +1,15 @@
 # M-the-perfect-crime
 
-Status: HEAD
+**Status:** OPEN — HEAD
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The chained-claim sweep joins agent final-turn claims to Joe's next-turn stance and records a verdict for each accepted claim.
+- [ ] `tornhill_chat.collect` tests cover per-file joins, ambiguous commits, operator-share apportioning, and session-grain coupling.
+- [ ] Tornhill complexity reads the recorded repository HEAD rather than uncommitted working-tree content.
+- [ ] The EFE mission view renders the reviewed Tornhill file-level measurements with timestamps and no fabricated data when the report is absent.
+- [ ] The mission records Joe's decision on whether futon1b should store churn and complexity metrics.
+- [ ] The overt Tornhill/Baudrillard question receives an explicit finding grounded in the claim sweep and hotspot evidence.
 
 **Type**: Mission
 **Lifecycle**: HEAD (drafted 2026-05-27) → first IDENTIFY artifact landed 2026-06-07 (corpus-audit pass; see §IDENTIFY). Operator HEAD-verify still pending.  Checkpoint 2026-09-24: no real progress on the overt question (see §IDENTIFY, Checkpoint).

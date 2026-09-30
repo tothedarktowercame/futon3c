@@ -1,6 +1,13 @@
 # M-turns-first — operator and agent turns as the primary artifact, on every surface
 
-**Status: IDENTIFY — Joe's decisions recorded; MAP next** (2026-09-14, claude-19).
+**Status:** OPEN — **IDENTIFY — Joe's decisions recorded; MAP next** (2026-09-14, claude-19).
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] FUTON keeps one marimo kernel alive for a thread while no browser is attached.
+- [ ] Marimo renders native operator and agent turns without requiring the operator to type Python or markdown cells.
+- [ ] Concurrent agent and browser edits cannot overwrite a newer thread or block state with a stale copy.
+- [ ] One thread begins in Emacs, continues in marimo, evaluates an agent-reasoned Python block in both UIs, and survives either UI reloading.
 Nothing is built under this mission yet.
 
 **Prompt (Joe, 2026-09-14):** *"marimo will be another UI, like Emacs, IRC, or

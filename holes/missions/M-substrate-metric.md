@@ -1,7 +1,7 @@
 # Mission: M-substrate-metric
 
 **Date:** 2026-06-01
-**Status:** DELIVERED (v1) - with named residue; first paired-consumer live consumption evidenced 2026-06-12. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). Campaign dissolution remains a separate owner/Joe decision.
+**Status:** CLOSED — DELIVERED (v1) - with named residue; first paired-consumer live consumption evidenced 2026-06-12. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). Campaign dissolution remains a separate owner/Joe decision.
 **Campaign:** `futon3c/holes/campaigns/C-substrate-completion.md`
 **Charter spec:** `futon3c/holes/campaigns/C-substrate-completion.STANDARD-ARGUE.draft.md`
 **Owner:** codex-3, ratified by Joe via claude-3 handoff, 2026-06-01.

@@ -1,5 +1,5 @@
 # Mission: Structural Law — Universal Invariants as Self-Representing Stack Layer
-Status: parked
+**Status:** CLOSED — parked; all Completion Criteria by Phase are checked in this file
 
 **Date:** 2026-03-10
 **Status:** INSTANTIATE complete

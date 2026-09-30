@@ -1,5 +1,5 @@
 # Mission: Transport Adapters (HTTP + WebSocket)
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

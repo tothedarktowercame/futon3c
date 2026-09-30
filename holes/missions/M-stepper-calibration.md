@@ -1,5 +1,5 @@
 # Mission: Stepper Calibration on First Proof Problems
-Status: archived
+**Status:** CLOSED — archived
 
 **Date:** 2026-02-18
 **Status:** IN PROGRESS — P1 complete (RED), P7 complete (RED), P3 next
