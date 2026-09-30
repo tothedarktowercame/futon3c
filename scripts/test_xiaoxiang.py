@@ -148,10 +148,6 @@ class Figures(unittest.TestCase):
         self.assertEqual("", xx.figures(None))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class Segment(unittest.TestCase):
     """The classical segmenter: ids, offsets, protections, merging."""
 
@@ -228,3 +224,22 @@ class Segment(unittest.TestCase):
     def test_deterministic(self):
         text = "A; b, but c. However, d — and then e, so f continues here."
         self.assertEqual(xx.segment(text), xx.segment(text))
+
+    def test_lines_lists_code_and_url_punctuation(self):
+        # review cases (claude-17): each failed on 43c9e029
+        text = ("This is the first point\n\nHere is the second point, however it differs\n"
+                "- item one is here\n- item two is here")
+        got = [f["text"].strip() for f in xx.segment(text)]
+        self.assertEqual(["This is the first point", "Here is the second point,", "however it differs",
+                          "- item one is here", "- item two is here"], got)
+        url = "See https://example.com/a.b/c?d=e.f, but do not open it today please."
+        self.assertEqual(2, len(xx.segment(url)))
+        code = "Run this now:\n```\nx = 1; y = 2\n- not a list item\n```\nand report back."
+        self.assertEqual(1, len(xx.segment(code)))
+        for t in (text, url, code):
+            for f in xx.segment(t):
+                self.assertEqual(f["text"], t[f["start"]:f["end"]])
+
+
+if __name__ == "__main__":
+    unittest.main()

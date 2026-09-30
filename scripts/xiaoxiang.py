@@ -57,6 +57,9 @@ CLAUSE_BOUNDARIES = (
     ("semicolon", ";"),
     # an em/en dash or spaced hyphen used as a break (" -- like this")
     ("spaced-dash", None),
+    # a blank line, or a line opening with a list marker ("- ", "* ", "1. "),
+    # starts a new piece; the marker stays with its item
+    ("line-structure", None),
     # clause-opening connectives -- cut BEFORE the connective, and only when
     # a comma or a dash sits right before it (mid-sentence "so" after a
     # comma IS a cut; sentence-initial "So," is not, the sentence boundary
@@ -67,7 +70,8 @@ CLAUSE_BOUNDARIES = (
 
 # Spans a boundary must not fall inside.
 _PROTECTED = (
-    re.compile(r"https?://\S+|www\.\S+"),            # URLs
+    re.compile(r"```.*?```", re.S),                  # fenced code blocks
+    re.compile(r"(?:https?://|www\.)\S*[^\s,.;:!?)]"),  # URLs, minus trailing punctuation
     re.compile(r"`[^`]*`"),                          # backticked spans
     re.compile(r"\([^()]*\)|\[[^\[\]]*\]"),          # (parenthesised) [spans]
     re.compile(r'"[^"]*"'),                          # quoted spans
@@ -75,6 +79,9 @@ _PROTECTED = (
     re.compile(r"(?:[\w.-]+/)+[\w.-]+"),             # file/dir paths a/b/c.py
     re.compile(r"\b[\w-]+\.[A-Za-z]{1,4}\b"),        # file names with dots
 )
+
+
+_LINE_STRUCTURE = re.compile(r"\n[ \t]*\n\s*|\n[ \t]*(?=(?:[-*•]|\d+[.)])[ \t])")
 
 
 def _protected_mask(text: str) -> list[bool]:
@@ -90,6 +97,9 @@ def _cut_points(sentence: str) -> list[int]:
     """Offsets where the sentence is cut into clauses (start of next piece)."""
     mask = _protected_mask(sentence)
     cuts = []
+    for m in _LINE_STRUCTURE.finditer(sentence):
+        if m.end() < len(sentence) and not mask[m.start()]:
+            cuts.append(m.end())
     i = 0
     while i < len(sentence):
         ch = sentence[i]
@@ -103,6 +113,7 @@ def _cut_points(sentence: str) -> list[int]:
             continue
         if (ch in "—–-" and not mask[i]
                 and i > 0 and sentence[i - 1].isspace()
+                and sentence[:i].rstrip(" \t")[-1:] not in ("", "\n")
                 and i + 1 < len(sentence) and sentence[i + 1].isspace()):
             j = i + 1
             while j < len(sentence) and sentence[j].isspace():
@@ -116,7 +127,7 @@ def _cut_points(sentence: str) -> list[int]:
             while j < len(sentence) and sentence[j].isspace():
                 j += 1
             if j < len(sentence):
-                for word in CLAUSE_BOUNDARIES[2][1]:
+                for word in CLAUSE_BOUNDARIES[3][1]:
                     if sentence[j:j + len(word)].lower() == word:
                         after = j + len(word)
                         if after == len(sentence) or not sentence[after].isalnum():
@@ -127,7 +138,7 @@ def _cut_points(sentence: str) -> list[int]:
                     i = j
                 continue
         i += 1
-    return cuts
+    return sorted(set(cuts))
 
 
 def segment(text: str) -> list[dict]:
