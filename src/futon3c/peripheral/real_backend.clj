@@ -250,8 +250,12 @@
 
 (defn- tool-bash
   "Execute a bash command. Args: [command] or [command {:timeout-ms N}].
-   Used by :bash, :bash-test, :bash-git, :bash-deploy."
-  [cwd default-timeout args agent-id session-id]
+   Used by :bash, :bash-test, :bash-git, :bash-deploy.
+   The 3-arity serves backends built before 4c269e12 was reloaded: their
+   compiled execute-tool still calls it with three arguments (kimi-3's shell
+   threw ArityException on every call from 03:31Z until this arity existed)."
+  ([cwd default-timeout args] (tool-bash cwd default-timeout args nil nil))
+  ([cwd default-timeout args agent-id session-id]
   (let [command (first args)
         opts (when (map? (second args)) (second args))
         timeout (or (:timeout-ms opts) default-timeout)]
@@ -260,7 +264,7 @@
       (let [result (run-command cwd command timeout agent-id session-id)]
         (if (zero? (:exit result))
           {:ok true :result result}
-          {:ok true :result result})))))
+          {:ok true :result result}))))))
 
 (defn- blank-quoted
   "Blank the contents of balanced quoted runs, preserving length, so that the
@@ -333,8 +337,10 @@
 
 (defn- tool-bash-readonly
   "Execute a read-only bash command. Rejects commands that mutate state.
-   Args: [command] or [command {:timeout-ms N}]."
-  [cwd default-timeout args agent-id session-id]
+   Args: [command] or [command {:timeout-ms N}].
+   3-arity: see `tool-bash`."
+  ([cwd default-timeout args] (tool-bash-readonly cwd default-timeout args nil nil))
+  ([cwd default-timeout args agent-id session-id]
   (let [command (str (first args))]
     (if-let [reason (readonly-rejection command)]
       {:ok false
@@ -343,7 +349,7 @@
                    "pipes are fine. Rewrite the command without the mutating "
                    "part, or report that the work needs a writable peripheral. "
                    "Do not retry variants of the same command.")}
-      (tool-bash cwd default-timeout args agent-id session-id))))
+      (tool-bash cwd default-timeout args agent-id session-id)))))
 
 ;; =============================================================================
 ;; HTTP tool
