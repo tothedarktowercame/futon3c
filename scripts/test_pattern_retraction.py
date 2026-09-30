@@ -89,6 +89,51 @@ class PatternRetractionTest(unittest.TestCase):
                                   dict(subject.DEFAULT_WEIGHTS))
         self.assertEqual(json.dumps(one, sort_keys=True), json.dumps(two, sort_keys=True))
 
+    def test_ranks_are_in_cost_order_when_the_first_tree_is_not_cheapest(self):
+        # 14-node subgraph of the live graph (2026-09-30, ids renamed) on which
+        # the first approximate tree costs 18 and two alternatives cost 16.
+        fixture = [
+            ["p/n00", "p/n02", "co-cited"],
+            ["p/n01", "p/n03", "co-cited"],
+            ["p/n01", "p/n04", "co-cited"],
+            ["p/n01", "p/n08", "co-cited"],
+            ["p/n02", "p/n03", "co-cited"],
+            ["p/n02", "p/n04", "co-cited"],
+            ["p/n03", "p/n04", "co-cited"],
+            ["p/n03", "p/n06", "co-cited"],
+            ["p/n04", "p/n08", "co-cited"],
+            ["p/n04", "p/n09", "co-cited"],
+            ["p/n00", "p/n09", "co-rejected"],
+            ["p/n01", "p/n08", "co-rejected"],
+            ["p/n01", "p/n09", "co-rejected"],
+            ["p/n08", "p/n09", "co-rejected"],
+            ["p/n10", "p/n12", "how"],
+            ["p/n10", "p/n13", "how"],
+            ["p/n11", "p/n13", "how"],
+            ["p/n12", "p/n13", "how"],
+            ["p/n00", "p/n01", "next-in-session"],
+            ["p/n00", "p/n04", "next-in-session"],
+            ["p/n01", "p/n03", "next-in-session"],
+            ["p/n01", "p/n04", "next-in-session"],
+            ["p/n01", "p/n08", "next-in-session"],
+            ["p/n04", "p/n06", "next-in-session"],
+            ["p/n04", "p/n07", "next-in-session"],
+            ["p/n04", "p/n08", "next-in-session"],
+            ["p/n06", "p/n09", "next-in-session"],
+            ["p/n00", "p/n01", "rejected-beside"],
+            ["p/n01", "p/n08", "rejected-beside"],
+            ["p/n05", "p/n06", "rejected-beside"],
+            ["p/n07", "p/n08", "why"],
+            ["p/n07", "p/n12", "why"],
+            ["p/n09", "p/n12", "why"],
+            ["p/n10", "p/n12", "why"],
+        ]
+        graph = self.graph([edge(a, b, kind) for a, b, kind in fixture])
+        rows = subject.retractions(graph, ["p/n00", "p/n05", "p/n11"], 3,
+                                   dict(subject.DEFAULT_WEIGHTS))["retractions"]
+        self.assertEqual([16, 16, 18], [row["cost"] for row in rows])
+        self.assertEqual([1, 2, 3], [row["rank"] for row in rows])
+
     def test_weight_override_changes_ranking(self):
         graph = self.graph([edge("p/a", "p/x", "why"),
                             edge("p/x", "p/b", "why"),

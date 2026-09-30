@@ -195,7 +195,8 @@ def retractions(graph, seeds, k, weights):
     nodes = sorted({n for edge in canonical for n in (edge["a"], edge["b"])})
     unknown = sorted(set(seeds) - set(nodes))
     if unknown:
-        raise ValueError("unknown seed id: " + ", ".join(unknown))
+        raise ValueError("seed not in graph (unknown id, or a library pattern "
+                         "with no edges): " + ", ".join(unknown))
     comps = components(nodes, pairs)
     seed_components = [{"component": index, "size": len(comp),
                         "seeds": sorted(set(seeds) & set(comp))}
@@ -235,6 +236,8 @@ def retractions(graph, seeds, k, weights):
             branch(chosen, removed)
             if tuple(chosen["nodes"]) not in {tuple(item["nodes"]) for item in answer}:
                 answer.append(chosen)
+    # The first tree is an approximation, so a later alternative can be cheaper.
+    answer.sort(key=lambda item: (item["cost"], item["nodes"]))
     for rank, item in enumerate(answer, 1):
         item["rank"] = rank
     component_size = seed_components[0]["size"] if connected else 0
