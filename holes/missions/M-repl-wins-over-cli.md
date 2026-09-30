@@ -1,5 +1,14 @@
 # Mission: REPL Wins Over CLI
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] `C-c C-c` stops the server-side agent process tree in a live invoke test.
+- [ ] Tool markers expose both tool input and output through persisted frame details.
+- [ ] Every turn persists prompt, assistant text, tool events, and tool output in queryable SQLite frames.
+- [ ] Cursor inspection and streaming preserve the user's window position without cursor-sensor stalls.
+- [ ] The REPL discovers the Agency endpoint and attaches through completion over registered agents without manual configuration.
+- [ ] Agent identity, session, and evidence continuity survive buffer clearing, reconnecting, and restarting Emacs.
 
 **Date:** 2026-03-29
 **Status:** :testing

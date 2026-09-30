@@ -1,7 +1,7 @@
 # Mission: M-populate-substrate-2
 
 **Date:** 2026-06-25
-**Status:** HEAD + IDENTIFY drafted; MAP grounded in live census (port 7071) + prior art; awaiting Joe ratification of the deliverable set and phase. Mission-close and phase transitions are Joe's call.
+**Status:** OPEN — HEAD + IDENTIFY drafted; MAP grounded in live census (port 7071) + prior art; awaiting Joe ratification of the deliverable set and phase. Mission-close and phase transitions are Joe's call.
 **Owner:** claude-2 (drafting), pending assignment.
 **Relates to:** Campaign `futon3c/holes/campaigns/C-substrate-completion.md` (this mission populates the nodes/edges that campaign's metric contract reads).
 **Excursions:** `futon3c/holes/excursions/E-substrate-2-timetravel.md` (the D3 bitemporal layer) · `futon3c/holes/excursions/E-clean-up-substrate-2.md` — **the negative-space map + registry-hygiene blocker** (honest census — re-derive with `futon3c/scripts/catalog_census.bb`, the registry drifts: 2026-06-26 = 216 docs → 196 distinct → **186 real declared** / **101 populated ≈ 54%** / ~130 store-side incl. off-catalog; the 6 families of empty types and their owning missions; why "clean the registry" needs gated code, not a cheap pass). **Supersedes the "203 declared / ~35 populated" figures in HEAD below** — those were a timeout-sniff undercount.
@@ -136,14 +136,14 @@ The comparison point (Rob's live Lean corpus in neo4j + pgvector) is graph **and
 
 ---
 
-## 4. Exit conditions (draft — for Joe to ratify/revise)
+## Acceptance checklist (2026-09-30)
 
-0. **Liveness:** a commit pushed today appears in substrate-2 within one watcher cycle, and a staleness alarm fires if ingestion stalls. (D0) — *the gating exit condition; without it the rest is decoration.*
-1. **Coherence:** one canonical-label map exists; `pgrep`-style census of substrate-2 returns counts attributable to a maintained ingest path, with staleness flagged. (D1)
-2. **Join:** `code/v05/edits` is non-empty and a query 'what defs did commit C touch' returns correct results. (D2)
-3. **Time-travel:** `db-as-of <past-commit>` returns the code structure *as of that commit*, demonstrated on one worked example. (D3)
-4. **Propagation:** at least one argument/proof relation type is populated from a named source and read by a named consumer query; closing one sorry demonstrably discharges a dependent. (D4/D5)
-5. **Inventory:** the explainer renders live counts with zero hand-typed numbers. (D7)
+- [x] A current commit appears in substrate-2 within one watcher cycle, and stalled ingestion fires the freshness alarm. (evidence: D0.2 checkpoint, commit `dfb1c4c`)
+- [ ] One canonical-label map makes the substrate census attributable to maintained ingest paths and marks stale data.
+- [x] `code/v05/edits` is populated and a commit-to-definitions query returns the correct edits. (evidence: D2.1 checkpoint)
+- [x] `db-as-of` returns code structure at a past commit in a worked example. (evidence: D3 14-repo sweep checkpoint)
+- [ ] A named argument or proof source populates a relation consumed by a named query, and closing one sorry discharges a dependent.
+- [ ] `substrate-2-explainer.html` renders live counts without hand-typed numbers.
 
 D6 (full inference layer) is explicitly *not* an exit condition for v1 — it is the mission's open horizon, ratified separately once D1–D5 hold.
 

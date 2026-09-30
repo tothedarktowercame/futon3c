@@ -1,4 +1,13 @@
-**Status:** INSTANTIATE complete (2026-05-01) for evidence-store sibling — **STOP-THE-LINE HOT-FIX, outside normal queue cadence.** Three remaining siblings handed to Codex via GitHub issue #65.
+**Status:** OPEN — INSTANTIATE complete (2026-05-01) for evidence-store sibling — **STOP-THE-LINE HOT-FIX, outside normal queue cadence.** Three remaining siblings handed to Codex via GitHub issue #65.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] `reachable-from-boot/evidence-store` is operational with implementation, enforcement, and evidence triples. (evidence: 2026-05-01 checkpoint)
+- [ ] `reachable-from-boot/family-check-fns` is operational with full triples in the structural-law inventory.
+- [ ] `reachable-from-boot/agent-registry` is operational with full triples in the structural-law inventory.
+- [ ] `reachable-from-boot/dev-evidence-store` is operational or is explicitly absorbed into the evidence-store sibling with evidence.
+- [ ] `scripts/check-reachable-from-boot.sh` refuses synthesized violations for every registered sibling and passes the clean tree.
+- [ ] GitHub issue #65 is closed and the stop-the-line checkpoint records that the foundation queue may resume.
 **Family:** `layered-error-hierarchy` (I0)
 **Stop-the-line trigger:** HUD widget showed STUCK on 2026-05-01; diagnosis revealed (a) pipeline-tracer entries lost at JVM restart because registry not bootstrapped, (b) Evidence Landscape lost ~2 weeks of data ~2 weeks ago because `@!store` was reset to in-memory map. Per `~/code/algorithms/next-invariant.md` § "Stop-the-line discipline" — when the HUD reports STUCK and the queue's promise of forward motion is unreliable due to a foundational failure, the queue is *paused* and a hot-fix mission opens at the foundation.
 **Sibling missions:** [M-archaeology-control], [M-bounded-disposition], [M-single-locus] — each ships invariants whose live signal silently depends on `!store` being durable and `family-check-fns` being repopulated. This mission's job is to make those dependencies structural-not-trust.

@@ -1,7 +1,7 @@
 # Mission: M-pilot-appearance
 
 **Date:** 2026-05-25
-**Status:** **CLOSED 2026-05-29** (operator-ratified, emacs-repl with claude-2). The pilot now appears coherently across all four depths via the differential-operator REPL — see Closing Checkpoint at end. Immersive-storyteller elaboration deferred to `E-storyteller.md`; hole-budget governance to `E-cheesemonger.md`; LOOP-learning + doc-currency automation are named OPEN follow-ons.
+**Status:** CLOSED — **CLOSED 2026-05-29** (operator-ratified, emacs-repl with claude-2). The pilot now appears coherently across all four depths via the differential-operator REPL — see Closing Checkpoint at end. Immersive-storyteller elaboration deferred to `E-storyteller.md`; hole-budget governance to `E-cheesemonger.md`; LOOP-learning + doc-currency automation are named OPEN follow-ons.
 **Timebox:** 3 weeks soft (extends through the M-war-machine-pilot Phase 4 friction-audit window, since Phase 4 outcomes feed this mission's MAP)
 **Predecessor:** `M-war-machine-pilot.md` — when Phase 3 lands, the pilot is operational; this mission picks up the question *what is it for the pilot to show up well across all four levels*
 **Sibling-of:** `M-interim-director.md` — both missions are facets of the operator-on-Hyperreal instrumentation gap identified 2026-05-25; this one is artefact-shaped, M-interim-director is commercial-shaped

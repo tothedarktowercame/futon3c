@@ -1,7 +1,7 @@
 # Mission: Portfolio Inference
 
 **Date:** 2026-02-26
-**Status:** DONE (TESTING)
+**Status:** CLOSED — DONE (TESTING)
 **Blocked by:** None (M-mission-control complete; chapter0 invariants
 defined; ant AIF loop operational in futon2; AifAdapter protocol exists
 with 3 domain adapters)

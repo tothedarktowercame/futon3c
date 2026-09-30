@@ -1,5 +1,5 @@
 # Mission: PSR/PUR Mesh Peripheral (futon3a + futon3b)
-Status: archived
+**Status:** CLOSED — archived
 
 Date: 2026-02-15
 Status: DONE-NEEDS-RETRO (Gates A+B pass, C infrastructure complete, D deferred)

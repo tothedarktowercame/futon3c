@@ -1,8 +1,16 @@
 # Mission: Shared memory/control build-test regime
 
 **Date:** 2026-07-23
-**Status:** Phases 1–3 ACCEPTED live; Phases 4–7 ACCEPTED dark/shadow;
+**Status:** OPEN — Phases 1–3 ACCEPTED live; Phases 4–7 ACCEPTED dark/shadow;
 Phase 8 advice-only ACCEPTED replay, enactment rungs operator-gated
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Owner review and hot-load make the bounded-autonomy selector reachable without changing the Phase 1–4 admissible set.
+- [ ] A canary click is machine-authorized only after all 13 tripwires, query, cache, witness, provenance, and explanation gates pass.
+- [ ] The canary records predicted and observed outcomes, memory use, witness status, and the current calibration sample status.
+- [ ] The enacted opportunity closes with an accepted Arxana Field Desk QA-notes addendum naming evidence ids and commit SHAs.
+- [ ] The first bounded-autonomy click completes with an explicit rollback boundary to `e74c7e7` and no silent additive-controller substitution.
 **Owners:** Joe + Zaif/WM implementers
 **Systems:** futon1b store, futon3c Zaif runners, futon2 War Machine, p4ng control patterns
 **Cross-references:** `M-typed-memories`, `CODEX-HANDOFF-p0-memory-record.md`,
