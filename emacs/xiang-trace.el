@@ -28,6 +28,13 @@
   "Seconds after which an unfinished step counts as a violation, not open."
   :type 'integer :group 'session-mode)
 
+(defcustom xiang-trace-live-check-window 200
+  "How many of the newest events the live check re-runs the rules over.
+The rules are evaluated after EVERY recorded event (I13); only this
+many of the most recent events are considered, so a long session does
+not make recording expensive."
+  :type 'integer :group 'session-mode)
+
 (defvar xiang-trace--events nil
   "Events, newest first.
 Each is a plist (:at SECONDS :kind SYMBOL :path STR :session STR ...).")
@@ -51,6 +58,7 @@ Each is a plist (:at SECONDS :kind SYMBOL :path STR :session STR ...).")
                                                   (if (symbolp v) (symbol-name v) v))))
                           "\n")))
         (write-region line nil xiang-trace-file t 'silent)))
+    (xiang-trace--live-check)
     ev))
 
 (defun xiang-trace--session-of (path)
@@ -182,6 +190,78 @@ Returns a list of (RULE PATH-OR-SESSION STATUS) where STATUS is
                     (xiang-trace-followso log `(dispatched ,p ,s1) `(dispatched ,p ,s2))))))
       (push (list "dispatched once" p 'violation) out))
     (nreverse out)))
+
+;;; ---------------------------------------------------------------- live check (I13)
+
+;; The elephantKanren loop: the standing relations re-run on each new
+;; event, and a violation shows in the 象 modeline segment beside the
+;; analysis-health lighter.  Evaluation NEVER signals out of the
+;; recorder: an error is caught, shown as one message, and recording
+;; continues.
+
+(defvar xiang-trace--violations nil
+  "Live rule state: the current (RULE WHO violation) triples, or nil.
+Recomputed after every recorded event by `xiang-trace--live-check';
+read by `xiang-trace--modeline-segment'.")
+
+(defvar xiang-trace--live-check-error nil
+  "The last evaluation error message, when the live check failed.
+Kept (and shown in the segment's help-echo) until a check succeeds.")
+
+(defun xiang-trace--live-check ()
+  "Re-run the rules over the newest `xiang-trace-live-check-window' events.
+Sets `xiang-trace--violations' and redraws the modeline.  Never
+signals: an evaluation error is caught and shown as one message."
+  (condition-case err
+      (let* ((n (min xiang-trace-live-check-window
+                     (length xiang-trace--events)))
+             (events (cl-subseq xiang-trace--events 0 n))
+             (vs (cl-remove-if-not (lambda (v) (eq (nth 2 v) 'violation))
+                                   (xiang-trace-violations events))))
+        (setq xiang-trace--violations vs
+              xiang-trace--live-check-error nil))
+    (error
+     (setq xiang-trace--live-check-error (error-message-string err))
+     (message "象 trace live check failed (recording continues): %s"
+              xiang-trace--live-check-error)))
+  (force-mode-line-update t))
+
+(defvar xiang-trace--segment-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mode-line mouse-1] #'xiang-trace-check)
+    map)
+  "Keymap on the violation segment: mouse-1 opens `*象 trace check*'.")
+
+(defun xiang-trace--modeline-segment ()
+  "The violation segment beside the 象 lighter, or nil when all is well.
+Names the first violated rule and the count, e.g. `!reply end → dispatch ×2'."
+  (cond
+   (xiang-trace--violations
+    (let ((rules (delete-dups (mapcar #'car xiang-trace--violations))))
+      (propertize
+       (format "!%s ×%d" (car rules) (length xiang-trace--violations))
+       'face '(:foreground "hot pink" :weight bold)
+       'mouse-face 'mode-line-highlight
+       'local-map xiang-trace--segment-map
+       'help-echo
+       (concat (format "象 trace violation: %s\nmouse-1: run xiang-trace-check"
+                       (mapconcat #'identity rules ", "))
+               (when xiang-trace--live-check-error
+                 (concat "\n(live check error: " xiang-trace--live-check-error ")"))))))
+   (xiang-trace--live-check-error
+    (propertize "!?"
+                'face '(:foreground "orange")
+                'help-echo (concat "象 trace live check error: "
+                                   xiang-trace--live-check-error)))))
+
+(defun xiang-trace--lighter-with-violations (orig)
+  "Append the violation segment to the 象 lighter drawn by ORIG.
+Sits beside the analysis-health states; it does not change what they mean."
+  (concat (funcall orig) (or (xiang-trace--modeline-segment) "")))
+
+(with-eval-after-load 'session-mode
+  (advice-add 'session-mode--analysis-lighter :around
+              #'xiang-trace--lighter-with-violations))
 
 (defun xiang-trace-load-file (&optional file)
   "Read the trace from FILE (default `xiang-trace-file'); newest first."

@@ -150,4 +150,108 @@ turn and dispatching it are stubbed beneath the recorders."
           (should (eq 'stepper-reload-failed (plist-get (car xiang-trace--events) :kind))))
       (delete-file xiang-trace-file))))
 
+;;; ---------------------------------------------------------------- I13: live check
+
+(ert-deftest xiang-trace-live-check-runs-on-record ()
+  "Recording an event re-evaluates the rules and names the violation."
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil)
+        (xiang-trace--violations nil)
+        (xiang-trace-open-after 10))
+    (unwind-protect
+        (progn
+          ;; An overdue reply-ended with no dispatch...
+          (push (xiang-trace-test--ev 'reply-ended "t1.json") xiang-trace--events)
+          (should-not xiang-trace--violations) ; not yet: only recording triggers
+          ;; ...becomes a violation when the NEXT event is recorded.
+          (xiang-trace-record 'sent "/a/t2.json")
+          (should (equal '(("reply end → dispatch" "t1.json" violation))
+                         xiang-trace--violations)))
+      (setq xiang-trace--violations nil)
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-live-check-open-is-not-a-violation ()
+  "A step younger than `xiang-trace-open-after' stays open, not shown."
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil)
+        (xiang-trace--violations nil)
+        (xiang-trace-open-after 900))
+    (unwind-protect
+        (progn
+          (xiang-trace-record 'reply-ended "/a/t1.json")
+          (should-not xiang-trace--violations))
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-live-check-clears-when-outcome-lands ()
+  "A dispatch followed by a failure clears the silent-dispatch violation."
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil)
+        (xiang-trace--violations nil)
+        (xiang-trace-open-after 0)) ; everything is overdue
+    (unwind-protect
+        (progn
+          (xiang-trace-record 'dispatched "/a/t1.json")
+          (should xiang-trace--violations)
+          (xiang-trace-record 'failed "/a/t1.json")
+          (should-not xiang-trace--violations))
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-live-check-never-signals ()
+  "An error in evaluation is caught; recording still appends."
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil)
+        (xiang-trace--violations nil)
+        (xiang-trace--live-check-error nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'xiang-trace-violations)
+                   (lambda (_) (error "planted evaluation bug"))))
+          (should (xiang-trace-record 'sent "/a/t1.json"))
+          (should (equal 1 (length xiang-trace--events)))
+          (should (string-match "planted evaluation bug"
+                                xiang-trace--live-check-error)))
+      (setq xiang-trace--live-check-error nil)
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-live-check-respects-window ()
+  "Only the newest `xiang-trace-live-check-window' events are checked."
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--violations nil)
+        (xiang-trace-live-check-window 2)
+        (xiang-trace-open-after 0)
+        (xiang-trace--events
+         (list (xiang-trace-test--ev 'failed "t1.json")
+               (xiang-trace-test--ev 'dispatched "t1.json")
+               ;; Older than the window: an overdue orphan reply-end.
+               (xiang-trace-test--ev 'reply-ended "t0.json"))))
+    (unwind-protect
+        (progn
+          (xiang-trace--live-check)
+          (should-not xiang-trace--violations))
+      (delete-file xiang-trace-file))))
+
+(ert-deftest xiang-trace-modeline-segment-shows-rule-and-count ()
+  (let ((xiang-trace--violations '(("reply end → dispatch" "t1.json" violation)
+                                   ("reply end → dispatch" "t2.json" violation)))
+        (xiang-trace--live-check-error nil))
+    (should (equal "!reply end → dispatch ×2"
+                   (substring-no-properties (xiang-trace--modeline-segment)))))
+  (let ((xiang-trace--violations nil)
+        (xiang-trace--live-check-error nil))
+    (should-not (xiang-trace--modeline-segment))))
+
+(ert-deftest xiang-trace-lighter-sits-beside-health-states ()
+  "The health lighter's meaning is unchanged; the segment is appended."
+  (require 'session-mode)
+  (let ((session-mode--analysis-health nil)
+        (session-mode--analysis-health-detail nil)
+        (xiang-trace--violations nil)
+        (xiang-trace--live-check-error nil))
+    (xiang-trace-enable)
+    (should (equal " 象" (substring-no-properties
+                          (session-mode--analysis-lighter))))
+    (let ((xiang-trace--violations '(("reply end → dispatch" "t1.json" violation))))
+      (should (equal " 象!reply end → dispatch ×1"
+                     (substring-no-properties
+                      (session-mode--analysis-lighter)))))))
+
 (provide 'xiang-trace-test)
