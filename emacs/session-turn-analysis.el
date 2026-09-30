@@ -1228,15 +1228,66 @@ Never includes diff text."
                   repo short subject (nth 0 sums) (nth 1 sums) (nth 2 sums)))
       (format "- %s %s %s" repo short subject))))
 
+(defvar-local session-mode--reply-pending-path nil
+  "Record path of the operator turn whose reply has not ended yet.")
+(defvar-local session-mode--turn-reply-text nil
+  "First streamed reply segment of the pending turn, for the summary.")
+(defvar-local session-mode--turn-commits-seen nil
+  "Commits `agent-chat-finish-turn-commits' returned this turn.
+A streamed turn emits its turn-commits (which clears the heads) before
+the turn ends, so the summary reads them from here.")
+
+(defun session-mode--dispatch-pending-turn (response)
+  "Send the pending turn, if any, to 象 with a summary built from RESPONSE.
+Runs at most once per turn: from the reply callback (unstreamed replies)
+or from the end of the turn (streamed ones), whichever comes first."
+  (let ((path session-mode--reply-pending-path))
+    (when path
+      (setq session-mode--reply-pending-path nil)
+      (session-mode--dispatch-analysis-after-reply path response)
+      (session-mode--display-analysis path))))
+
+(defun session-mode--note-reply-segment (text &rest _)
+  "Keep the first reply segment TEXT of a pending turn."
+  (when (and session-mode--reply-pending-path (not session-mode--turn-reply-text)
+             (stringp text))
+    (setq session-mode--turn-reply-text text)))
+
+(defun session-mode--note-turn-commits (original &rest args)
+  "Call ORIGINAL with ARGS and keep the commits it returns for the summary."
+  (let ((commits (apply original args)))
+    (when session-mode--reply-pending-path
+      (setq session-mode--turn-commits-seen commits))
+    commits))
+
+(defun session-mode--on-turn-finished (&rest _)
+  "End of a turn: dispatch a still-pending operator turn to 象."
+  (condition-case err
+      (session-mode--dispatch-pending-turn session-mode--turn-reply-text)
+    (error (display-warning
+            'session-mode
+            (format "象 dispatch at turn end failed: %s; the record stays `requested'"
+                    (error-message-string err)))))
+  (setq session-mode--turn-reply-text nil
+        session-mode--turn-commits-seen nil))
+
+(with-eval-after-load 'agent-chat
+  (advice-add 'agent-chat-finish-turn-commits :around #'session-mode--note-turn-commits)
+  (advice-add 'agent-chat-finish-turn! :after #'session-mode--on-turn-finished))
+(with-eval-after-load 'claude-repl
+  (advice-add 'claude-repl--emit-assistant-segment-evidence! :before
+              #'session-mode--note-reply-segment))
+
 (defun session-mode--turn-commits-snapshot ()
   "Commits made since turn start, computed from `agent-chat--turn-git-heads'.
 Reads the same snapshot `agent-chat-finish-turn-commits' will use, but does
 NOT clear it: the turn-commits evidence emit runs after the reply callback
 and must still see the heads."
-  (when (and (boundp 'agent-chat--turn-git-heads)
-             agent-chat--turn-git-heads
-             (fboundp 'agent-chat--git-head)
-             (fboundp 'agent-chat--git-commits-after))
+  (if (not (and (boundp 'agent-chat--turn-git-heads)
+                agent-chat--turn-git-heads
+                (fboundp 'agent-chat--git-head)
+                (fboundp 'agent-chat--git-commits-after)))
+      session-mode--turn-commits-seen
     (cl-loop for (repo . old-head) in agent-chat--turn-git-heads
              for new-head = (agent-chat--git-head repo)
              when (and new-head (not (equal old-head new-head)))
@@ -1325,9 +1376,14 @@ building or storing the summary warns once and still dispatches the turn."
          (condition-case err
              (progn
                (setq path (session-mode--record-turn sent failed text))
-               ;; Dispatch to 象 happens when the agent's REPLY arrives (see
-               ;; the callback below), not here: 象 should read the turn
-               ;; together with what the agent did in it.
+               ;; Dispatch to 象 happens when the agent's reply ENDS, not
+               ;; here: 象 should read the turn together with what the agent
+               ;; did in it.  A streamed reply never calls the callback below
+               ;; (claude-repl finishes the turn itself), so the path waits in
+               ;; the buffer for whichever end-of-turn comes first.
+               (setq session-mode--reply-pending-path path
+                     session-mode--turn-reply-text nil
+                     session-mode--turn-commits-seen nil)
                (when (and (not session-mode-analysis-agent)
                           (or failed (session-mode--analysis-requested-p
                                       (session-mode--structure-turn sent))))
@@ -1342,8 +1398,7 @@ building or storing the summary warns once and still dispatches the turn."
                     (condition-case err
                         (if (buffer-live-p buffer)
                             (with-current-buffer buffer
-                              (session-mode--dispatch-analysis-after-reply path response)
-                              (session-mode--display-analysis path))
+                              (session-mode--dispatch-pending-turn response))
                           ;; Buffer gone: the turn still goes to 象, without a summary.
                           (when path (session-mode--dispatch-analysis path)))
                       (error (display-warning

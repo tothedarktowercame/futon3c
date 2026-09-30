@@ -136,5 +136,41 @@ stop the agent's reply from reaching the REPL."
        "claude" nil "do the thing" "joe" 'operator))
     (should (equal reached "REPLY"))))
 
+(ert-deftest session-turn-analysis-test-streamed-reply-dispatches-at-turn-end ()
+  "Planted in review (claude-17): a streamed reply never calls the callback.
+claude-repl finishes a streamed turn itself: segment evidence, then the
+turn-commits emit (which clears the heads), then `agent-chat-finish-turn!'.
+The turn must still reach 象 exactly once, with the reply and the commits."
+  (let ((dispatched nil) (stored nil))
+    (with-temp-buffer
+      (cl-letf ((session-mode-turn-tags-mode t)
+                (session-mode-analysis-agent "象")
+                (agent-chat--agent-id "claude-17")
+                (agent-chat-user-speaker "joe")
+                (agent-chat--turn-git-heads nil)
+                ((symbol-function 'session-mode--split-failure-marker) (lambda (text) (cons text nil)))
+                ((symbol-function 'agent-chat--walkie-command-p) (lambda (&rest _) nil))
+                ((symbol-function 'session-mode--record-turn) (lambda (&rest _) "/tmp/fake-turn.json"))
+                ((symbol-function 'session-mode--record-add-field)
+                 (lambda (_p _k v) (setq stored v)))
+                ((symbol-function 'session-mode--git-numstat) (lambda (&rest _) "1\t0\tf.el\n"))
+                ((symbol-function 'session-mode--dispatch-analysis)
+                 (lambda (path &rest _) (push path dispatched)))
+                ((symbol-function 'session-mode--display-analysis) (lambda (&rest _) nil)))
+        ;; The call streams: it never invokes its callback.
+        (session-mode--analyze-start-turn
+         (lambda (call &rest _) (funcall call "PROMPT" (lambda (_r) (error "not reached"))))
+         (lambda (_sent _callback) nil)
+         "claude" nil "do the thing" "joe" 'operator)
+        (should-not dispatched)
+        (session-mode--note-reply-segment "Gist: streamed reply" t)
+        (session-mode--note-turn-commits
+         (lambda () (list '((repo . "futon3c") (sha . "abcdef1234") (subject . "fix a thing")))))
+        (session-mode--on-turn-finished nil nil)
+        (session-mode--on-turn-finished nil nil)))
+    (should (equal dispatched '("/tmp/fake-turn.json")))
+    (should (string-match-p "Gist: streamed reply" stored))
+    (should (string-match-p "futon3c abcdef12" stored))))
+
 (provide 'session-turn-analysis-dispatch-test)
 ;;; session-turn-analysis-dispatch-test.el ends here
