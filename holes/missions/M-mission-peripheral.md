@@ -1,5 +1,5 @@
 # Mission: General Mission Peripheral
-Status: archived
+**Status:** CLOSED — archived
 
 **Date:** 2026-02-18
 **Status:** INSTANTIATE complete — derivation xenotype finished

@@ -1,7 +1,15 @@
 # Mission: M-mission-scopes-into-substrate-2
 
 **Date:** 2026-06-08
-**Status:** HEAD authored / IDENTIFY (charter). Greenlit by Joe 2026-06-08.
+**Status:** OPEN — HEAD authored / IDENTIFY (charter). Greenlit by Joe 2026-06-08.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] The structural scope binders, stable parent wiring, incremental maintenance, and watcher auto-trigger are live-verified without position-based identity. (evidence: this mission's D1 progress table)
+- [x] PSR, PUR, PXR, and applied-pattern records ingest through the four-form grammar with typed provenance and no fabricated pattern nodes. (evidence: this mission's D1.3 rows)
+- [ ] The parked library backfill is complete and an idempotent pattern-binder rerun resolves existing `.flexiarg` targets without fabricating missing nodes.
+- [ ] The Salingaros C-field runs over unified substrate-2 data and records a fat code file as high-C.
+- [ ] A ratified C-field/WM-EFE composition has a worked example where the War Machine returns a specific buildable unit rather than the instruction to finish a mission.
 **Owner:** claude-3 (mission-scope hypergraph + Salingaros field) · claude-1 (WM EFE — Deliverable 2 is
 co-owned with the pudding-engine) · codex (the ingest).
 **Predecessor:** M-web-arxana-missions (futon4) Layer-3 — the session of *play* (the mission carpet,

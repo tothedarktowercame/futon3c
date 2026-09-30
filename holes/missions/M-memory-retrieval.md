@@ -1,12 +1,21 @@
 # M-memory-retrieval — growing the retrieval subsystem toward the theory
 
 Date: 2026-07-27
-Status: **PROPOSED** (organised by claude-6 at Joe's handoff, 2026-07-27;
+**Status:** OPEN — **PROPOSED** (organised by claude-6 at Joe's handoff, 2026-07-27;
 charter confirmation = Joe). WS1 (Rung 4) needs no confirmation — it was
 chartered dark by Joe 2026-07-24 in `E-dynamic-queries` §Rung 4 and is
 dispatched under that charter.
 Owner: claude-6 (organisation, review, architecture). Coding handoffs to
 idle Codex agents per the workspace handoff protocol.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] Rung 4 coupled propagation passes its confirmation-collapse battery while preserving k=1 identity. (evidence: futon3c `35f1fef` and `E-dynamic-queries.md`)
+- [x] The spectral sweep and standing connectivity meter publish the component and λ₂ baseline used to gate semantic-lane work. (evidence: futon3c `07aa3af`, `be93d0f`, and `ws2-results-note.md`)
+- [x] The Ψ-v2 design and dark replay enforce coefficient abstention, no-self-scoring, cold-start neutrality, and no live ordering change. (evidence: futon3c `965128d` and `holes/labs/M-memory-retrieval/psi-v2-design.md`)
+- [ ] A frozen-corpus WS4 report measures proposal-only semantic-lane would-have-surfaced precision on the documented recall-empty rows without changing reviewed edges or live ordering.
+- [ ] `docs/retrieval-whitepaper.md` contains the claims enumeration, correspondence tables, architecture, embodiments, evidence, and honest-delta sections required by WS6.
+- [ ] Any proposed live promotion has n≥20 independently witnessed outcomes, a new `:recall-system` tag, and an Interface-1 cohort-boundary agreement with the live-loop owner.
 
 ## Position in the landscape
 

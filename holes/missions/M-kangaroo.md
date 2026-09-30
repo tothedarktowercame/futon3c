@@ -1,7 +1,14 @@
 # M-kangaroo — Warm-pouch persistent agent processes
 
 Date: 2026-06-10
-Status: INSTANTIATE v1 LANDED on master + LIVE-VALIDATED 2026-06-10 (agent_pouch.clj, gate in make-claude-invoke-fn, flag FUTON3C_KANGAROO default OFF). VERIFY ✅ — live real-claude `feed-turn!` ×2: turn1 spawn 7.6s → "ONE", turn2 warm 3.4s → "TWO" (≈2.2× faster even fresh; gap scales with session size = the 5.8MB win). ACTIVATION: next restart (closure-capture, like Car-3) + cr-new agents + flag ON. Reviewed: OFF byte-for-byte cold; ON→cold-fallback on any Throwable; feed-turn! evicts pouch on failure (no desync).
+**Status:** OPEN — INSTANTIATE v1 LANDED on master + LIVE-VALIDATED 2026-06-10 (agent_pouch.clj, gate in make-claude-invoke-fn, flag FUTON3C_KANGAROO default OFF). VERIFY ✅ — live real-claude `feed-turn!` ×2: turn1 spawn 7.6s → "ONE", turn2 warm 3.4s → "TWO" (≈2.2× faster even fresh; gap scales with session size = the 5.8MB win). ACTIVATION: next restart (closure-capture, like Car-3) + cr-new agents + flag ON. Reviewed: OFF byte-for-byte cold; ON→cold-fallback on any Throwable; feed-turn! evicts pouch on failure (no desync).
+
+## Acceptance checklist (2026-09-30)
+
+- [x] One real Claude pouch answers two consecutive turns and the second turn is measurably faster. (evidence: this mission's E1/E2 and live `feed-turn!` verification)
+- [x] Tests cover flag-off cold behavior, flag-on routing, cold fallback after a warm-path failure, eviction on failure, and one pouch per agent identity. (evidence: the INSTANTIATE v1 review recorded in this mission)
+- [x] The warm path emits invoke evidence, blackboard/ticker updates, tool activity, interrupt control, context retrieval, and an invoke trace id. (evidence: this mission's “Observability parity” section)
+- [ ] After an operator-approved restart with `FUTON3C_KANGAROO` enabled, a newly minted `cr` agent handles two Agency turns through one observable warm pouch and survives the documented cold-fallback bad case.
 Cross-reference: `M-agency-hardening.md` (durable turn-queue, invoke path,
 false-online-state, the flag-gated-rollout discipline). Kangaroo extends the
 same invoke path; it is the natural successor once the queue is live.

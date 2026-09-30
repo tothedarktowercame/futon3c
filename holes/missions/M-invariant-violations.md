@@ -1,5 +1,12 @@
 # Mission: Invariant Violations Ledger
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The ledger records an architectural decision for whether `:explore` accepts `:from-any`, enumerated sources, or only user-request overrides.
+- [ ] V-1 through V-5 appear under a Resolved section with the fixing commit and a clean `query-entry-exit-asymmetry` result.
+- [ ] The ledger records whether the FM conductor is a Tickle configuration, with the compared invariants and resulting disposition.
+- [ ] At least one cross-domain invariant joins Tickle evidence to Agency registration and has a test that catches a mismatched agent capability or identity.
 
 **Date:** 2026-03-10
 **Status:** MAP

@@ -1,7 +1,14 @@
 # Mission: M-latex-wysiwyg — browser WYSIWYG over a live Emacs LaTeX backend
 
 **Date:** 2026-08-08
-**Status:** :designed — ground measured on draft8, slices cut, nothing built yet.
+**Status:** OPEN — :designed — ground measured on draft8, slices cut, nothing built yet.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The S1 navigation test maps 20/20 sampled paragraphs across all three source files in both browser→Emacs and Emacs→browser directions, with zero `.tex` writes.
+- [ ] An S2 Class-A browser edit performs a quote-verified one-paragraph splice with one undo boundary, and the rebuilt PDF remains 61 pages with zero TeX errors.
+- [ ] S3 renders Class-B and Class-C regions visibly non-editable, and every refused edit offers jump-to-source without changing the source file.
+- [ ] S4 annotations survive a rebuild and remain attached to the same `section-id`.
 **Prior art bound by name:** `M-smart-emacs-cursor` (WS actuator),
 `futon-agency-ws.el` (transport), Arxana Essays (`futon4/dev/arxana-browser-essays.el`,
 annotation persistence), mission scope hyperedges (`futon6/scripts/mission_scope_detect.py`,

@@ -1,4 +1,4 @@
-Status: parked
+**Status:** CLOSED — parked; the mission records “Mission status: CLOSED (2026-04-29) for INSTANTIATE + DOCUMENT.”
 
 **Status:** MAP → DERIVE iterating (2026-04-29). Pending Joe review before VERIFY / INSTANTIATE.
 
