@@ -32,6 +32,7 @@ sweeps are diffable across runs.
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -45,13 +46,27 @@ DEFAULT_ROOT = Path.home() / "code/storage/test-registry/mfuton-suite"
 AGENCY = os.environ.get("AGENCY_URL", "http://localhost:7070")
 
 
-def wrapper_python(real_python, memory_max, timeout_s, bin_dir):
-    """A stable absolute path named `python` that execs the real interpreter
-    under the systemd memory scope and timeout. The registry command names
-    THIS path; its sha pins the wrapper, so changing cap/timeout stales."""
+# The run environment is part of the wrapper, not of whoever calls it: the
+# registry fingerprints what the interpreter sees, and a check from the
+# serving JVM (whose environment has none of these) must reproduce it.
+RUN_ENV_KEYS = ("MFUTON_HOME", "PYTHONPATH", "PATH", "PYTEST_ADDOPTS")
+
+
+def wrapper_python(real_python, memory_max, timeout_s, bin_dir, run_env):
+    """A stable absolute path named `python` that exports the run environment
+    and execs the real interpreter under the systemd memory scope and timeout.
+    The registry command names THIS path; its sha pins the wrapper, so
+    changing cap/timeout/environment stales."""
     bin_dir.mkdir(parents=True, exist_ok=True)
     w = bin_dir / "python"
-    w.write_text("#!/bin/sh\nexec systemd-run --user --scope -q --collect "
+    exports = "".join("export %s=%s\n" % (k, shlex.quote(v)) for k, v in sorted(run_env.items()))
+    # The registry finds its pytest plugin through PYTHONPATH; keep its
+    # directory (set only for the registered run, so the fingerprint's view
+    # of PYTHONPATH is the same from every caller).
+    exports += ('export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${FUTON3C_REGISTRY_PLUGIN_DIR}"\n'
+                if "PYTHONPATH" in run_env else
+                'export PYTHONPATH="${FUTON3C_REGISTRY_PLUGIN_DIR}"\n')
+    w.write_text("#!/bin/sh\n" + exports + "exec systemd-run --user --scope -q --collect "
                  "-p MemoryMax=%s -p MemorySwapMax=0 "
                  "timeout %d %s \"$@\"\n" % (memory_max, timeout_s, real_python))
     w.chmod(0o755)
@@ -151,13 +166,20 @@ def main():
     ap.add_argument("--memory-max", default="12G")
     ap.add_argument("-j", type=int, default=3)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",
+                    help="run environment baked into the wrapper (default: the "
+                         "caller's %s)" % ", ".join(RUN_ENV_KEYS))
     ap.add_argument("files", nargs="*", help="named subset (repo-relative test files)")
     a = ap.parse_args()
 
     repo = a.repo.resolve()
     if not a.python.is_absolute():
         sys.exit("--python must be absolute")
-    python = wrapper_python(a.python, a.memory_max, a.timeout, a.bin_dir)
+    run_env = {k: os.environ[k] for k in RUN_ENV_KEYS if k in os.environ}
+    for item in a.env:
+        k, _, v = item.partition("=")
+        run_env[k] = v
+    python = wrapper_python(a.python, a.memory_max, a.timeout, a.bin_dir, run_env)
     all_files = test_files(repo, a.test_dir)
     files = a.files or all_files
     known = set(all_files)

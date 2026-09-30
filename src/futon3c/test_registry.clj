@@ -335,15 +335,22 @@
                                            (sha value) (none :unset))]))}]
     (assoc parts :sha256 (sha parts))))
 
-(defn- tool-version-on-path
-  "The PATH-resolved PROG and its --version, or nil when PROG is not on PATH."
-  [repo-root prog]
-  (let [env (effective-environment)
-        r (shell/sh "which" prog :dir repo-root :env env)]
-    (when (zero? (:exit r))
-      (let [path (str/trim (:out r))
-            v (shell/sh path "--version" :dir repo-root :env env)]
-        {:path path :version (str/trim (str (:out v) (:err v)))}))))
+(def ^:private python-run-environment-program
+  "Run inside the NAMED interpreter: what the tests will actually see. The
+  interpreter may be a wrapper that sets the run environment itself (the
+  pytest suite's bin/python exports MFUTON_HOME/PYTHONPATH/PATH), so these are
+  read from its os.environ and its PATH, never from the registry's own
+  process — a serving JVM checking a record must fingerprint the run's
+  environment, not its own."
+  (str "import hashlib, json, os, shutil, subprocess\n"
+       "def tool(p):\n"
+       "    w = shutil.which(p)\n"
+       "    if not w: return None\n"
+       "    r = subprocess.run([w, '--version'], capture_output=True, text=True)\n"
+       "    return {'path': w, 'version': (r.stdout + r.stderr).strip()}\n"
+       "env = {k: (hashlib.sha256(os.environ[k].encode()).hexdigest() if k in os.environ else None)\n"
+       "       for k in ('PYTHONPATH', 'MFUTON_HOME', 'PATH', 'PYTEST_ADDOPTS')}\n"
+       "print(json.dumps({'environment': env, 'lake': tool('lake'), 'lean': tool('lean')}))\n"))
 
 (defn- python-fingerprint*
   "Python/pytest fingerprint. Chosen pins, and why:
@@ -356,30 +363,33 @@
     (see immutable-artifact-roots), so dist metadata pins the installed
     bytes without re-hashing every site-packages file. Compiled extensions
     under site-packages are NOT individually hashed: they belong to a dist
-    whose name==version is pinned, and hashing a numpy/torch-sized tree per
-    registration is not cheap. Repo-local .so bindings are pinned instead by
-    the LOAD CLOSURE (audit hook on ctypes.dlopen in the pytest plugin) —
-    an in-place rebuild of those is an input change, which is a closure
-    question, not a fingerprint question.
-  - Environment keys as today (hashed) plus PYTHONPATH and MFUTON_HOME, and
-    the PATH-resolved lake/lean versions when present on PATH (the mfuton
-    tests shell out to them; nil means not installed, which is comparable)."
+    whose name==version is pinned. Repo-local .so bindings are pinned by the
+    LOAD CLOSURE (audit hook on ctypes.dlopen in the pytest plugin).
+  - The run environment as the INTERPRETER sees it
+    (python-run-environment-program): PYTHONPATH, MFUTON_HOME, PATH and
+    PYTEST_ADDOPTS hashed, and the lake/lean on that PATH with versions.
+    Read through the interpreter so a check from another process (the
+    serving JVM, whose own environment has none of these) reproduces the
+    run's values; a bare interpreter reports its caller's, which is then
+    genuinely what a rerun would see.
+  - The registry's canonical keys (JAVA_HOME ... TZ) as for other runners."
   [{:keys [repo-root command]}]
   (let [python (first command)
         run (fn [argv] (let [r (apply shell/sh (concat argv [:dir repo-root :env (effective-environment)]))]
                          (str/trim (str (:out r) (:err r)))))
         package-program "import importlib.metadata as m\nprint(\"\\n\".join(sorted(f\"{d.metadata['Name']}=={d.version}\" for d in m.distributions())))"
         packages (vec (remove str/blank? (str/split-lines (run [python "-c" package-program]))))
+        observed (let [out (run [python "-c" python-run-environment-program])]
+                   (try (json/parse-string (last (str/split-lines out)) true)
+                        (catch Exception _ (none :unparsed))))
         parts {:toolchain {:python-version (run [python "--version"])
                            :executable {:path python :sha256 (file-sha python)}
                            :packages packages
                            :packages-sha256 (sha packages)}
-               :lake (tool-version-on-path repo-root "lake")
-               :lean (tool-version-on-path repo-root "lean")
+               :run-environment observed
                :environment (into (sorted-map)
                                   (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS"
-                                             "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"
-                                             "PYTHONPATH" "MFUTON_HOME" "PATH"]]
+                                             "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"]]
                                     [key (if-let [value (get (effective-environment) key)]
                                            (sha value) (none :unset))]))}]
     (assoc parts :sha256 (sha parts))))
@@ -906,6 +916,8 @@
             (let [env (.environment builder)
                   existing (get env "PYTHONPATH")]
               (.put env "PYTHONPATH" (str (pytest-plugin-dir) java.io.File/pathSeparator (or existing "")))
+              ;; An interpreter wrapper that sets PYTHONPATH itself appends this.
+              (.put env "FUTON3C_REGISTRY_PLUGIN_DIR" (pytest-plugin-dir))
               (.put env "FUTON3C_REGISTRY_REPO_ROOT" (str (.getCanonicalPath (io/file root))))
               (.put env "FUTON3C_REGISTRY_CLOSURE_OUT" (str (closure-out-file log-file)))))
         _ (.redirectErrorStream builder true)
