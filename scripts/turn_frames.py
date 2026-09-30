@@ -231,9 +231,18 @@ def summarize_row(row):
         excerpt = {k: b[k] for k in ("park-id", "promise-id", "job-id",
                                      "reason", "status", "dependency")
                    if k in b}
+        out = {"event": t}
         if not excerpt:
-            excerpt = json.dumps(b, ensure_ascii=False)[:200]
-        return {"event": t, "excerpt": excerpt}
+            full = json.dumps(b, ensure_ascii=False)
+            excerpt = full[:200]
+            # The park id sits after the payload, past the cut: keep it.
+            m = re.search(r'park-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', full)
+            if m:
+                out["park-id"] = m.group(0)
+        elif isinstance(excerpt, dict) and excerpt.get("park-id"):
+            out["park-id"] = excerpt["park-id"]
+        out["excerpt"] = excerpt
+        return out
     if t and t.startswith("interpretation/"):
         return {"intent": b.get("intent"),
                 "fragment-id": b.get("fragment-id"),

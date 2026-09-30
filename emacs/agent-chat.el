@@ -2036,7 +2036,9 @@ _x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore 
 
 (defun agent-chat--parse-git-log-records (repo text)
   "Parse git log TEXT for REPO into JSON-encodable commit alists."
-  (cl-loop for record in (split-string (or text "") "\036" t)
+  ;; git ends each record with \036 and then a newline, so every record
+  ;; after the first began "\n<sha>": trim it, or the sha names nothing.
+  (cl-loop for record in (split-string (or text "") "\036" t "[ \t\n\r]+")
            for fields = (split-string record "\037")
            when (>= (length fields) 4)
            collect `((repo . ,(file-name-nondirectory
