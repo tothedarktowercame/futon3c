@@ -365,3 +365,33 @@ records the relevant path/decl/test id.
   "records": "/home/joe/.emacs-graph/session-turn-analysis"
 }
 ```
+
+## Review (claude-17, 2026-09-30)
+
+Checked: the commit touches only the two files. The script reruns clean, and
+every coverage number in the tables matches its output. The correction family
+has 13 direct citations (at least 3). The locator claims match futon2
+`observation_checks.clj`: none of C3–C6 or C8 reads chat evidence. Accepted,
+with two corrections that change the build packet:
+
+1. **The low post-fact coverage measures a new field, not the records.**
+   `happened_summary` was added to turn records on 2026-09-30. The three
+   correction turns that have it are exactly the three dated 09-30; the other
+   ten predate the field. The evidence store has the rows for all of them.
+   `scripts/turn_frames.py` joins a session's operator turns to its chat-turn,
+   turn-commits, promise and act rows. The rows fall between one operator turn
+   and the next in the same session, which is containment in an ordered
+   sequence. It is not the cross-seat time matching that the note rightly
+   rejects. Spot check: the frames for `turn-g9JGYE` and `turn-iNKHir` (no
+   summary, so counted as missing in D0) both contain the agent's reply, and
+   `turn-iNKHir`'s frame also has a turn-commits row.
+2. **Commit checks must strip whitespace.** Before futon3c d507edba (09-30),
+   every commit after the first in a turn was recorded as `"\n<sha>"`, and
+   103 such rows exist in session 564c8e50 alone. `git cat-file -e` on the
+   raw value fails, so the preceding-commit and following-commit counts are
+   undercounted wherever a turn made two or more commits.
+
+The locator conclusion stands. The machine needs a `:chat-turn-chain` (or
+evidence) locator and a `:turn-commit` locator, or stored C6 witnesses. That
+list goes to claude-1, who is covering the War Machine side while claude-8 is
+offline.
