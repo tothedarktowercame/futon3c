@@ -10,12 +10,14 @@ import sys
 import mined_pattern_graph
 
 
-KIND_ORDER = tuple(mined_pattern_graph.KINDS)
+# co-rejected is no longer produced by mined_pattern_graph (Joe, 2026-09-30) but
+# is still priced, as weak, for graph files written before then.
+KIND_ORDER = tuple(mined_pattern_graph.KINDS) + ("co-rejected",)
 DEFAULT_WEIGHTS = {
     "why": 1, "how": 1, "co-cited": 2, "rejected-beside": 3,
-    "co-rejected": 8, "next-in-session": 8,
+    "next-in-session": 3, "co-rejected": 8,
 }
-WEAK_KINDS = {"co-rejected", "next-in-session"}
+WEAK_KINDS = {"co-rejected"}
 
 
 def canonical_graph(graph):

@@ -11,9 +11,13 @@ Edge kinds, strongest first:
   co-cited         two patterns cited in the same operator turn
   rejected-beside  a pattern read and turned down for a fragment that cites
                    another; the rejection reason says where the boundary runs
-  co-rejected      two patterns both turned down for the same fragment (these
-                   largely reflect what the search returned together)
   next-in-session  patterns cited in consecutive analysed turns of a session
+"Both turned down for the same fragment" (co-rejected) is no longer written
+down (Joe, 2026-09-30: too weak an association to record, until further
+notice). It mostly recorded what the search returned together, and it was what
+attached 253 patterns to the giant component. To bring it back, restore the
+pairs(rejs) loop in mined_edges and the kind in KINDS; pattern_retraction.py
+still prices the kind for graph files written before this date.
 The graph is undirected; authored edges from the library are included, marked
 as such, so components can be read with or without them. There are two
 authored kinds, and they are different topologies (Joe, 2026-09-27):
@@ -34,7 +38,7 @@ import json
 import os
 import re
 
-KINDS = ["why", "how", "co-cited", "rejected-beside", "co-rejected", "next-in-session"]
+KINDS = ["why", "how", "co-cited", "rejected-beside", "next-in-session"]
 
 
 def library_ids(lib):
@@ -114,8 +118,6 @@ def mined_edges(batches, live, ids):
                         if c != r["id"]:
                             edges["rejected-beside"].append(
                                 (r["id"], c, {"at": where, "reason": r.get("reason", "")}))
-                for a, b in pairs({r["id"] for r in rejs}):
-                    edges["co-rejected"].append((a, b, {"at": where}))
         for a, b in pairs(turn_cites):
             edges["co-cited"].append((a, b, {"at": rel}))
         if turn_cites:

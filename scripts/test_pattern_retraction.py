@@ -130,7 +130,7 @@ class PatternRetractionTest(unittest.TestCase):
         ]
         graph = self.graph([edge(a, b, kind) for a, b, kind in fixture])
         rows = subject.retractions(graph, ["p/n00", "p/n05", "p/n11"], 3,
-                                   dict(subject.DEFAULT_WEIGHTS))["retractions"]
+                                   dict(subject.DEFAULT_WEIGHTS, **{"next-in-session": 8}))["retractions"]
         self.assertEqual([16, 16, 18], [row["cost"] for row in rows])
         self.assertEqual([1, 2, 3], [row["rank"] for row in rows])
 
