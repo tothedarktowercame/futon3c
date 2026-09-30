@@ -216,3 +216,35 @@ short interval and then at the long one, and a late landing runs the hook."
          (r (session-turn-analysis-test--reap-with (make-list 20 "running"))))
     (should (equal '(180 180 600 600 600 600 600 600) (car r)))
     (should-not (cdr r))))
+
+(ert-deftest session-turn-analysis-pool-picks-least-loaded-seat ()
+  "Joe 2026-09-30: a pool of 象 seats; each turn to the least-loaded one."
+  (let ((session-mode-analysis-pool '("象-1" "象-2" "象-3"))
+        (session-mode-analysis-alternate "象-sonnet")
+        (session-mode--analysis-benched nil)
+        (session-mode--analysis-outstanding (make-hash-table :test #'equal)))
+    (should (equal "象-1" (session-mode--analysis-seat)))
+    (session-mode--analysis-note-dispatch "/r/t1.json" "象-1")
+    (should (equal "象-2" (session-mode--analysis-seat)))
+    (session-mode--analysis-note-dispatch "/r/t2.json" "象-2")
+    (session-mode--analysis-note-dispatch "/r/t3.json" "象-3")
+    ;; A landing frees its seat.
+    (session-mode--analysis-note-done "/r/t2.json")
+    (should (equal "象-2" (session-mode--analysis-seat)))
+    ;; A dispatch older than an hour no longer counts against its seat.
+    (puthash "t1.json" (cons "象-1" (- (float-time) 4000)) session-mode--analysis-outstanding)
+    (session-mode--analysis-note-dispatch "/r/t4.json" "象-2")
+    (should (equal "象-1" (session-mode--analysis-seat)))))
+
+(ert-deftest session-turn-analysis-pool-benches-together ()
+  "The pool shares one provider: a usage limit on one seat benches all of
+them, and the alternate takes over."
+  (let ((session-mode-analysis-pool '("象-1" "象-2"))
+        (session-mode-analysis-alternate "象-sonnet")
+        (session-mode-analysis-bench-minutes 30)
+        (session-mode--analysis-benched nil)
+        (session-mode--analysis-outstanding (make-hash-table :test #'equal)))
+    (session-mode--bench-analysis-seat "象-1")
+    (should (session-mode--analysis-benched-p "象-2"))
+    (should (equal "象-sonnet" (session-mode--analysis-seat)))
+    (should (equal "象-sonnet" (session-mode--analysis-other-seat "象-1")))))

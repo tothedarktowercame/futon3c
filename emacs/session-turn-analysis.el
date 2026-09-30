@@ -489,31 +489,83 @@ fails over once more, quietly."
 (defvar session-mode--analysis-benched nil
   "Alist of (AGENT . TIME): seats out of quota, not to be used before TIME.")
 
+(defcustom session-mode-analysis-pool '("象-1" "象-2" "象-3" "象-4")
+  "Kimi seats that share turn analysis.
+nil: `session-mode-analysis-agent' alone.
+Joe, 2026-09-30: turns waited a median 5.5 min in one seat's queue for a
+2.5 min reading.  Each turn goes to the pool seat with the fewest readings
+outstanding.  Differing pattern names across seats are coalesced later
+(M-象-cascade); the multiplicity is kept, since it is information too.
+The seats share a provider, so a usage limit benches the whole pool and
+`session-mode-analysis-alternate' takes over."
+  :type '(repeat string) :group 'session-mode)
+
 (defun session-mode--analysis-benched-p (agent)
   "Non-nil if AGENT hit its usage limit and its bench has not expired."
   (let ((until (alist-get agent session-mode--analysis-benched nil nil #'equal)))
     (and until (time-less-p nil until))))
 
 (defun session-mode--bench-analysis-seat (agent)
-  "Pass over AGENT for `session-mode-analysis-bench-minutes'."
-  (setf (alist-get agent session-mode--analysis-benched nil nil #'equal)
-        (time-add nil (* 60 session-mode-analysis-bench-minutes))))
+  "Pass over AGENT for `session-mode-analysis-bench-minutes'.
+A pool seat benches the whole pool: the seats share one provider's limit."
+  (dolist (a (if (member agent session-mode-analysis-pool)
+                 session-mode-analysis-pool
+               (list agent)))
+    (setf (alist-get a session-mode--analysis-benched nil nil #'equal)
+          (time-add nil (* 60 session-mode-analysis-bench-minutes)))))
+
+(defvar session-mode--analysis-outstanding (make-hash-table :test #'equal)
+  "Turn record path -> (SEAT . DISPATCH-TIME) for readings not yet landed.")
+
+(defun session-mode--analysis-note-dispatch (path seat)
+  (puthash (file-name-nondirectory path) (cons seat (float-time))
+           session-mode--analysis-outstanding))
+
+(defun session-mode--analysis-note-done (path)
+  (remhash (file-name-nondirectory path) session-mode--analysis-outstanding))
+
+(defun session-mode--analysis-load (seat)
+  "Readings dispatched to SEAT in the last hour that have not landed."
+  (let ((n 0) (cutoff (- (float-time) 3600)))
+    (maphash (lambda (_ v) (when (and (equal (car v) seat) (> (cdr v) cutoff))
+                             (setq n (1+ n))))
+             session-mode--analysis-outstanding)
+    n))
+
+(defun session-mode--analysis-pool-seat ()
+  "The least-loaded unbenched pool seat, first in pool order on a tie; or nil."
+  (let (best best-load)
+    (dolist (seat session-mode-analysis-pool best)
+      (unless (session-mode--analysis-benched-p seat)
+        (let ((load (session-mode--analysis-load seat)))
+          (when (or (null best) (< load best-load))
+            (setq best seat best-load load)))))))
 
 (defun session-mode--analysis-other-seat (agent)
-  "The seat that is not AGENT, among the analysis seat and its alternate."
-  (if (equal agent session-mode-analysis-agent)
-      session-mode-analysis-alternate
-    session-mode-analysis-agent))
+  "The seat to use when AGENT is out of usage.
+A pool seat: another unbenched pool seat, else the alternate.  Otherwise
+the seat that is not AGENT, among the analysis seat and its alternate."
+  (cond ((member agent session-mode-analysis-pool)
+         (or (session-mode--analysis-pool-seat) session-mode-analysis-alternate))
+        ((equal agent session-mode-analysis-agent) session-mode-analysis-alternate)
+        (t (or (session-mode--analysis-pool-seat) session-mode-analysis-agent))))
 
 (defun session-mode--analysis-seat ()
-  "The seat to dispatch to now: the analysis agent unless it is benched."
+  "The seat to dispatch to now.
+With a pool: its least-loaded unbenched seat, else the alternate.
+Without: the analysis agent unless it is benched."
   (let ((primary session-mode-analysis-agent)
         (alternate session-mode-analysis-alternate))
-    (if (and alternate
-             (session-mode--analysis-benched-p primary)
-             (not (session-mode--analysis-benched-p alternate)))
-        alternate
-      primary)))
+    (cond
+     (session-mode-analysis-pool
+      (or (session-mode--analysis-pool-seat)
+          (and alternate (not (session-mode--analysis-benched-p alternate)) alternate)
+          (car session-mode-analysis-pool)))
+     ((and alternate
+           (session-mode--analysis-benched-p primary)
+           (not (session-mode--analysis-benched-p alternate)))
+      alternate)
+     (t primary))))
 
 (defun session-mode--quota-failure-p (out)
   "Non-nil if reaper output OUT says the seat ran out of usage."
@@ -969,6 +1021,8 @@ analysis health failing; it is not discarded."
 (defvar session-mode-analysis-landed-functions nil
   "Called with a record's path when the reaper finds its 象 reading done.")
 
+(add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
+
 (defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
@@ -1007,6 +1061,7 @@ for good."
                                   (session-mode--dispatch-analysis path other)
                                   t))))
                         ((string-match-p "REFUSED\\|FAILED" out)
+                         (session-mode--analysis-note-done path)
                          (session-mode--set-analysis-health
                           'failing (format "%s: job refused or failed"
                                            (file-name-base path)))
@@ -1044,6 +1099,7 @@ Fire and forget: the dispatch must not delay the conversation, and a seat
 that is busy or absent leaves the record `requested', which is the honest
 state -- never silently complete."
   (let* ((agent (or agent (session-mode--analysis-seat)))
+         (_ (session-mode--analysis-note-dispatch path agent))
          (brief (concat
                  ;; A requisition line, because a seat may refuse work without
                  ;; one. kimi-1 began refusing on 2026-09-24 and every dispatch
