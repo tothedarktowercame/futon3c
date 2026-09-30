@@ -471,12 +471,29 @@ showing it anywhere else (another frame, a frame side window) is closed."
                         (if (buffer-live-p source) (buffer-name source) "the REPL"))
                nil))))
 
-(defun turn-stepper--start-fetch (session-id source &optional quiet)
+(defcustom turn-stepper-reload-retries 3
+  "Times a failed reload is retried (futon1b busy is usually brief)."
+  :type 'integer :group 'turn-stepper)
+
+(defcustom turn-stepper-reload-retry-after 60
+  "Seconds to wait before retrying a failed reload."
+  :type 'integer :group 'turn-stepper)
+
+(defun turn-stepper--retry-fetch (session-id source tries)
+  "Retry a failed reload of SESSION-ID if its stepper is still on screen."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (when (and buf (get-buffer-window buf t)
+               (equal session-id (buffer-local-value 'turn-stepper--session-id buf))
+               (not (get-process "turn-stepper-frames")))
+      (turn-stepper--start-fetch session-id source t tries))))
+
+(defun turn-stepper--start-fetch (session-id source &optional quiet tries)
   "Run turn_frames.py asynchronously for SESSION-ID.
 On completion, cache the frames and display the most recent frame, unless
 the stepper was on an older frame of this session: then it stays there.
 SOURCE is the REPL buffer the stepper is attached to.  QUIET keeps the
-current frame on screen instead of a loading message."
+current frame on screen instead of a loading message.  TRIES is how many
+more times a failure is retried (default `turn-stepper-reload-retries')."
   (unless quiet
     (turn-stepper--loading-buffer session-id source))
   (let* ((output (generate-new-buffer " *turn-stepper-output*"))
@@ -503,8 +520,17 @@ current frame on screen instead of a loading message."
                                               session-id (length frames))
                                              quiet))
                      (progn
-                       (message "turn-stepper: reload failed (%s); frames kept"
-                                (turn-stepper--last-error-line))
+                       (let ((left (if tries tries turn-stepper-reload-retries)))
+                         (message "turn-stepper: reload failed (%s); frames kept%s"
+                                  (turn-stepper--last-error-line)
+                                  (if (> left 0)
+                                      (format ", retrying in %ds (%d left)"
+                                              turn-stepper-reload-retry-after left)
+                                    ", no retries left"))
+                         (when (> left 0)
+                           (run-at-time turn-stepper-reload-retry-after nil
+                                        #'turn-stepper--retry-fetch
+                                        session-id source (1- left))))
                        ;; Put back what was showing; a busy evidence store
                        ;; must not cost the frames already read.
                        (when (gethash session-id turn-stepper--cache)

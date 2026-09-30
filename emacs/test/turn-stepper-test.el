@@ -289,3 +289,32 @@ Planted: a commit AFTER the next turn (10:20) must not be listed."
   (should-not (turn-stepper--rewind-plan '((turn . ((at . "2026-09-29T10:05:00Z")))
                                            (happened . nil))
                                          nil)))
+
+(ert-deftest turn-stepper-failed-reload-retries-then-stops ()
+  "Planted: a reload that keeps failing is retried the configured number of
+times and then stops, rather than never (futon1b busy) or forever."
+  (let ((buf (get-buffer-create turn-stepper-buffer-name))
+        (timers nil) (fetches 0)
+        (real-make-process (symbol-function 'make-process))
+        (turn-stepper-reload-retries 2))
+    (unwind-protect
+        (cl-letf (((symbol-function 'run-at-time)
+                   (lambda (_d _r fn &rest args) (push (cons fn args) timers)))
+                  ((symbol-function 'make-process)
+                   (lambda (&rest plist)
+                     (cl-incf fetches)
+                     ;; a process that has already failed
+                     (let ((p (funcall real-make-process :name "ts-fail" :command '("false"))))
+                       (while (process-live-p p) (accept-process-output p 0.05))
+                       (set-process-buffer p (plist-get plist :buffer))
+                       (funcall (plist-get plist :sentinel) p "exited abnormally")
+                       p))))
+          (delete-other-windows)
+          (with-current-buffer buf (setq turn-stepper--session-id "s1"))
+          (display-buffer buf)
+          (turn-stepper--start-fetch "s1" nil t)
+          (while timers
+            (let ((tm (pop timers))) (apply (car tm) (cdr tm))))
+          (should (= 3 fetches)))
+      (delete-other-windows)
+      (kill-buffer buf))))
