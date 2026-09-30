@@ -111,3 +111,10 @@ parks_released):
    (claude-1's loading requirement).
 
 This applies to the live-gap family (12 turns) and to the go-ahead family.
+
+## C5 results
+
+| family | full triples | guard met | held-out hits | matched baseline | exact one-sided p | verdict |
+|---|---:|---:|---:|---:|---:|---|
+| go-ahead | 32 | 22 | 20 | 240/343 | 0.020528426201629438 | not-better |
+| live-gap | 12 | 9 | 6 | 177/253 | 0.7287545976569827 | too-few-to-judge |
