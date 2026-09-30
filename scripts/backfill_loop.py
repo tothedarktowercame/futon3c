@@ -20,6 +20,9 @@ WORK = "/tmp/claude17/loop"
 LOG = "/home/joe/code/storage/operator-turns/backfill-loop.jsonl"
 STOP = "/tmp/claude17/backfill-loop.STOP"
 API = "http://localhost:7070/api/alpha"
+# Not on the roster, so completions do not bell anyone back (Joe, 2026-09-30:
+# no per-pack bellbacks; the loop polls the job itself).
+CALLER = "xiang-backfill-loop"
 lock = threading.Lock()
 tries = {}      # turn path -> attempts
 claimed = set()
@@ -57,7 +60,13 @@ def claim(blocks, n=10):
                     continue
                 if os.path.exists(f + ".analysis.json") or f in claimed or tries.get(f, 0) >= 2:
                     continue
-                created = json.load(open(f)).get("created_at")
+                rec = json.load(open(f))
+                created = rec.get("created_at")
+                # Unmatched turns include harness prompts and captured transcripts
+                # (hour 1: an auto-resume message read as Joe; one transcript
+                # saved three times); long ones are nearly always the latter.
+                if rec.get("origin") == "unmatched" or len(rec.get("sentences") or []) > 20:
+                    continue
                 if created:
                     rows.append((created, f))
             rows.sort()
@@ -90,7 +99,7 @@ def post(path, body=None):
 
 def dispatch(seat, cover_path, purpose):
     if seat.startswith("kimi"):
-        out = subprocess.run(["bash", os.path.join(HERE, "kimi-task.sh"), "--from", "claude-17",
+        out = subprocess.run(["bash", os.path.join(HERE, "kimi-task.sh"), "--from", CALLER,
                               "--to", seat, "--purpose", purpose, cover_path],
                              capture_output=True, text=True).stdout
         m = re.search(r"task=(\S+) .*job=(\S+)", out)
@@ -99,7 +108,7 @@ def dispatch(seat, cover_path, purpose):
         post(f"/agents/{seat}/reset-session")   # a fresh conversation per pack
     except Exception:
         pass
-    out = subprocess.run([sys.executable, os.path.join(HERE, "agency_send.py"), "--from", "claude-17",
+    out = subprocess.run([sys.executable, os.path.join(HERE, "agency_send.py"), "--from", CALLER,
                           "--to", seat, "--kind", "bell", "--mode", "work"],
                          stdin=open(cover_path), capture_output=True, text=True).stdout
     m = re.search(r'"job-id":"([^"]+)"', out)
@@ -148,6 +157,12 @@ def seat_loop(seat, blocks, end_at):
                                 block, answer, *ids], capture_output=True, text=True)
             try:
                 s = json.loads(p.stdout)
+                frags = [f for e in json.load(open(answer)) for x in e.get("sentences") or []
+                         for f in x.get("fragments") or []]
+                cited = sum(1 for f in frags if f.get("pattern_refs"))
+                row["citation_rate"] = round(cited / len(frags), 2) if frags else None
+                if frags and cited / len(frags) > 0.4:
+                    row["flag"] = "citation rate over 40%"
                 row.update({"published": s["published"], "refused": s["refused"],
                             "reasons": [(t["turn"], t.get("reason", "")[:160])
                                         for t in s["turns"] if not t["published"]]})

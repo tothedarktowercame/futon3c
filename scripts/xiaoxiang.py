@@ -366,6 +366,8 @@ def seg_eval(directory: str) -> dict:
     """
     turns = x_fragments = mine_fragments = matched_mine = matched_x = 0
     for path in sorted(glob.glob(os.path.join(directory, "*.analysis.json"))):
+        if unmatched_origin(path):
+            continue
         try:
             with open(path, encoding="utf-8") as fh:
                 doc = json.load(fh)
@@ -439,10 +441,25 @@ def tokens(text: str) -> list[str]:
     return out
 
 
+def unmatched_origin(analysis_path: str) -> bool:
+    """True when the turn's request record says its origin was never matched.
+
+    Such turns include harness prompts and captured transcripts, not only
+    Joe's words (backfill hour 1, 2026-09-30), so 小象 neither trains nor
+    scores on them."""
+    try:
+        with open(analysis_path[:-len(".analysis.json")], encoding="utf-8") as fh:
+            return json.load(fh).get("origin") == "unmatched"
+    except (OSError, ValueError):
+        return False
+
+
 def load(directory: str) -> list[dict]:
     """One row per labelled fragment: turn id, labeller, text, intent."""
     rows = []
     for path in sorted(glob.glob(os.path.join(directory, "*.analysis.json"))):
+        if unmatched_origin(path):
+            continue
         try:
             with open(path, encoding="utf-8") as fh:
                 doc = json.load(fh)

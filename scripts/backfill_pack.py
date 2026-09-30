@@ -86,6 +86,10 @@ For each turn, in order:
    why it does not fit. A fragment with neither a citation nor a recorded rejection fails the
    check. If nothing in the pack fits, name up to 3 searches per turn in a "more_searches"
    field (plain strings); the packer will not have run them.
+   The hits are search results, not suggestions: most do NOT fit, and a sharing of words
+   ("metadata", "line", "resets") is not a fit. A citation's rationale must quote the
+   pattern's IF (or context) condition and say how this turn meets it. Expect to cite on
+   roughly one fragment in five; a pack where most fragments cite will be rechecked.
 4. Every uncited fragment needs a candidate (with `fragment` set to its sentence id and a real
    `parent`). If the same move genuinely recurs, reuse the earlier candidate id, and say why.
 5. Choose display_cues by hand, within the budget; do not truncate mechanically.
