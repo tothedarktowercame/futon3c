@@ -148,17 +148,10 @@ def components(edge_list, nodes):
     return sorted(groups.values(), key=len, reverse=True)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--batches", default="/home/joe/code/storage/operator-turns/batches")
-    ap.add_argument("--live", default=os.path.expanduser("~/.emacs-graph/session-turn-analysis"),
-                    help="live turn analysis directory; pass an empty path to disable")
-    ap.add_argument("--library", default="/home/joe/code/futon3/library")
-    ap.add_argument("--out", default="/home/joe/code/storage/operator-turns/mined-pattern-graph.json")
-    args = ap.parse_args()
-
-    ids = library_ids(args.library)
-    edges, records = mined_edges(args.batches, args.live, ids)
+def build_graph(batches, live, library):
+    """Return the JSON graph value without printing or writing it."""
+    ids = library_ids(library)
+    edges, records = mined_edges(batches, live, ids)
     edges["why"] = why_edges(ids)
     edges["how"] = how_edges(ids)
 
@@ -169,7 +162,6 @@ def main():
             e = merged.setdefault(key, {"a": key[0], "b": key[1], "kind": kind, "evidence": []})
             e["evidence"].append(ev)
 
-    print(f"{records} analyses, {len(ids)} library patterns")
     acc = []
     summary = []
     for kind in KINDS:
@@ -179,8 +171,6 @@ def main():
         n = len({(min(a, b), max(a, b)) for a, b, _ in edges[kind]})
         summary.append({"through": kind, "edges": n, "giant": len(comps[0]),
                         "components": len(comps), "singletons": singles})
-        print(f"+{kind:16} {n:5} edges  giant {len(comps[0]):4}/{len(ids)}"
-              f"  components {len(comps):4}  singletons {singles}")
 
     strong = [e for k in ("co-cited", "rejected-beside") for e in edges[k]]
     giant = components(strong + edges["why"] + edges["how"], list(ids))[0]
@@ -196,15 +186,34 @@ def main():
                      "components": xiang_components,
                      "giant_component": 1 if final_components else None,
                      "in_giant_component": xiang_in_giant}
+    return {"records": records, "patterns": len(ids), "summary": summary,
+            "giant_without_weak_edges": sorted(giant),
+            "象_family": xiang_summary,
+            "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--batches", default="/home/joe/code/storage/operator-turns/batches")
+    ap.add_argument("--live", default=os.path.expanduser("~/.emacs-graph/session-turn-analysis"),
+                    help="live turn analysis directory; pass an empty path to disable")
+    ap.add_argument("--library", default="/home/joe/code/futon3/library")
+    ap.add_argument("--out", default="/home/joe/code/storage/operator-turns/mined-pattern-graph.json")
+    args = ap.parse_args()
+    graph = build_graph(args.batches, args.live, args.library)
+
+    print(f"{graph['records']} analyses, {graph['patterns']} library patterns")
+    for row in graph["summary"]:
+        print(f"+{row['through']:16} {row['edges']:5} edges  "
+              f"giant {row['giant']:4}/{graph['patterns']}  "
+              f"components {row['components']:4}  singletons {row['singletons']}")
+    xiang = graph["象_family"]
     print("象 family components "
-          f"{xiang_components or 'none'}; giant component 1; "
-          f"in giant: {str(xiang_in_giant).lower()}; patterns {len(xiang_patterns)}")
+          f"{xiang['components'] or 'none'}; giant component 1; "
+          f"in giant: {str(xiang['in_giant_component']).lower()}; "
+          f"patterns {len(xiang['patterns'])}")
     with open(args.out, "w") as fh:
-        json.dump({"records": records, "patterns": len(ids), "summary": summary,
-                   "giant_without_weak_edges": sorted(giant),
-                   "象_family": xiang_summary,
-                   "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))},
-                  fh, indent=1)
+        json.dump(graph, fh, indent=1)
     print(f"wrote {args.out}")
 
 
