@@ -78,6 +78,16 @@ class PatternRetractionTest(unittest.TestCase):
         self.assertNotEqual(0, status)
         self.assertIn("p/missing", stderr.getvalue())
 
+    def test_isolated_seed_is_told_apart_from_an_unknown_id(self):
+        graph = self.graph([edge("p/a", "p/b", "why")])
+        graph["pattern_ids"] = ["p/a", "p/b", "p/lonely"]
+        with self.assertRaises(ValueError) as caught:
+            subject.retractions(graph, ["p/a", "p/lonely", "p/missing"], 1,
+                                dict(subject.DEFAULT_WEIGHTS))
+        message = str(caught.exception)
+        self.assertIn("isolated seed (library pattern with no edges): p/lonely", message)
+        self.assertIn("seed not in graph (not a library pattern): p/missing", message)
+
     def test_output_is_identical_when_edges_are_shuffled(self):
         edges = [edge("p/a", "p/x", "why"), edge("p/x", "p/b", "how"),
                  edge("p/a", "p/b", "co-rejected")]

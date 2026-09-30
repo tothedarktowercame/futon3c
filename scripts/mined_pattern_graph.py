@@ -188,7 +188,8 @@ def build_graph(batches, live, library):
                      "components": xiang_components,
                      "giant_component": 1 if final_components else None,
                      "in_giant_component": xiang_in_giant}
-    return {"records": records, "patterns": len(ids), "summary": summary,
+    return {"records": records, "patterns": len(ids), "pattern_ids": sorted(ids),
+            "summary": summary,
             "giant_without_weak_edges": sorted(giant),
             "象_family": xiang_summary,
             "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))}

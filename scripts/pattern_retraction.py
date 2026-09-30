@@ -197,8 +197,20 @@ def retractions(graph, seeds, k, weights):
     nodes = sorted({n for edge in canonical for n in (edge["a"], edge["b"])})
     unknown = sorted(set(seeds) - set(nodes))
     if unknown:
-        raise ValueError("seed not in graph (unknown id, or a library pattern "
-                         "with no edges): " + ", ".join(unknown))
+        library = graph.get("pattern_ids")
+        if library is None:
+            raise ValueError("seed not in graph (unknown id, or a library pattern "
+                             "with no edges): " + ", ".join(unknown))
+        isolated = [seed for seed in unknown if seed in set(library)]
+        absent = [seed for seed in unknown if seed not in set(library)]
+        parts = []
+        if isolated:
+            parts.append("isolated seed (library pattern with no edges): "
+                         + ", ".join(isolated))
+        if absent:
+            parts.append("seed not in graph (not a library pattern): "
+                         + ", ".join(absent))
+        raise ValueError("; ".join(parts))
     comps = components(nodes, pairs)
     seed_components = [{"component": index, "size": len(comp),
                         "seeds": sorted(set(seeds) & set(comp))}
