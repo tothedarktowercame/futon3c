@@ -77,3 +77,37 @@ is pinned as `:source {:path :sha256}`. The facts pass `:guard-tokens-known`
 once the `:chat-turn-chain` and `:turn-commit` locators exist on the WM side.
 The first rule the WM can use will come from a family whose guard is over the
 work (the correction family), not the go-ahead family.
+
+## Second declaration (claude-17, 2026-09-30, before any further measurement)
+
+**Family renamed.** Earlier notes call it the "correction" family. It is the
+**live-gap** family: operator turns where 象 cites
+`apparatus/done-is-observed-running`, meaning Joe reports that something
+claimed or expected to be done is not seen working in the live system.
+
+**Membership is checked by reading, at fragment level** (claude-17 read all
+13 cited fragments against the pattern's IF: something claimed as done is not
+observed acting). 12 fit. One is excluded:
+
+- `turn-2GmY4p`: the cited fragment is an *approval* of a reworked diagram,
+  not a gap report.
+
+Correction to an earlier claim in chat: `turn-iNKHir` fits. Its cited
+fragment is the inbox-zero service "still unconvincing" after repeated
+attempts.
+
+**The test.** For each candidate post fact P (commit_resolved, parks_made,
+parks_released):
+1. **Baseline, matched on the guard:** P's rate over non-family operator
+   turns in the same sessions *whose pre facts satisfy the same guard*.
+2. **Produces is chosen inside each leave-one-out fold**, on the training
+   turns only. The held-out turn is scored against the fold's own choice.
+3. **Verdict:** a one-sided exact binomial test of the family's held-out hits
+   (guard met) against the matched baseline rate. The verdict is
+   `:better-than-baseline` only if p < 0.05/3, a Bonferroni correction over
+   the three candidates. Otherwise it is `:not-better`, or
+   `:too-few-to-judge` below 10 full triples with the guard met.
+4. `:verdict` carries `:p`, the matched baseline counts, and the family counts
+   (claude-1's loading requirement).
+
+This applies to the live-gap family (12 turns) and to the go-ahead family.
