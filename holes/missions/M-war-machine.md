@@ -1,5 +1,5 @@
 # Mission: War Machine
-Status: parked
+**Status:** OPEN — parked
 
 **Date:** 2026-04-10
 **Status:** IDENTIFY
@@ -8,6 +8,15 @@ Status: parked
   holistic-argument-sketch.md (the thesis), war-room.md (WR-1 through WR-4)
 **Repos:** futon3c (evidence, Agency), futon3 (war room, pattern library, holistic argument),
   futon4 (Arxana browser), futon5a (logic model, sorry topology), futon0 (joe-hud)
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The War Machine produces a readable strategic status from live evidence, mission, sorry-topology, and HUD data.
+- [ ] The status gives a last-seen timestamp for every arrow in the holistic argument loop.
+- [ ] The status gives a current evidence summary for each of S1–S5 and A1–A4.
+- [ ] The status is accessible from Emacs through `M-x war-machine` or the Arxana war-room view.
+- [ ] A measured update of the complete status finishes in under 30 seconds.
+- [ ] A recorded run demonstrates coordination without command through closing sorrys, activating patterns, and operator navigation backed by evidence.
 
 ## 1. IDENTIFY
 

@@ -1,12 +1,20 @@
 # M-xenotype-its — the explanation witness, and proofs as the basis of an ITS
 
 Date: 2026-07-28
-Status: **PROPOSED** (Joe's design, this date, recorded by claude-6;
+**Status:** OPEN — **PROPOSED** (Joe's design, this date, recorded by claude-6;
 charter confirmation + first pilot scheduling = Joe).
 Lineage: `TN-baldwin-reconstructed` (the layer tower),
 `baldwin-ratchet-defeats-darkroom.flexiarg` (the operative principle),
 M-codex-sorry-loop (the corpus + loop this sits atop),
 Prelim Tutor (the product this grounds).
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Joe confirms the charter and a first explanation pilot is scheduled.
+- [ ] A preregistration exists for the first session using `YoungL2.lean` or `ConstructionTargets/SchwarzEquality.lean`.
+- [ ] The pilot records every drill-down “no” in one of the four typed bins.
+- [ ] The harvested session records Joe's explanation verdict and the first explanation edges or ancillary targets it produces.
+- [ ] The pilot records the session surface and drill-down recording format used.
 
 ## The four-layer stack (Joe's mapping)
 

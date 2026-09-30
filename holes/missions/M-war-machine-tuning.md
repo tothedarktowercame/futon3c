@@ -1,5 +1,5 @@
 # Mission: War Machine Tuning
-Status: parked
+**Status:** OPEN — parked
 
 **Date:** 2026-04-26
 **Status:** INSTANTIATE near complete — handing off to E-war-machine-qa (Checkpoint 10, 2026-04-26)
@@ -12,7 +12,16 @@ Status: parked
     (stack-level capability map; § Checkpoint 5 wires the recurring
     AIF tick that the War Machine consumes);
   `futon3c/holes/missions/M-stack-inhabitation.md` (inhabited vs
-    uninhabited surfaces).
+  uninhabited surfaces).
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The `M-aif-head` audit table names every requirement and gives each a cited verdict.
+- [ ] The clock/cadence and discoverability audit tables cover every clock-bearing affordance and every tile or control.
+- [ ] The Audacity-style timeline has a documented visual and interaction specification that matches its implementation.
+- [ ] A Half-A instance proof follows one specific recommendation through operator action to evidence visible on refresh.
+- [ ] The D&G audit cites evidence for all eight operational tests and records at least three passing verdicts.
+- [ ] The mission records an exit allowed by its revised exit rubric, with the evidence supporting that verdict.
 
 ## 1. IDENTIFY
 

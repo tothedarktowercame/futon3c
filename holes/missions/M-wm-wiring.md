@@ -1,9 +1,17 @@
 # Mission: M-wm-wiring
 
-**Status:** HEAD, IDENTIFY, MAP, DERIVE, ARGUE met (Joe's read, 2026-09-25 ~23:55Z: "it looks good to me"); VERIFY entered (the wiring as a whole, by the diagramprover run over the machine's map); INSTANTIATE drafted: the overall wiring first, then the missing parts and hops.
+**Status:** OPEN — HEAD, IDENTIFY, MAP, DERIVE, ARGUE met (Joe's read, 2026-09-25 ~23:55Z: "it looks good to me"); VERIFY entered (the wiring as a whole, by the diagramprover run over the machine's map); INSTANTIATE drafted: the overall wiring first, then the missing parts and hops.
 **Owner:** claude-10, accepted 2026-09-25 ~16:50Z ("I've held the flight loop, the `:construction` tick and the read step, and most rows plug into `flight_runner.clj`, which I wrote"); claude-8 leads PROOF-2a and reviews under author ≠ reviewer; Joe to confirm.
 **Repo:** futon3c (the mission lives here). Components live in futon2 (`src/futon2/aif`, `scripts/wm`), mathlib4 (`DarkTower/WarMachine`), futon3c (checkers, cascade-real).
 **Governing record:** futon2 `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md` (66120f4c at drafting): the theorem is completion; its holes are the components below.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Every wiring row's tripwire and named test box pass against the committed map.
+- [ ] The map's `:expected-findings` contains only the two standing findings named by the mission.
+- [ ] N0 holds when a flight run's closure includes the wired files.
+- [ ] The first flight's record is reviewed and accepted whether the flight succeeds or fails.
+- [ ] The DOCUMENT page contains the mission annotations and lifecycle evidence rather than reporting them absent.
 
 ## HEAD (Joe, 2026-09-25, emacs-repl; sense preserved, quotes verbatim)
 
@@ -375,4 +383,3 @@ The post-choice refusal register (claude-3) lands before step 10's first enactin
 ## DOCUMENT (note, ahead of its phase)
 
 The mission's working page uses the M-futon-seams presentation (Joe, 2026-09-25: zone/wip/seams.html is the style for a wiring-focused mission): the mission text as the main column, margin notes anchored to exact spans at a recorded sha, a phase table read from each exit criterion against evidence, figures in their own lane. The generator `scripts/seams_mission_page.py` takes `--mission` and `--lab` since futon3c dc86c962 (claude-1; the M-futon-seams page byte-identical before and after, sha256 7be3b52d…; a non-mission refused with nothing written). `holes/labs/M-wm-wiring/` holds only a README: `annotations.edn` and `lifecycle.edn` are the owner's to write as the rows are worked, and until then the page states both absences (empty margin; every phase "not read" with its criterion quoted, "exit met" nowhere). Suggested annotation columns for this mission: (a) the component the row calls, with sha and warrant; (b) the PROOF-2a clause the row exercises. The margin is sized for two columns; if the mission stays annotation-light the measure is worth revisiting (claude-1).
-

@@ -1,10 +1,19 @@
 # M-zai-learning-loop — a laptop-based, self-improving learning loop in mathematics
 
-**Status:** CHARTERED 2026-07-25 (Joe's direction; this doc claude-4).
+**Status:** OPEN — CHARTERED 2026-07-25 (Joe's direction; this doc claude-4).
 **Parents:** M-typed-memories (the gap, the prototype ladder),
 M-shared-memory-control-build-test (recall/curation/receipts machinery),
 E-dynamic-queries + E-retrieval-flows (the dynamical retrieval theory),
 Zaif (the runner formalism this loop completes with a memory axis).
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Dispatch records show recalled pattern neighborhoods injected into runner prompts with the offered memories receipted.
+- [ ] A scribe run turns store-native session evidence into typed memories carrying evidence ids and subject links.
+- [ ] Use receipts and challenge edges record both helpful and misleading recalled rules.
+- [ ] Pattern-formation records show at least one multi-instance pattern or new pattern level reviewed by the operator.
+- [ ] A preregistered BPM baseline batch reports solved-with-zero-sorries and turn counts without held-out contamination.
+- [ ] Later preregistered evaluation reports capability over memory accumulation, with cohort size and the BPM pretraining caveat.
 
 ## HEAD (the gap this closes)
 

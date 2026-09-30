@@ -1,9 +1,16 @@
 # M-warrant-limit
 
-**Status:** MAP in progress (2026-09-28)
+**Status:** OPEN — MAP in progress (2026-09-28)
 **Owner:** claude-8. Authors: Codex and Kimi seats, one packet each.
 **Repos:** futon3c (test registry, wire tests), futon2 (product code the tests reach); operational state in `/home/joe/code/storage/test-registry/`.
 **Lifecycle:** [Futonic Mission Lifecycle](../../../futon4/holes/mission-lifecycle.md)
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] A product edit that makes more than 10 warrants stale creates exactly one open refactor request without a manually started worker pass.
+- [ ] An open refactor request is dispatched to a Codex or Kimi seat and its job id is stored on the request.
+- [ ] A request closes only after replay shows that the same edit makes at most 10 warrants stale, with that count recorded.
+- [ ] The local database records seven consecutive days of product edits, stale warrants, requests, and reruns.
 
 ## 1. IDENTIFY
 
