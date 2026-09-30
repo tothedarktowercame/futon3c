@@ -41,6 +41,197 @@ import sys
 
 DEFAULT_DIR = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
 MIN_TURNS = 3
+# ---------------------------------------------------------------------------
+# Classical segmenter: cut one operator turn into fragments with stable ids
+# and exact offsets, so a reply can name the fragment it answers.  Sentence
+# ids match turn_batch.sentences_of (the recorders' rule); clause fragments
+# are s<i>.<k>.  Standard library only, deterministic, no model involved.
+
+# The sentence-split rule of scripts/turn_batch.py (SPLIT there); the ids
+# must agree with its sentences_of for the same text.
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+# Clause-boundary rules.  One entry, one comment; keep the list explicit.
+CLAUSE_BOUNDARIES = (
+    # a semicolon ends a clause -- the classic list separator in Joe's prose
+    ("semicolon", ";"),
+    # an em/en dash or spaced hyphen used as a break (" -- like this")
+    ("spaced-dash", None),
+    # clause-opening connectives -- cut BEFORE the connective, and only when
+    # a comma or a dash sits right before it (mid-sentence "so" after a
+    # comma IS a cut; sentence-initial "So," is not, the sentence boundary
+    # already did that work)
+    ("connective", ("but", "however", "so", "because", "although", "though",
+                    "whereas", "while", "and then", "i.e.", "e.g.")),
+)
+
+# Spans a boundary must not fall inside.
+_PROTECTED = (
+    re.compile(r"https?://\S+|www\.\S+"),            # URLs
+    re.compile(r"`[^`]*`"),                          # backticked spans
+    re.compile(r"\([^()]*\)|\[[^\[\]]*\]"),          # (parenthesised) [spans]
+    re.compile(r'"[^"]*"'),                          # quoted spans
+    re.compile(r"\d+(?:\.\d+)+"),                    # numbers with dots (v0.2, 3.14)
+    re.compile(r"(?:[\w.-]+/)+[\w.-]+"),             # file/dir paths a/b/c.py
+    re.compile(r"\b[\w-]+\.[A-Za-z]{1,4}\b"),        # file names with dots
+)
+
+
+def _protected_mask(text: str) -> list[bool]:
+    mask = [False] * len(text)
+    for pattern in _PROTECTED:
+        for m in pattern.finditer(text):
+            for i in range(m.start(), m.end()):
+                mask[i] = True
+    return mask
+
+
+def _cut_points(sentence: str) -> list[int]:
+    """Offsets where the sentence is cut into clauses (start of next piece)."""
+    mask = _protected_mask(sentence)
+    cuts = []
+    i = 0
+    while i < len(sentence):
+        ch = sentence[i]
+        if ch == ";" and not mask[i]:
+            j = i + 1
+            while j < len(sentence) and sentence[j].isspace():
+                j += 1
+            if j < len(sentence):
+                cuts.append(j)
+            i = j
+            continue
+        if (ch in "—–-" and not mask[i]
+                and i > 0 and sentence[i - 1].isspace()
+                and i + 1 < len(sentence) and sentence[i + 1].isspace()):
+            j = i + 1
+            while j < len(sentence) and sentence[j].isspace():
+                j += 1
+            if j < len(sentence):
+                cuts.append(j)
+            i = j
+            continue
+        if ch in ",—–-" and not mask[i]:
+            j = i + 1
+            while j < len(sentence) and sentence[j].isspace():
+                j += 1
+            if j < len(sentence):
+                for word in CLAUSE_BOUNDARIES[2][1]:
+                    if sentence[j:j + len(word)].lower() == word:
+                        after = j + len(word)
+                        if after == len(sentence) or not sentence[after].isalnum():
+                            cuts.append(j)
+                            i = after
+                            break
+                else:
+                    i = j
+                continue
+        i += 1
+    return cuts
+
+
+def segment(text: str) -> list[dict]:
+    """Fragments of one operator turn: {"id": "s2.1", "start", "end", "text"}.
+
+    Sentence ids match turn_batch.sentences_of; clause fragments are
+    s<i>.<k>.  Offsets are unicode codepoints, zero-based, end-exclusive,
+    text[start:end] == text exactly; fragments are in order, do not
+    overlap, and a fragment shorter than 3 words is merged into its
+    neighbour.  Deterministic.
+    """
+    sentences = []
+    at = 0
+    for i, piece in enumerate(SENTENCE_SPLIT.split(text), start=1):
+        if not piece:
+            continue
+        start = text.index(piece, at)
+        end = start + len(piece)
+        at = end
+        sentences.append((f"s{i}", start, end))
+    if not sentences and text.strip():
+        sentences = [("s1", 0, len(text))]
+    merged = []
+    for sid, sstart, send in sentences:
+        body = text[sstart:send]
+        cuts = _cut_points(body)
+        pieces = []
+        prev = 0
+        for cut in cuts:
+            pieces.append((prev, cut))
+            prev = cut
+        pieces.append((prev, len(body)))
+        frags = []
+        for a, b in pieces:
+            span = body[a:b]
+            stripped = span.strip()
+            if not stripped:
+                continue
+            fa = a + (len(span) - len(span.lstrip()))
+            fb = b - (len(span) - len(span.rstrip()))
+            frags.append({"id": None, "start": sstart + fa, "end": sstart + fb,
+                          "text": body[fa:fb]})
+        # a fragment shorter than 3 words merges into its neighbour
+        result = []
+        for f in frags:
+            if result and len(f["text"].split()) < 3:
+                prev_f = result[-1]
+                prev_f["end"] = f["end"]
+                prev_f["text"] = text[prev_f["start"]:prev_f["end"]]
+            else:
+                result.append(f)
+        if len(result) > 1 and len(result[0]["text"].split()) < 3:
+            first, second = result[0], result[1]
+            second["start"] = first["start"]
+            second["text"] = text[second["start"]:second["end"]]
+            result = result[1:]
+        for k, f in enumerate(result):
+            f["id"] = f"{sid}.{k}"
+            merged.append(f)
+    return merged
+
+
+def seg_eval(directory: str) -> dict:
+    """Compare segment() with 象's fragments over the published analyses.
+
+    A boundary matches when a 小象 fragment start is within 2 characters
+    of a 象 fragment start.  A measurement, not a gate.
+    """
+    turns = x_fragments = mine_fragments = matched_mine = matched_x = 0
+    for path in sorted(glob.glob(os.path.join(directory, "*.analysis.json"))):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        source = doc.get("source_text")
+        if not isinstance(source, str) or not source.strip():
+            continue
+        theirs = [f for sentence in doc.get("sentences") or []
+                  for f in sentence.get("fragments") or []
+                  if isinstance(f.get("start"), int)]
+        if not theirs:
+            continue
+        turns += 1
+        x_fragments += len(theirs)
+        mine = segment(source)
+        mine_fragments += len(mine)
+        their_starts = [f["start"] for f in theirs]
+        my_starts = [f["start"] for f in mine]
+        matched_mine += sum(1 for m in my_starts
+                            if any(abs(m - t) <= 2 for t in their_starts))
+        matched_x += sum(1 for t in their_starts
+                         if any(abs(m - t) <= 2 for m in my_starts))
+    precision = matched_mine / mine_fragments if mine_fragments else 0.0
+    recall = matched_x / x_fragments if x_fragments else 0.0
+    f1 = (2 * precision * recall / (precision + recall)
+          if precision + recall else 0.0)
+    return {"turns": turns, "xiang_fragments": x_fragments,
+            "xiaoxiang_fragments": mine_fragments,
+            "boundary_precision": round(precision, 4),
+            "boundary_recall": round(recall, 4),
+            "boundary_f1": round(f1, 4)}
+
+
 CJK = "一-鿿㐀-䶿"
 WORD = re.compile(r"[a-z][a-z']*|[%s]+" % CJK)
 IDLIKE = re.compile(r"\d|^[a-f0-9]{8,}$")
@@ -578,6 +769,8 @@ def main(argv=None) -> int:
     x = sub.add_parser("export"); x.add_argument("--dir", default=DEFAULT_DIR); x.add_argument("out")
     c = sub.add_parser("classify"); c.add_argument("model"); c.add_argument("text")
     b = sub.add_parser("bundle"); b.add_argument("--dir", default=DEFAULT_DIR); b.add_argument("out")
+    g = sub.add_parser("segment"); g.add_argument("text")
+    v = sub.add_parser("seg-eval"); v.add_argument("--dir", default=DEFAULT_DIR)
     w = sub.add_parser("page"); w.add_argument("--dir", default=DEFAULT_DIR); w.add_argument("out")
     w.add_argument("--report", default=SAMPLE_REPORT,
                    help="JSON from `xiaoxiang-local.py --json`, drawn as figures (skipped if absent)")
@@ -592,6 +785,10 @@ def main(argv=None) -> int:
         model = export(rows, safe_vocab(rows))
         with open(a.out, "w", encoding="utf-8") as fh:
             json.dump(model, fh, ensure_ascii=False)
+    elif a.cmd == "segment":
+        json.dump(segment(a.text), sys.stdout, indent=1, ensure_ascii=False); print()
+    elif a.cmd == "seg-eval":
+        json.dump(seg_eval(a.dir), sys.stdout, indent=1, ensure_ascii=False); print()
     elif a.cmd == "bundle":
         code = bundle(load(a.dir))
         with open(a.out, "w", encoding="utf-8") as fh:

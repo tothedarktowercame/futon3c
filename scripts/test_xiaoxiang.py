@@ -150,3 +150,81 @@ class Figures(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Segment(unittest.TestCase):
+    """The classical segmenter: ids, offsets, protections, merging."""
+
+    def test_offsets_exact_on_several_texts(self):
+        texts = [
+            "So, yes, but let's continue to build these features into xiaoxiang b/c I like the idea of releasing it as open source software; and in order to make it good, let's get back to the programme of running the backfill on old operator turns, so we can use that as a training set.",
+            "First sentence. Second one; however, it continues here — and so does that. A third.",
+            "We did A. Then B, because C matters, although D is unclear. e.g. this stays with its comma-side clause, but this is a new fragment.",
+            "One clause only here",
+        ]
+        for text in texts:
+            frags = xx.segment(text)
+            self.assertTrue(frags)
+            at = -1
+            for f in frags:
+                self.assertEqual(text[f["start"]:f["end"]], f["text"])
+                self.assertGreaterEqual(f["start"], at)
+                at = f["end"]
+
+    def test_sentence_ids_match_turn_batch(self):
+        import turn_batch
+        for text in ["One. Two! Three? Four.",
+                     "No punctuation at all in this one",
+                     "A; b, c — d. And then e; f.",
+                     ""]:
+            theirs = [s["id"] for s in turn_batch.sentences_of(text)]
+            mine = sorted({f["id"].split(".")[0] for f in xx.segment(text)},
+                          key=lambda x: int(x[1:]))
+            if text.strip():
+                self.assertEqual(theirs, mine, text)
+            else:
+                self.assertEqual([], xx.segment(text))
+
+    def test_empty_and_tiny(self):
+        self.assertEqual([], xx.segment(""))
+        self.assertEqual([], xx.segment("   "))
+        one = xx.segment("word")
+        self.assertEqual(1, len(one))
+        self.assertEqual([{"id": "s1.0", "start": 0, "end": 4, "text": "word"}], one)
+
+    def test_cjk_sentence(self):
+        text = "象给操作员的每一句加上标注。小象做经典的切分！这是第三句？"
+        frags = xx.segment(text)
+        # CJK full stops are not sentence boundaries under the recorders'
+        # rule, so this is one sentence, one fragment
+        self.assertEqual(["s1.0"], [f["id"] for f in frags])
+        self.assertEqual(text, frags[0]["text"])
+
+    def test_no_split_inside_protected_spans(self):
+        url = "see https://example.com/a/b;but?q=1 and http://x.io/y,so z"
+        path = "edit scripts/turn_batch.py; however, keep tests/whole_dir/x.py; but ok"
+        tick = "run `git log --oneline; and more` then, but stop"
+        paren = "keep (this; however, and but) outside, but split here"
+        for text in (url, path, tick, paren):
+            for f in xx.segment(text):
+                self.assertEqual(text[f["start"]:f["end"]], f["text"])
+        # the parenthesis body survives as part of one fragment
+        parenfrags = xx.segment(paren)
+        inside = [f for f in parenfrags if "(this; however, and but)" in f["text"]]
+        self.assertEqual(1, len(inside))
+        # no fragment boundary lands inside the URL
+        urlfrags = xx.segment(url)
+        starts = [f["start"] for f in urlfrags]
+        for m in __import__("re").finditer(r"https?://\S+", url):
+            for k in range(m.start() + 1, m.end()):
+                self.assertNotIn(k, starts)
+
+    def test_short_fragment_merge(self):
+        frags = xx.segment("Ok, but now the real work begins in earnest here")
+        # "Ok," alone would be under 3 words: merged into the first fragment
+        self.assertTrue(frags[0]["text"].startswith("Ok,"))
+        self.assertLess(2, len(frags[0]["text"].split()))
+
+    def test_deterministic(self):
+        text = "A; b, but c. However, d — and then e, so f continues here."
+        self.assertEqual(xx.segment(text), xx.segment(text))
