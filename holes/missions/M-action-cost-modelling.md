@@ -1,7 +1,7 @@
 # Mission: Action Cost/Benefit Modelling for the WM
 
 **Type:** Mission (M-prefix; lifecycle HEAD → IDENTIFY → MAP → DERIVE → ARGUE → VERIFY complete; retitled from E- to M- by Joe 2026-05-26 once DERIVE surfaced that this is full-fledged-mission scope, not a side excursion).
-**Status:** HEAD / IDENTIFY / MAP / DERIVE / ARGUE / VERIFY all drafted and operator-ratified through 2026-05-27. VERIFY's 10 carried-forward tensions: 4 done (T1, T5, T8, T10), 4 held for downstream INSTANTIATE (T2, T4, T6, T9 — all blocked on `E-substrate-2-sorry-typing.md`'s own INSTANTIATE which is a future cycle), 2 future-Joe-triggered (T3, T7). Mission ready for INSTANTIATE when Joe ratifies.
+**Status:** OPEN — HEAD / IDENTIFY / MAP / DERIVE / ARGUE / VERIFY all drafted and operator-ratified through 2026-05-27. VERIFY's 10 carried-forward tensions: 4 done (T1, T5, T8, T10), 4 held for downstream INSTANTIATE (T2, T4, T6, T9 — all blocked on `E-substrate-2-sorry-typing.md`'s own INSTANTIATE which is a future cycle), 2 future-Joe-triggered (T3, T7). Mission ready for INSTANTIATE when Joe ratifies.
 **Date:** 2026-05-26
 **Author + end-to-end owner:** claude-1 (inhabiting `:war-machine-pilot`, emacs-repl with Joe).
 **Replaces:** `futon3c/holes/missions/HEAD-wm-action-cost-prioritisation.md` (same content under §HEAD below).
@@ -105,7 +105,7 @@ The gap therefore decomposes into three nested questions:
 - Replacing operator judgement on cost/benefit (the work-breakdown layer aids judgement, doesn't replace it)
 - Automated work-breakdown ("decompose this multi-month thing into pilot cycles for me") — that's its own deep problem; this excursion only asks the WM to *recognise that decomposition is needed*
 
-### Completion criteria
+## Acceptance checklist (2026-09-30)
 
 - [ ] **Cost-signal lands**: Each candidate action in the WM's ranked-actions carries a `:scale` (or equivalently expressive) annotation, sourceable from at least one of shape (a)/(b)/(c)
 - [ ] **Work-breakdown gate fires**: When the WM's top recommendation is `:multi-session` or larger, the live next-move-live tile renders a "needs work breakdown" CTA instead of "→ address-sorry X"

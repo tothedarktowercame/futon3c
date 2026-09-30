@@ -1,7 +1,7 @@
 # M-agency-hardening -- Conference-ready IRC-backed Agency
 
 Date: 2026-06-07
-Status: CLOSED 2026-06-12 (Joe's call) — **but see
+**Status:** CLOSED — CLOSED 2026-06-12 (Joe's call) — **but see
 `holes/excursions/E-unsolicited-pouch-turns.md` (2026-08-03): a turn source the
 D1–D5 invariants do not quantify over (the agent's own background-task
 completions) reproduces the operator-visible defect this mission closed on.

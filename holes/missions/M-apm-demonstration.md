@@ -1,6 +1,6 @@
 # M-apm-demonstration
 
-**Status:** HEAD complete; IDENTIFY draft pending operator acceptance (2026-08-14)
+**Status:** OPEN — HEAD complete; IDENTIFY draft pending operator acceptance (2026-08-14)
 **Gate:** operator-acceptance — HEAD must be recognised as faithful to the
 mission's live shape before IDENTIFY hardens it. Per the lifecycle, the
 operator clears this by editing the file.
@@ -294,23 +294,16 @@ elicitation-verified are *observed invalidators*, not design — they are facts
 about assays that failed, so they stay. What is speculative is promoting them
 to formal pass/fail conditions; that is a DERIVE decision.
 
-### 1.5 Completion criteria *(testable; thresholds are proposals — see Gate)*
+## Acceptance checklist (2026-09-30)
 
 Stated so as not to presume the register's outcome:
 
-1. **Every N-register row resolved** to already-done / partly-done /
-   greenfield, with evidence — this is MAP's exit condition and this mission's
-   first real deliverable.
-2. **N7 carries a mechanical warrant**, by whatever endpoint DERIVE settles on.
-3. **N5 graded against the users' contract** (engine-name and
-   structural-similarity queries), not a generic relevance notion.
-4. **N8 stated in a checkable form** and evaluated within a fixed retrieval
-   regime named by hash.
-5. **N6 discharged or refused**, with the refusal recorded if so.
-6. **A held-out demonstration** on BPM or arXiv satisfying the three
-   preconditions.
-7. **The capability proof revised** to rank nodes by load-bearing status and to
-   drop the miscalibrated odometer.
+- [ ] Every N-register row is classified as already-done, partly-done, or greenfield, with evidence.
+- [ ] N7 carries a mechanical warrant through the endpoint selected by DERIVE.
+- [ ] N5 is graded against engine-name and structural-similarity queries from the users' contract.
+- [ ] N8 is stated in a checkable form and evaluated within a fixed retrieval regime named by hash.
+- [ ] N6 is discharged or has a recorded refusal.
+- [ ] A held-out BPM or arXiv demonstration satisfies the three preconditions, and the revised capability proof ranks nodes by load-bearing status without the miscalibrated odometer.
 
 ### 1.5 Relationship to other missions
 

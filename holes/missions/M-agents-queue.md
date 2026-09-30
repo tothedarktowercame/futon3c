@@ -1,9 +1,17 @@
 # M-agents-queue
 
 Date: 2026-06-13
-Status: IDENTIFY — **PARKED** 2026-06-13 (Joe). Held: claude-1 on `/loop` manages
+**Status:** OPEN — IDENTIFY — **PARKED** 2026-06-13 (Joe). Held: claude-1 on `/loop` manages
 dispatch adequately for now; this is the more elaborate, self-organizing version for
 later. Not started.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The pool-queue logic model states and checks that two workers cannot claim the same job.
+- [ ] A worker failure returns its claimed job to the pool without losing or duplicating it.
+- [ ] A completed pool job routes its result to the recorded originator.
+- [ ] Pool scheduling demonstrates worker opt-in and no starvation, with Codex retained as a downstream handoff target.
+- [ ] The queue and active claims are inspectable, and a worker does not end a turn during a tool call.
 
 ## The idea (Joe, 2026-06-13)
 
