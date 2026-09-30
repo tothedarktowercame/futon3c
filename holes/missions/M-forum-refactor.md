@@ -1,6 +1,6 @@
 # Mission: Evidence Landscape
 
-## Status: DONE (2026-03-08)
+**Status:** CLOSED — DONE (2026-03-08)
 
 All four parts delivered: evidence shapes (shapes.clj), evidence store
 (store.clj + pluggable backend protocol), thread projection (threads.clj),

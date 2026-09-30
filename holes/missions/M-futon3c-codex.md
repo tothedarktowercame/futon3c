@@ -1,5 +1,5 @@
 # Mission Notes: futon3c Codex Workstream
-Status: archived
+**Status:** CLOSED — archived
 
 Date: 2026-02-14
 Status: Active (updated after pulling `7d1a5d0`)

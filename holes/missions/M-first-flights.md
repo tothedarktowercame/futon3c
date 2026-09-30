@@ -1,7 +1,7 @@
 # M-first-flights — we have flight data (Orville); we need the data shapes (Wilbur)
 
 Date: 2026-06-11
-Status: SUPERSEDED-AS-MISSION toward E-first-flights-transferred-work — Phase A COMPLETE (2026-06-12, operator side-by-side verdict PASS — checkpoint 20). Full lifecycle IDENTIFY → MAP → DERIVE → ARGUE → VERIFY → INSTANTIATE ran 2026-06-11/12. Phase B (policy-grade G(s, π)) and the typed-grounds tail moved to Excursion ownership on 2026-07-06; related fold-frontier work may inform M-fold-ansatz, but M-first-flights no longer carries that work as an open WM target.
+**Status:** SUPERSEDED — SUPERSEDED-AS-MISSION toward E-first-flights-transferred-work — Phase A COMPLETE (2026-06-12, operator side-by-side verdict PASS — checkpoint 20). Full lifecycle IDENTIFY → MAP → DERIVE → ARGUE → VERIFY → INSTANTIATE ran 2026-06-11/12. Phase B (policy-grade G(s, π)) and the typed-grounds tail moved to Excursion ownership on 2026-07-06; related fold-frontier work may inform M-fold-ansatz, but M-first-flights no longer carries that work as an open WM target.
 Owners: fable-2 (mint, human-cockpit standard), claude-3 (the flight half),
 fable-1 (machine-trace production sites; schema and logic model).
 

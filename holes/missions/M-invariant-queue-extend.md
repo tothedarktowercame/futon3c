@@ -1,4 +1,13 @@
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] At least three of the six substrate-2 phase-1 families have real probe check functions returning typed `:ok` or `:violation` detail instead of deferred-stub results.
+- [ ] At least two War-Machine diagram-invariant families have real probe check functions, or this mission records the specific M-war-machine condition that keeps their lift deferred.
+- [ ] Snapshot-as-evidence is implemented and the Arxana operational-families view renders `last-fire-at`, `last-violation-at`, and `inactive-since` from probe evidence.
+- [ ] Two write-class sub-mission files exist, each with IDENTIFY and an explicit boundary, ratchet, and canary contract.
+- [ ] The VSATARCS track records either its current defer reason or a deferred-stub registration justified by upstream readiness.
+- [ ] The coverage ratchet passes after every inventory mutation, with no structural-law entry marked operational unless its check actually fires.
 
 **Status:** MAP → INSTANTIATE iterating per track (2026-04-29). Q-track-priority + Q-merge-with-violations settled by Joe 2026-04-29.
 

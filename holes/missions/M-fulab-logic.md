@@ -1,5 +1,14 @@
 # Mission: Fulab Logic — core.logic Invariants Beyond Portfolio
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] `src/futon3c/peripheral/proof_logic.clj` expresses status/evidence, proved-dependency, DAG, and phase-output invariants as queryable goals, with its namespace tests passing.
+- [ ] `src/futon3c/agents/tickle_logic.clj` checks escalation ordering, stall/evidence alignment, and orphan escalation, with its namespace tests passing.
+- [ ] `src/futon3c/social/peripheral_logic.clj` checks observed-hop validity, dead ends, reachability, and entry/exit symmetry, with its namespace tests passing.
+- [ ] `src/futon3c/invariants/logic.clj` aggregates the three domains and returns typed violations or an empty clean result.
+- [ ] A test constructs a real-shaped relational violation and demonstrates that the corresponding invariant reports it.
+- [ ] The documented REPL helper runs all invariant checks against a live system snapshot and returns the aggregate result.
 
 **Date:** 2026-03-10
 **Status:** NOT STARTED

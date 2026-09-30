@@ -1,6 +1,14 @@
 # Mission: M-intent-curvature
 
-**Status:** IDENTIFY (scoped 2026-06-03 at C-substrate-completion dissolution) — **HIGH PRIORITY**, entry-gated. Not yet picked up.
+**Status:** OPEN — IDENTIFY (scoped 2026-06-03 at C-substrate-completion dissolution) — **HIGH PRIORITY**, entry-gated. Not yet picked up.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] Live ingest materializes `:mission/mentions-file` edges at real scale. (evidence: this mission's EC1 and verified 2026-06-03 counts)
+- [x] The sampled β ablation records exact reversibility at β=0 and an intent-bridge lift at β=0.5. (evidence: `M-substrate-metric.R3-mentions-beta{0,05}.json`)
+- [ ] A live full-scale `curvature-at` surface exposes mentions-mixed curvature while preserving `feeds-mu? true`, `feeds-A? false`, and the other O3 separation invariants.
+- [ ] The mission records a chosen default β or a typed consumer-set parameter, with β=0 retained as the reversible baseline.
+- [ ] A full-scale verification record reproduces reversibility and intent-bridge lift, and the M-aif2 tension proposer demonstrably reads the β>0 surface.
 **Owner:** claude-3 (E1 verify) + codex-3 (keystone exposes the live surface).
 **Repo:** futon3c (keystone metric surface; the R3-mentions artifacts live here).
 **Parent:** `C-substrate-completion` §9.1 (the named follow-up beyond the dissolution bar).

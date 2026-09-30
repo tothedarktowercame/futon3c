@@ -1,6 +1,6 @@
 # M-improve-irc — IRC Surface Improvements for Agent Coordination
 
-## Status: DONE
+**Status:** CLOSED — DONE
 
 ## Context
 
