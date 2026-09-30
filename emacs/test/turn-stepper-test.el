@@ -335,6 +335,8 @@ unsigned commit, each touching its own file."
                '(("10:00" "base" "base")
                  ("10:10" "mine" "mine\n\nAgent-Session: S")
                  ("10:11" "theirs" "theirs\n\nAgent-Session: OTHER")
+                 ("10:14" "kimis" "dispatched\n\nAgent-Session: K\nDispatched-By: claude-17/S")
+                 ("10:15" "stranger" "dispatched by someone else\n\nAgent-Session: K2\nDispatched-By: claude-9/OTHER")
                  ("10:12" "joes" "joe at a terminal"))
                do (with-temp-file (expand-file-name file repo) (insert tm))
                (call-process "git" nil nil nil "add" file)
@@ -360,10 +362,13 @@ unsigned commit, each touching its own file."
          (repo (plist-get p :path)))
     (unwind-protect
         (progn
-          (should (= 3 (length (plist-get p :commits))))
-          (should (= 1 (length (turn-stepper--own-commits p "S"))))
-          (should (equal 1 (plist-get (turn-stepper--revert p "S") :reverted)))
+          (should (= 5 (length (plist-get p :commits))))
+          ;; This session's commit and the one it dispatched; not claude-9's.
+          (should (= 2 (length (turn-stepper--own-commits p "S"))))
+          (should (equal 2 (plist-get (turn-stepper--revert p "S") :reverted)))
           (should-not (file-exists-p (expand-file-name "mine" repo)))
+          (should-not (file-exists-p (expand-file-name "kimis" repo)))
+          (should (file-exists-p (expand-file-name "stranger" repo)))
           (should (file-exists-p (expand-file-name "theirs" repo)))
           (should (file-exists-p (expand-file-name "joes" repo))))
       (delete-directory root t))))
@@ -376,7 +381,7 @@ unsigned commit, each touching its own file."
         (progn
           ;; Another seat mid-edit on an unrelated file: the revert goes ahead.
           (with-temp-file (expand-file-name "theirs" repo) (insert "mid-edit"))
-          (should (equal 1 (plist-get (turn-stepper--revert p "S") :reverted)))
+          (should (equal 2 (plist-get (turn-stepper--revert p "S") :reverted)))
           (should (equal "mid-edit" (with-temp-buffer
                                       (insert-file-contents (expand-file-name "theirs" repo))
                                       (buffer-string)))))
@@ -464,7 +469,7 @@ load, so r and R were undefined after a reload.  Simulate an old map."
           (with-current-buffer repl
             (should (string-match-p "reply one" (buffer-string)))
             (should-not (string-match-p "second turn\\|reply two" (buffer-string))))
-          (should (string-match-p "\\`\\(> \\)?Operator reverted frame 5 (from the turn at 2026-09-30T02:40:00Z): 1 commit(s) reverted in r"
+          (should (string-match-p "\\`\\(> \\)?Operator reverted frame 5 (from the turn at 2026-09-30T02:40:00Z): 2 commit(s) reverted in r"
                                   turn-stepper-test--sent)))
       (kill-buffer repl) (kill-buffer rw) (delete-directory root t))))
 

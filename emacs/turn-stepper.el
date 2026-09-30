@@ -712,8 +712,8 @@ Frames are cached per session; use `g' in the stepper to refresh."
   "Per repo: the pin at FRAME's start and the commits up to NEXT-AT (nil: now).
 REPOS defaults to the repos in FRAME's turn-commits rows.
 Returns a list of plists (:repo :path :pin :end :commits), commits as
-\"SHA<TAB>AUTHOR<TAB>AGENT-SESSION<TAB>SUBJECT\" lines oldest first; the
-session is the commit's Agent-Session trailer, empty when unsigned."
+\"SHA<TAB>AUTHOR<TAB>AGENT-SESSION<TAB>DISPATCHED-BY<TAB>SUBJECT\" lines oldest
+first, from the commit's trailers (empty when absent)."
   (let ((at (turn-stepper--aget 'at (turn-stepper--aget 'turn frame))))
     (delq nil
           (mapcar
@@ -727,7 +727,7 @@ session is the commit's Agent-Session trailer, empty when unsigned."
                        :commits (and (not (equal pin end))
                                      (split-string
                                       (or (turn-stepper--git path "log" "--reverse" "--first-parent"
-                                                             "--format=%H%x09%an%x09%(trailers:key=Agent-Session,valueonly,separator=%x2C)%x09%s"
+                                                             "--format=%H%x09%an%x09%(trailers:key=Agent-Session,valueonly,separator=%x2C)%x09%(trailers:key=Dispatched-By,valueonly,separator=%x2C)%x09%s"
                                                              (concat pin ".." end))
                                           "")
                                       "\n" t))))))
@@ -767,12 +767,19 @@ CTX is the rewind context; RESULTS the per-repo revert results."
                                         results ", "))
               "; there were no commits of this session to revert"))))
 
+(defun turn-stepper--commit-owner (sess dispatched session)
+  "`own' if SESS is SESSION, `dispatched' if DISPATCHED-BY names SESSION, else nil.
+Dispatched-By reads \"<caller agent>/<caller session>\"."
+  (cond ((null session) nil)
+        ((equal sess session) 'own)
+        ((and dispatched (string-suffix-p (concat "/" session) dispatched)) 'dispatched)))
+
 (defun turn-stepper--own-commits (plan-entry session)
-  "Full shas in PLAN-ENTRY signed by SESSION, newest first."
+  "Full shas in PLAN-ENTRY made by SESSION or by work it dispatched, newest first."
   (let (out)
     (dolist (c (plist-get plan-entry :commits) out)
-      (pcase-let ((`(,sha ,_ ,sess . ,_) (split-string c "\t")))
-        (when (and session (equal sess session)) (push sha out))))))
+      (pcase-let ((`(,sha ,_ ,sess ,disp . ,_) (split-string c "\t")))
+        (when (turn-stepper--commit-owner sess disp session) (push sha out))))))
 
 (defun turn-stepper--dirty-overlap (path shas)
   "Uncommitted files in PATH that the commits SHAS touch.
@@ -876,18 +883,20 @@ REPL is not cut and the agent is not told, so the two never disagree."
                                         (substring (plist-get p :pin) 0 12))
                                 'turn-stepper-rewind p 'face 'bold))
             (dolist (c (plist-get p :commits))
-              (pcase-let ((`(,sha ,author ,sess ,subject) (split-string c "\t")))
+              (pcase-let ((`(,sha ,author ,sess ,disp ,subject) (split-string c "\t")))
                 (insert (propertize
-                         (format "  %-10s %s  %s  %s\n"
-                                 (cond ((equal sess session) "R undoes")
-                                       ((string-empty-p (or sess "")) "unsigned")
-                                       (t "other seat"))
+                         (format "  %-13s %s  %s  %s\n"
+                                 (pcase (turn-stepper--commit-owner sess disp session)
+                                   ('own "R undoes")
+                                   ('dispatched "R (dispatched)")
+                                   (_ (if (string-empty-p (or sess "")) "unsigned" "other seat")))
                                  (substring sha 0 8) author subject)
                          'turn-stepper-rewind p))))
             (insert "\n")))
         (insert "Every commit in the window is listed: the repos are shared.  R reverts\n"
-                "only commits signed by this session (Agent-Session trailer), newest\n"
-                "first, as new commits; other seats' and unsigned commits are left alone.\n"
+                "only commits signed by this session, or by work it dispatched\n"
+                "(Dispatched-By), newest first, as new commits; other seats' and\n"
+                "unsigned commits are left alone.\n"
                 "Uncommitted edits are not covered.\n"
                 "w = read-only worktree at the pin, d = diff pin..end (on a repo's lines),\n"
                 "R = rewind: revert this session's commits, cut the REPL back to before\n"
