@@ -24,7 +24,7 @@ lock = threading.Lock()
 tries = {}      # turn path -> attempts
 claimed = set()
 
-COVER = """From claude-17, for Joe: annotate ten of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches.
+COVER = """From claude-17, for Joe: annotate {n} of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches.
 
 The file {pack} holds the instructions, the closed intent list, the ten turns with session context, pattern search hits for every sentence, and the text of every pattern hit in an appendix. Read it and follow it, including its rules on rejections, display cues (at most half of a sentence's words), candidates for every uncited fragment, and quoting text instead of giving offsets.
 
@@ -32,7 +32,7 @@ Write as you go. After you finish each turn, rewrite {answer} as a JSON array of
   python3 -c "import json;print(len(json.load(open('{answer}'))))"
 Keep your reasoning short and put the work in the file. Do not publish anything, do not commit, and do not write anywhere else.
 
-Do all ten, one at a time. If a turn truly cannot be read from the pack, leave it out and say why.
+Do all {n}, one at a time. If a turn truly cannot be read from the pack, leave it out and say why.
 
 Reply (delivered automatically): the answer path, how many turns it contains, and any turn left out with the reason.
 """
@@ -131,7 +131,7 @@ def seat_loop(seat, blocks, end_at):
                                f"{WORK}/{tag}.cover.md")
         subprocess.run([sys.executable, os.path.join(HERE, "backfill_pack.py"), "pack", block, *ids,
                         "--out", pack], capture_output=True, text=True)
-        open(cover, "w").write(COVER.format(pack=pack, answer=answer))
+        open(cover, "w").write(COVER.format(pack=pack, answer=answer, n=len(ids)))
         started = time.time()
         job, req = dispatch(seat, cover, f"象 backfill pack {tag} ({len(ids)} turns, {os.path.basename(block)})")
         row = {"at": now(), "seat": seat, "block": os.path.basename(block), "turns": ids, "job": job}
@@ -145,7 +145,7 @@ def seat_loop(seat, blocks, end_at):
                            capture_output=True, text=True)
         if os.path.exists(answer):
             p = subprocess.run([sys.executable, os.path.join(HERE, "backfill_pack.py"), "publish",
-                                block, answer], capture_output=True, text=True)
+                                block, answer, *ids], capture_output=True, text=True)
             try:
                 s = json.loads(p.stdout)
                 row.update({"published": s["published"], "refused": s["refused"],
