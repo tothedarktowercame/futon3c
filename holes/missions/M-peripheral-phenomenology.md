@@ -1,5 +1,5 @@
 # Mission: Peripheral Phenomenology
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

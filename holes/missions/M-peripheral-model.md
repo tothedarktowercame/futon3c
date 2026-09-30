@@ -1,5 +1,5 @@
 # Mission: Peripheral Model
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

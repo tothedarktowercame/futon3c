@@ -1,5 +1,5 @@
 # Mission: Peripheral Gauntlet
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

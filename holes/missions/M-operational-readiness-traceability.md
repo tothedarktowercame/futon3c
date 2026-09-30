@@ -1,5 +1,5 @@
 # Traceability: M-operational-readiness
-Status: archived
+**Status:** CLOSED — archived
 
 End-to-end evidence chain for the Operational Readiness mission.
 

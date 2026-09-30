@@ -1,8 +1,19 @@
 # M-omni-wm-runner — fold the WM full-loop runner into the serving JVM
 
+**Status:** OPEN — chartered 2026-07-26; parcel review and live cutover remain
+
 Chartered 2026-07-26 (Joe, emacs-repl: "let's do the fold-in, *then* restart
 the JVM for good measure"). Owner: claude-3 (ground control). Authors: codex
 parcels under the coding-handoff protocol; claude-3 reviews as the gate.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] Runner tests demonstrate the selection retry ladder, explicit override, typed exhaustion, and injectable in-process selection seam.
+- [ ] Runner-service tests demonstrate single-flight 409 behavior, endpoint responses, and registry status transitions.
+- [ ] A stubbed click leaves the host Java-process count unchanged.
+- [ ] A live canary click completes through `/api/alpha/wm/click` with synchronous roster visibility and no click JVM.
+- [ ] `README-ground-control` documents the endpoint workflow and marks the `:wm-full-loop` click alias deprecated.
+- [ ] Futon2 instructions state the one-serving-JVM invariant and the cohort-46 charter records the cutover epoch.
 
 ## Why (the I-0 ruling)
 

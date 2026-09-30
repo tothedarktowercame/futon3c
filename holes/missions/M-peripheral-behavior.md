@@ -1,5 +1,5 @@
 # Mission: Peripheral Behavior
-Status: archived
+**Status:** CLOSED — archived
 
 ## Derivation
 

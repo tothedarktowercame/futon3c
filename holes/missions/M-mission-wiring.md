@@ -1,5 +1,5 @@
 # Mission: Mission Wiring
-Status: parked
+**Status:** OPEN — parked
 
 **Date:** 2026-04-29
 **Status:** IDENTIFY
@@ -266,17 +266,13 @@ stable and tested.
 7. Which parts of this contract are mission-specific, and which should later
    become a generic document-wiring pattern?
 
-## Completion Criteria
+## Acceptance checklist (2026-09-30)
 
 This mission is complete when all of the following are true:
 
-1. Saving a mission file causes an inspectable push event, not just eventual
-   pull visibility.
-2. Rename/delete semantics are implemented and tested.
-3. There is one coherent watcher path for mission-doc wiring.
-4. Mission docs have versioned evidence snapshots and substrate projection.
-5. The live AIF stack view exposes mapped vs unmapped active missions.
-6. War Machine / operator-facing mission surfaces no longer silently miss
-   active missions that are present in inventory.
-7. The resulting contract is explicit enough to reuse as the model for other
-   first-class document types later.
+- [ ] Saving a mission file produces an inspectable push event rather than only eventual pull visibility.
+- [ ] Create, update, rename, and delete semantics are implemented and tested through one canonical watcher path.
+- [ ] Mission documents produce versioned evidence snapshots and substrate projections.
+- [ ] The live AIF stack view distinguishes mapped missions from unmapped active missions.
+- [ ] War Machine and operator mission surfaces show every active inventory mission or its explicit unmapped residue.
+- [ ] The mission-wiring contract names its states and failures precisely enough to serve as the model for another first-class document type.
