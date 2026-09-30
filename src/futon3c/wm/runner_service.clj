@@ -349,6 +349,13 @@
                  run-record-path
                  (assoc :run-record run-record-path)
 
+                 ;; PROOF-2b ⟨0⟩0: the receipt's digest, copied verbatim from
+                 ;; the run record the click already persisted (the runner
+                 ;; writes it beside :terminal-receipt); no recomputation.
+                 (:terminal-receipt-digest run-record)
+                 (assoc :terminal-receipt-digest
+                        (:terminal-receipt-digest run-record))
+
                  (not= :present run-record-status)
                  (assoc :run-record-absence
                         (case run-record-status
