@@ -1,6 +1,13 @@
 # Mission: War Machine Pilot
 
-**Status:** HEAD → INSTANTIATE Phase 1-5 EXECUTED; v0 mission-complete in operational substance: claude-9 inhabited per DERIVE Choice 4 + ran first Pair-stage substantive cycle (cycle 408e44ed; anchor-0020 coherence-row authored; new :sub-kind :symptom-to-root-traceback; all 4 consent-gate success-criteria verified); pre-restart no-op flip demo on 0010 also retained; codex-8 closed 4/5 deferrals; awaiting operator acceptance bell to formally close v0
+**Status:** OPEN — HEAD → INSTANTIATE Phase 1-5 EXECUTED; v0 mission-complete in operational substance: claude-9 inhabited per DERIVE Choice 4 + ran first Pair-stage substantive cycle (cycle 408e44ed; anchor-0020 coherence-row authored; new :sub-kind :symptom-to-root-traceback; all 4 consent-gate success-criteria verified); pre-restart no-op flip demo on 0010 also retained; codex-8 closed 4/5 deferrals; awaiting operator acceptance bell to formally close v0
+
+## Acceptance checklist (2026-09-30)
+
+- [x] All eight C1–C8 v0 completion criteria are verified against the live pilot. (evidence: this file, “v0-close” and “Phase 5 EXECUTED”)
+- [x] The pilot completes a Pair-stage substantive cycle and a recursive-QA repair with consent-gate criteria independently checked. (evidence: cycles `408e44ed-c1d6-4b61-bbc0-f37babfb5b69` and `408d02d1-9985-4f84-9136-20b85b9f30e8` in this file)
+- [ ] An operator acceptance bell records the v0 verdict and is linked from this mission's close-out.
+
 **Date:** 2026-05-24
 **Owner:** Joe
 **Surface authored on:** emacs-repl (claude-10 transcribing Joe's directive verbatim into the HEAD)

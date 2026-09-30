@@ -1,6 +1,6 @@
 # Mission: M-typed-holes
 
-**Status:** **CLOSED (2026-06-15, Joe).** Ran the full lifecycle
+**Status:** CLOSED — **CLOSED (2026-06-15, Joe).** Ran the full lifecycle
 IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE→DOCUMENT in two sessions
 (2026-06-14 design; 2026-06-15 build). The single runtime `fill` is built and all
 six projections route through it (D1, failure-condition #1 closed); see

@@ -1,7 +1,7 @@
 # Mission: M-war-machine-first-outing
 
 **Date:** 2026-05-30
-**Status:** **CLOSED 2026-05-30** (operator-directed, emacs-repl with claude-5; codex-2 piloted M2). Full lifecycle IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE ran in-session; M0–M4 done; the WM-pilot loop demonstrated end-to-end (codex-2 cleared the entire open-sorry queue following the WM, driven unattended-across-turns by `/loop`+whistle). See **Closing Checkpoint** at end for milestones + named follow-ons (the input-sources frontier, geometry→AIF bug, VSATARCS regen, bootstrap auto-register). The mission *asked*: which open edges must close to run the machine confidently for a while, and how such a run is set up — answered yes, demonstrated.
+**Status:** CLOSED — **CLOSED 2026-05-30** (operator-directed, emacs-repl with claude-5; codex-2 piloted M2). Full lifecycle IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE ran in-session; M0–M4 done; the WM-pilot loop demonstrated end-to-end (codex-2 cleared the entire open-sorry queue following the WM, driven unattended-across-turns by `/loop`+whistle). See **Closing Checkpoint** at end for milestones + named follow-ons (the input-sources frontier, geometry→AIF bug, VSATARCS regen, bootstrap auto-register). The mission *asked*: which open edges must close to run the machine confidently for a while, and how such a run is set up — answered yes, demonstrated.
 **Timebox:** open — gated by the blocking-edge workstream (§3.1), not the calendar.
 **Predecessors:**
 - `M-war-machine-pilot.md` (capability — v0 complete 2026-05-24)

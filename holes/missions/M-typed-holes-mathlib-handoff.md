@@ -1,12 +1,19 @@
 # Codex handoff (DRAFT — scope only): M-typed-holes manifest × mathlib4 audit
 
-**Status:** DISPATCHED to Codex (2026-06-14). **Owner of result:** claude-2
+**Status:** OPEN — DISPATCHED to Codex (2026-06-14). **Owner of result:** claude-2
 (reviewer); Codex (author).
 **Goal:** For each concept in `holes/missions/M-typed-holes-lean-manifest.edn`,
 decide its mathlib4 status (PRESENT / PARTIAL / ABSENT); for anything not fully
 PRESENT in mathlib4, **web-search for formalisations in other systems** (Coq,
 Agda, Idris, …); then scope the remaining build. This is an AUDIT — no
 formalisation, no new Lean code.
+
+## Acceptance checklist (2026-09-30)
+
+- [x] `holes/missions/M-typed-holes-mathlib-audit.edn` classifies all ten manifest concepts and includes summary counts plus a critical path. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
+- [x] Every present or partial result in the audit cites exact mathlib declarations and source paths and distinguishes the full-tree audit from the declaration slice. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
+- [x] Every partial or absent concept records cited external formalisations or source literature, portability, build scope, difficulty, and confidence. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
+- [ ] A result record shows claude-2's review disposition and receipt of the audit path with summary counts.
 
 ## Inputs (READ-ONLY)
 - `futon3c/holes/missions/M-typed-holes-lean-manifest.edn` — 10 concepts, each

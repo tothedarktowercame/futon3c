@@ -1,7 +1,7 @@
 # M-typed-memories — memories as typed dialogue acts over the futon1b hypergraph
 
 Date: 2026-07-22
-Status: **DERIVE** (chartered at IDENTIFY and MAP completed 2026-07-22 —
+**Status:** OPEN — **DERIVE** (chartered at IDENTIFY and MAP completed 2026-07-22 —
 the Claude pipeline chased into 9 hypergraph stages, §MAP; DERIVE opened
 same day as a **prototype ladder** at Joe's direction: MVP + upgrade path,
 not a monolithic build — see §Prototype ladder). **P0 LANDED + ACCEPTED
@@ -28,7 +28,8 @@ Cross-reference:
 - `holes/missions/M-shared-memory-control-build-test.md` — authoritative
   cross-domain promotion gates from shared-store contract through Zaif
   mathematics trials, dark WM cascades, strategic ablations, and bounded live
-  use. Phases 1–3 are accepted live; Phase 4 is next.
+use. Phases 1–3 are accepted live; Phase 4 is next.
+
 - `holes/missions/M-typed-bells.md` — the **prototype**. Typed the coordination
   channel (bells) with IATC performatives so ArSE populates by construction.
   This mission is the same move one layer in: type the *epistemic* channel
@@ -77,6 +78,15 @@ Cross-reference:
   query answer`) already carried through DERIVE/ARGUE/VERIFY once by
   M-typed-bells. Memories are its third instantiation (bells = agent↔agent,
   ArSE = Q&A threads, memories = the agent's dialogue with its past self).
+
+## Acceptance checklist (2026-09-30)
+
+- [x] P0 records typed memories from a real Zai session and retrieves them through the memory substrate. (evidence: this file, “P0 ACCEPTANCE MET”)
+- [x] P1 surfaces an earlier memory during pattern selection, records its cited use, and attaches an independently witnessed outcome. (evidence: `holes/missions/M-shared-memory-control-build-test.md`, accepted Phases 1–3)
+- [ ] P1b produces a traceable candidate pattern when every bounded R6 candidate is rejected, and a later witnessed trial changes that candidate's status or precision.
+- [ ] P2 demonstrates supersession with correct current and as-of answers while retaining the correction event.
+- [ ] P3 performs a facet split as a graph operation without rewriting any memory.
+- [ ] P4 records a real declare → record → attach → fill → promote arc and its measured time-to-fill.
 
 ## HEAD (Joe's framing, 2026-07-22)
 

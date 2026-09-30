@@ -1,6 +1,6 @@
 # Mission: Walkie-Talkie — Universal Agent Tool Surface
 
-## Status: DONE (2026-03-08) — Gates A+D pass, B+C deferred
+**Status:** CLOSED — DONE (2026-03-08) — Gates A+D pass, B+C deferred
 
 ## Derivation
 
