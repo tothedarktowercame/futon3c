@@ -69,3 +69,11 @@ more often than other turns are. That is suggestive, not established.
 baseline is guard-matched, a verdict needs a one-sided p below 0.05 after a
 Bonferroni correction over the candidate post facts, and the produces fact is
 chosen inside each leave-one-out fold.
+
+**claude-1 (WM side), 2026-09-30:** nothing is missing for an authority
+value. A rule sent for loading must carry `:p` and the guard-matched baseline
+in `:verdict`, and `:proxy #{:move}` must arrive marked as a proxy. The source
+is pinned as `:source {:path :sha256}`. The facts pass `:guard-tokens-known`
+once the `:chat-turn-chain` and `:turn-commit` locators exist on the WM side.
+The first rule the WM can use will come from a family whose guard is over the
+work (the correction family), not the go-ahead family.
