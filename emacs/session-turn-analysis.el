@@ -567,6 +567,17 @@ nothing depends on that history."
   :type 'string
   :group 'session-mode)
 
+(defcustom session-mode-analysis-reap-late-after 600
+  "Seconds between reaps once the first three have found the job unfinished.
+With 象 backed up, readings land well after nine minutes; the reaper used
+to stop there, so the landing ran no hook and neither the stepper nor the
+turn trace ever heard of it (claude-17, 2026-09-30)."
+  :type 'integer :group 'session-mode)
+
+(defcustom session-mode-analysis-reap-late-tries 6
+  "Reaps at `session-mode-analysis-reap-late-after' after the first three."
+  :type 'integer :group 'session-mode)
+
 (defcustom session-mode-analysis-reap-after 180
   "Seconds after a dispatch before asking what became of its job.
 Long enough that an ordinary interpretation has finished, so the usual
@@ -963,8 +974,11 @@ analysis health failing; it is not discarded."
 A refusal and a busy seat both left `requested' before this existed.
 AGENT is the seat it went to: if that seat ran out of usage, bench it and
 send the turn to the other seat instead of warning.  A job still running
-is asked about again, up to TRIES (default 3) times in all: a single reap
-that found it running left the lighter's health unchanged for good."
+is asked about again: three times at `session-mode-analysis-reap-after',
+then `session-mode-analysis-reap-late-tries' times at
+`session-mode-analysis-reap-late-after'.  TRIES counts the reaps left.
+A single reap that found it running left the lighter's health unchanged
+for good."
   (let ((buf (generate-new-buffer " *session-analysis-reap*")))
     (make-process
      :name "session-analysis-reap" :buffer buf :noquery t
@@ -1007,11 +1021,17 @@ that found it running left the lighter's health unchanged for good."
                         ((string-match-p "analyzed" out)
                          (session-mode--handle-reap-output path out)
                          (run-hook-with-args 'session-mode-analysis-landed-functions path))
-                        ((and (string-match-p "running" out)
-                              (> (or tries 3) 1))
-                         (run-at-time session-mode-analysis-reap-after nil
-                                      #'session-mode--reap-dispatch path agent
-                                      (1- (or tries 3)))))))
+                        ;; Unfinished (running, or queued behind other
+                        ;; turns): ask again, three times at the short
+                        ;; interval, then at the long one.
+                        ((and (string-match-p "running\\|queued" out)
+                              (> (or tries (+ 3 session-mode-analysis-reap-late-tries)) 1))
+                         (let ((left (1- (or tries (+ 3 session-mode-analysis-reap-late-tries)))))
+                           (run-at-time (if (> left session-mode-analysis-reap-late-tries)
+                                            session-mode-analysis-reap-after
+                                          session-mode-analysis-reap-late-after)
+                                        nil #'session-mode--reap-dispatch path agent
+                                        left))))))
                    (when (buffer-live-p (process-buffer proc))
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))

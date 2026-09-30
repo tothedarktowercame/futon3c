@@ -174,3 +174,45 @@ The turn must still reach 象 exactly once, with the reply and the commits."
 
 (provide 'session-turn-analysis-dispatch-test)
 ;;; session-turn-analysis-dispatch-test.el ends here
+
+(defun session-turn-analysis-test--reap-with (outputs)
+  "Run the reaper against OUTPUTS, one per reap, with timers run at once.
+Returns (DELAYS . LANDED): the delays asked for and the paths landed."
+  (let* ((delays nil) (landed nil) (outs outputs)
+        (real-make-process (symbol-function 'make-process))
+        (session-mode-analysis-landed-functions
+         (list (lambda (p) (push p landed)))))
+    (cl-letf (((symbol-function 'run-at-time)
+               (lambda (d _r fn &rest args) (push d delays) (apply fn args)))
+              ((symbol-function 'session-mode--handle-reap-output) #'ignore)
+              ((symbol-function 'session-mode--set-analysis-health) #'ignore)
+              ((symbol-function 'make-process)
+               (lambda (&rest plist)
+                 (let ((p (funcall real-make-process :name "reap-stub"
+                                   :buffer (plist-get plist :buffer)
+                                   :command (list "printf" "%s" (or (pop outs) "running")))))
+                   (while (process-live-p p) (accept-process-output p 0.05))
+                   (funcall (plist-get plist :sentinel) p "finished\n")
+                   p))))
+      (session-mode--reap-dispatch "/tmp/turn-x.json" nil))
+    (cons (nreverse delays) landed)))
+
+(ert-deftest session-turn-analysis-reap-keeps-asking-after-nine-minutes ()
+  "claude-17, 2026-09-30: with 象 backed up, readings landed after the third
+reap and ran no hook.  A queued job is asked about again, three times at the
+short interval and then at the long one, and a late landing runs the hook."
+  (let* ((session-mode-analysis-reap-after 180)
+         (session-mode-analysis-reap-late-after 600)
+         (session-mode-analysis-reap-late-tries 6)
+         (r (session-turn-analysis-test--reap-with
+             '("queued" "running" "running" "running" "analyzed"))))
+    (should (equal '(180 180 600 600) (car r)))
+    (should (equal '("/tmp/turn-x.json") (cdr r)))))
+
+(ert-deftest session-turn-analysis-reap-stops-after-an-hour ()
+  (let* ((session-mode-analysis-reap-after 180)
+         (session-mode-analysis-reap-late-after 600)
+         (session-mode-analysis-reap-late-tries 6)
+         (r (session-turn-analysis-test--reap-with (make-list 20 "running"))))
+    (should (equal '(180 180 600 600 600 600 600 600) (car r)))
+    (should-not (cdr r))))
