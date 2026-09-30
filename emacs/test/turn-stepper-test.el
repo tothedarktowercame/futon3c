@@ -368,14 +368,28 @@ unsigned commit, each touching its own file."
           (should (file-exists-p (expand-file-name "joes" repo))))
       (delete-directory root t))))
 
-(ert-deftest turn-stepper-R-refuses-a-dirty-checkout ()
+(ert-deftest turn-stepper-R-ignores-unrelated-edits ()
   (let* ((root (turn-stepper-test--mixed-repo))
          (p (turn-stepper-test--mixed-plan root))
          (repo (plist-get p :path)))
     (unwind-protect
         (progn
+          ;; Another seat mid-edit on an unrelated file: the revert goes ahead.
           (with-temp-file (expand-file-name "theirs" repo) (insert "mid-edit"))
-          (should (plist-get (turn-stepper--revert p "S") :refused))
+          (should (equal 1 (plist-get (turn-stepper--revert p "S") :reverted)))
+          (should (equal "mid-edit" (with-temp-buffer
+                                      (insert-file-contents (expand-file-name "theirs" repo))
+                                      (buffer-string)))))
+      (delete-directory root t))))
+
+(ert-deftest turn-stepper-R-refuses-edits-to-the-same-file ()
+  (let* ((root (turn-stepper-test--mixed-repo))
+         (p (turn-stepper-test--mixed-plan root))
+         (repo (plist-get p :path)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "mine" repo) (insert "mid-edit"))
+          (should (string-match-p "mine" (plist-get (turn-stepper--revert p "S") :refused)))
           (should (file-exists-p (expand-file-name "mine" repo))))
       (delete-directory root t))))
 

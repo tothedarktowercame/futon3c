@@ -704,6 +704,17 @@ session is the commit's Agent-Session trailer, empty when unsigned."
       (pcase-let ((`(,sha ,_ ,sess . ,_) (split-string c "\t")))
         (when (and session (equal sess session)) (push sha out))))))
 
+(defun turn-stepper--dirty-overlap (path shas)
+  "Uncommitted files in PATH that the commits SHAS touch.
+Other seats' edits to unrelated files do not stop a revert, as they do
+not stop git's; edits to the same files do."
+  (let ((dirty (split-string (or (turn-stepper--git path "diff" "--name-only" "HEAD") "?") "\n" t))
+        (touched (split-string
+                  (or (apply #'turn-stepper--git path "show" "--name-only" "--format=" shas) "")
+                  "\n" t)))
+    (if (member "?" dirty) '("(git status failed)")
+      (seq-intersection dirty touched))))
+
 (defun turn-stepper--revert (plan-entry session)
   "Revert PLAN-ENTRY's commits signed by SESSION as new commits.
 Returns (:repo R :reverted N) or (:repo R :refused WHY)."
@@ -712,19 +723,20 @@ Returns (:repo R :reverted N) or (:repo R :refused WHY)."
          (shas (turn-stepper--own-commits plan-entry session)))
     (cond
      ((null shas) (list :repo repo :refused "no commits signed by this session"))
-     ((not (string-empty-p (or (turn-stepper--git path "status" "--porcelain"
-                                                  "--untracked-files=no")
-                               "?")))
-      (list :repo repo :refused "uncommitted edits in the checkout"))
+     ((turn-stepper--dirty-overlap path shas)
+      (list :repo repo :refused
+            (format "uncommitted edits to %s, which the revert would change"
+                    (string-join (turn-stepper--dirty-overlap path shas) ", "))))
      ((not (apply #'turn-stepper--git path "revert" "--no-edit" shas))
       (turn-stepper--git path "revert" "--abort")
       (list :repo repo :refused "revert conflicted; aborted, nothing changed"))
      (t (list :repo repo :reverted (length shas))))))
 
 (defun turn-stepper-rewind-apply ()
-  "Revert this session's commits in each repo of the rewind view."
+  "Revert this session's commits: in the repo at point, else in every repo listed."
   (interactive)
-  (let* ((plan turn-stepper--rewind-plan)
+  (let* ((here (get-text-property (point) 'turn-stepper-rewind))
+         (plan (if here (list here) turn-stepper--rewind-plan))
          (session turn-stepper--rewind-session)
          (todo (cl-remove-if-not (lambda (p) (turn-stepper--own-commits p session)) plan)))
     (if (null todo)
@@ -781,7 +793,7 @@ Returns (:repo R :reverted N) or (:repo R :refused WHY)."
                 "first, as new commits; other seats' and unsigned commits are left alone.\n"
                 "Uncommitted edits are not covered.\n"
                 "w = read-only worktree at the pin, d = diff pin..end (on a repo's lines),\n"
-                "R = revert this session's commits in every repo listed, q = quit\n"))
+                "R = revert this session's commits (in the repo at point, else all), q = quit\n"))
       (turn-stepper-rewind-mode)
       (setq turn-stepper--rewind-plan plan
             turn-stepper--rewind-session session)
