@@ -426,23 +426,43 @@ If the turn text is not found in the REPL buffer, say so and do not move."
       (setq header-line-format
             (format "loading… · session %s"
                     (turn-stepper--short-id session-id))))
-    (turn-stepper--show-window buf)
+    (turn-stepper--show-window buf source)
     buf))
 
-(defun turn-stepper--show-window (buffer)
-  "Display BUFFER in a side window, stack-hud style."
-  (display-buffer
-   buffer
-   `(display-buffer-in-side-window
-     (side . ,turn-stepper-window-side)
-     (window-width . ,turn-stepper-window-width)
-     (slot . 0))))
+(defun turn-stepper--show-window (buffer &optional source)
+  "Show BUFFER in one window only, split off beside SOURCE's window.
+The stepper belongs to the REPL it reads, not to the frame: a window
+showing it anywhere else (another frame, a frame side window) is closed."
+  (let* ((src-win (and (buffer-live-p source)
+                       (or (get-buffer-window source)
+                           (get-buffer-window source 'visible))))
+         (anchor (or src-win (selected-window)))
+         (keep (window-in-direction turn-stepper-window-side anchor)))
+    (unless (and keep (eq (window-buffer keep) buffer)
+                 (not (window-parameter keep 'window-side)))
+      (setq keep nil))
+    (dolist (w (get-buffer-window-list buffer nil t))
+      (unless (eq w keep)
+        (condition-case nil
+            (delete-window w)
+          ;; The only window of its frame: show something else there.
+          (error (with-selected-window w (switch-to-prev-buffer w 'kill))))))
+    (or keep
+        (display-buffer
+         buffer
+         `(display-buffer-in-direction
+           (window . ,anchor)
+           (direction . ,turn-stepper-window-side)
+           (window-width . ,turn-stepper-window-width))))))
 
-(defun turn-stepper--start-fetch (session-id source)
+(defun turn-stepper--start-fetch (session-id source &optional quiet)
   "Run turn_frames.py asynchronously for SESSION-ID.
-On completion, cache the frames and display the most recent frame.
-SOURCE is the REPL buffer the stepper is attached to."
-  (turn-stepper--loading-buffer session-id source)
+On completion, cache the frames and display the most recent frame, unless
+the stepper was on an older frame of this session: then it stays there.
+SOURCE is the REPL buffer the stepper is attached to.  QUIET keeps the
+current frame on screen instead of a loading message."
+  (unless quiet
+    (turn-stepper--loading-buffer session-id source))
   (let* ((output (generate-new-buffer " *turn-stepper-output*"))
          (proc
           (make-process
@@ -463,13 +483,43 @@ SOURCE is the REPL buffer the stepper is attached to."
                                  (turn-stepper--parse-frames (buffer-string))))))
                          (puthash session-id frames turn-stepper--cache)
                          (turn-stepper--open session-id source
-                                             (1- (length frames))))
+                                             (turn-stepper--index-after-reload
+                                              session-id (length frames))))
                      (message "turn-stepper: turn_frames.py failed: %s"
                               (with-current-buffer (process-buffer proc)
                                 (string-trim (buffer-string)))))
                  (when (buffer-live-p output)
                    (kill-buffer output))))))))
     proc))
+
+(defun turn-stepper--index-after-reload (session-id count)
+  "Frame to show after a reload giving COUNT frames for SESSION-ID.
+The newest frame, unless the stepper is on an older frame of the same
+session: someone reading back stays where they are."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (or (and buf
+             (with-current-buffer buf
+               (and (equal turn-stepper--session-id session-id)
+                    turn-stepper--frames
+                    (< turn-stepper--index (1- (length turn-stepper--frames)))
+                    turn-stepper--index)))
+        (1- count))))
+
+(defun turn-stepper--reading-landed (path)
+  "A 象 reading for the record at PATH has arrived: reload a stepper on it.
+Only a stepper that is on screen and reads PATH's session is reloaded;
+a closed stepper stays closed."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (when (and buf (get-buffer-window buf t))
+      (let ((session (ignore-errors
+                       (alist-get 'session_id
+                                  (json-read-file path)))))
+        (with-current-buffer buf
+          (when (and session (equal session turn-stepper--session-id)
+                     (not (get-process "turn-stepper-frames")))
+            (turn-stepper--start-fetch session turn-stepper--source-buffer t)))))))
+
+(add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
 (defun turn-stepper--open (session-id source &optional index)
   "Open (or reuse) the stepper buffer on frame INDEX for SESSION-ID."
@@ -483,7 +533,7 @@ SOURCE is the REPL buffer the stepper is attached to."
             turn-stepper--index (turn-stepper--clamp-index
                                  (or index 0) (length frames)))
       (turn-stepper--display-current))
-    (turn-stepper--show-window buf)
+    (turn-stepper--show-window buf source)
     buf))
 
 (defun turn-stepper-refresh ()

@@ -955,6 +955,9 @@ analysis health failing; it is not discarded."
        (format "%s: %s" (file-name-base path)
                (if failure "withdrawal processing failed" "analysed"))))))
 
+(defvar session-mode-analysis-landed-functions nil
+  "Called with a record's path when the reaper finds its 象 reading done.")
+
 (defun session-mode--reap-dispatch (path &optional agent tries)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
@@ -1002,7 +1005,8 @@ that found it running left the lighter's health unchanged for good."
                           'failing (format "%s: job status unreachable"
                                            (file-name-base path))))
                         ((string-match-p "analyzed" out)
-                         (session-mode--handle-reap-output path out))
+                         (session-mode--handle-reap-output path out)
+                         (run-hook-with-args 'session-mode-analysis-landed-functions path))
                         ((and (string-match-p "running" out)
                               (> (or tries 3) 1))
                          (run-at-time session-mode-analysis-reap-after nil

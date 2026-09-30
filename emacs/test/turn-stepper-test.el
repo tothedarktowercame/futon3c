@@ -170,3 +170,59 @@
                    (turn-stepper--ready-frames
                     (list (funcall f "missing") (funcall f "analyzed")
                           (funcall f "missing") (funcall f "missing")))))))
+
+(ert-deftest turn-stepper-one-window-beside-its-repl ()
+  "Planted in review (claude-17): a stepper in a frame side window and in a
+second window must end as ONE window, right of the REPL it reads."
+  (let ((src (get-buffer-create " *ts-repl*"))
+        (buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (progn
+          (delete-other-windows)
+          (switch-to-buffer src)
+          (display-buffer-in-side-window buf '((side . right)))
+          (let ((extra (split-window (selected-window) nil 'below)))
+            (set-window-buffer extra buf))
+          (should (= 2 (length (get-buffer-window-list buf nil t))))
+          (turn-stepper--show-window buf src)
+          (let ((ws (get-buffer-window-list buf nil t)))
+            (should (= 1 (length ws)))
+            (should-not (window-parameter (car ws) 'window-side))
+            (should (eq (car ws) (window-in-direction 'right (get-buffer-window src)))))
+          ;; Again: reused, not duplicated.
+          (turn-stepper--show-window buf src)
+          (should (= 1 (length (get-buffer-window-list buf nil t)))))
+      (delete-other-windows)
+      (kill-buffer buf) (kill-buffer src))))
+
+(ert-deftest turn-stepper-reload-keeps-an-older-frame ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (with-current-buffer buf
+          (setq turn-stepper--session-id "s1" turn-stepper--frames '(a b c))
+          (setq turn-stepper--index 2)
+          (should (= 3 (turn-stepper--index-after-reload "s1" 4)))
+          (setq turn-stepper--index 0)
+          (should (= 0 (turn-stepper--index-after-reload "s1" 4)))
+          (should (= 3 (turn-stepper--index-after-reload "other" 4))))
+      (kill-buffer buf))))
+
+(ert-deftest turn-stepper-reloads-only-its-own-visible-session ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name))
+        (rec (make-temp-file "ts-rec" nil ".json" "{\"session_id\": \"s1\"}"))
+        (fetched nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--start-fetch)
+                   (lambda (sid _src quiet) (push (list sid quiet) fetched))))
+          (with-current-buffer buf (setq turn-stepper--session-id "s1"))
+          (turn-stepper--reading-landed rec)          ; not on screen
+          (should-not fetched)
+          (delete-other-windows)
+          (display-buffer buf)
+          (turn-stepper--reading-landed rec)
+          (should (equal fetched '(("s1" t))))
+          (with-current-buffer buf (setq turn-stepper--session-id "s2"))
+          (turn-stepper--reading-landed rec)
+          (should (= 1 (length fetched))))
+      (delete-other-windows)
+      (kill-buffer buf) (delete-file rec))))
