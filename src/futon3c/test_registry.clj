@@ -1016,8 +1016,11 @@
         ;; any newly-loaded source implies a change to an already-recorded
         ;; closure file. A changed closure file refuses naming the FILES; a
         ;; changed path outside manifests and closure is :outside-closure.
-        closure-changed (closure-diff (closure-shas (:load-closure run))
-                                      (current-closure-shas repo-root (:load-closure run)))
+        ;; A run killed before its runner wrote the closure records a typed
+        ;; none there, not a vector: nothing to re-hash (callers decide).
+        closure-changed (when (vector? (:load-closure run))
+                          (closure-diff (closure-shas (:load-closure run))
+                                        (current-closure-shas repo-root (:load-closure run))))
         log (:log-artifact run)
         ;; The ledger holds the object under its own sha, so it cannot have
         ;; moved; the recorded path is the fallback for pre-ledger records.
@@ -1130,6 +1133,15 @@
   (try
     (let [facts (read-verified-run! backend entry-id repo-root changed-paths)
           run (:run facts)]
+      ;; Currency is a claim about the recorded inputs. A run with no load
+      ;; closure (killed before session end: OOM, os._exit) or whose inputs
+      ;; moved under it pinned nothing, so it can never read as current.
+      (when-not (and (vector? (:load-closure run)) (true? (:execution/stable? run)))
+        (fail! :no-load-closure {:load-closure (if (vector? (:load-closure run))
+                                                 :present
+                                                 (:load-closure run))
+                                 :execution/stable? (:execution/stable? run)
+                                 :next-action :rerun-the-file}))
       (refute-if-drifted! repo-root facts)
       {:current? true :record run :results (:results run)
        :chain-length (count (:chain facts)) :entry-id entry-id

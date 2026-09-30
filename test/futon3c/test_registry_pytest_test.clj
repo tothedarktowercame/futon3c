@@ -172,6 +172,24 @@
                        backend {:entry-id (:evidence/id bad) :repo-root root
                                 :changed-paths ["unrelated/notes.md"]})]
                 (is (true? (:current? r)) (pr-str r))
-                (is (= ["unrelated/notes.md"] (:outside-closure r)))))))
+                (is (= ["unrelated/notes.md"] (:outside-closure r)))))
+            ;; A run killed before pytest's session end (OOM, os._exit) has
+            ;; no load closure; with nothing pinned it must not read current.
+            (write "test/test_killed.py"
+                   "import os\nimport mymod\n\ndef test_killed():\n    os._exit(137)\n")
+            (sh root "git" "add" ".")
+            (sh root "git" "-c" "user.email=t@t" "-c" "user.name=t" "commit" "-qm" "killed")
+            (let [killed (registry/register-run!
+                          backend {:repo-root root :command [python "-m" "pytest" "test/test_killed.py"]
+                                   :code-paths ["conftest.py"]
+                                   :test-paths ["test/test_killed.py"]
+                                   :author "author" :artifact-dir (str root "/.artifacts")
+                                   :ledger-root (str root "/.ledger")})
+                  r (registry/check-currency!
+                     backend {:entry-id (:evidence/id killed) :repo-root root :changed-paths []})]
+              (is (not (true? (:current? r))) (pr-str r))
+              (is (= :no-load-closure (:reason r)) (pr-str r))
+              ;; and check-record! refuses it as a non-warrant, not a crash.
+              (is (= :not-a-warrant (:reason (check killed [])))))))
         (finally
           (doseq [f (reverse (file-seq dir))] (io/delete-file f true)))))))
