@@ -1,9 +1,10 @@
 # Codex handoffs: M-typed-holes → Lean (DarkTower)
 
-**Status:** SCOPED. Dispatch wave 1 (foundational, mathlib-backed) to the Codex
+**Status:** CLOSED — SCOPED. Dispatch wave 1 (foundational, mathlib-backed) to the Codex
 pool; wave 2 (greenfield) held for design. Owner-of-result: claude-2 (reviewer,
 real gate). Source of truth: `M-typed-holes-lean-manifest.edn` +
 `M-typed-holes-mathlib-audit.edn` (codex-3, reviewed `6243ed3`).
+All T1–T9 artifacts are present in `mathlib4/DarkTower/`; commits `a420bd1cb2`, `b23232d5bc`, `b64d3c1b6b`, `75e4725dd9`, `1f85ad2d52`, `d1e0888adc`, `36b44b7081`, `58fb0b743a`, and `6d47cd0d12` supply the scoped handoffs and examples.
 
 ## House rules (every task)
 - Add ONE file `mathlib4/DarkTower/<Name>.lean`, matching the existing DarkTower

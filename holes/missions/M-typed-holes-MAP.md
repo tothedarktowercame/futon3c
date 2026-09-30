@@ -1,6 +1,6 @@
 # M-typed-holes — MAP (2026-06-14)
 
-Status: complete
+**Status:** CLOSED — complete
 
 *Phase 2 per `futon4/holes/mission-lifecycle.md`: survey what exists; produce
 facts, not decisions. The detailed IDENTIFY is the charter + the four worked

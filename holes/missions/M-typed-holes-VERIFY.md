@@ -1,6 +1,6 @@
 # M-typed-holes — VERIFY (2026-06-14)
 
-Status: complete
+**Status:** CLOSED — complete
 
 *Phase 5 per `futon4/holes/mission-lifecycle.md`: check the design against
 evidence — does it hold, what breaks it? ARGUE's handoff: "does one `fill` + the
