@@ -302,6 +302,37 @@ def place_offsets(element, record):
                     cue["start"], cue["end"] = at, at + len(ctext)
 
 
+def fit_cues(element, record):
+    """Drop display cues until each sentence meets the validator's budget.
+
+    Readers keep over-marking despite the stated rule (loop hour 1: most
+    refusals after the relations fix).  A cue over 8 words or 80 characters
+    is dropped; then, in a sentence over 8 words whose cues cover more than
+    half its words (at least 2), the longest cues are dropped until it fits.
+    A fragment left with no cue says so in no_surface_cue, so the record
+    shows the publisher did it.  Mirrors session_turn_analysis.py's check."""
+    source = record["source_text"]
+    spans = {s["id"]: (s["start"], s["end"]) for s in record["sentences"]}
+    note = "publisher dropped this fragment's cues to meet the cue budget"
+    for sentence in element.get("sentences") or []:
+        frags = sentence.get("fragments") or []
+        for frag in frags:
+            frag["display_cues"] = [c for c in frag.get("display_cues") or []
+                                    if len((c.get("text") or "").split()) <= 8
+                                    and len(c.get("text") or "") <= 80]
+        lo, hi = spans[sentence["id"]]
+        total = len(source[lo:hi].split())
+        if total > 8:
+            budget = max(total // 2, 2)
+            while sum(len(c["text"].split()) for f in frags for c in f["display_cues"]) > budget:
+                owner, cue = max(((f, c) for f in frags for c in f["display_cues"]),
+                                 key=lambda fc: len(fc[1]["text"].split()))
+                owner["display_cues"].remove(cue)
+        for frag in frags:
+            if not frag["display_cues"] and not (frag.get("no_surface_cue") or "").strip():
+                frag["no_surface_cue"] = note
+
+
 def publish(directory, answer_path, order=()):
     """Publish each element through the validator; never overwrite.
 
@@ -341,6 +372,7 @@ def publish(directory, answer_path, order=()):
             entry.update({"published": False, "reason": f"offsets: {error}"})
             results.append(entry)
             continue
+        fit_cues(element, json.load(open(request, encoding="utf-8")))
         payload = {k: v for k, v in element.items()
                    if k not in ("turn_id", "id", "candidates", "more_searches")}
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,

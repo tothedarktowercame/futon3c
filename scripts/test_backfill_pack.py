@@ -191,6 +191,25 @@ class Publish(unittest.TestCase):
         proc, summary = self.run_publish([wrong])
         self.assertIn("not in sentence", summary["turns"][0]["reason"])
 
+    def test_over_budget_cues_are_dropped_not_refused(self):
+        # review case (claude-17): the loop's commonest refusal after relations
+        text = "one two three four five six seven eight nine ten eleven twelve"
+        record = {"source_text": text,
+                  "sentences": [{"id": "s1", "start": 0, "end": len(text)}]}
+        element = {"sentences": [{"id": "s1", "fragments": [
+            {"display_cues": [{"text": "one two three four five six seven eight nine"},
+                              {"text": "two three four"},
+                              {"text": "ten eleven twelve"},
+                              {"text": "five six"}]},
+            {"display_cues": [{"text": "seven eight"}]}]}]}
+        bp.fit_cues(element, record)
+        frags = element["sentences"][0]["fragments"]
+        kept = [c["text"] for f in frags for c in f["display_cues"]]
+        self.assertLessEqual(sum(len(c.split()) for c in kept), 6)
+        self.assertNotIn("one two three four five six seven eight nine", kept)
+        for f in frags:
+            self.assertTrue(f["display_cues"] or f.get("no_surface_cue"))
+
     def test_existing_analysis_not_overwritten(self):
         _proc, first = self.run_publish([self.valid()])
         self.assertEqual(1, first["published"])
