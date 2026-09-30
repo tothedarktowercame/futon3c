@@ -232,7 +232,7 @@ class Segment(unittest.TestCase):
         got = [f["text"].strip() for f in xx.segment(text)]
         self.assertEqual(["This is the first point", "Here is the second point,", "however it differs",
                           "- item one is here", "- item two is here"], got)
-        url = "See https://example.com/a.b/c?d=e.f, but do not open it today please."
+        url = "Please go and see https://example.com/a.b/c?d=e.f, but do not open it today."
         self.assertEqual(2, len(xx.segment(url)))
         code = "Run this now:\n```\nx = 1; y = 2\n- not a list item\n```\nand report back."
         self.assertEqual(1, len(xx.segment(code)))
