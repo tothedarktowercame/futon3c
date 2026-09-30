@@ -101,6 +101,10 @@ write any file yourself: return the array; the publisher runs the validator.
 A rejection is {"id": "family/pattern", "query": "MOVE" or "SUBJECT", "reason": "why it does
 not fit, from its text"}; a citation is {"id": ..., "rationale": "why it fits"}.
 
+Display cues: at most 8 words each, and all the cues in one sentence together may mark at most
+half of that sentence's words (a 17-word sentence allows 8 marked words). Most of each sentence
+stays unmarked; the validator refuses more.
+
 Do NOT count characters. Leave out "start" and "end" on fragments and display cues:
 quote the fragment's text exactly as it appears in the turn (and each cue's text exactly
 as it appears in its fragment), and the publisher finds the offsets. A quote that does
@@ -346,6 +350,8 @@ def publish(directory, answer_path, order=()):
             candidates = element.get("candidates")
             cand_path = request + ".candidates.json"
             if candidates and not os.path.exists(cand_path):
+                if isinstance(candidates, list):   # the block's files are {"candidates": [...]}
+                    candidates = {"candidates": candidates}
                 with open(cand_path, "w", encoding="utf-8") as fh:
                     json.dump(candidates, fh, ensure_ascii=False, indent=1)
                 entry["candidates"] = "written"
