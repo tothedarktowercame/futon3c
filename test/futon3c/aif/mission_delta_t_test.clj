@@ -1,5 +1,7 @@
 (ns futon3c.aif.mission-delta-t-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [babashka.http-client]
+            [clojure.string]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.aif.mission-delta-t :as sut]))
 
 (def ^:private war-machine-pilot
@@ -187,3 +189,45 @@
   (is (= 0.5 (sut/phase->t "unknown")))
   (is (= 0.5 (sut/phase->t nil)))
   (is (= 0.3 (sut/phase->t :instantiate))))
+
+(defn- age-cache-entries!
+  "Make every cached entry look older than any TTL or backoff."
+  []
+  (swap! @#'sut/type-cache
+         (fn [m] (update-vals m #(cond-> %
+                                   (:at %) (assoc :at 0)
+                                   (:failed-at %) (assoc :failed-at 0))))))
+
+(deftest failed-essential-fetch-keeps-last-good-and-backs-off
+  (sut/reset-type-cache!)
+  (let [calls (atom 0)
+        good [{:hx/type "code/v05/mission-doc"
+               :hx/endpoints [war-machine-pilot]
+               :hx/props {:mission/phase "map"}}]
+        responses (atom [good []])
+        opts {:futon1a-url "http://backoff.test" :families ["code/v05/mission-doc"]}]
+    (with-redefs [sut/fetch-hyperedges-by-type
+                  (fn [_ _ _]
+                    (swap! calls inc)
+                    (let [r (first @responses)] (swap! responses rest) (or r [])))]
+      (is (= good (sut/fetch-hyperedges-by-endpoint war-machine-pilot opts)))
+      (testing "a fresh entry is served without fetching"
+        (sut/fetch-hyperedges-by-endpoint war-machine-pilot opts)
+        (is (= 1 @calls)))
+      (testing "an expired entry refetches; a failed refetch serves the last good value"
+        (age-cache-entries!)
+        (is (= good (sut/fetch-hyperedges-by-endpoint war-machine-pilot opts)))
+        (is (= 2 @calls)))
+      (testing "within the backoff a failed family is not fetched again"
+        (is (= good (sut/fetch-hyperedges-by-endpoint war-machine-pilot opts)))
+        (is (= 2 @calls))))))
+
+(deftest type-fetch-asks-futon1b-only-for-the-fields-delta-t-reads
+  (let [urls (atom [])]
+    (with-redefs [babashka.http-client/get
+                  (fn [url _] (swap! urls conj url) {:status 200 :body "{:hyperedges []}"})]
+      (sut/fetch-hyperedges-by-type "http://fields.test" "code/v05/mission-doc" 500)
+      (sut/fetch-hyperedges-by-type "http://fields.test" "code/v05/related-mission" 500)
+      (is (clojure.string/includes? (first @urls)
+                                    "&fields=hx/type,hx/endpoints,hx/props.mission/phase"))
+      (is (clojure.string/includes? (second @urls) "&fields=hx/type,hx/endpoints")))))

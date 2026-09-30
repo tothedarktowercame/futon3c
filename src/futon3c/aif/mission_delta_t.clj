@@ -102,6 +102,16 @@
       (assoc hx :hx/props (or (try (edn/read-string p) (catch Exception _ nil)) {}))
       hx)))
 
+(def ^:private type-fields
+  "The only columns delta-T reads from each family (`hx/props.<k>` projects one
+   prop). Asking futon1b for these instead of whole documents: the mission-doc
+   read fell from 25.8 s / 1.06 MB to 8.0 s / 46 KB on 2026-09-30, when every
+   whole-document fetch was timing out."
+  {"code/v05/mission-doc" "hx/type,hx/endpoints,hx/props.mission/phase"
+   "code/v05/sorry-doc" "hx/type,hx/endpoints,hx/props.sorry/t"})
+
+(def ^:private default-fields "hx/type,hx/endpoints")
+
 (defn fetch-hyperedges-by-type
   "Fetch all hyperedges of one type from the live substrate (the `?type=` route,
    which 1b serves; the `?end=` route is not served and hangs).
@@ -113,7 +123,8 @@
   [futon1a-url hx-type limit]
   (let [url (str futon1a-url "/api/alpha/hyperedges?type="
                  (url-encode hx-type) "&limit=" limit
-                 "&include-total=false")
+                 "&include-total=false"
+                 "&fields=" (get type-fields hx-type default-fields))
         ;; The essential `mission-doc` family (supplies :mission-T) is a large
         ;; read — ~6-9s in the loaded serving JVM — so it gets ample headroom.
         ;; The ΔT-only edge families stay short: they are best-effort and some
@@ -136,27 +147,38 @@
                    {:hx-type hx-type :error (.getMessage e)}))
         []))))
 
-;; Per-process snapshot cache: one fetch per (base,type) is reused across all
-;; missions in a judgement. The WM full loop runs as a fresh JVM per click, so
-;; this is a point-in-time snapshot, never stale across clicks; call
-;; `reset-type-cache!` to force a refresh inside a long-lived JVM.
+;; Per-process cache: one fetch per (base,type) is reused across all missions
+;; in a judgement. It also runs inside the long-lived Agency JVM (war_machine),
+;; where nothing called `reset-type-cache!`, so entries now expire after
+;; `cache-ttl-ms`. A failed essential fetch is not retried for
+;; `failure-backoff-ms`, and meanwhile the last good result is served: on
+;; 2026-09-30 every mission-doc fetch timed out and each judgement fetched
+;; again, holding a futon1b query permit for ~25 s each time.
+(def ^:private cache-ttl-ms (* 10 60 1000))
+(def ^:private failure-backoff-ms (* 60 1000))
 (def ^:private type-cache (atom {}))
 
 (defn reset-type-cache! [] (reset! type-cache {}))
 
 (defn- cached-fetch-by-type
   [futon1a-url hx-type limit]
-  (let [k [futon1a-url hx-type]]
-    (if-let [hit (get @type-cache k)]
-      hit
-      (let [v (fetch-hyperedges-by-type futon1a-url hx-type limit)]
-        ;; Never cache an empty essential `mission-doc` result — that only
-        ;; happens on a transient failure, and caching it would poison every
-        ;; mission's :mission-T to the nil-phase default for the process
-        ;; lifetime. Edge families legitimately return empty and stay cached.
-        (when-not (and (= hx-type "code/v05/mission-doc") (empty? v))
-          (swap! type-cache assoc k v))
-        v))))
+  (let [k [futon1a-url hx-type]
+        now (System/currentTimeMillis)
+        {:keys [v at failed-at]} (get @type-cache k)]
+    (cond
+      (and at (< (- now at) cache-ttl-ms)) v
+      (and failed-at (< (- now failed-at) failure-backoff-ms)) (or v [])
+      :else
+      (let [fresh (fetch-hyperedges-by-type futon1a-url hx-type limit)]
+        ;; An empty essential `mission-doc` result only happens on a transient
+        ;; failure; caching it would poison every mission's :mission-T to the
+        ;; nil-phase default. Keep the last good value and back off instead.
+        ;; Edge families legitimately return empty and are cached.
+        (if (and (= hx-type "code/v05/mission-doc") (empty? fresh))
+          (do (swap! type-cache update k assoc :failed-at now)
+              (or v []))
+          (do (swap! type-cache assoc k {:v fresh :at now})
+              fresh))))))
 
 (defn- hx-type-str
   [hx]
