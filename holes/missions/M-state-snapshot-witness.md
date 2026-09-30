@@ -1,9 +1,18 @@
-**Status:** INSTANTIATE in progress (2026-05-01) for the inventory-snapshot sibling; siblings to Codex.
+**Status:** OPEN — INSTANTIATE in progress (2026-05-01) for the inventory-snapshot sibling; siblings to Codex.
 **Family:** `evidence-per-turn` (proposed; alternatively under a new family `observability-stewardship`)
 **Algorithm trial run:** iteration-3 of `~/code/algorithms/next-invariant.md`. Closes pipeline-tracer `track-4-2-snapshot-as-evidence`.
 **Home-repo:** futon3c
 
 # M-state-snapshot-witness: Periodic point-in-time projection as queryable evidence
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] `docs/structural-law-inventory.sexp` registers `state-snapshot-witness/inventory` as `:operational-when-enabled` with its full triples.
+- [ ] `src/futon3c/logic/snapshot.clj` provides boot-callable `snapshot-inventory!` and operator-callable `snapshot-inventory-now!`.
+- [ ] `dev/futon3c/dev/bootstrap.clj` invokes the inventory snapshot after the registrar block.
+- [ ] `test/futon3c/logic/snapshot_test.clj` passes emit-shape and clean-stack no-throw cases.
+- [ ] Evidence contains a `:pipeline-tracer-closed` event for `track-4-2-snapshot-as-evidence` with the decision and implementation commit, and the HUD reports MOVING with the stated counts.
+- [ ] A handoff record scopes the `registry`, `repo-refs`, and `hud-render` snapshot siblings.
 
 ## 1. IDENTIFY
 

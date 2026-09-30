@@ -1,5 +1,14 @@
 # Mission: Stack Inhabitation
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] The portfolio table records a current status and the actual entry cost for every stack surface named by this mission.
+- [ ] At least 20 of the 65 candidate invariants have a recorded keep, discard, defer, or merge disposition.
+- [x] Evidence-browser sessions render conversations and expose copyable evidence URIs. (evidence: this mission's 2026-02-26 checkpoint)
+- [ ] One Click proof artifact and one Tick `sorry` violation are recorded as evidence and are browsable from their owning surfaces.
+- [ ] The named excursion findings are each recorded as backfilled, promoted, deferred, or discarded, and evidence from every inhabited surface is browsable.
+- [x] A war bulletin records the cross-stack snapshot. (evidence: `holes/missions/M-stack-inhabitation.md`, Checkpoint 1)
 
 **Date:** 2026-04-10
 **Status:** IDENTIFY

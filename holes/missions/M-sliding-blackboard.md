@@ -1,5 +1,12 @@
 # M-sliding-blackboard: Code Block Extraction for Emacs Chat
-Status: parked
+**Status:** OPEN — parked
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] `futon3c-code-blocks.el` exists and provides a minor mode that replaces fenced code blocks in chat with clickable language-labelled references.
+- [ ] Extracted code blocks open in dedicated side-window buffers using the corresponding major mode for fontification.
+- [ ] Commands exist and are documented for moving between panels, closing one panel, closing all panels, and toggling panel visibility.
+- [ ] An automated Emacs test demonstrates that multiple fenced blocks are registered in order and their references recover the original content.
 
 ## Origin
 

@@ -1,6 +1,13 @@
-Status: open
+**Status:** OPEN — open
 
 # M-single-entry-point: One JVM, one launcher for the local dev stack
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] After a fresh boot, the webarxana Ring server, war-machine hot reload, and webarxana hot reload are all reachable when started through `scripts/dev-laptop-env`.
+- [ ] After `SIGINT` to `scripts/dev-laptop-env`, no child Java process remains reparented to PID 1.
+- [ ] `(dev/status)` lists every managed subsystem and its current state.
+- [ ] A second concurrent invocation of `scripts/dev-laptop-env` fails fast with a recognizable diagnostic.
 
 **Phase:** IDENTIFY (2026-05-02)
 **Parent:** M-the-futon-stack (Q4 — is the stack set up so the invariants can work?)

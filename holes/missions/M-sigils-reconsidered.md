@@ -6,8 +6,15 @@ rewarding. They go back to a much earlier prototype of something that now works
 better in other ways… I'm not ready to rule on it… but there would be a case
 'for' them."*
 
-**Status: OPEN, no ruling.** This file records a survey and both sides of the
+**Status:** OPEN — OPEN, no ruling. This file records a survey and both sides of the
 argument. It does not propose a change.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] A documented observation records whether anyone uses sigils to navigate the library in practice.
+- [ ] A vocabulary analysis of the 595 distinct sigils states whether singleton frequency and collisions permit a usable sigil vocabulary.
+- [ ] A recorded ruling states whether the `iching/` files retain one shared sigil or receive distinct sigils.
+- [ ] The final keep, revise, or retire decision is recorded here and reflected in `futon3/flexiarg-directives.edn` when that directive is affected.
 
 ## The survey (measured 2026-08-17, whole library)
 

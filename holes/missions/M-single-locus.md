@@ -1,4 +1,4 @@
-**Status:** INSTANTIATE complete (2026-04-29) for the mission-home slice; siblings handed to Codex via GitHub issue #64.
+**Status:** CLOSED — INSTANTIATE complete (2026-04-29) for the mission-home slice; siblings handed to Codex via GitHub issue #64.
 **Family:** `atomic-inspectable-units` (structural-law-inventory.sexp:161)
 **Sibling missions:** [M-archaeology-control](M-archaeology-control.md) (subsumption-witness shape); [M-bounded-disposition](M-bounded-disposition.md) (bounded-disposition shape); [M-invariant-queue-extend](M-invariant-queue-extend.md) (apparatus).
 **Origin:** Joe + claude-11 conversation 2026-04-29 — first execution of `~/code/algorithms/next-invariant.md` ratifies the algorithm by running it on the rank-4 candidate `home-repo`.

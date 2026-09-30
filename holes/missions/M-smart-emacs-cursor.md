@@ -1,11 +1,19 @@
 # Mission: M-smart-emacs-cursor — the spoken mission loop
 
 **Date:** 2026-06-11
-**Status:** :documented 2026-06-11 — every phase touched in one spoken day; GATE OPEN; retrospective in section 7; IOUs in 6.x.
+**Status:** OPEN — :documented 2026-06-11 — every phase touched in one spoken day; GATE OPEN; retrospective in section 7; IOUs in 6.x.
 **Spawned:** task #3 of the 2026-06-11 shortlist; the prior smart-cursor work
 stalled because it was dispatched for autonomous building when it is
 inherently interactive. This revival is built WITH the operator at the
 keyboard, and connects the day's other work as its organs.
+
+## Acceptance checklist (2026-09-30)
+
+- [ ] A witnessed back-half demo drives the cursor through three scopes in `E-anatomy-of-a-proof.md` and displays the cursor-anchored completion bubble.
+- [ ] A witnessed voice-front-half demo routes speech from `M-x stack-hud` through voice typing into the intended agent prompt.
+- [ ] One witnessed end-to-end run turns the stated Futon City mission sentence into cursor choreography, a scope-rendered mission, and a completion bubble.
+- [ ] The verify forms recorded by this mission pass again during a restart window.
+- [ ] Presence is clocked, and the mission's handoffs and outputs have explicit binders recorded in the mission graph.
 
 ## HEAD (Joe, 2026-06-11, verbatim sense)
 
