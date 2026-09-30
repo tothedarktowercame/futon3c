@@ -27,3 +27,10 @@ stays marked as a proxy.
 **Families.** The go-ahead family (26 full triples) is measured first. The
 correction family has 7 full triples, so it is reported as "too few to judge".
 `turn-iNKHir` is in both families; it counts in each, and this is noted.
+
+## Results (2026-09-30)
+
+| Family | Full triples | Guard | Produces | Held-out hit / miss / guard-not-met | Baseline count / denominator | Verdict |
+|---|---:|---|---|---:|---:|---|
+| go-ahead | 26 | agent reply present + resolved commit | resolved commit | 16 / 2 / 8 | 210 / 389 | better-than-baseline |
+| done-is-observed-running correction | 7 | agent reply present + resolved commit | resolved commit | 2 / 3 / 2 | 212 / 371 | too-few-to-judge |
