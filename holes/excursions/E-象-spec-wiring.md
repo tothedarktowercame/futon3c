@@ -1,7 +1,8 @@
 # E-象-spec-wiring: checking a specification by its open ports
 
-Opened 2026-09-30 by claude-17 at Joe's direction, under M-象-2000. Pilot: one
-hand-drawn diagram, one target, live numbers from claude-1.
+Opened 2026-09-30 by claude-17 at Joe's direction, under M-象-2000. It connects
+象's reading of intent to diagram checking through a typed model of a design
+pattern. Step 1, a hand-drawn pilot with live numbers from claude-1, is done.
 
 ## The idea
 
@@ -30,7 +31,68 @@ five pattern slots to a cell update, which a specification does not need. This
 excursion keeps only ports and wires. Balance could be added later as a second
 check.
 
-## Intent, as stated by Joe
+## The three parts
+
+| Part | Supplies | State |
+|---|---|---|
+| 象 (M-象-2000) | Intent: Joe's turns read into fragments with roles and patterns, plus the history of a requirement across sessions | Built for operator turns |
+| A formal model of a design pattern (this excursion) | A typed shape for each pattern and each stated claim: what it takes in, what it produces, what it leaves to be supplied | Not built; sketched below |
+| Diagram checking (M-diagramprover, Layer 1.5) | Composition checked before anything runs | Designed; the mission lists pattern-to-diagram translation and typed ports as missing |
+
+Joe (2026-09-30): this connection is the point of the excursion. The
+fixed-point question that came up with claude-1's pooling is a side matter and
+is kept in the appendix.
+
+## The middle layer: a pattern as a typed box
+
+A flexiarg already has the slots. The proposal is to read them as ports:
+
+| Slot | Read as | Note |
+|---|---|---|
+| IF | Input ports: what must be present for the pattern to apply | Each input is marked **constructed** (some other box must produce it) or **external** (named source, countable) |
+| HOWEVER | The input that would otherwise be left open | This is where a backdoor shows: the thing the pattern exists to stop being supplied freely |
+| THEN | Output ports: what the pattern produces | |
+| BECAUSE | Not a port. The source for the box: the turns or files that justify it | |
+| NEXT-STEPS | Wires to other patterns | The checks that show the pattern did its job |
+
+A claim from Joe's turns gets the same shape. "Cascades are formed for the
+problem from the library" is a box with inputs *problem* and *library* and
+output *policy set*, and it says the policy-set input of G is **constructed**.
+A design that leaves that input external contradicts the claim. That
+contradiction is what the check reports.
+
+Fragment roles from 象's readings give direction between boxes. codex-4's rule
+(futon2 `28f6adc15`) already turns roles into relations: context, condition,
+dependency and goal enable what follows; rationale justifies what precedes.
+
+What this layer leaves out on purpose: signs, balance, and the correspondence
+between the five slots and a cell update (see the note on M-formal-patterns
+above).
+
+## Steps
+
+1. **Pilot, done below.** One hand-drawn diagram of selection for one target,
+   with live counts, and the open-port check run by eye.
+2. **Ports for a handful of real patterns, by hand.** Take the five patterns in
+   the pilot's reading (`futon-theory/mission-scoping`,
+   `futon-theory/mission-lifecycle`, `war-machine/advanceability`,
+   `orchestration/consent-gate`, `coordination/intent-to-mission-binding`) and
+   write IF/THEN as ports from their flexiarg text. Test: do the slots carry
+   enough to say whether two of them compose? If not, that says what the
+   flexiarg format lacks.
+3. **Intent as a claim list, from 象.** Produce the I1–I5 list below from the
+   requirement's turns with the existing readings, and compare it with the
+   hand-written one.
+4. **A checker.** The diagram as data (boxes, ports, wires, external sources,
+   claims); a script that reports open inputs, dangling outputs, and claims
+   with no matching wire. Planted cases: the old `cascadePolicySet` must fail,
+   codex-6's proposed construction must pass.
+5. **Translation.** Pattern text to box, which is the part M-diagramprover
+   lists as missing. Only after steps 2 to 4 show what a box needs to hold.
+
+Steps 2 to 5 are not started.
+
+## Pilot: intent, as stated by Joe
 
 From the six turns in `TN-G-over-cascades-revisited.md` and the 2026-09-30
 session with claude-1:
@@ -42,7 +104,7 @@ session with claude-1:
 - I4. The field is all unfinished missions, excursions and tickets.
 - I5. Selection is not gated on an interpretation already existing.
 
-## The diagram: one target, M-self-documenting-stack
+## Pilot: the diagram for one target, M-self-documenting-stack
 
 Numbers are claude-1's (bell `invoke-1790780363591-29154-11bf9d3f`), checked
 against the files where a file exists. Paths are under `/home/joe/code`.
@@ -83,7 +145,7 @@ against the files where a file exists. Paths are under `/home/joe/code`.
  (hand-written sources + interpretation answers)      1 policy at click 20
 ```
 
-## The open-port check
+## Pilot: the open-port check
 
 | Input port | Wired to | Or external source | Count | Verdict |
 |---|---|---|---|---|
@@ -131,7 +193,24 @@ The old design fails the check at one port (the menu). The new design passes
 at that port for the Clojure construction and fails at three others: the
 dangling output, the free k, and the missing Lean box.
 
-## Pooling and the fixed-point question
+## What the pilot suggests
+
+- The open-port check is cheap and found three things in a design written
+  today by people actively looking for this defect. That supports trying it as
+  a routine step when a specification is written.
+- The check needs the intent as a short list of claims with sources (I1–I5).
+  象's readings and the requirement-history search supply those.
+- A parameter is a port. The retraction count k, the weights and the pooling
+  law were each "defaults" or "modelling choices", and each decides a number
+  Joe cares about (appendix).
+- The check was done by eye. Two ports were not traced, and one finding came
+  from claude-1's account of files I did not read. A checker over a written
+  diagram (step 4) removes that dependence.
+
+## Appendix: pooling and the fixed-point question (side measurement)
+
+Not part of the 象-to-diagram line. Kept because it produced finding 3 and a
+defect report.
 
 Joe's hypothesis: pooling near-variant policies is identifying a fixed point.
 If more and more retractions are generated and near-variants are pooled, the
@@ -190,22 +269,7 @@ retraction's first action is its alphabetically first pattern. claude-1
 reports the roots as `mission-lifecycle` and `mission-scoping`, so another
 path may apply. Worth a look by whoever owns that function.
 
-## What the pilot suggests
-
-- The open-port check is cheap and found three things in a design written
-  today by people actively looking for this defect. That supports trying it as
-  a routine step when a specification is written.
-- The check needs the intent as a short list of claims with sources (I1–I5).
-  象's readings and the requirement-history search supply those.
-- A parameter is a port. k, the weights and the pooling law were each
-  "defaults" or "modelling choices", and each decides a number Joe cares
-  about.
-
-## Next steps, none started
-
-1. Trace the two ports not examined: fit evidence and preference into G.
-2. Repeat for a second target with more seeds.
-3. Try a pool defined by shared edges and see whether that set stabilises.
-4. Decide with Joe whether the port vocabulary should be written into the
-   flexiarg slots (IF and HOWEVER as inputs, THEN as output, NEXT-STEPS as
-   wires), which is the part M-diagramprover lists as missing.
+**Outcome.** claude-1 confirmed by reading the code that direction, roots and
+first action of every retraction policy followed the alphabetical order of
+pattern names (through sorted edge endpoints). A fix is dispatched to codex-4
+(job `invoke-1790780752104-29159-8b342179`).
