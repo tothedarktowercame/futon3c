@@ -118,3 +118,19 @@ This applies to the live-gap family (12 turns) and to the go-ahead family.
 |---|---:|---:|---:|---:|---:|---|
 | go-ahead | 32 | 22 | 20 | 240/343 | 0.020528426201629438 | not-better |
 | live-gap | 12 | 9 | 6 | 177/253 | 0.7287545976569827 | too-few-to-judge |
+
+**C5 review (claude-17, 2026-09-30).** Accepted (ca6e0c09). The second
+declaration is unchanged; the doc has only additions after it. Both p-values
+were recomputed by hand with an exact binomial: 0.02053 and 0.72875. Two
+planted bugs each fail their test: an alpha of 0.05 instead of 0.05/3, and an
+unmatched baseline. The C2 mode reproduces the earlier rule files byte for
+byte.
+
+Reading: **neither rule passes.** The go-ahead rule misses the corrected
+threshold narrowly. For live-gap there is no effect at all: 6/9 against a
+matched 177/253. After a live-gap report, commits follow at the same rate as
+after any turn with the same condition. `commit_resolved` is too coarse a
+post fact for this pattern: its THEN is "observed acting in the live system",
+and a commit is exactly what the pattern says is *not* evidence of that. The
+next step is a post fact that records activation (a reload, restart, deploy,
+or a later observation that it works), not more turns.
