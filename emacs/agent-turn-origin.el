@@ -11,6 +11,20 @@
 (defvar agent-turn-origin-input nil
   "Source context carried into a queued or unsolicited turn.")
 
+(defun agent-turn-origin-author (source &optional operator-author)
+  "Return the evidence author warranted by SOURCE.
+An operator source is authored by OPERATOR-AUTHOR (normally the login name).
+Harness and agent sources are authored by their recorded actor.  Missing,
+unknown, or malformed source data is deliberately attributed to \"unknown\"."
+  (let ((kind (plist-get source :kind))
+        (actor (plist-get source :actor)))
+    (cond
+     ((equal kind "operator") (or operator-author "unknown"))
+     ((and (member kind '("harness" "agent"))
+           (stringp actor) (not (string-empty-p actor)))
+      actor)
+     (t "unknown"))))
+
 (defun agent-turn-harness-stamp (source session-id)
   "Return the execution harness known by the turn producer.
 SOURCE is the same write-time provenance plist used for origin, optionally

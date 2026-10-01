@@ -3813,15 +3813,19 @@ posted in the meantime is newer than whatever the server reports."
                (not (and (stringp (symbol-value last-id-var))
                          (not (string-empty-p (symbol-value last-id-var)))))
                (agent-chat-evidence-enabled-p evidence-url))
-      (let ((payload `((subject . ((ref/type . "session")
+      (let* ((session-source '(:kind "harness" :actor "session-start"))
+             (author (if (fboundp 'agent-turn-origin-author)
+                         (agent-turn-origin-author session-source)
+                       "unknown"))
+             (payload `((subject . ((ref/type . "session")
                                    (ref/id . ,sid)))
                        (type . "coordination")
                        (claim-type . "goal")
-                       (author . ,(or (getenv "USER") user-login-name "joe"))
+                       (author . ,author)
                        (origin . ,(agent-turn-origin-stamp
-                                   (or (getenv "USER") user-login-name "joe")
+                                   author
                                    "agent-chat/session-start"
-                                   '(:kind "harness" :actor "session-start")))
+                                   session-source))
                        (session-id . ,sid)
                        (body . ,(append `((event . "session-start")
                                           (source . ,source)
@@ -3902,7 +3906,11 @@ character the operator meant to write."
                         (is-error "correction")
                         (t "observation")))
            (author (if is-user
-                       (or (getenv "USER") user-login-name "joe")
+                       (if (fboundp 'agent-turn-origin-author)
+                           (agent-turn-origin-author
+                            turn-source
+                            (or (getenv "USER") user-login-name "joe"))
+                         "unknown")
                      assistant-author))
            (role-tag (if is-user "user" "assistant"))
            (payload `((subject . ((ref/type . "session")
