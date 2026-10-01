@@ -34,6 +34,7 @@
 (deftest missing-cast-is-resolved-from-the-live-roster
   (let [roster (roster-with {"claude-17" idle-seat
                              "claude-1" idle-seat
+                             "kimi-2" idle-seat
                              "codex-8" idle-seat
                              "zai-4" {:status "restored" :invoke-ready? true}})]
     (binding [service/*roster-fn* (fn [_] roster)
@@ -41,9 +42,9 @@
                                       (when (= sym 'futon2.aif.full-loop-runner/config)
                                         identity))]
       (with-redefs [cohort/apply-binding identity]
-        (is (= {:author "claude-1"
-                :reviewer "codex-8"
-                :repair-reviewer "codex-8"}
+        (is (= {:author "codex-8"
+                :reviewer "zai-4"
+                :repair-reviewer "zai-4"}
                (select-keys (service/prepare-ordinary-click-opts {})
                             [:author :reviewer :repair-reviewer])))))))
 

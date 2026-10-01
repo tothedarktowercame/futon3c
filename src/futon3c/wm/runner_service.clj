@@ -212,6 +212,12 @@
   [value]
   (and (string? value) (not (str/blank? value))))
 
+(def automatic-cast-families
+  "Provider families eligible for automatic ordinary-click casting. Explicit
+   caller-supplied casts remain authoritative. Joe, 2026-10-01: keep new
+   dispatches to Zai and Codex while Kimi is exhausted."
+  #{"zai" "codex"})
+
 (defn- available-cast-seats
   [roster]
   (->> roster
@@ -219,6 +225,7 @@
                (let [seat (name seat)
                      status (some-> (:status record) name)]
                  (when (and (not= war-machine-agent-id seat)
+                            (contains? automatic-cast-families (seat-family seat))
                             (true? (:invoke-ready? record))
                             (contains? #{"idle" "restored"} status))
                    {:seat seat :status status}))))
@@ -238,10 +245,11 @@
   "Resolve an ordinary click's execution cast before its ration is spent.
 
    Explicit/configured identities win. Missing author and reviewer identities
-   are selected deterministically from the current invoke-ready Agency roster;
-   independent provider families are preferred and the two roles are always
-   distinct. A missing repair reviewer follows the resolved reviewer. This is
-   a live caller-supplied cast, not the retired static runner default."
+   are selected deterministically from the current invoke-ready Zai/Codex
+   Agency roster; independent provider families are preferred and the two
+   roles are always distinct. A missing repair reviewer follows the resolved
+   reviewer. This is a live caller-supplied cast, not the retired static
+   runner default."
   [opts]
   (let [configured (configured-runner-opts opts)]
     (if (and (nonblank-string? (:author configured))
@@ -266,6 +274,7 @@
           (throw (ex-info "WM click refused: no distinct live execution cast is available"
                           {:status 409
                            :error :wm-click-cast-unavailable
+                           :automatic-cast-families automatic-cast-families
                            :available-seats (mapv :seat available)
                            :author author
                            :reviewer reviewer})))
