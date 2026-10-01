@@ -718,6 +718,20 @@
     (is (= :verification-policy-absent (:reason result)))
     (is (= ["scripts/not-yet-verified.py"] (:unsupported-code-files result)))))
 
+(deftest exact-policy-path-can-exempt-documentary-intent-markers
+  (let [packet {:repo "futon2"
+                :files ["holes/labs/M-aif-full-loop-94/cohort.edn"]
+                :diff-text "+ REQUIRED AUTHOR STEP\n+ TODO is quoted evidence"
+                :loc 2
+                :file-statuses
+                {"holes/labs/M-aif-full-loop-94/cohort.edn" :untracked}
+                :repo-policy
+                {:intent-marker-exempt-path-regexes
+                 ["holes/labs/M-aif-full-loop-[0-9]+/cohort\\.edn"]}}
+        result (ssb/classify-packet packet)]
+    (is (:auto-approve? result) (pr-str result))
+    (is (not (some #{:intent-marker-in-diff} (:defer-reasons result))))))
+
 (deftest run-full-sweep-empty-repos-list
   (testing "explicit empty repo list = no-op clean structure"
     (let [r (ss/run-full-sweep {:dry-run? true :repos []})]

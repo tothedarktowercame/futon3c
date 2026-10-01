@@ -458,8 +458,22 @@
    Returns {:auto-approve? bool, :failed-checks [...], :defer-reasons [...]}.
    packet = {:repo, :files, :diff-text, :loc, ...}."
   [packet]
-  (let [results (mapv (fn [{:keys [id name check defer-reason-if-fails defer-reason]}]
-                        (let [pass? (try (check packet) (catch Throwable _ false))]
+  (let [intent-exempt-patterns (map re-pattern
+                                    (get-in packet
+                                            [:repo-policy
+                                             :intent-marker-exempt-path-regexes]
+                                            []))
+        intent-exempt? (and (seq intent-exempt-patterns)
+                            (seq (:files packet))
+                            (every? (fn [path]
+                                      (some #(re-matches % path)
+                                            intent-exempt-patterns))
+                                    (:files packet)))
+        results (mapv (fn [{:keys [id name check defer-reason-if-fails defer-reason]}]
+                        (let [pass? (if (and (= id :inv-15-no-intent-markers)
+                                             intent-exempt?)
+                                      true
+                                      (try (check packet) (catch Throwable _ false)))]
                           {:id id :name name :pass? pass?
                            :defer-reason (when-not pass?
                                            (or defer-reason-if-fails defer-reason))}))
