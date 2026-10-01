@@ -2935,44 +2935,60 @@ Only `yes' is case-insensitive; either id may be nil."
           ((stringp reason) reason)
           (t "unknown"))))
 
+(defun agent-chat--insert-note (text)
+  "Insert TEXT above the prompt as one dim, indented line.
+For short status lines (an acceptance outcome) that should not read as a
+message: no name, no blank line after, `shadow' face.  Joe, 2026-10-01:
+\"the system messages are a bit in-your-face\"."
+  (let ((inhibit-read-only t)
+        (at-end (>= (point) (marker-position agent-chat--input-start))))
+    (save-excursion
+      (goto-char (marker-position agent-chat--prompt-marker))
+      (let ((start (point)))
+        (insert "  " text "\n")
+        (agent-chat--bake-face start (point) 'shadow)))
+    (when at-end
+      (agent-chat-scroll-to-bottom))))
+
+(defun agent-chat--short-act (id)
+  "Return ID shortened to act:XXXXXXXX, or ID unchanged if it is not an act id."
+  (if (and (stringp id) (string-match "\\`act:\\([0-9a-f]\\{8\\}\\)" id))
+      (concat "act:" (match-string 1 id))
+    (or id "?")))
+
 (defun agent-chat--report-acceptance (status body)
-  "Insert the one-line outcome of an acceptance request: STATUS and parsed BODY."
-  (cond
-   ((eql status 200)
-              (let* ((record (plist-get body :record))
-                     ;; JSON null parses as :null, which is non-nil.
-                     (grant (let ((g (plist-get body :grant)))
-                              (and (not (eq g :null)) g)))
-                     (grant-reason (plist-get body :grant-reason))
-                     (suffix (cond
-                              (grant
-                               (format "; grant %s until %s"
-                                       (or (plist-get grant :id) "unknown")
-                                       (or (plist-get grant :until) "unknown")))
-                              ((equal grant-reason "grant-write-failed")
-                               "; grant write failed")
-                              (t "; agreement only, no grant"))))
-                (agent-chat-insert-message
-                 "system"
-                 (format "yes: agreement %s (offer %s option %s)%s"
-                         (or (plist-get record :id) "unknown")
-                         (or (plist-get record :agreement/offer) "unknown")
-                         (or (plist-get record :agreement/option-id) "unknown")
-                         suffix))))
-   ((and (eql status 409)
-         (equal "ambiguous" (agent-chat--agreement-reason body)))
-    (agent-chat-insert-message
-     "system" "yes: ambiguous; the agent will ask which"))
-   ((eql status 409)
-    (agent-chat-insert-message
-     "system" (format "yes: not recorded (%s)" (agent-chat--agreement-reason body))))
-   (t
-    (agent-chat-insert-message
-     "system" (format "yes: not checked (%s)"
-                      (cond ((and status (not (eql status 0)) (plist-get body :reason))
-                             (format "http %s, %s" status (agent-chat--agreement-reason body)))
-                            ((and status (not (eql status 0))) (format "http %s" status))
-                            (t "timeout")))))))
+  "Insert the one-line outcome of an acceptance request: STATUS and parsed BODY.
+The next turn's header carries the full ids, so this line uses short ones."
+  (agent-chat--insert-note
+   (cond
+    ((eql status 200)
+     (let* ((record (plist-get body :record))
+            ;; JSON null parses as :null, which is non-nil.
+            (grant (let ((g (plist-get body :grant)))
+                     (and (not (eq g :null)) g))))
+       (concat
+        (format "✓ agreed: option %s of %s (agreement %s)"
+                (or (plist-get record :agreement/option-id) "?")
+                (agent-chat--short-act (plist-get record :agreement/offer))
+                (agent-chat--short-act (plist-get record :id)))
+        (cond (grant
+               (format "; grant %s until %s"
+                       (agent-chat--short-act (plist-get grant :id))
+                       (or (plist-get grant :until) "?")))
+              ((equal (plist-get body :grant-reason) "grant-write-failed")
+               "; grant write failed")
+              (t "")))))
+    ((and (eql status 409)
+          (equal "ambiguous" (agent-chat--agreement-reason body)))
+     "? yes was ambiguous; the agent will ask which")
+    ((eql status 409)
+     (format "✗ yes not recorded: %s" (agent-chat--agreement-reason body)))
+    (t
+     (format "✗ yes not checked: %s"
+             (cond ((and status (not (eql status 0)) (plist-get body :reason))
+                    (format "http %s, %s" status (agent-chat--agreement-reason body)))
+                   ((and status (not (eql status 0))) (format "http %s" status))
+                   (t "timeout")))))))
 
 (defun agent-chat--check-acceptance (text evidence-id)
   "Record classical acceptance TEXT backed by EVIDENCE-ID, without blocking.
@@ -2988,7 +3004,7 @@ so a blocking call either froze Emacs or reported a recorded agreement as
                                (not (equal agent-chat--session-id "pending"))
                                agent-chat--session-id)))
     (if (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
-        (agent-chat-insert-message "system" "yes: not checked (no evidence id)")
+        (agent-chat--insert-note "✗ yes not checked: no evidence id")
       (let ((origin (current-buffer)))
         (agent-chat--agreement-post-async
          (format "%s/api/alpha/agreement"

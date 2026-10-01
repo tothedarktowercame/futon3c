@@ -254,6 +254,8 @@
       (cl-letf (((symbol-function 'agent-chat-insert-message)
                  (lambda (name value)
                    (push (cons name value) messages)))
+                ((symbol-function 'agent-chat--insert-note)
+                 (lambda (value) (push (cons "system" value) messages)))
                 ((symbol-function 'agent-chat--agreement-post-async)
                  (lambda (_url payload callback)
                    (push (list :request payload) events)
@@ -285,26 +287,26 @@
            :json (:record (:id "act:agreement-1"
                            :agreement/offer "act:offer-1"
                            :agreement/option-id "2")))
-          "yes: agreement act:agreement-1 (offer act:offer-1 option 2); agreement only, no grant")
+          "✓ agreed: option 2 of act:offer-1 (agreement act:agreement-1)")
          ((:status 200
            :json (:record (:id "act:agreement-2"
                            :agreement/offer "act:offer-2"
                            :agreement/option-id "1")
                   :grant (:id "act:grant-2" :until "2026-09-29T00:00:00Z")))
-          "yes: agreement act:agreement-2 (offer act:offer-2 option 1); grant act:grant-2 until 2026-09-29T00:00:00Z")
+          "✓ agreed: option 1 of act:offer-2 (agreement act:agreement-2); grant act:grant-2 until 2026-09-29T00:00:00Z")
          ((:status 200
            :json (:record (:id "act:agreement-3"
                            :agreement/offer "act:offer-3"
                            :agreement/option-id "2")
                   :grant :null :grant-reason "agreement-only"))
-          "yes: agreement act:agreement-3 (offer act:offer-3 option 2); agreement only, no grant")
+          "✓ agreed: option 2 of act:offer-3 (agreement act:agreement-3)")
          ((:status 409 :json (:reason "ambiguous"))
-          "yes: ambiguous; the agent will ask which")
+          "? yes was ambiguous; the agent will ask which")
          ((:status 409 :json (:reason "unknown-option"))
-          "yes: not recorded (unknown-option)")
+          "✗ yes not recorded: unknown-option")
          ((:status 403 :json (:reason "evidence-not-operator-turn"))
-          "yes: not checked (http 403, evidence-not-operator-turn)")
-         (:timeout "yes: not checked (timeout)")))
+          "✗ yes not checked: http 403, evidence-not-operator-turn")
+         (:timeout "✗ yes not checked: timeout")))
     (let* ((result (agent-chat-test--agreement-send "yes 2" (car case)))
            (events (plist-get result :events))
            (system-lines (mapcar #'cdr
@@ -335,6 +337,8 @@
                        (lambda (name value)
                          (when (equal name "system")
                            (push (cons (buffer-name) value) lines))))
+                      ((symbol-function 'agent-chat--insert-note)
+                       (lambda (value) (push (cons (buffer-name) value) lines)))
                       ((symbol-function 'agent-chat--agreement-post-async)
                        (lambda (_url _payload callback) (setq pending callback)))
                       ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore)
@@ -357,9 +361,29 @@
                            :json (:record (:id "act:a" :agreement/offer "act:o"
                                            :agreement/option-id "1")))))
               (should (equal (list (cons (buffer-name chat)
-                                         "yes: agreement act:a (offer act:o option 1); agreement only, no grant"))
+                                         "✓ agreed: option 1 of act:o (agreement act:a)"))
                              lines)))))
       (kill-buffer chat))))
+
+(ert-deftest agent-chat-acceptance-note-is-one-dim-line-with-short-ids ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let ((before (buffer-size)))
+      (agent-chat--report-acceptance
+       200 '(:record (:id "act:32ab1363-88f5-48a2-92dd-0bc1fbe62989"
+                      :agreement/offer "act:31e3fc8d-2436-462f-a8a1-eb470d8eeb2c"
+                      :agreement/option-id "2")
+             :grant :null :grant-reason "agreement-only"))
+      (let* ((pos (save-excursion (goto-char (point-min))
+                                  (search-forward "✓ agreed" nil t)))
+             (line (save-excursion (goto-char pos)
+                                   (buffer-substring-no-properties
+                                    (line-beginning-position) (line-end-position)))))
+        (should pos)
+        (should (equal "  ✓ agreed: option 2 of act:31e3fc8d (agreement act:32ab1363)" line))
+        (should (eq 'shadow (get-text-property pos 'face)))
+        (should-not (string-match-p "system:" (buffer-string)))
+        (should (= (+ before (length line) 1) (buffer-size)))))))
 
 (ert-deftest agent-chat-agreement-near-miss-makes-no-request ()
   (let* ((result (agent-chat-test--agreement-send
@@ -374,7 +398,7 @@
          (events (plist-get result :events)))
     (should (equal "yes" (plist-get result :sent)))
     (should (equal '(:evidence :invoke) events))
-    (should (member '("system" . "yes: not checked (no evidence id)")
+    (should (member '("system" . "✗ yes not checked: no evidence id")
                     (plist-get result :messages)))))
 
 (ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
