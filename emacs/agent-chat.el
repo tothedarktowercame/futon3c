@@ -2884,10 +2884,15 @@ path) may already have recorded the delivery, so refusing would lose it."
 (defun agent-chat--acceptance-command (text)
   "Return (OFFER-ID . OPTION-ID) when TEXT is a classical acceptance, else nil.
 Mirrors `futon3c.agency.agreement-record/parse-acceptance': trim, strip one
-trailing . or !, then exactly `yes', `yes N', `yes act:ID' or `yes act:ID N'.
+trailing . or ! and a leading `🈸:', then exactly `yes', `yes N', `yes act:ID'
+or `yes act:ID N'.
 Only `yes' is case-insensitive; either id may be nil."
   (let* ((trimmed (string-trim text))
-         (normalized (string-trim (replace-regexp-in-string "[.!]\\'" "" trimmed)))
+         ;; "🈸:yes" answers an agent's 🈸 paragraph (Joe, 2026-10-01).
+         (normalized (string-trim
+                      (replace-regexp-in-string
+                       "\\`🈸:[[:space:]]*" ""
+                       (replace-regexp-in-string "[.!]\\'" "" trimmed))))
          (case-fold-search nil))
     (when (string-match
            (concat "\\`[Yy][Ee][Ss]\\(?:[[:space:]]+\\(?:\\(act:[^[:space:]]+\\)"

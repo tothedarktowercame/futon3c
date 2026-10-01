@@ -35,12 +35,17 @@
        (catch Exception _ (refuse! reason field))))
 
 (defn parse-acceptance
-  "Parse only the classical P11 acceptance grammar. The `yes` token is
-   case-insensitive; offer and option ids retain their spelling."
+  "Parse only the classical P11 acceptance grammar, optionally prefixed by
+   the mark `🈸:`. The `yes` token is case-insensitive; offer and option ids
+   retain their spelling."
   [input]
   (when (string? input)
     (let [trimmed (str/trim input)
-          without-punctuation (str/trim (str/replace trimmed #"[.!]$" ""))]
+          ;; "🈸:yes" answers an agent's 🈸 paragraph in the reply-proforma
+          ;; marks (Joe, 2026-10-01); the prefix is dropped before the grammar.
+          without-punctuation (-> (str/replace trimmed #"[.!]$" "")
+                                  (str/replace #"^🈸:\s*" "")
+                                  str/trim)]
       (when-let [[_ offer-id option-after-offer option-only]
                  (re-matches #"(?i:yes)(?:\s+(?:(act:[^\s]+)(?:\s+([0-9]+))?|([0-9]+)))?"
                              without-punctuation)]

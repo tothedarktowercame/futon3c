@@ -42,7 +42,14 @@
            ["yes, but" nil]
            ["yes 2 3" nil]
            ["not yes" nil]
-           ["yes?" nil]]]
+           ["yes?" nil]
+           ["🈸:yes" {:offer-id nil :option-id nil}]
+           ["🈸: yes 2." {:offer-id nil :option-id "2"}]
+           ["🈸:yes act:offer-a 2" {:offer-id "act:offer-a" :option-id "2"}]
+           ["🈸:" nil]
+           ["🈸:yes please" nil]
+           ["㊭:yes" nil]
+           ["x 🈸:yes" nil]]]
     (is (= expected (agreement/parse-acceptance input)) input)))
 
 (deftest resolver-does-not-break-ties-by-recency
