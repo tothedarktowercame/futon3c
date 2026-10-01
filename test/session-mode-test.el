@@ -1019,3 +1019,13 @@ agent text is left alone."
         (should (eq 'session-mode-mark-act-face (cdr (assoc "🈸" faces))))
         (should (eq 'session-mode-mark-believe-face (cdr (assoc "㊟" faces))))
         (should (eq 'session-mode-mark-evaluate-face (cdr (assoc "🈲" faces))))))))
+
+(ert-deftest session-mode-turn-tags-paints-marks ()
+  (with-temp-buffer
+    (insert "㊬ (checked) yes. 🈸:go")
+    (session-mode--paint-marks (point-min) (point-max))
+    (session-mode--paint-marks (point-min) (point-max))   ; repaint does not stack
+    (let ((os (seq-filter (lambda (o) (overlay-get o 'session-mode-mark))
+                          (overlays-in (point-min) (point-max)))))
+      (should (= 2 (length os)))
+      (should (eq 'session-mode-mark-act-face (overlay-get (car (overlays-at 1)) 'face))))))

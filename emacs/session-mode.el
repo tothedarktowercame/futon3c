@@ -980,6 +980,23 @@ Use the real inserted span, including any agent-chat text transformations."
                  "no recognized phrase; intent not inferred")))))
 
 ;;;###autoload
+;; Marks are painted under turn-tags mode too, the mode REPL buffers run;
+;; jit-lock repaints them as text is shown or changed, on overlays that
+;; font-lock does not clear.
+(defun session-mode--paint-marks (beg end)
+  "Give each reply-proforma mark between BEG and END its stage face."
+  (dolist (o (overlays-in beg end))
+    (when (overlay-get o 'session-mode-mark) (delete-overlay o)))
+  (save-excursion
+    (goto-char beg)
+    (while (re-search-forward session-mode--mark-re end t)
+      (pcase-let ((`(,mark ,intent ,stage) (assoc (match-string-no-properties 0) session-mode--marks))
+                  (o (make-overlay (match-beginning 0) (match-end 0))))
+        (overlay-put o 'session-mode-mark t)
+        (overlay-put o 'evaporate t)
+        (overlay-put o 'face (intern (format "session-mode-mark-%s-face" stage)))
+        (overlay-put o 'help-echo (format "%s %s — %s" mark intent (upcase (symbol-name stage))))))))
+
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
 Also annotate the latest sent operator turn.  Drafts use local cues only;
@@ -1000,7 +1017,10 @@ Kept separate from full session markup so typing never triggers retrieval."
         (add-hook 'after-change-functions #'session-mode--tags-after-change nil t)
         (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
         (add-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation nil t)
+        (jit-lock-register #'session-mode--paint-marks)
         (session-mode-turn-tags-refresh))
+    (jit-lock-unregister #'session-mode--paint-marks)
+    (remove-overlays (point-min) (point-max) 'session-mode-mark t)
     (remove-hook 'after-change-functions #'session-mode--tags-after-change t)
     (remove-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation t)
     (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
