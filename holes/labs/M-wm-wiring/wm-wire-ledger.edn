@@ -80,9 +80,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b04dde43e10eec9d39356f7b703d40196f6de36f599f5c71bcc247b283f23a18",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.964025133Z"}},
+     "test-registry-34ceeba9e2b63b14d5d59086859d9f514464dbbc6a01d0cc9421175b869d3bbd",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:38.149456922Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-message-test/the-exception-message-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-entry :timeout-ms],
@@ -96,9 +96,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-e5795d6fd3db687916457eca500e95e265e66b0a8de04c35ca79cc9d50d17bb6",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:11.965145597Z"}},
+     "test-registry-4a5e47c5caa7daac0ef961a1fa7e401f6dcc5d155db7c685d4e392a36c712310",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:47:05.139403179Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-entry-timeout-ms-test/the-timeout-reaches-the-entry-refusal}
   {:wire [:c8-registry-get :c8-latest :message],
@@ -112,9 +112,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-0c924b108b824621ab3567a93fc8dea08f88600038169bbcbb70045501a3fb37",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:30:32.862001507Z"}},
+     "test-registry-8e4604d7b7d8c3e176207f8ec016e5f2cc8264483fd494cdad6806f236877f20",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:48.288542317Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-message-test/the-exception-message-reaches-the-latest-refusal}
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
@@ -128,9 +128,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-33403293bae875636732080eb75b25b95f7b166936928d02cc081f38c00c937c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:25:23.663970594Z"}},
+     "test-registry-1e1adfcbcac94b9a78324235728676e7755448c2fa50255480ab314b52c67872",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:57.267286279Z"}},
    :test
    futon3c.diagramprover.wm-wire-c8-registry-get-latest-timeout-ms-test/the-timeout-reaches-the-latest-refusal}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
@@ -246,9 +246,9 @@
      :expected :no-order-on-receipt},
     :evidence
     {:warrant-id
-     "test-registry-f709d7ebfc53fa72ec851c4726dfe97b1f8e87a52deb8857d72f54a40f2304d8",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:09.960299254Z"}},
+     "test-registry-66ca75542c56a090649aa5471eb1a0616b5ccdf952223897e99089c989df2d10",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:57.321176366Z"}},
    :test
    futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/the-construction-receipt-reaches-order-use}
   {:wire [:construction-construct :r9-decision :construction-receipt],
@@ -296,9 +296,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8908bd4fbee29b486a3a625e07dd2008da96ef3361c9b7d542b262c2c8785657",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.451486335Z"}},
+     "test-registry-ab1fe238d15285bdb973a2d3f30cfa6fc3f9897f0c798a21a342ecfbefc13990",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:38:40.735158108Z"}},
    :test
    futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-eligibility-ruling-reaches-the-cascade}
   {:wire [:flight-cast :click-start :author],
@@ -353,9 +353,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-0802902a990162e01f624d9e21c924159b1ac91557cd1653f155734e74c09c46",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:39:37.965837669Z"}},
+     "test-registry-7a3d46bf548e3fe391662a145d8082216e776fc20f4d7d6e915b6e7fb4f580c9",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:38:40.708458718Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/the-refused-clicks-detail-reaches-the-click-entry}
   {:wire [:flight-click :flight-record-click :status],
@@ -369,9 +369,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ab4d314e3b3bb12d95c005047de12697b79322d54bca9c876675676ce0908b8c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:32.272304442Z"}},
+     "test-registry-082c10014384bc7518325d61b4008e2435071f3f7e5c6518924d7159e4e093e3",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:38:54.952942216Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
   {:wire [:flight-click-wants :click-start :wants],
@@ -821,9 +821,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-d71716a9102d4c0552caba47c9ce5a59ef46fe757ac9b950e6e2204fc28ec307",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:40:50.873748024Z"}},
+     "test-registry-0a231197716c07d146a25e5f7da4faf9341e023e56d973ef348cd7fcc4b5cda7",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:38:54.787549541Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-test-attempts-test/the-attempts-reach-the-row-0-test}
   {:wire [:r0-enact-step :r0-test :grain-gate],
@@ -837,9 +837,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-93ac54fa461d32b7323d6f83672b55e4c294f362468e259dc21f4bf2fb04e24b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:34:17.475183475Z"}},
+     "test-registry-96ce304d7d03a70c0f7a876527930de5a1bed5eae1b8b64440c1b9c371672541",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:08.523875894Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-test-grain-gate-test/the-gate-refusal-reaches-the-row-0-test}
   {:wire [:r0-enact-step :r5-test :attempts],
@@ -863,9 +863,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-a059a04898ae788fdb284c760711653dcff5880f18e47bd037606e3461857e12",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:12.265585696Z"}},
+     "test-registry-996fdfe45acec3207b6d931b05f09a348f66a3e1acfad720f4931592fdc6f7f8",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:08.630617236Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-r7-flight-call-attempts-test/the-attempts-reach-the-flights-wc-call}
   {:wire [:r0-enact-step :r7-increment :attempts],
@@ -879,9 +879,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f8608cb17cc4afedbeaf82bf6dca0025cc4e486976bdf8cabfdfa78d674b9adc",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:21.354900879Z"}},
+     "test-registry-0ca0705471b1523c664378bb672fbe2bdacd3c5b5ee5b034949399d614f31c22",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:22.670615767Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-enact-step-r7-increment-attempts-test/the-attempts-reach-the-increment}
   {:wire [:r0-enact-step :wc-checker :attempts],
@@ -895,9 +895,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-06def889ed51263ee4b259b0fdebd4c7b9e499016472375d310d42de0bc109f9",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.363681484Z"}},
+     "test-registry-cc35e1685b21ed0088ce695b898deb933ff5f30a74dc21a4d1d10b2e28643482",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:22.732564203Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-wc-attempts-test/the-attempts-reach-the-wc-checker}
   {:wire [:r0-enact-step :wc-checker :grain-gate],
@@ -911,9 +911,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8f15c659429fe4692922cf2a0c34bd12f0974f05648997060b1516e6af85de7b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:33.068756302Z"}},
+     "test-registry-cb493d769299f25dcc71655f6faf5af162de5d3752738982aa0c2b51466f1c5d",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:36.959243077Z"}},
    :test
    futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/the-gate-pass-reaches-the-wc-checker}
   {:wire [:r1-outer-cascade :flight-entry :chosen-target],
@@ -943,9 +943,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-25ab3e001611f044a3f03c120699f8dadcf17dc8e657b411d2768264ad2aa3f4",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:35:40.351194944Z"}},
+     "test-registry-19505f583509752f0d94c299466fefc0fb00e6a157a6172704f13adfbf05b1f5",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:36.976632586Z"}},
    :test
    futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-draw-seed-test/the-draw-seed-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :target-selection],
@@ -1250,9 +1250,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-7f8f5551a98b464c053cfed5672a9fc53665f0e41c138f4a1613383b536efd92",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:30:32.689345663Z"}},
+     "test-registry-8375311a15a33f7a0ac7dfc7226139921c94b83dc1b16116aa70a0deb48efbcc",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:43:08.038283646Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -1294,9 +1294,9 @@
      :expected :invalid-temperature},
     :evidence
     {:warrant-id
-     "test-registry-a77d05d7d542f59ef191a48b0d61a0242128f20227eac1b3db4ea7ee32aeda94",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.148092837Z"}},
+     "test-registry-93cb2dd515d44e5b0eea7b34273e1d09aeeeb186626e1da4b875475777bbeff5",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:50.876640096Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -1382,9 +1382,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-c2413e5a46a5511bec611f300df8cc78b1ea57d5c95f324c499555acd513b592",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.363839204Z"}},
+     "test-registry-76b75aa0eec14ec3c1f784011e4b5293da769a5776166333b76eeaae434cf64d",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:39:50.993984590Z"}},
    :record
    {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
     :sha256
@@ -1405,9 +1405,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-f845a25c73325d1f36f33494554760e33db57aadb8e0d21bc538a9d122cfe39a",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:32.269643410Z"}},
+     "test-registry-254ddf2c8a02d2f19aa365a27521c4212f3025ac73e6520877fbc4a7bbf53b8d",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:04.489749014Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-constraints-read-r3-store-constraints-read-constraints-read-test/published-value-reaches-reader}
   {:wire [:r2-store-coverage :r3-store-coverage :coverage],
@@ -1421,9 +1421,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8255bd232a405a49e0e5a19fb8afae44da4e34d90f498703009b22ea7688cbe9",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:38:20.979739279Z"}},
+     "test-registry-ea76dfec8409eba1c6e3c82cb67c67e3609f36993b90dd6a0c59a931dff00f38",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:04.419550842Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-coverage-r3-store-coverage-coverage-test/published-value-reaches-reader}
   {:wire [:r2-store-criteria :r3-store-criteria :criteria],
@@ -1437,9 +1437,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-18a66c0600766dfa847cbba5479117f4a35b118e72641c423a0ba31d49085bb2",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:33.670248613Z"}},
+     "test-registry-232752740eb654993966d678647b65f2a7f8f8b4639ea46e4289d8a038713ae6",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:14.852895453Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test/published-value-reaches-reader}
   {:wire
@@ -1456,9 +1456,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-c20207780160bcab2da4d26b478ffa241088b2a3424cea0859fb765295e5467b",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:24:11.961814430Z"}},
+     "test-registry-222c1d59aebd7d0e0e2d34297316b08802526b8b1d3778aeab274dfa7d217444",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:14.829512072Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-declines-r3-store-locator-declines-locator-declines-test/published-value-reaches-reader}
   {:wire
@@ -1475,9 +1475,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-8b1c92f6478a6e9261ab58f8bd9db9d83d45756795686e448888a8c993e694e6",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.563919144Z"}},
+     "test-registry-1ded73641c28fed2bb14b75a598c34f88a6a4d0688907650df976b16c3f25814",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:25.184081262Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locator-questions-r3-store-locator-questions-locator-questions-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r3-store-locators :locators],
@@ -1491,9 +1491,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6671997c69dec28f48518be6419a260e93fe3335f5a4af86f3d77329137b6651",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:31:40.880811236Z"}},
+     "test-registry-65687f30e91bb04c3dc3fa85bf64fa53426f515ee229426f04e2cc2976c1f94b",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:25.196823499Z"}},
    :test
    futon3c.diagramprover.wm-wire-r2-store-locators-r3-store-locators-locators-test/published-value-reaches-reader}
   {:wire [:r2-store-locators :r9-measured-a-version :locators],
@@ -1599,9 +1599,9 @@
      :expected :no-order-on-receipt},
     :evidence
     {:warrant-id
-     "test-registry-554a0892d6f96057eb0b768c1a995481382fd95109a797def9e93872b3eaa86c",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:21:40.154725648Z"}},
+     "test-registry-e0f0c078fa75b889993d1c96268eb03d77dc442dd696127c341ebde161690b11",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:43:07.963849977Z"}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/the-descent-reaches-order-use}
   {:wire [:r4-constructor :r4-order-use :precedence-violations],
@@ -1615,9 +1615,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-85094bdbfc3612f171462ffaf625a262da5e84c94107a8e7b48b6f8c704ac606",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:20:32.969520214Z"}},
+     "test-registry-ed2df6d5d3c722c983aa8c5223f85eb9c130412d490038e9436da099f3f4e20b",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:43:20.071428202Z"}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/the-precedence-violations-reach-order-use}
   {:wire [:r4-constructor :r4-order-use :units],
@@ -1632,9 +1632,9 @@
      :expected :no-order-on-receipt},
     :evidence
     {:warrant-id
-     "test-registry-a72c198395f73326c589db6915ff57e81861c9c46781f3aa766726f3709e3caa",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:40:50.874911162Z"}},
+     "test-registry-103be962a1cd3ad47b8dbfb800fcf6382b9c361ed49dcec427fa01e718eb430d",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:43:19.665610514Z"}},
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-units-test/the-units-reach-order-use}
   {:wire
@@ -1677,9 +1677,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-024bf32c95b2e476d1e19873e4194b2b9e36f0627b8b7f7c1994fd22c3b2597d",
-     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
-     :ran-at "2026-09-28T20:56:03.050057007Z"}},
+     "test-registry-785ac560a683fe9820b8a887556b779f5fced7cd6a3c1ba5a3f3ae41b0b88035",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:37.492415815Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
    :note
@@ -1695,9 +1695,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-04402784fc6310068dde59b6625eb646ec85a6192050b90d32d484d5c741183d",
-     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
-     :ran-at "2026-09-28T20:56:03.556230461Z"}},
+     "test-registry-54b05ca2b14c3ed12da1ca7d1443b9bc96eb4c129de54918bc84d8e02cf14a75",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:40:37.616790300Z"}},
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/the-reader-receives-the-kernel-value,
    :note
@@ -1714,9 +1714,9 @@
      :expected :grain-not-declared},
     :evidence
     {:warrant-id
-     "test-registry-1133e56b405b759b47cc2440cd07c6e8aaf414a8bd462fd9f0de26deceb7d056",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:33.172161078Z"}},
+     "test-registry-4b3f988b6abf6b37dcbd9761186200051414939fed90f113420bbdd4bbc6c70e",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:00.722878576Z"}},
    :test
    futon3c.diagramprover.wm-wire-r5-gate-grain-test/the-candidates-grain-reaches-the-gate}
   {:wire [:r5-flight-call :r5-test :grain],
@@ -1910,9 +1910,9 @@
      :expected :no-enactment-fold},
     :evidence
     {:warrant-id
-     "test-registry-b084ebd747670c4f2474f52a4f392b59d75dcb8e15cf000cc7833fba0fac7aca",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.053720839Z"}},
+     "test-registry-191c1bbcb653a1ebfd76d1c56be9d21c7aeedda2ca7b5d14278928f3c001d5f2",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:00.654485785Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
   {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
@@ -2064,9 +2064,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ecd031ccd8cc75af690dca5f843ccddff2f713a73b8b48f4d59f8379b3b1d2fe",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:25:23.458399572Z"}},
+     "test-registry-da3f8fe7fd38d639c7627e4d574b9db302b1a7bf3d9b0156298071253334551c",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:43:31.147643838Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/the-delta-reaches-the-fold}
   {:wire [:r7-increment :r7-test :delta],
@@ -2080,9 +2080,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-5568b814ddda34ff099e465a04484cd42858b97508af11bee2c334b629a2b43f",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.848764078Z"}},
+     "test-registry-8627b43397dbc3e3b052ec8079080acf1cce3033498aa1302a859d9c586dc1c6",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:14.869090061Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/the-delta-reaches-the-selection-test}
   {:wire [:r7-selection :r7-test :e-source],
@@ -2096,9 +2096,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-6ae1eb41873a71c37bc7a530cda504e8cd971ba8bb6827c9862d9c17f53bd219",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:27:50.374238248Z"}},
+     "test-registry-f0582088dd2eee44a4a43c0bd6fc26d060abe29288d8a8bd185cb12cd34b6030",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:14.829648986Z"}},
    :test
    futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
@@ -2151,9 +2151,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-4a2689c18e484c1d071e5b6af6ddde45aaa5b68097398a9a2f03efecc44ae1fb",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:19:10.259095880Z"}},
+     "test-registry-4f8f3af11248c101cc400e61fb70d5ba9fec09ee420877132d9d772a139b46bd",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:28.124789779Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -2307,9 +2307,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-a199beb91fc05d475ff094ac98562f0372de030913d0727edfb1a2f440f0423a",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.350434613Z"}},
+     "test-registry-c94403cd561d1176245a3b6a7c45f9ae7b53b3a5fe798dc662877fab6918d184",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:28.033537569Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -2353,9 +2353,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-ab6ef35a6a133d2e4c6f929b79177c9c142f3e988cf2a9525b2c2c148fe0fa9a",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:29:13.365900521Z"}},
+     "test-registry-85c75b02f81833f88170f5abb5f152a10dd6a42e92673a65af0827536f86cbe5",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:45.046409599Z"}},
    :record
    {:path
     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
@@ -2382,9 +2382,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-fd1bc4120096cb4d46c402922eda1bce77f1c98401af2d94307e6104a1076c5d",
-     :git-head "770301dd64641c12afac4a6cc83d023c433789d6",
-     :ran-at "2026-09-28T20:57:04.329447283Z"}},
+     "test-registry-4cf119e1359a85b5e14a09269acfeaa22131ae295fe18c0bf6766958b737f6ba",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:41:45.152988764Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/the-reader-receives-the-kernel-value,
    :note
@@ -2531,9 +2531,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-da06b7bfacecee904b3aca7adce090e1cbfd317cc0b615b13804014fe1501d91",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:37:00.156910605Z"}},
+     "test-registry-0cb7bc0ef0976473d0a9556971b2274cccf1aa5b887fbc4dda7d2b0d84e1040b",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:47:05.066308488Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-candidate-test/the-candidate-reaches-the-selection-test}
   {:wire [:r9-selection-law :r9-test :enacted-steps],
@@ -2547,9 +2547,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-2002f5811ed0fdb5a23e46fa1fca0ebf3f00be35b5672b2ba19adbee7bd6c069",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:17:32.652922979Z"}},
+     "test-registry-c72addf55c9a1784506afc9d2fc2caff4aff90fd36a40a4862fd6b1d4d4ade27",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:45:35.076001403Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-enacted-steps-test/the-enacted-steps-reach-the-selection-test}
   {:wire [:r9-selection-law :r9-test :per-policy-argmax],
@@ -2563,9 +2563,9 @@
      :intervention :before-reader},
     :evidence
     {:warrant-id
-     "test-registry-b52975e8a24d99746210944c449a5af3f17416489b20a4dce3bb92d2847985a1",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:55.856757871Z"}},
+     "test-registry-7ebb4713371dd88871bba6326f72570af3be33579310f3685e93d239ba715d58",
+     :git-head "5f292d47f70ec2d7070ab56fb32479375f718bd4",
+     :ran-at "2026-10-01T17:47:15.974092779Z"}},
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
@@ -2808,9 +2808,9 @@
      :expected :universe-not-admitted},
     :evidence
     {:warrant-id
-     "test-registry-9413cbc99016d8ff811544c1b30c6a63b533172ac8fc3e1f092632d69ef627af",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:26:33.085664156Z"}},
+     "test-registry-b524847524e89cdaf31e7088dda80d54c3434a1123bfa2762ea205f5ca6c30fa",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:25.922901735Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/the-flights-universe-reaches-assembly}
   {:wire
@@ -2828,9 +2828,9 @@
      :expected :want-not-declared},
     :evidence
     {:warrant-id
-     "test-registry-8eae8699aabb41eb9162094a7a67b43e976b5c9569b7d6f6e179834f41cda6dd",
-     :git-head "500c3ad863bff92139f957ef9d2eab10f42ec7c1",
-     :ran-at "2026-09-28T17:22:56.175627915Z"}},
+     "test-registry-be7e7940b6185bd99ddfcadc92ecf84e474975e13295a1eeba34d706a3058b3a",
+     :git-head "df0ca102255d919e671ec1b6837f27427bc50556",
+     :ran-at "2026-10-01T17:42:37.995149026Z"}},
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
   {:wire
