@@ -37,7 +37,7 @@ Keep your reasoning short and put the work in the file. Do not publish anything,
 
 Do all {n}, one at a time. If a turn truly cannot be read from the pack, leave it out and say why.
 
-Reply (delivered automatically): the answer path, how many turns it contains, and any turn left out with the reason.
+No reply is needed and nobody should be belled: the loop reads the answer file itself. End your turn with one line giving the answer path and the turn count.
 """
 
 
