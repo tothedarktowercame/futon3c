@@ -145,27 +145,32 @@
   "Return the transcript mark face for STAGE."
   (intern (format "session-mode-mark-%s-face" stage)))
 
+(defun xiaoxiang--hydra-cell (text stage width)
+  "Give TEXT its STAGE face and pad it to WIDTH display columns."
+  (let ((padding (- width (string-width text))))
+    (when (< padding 0)
+      (error "Mark hydra cell is wider than %d columns: %s" width text))
+    (propertize (concat text (make-string padding ?\s))
+                'face (xiaoxiang--stage-face stage))))
+
 (defun xiaoxiang--mark-hydra-hint ()
   "Build the stage-coloured mark menu with PBASE stages as columns."
   (let* ((width 23)
          (columns
           (mapcar
            (lambda (stage)
-             (let ((face (xiaoxiang--stage-face stage)))
-               (cons
-                (propertize
-                 (format (format "%%-%ds" width)
-                         (if (eq stage 'annotator)
-                             "OTHER" (upcase (symbol-name stage))))
-                 'face face)
-                (mapcar
-                 (lambda (k)
-                   (propertize
-                    (format (format "%%-%ds" width)
-                            (format "_%s_ %s %s" (nth 0 k) (nth 2 k) (nth 1 k)))
-                    'face face))
-                 (seq-filter (lambda (k) (eq stage (nth 3 k)))
-                             xiaoxiang-mark-keys)))))
+             (cons
+              (xiaoxiang--hydra-cell
+               (if (eq stage 'annotator)
+                   "OTHER" (upcase (symbol-name stage)))
+               stage width)
+              (mapcar
+               (lambda (k)
+                 (xiaoxiang--hydra-cell
+                  (format "_%s_ %s %s" (nth 0 k) (nth 2 k) (nth 1 k))
+                  stage width))
+               (seq-filter (lambda (k) (eq stage (nth 3 k)))
+                           xiaoxiang-mark-keys))))
            xiaoxiang-mark-stage-order))
          (height (apply #'max (mapcar #'length columns))))
     (concat

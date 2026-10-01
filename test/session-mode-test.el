@@ -1031,13 +1031,25 @@ agent text is left alone."
     (let ((heading-line (seq-find (lambda (line) (string-match-p "PERCEIVE" line))
                                   (split-string hint "\n"))))
       (dolist (heading headings)
-        (should (string-match-p heading heading-line))))
+        (should (string-match-p heading heading-line)))
+      (should (equal '(0 23 46 69 92 115)
+                     (mapcar (lambda (heading)
+                               (string-width
+                                (substring heading-line 0
+                                           (string-match heading heading-line))))
+                             headings))))
     (dolist (stage xiaoxiang-mark-stage-order)
       (let* ((heading (if (eq stage 'annotator)
                           "OTHER" (upcase (symbol-name stage))))
              (pos (string-match heading hint)))
         (should (eq (xiaoxiang--stage-face stage)
                     (get-text-property pos 'face hint)))))))
+
+(ert-deftest session-mode-mark-hydra-pads-by-display-width ()
+  "A double-width mark must not push the following PBASE column rightward."
+  (let ((cell (xiaoxiang--hydra-cell "_g_ ㊥ gist" 'annotator 23)))
+    (should (= 23 (string-width cell)))
+    (should (= 22 (length cell)))))
 
 (ert-deftest session-mode-turn-tags-paints-marks ()
   (with-temp-buffer
