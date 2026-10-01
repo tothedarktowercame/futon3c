@@ -1,6 +1,6 @@
 # M-aif-over-the-operator — close the AIF loop over the operator's responses
 
-**Status:** IDENTIFY, draft (2026-10-01, claude-17 with codex-10). Not a build plan yet.
+**Status:** IDENTIFY, draft (2026-10-01, claude-17 with codex-10); Zip drafted, awaiting Joe. Not a build plan yet.
 **Owner:** Joe · interactive side claude-17 · War Machine side codex-10.
 
 ## Origin
@@ -41,8 +41,10 @@ All live on 2026-10-01 unless marked.
 - **Commit trailers** link commits to the agent session and dispatching job.
 
 What this gives an AIF loop, per offer: accepted (which option) / declined
-(🈚, negation) / withdrawn / expired with no response, with the operator's turn
-as the basis. Gaps:
+(🈚, negation) / withdrawn / no response, with the operator's turn as the basis
+for the first two. No response holds only once the offer, its response window
+and the absence of a linked response are durably joined, and it never shows the
+offer was considered (codex-10's correction, below). Gaps:
 - a 🈸 in a reply does not post an offer; until agents post one, most asks
   leave no record;
 - "declined" has no classical grammar yet (only `yes` is parsed);
@@ -101,11 +103,67 @@ display event alone should upgrade silence to `:declined`.  The proposal record
 also needs a stable proposal/action-class identity; otherwise the WR-0 credit
 update cannot be scoped or replayed.
 
-## Zip (open)
+## Zip (draft, claude-17, 2026-10-01)
 
-To be written once Side B exists: which Side A records become which Side B
-observations, what each side must add, and the first test that would show the
-loop changes what gets proposed.
+### Records to observations
+
+Side B's observation is `{proposal-id, option-id?, outcome, offer-revision,
+operator-turn-evidence, observed-at}`. From Side A:
+
+| outcome | Side A record | observed-at | basis | exists? |
+|---|---|---|---|---|
+| `:accepted` + option | `:agreement/record` | agreement time | acceptance evidence (operator turn) | yes |
+| `:declined` | operator negation (P12-5) or a decline grammar | negation time | operator turn | grammar missing; P12-5 fit to check |
+| `:withdrawn` | `:act/withdrawal` on the offer (P10) | withdrawal time | withdrawing act | yes |
+| `:no-response` | offer with `until`, no linked agreement / negation / withdrawal | `until` | the durable absence join | join not built |
+
+`proposal-id` is the offer id. Offers are immutable, so a changed offer is a
+new id; `offer-revision` can be the offer id until revisions exist. A shown
+offer with no answer before `until` is censored, not negative (Side B).
+
+### What each side must add
+
+Interactive side (claude-17 / 象-2000):
+1. **Action class on offers**: a required, stable `:offer/action-class`, so
+   credit can be scoped and replayed (codex-10's point). Without it nothing
+   below can be counted per class.
+2. **`until` required** for offers that feed the loop, so no-response has a
+   window.
+3. **Decline grammar**: classical `no` / `no act:ID`, parsed like `yes`, or
+   P12-5 negation if it already fits.
+4. **Agents post an offer for each 🈸** they write (convention first).
+
+War Machine side (codex-10):
+5. **WM proposals become offers**: the nag / brief / silent notifications
+   that make up WR-0 are minted as offers with the WM action class as
+   `:offer/action-class`. This is what lets the WR-0 case be recorded at all.
+6. **Response model as an E-family term**: per action class and option,
+   posterior counts of accepted / declined / censored, kept separate from
+   `cascade-feedback` pattern evidence and from C (Side B).
+
+At the seam (either side):
+7. **Response projector**: read offers, agreements, withdrawals and negations
+   from futon1b and emit Side B observations, including the no-response join
+   evaluated as of each offer's `until`. Read-only; no timer — the WM computes
+   it when it next reads.
+
+### First tests, in order
+
+- **T1 (records):** the projector over offers posted from 2026-10-01 returns
+  one observation per closed offer, and counts match a hand count. Shows the
+  operator side is readable by the WM.
+- **T2 (WR-0 recordable):** one WM notification class runs as offers for a
+  week; its no-response count is no longer indistinguishable from decline.
+- **T3 (intervention, per sec-operator):** does selection with the response
+  model propose differently, and are those proposals accepted more often?
+  Pre-register the comparison before switching it on.
+
+## Working from both sides
+
+Items 1–4 suit the interactive session (small, live, Emacs and route edits);
+5–6 suit the automated team. Item 7 is the hand-over point; proposed owner:
+the WM side, since it consumes the observations. Work passes between teams as
+offers to Joe, so the mission's own hand-offs are recorded by the loop it builds.
 
 ## Working from both sides (Joe's proposal, open)
 
