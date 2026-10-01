@@ -62,6 +62,17 @@
               :model "gpt-test" :source :codex}
              (:usage (invoke "work")))))))
 
+(deftest invoke-result-identifies-provider-when-cli-chooses-default-model
+  (let [invoke (codex-cli/make-invoke-fn {:cwd "/tmp"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [& _]
+                    {:exit 0 :timed-out? false :session-id "sid-default"
+                     :text "done" :stderr ""
+                     :raw-output
+                     "{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":7,\"output_tokens\":2}}\n"})]
+      (is (= {:input_tokens 7 :output_tokens 2 :source :codex}
+             (:usage (invoke "work")))))))
+
 (deftest parse-output-falls-back-to-prior-session-and-error-message
   (testing "no thread.start event keeps prior session id"
     (let [raw "{\"type\":\"error\",\"message\":\"boom\"}\n"

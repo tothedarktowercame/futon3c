@@ -672,8 +672,8 @@
                   (zero? (:exit r2))
                   {:result (or txt2 "[Codex produced no text response]")
                    :session-id sid2 :execution exec2
-                   :usage (cond-> (:usage p2)
-                            model (assoc :model model :source :codex))}
+                   :usage (cond-> (assoc (:usage p2) :source :codex)
+                            model (assoc :model model))}
                   :else
                   {:result nil :session-id sid2 :execution exec2
                    :error (str "Exit " (:exit r2) ": "
@@ -688,8 +688,8 @@
                   (zero? exit)
                   {:result (or final-text "[Codex produced no text response]")
                    :session-id final-sid :execution exec
-                   :usage (cond-> (:usage parsed)
-                            model (assoc :model model :source :codex))}
+                   :usage (cond-> (assoc (:usage parsed) :source :codex)
+                            model (assoc :model model))}
                   :else
                   {:result nil :session-id final-sid :execution exec
                    :error (str "Exit " exit ": "
