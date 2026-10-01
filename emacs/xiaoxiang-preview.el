@@ -146,24 +146,36 @@
   (intern (format "session-mode-mark-%s-face" stage)))
 
 (defun xiaoxiang--mark-hydra-hint ()
-  "Build the PBASE-ordered, stage-coloured mark menu."
-  (concat
-   "\nMarks by PBASE stage. Type a colon after a mark to answer it (🈸:yes).\n\n"
-   (mapconcat
-    (lambda (stage)
-      (let* ((face (xiaoxiang--stage-face stage))
-             (marks (seq-filter (lambda (k) (eq stage (nth 3 k)))
-                                xiaoxiang-mark-keys))
-             (label (if (eq stage 'annotator) "OTHER" (upcase (symbol-name stage)))))
-        (concat
-         (propertize (format "%-9s" label) 'face face)
-         (mapconcat
-          (lambda (k)
-            (propertize (format "_%s_ %s %-15s" (nth 0 k) (nth 2 k) (nth 1 k))
-                        'face face))
-          marks ""))))
-    xiaoxiang-mark-stage-order "\n")
-   "\n\n_q_ quit\n"))
+  "Build the stage-coloured mark menu with PBASE stages as columns."
+  (let* ((width 23)
+         (columns
+          (mapcar
+           (lambda (stage)
+             (let ((face (xiaoxiang--stage-face stage)))
+               (cons
+                (propertize
+                 (format (format "%%-%ds" width)
+                         (if (eq stage 'annotator)
+                             "OTHER" (upcase (symbol-name stage))))
+                 'face face)
+                (mapcar
+                 (lambda (k)
+                   (propertize
+                    (format (format "%%-%ds" width)
+                            (format "_%s_ %s %s" (nth 0 k) (nth 2 k) (nth 1 k)))
+                    'face face))
+                 (seq-filter (lambda (k) (eq stage (nth 3 k)))
+                             xiaoxiang-mark-keys)))))
+           xiaoxiang-mark-stage-order))
+         (height (apply #'max (mapcar #'length columns))))
+    (concat
+     "\nMarks by PBASE stage. Type a colon after a mark to answer it (🈸:yes).\n\n"
+     (mapconcat
+      (lambda (row)
+        (mapconcat (lambda (column) (or (nth row column) (make-string width ?\s)))
+                   columns ""))
+      (number-sequence 0 (1- height)) "\n")
+     "\n\n_q_ quit\n")))
 
 (declare-function xiaoxiang-mark-hydra/body "xiaoxiang-preview")
 
