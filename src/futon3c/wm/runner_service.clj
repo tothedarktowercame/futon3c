@@ -610,7 +610,9 @@
           (close-click! agent-id click-id result)))
       (catch Throwable throwable
         (deliver admission
-                 (if (realized? admission)
+                 (if (or (realized? admission)
+                         (= :ordinary-click-budget-exhausted
+                            (:error (ex-data throwable))))
                    throwable
                    (ex-info "WM click refused before ration admission"
                             {:status 409

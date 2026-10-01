@@ -43,9 +43,11 @@
   "Five of the eighth grant (unspent, claude-5) plus ten granted to claude-8
    on 2026-09-24 for overnight use at claude-8's discretion, plus twenty
    granted to claude-1 on 2026-09-29 (\"OK let's run 20 ticks, you can do
-   repairs between them\"; recorded in the same document's section \"Joe's
-   grant to claude-1, 2026-09-29\", futon2 1e49a67a)."
-  35)
+   repairs between them\"), plus ten granted to codex-10 on 2026-10-01 for
+   the new registered-run series (\"I'll grant a block of 10 clicks\"; repairs
+   may land between clicks). All grants are recorded in the authorization
+   document named above."
+  45)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))

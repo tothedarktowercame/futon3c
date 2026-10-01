@@ -36,12 +36,16 @@
     (with-hermetic-stores
       (fn []
         (binding [budget/*ledger-path* (str root "/consumption.jsonl")
+                  service/*roster-fn*
+                  (fn [_] {:zai-1 {:status "idle" :invoke-ready? true}
+                           :codex-34 {:status "idle" :invoke-ready? true}})
                   service/*resolve-var*
                   (fn [sym]
                     (case sym
                       futon2.aif.full-loop-runner/config identity
                       futon2.aif.full-loop-runtime/run-opportunity!
                       (fn [opts]
+                        ((:readiness-admitted-fn opts))
                         (swap! observed conj {:click-id (:click-id opts) :rows (rows)})
                         (throw (ex-info "intentional immediate runner failure" {:fixture true})))
                       nil))]
@@ -52,14 +56,17 @@
             (dotimes [n budget/allocated]
               (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
                                  :body (json/generate-string
-                                        (cond-> {:trigger "duree-click-on-demand"}
+                                        (cond-> {:trigger "duree-click-on-demand"
+                                                 :author "zai-1"
+                                                 :reviewer "codex-34"}
                                           (zero? n) (assoc :issuing-caller "codex-34")))})
                     body (json/parse-string (:body response) true)]
                 (is (= 200 (:status response)))
                 (service/await-click! (:click-id body))
                 (is (= :service-failed (get-in @service/!status [:last-result :outcome])))
                 (is (= (inc n) (count (rows))))))
-            (let [response (h {:request-method :post :uri "/api/alpha/wm/click" :body "{}"})
+            (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
+                               :body "{\"author\":\"zai-1\",\"reviewer\":\"codex-34\"}"})
                   body (json/parse-string (:body response) true)]
               (is (= 409 (:status response)))
               (is (= "ordinary-click-budget-exhausted" (:error body)))
