@@ -637,6 +637,16 @@ answer is \"still running\" and nothing is written."
   :type 'integer
   :group 'session-mode)
 
+(defcustom session-mode-analysis-store-busy-retry-delays '(60 180 600)
+  "Seconds to wait between analysis redispatches after futon1b is busy.
+Each delay permits one more attempt.  The evidence-store boundary prevents the
+agent from running when its clock decision was not recorded, and the turn's
+event identity is stable, so these retries neither duplicate analysis nor
+admit an unclocked turn.  After the final delay the failed job is reported
+normally."
+  :type '(repeat integer)
+  :group 'session-mode)
+
 (defconst session-mode--dispatch-reaper
   (expand-file-name "../scripts/turn_dispatch_reap.py"
                     (file-name-directory (or load-file-name buffer-file-name)))
@@ -1023,7 +1033,30 @@ analysis health failing; it is not discarded."
 
 (add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
 
-(defun session-mode--reap-dispatch (path &optional agent tries)
+(defun session-mode--store-busy-failure-p (out)
+  "Non-nil when reaper output OUT reports transient futon1b admission load."
+  (and (string-match-p "REFUSED\\|FAILED" out)
+       (string-match-p
+        "futon1b busy\\|clock/store-busy\\|Turn not started: futon1b"
+        out)))
+
+(defun session-mode--retry-analysis-after-store-busy (path agent delays)
+  "Archive PATH's failed attempt and redispatch it to AGENT.
+DELAYS is the tail of the bounded backoff schedule for later failures."
+  (let ((status (call-process "python3" nil nil nil
+                              session-mode--dispatch-reaper "--retry" path)))
+    (if (zerop status)
+        (session-mode--dispatch-analysis path agent delays)
+      (session-mode--set-analysis-health
+       'failing (format "%s: could not prepare store-busy retry"
+                        (file-name-base path)))
+      (display-warning
+       'session-mode
+       (format "Turn analysis retry could not reset %s to `requested'."
+               (file-name-base path))
+       :warning))))
+
+(defun session-mode--reap-dispatch (path &optional agent tries store-busy-delays)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
 AGENT is the seat it went to: if that seat ran out of usage, bench it and
@@ -1032,7 +1065,7 @@ is asked about again: three times at `session-mode-analysis-reap-after',
 then `session-mode-analysis-reap-late-tries' times at
 `session-mode-analysis-reap-late-after'.  TRIES counts the reaps left.
 A single reap that found it running left the lighter's health unchanged
-for good."
+for good.  STORE-BUSY-DELAYS is the remaining bounded redispatch schedule."
   (let ((buf (generate-new-buffer " *session-analysis-reap*")))
     (make-process
      :name "session-analysis-reap" :buffer buf :noquery t
@@ -1060,6 +1093,20 @@ for good."
                                                agent other (file-name-base path)))
                                   (session-mode--dispatch-analysis path other)
                                   t))))
+                        ((and (session-mode--store-busy-failure-p out)
+                              (not (eq store-busy-delays :exhausted))
+                              (or store-busy-delays
+                                  session-mode-analysis-store-busy-retry-delays))
+                         (let* ((delays (or store-busy-delays
+                                           session-mode-analysis-store-busy-retry-delays))
+                                (delay (car delays)))
+                           (session-mode--set-analysis-health
+                            nil (format "%s: futon1b busy; retrying in %ss"
+                                        (file-name-base path) delay))
+                           (run-at-time
+                            delay nil
+                            #'session-mode--retry-analysis-after-store-busy
+                            path agent (or (cdr delays) :exhausted))))
                         ((string-match-p "REFUSED\\|FAILED" out)
                          (session-mode--analysis-note-done path)
                          (session-mode--set-analysis-health
@@ -1091,11 +1138,12 @@ for good."
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
 
-(defun session-mode--dispatch-analysis (path &optional agent)
+(defun session-mode--dispatch-analysis (path &optional agent store-busy-delays)
   "Ask AGENT to interpret the turn recorded at PATH.
 AGENT defaults to `session-mode--analysis-seat': the analysis agent, or
 its alternate while the analysis agent is out of usage.
-Fire and forget: the dispatch must not delay the conversation, and a seat
+STORE-BUSY-DELAYS, when non-nil, is the remaining retry schedule inherited
+from a transient evidence-store failure.  Fire and forget: the dispatch must not delay the conversation, and a seat
 that is busy or absent leaves the record `requested', which is the honest
 state -- never silently complete."
   (let* ((agent (or agent (session-mode--analysis-seat)))
@@ -1242,7 +1290,8 @@ state -- never silently complete."
                    (let ((jid (match-string 1 out)))
                      (session-mode--record-dispatch-job path jid)
                      (run-at-time session-mode-analysis-reap-after nil
-                                  #'session-mode--reap-dispatch path agent)))))
+                                  #'session-mode--reap-dispatch path agent nil
+                                  store-busy-delays)))))
              (when (buffer-live-p (process-buffer proc))
                (kill-buffer (process-buffer proc)))))
          :command (list "sh" "-c"

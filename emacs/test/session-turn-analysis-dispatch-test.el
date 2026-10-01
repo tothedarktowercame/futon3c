@@ -217,6 +217,41 @@ short interval and then at the long one, and a late landing runs the hook."
     (should (equal '(180 180 600 600 600 600 600 600) (car r)))
     (should-not (cdr r))))
 
+(ert-deftest session-turn-analysis-retries-exact-futon1b-busy-failure ()
+  "A clock read rejected under load is delayed and redispatched, not terminal."
+  (let ((scheduled nil)
+        (redispatched nil)
+        (done nil)
+        (session-mode-analysis-store-busy-retry-delays '(60 180 600))
+        (real-make-process (symbol-function 'make-process)))
+    (cl-letf (((symbol-function 'run-at-time)
+               (lambda (delay _repeat fn &rest args)
+                 (setq scheduled (list delay fn args))))
+              ((symbol-function 'session-mode--set-analysis-health) #'ignore)
+              ((symbol-function 'session-mode--analysis-note-done)
+               (lambda (&rest _) (setq done t)))
+              ((symbol-function 'session-mode--dispatch-analysis)
+               (lambda (path agent delays)
+                 (setq redispatched (list path agent delays))))
+              ((symbol-function 'call-process) (lambda (&rest _) 0))
+              ((symbol-function 'make-process)
+               (lambda (&rest plist)
+                 (let ((p (funcall
+                           real-make-process :name "reap-store-busy-stub"
+                           :buffer (plist-get plist :buffer)
+                           :command
+                           '("printf" "%s"
+                             "FAILED turn-ZKoe7v.json failed: Clock decision not recorded: the evidence store refused it (exception: futon1b busy (HTTP 504): the read was not served)"))))
+                   (while (process-live-p p) (accept-process-output p 0.05))
+                   (funcall (plist-get plist :sentinel) p "finished\n")
+                   p))))
+      (session-mode--reap-dispatch "/tmp/turn-ZKoe7v.json" "象-1")
+      (should (= 60 (car scheduled)))
+      (apply (cadr scheduled) (caddr scheduled))
+      (should (equal redispatched
+                     '("/tmp/turn-ZKoe7v.json" "象-1" (180 600))))
+      (should-not done))))
+
 (ert-deftest session-turn-analysis-pool-picks-least-loaded-seat ()
   "Joe 2026-09-30: a pool of 象 seats; each turn to the least-loaded one."
   (let ((session-mode-analysis-pool '("象-1" "象-2" "象-3"))
