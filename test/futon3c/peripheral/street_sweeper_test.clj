@@ -660,6 +660,54 @@
       (finally
         (delete-tree! base)))))
 
+(deftest clojure-packet-without-test-policy-is-deferred
+  (let [base (.toFile (java.nio.file.Files/createTempDirectory
+                       "street-sweeper-gate-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        repo (io/file base "fixture")
+        source (io/file repo "src/example/core.clj")
+        test-file (io/file repo "test/example/core_test.clj")
+        root-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                             'repos-root)]
+    (try
+      (io/make-parents source)
+      (io/make-parents test-file)
+      (spit source "(ns example.core)\n(def answer 42)\n")
+      (spit test-file "(ns example.core-test)\n")
+      (let [result (with-redefs-fn {root-var (str base)}
+                     #(ssb/verify-packet
+                       {:repo "fixture" :files ["src/example/core.clj"]
+                        :repo-policy nil}))]
+        (is (false? (:ok? result)))
+        (is (= :verification-policy-absent (:reason result))))
+      (finally
+        (delete-tree! base)))))
+
+(deftest failed-declared-test-command-refuses-clojure-packet
+  (let [base (.toFile (java.nio.file.Files/createTempDirectory
+                       "street-sweeper-gate-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        repo (io/file base "fixture")
+        source (io/file repo "src/example/core.clj")
+        test-file (io/file repo "test/example/core_test.clj")
+        root-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                             'repos-root)]
+    (try
+      (io/make-parents source)
+      (io/make-parents test-file)
+      (spit source "(ns example.core)\n(def answer 42)\n")
+      (spit test-file "(ns example.core-test)\n")
+      (let [result (with-redefs-fn {root-var (str base)}
+                     #(ssb/verify-packet
+                       {:repo "fixture" :files ["src/example/core.clj"]
+                        :repo-policy {:clojure-test-command ["false"]}}))]
+        (is (false? (:ok? result)))
+        (is (= :verification-failed (:reason result)))
+        (is (= ["false" "-n" "example.core-test"]
+               (get-in result [:failed :command]))))
+      (finally
+        (delete-tree! base)))))
+
 (deftest run-full-sweep-empty-repos-list
   (testing "explicit empty repo list = no-op clean structure"
     (let [r (ss/run-full-sweep {:dry-run? true :repos []})]

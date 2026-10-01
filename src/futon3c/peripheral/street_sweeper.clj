@@ -328,6 +328,11 @@
                                           :loc loc
                                           :file-statuses file-statuses
                                           :repo-policy repo-policy})
+                         verification (when (:auto-approve? classification)
+                                        (ssb/verify-packet
+                                         {:repo repo
+                                          :files (:files pkt)
+                                          :repo-policy repo-policy}))
                          msg (derive-commit-message repo pkt entries-by-path)
                          pkt-summary {:repo repo
                                       :files (:files pkt)
@@ -336,6 +341,16 @@
                                       :file-count (count (:files pkt))
                                       :message-draft msg}]
                      (cond
+                       (and (:auto-approve? classification)
+                            (not (:ok? verification)))
+                       (swap! results update :deferred-packets conj
+                              (assoc pkt-summary
+                                     :defer-reason (:reason verification)
+                                     :defer-reasons [(:reason verification)]
+                                     :verification verification
+                                     :diff-text content
+                                     :commit-message-draft msg))
+
                        (:auto-approve? classification)
                        (if dry-run?
                          (swap! results update :would-commit conj
