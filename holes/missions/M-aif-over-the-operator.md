@@ -1,6 +1,6 @@
 # M-aif-over-the-operator — close the AIF loop over the operator's responses
 
-**Status:** IDENTIFY, draft (2026-10-01, claude-17 with codex-10); Zip drafted, awaiting Joe. Not a build plan yet.
+**Status:** IDENTIFY (opened 2026-10-01, claude-17 with codex-10). Live; open work is the unchecked items under "Work items".
 **Owner:** Joe · interactive side claude-17 · War Machine side codex-10.
 
 ## Origin
@@ -103,7 +103,7 @@ display event alone should upgrade silence to `:declined`.  The proposal record
 also needs a stable proposal/action-class identity; otherwise the WR-0 credit
 update cannot be scoped or replayed.
 
-## Zip (draft, claude-17, 2026-10-01)
+## Zip (claude-17, 2026-10-01)
 
 ### Records to observations
 
@@ -121,53 +121,53 @@ operator-turn-evidence, observed-at}`. From Side A:
 new id; `offer-revision` can be the offer id until revisions exist. A shown
 offer with no answer before `until` is censored, not negative (Side B).
 
-### What each side must add
+### Work items
+
+Each item names the change and how to observe that it holds. Owners are the
+side best placed to do it, not a gate.
 
 Interactive side (claude-17 / 象-2000):
-1. **Action class on offers**: a required, stable `:offer/action-class`, so
-   credit can be scoped and replayed (codex-10's point). Without it nothing
-   below can be counted per class.
-2. **`until` required** for offers that feed the loop, so no-response has a
-   window.
-3. **Decline grammar**: classical `no` / `no act:ID`, parsed like `yes`, or
-   P12-5 negation if it already fits.
-4. **Agents post an offer for each 🈸** they write (convention first).
+- [ ] **Action class on offers.** `:offer/record` validation requires a stable
+  `:offer/action-class`; an offer posted without one is refused, and the
+  offer tests cover both cases. Credit cannot be scoped or replayed per class
+  without it (codex-10).
+- [ ] **`until` on loop offers.** Offers that carry an action class must carry
+  `until`; one posted without it is refused. Gives no-response a window.
+- [ ] **Decline recorded.** Either a classical `no` / `no act:ID [N]` grammar,
+  parsed like `yes` in both parsers and minting a decline record linked to the
+  offer, or P12-5 negation shown (with a test) to resolve against offers.
+  Today `negation_interpretation.clj` appears to resolve against disclosures.
+- [ ] **Agents post an offer for each 🈸.** The rule is written in the reply
+  proforma; over a sample of later agent replies, every 🈸 paragraph has an
+  offer id on the operator's prompt line in that turn.
 
 War Machine side (codex-10):
-5. **WM proposals become offers**: the nag / brief / silent notifications
-   that make up WR-0 are minted as offers with the WM action class as
-   `:offer/action-class`. This is what lets the WR-0 case be recorded at all.
-6. **Response model as an E-family term**: per action class and option,
-   posterior counts of accepted / declined / censored, kept separate from
-   `cascade-feedback` pattern evidence and from C (Side B).
+- [ ] **WM proposals become offers.** At least one nag / brief / silent
+  notification class is minted as offers with its WM action class as
+  `:offer/action-class`; the offers appear in futon1b.
+- [ ] **Response model as an E-family term.** Per action class and option,
+  posterior counts of accepted / declined / censored enter E, separate from
+  `cascade-feedback` pattern evidence and from C (Side B); a selection receipt
+  shows the term and its counts.
 
-At the seam (either side):
-7. **Response projector**: read offers, agreements, withdrawals and negations
-   from futon1b and emit Side B observations, including the no-response join
-   evaluated as of each offer's `until`. Read-only; no timer — the WM computes
-   it when it next reads.
+At the seam (proposed owner: WM side, which consumes the observations):
+- [ ] **Response projector.** Reads offers, agreements, withdrawals and
+  declines from futon1b and emits Side B observations, including no-response
+  evaluated as of each offer's `until`. Read-only, no timer; computed when the
+  WM next reads.
 
-### First tests, in order
-
-- **T1 (records):** the projector over offers posted from 2026-10-01 returns
-  one observation per closed offer, and counts match a hand count. Shows the
-  operator side is readable by the WM.
-- **T2 (WR-0 recordable):** one WM notification class runs as offers for a
-  week; its no-response count is no longer indistinguishable from decline.
-- **T3 (intervention, per sec-operator):** does selection with the response
-  model propose differently, and are those proposals accepted more often?
-  Pre-register the comparison before switching it on.
+Tests:
+- [ ] **T1 (records):** the projector over offers posted from 2026-10-01
+  returns one observation per closed offer, and its counts match a hand count.
+- [ ] **T2 (WR-0 recordable):** one WM notification class runs as offers for a
+  week; its no-response and decline counts are reported separately.
+- [ ] **T3 (intervention, per sec-operator):** the comparison is written down
+  before the response model is switched on (what is compared, over which
+  offers, what result would count against it); then selection with the model
+  is run and the result recorded against that statement.
 
 ## Working from both sides
 
-Items 1–4 suit the interactive session (small, live, Emacs and route edits);
-5–6 suit the automated team. Item 7 is the hand-over point; proposed owner:
-the WM side, since it consumes the observations. Work passes between teams as
-offers to Joe, so the mission's own hand-offs are recorded by the loop it builds.
-
-## Working from both sides (Joe's proposal, open)
-
-Candidate split, to settle in the zip: the interactive side mints and answers
-offers and finds new items in dialogue; the automated side turns recorded
-outcomes into credit and proposal policy. Work items can pass in either
-direction as offers.
+The interactive session suits the small live edits (offer schema, grammar,
+Emacs); the automated team suits the WM items. Work can pass between teams as
+offers, so the mission's own hand-offs are recorded by the loop it builds.
