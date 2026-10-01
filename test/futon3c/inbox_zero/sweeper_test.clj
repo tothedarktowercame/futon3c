@@ -5,6 +5,8 @@
             [futon3c.inbox-zero.sweeper :as sweeper])
   (:import [java.util Date]))
 
+(declare git!)
+
 (def now (Date. 1789000000000))
 (def now-ms (.getTime now))
 
@@ -300,6 +302,52 @@
         fixed (push-options 0 calls {:push-log-path log})]
     (sweeper/push-stranded-commits! fixed)
     (is (= [] (:repos (read-string (slurp log)))))))
+
+(defn divergent-repo-fixture [conflict?]
+  (let [base (temp-dir)
+        repo (java.io.File. base "repo")
+        peer (java.io.File. base "peer")
+        remote (java.io.File. base "remote.git")]
+    (.mkdirs repo)
+    (git! repo "init" "-b" "main")
+    (git! repo "config" "user.name" "Inbox Zero Test")
+    (git! repo "config" "user.email" "inbox-zero@example.invalid")
+    (spit (java.io.File. repo "base.txt") "base\n")
+    (git! repo "add" "base.txt")
+    (git! repo "commit" "-m" "base")
+    (git! base "init" "--bare" (str remote))
+    (git! repo "remote" "add" "origin" (str remote))
+    (git! repo "push" "-u" "origin" "main")
+    (git! remote "symbolic-ref" "HEAD" "refs/heads/main")
+    (git! base "clone" (str remote) (str peer))
+    (git! peer "config" "user.name" "Remote Test")
+    (git! peer "config" "user.email" "remote@example.invalid")
+    (spit (java.io.File. peer (if conflict? "base.txt" "remote.txt")) "remote\n")
+    (git! peer "add" ".")
+    (git! peer "commit" "-m" "remote")
+    (git! peer "push")
+    (spit (java.io.File. repo (if conflict? "base.txt" "local.txt")) "local\n")
+    (git! repo "add" ".")
+    (git! repo "commit" "-m" "local")
+    {:repo repo :peer peer :remote remote :original (git! repo "rev-parse" "HEAD")}))
+
+(deftest non-fast-forward-push-merges-clean-upstream-and-retries
+  (let [{:keys [repo remote]} (divergent-repo-fixture false)
+        result (sweeper/git-push-reconciled! (str repo))]
+    (is (:ok? result) (:output result))
+    (is (:reconciled? result))
+    (is (= (git! repo "rev-parse" "HEAD")
+           (git! remote "rev-parse" "refs/heads/main")))
+    (is (str/blank? (git! repo "status" "--porcelain")))))
+
+(deftest conflicted-reconciliation-aborts-to-the-original-head
+  (let [{:keys [repo original]} (divergent-repo-fixture true)
+        result (sweeper/git-push-reconciled! (str repo))]
+    (is (false? (:ok? result)))
+    (is (str/includes? (:output result) "reconciliation failed"))
+    (is (= original (git! repo "rev-parse" "HEAD")))
+    (is (not (.exists (java.io.File. repo ".git/MERGE_HEAD"))))
+    (is (str/blank? (git! repo "status" "--porcelain")))))
 
 
 ;; ---------- the worktree lane ----------

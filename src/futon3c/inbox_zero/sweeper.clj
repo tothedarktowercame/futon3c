@@ -474,6 +474,60 @@
        :output (str/trim (str (slurp (.getInputStream proc))
                               (slurp (.getErrorStream proc))))})))
 
+(defn- non-fast-forward? [output]
+  (boolean (re-find #"(?i)(non-fast-forward|fetch first|behind its remote)"
+                    (str output))))
+
+(defn- git-pull-merge! [root]
+  (let [proc (.exec (Runtime/getRuntime)
+                    (into-array String ["git" "pull" "--no-rebase" "--no-edit"])
+                    (into-array String ["GIT_TERMINAL_PROMPT=0"
+                                        "GIT_MERGE_AUTOEDIT=no"
+                                        "GIT_SSH_COMMAND=ssh -o BatchMode=yes"
+                                        (str "HOME=" (System/getenv "HOME"))
+                                        (str "PATH=" (System/getenv "PATH"))
+                                        (str "SSH_AUTH_SOCK="
+                                             (or (System/getenv "SSH_AUTH_SOCK") ""))])
+                    (io/file root))]
+    (if-not (.waitFor proc push-timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
+      (do (.destroyForcibly proc)
+          {:ok? false :output (str "pull timed out after " push-timeout-ms "ms")})
+      {:ok? (zero? (.exitValue proc))
+       :output (str/trim (str (slurp (.getInputStream proc))
+                              (slurp (.getErrorStream proc))))})))
+
+(defn git-push-reconciled!
+  "Push ROOT, mechanically merging upstream only after non-fast-forward.
+  Dirty or mid-operation repositories refuse. A conflicted merge is aborted,
+  restoring the original HEAD before the failure is returned."
+  [root]
+  (let [first-attempt (git-push! root)]
+    (if (or (:ok? first-attempt)
+            (not (non-fast-forward? (:output first-attempt))))
+      first-attempt
+      (cond
+        (mid-operation? root)
+        {:ok? false :output (str (:output first-attempt)
+                                 "\nreconciliation refused: Git operation in progress")}
+
+        (seq (git-dirty root))
+        {:ok? false :output (str (:output first-attempt)
+                                 "\nreconciliation refused: working tree is dirty")}
+
+        :else
+        (let [original (str/trim (:out (shell/sh "git" "rev-parse" "HEAD" :dir root)))
+              pull (git-pull-merge! root)]
+          (if (:ok? pull)
+            (let [retry (git-push! root)]
+              (assoc retry :reconciled? true :original-head original
+                           :reconcile-output (:output pull)))
+            (do
+              (when (.exists (io/file root ".git" "MERGE_HEAD"))
+                (shell/sh "git" "merge" "--abort" :dir root))
+              {:ok? false :reconciled? false :original-head original
+               :output (str (:output first-attempt) "\nreconciliation failed: "
+                            (:output pull))})))))))
+
 (defn push-stranded-commits!
   "Push every watched repo carrying one or more unpushed commits by default.
 
@@ -502,7 +556,7 @@
                                        default-push-threshold)))
             watch-roots (or (:roots options) roots/sweep-roots)
             ahead-fn (or (:ahead-fn options) git-unpushed)
-            push-fn (or (:push-fn options) git-push!)
+            push-fn (or (:push-fn options) git-push-reconciled!)
             busy-fn (or (:busy-fn options) mid-operation?)
             now ((or (:now-fn options) #(Date.)))
             log-path (or (:push-log-path options) default-push-log-path)
