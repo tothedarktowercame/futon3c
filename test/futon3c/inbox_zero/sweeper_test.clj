@@ -349,6 +349,60 @@
     (is (not (.exists (java.io.File. repo ".git/MERGE_HEAD"))))
     (is (str/blank? (git! repo "status" "--porcelain")))))
 
+;; ---------- the clean behind-only lane ----------
+
+(defn sync-options [state calls & [extra]]
+  (merge {:roots [{:path "/repo/futon1" :label "futon1-d"}]
+          :ahead-behind-fn (fn [_] state)
+          :git-fn (constantly [])
+          :busy-fn (constantly false)
+          :pull-fn (fn [root]
+                     (swap! calls conj [:pull root])
+                     {:ok? true :output ""})
+          :now-fn (constantly now)
+          :sync-log-path (temp-backlog-path)
+          :print-fn (fn [line] (swap! calls conj [:print line]))}
+         extra))
+
+(deftest clean-behind-only-repo-fast-forwards
+  (let [calls (atom [])
+        counts (sweeper/sync-behind-repos!
+                (sync-options {:ok? true :behind 3 :ahead 0} calls))]
+    (is (= 1 (:updated counts)))
+    (is (= [[:pull "/repo/futon1"]]
+           (filterv #(= :pull (first %)) @calls)))))
+
+(deftest dirty-behind-only-repo-is-never-touched
+  (let [calls (atom [])
+        counts (sweeper/sync-behind-repos!
+                (sync-options {:ok? true :behind 3 :ahead 0} calls
+                              {:git-fn (constantly [(entry "unfinished.clj" 1 false)])}))]
+    (is (= 1 (:skipped counts)))
+    (is (empty? (filter #(= :pull (first %)) @calls)))))
+
+(deftest diverged-repo-is-left-to-push-reconciliation
+  (let [calls (atom [])
+        counts (sweeper/sync-behind-repos!
+                (sync-options {:ok? true :behind 3 :ahead 2} calls))]
+    (is (= 0 (:updated counts)))
+    (is (= 0 (:skipped counts)))
+    (is (empty? (filter #(= :pull (first %)) @calls)))))
+
+(deftest fast-forward-command-advances-a-real-clean-clone
+  (let [{:keys [repo peer]} (divergent-repo-fixture false)
+        original (git! repo "rev-parse" "HEAD")]
+    ;; Remove the fixture's local-only commit, leaving this checkout exactly
+    ;; behind the upstream update made through PEER.
+    (git! repo "reset" "--hard" (str original "^"))
+    (let [before (sweeper/git-ahead-behind (str repo))
+          result (sweeper/git-fast-forward! (str repo))
+          after (sweeper/git-ahead-behind (str repo))]
+      (is (= {:ok? true :behind 1 :ahead 0} before))
+      (is (:ok? result) (:output result))
+      (is (= {:ok? true :behind 0 :ahead 0} after))
+      (is (= (git! peer "rev-parse" "HEAD") (git! repo "rev-parse" "HEAD")))
+      (is (str/blank? (git! repo "status" "--porcelain"))))))
+
 
 ;; ---------- the worktree lane ----------
 

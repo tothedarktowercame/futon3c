@@ -20,11 +20,13 @@
   keyed on Edit/Write witnesses observes almost nothing (2 of 238 paths on
   2026-09-17, and zero proposals in the three weeks to then).
 
-  Three lanes, split by whether a person has to decide anything.
+  Four lanes, split by whether a person has to decide anything.
   Dirty files INFORM: deciding what is yours and whether it should be kept
   needs a person, so that lane never stages, commits or mints a claim.
   Unpushed commits ACT: pushing a commit already written decides nothing, so
   that lane pushes rather than asking anyone to (Joe, 2026-09-18).
+  Clean behind-only repos ACT: fast-forwarding to their upstream decides
+  nothing and prevents canonical checkouts from remaining stale indefinitely.
   Merged worktrees ACT: every commit in them is already on the pushed branch,
   so removing one loses nothing there is any way to lose.
 
@@ -439,6 +441,9 @@
 (def ^:private default-push-log-path
   "/home/joe/code/storage/inbox-zero/push-log.edn")
 
+(def ^:private default-sync-log-path
+  "/home/joe/code/storage/inbox-zero/sync-log.edn")
+
 (def ^:private push-timeout-ms 120000)
 
 (defn- mid-operation?
@@ -450,6 +455,97 @@
   (boolean (some #(.exists (io/file root ".git" %))
                  ["rebase-merge" "rebase-apply" "MERGE_HEAD"
                   "CHERRY_PICK_HEAD" "BISECT_LOG"])))
+
+(defn git-ahead-behind
+  "Return HEAD's ahead/behind counts against its configured upstream.
+  Missing upstream or a Git error is explicit rather than indistinguishable
+  from a synchronized repository."
+  [root]
+  (let [fetch (shell/sh "git" "fetch" "--prune" :dir root)]
+    (if-not (zero? (:exit fetch))
+      {:ok? false :behind 0 :ahead 0
+       :error (str/trim (str (:out fetch) " " (:err fetch)))}
+      (let [{:keys [exit out err]}
+            (shell/sh "git" "rev-list" "--left-right" "--count"
+                      "@{upstream}...HEAD" :dir root)]
+        (if (zero? exit)
+          (let [[behind ahead] (map #(Long/parseLong %)
+                                    (str/split (str/trim out) #"\s+"))]
+            {:ok? true :behind behind :ahead ahead})
+          {:ok? false :behind 0 :ahead 0
+           :error (str/trim (str out " " err))})))))
+
+(defn git-fast-forward!
+  "Advance ROOT to its upstream without creating a merge or rewriting history."
+  [root]
+  (let [{:keys [exit out err]}
+        (shell/sh "git" "pull" "--ff-only" :dir root)]
+    {:ok? (zero? exit) :output (str/trim (str out " " err))}))
+
+(defn sync-behind-repos!
+  "Fast-forward clean repos that are behind upstream and have no local commits.
+
+  Diverged repos belong to the push-reconciliation lane. Dirty and mid-Git-
+  operation repositories are recorded but never touched."
+  [options]
+  (let [print-fn (or (:print-fn options) println)]
+    (try
+      (let [watch-roots (or (:roots options) roots/sweep-roots)
+            counts-fn (or (:ahead-behind-fn options) git-ahead-behind)
+            dirty-fn (or (:git-fn options) git-dirty)
+            busy-fn (or (:busy-fn options) mid-operation?)
+            pull-fn (or (:pull-fn options) git-fast-forward!)
+            log-path (or (:sync-log-path options) default-sync-log-path)
+            now ((or (:now-fn options) #(Date.)))
+            result
+            (reduce
+             (fn [acc {:keys [path label]}]
+               (let [{:keys [ok? behind ahead error]} (counts-fn path)]
+                 (cond
+                   (not ok?)
+                   (-> acc (update :failed inc)
+                       (update :rows conj {:label label :root path
+                                           :outcome :measurement-failed
+                                           :error error}))
+
+                   (or (zero? behind) (pos? ahead)) acc
+
+                   (busy-fn path)
+                   (-> acc (update :skipped inc)
+                       (update :rows conj {:label label :root path
+                                           :behind behind :outcome :mid-operation}))
+
+                   (seq (dirty-fn path))
+                   (-> acc (update :skipped inc)
+                       (update :rows conj {:label label :root path
+                                           :behind behind :outcome :dirty}))
+
+                   :else
+                   (let [{:keys [ok? output]} (pull-fn path)]
+                     (if ok?
+                       (do
+                         (print-fn (str "[inbox-zero] fast-forwarded " label
+                                        " by " behind " commit(s)"))
+                         (update acc :updated inc))
+                       (-> acc (update :failed inc)
+                           (update :rows conj {:label label :root path
+                                               :behind behind :outcome :failed
+                                               :error output})))))))
+             {:repos (count watch-roots) :updated 0 :failed 0 :skipped 0 :rows []}
+             watch-roots)]
+        (atomic-write! log-path
+                       {:at now
+                        :generated-by "futon3c.inbox-zero.sweeper"
+                        :note (str "Behind-only repositories that could not be "
+                                   "fast-forwarded. Current state, not a queue.")
+                        :repos (vec (sort-by :label (:rows result)))})
+        (let [counts (dissoc result :rows)]
+          (print-fn (str "[inbox-zero] sync pass: " (pr-str counts)))
+          counts))
+      (catch Throwable error
+        (try (print-fn (str "[inbox-zero] sync pass failed: " (.getMessage error)))
+             (catch Throwable _))
+        {:repos 0 :updated 0 :failed 0 :skipped 0}))))
 
 (defn git-push!
   "Run the plain `git push` in ROOT. Never forces, never names a refspec.
@@ -850,7 +946,7 @@
         {:repos 0 :retired 0 :moved 0 :failed 0 :skipped 0 :unmerged 0}))))
 
 (defn run-pass!
-  "One full pass: inform about dirty files, act on unpushed commits.
+  "One full pass: report dirt, synchronize, push, and retire worktrees.
 
   The loop below calls this ONE var rather than each lane in turn, so a lane
   added or changed later reaches the running loop through a plain namespace
@@ -863,6 +959,10 @@
     (try (sweep-dirty-repos! options)
          (catch Throwable error
            (print-fn (str "[inbox-zero] commit-notice lane threw: "
+                          (.getMessage error)))))
+    (try (sync-behind-repos! options)
+         (catch Throwable error
+           (print-fn (str "[inbox-zero] sync lane threw: "
                           (.getMessage error)))))
     (try (push-stranded-commits! options)
          (catch Throwable error
