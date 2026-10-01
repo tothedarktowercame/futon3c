@@ -330,6 +330,14 @@
     (is (not (contains? view :result-text)))
     (is (= "private complete response" (:result view)))))
 
+(deftest invoke-job-public-view-preserves-provider-usage-receipt
+  (let [usage {:input_tokens 101 :output_tokens 23 :total_tokens 124}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-usage" :state "done" :usage usage
+               :total-cost-usd 0.012})]
+    (is (= usage (:usage view)))
+    (is (= 0.012 (:total-cost-usd view)))))
+
 (deftest invoke-job-public-view-preserves-delivery-observation
   (let [observation {:terminal-job-id "job-1"
                      :delivery-status "delivery-failed"

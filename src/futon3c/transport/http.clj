@@ -2163,6 +2163,12 @@
                                           :result-summary summary
                                           :result-text bellback-text
                                           :artifact-ref artifact-ref
+                                          ;; Provider-owned accounting. Keep the
+                                          ;; receipt on the terminal job so a WM
+                                          ;; caller can cite it; never infer usage
+                                          ;; from prompt or reply length.
+                                          :usage (:usage result)
+                                          :total-cost-usd (:total-cost-usd result)
                                           :execution execution)
                                    (append-job-event terminal-state
                                                      {:code terminal-code
@@ -2368,6 +2374,7 @@
                           :terminal-code :terminal-message
                           :session-id :trace-id :invocation/model
                           :result :result-summary :artifact-ref
+                          :usage :total-cost-usd
                           :execution :auto-bellback :delivery
                           ;; D13 review: a rolling-expiry tombstone must SAY so.
                           ;; Without this the compacted job's :result nil is
