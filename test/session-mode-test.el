@@ -1035,8 +1035,8 @@ agent text is left alone."
       ;; Each later heading is preceded by an absolute display anchor.  This
       ;; survives fallback-font glyphs whose pixel widths are not cell widths.
       (should
-       (equal '((space :align-to 23) (space :align-to 46) (space :align-to 69)
-                (space :align-to 92) (space :align-to 115))
+       (equal '((space :align-to 23) (space :align-to 40) (space :align-to 58)
+                (space :align-to 77) (space :align-to 96))
               (mapcar (lambda (heading)
                         (get-text-property (1- (string-match heading heading-line))
                                            'display heading-line))
@@ -1052,10 +1052,11 @@ agent text is left alone."
   "A variable-width mark must not push the following PBASE column rightward."
   (require 'xiaoxiang-preview)
   (let* ((left (xiaoxiang--hydra-cell "_g_ ㊥ gist" 'annotator 23))
-         (row (xiaoxiang--hydra-row (list left "_a_ ㊣ approve" "_d_ 🈚 disagree") 23)))
+         (row (xiaoxiang--hydra-row (list left "_a_ ㊣ approve" "_d_ 🈚 disagree")
+                                    '(0 23 40))))
     (should (equal '(space :align-to 23)
                    (get-text-property (1- (string-match "_a_" row)) 'display row)))
-    (should (equal '(space :align-to 46)
+    (should (equal '(space :align-to 40)
                    (get-text-property (1- (string-match "_d_" row)) 'display row)))))
 
 (ert-deftest session-mode-turn-tags-paints-marks ()

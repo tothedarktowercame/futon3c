@@ -151,8 +151,17 @@
     (error "Mark hydra cell is wider than %d columns: %s" width text))
   (propertize text 'face (xiaoxiang--stage-face stage)))
 
-(defun xiaoxiang--hydra-row (cells width)
-  "Place CELLS at absolute display positions WIDTH columns apart."
+(defun xiaoxiang--hydra-column-offsets (columns)
+  "Return absolute display offsets for COLUMNS with two-column gutters."
+  (let ((offset 0))
+    (mapcar
+     (lambda (column)
+       (prog1 offset
+         (setq offset (+ offset 2 (apply #'max (mapcar #'string-width column))))))
+     columns)))
+
+(defun xiaoxiang--hydra-row (cells offsets)
+  "Place CELLS at their absolute display OFFSETS."
   (let ((column 0))
     (mapconcat
      (lambda (cell)
@@ -160,7 +169,7 @@
            (if (zerop column)
                (or cell "")
              (concat
-              (propertize " " 'display `(space :align-to ,(* column width)))
+              (propertize " " 'display `(space :align-to ,(nth column offsets)))
               (or cell "")))
          (setq column (1+ column))))
      cells "")))
@@ -184,13 +193,14 @@
                (seq-filter (lambda (k) (eq stage (nth 3 k)))
                            xiaoxiang-mark-keys))))
            xiaoxiang-mark-stage-order))
+         (offsets (xiaoxiang--hydra-column-offsets columns))
          (height (apply #'max (mapcar #'length columns))))
     (concat
      "\nMarks by PBASE stage. Type a colon after a mark to answer it (🈸:yes).\n\n"
      (mapconcat
       (lambda (row)
         (xiaoxiang--hydra-row (mapcar (lambda (column) (nth row column)) columns)
-                              width))
+                              offsets))
       (number-sequence 0 (1- height)) "\n")
      "\n\n_q_ quit\n")))
 
