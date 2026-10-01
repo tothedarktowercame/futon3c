@@ -28,9 +28,10 @@
   Merged worktrees ACT: every commit in them is already on the pushed branch,
   so removing one loses nothing there is any way to lose.
 
-  The first two carry a threshold of ten because the count IS the exposure.
-  The third has none -- a merged worktree is residue the moment it merges, and
-  holding nine of them to make a batch would be an odd thing to want.
+  Dirty-file pressure retains a threshold of ten because attribution and file
+  disposition require work. The push lane acts at one commit: a commit that
+  exists only on one machine is already exposed, and pushing it needs no batch.
+  The worktree lane likewise has no count threshold.
 
   All three report their counts on every pass, so a silent pass cannot look
   like a working one."
@@ -46,6 +47,7 @@
            [java.util Date]))
 
 (def default-threshold 10)
+(def default-push-threshold 1)
 (def default-interval-ms 1800000)
 
 (defonce ^:private !loop (atom nil))
@@ -473,14 +475,14 @@
                               (slurp (.getErrorStream proc))))})))
 
 (defn push-stranded-commits!
-  "Push every watched repo carrying THRESHOLD or more unpushed commits.
+  "Push every watched repo carrying one or more unpushed commits by default.
 
   An action, not a notice. Pushing a commit that has already been written
   involves no judgement at all: escalate-by-who-can-act puts ordinary
   accumulation at tier 0, which acts without asking anybody, and a notice for
   something needing no judgement is only a queue that waits (Joe, 2026-09-18).
-  Ten dirty files means commit, because deciding what is yours needs a person.
-  Ten unpushed commits means push, because nothing needs deciding.
+  Ten dirty files means ask the street sweeper to decide their disposition.
+  One unpushed commit means push, because nothing needs deciding.
 
   The threshold is a count and never an age. A commit that exists only on this
   box is not saved, and the box is bare metal that can break at any moment, so
@@ -494,10 +496,10 @@
   [options]
   (let [print-fn (or (:print-fn options) println)]
     (try
-      (let [threshold (max 1 (long (or (:threshold options)
-                                       (some-> (System/getenv "FUTON3C_INBOX_ZERO_THRESHOLD")
+      (let [threshold (max 1 (long (or (:push-threshold options)
+                                       (some-> (System/getenv "FUTON3C_INBOX_ZERO_PUSH_THRESHOLD")
                                                Long/parseLong)
-                                       default-threshold)))
+                                       default-push-threshold)))
             watch-roots (or (:roots options) roots/sweep-roots)
             ahead-fn (or (:ahead-fn options) git-unpushed)
             push-fn (or (:push-fn options) git-push!)

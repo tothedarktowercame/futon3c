@@ -250,12 +250,13 @@
           :print-fn (fn [line] (swap! calls conj [:print line]))}
          extra))
 
-(deftest nine-unpushed-commits-are-left-alone
+(deftest one-unpushed-commit-is-pushed-without-an-exposure-window
   (let [calls (atom [])
-        counts (sweeper/push-stranded-commits! (push-options 9 calls))]
-    (is (= 0 (:over-threshold counts)))
-    (is (= 0 (:pushed counts)))
-    (is (empty? (filter #(= :push (first %)) @calls)))))
+        counts (sweeper/push-stranded-commits! (push-options 1 calls))]
+    (is (= 1 (:over-threshold counts)))
+    (is (= 1 (:pushed counts)))
+    (is (= [[:push "/repo/futon2-d"]]
+           (filter #(= :push (first %)) @calls)))))
 
 (deftest ten-unpushed-commits-are-pushed-without-asking-anyone
   ;; The whole point: no notice, no recipient, no judgement. It just pushes.
