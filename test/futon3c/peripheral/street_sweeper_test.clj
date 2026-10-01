@@ -631,6 +631,35 @@
 ;; Orchestration smoke
 ;; =============================================================================
 
+(deftest repo-status-expands-untracked-directories-to-real-files
+  (let [base (.toFile (java.nio.file.Files/createTempDirectory
+                       "street-sweeper-status-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        repo (io/file base "fixture")
+        nested (io/file repo "new-tree/deep")
+        root-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                             'repos-root)]
+    (try
+      (.mkdirs nested)
+      (sh! base "git" "init" (str repo))
+      (sh! repo "git" "config" "user.name" "Street Sweeper Test")
+      (sh! repo "git" "config" "user.email" "sweeper@example.invalid")
+      (spit (io/file repo "tracked.txt") "base\n")
+      (sh! repo "git" "add" "tracked.txt")
+      (sh! repo "git" "commit" "-m" "base")
+      (spit (io/file nested "one.clj") "(def one 1)\n")
+      (spit (io/file nested "two.clj") "(def two 2)\n")
+      (let [result (with-redefs-fn {root-var (str base)}
+                     #(ssb/repo-status {:repo "fixture"}))
+            entries (get-in result [:result :entries])]
+        (is (:ok result))
+        (is (= ["new-tree/deep/one.clj" "new-tree/deep/two.clj"]
+               (mapv :path entries)))
+        (is (every? #(= :untracked (:status %)) entries))
+        (is (not-any? #(str/ends-with? (:path %) "/") entries)))
+      (finally
+        (delete-tree! base)))))
+
 (deftest run-full-sweep-empty-repos-list
   (testing "explicit empty repo list = no-op clean structure"
     (let [r (ss/run-full-sweep {:dry-run? true :repos []})]

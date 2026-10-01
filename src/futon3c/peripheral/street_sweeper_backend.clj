@@ -95,7 +95,7 @@
 ;; =============================================================================
 
 (defn- substantive-arg-check
-  [tool-id {:keys [consent-gate-event-id] :as args}]
+  [tool-id {:keys [consent-gate-event-id]}]
   (cond
     (not (string? consent-gate-event-id))
     {:ok false
@@ -124,8 +124,39 @@
        (.isDirectory (io/file (repo-path repo-name)))
        (.exists (io/file (repo-path repo-name) ".git"))))
 
+(defn- status-kind [code]
+  (cond
+    (= code "??") :untracked
+    (= code "!!") :ignored
+    (str/includes? code "D") :deleted
+    (not= \space (first code)) :staged
+    (= \M (second code)) :modified
+    :else :other))
+
+(defn- parse-status-z
+  "Parse porcelain-v1 -z records without collapsing untracked directories.
+
+  Rename/copy records have a second NUL-delimited pathname.  The first path
+  is the destination in -z mode; the second is consumed but does not become a
+  phantom status row."
+  [output]
+  (loop [tokens (seq (str/split (or output "") #"\x00" -1))
+         entries []]
+    (if-let [record (first tokens)]
+      (if (str/blank? record)
+        (recur (next tokens) entries)
+        (let [code (when (>= (count record) 3) (subs record 0 2))
+              path (when code (subs record 3))
+              rename-or-copy? (and code (re-find #"[RC]" code))
+              remaining (if rename-or-copy? (nnext tokens) (next tokens))]
+          (recur remaining
+                 (cond-> entries
+                   (and code (not (str/blank? path)))
+                   (conj {:code code :path path :status (status-kind code)})))))
+      entries)))
+
 (defn repo-status
-  "Read `git status --porcelain` for one repo."
+  "Read every dirty file in one repo, including files below untracked dirs."
   [{:keys [repo]}]
   (cond
     (not (valid-repo? repo))
@@ -133,21 +164,10 @@
 
     :else
     (try
-      (let [r (shell/sh "git" "status" "--porcelain" :dir (repo-path repo))]
+      (let [r (shell/sh "git" "status" "--porcelain=v1" "-z"
+                        "--untracked-files=all" :dir (repo-path repo))]
         (if (zero? (:exit r))
-          (let [lines (->> (str/split-lines (or (:out r) ""))
-                           (remove str/blank?))
-                entries (mapv (fn [l]
-                                (let [code (subs l 0 2)
-                                      path (str/trim (subs l 3))]
-                                  {:code code :path path
-                                   :status (cond
-                                             (str/starts-with? code "??") :untracked
-                                             (str/starts-with? code " M") :modified
-                                             (str/starts-with? code "M ") :staged
-                                             (str/starts-with? code " D") :deleted
-                                             :else :other)}))
-                              lines)]
+          (let [entries (parse-status-z (:out r))]
             {:ok true :result {:repo repo :count (count entries) :entries entries}})
           {:ok false :error (str "git status failed: " (:err r))}))
       (catch Throwable t
@@ -253,7 +273,7 @@
    house idiom for side-effecting deps — cf. memory_lifecycle.clj's
    {:keys [fetch-hyperedges post-hyperedge] :or {...}}."
   ([payload] (consent-gate-emit payload {}))
-  ([{:keys [repo intent files commit-message-draft success-criteria] :as payload}
+  ([{:keys [repo intent files] :as payload}
     {:keys [post-bell] :or {post-bell post-consent-gate-bell!}}]
   (cond
     (not (valid-repo? repo))
@@ -468,7 +488,7 @@
              (let [allowed (set (map str (:files-allowed binding)))]
                (not (every? allowed (map str files)))))
         {:ok false
-         :error (str "INV-1 (files sub-rule): args :files are not a subset of cg-bound :files-allowed")
+         :error "INV-1 (files sub-rule): args :files are not a subset of cg-bound :files-allowed"
          :pilot-invariant :INV-1
          :allowed (:files-allowed binding)
          :requested (vec files)}
@@ -605,7 +625,7 @@
    Each packet: {:repo, :files, :defer-reason, :diff-text, :commit-message-draft}.
    No cg-id required: writes only to ~/code/storage/sweeper-deferred/<ts>/,
    not to any repo (per shapes/substantive-tools docstring)."
-  [{:keys [sweep-ts deferred-packets] :as args}]
+  [{:keys [sweep-ts deferred-packets]}]
   (let [ts (or sweep-ts
                    (str/replace (str (java.time.Instant/now)) #"[:.]" "-"))
             root (str deferred-storage-root "/" ts)
