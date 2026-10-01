@@ -2950,10 +2950,10 @@ Only `yes' is case-insensitive; either id may be nil."
    (t
     (agent-chat-insert-message
      "system" (format "yes: not checked (%s)"
-                      (cond ((plist-get body :reason)
+                      (cond ((and status (not (eql status 0)) (plist-get body :reason))
                              (format "http %s, %s" status (agent-chat--agreement-reason body)))
                             ((and status (not (eql status 0))) (format "http %s" status))
-                            (t "no answer")))))))
+                            (t "timeout")))))))
 
 (defun agent-chat--check-acceptance (text evidence-id)
   "Record classical acceptance TEXT backed by EVIDENCE-ID, without blocking.
@@ -2970,39 +2970,44 @@ so a blocking call either froze Emacs or reported a recorded agreement as
                                agent-chat--session-id)))
     (if (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
         (agent-chat-insert-message "system" "yes: not checked (no evidence id)")
-      (let* ((origin (current-buffer))
-             (url (format "%s/api/alpha/agreement"
-                          (string-remove-suffix "/" agent-chat-agency-base-url)))
-             (url-request-method "POST")
-             (url-request-extra-headers '(("Content-Type" . "application/json")
-                                          ("Accept" . "application/json")))
-             (url-request-data
-              (encode-coding-string
-               (json-encode `((agent . ,agent-id) (session . ,session-id)
-                              (text . ,text) (evidence-id . ,evidence-id)))
-               'utf-8)))
-        (futon-url-retrieve
-         url agent-chat-agreement-timeout
-         (lambda (status)
-           (let* ((code (and (not (plist-get status :error))
-                             (boundp 'url-http-response-status)
-                             url-http-response-status))
-                  ;; url.el reports HTTP errors (409) as :error, with the
-                  ;; status still set, so read it whenever it is there.
-                  (code (or code (and (boundp 'url-http-response-status)
-                                      url-http-response-status)))
-                  (body (progn (goto-char (point-min))
-                               (when (re-search-forward "\n\n" nil t)
-                                 (let ((raw (buffer-substring-no-properties
-                                             (point) (point-max))))
-                                   (agent-chat--parse-json-string
-                                    (if (multibyte-string-p raw) raw
-                                      (decode-coding-string raw 'utf-8))))))))
-             (unless (string-prefix-p " *temp" (buffer-name))
-               (kill-buffer (current-buffer)))
-             (when (buffer-live-p origin)
-               (with-current-buffer origin
-                 (agent-chat--report-acceptance code body))))))))))
+      (let ((origin (current-buffer)))
+        (agent-chat--agreement-post-async
+         (format "%s/api/alpha/agreement"
+                 (string-remove-suffix "/" agent-chat-agency-base-url))
+         `((agent . ,agent-id) (session . ,session-id)
+           (text . ,text) (evidence-id . ,evidence-id))
+         (lambda (response)
+           (when (buffer-live-p origin)
+             (with-current-buffer origin
+               (agent-chat--report-acceptance (plist-get response :status)
+                                              (plist-get response :json))))))))))
+
+(defun agent-chat--agreement-post-async (url payload callback)
+  "POST JSON PAYLOAD to URL in the background; call CALLBACK with a plist.
+The plist has :status (0 when no HTTP answer arrived in
+`agent-chat-agreement-timeout' seconds) and :json, the parsed body."
+  (let ((url-request-method "POST")
+        (url-request-extra-headers '(("Content-Type" . "application/json")
+                                     ("Accept" . "application/json")))
+        (url-request-data (encode-coding-string (json-encode payload) 'utf-8)))
+    (futon-url-retrieve
+     url agent-chat-agreement-timeout
+     (lambda (_status)
+       ;; url.el reports a 4xx as :error but still sets the status, so read
+       ;; the status and body whenever they are there.
+       (let* ((code (or (and (boundp 'url-http-response-status)
+                             url-http-response-status)
+                        0))
+              (body (progn (goto-char (point-min))
+                           (when (re-search-forward "\n\n" nil t)
+                             (let ((raw (buffer-substring-no-properties
+                                         (point) (point-max))))
+                               (agent-chat--parse-json-string
+                                (if (multibyte-string-p raw) raw
+                                  (decode-coding-string raw 'utf-8))))))))
+         (unless (string-prefix-p " *temp" (buffer-name))
+           (kill-buffer (current-buffer)))
+         (funcall callback (list :status code :json body)))))))
 
 (defun agent-chat--maybe-handle-undo (text)
   "Handle exact operator undo TEXT. Return non-nil only when consumed.

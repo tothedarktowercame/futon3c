@@ -207,10 +207,12 @@
       (cl-letf (((symbol-function 'agent-chat-insert-message)
                  (lambda (name value)
                    (push (cons name value) messages)))
-                ((symbol-function 'agent-chat-evidence-request-json)
-                 (lambda (_method _url _timeout payload)
+                ((symbol-function 'agent-chat--agreement-post-async)
+                 (lambda (_url payload callback)
                    (push (list :request payload) events)
-                   (if (eq response :timeout) (error "timeout") response)))
+                   (funcall callback (if (eq response :timeout)
+                                         (list :status 0 :json nil)
+                                       response))))
                 ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore)
                 ((symbol-function 'agent-chat--refresh-prompt-line!) #'ignore)
                 ((symbol-function 'agent-chat--prefetch-prompt-line!) #'ignore)
@@ -248,7 +250,7 @@
          ((:status 409 :json (:reason "unknown-option"))
           "yes: not recorded (unknown-option)")
          ((:status 403 :json (:reason "evidence-not-operator-turn"))
-          "yes: not checked (http 403)")
+          "yes: not checked (http 403, evidence-not-operator-turn)")
          (:timeout "yes: not checked (timeout)")))
     (let* ((result (agent-chat-test--agreement-send "yes 2" (car case)))
            (events (plist-get result :events))
@@ -262,6 +264,49 @@
                      (mapcar (lambda (event) (if (listp event) :request event))
                              events)))
       (should (member (cadr case) system-lines)))))
+
+;; 2026-10-01: the route took 11 s under futon1b load.  The turn must go to the
+;; agent without waiting, and the outcome line must land in the buffer that
+;; asked when the answer comes back later.
+(ert-deftest agent-chat-agreement-answer-arrives-after-the-turn-is-sent ()
+  (let ((chat (generate-new-buffer " *agreement-async*"))
+        pending sent lines)
+    (unwind-protect
+        (progn
+          (with-current-buffer chat
+            (agent-chat-test--init-buffer)
+            (setq-local agent-chat--agent-id "agent-a"
+                        agent-chat--session-id "session-a")
+            (insert "🈸:yes 1")
+            (cl-letf (((symbol-function 'agent-chat-insert-message)
+                       (lambda (name value)
+                         (when (equal name "system")
+                           (push (cons (buffer-name) value) lines))))
+                      ((symbol-function 'agent-chat--agreement-post-async)
+                       (lambda (_url _payload callback) (setq pending callback)))
+                      ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore)
+                      ((symbol-function 'agent-chat--refresh-prompt-line!) #'ignore)
+                      ((symbol-function 'agent-chat--prefetch-prompt-line!) #'ignore)
+                      ((symbol-function 'agent-chat-insert-thinking) #'ignore)
+                      ((symbol-function 'redisplay) #'ignore))
+              (agent-chat-send-input
+               (lambda (value _callback) (setq sent value) nil)
+               "agent"
+               (list :before-send
+                     (lambda (_value) (setq agent-chat--last-evidence-id "e:yes"))))
+              (should (equal "🈸:yes 1" sent))
+              (should (functionp pending))
+              (should-not lines)
+              ;; The answer arrives later, while another buffer is current.
+              (with-temp-buffer
+                (funcall pending
+                         '(:status 200
+                           :json (:record (:id "act:a" :agreement/offer "act:o"
+                                           :agreement/option-id "1")))))
+              (should (equal (list (cons (buffer-name chat)
+                                         "yes: agreement act:a (offer act:o option 1); agreement only, no grant"))
+                             lines)))))
+      (kill-buffer chat))))
 
 (ert-deftest agent-chat-agreement-near-miss-makes-no-request ()
   (let* ((result (agent-chat-test--agreement-send
