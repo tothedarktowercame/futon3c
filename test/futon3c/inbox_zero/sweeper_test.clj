@@ -235,6 +235,34 @@
                      (str/includes? (second call) "INCOMPLETE")))
               @calls))))
 
+(deftest dirty-canonical-futon-repo-reaches-street-sweeper-with-age-guard
+  (let [calls (atom [])
+        result (sweeper/sweep-dirty-with-peripheral!
+                {:roots [{:path "/home/joe/code/futon9-test" :label "test"}]
+                 :git-fn (constantly [(entry "work.clj" 60 false)])
+                 :interval-ms 12345
+                 :street-sweeper-fn
+                 (fn [options]
+                   (swap! calls conj options)
+                   {:commits-landed [{:sha "saved"}]
+                    :deferred-packets [{:files ["later"]}]
+                    :errors []})
+                 :print-fn (fn [_])})]
+    (is (= {:repos 1 :committed 1 :deferred 1 :errors 0} result))
+    (is (= [{:dry-run? false :repos ["futon9-test"]
+             :minimum-file-age-ms 12345}]
+           @calls))))
+
+(deftest non-futon-repo-never-enters-street-sweeper-envelope
+  (let [called? (atom false)
+        result (sweeper/sweep-dirty-with-peripheral!
+                {:roots [{:path "/home/joe/code/mathlib4" :label "mathlib4"}]
+                 :git-fn (constantly [(entry "work.lean" 60 false)])
+                 :street-sweeper-fn (fn [_] (reset! called? true))
+                 :print-fn (fn [_])})]
+    (is (= 0 (:repos result)))
+    (is (false? @called?))))
+
 ;; ---------- the push lane ----------
 
 (defn commits [n]

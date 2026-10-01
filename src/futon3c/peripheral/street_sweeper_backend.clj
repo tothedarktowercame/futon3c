@@ -167,7 +167,13 @@
       (let [r (shell/sh "git" "status" "--porcelain=v1" "-z"
                         "--untracked-files=all" :dir (repo-path repo))]
         (if (zero? (:exit r))
-          (let [entries (parse-status-z (:out r))]
+          (let [entries (mapv (fn [{:keys [path] :as entry}]
+                                (let [file (io/file (repo-path repo) path)]
+                                  (assoc entry :mtime-ms
+                                         (if (.exists file)
+                                           (.lastModified file)
+                                           0))))
+                              (parse-status-z (:out r)))]
             {:ok true :result {:repo repo :count (count entries) :entries entries}})
           {:ok false :error (str "git status failed: " (:err r))}))
       (catch Throwable t

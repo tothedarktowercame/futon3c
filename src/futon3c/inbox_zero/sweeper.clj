@@ -436,6 +436,45 @@
           (catch Throwable _))
         (empty-counts)))))
 
+(defn sweep-dirty-with-peripheral!
+  "Act on settled dirt through the invariant-enforcing Street Sweeper.
+
+  Only canonical Futon repositories are in this peripheral's capability
+  envelope. Files changed within one full pass interval are deferred there,
+  as are code packets whose repository gates cannot be established."
+  [options]
+  (let [print-fn (or (:print-fn options) println)]
+    (try
+      (let [watch-roots (or (:roots options) roots/sweep-roots)
+            git-fn (or (:git-fn options) git-dirty)
+            interval-ms (long (or (:interval-ms options) default-interval-ms))
+            targets (->> watch-roots
+                         (keep (fn [{:keys [path]}]
+                                 (let [name (.getName (io/file path))]
+                                   (when (and (str/starts-with? path "/home/joe/code/")
+                                              (re-matches #"futon[0-9].*" name)
+                                              (seq (git-fn path)))
+                                     name))))
+                         vec)
+            sweep-fn (or (:street-sweeper-fn options)
+                         (requiring-resolve
+                          'futon3c.peripheral.street-sweeper/run-full-sweep))]
+        (if (empty? targets)
+          {:repos 0 :committed 0 :deferred 0 :errors 0}
+          (let [result (sweep-fn {:dry-run? false
+                                  :repos targets
+                                  :minimum-file-age-ms interval-ms})
+                counts {:repos (count targets)
+                        :committed (count (:commits-landed result))
+                        :deferred (count (:deferred-packets result))
+                        :errors (count (:errors result))}]
+            (print-fn (str "[inbox-zero] Street Sweeper pass: " (pr-str counts)))
+            counts)))
+      (catch Throwable error
+        (print-fn (str "[inbox-zero] Street Sweeper lane failed: "
+                       (.getMessage error)))
+        {:repos 0 :committed 0 :deferred 0 :errors 1}))))
+
 ;; ---------- the push lane: act, never notify ----------
 
 (def ^:private default-push-log-path
@@ -967,6 +1006,10 @@
     (try (sweep-dirty-repos! options)
          (catch Throwable error
            (print-fn (str "[inbox-zero] commit-notice lane threw: "
+                          (.getMessage error)))))
+    (try (sweep-dirty-with-peripheral! options)
+         (catch Throwable error
+           (print-fn (str "[inbox-zero] Street Sweeper lane threw: "
                           (.getMessage error)))))
     (try (sync-behind-repos! options)
          (catch Throwable error

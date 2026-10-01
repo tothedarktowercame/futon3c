@@ -270,8 +270,8 @@
      :max-packets-per-repo — safety cap (default 100; sweep won't process more)
    "
   ([] (run-full-sweep {}))
-  ([{:keys [dry-run? repos max-packets-per-repo]
-     :or {dry-run? true max-packets-per-repo 100}}]
+  ([{:keys [dry-run? repos max-packets-per-repo minimum-file-age-ms]
+     :or {dry-run? true max-packets-per-repo 100 minimum-file-age-ms 0}}]
    ;; INV: hop-back lifecycle (E-pilot-hop-trigger-wiring §8 contract α).
    ;; Resolve agency.registry primitives lazily (avoid circular ns deps).
    ;; agent-id is captured at cycle start; on cycle end (success OR error
@@ -308,13 +308,25 @@
                    entries-by-path (into {} (map (juxt :path identity) entries))
                    all-paths (mapv :path entries)
                    inv-result (ssb/apply-stage-invariants repo all-paths repo-policy)
-                   stageable (:ok inv-result)
+                   cutoff (- (System/currentTimeMillis) minimum-file-age-ms)
+                   recently-written (filterv #(> (long (or (:mtime-ms (entries-by-path %)) 0))
+                                                  cutoff)
+                                             (:ok inv-result))
+                   recent-set (set recently-written)
+                   stageable (filterv #(not (contains? recent-set %))
+                                      (:ok inv-result))
                    packets (take max-packets-per-repo
                                  (build-packets stageable sss/packet-size-cap-files))]
                (swap! results update :rejected-files into
                       (mapv #(assoc % :repo repo) (:rejected inv-result)))
                (swap! results update :proposed-relocations into
                       (mapv #(assoc % :repo repo) (:proposed inv-result)))
+               (swap! results update :deferred-packets into
+                      (mapv (fn [path]
+                              {:repo repo :files [path] :file-count 1
+                               :defer-reason :recently-written
+                               :defer-reasons [:recently-written]})
+                            recently-written))
                (doseq [pkt packets]
                  (try
                    (let [content (effective-content-for-packet repo (:files pkt) entries-by-path)
