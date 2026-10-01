@@ -433,6 +433,27 @@
                           :command-events 1}}
              (:invoke-meta result))))))
 
+(deftest invoke-preserves-provider-accounting-at-terminal-boundary
+  (testing "usage remains top-level while also remaining in diagnostic invoke-meta"
+    (let [usage {:provider :codex
+                 :model "gpt-5.6-sol"
+                 :input-tokens 17
+                 :output-tokens 5}]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "codex-usage")
+        :type :codex
+        :invoke-fn (fn [_prompt _session-id]
+                     {:result "ok"
+                      :session-id "sess-usage"
+                      :usage usage
+                      :total-cost-usd 0.0125})
+        :capabilities [:edit]})
+      (let [result (reg/invoke-agent! (fix/make-agent-id "codex-usage") "hi" 1000)]
+        (is (= usage (:usage result)))
+        (is (= 0.0125 (:total-cost-usd result)))
+        (is (= usage (get-in result [:invoke-meta :usage])))
+        (is (= 0.0125 (get-in result [:invoke-meta :total-cost-usd])))))))
+
 (deftest invoke-exception-returns-social-error
   (testing "invoke-fn that throws returns SocialError, not nil"
     (reg/register-agent!

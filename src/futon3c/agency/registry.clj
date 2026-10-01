@@ -1186,6 +1186,13 @@
                              (hook final-agent result-map)
                              (catch Exception _)))))
                      (cond-> {:ok true :result result :session-id session-id}
+                       ;; Provider accounting is consumed by the terminal-job
+                       ;; boundary as data, not merely diagnostic metadata.
+                       ;; Keep it in invoke-meta for compatibility and also
+                       ;; preserve the adapter's canonical top-level fields.
+                       (:usage result-map) (assoc :usage (:usage result-map))
+                       (:total-cost-usd result-map) (assoc :total-cost-usd
+                                                          (:total-cost-usd result-map))
                        invoke-meta (assoc :invoke-meta invoke-meta)))))
 
                (:invoke-ws-available? routing-info)
@@ -1213,6 +1220,9 @@
                    (map? response)
                    (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
                      (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
+                       (:usage response) (assoc :usage (:usage response))
+                       (:total-cost-usd response) (assoc :total-cost-usd
+                                                        (:total-cost-usd response))
                        invoke-meta (assoc :invoke-meta invoke-meta)))
 
                    :else
