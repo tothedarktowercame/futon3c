@@ -292,6 +292,12 @@
                            :agreement/option-id "1")
                   :grant (:id "act:grant-2" :until "2026-09-29T00:00:00Z")))
           "yes: agreement act:agreement-2 (offer act:offer-2 option 1); grant act:grant-2 until 2026-09-29T00:00:00Z")
+         ((:status 200
+           :json (:record (:id "act:agreement-3"
+                           :agreement/offer "act:offer-3"
+                           :agreement/option-id "2")
+                  :grant :null :grant-reason "agreement-only"))
+          "yes: agreement act:agreement-3 (offer act:offer-3 option 2); agreement only, no grant")
          ((:status 409 :json (:reason "ambiguous"))
           "yes: ambiguous; the agent will ask which")
          ((:status 409 :json (:reason "unknown-option"))

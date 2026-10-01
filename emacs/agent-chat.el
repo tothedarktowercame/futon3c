@@ -2940,7 +2940,9 @@ Only `yes' is case-insensitive; either id may be nil."
   (cond
    ((eql status 200)
               (let* ((record (plist-get body :record))
-                     (grant (plist-get body :grant))
+                     ;; JSON null parses as :null, which is non-nil.
+                     (grant (let ((g (plist-get body :grant)))
+                              (and (not (eq g :null)) g)))
                      (grant-reason (plist-get body :grant-reason))
                      (suffix (cond
                               (grant
