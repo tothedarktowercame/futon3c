@@ -106,6 +106,54 @@
       (xiaoxiang-preview--label ov)
       (message "Recorded: %s" intent))))
 
+;;; Typing the marks: C-c ; opens a menu of the reply-proforma marks.
+;; Joe (2026-10-01): answering an agent's 🈸 with "🈸:yes" makes the pairing of
+;; proposal and answer easy to code, so the marks should be quick to type.
+
+(defconst xiaoxiang-mark-keys
+  '(("g" "gist" "㊥") ("p" "propose" "㊭") ("a" "approve" "㊣") ("d" "disagree" "🈚")
+    ("f" "qualify" "㊟") ("e" "explain" "🈖") ("c" "clarify" "🈯") ("r" "report" "㊢")
+    ("!" "report-problem" "㊩") ("v" "verify" "㊬") ("t" "retract" "🈹") ("w" "withdraw" "🈡")
+    ("n" "constrain" "🈲") ("s" "ask-action" "🈸") ("l" "delegate" "㊯") ("i" "prioritize" "㊝")
+    ("o" "collect" "㊮") ("x" "extend" "🈕") ("u" "continue" "🈰") ("z" "defer" "🈝")
+    ("j" "redirect" "🈘") ("h" "explore" "㊫") ("." "unresolved" "🈳"))
+  "Key, intent and mark for `xiaoxiang-insert-mark'; marks as in CLAUDE.md.")
+
+(declare-function xiaoxiang-mark-hydra/body "xiaoxiang-preview")
+
+(defun xiaoxiang--insert (mark)
+  (insert mark))
+
+(defun xiaoxiang-insert-mark ()
+  "Insert a reply-proforma mark at point, chosen from a menu of keys and intents.
+Type a colon after it to answer the agent's paragraph with that mark: 🈸:yes."
+  (interactive)
+  (if (or (fboundp 'defhydra) (require 'hydra nil t))
+      (progn
+        (eval
+         `(defhydra xiaoxiang-mark-hydra (:hint nil :color blue)
+            ;; Hydra needs the hint to start with a newline, or it errors on display.
+            ,(concat "\nMarks: key, mark, intent. Type a colon after a mark to answer it (🈸:yes).\n\n"
+                     (let ((cells (mapcar (lambda (k) (format "_%s_ %s %-15s" (nth 0 k) (nth 2 k) (nth 1 k)))
+                                          xiaoxiang-mark-keys))
+                           (out "") (i 0))
+                       (dolist (c cells out)
+                         (setq out (concat out c (if (= (% (setq i (1+ i)) 4) 0) "\n" "")))))
+                     "\n_q_ quit\n")
+            ,@(mapcar (lambda (k) (list (nth 0 k) `(xiaoxiang--insert ,(nth 2 k)))) xiaoxiang-mark-keys)
+            ("q" nil)))
+        (xiaoxiang-mark-hydra/body))
+    (let* ((choices (mapcar (lambda (k) (cons (format "%s %s" (nth 2 k) (nth 1 k)) (nth 2 k)))
+                            xiaoxiang-mark-keys))
+           (pick (completing-read "Mark: " choices nil t)))
+      (insert (cdr (assoc pick choices))))))
+
+(dolist (feature-map '((claude-repl . claude-repl-mode-map) (codex-repl . codex-repl-mode-map)
+                       (kimi-repl . kimi-repl-mode-map) (zai-repl . zai-repl-mode-map)))
+  (with-eval-after-load (car feature-map)
+    (when (boundp (cdr feature-map))
+      (define-key (symbol-value (cdr feature-map)) (kbd "C-c ;") #'xiaoxiang-insert-mark))))
+
 (with-eval-after-load 'claude-repl
   (when (boundp 'claude-repl-mode-map)
     (define-key claude-repl-mode-map (kbd "C-c x p") #'xiaoxiang-preview)
