@@ -1,7 +1,6 @@
 (ns futon3c.wm.cast-preflight-test
-  "A rationed ordinary click is consumed before the worker starts, and failed
-  runs never refund a grant -- so the endpoint must refuse, before the ledger
-  append, a run whose cast cannot be invoked for a reason knowable now.
+  "Failed runs never refund a grant, so the endpoint refuses known-bad casts
+  and the runner admits the ration only after its authoritative readiness read.
   Incident: wm-click-ff7c0384 (2026-09-23) spent a grant on default
   repair-reviewer codex-24, absent from the roster; the run ended
   :agent-unavailable and the ledger kept the spend (claude-5's report)."
@@ -79,6 +78,7 @@
                 futon2.aif.full-loop-runner/config identity
                 futon2.aif.full-loop-runtime/run-opportunity!
                 (fn [opts]
+                  ((:readiness-admitted-fn opts))
                   (swap! observed conj {:click-id (:click-id opts) :rows (rows)})
                   (throw (ex-info "intentional immediate runner failure" {:fixture true})))
                 nil))]
@@ -171,6 +171,52 @@
               (get-in body [:details :unready :author])))
        (is (zero? (count (binding [budget/*ledger-path* (str root "/consumption.jsonl")] (rows)))))
        (is (empty? @observed))))))
+
+(deftest automatically-selected-seat-becoming-busy-refuses-before-consumption
+  (with-fixture
+   (fn [h root]
+     (let [idle-roster (roster-with {"codex-11" idle-seat
+                                     "zai-1" idle-seat})
+           busy-roster (assoc idle-roster :codex-11
+                              {:status "invoking" :invoke-ready? true})
+           reads (atom 0)
+           roster-fn (fn [_]
+                       (if (<= (swap! reads inc) 2) idle-roster busy-roster))
+           runner-outcome (atom nil)]
+       (binding [budget/*ledger-path* (str root "/consumption.jsonl")
+                 service/*roster-fn* roster-fn
+                 service/*resolve-var*
+                 (fn [sym]
+                   (case sym
+                     futon2.aif.full-loop-runner/config identity
+                     futon2.aif.full-loop-runtime/run-opportunity!
+                     (fn [opts]
+                       ;; Reproduce the runner's authoritative readiness read:
+                       ;; codex-11 was idle at endpoint preflight and is busy now.
+                       (let [roster (roster-fn nil)
+                             author (:author opts)]
+                         (if (= "invoking" (get-in roster [(keyword author) :status]))
+                           (do (reset! runner-outcome :agent-unavailable)
+                               (throw (ex-info "Configured author is unavailable"
+                                               {:failure-kind :agent-unavailable
+                                                :failure-stage :agent-readiness
+                                                :failure-detail :busy})))
+                           (do ((:readiness-admitted-fn opts))
+                               (reset! runner-outcome :admitted)))))
+                     nil))]
+         (with-redefs [cohort/apply-binding identity
+                       reg/mark-agent-idle! (fn [& _])
+                       reg/clear-external-invoke! (fn [& _])]
+           (reset! service/!status service/initial-status)
+           (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
+                              :body (json/generate-string
+                                     {:trigger "duree-click-on-demand"})})
+                 body (json/parse-string (:body response) true)]
+             (is (= 409 (:status response)) (pr-str body))
+             (is (= "wm-click-cast-not-admitted" (:error body)))
+             (is (= :agent-unavailable @runner-outcome))
+             (is (zero? (count (rows)))
+                 "runner readiness refused before the ration callback"))))))))
 
 ;; Case 3b -- a seat that is present but NOT invoke-ready is a refusal too,
 ;; and an unreadable roster is a 503 (nothing else can be checked), never a

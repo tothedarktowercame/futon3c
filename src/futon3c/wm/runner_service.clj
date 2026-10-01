@@ -167,10 +167,9 @@
         bound-opts))))
 
 ;; ---------------------------------------------------------------------------
-;; Cast preflight. A rationed ordinary click is consumed before the worker
-;; starts, and failed runs never refund a grant -- so a run that cannot reach
-;; selection for a reason knowable before it starts must be refused BEFORE the
-;; issue callback fires. On 2026-09-23 a bare POST spent click
+;; Cast preflight. Failed runs never refund a grant, so the endpoint rejects
+;; known-bad casts and the runner owns the issue callback after its fresh,
+;; authoritative author-readiness observation. On 2026-09-23 a bare POST spent click
 ;; wm-click-ff7c0384 on default repair-reviewer codex-24, which is on no
 ;; roster; the run ended :agent-unavailable 45 seconds later and the ledger
 ;; kept the spend (claude-5's incident report).
@@ -580,22 +579,43 @@
     (flush)))
 
 (defn- run-click!
-  [click-id opts completion]
+  [click-id started-at opts completion admission]
   (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
     (try
       (let [configured (configured-runner-opts opts)
             run! (*resolve-var*
                   'futon2.aif.full-loop-runtime/run-opportunity!)
             runner-opts
-            (-> configured
-                (dissoc :wm-agent-id)
+            (cond-> (-> configured
+                        (dissoc :wm-agent-id :ordinary-click/issue!)
                 (assoc :click-id click-id
                        :phase-log-fn
                        (phase-sink agent-id click-id configured)
                        :strategic-selection-invoke-fn
-                       in-process-selection))]
-        (close-click! agent-id click-id (run! runner-opts)))
+                       in-process-selection))
+              (:ordinary-click/issue! opts)
+              (assoc :readiness-admitted-fn
+                     (fn []
+                       ((:ordinary-click/issue! opts) click-id started-at)
+                       (deliver admission :admitted))))]
+        (when-not (:ordinary-click/issue! opts)
+          (deliver admission :admitted))
+        (let [result (run! runner-opts)]
+          (when-not (realized? admission)
+            (deliver admission
+                     (ex-info "WM click refused before ration admission"
+                              {:status 409
+                               :error :wm-click-cast-not-admitted
+                               :outcome (:outcome result)})))
+          (close-click! agent-id click-id result)))
       (catch Throwable throwable
+        (deliver admission
+                 (if (realized? admission)
+                   throwable
+                   (ex-info "WM click refused before ration admission"
+                            {:status 409
+                             :error :wm-click-cast-not-admitted}
+                            throwable)))
         (fail-click! agent-id click-id throwable))
       (finally
         (deliver completion {:status :completed :click-id click-id})))))
@@ -642,23 +662,29 @@
           (if-not (compare-and-set! !status current next-status)
             (recur)
             (let [completion (promise)
+                  admission (promise)
                   _ (reset! !completion {:click-id click-id
                                          :completion completion})
-                  runnable (bound-fn [] (run-click! click-id (dissoc opts :ordinary-click/issue!) completion))
+                  runnable (bound-fn [] (run-click! click-id started-at opts completion admission))
                   thread (Thread. ^Runnable runnable "wm-runner-click")]
               (swap! !completion assoc :thread thread)
               (.setDaemon thread true)
               (try
-                (when-let [issue! (:ordinary-click/issue! opts)]
-                  (issue! click-id started-at))
                 (.start thread)
-                {:click-id click-id :started-at started-at}
+                (let [admitted @admission]
+                  (if (instance? Throwable admitted)
+                    (throw admitted)
+                    {:click-id click-id :started-at started-at}))
                 (catch Throwable throwable
-                  (try
-                    (fail-click! (or (:wm-agent-id opts)
-                                     war-machine-agent-id)
-                                 click-id throwable)
-                    (finally
-                      (deliver completion {:status :start-failed
-                                           :click-id click-id})))
+                  ;; A pre-admission refusal was already closed by the worker;
+                  ;; only a failure to start the worker belongs to this path.
+                  (when-not (= :wm-click-cast-not-admitted
+                               (:error (ex-data throwable)))
+                    (try
+                      (fail-click! (or (:wm-agent-id opts)
+                                       war-machine-agent-id)
+                                   click-id throwable)
+                      (finally
+                        (deliver completion {:status :start-failed
+                                             :click-id click-id}))))
                   (throw throwable))))))))))

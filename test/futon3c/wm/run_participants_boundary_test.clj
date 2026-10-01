@@ -21,19 +21,25 @@
        #'budget/consume! (fn [& args] (swap! consumed conj args))
        #'service/click!
        (fn [opts]
-         ;; Exercise the budget callback only against the stub, then the real
-         ;; synchronous worker handoff. Never call click! or start its thread.
-         ((:ordinary-click/issue! opts) "test-click" "test-time")
-         (#'service/run-click! "test-click"
-          (cond-> (dissoc opts :ordinary-click/issue!)
-            drop-provenance? (dissoc :issuer-provenance)) (promise))
+         ;; Exercise the real synchronous worker handoff. Its readiness
+         ;; admission callback owns budget consumption.
+         (#'service/run-click! "test-click" "test-time"
+          (cond-> opts drop-provenance? (dissoc :issuer-provenance))
+          (promise) (promise))
          {:started true})}
       (fn []
         (binding [service/*resolve-var*
                   (fn [sym]
                     (case sym
                       futon2.aif.full-loop-runner/config identity
-                      futon2.aif.full-loop-runtime/run-opportunity! persist))]
+                      futon2.aif.full-loop-runtime/run-opportunity!
+                      (fn [opts]
+                        ((:readiness-admitted-fn opts))
+                        (persist opts))))
+                  service/*roster-fn*
+                  (fn [_]
+                    {:codex-1 {:status "idle" :invoke-ready? true}
+                     :zai-1 {:status "idle" :invoke-ready? true}})]
           (is (= 200 (:status (handler {:request-method :post :uri "/api/alpha/wm/click"
                                        :body (json/generate-string payload)})))))))
     {:record @record :consumed @consumed}))
