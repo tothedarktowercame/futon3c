@@ -35,15 +35,17 @@
                              "claude-1" idle-seat
                              "kimi-2" idle-seat
                              "codex-8" idle-seat
-                             "zai-4" {:status "restored" :invoke-ready? true}})]
+                             "zai-4" {:status "restored" :invoke-ready? true}
+                             "wm-author" idle-seat
+                             "wm-reviewer" {:status "restored" :invoke-ready? true}})]
     (binding [service/*roster-fn* (fn [_] roster)
               service/*resolve-var* (fn [sym]
                                       (when (= sym 'futon2.aif.full-loop-runner/config)
                                         identity))]
       (with-redefs [cohort/apply-binding identity]
-        (is (= {:author "codex-8"
-                :reviewer "zai-4"
-                :repair-reviewer "zai-4"}
+        (is (= {:author "wm-author"
+                :reviewer "wm-reviewer"
+                :repair-reviewer "wm-reviewer"}
                (select-keys (service/prepare-ordinary-click-opts {})
                             [:author :reviewer :repair-reviewer])))))))
 
@@ -175,9 +177,12 @@
 (deftest automatically-selected-seat-becoming-busy-refuses-before-consumption
   (with-fixture
    (fn [h root]
-     (let [idle-roster (roster-with {"codex-11" idle-seat
-                                     "zai-1" idle-seat})
-           busy-roster (assoc idle-roster :codex-11
+     (let [idle-roster (roster-with {"wm-author" idle-seat
+                                     "wm-reviewer" idle-seat
+                                     ;; Interactive helpers are deliberately
+                                     ;; irrelevant to automatic casting.
+                                     "codex-11" idle-seat})
+           busy-roster (assoc idle-roster :wm-author
                               {:status "invoking" :invoke-ready? true})
            reads (atom 0)
            roster-fn (fn [_]
@@ -192,7 +197,7 @@
                      futon2.aif.full-loop-runtime/run-opportunity!
                      (fn [opts]
                        ;; Reproduce the runner's authoritative readiness read:
-                       ;; codex-11 was idle at endpoint preflight and is busy now.
+                       ;; wm-author was idle at endpoint preflight and is busy now.
                        (let [roster (roster-fn nil)
                              author (:author opts)]
                          (if (= "invoking" (get-in roster [(keyword author) :status]))
