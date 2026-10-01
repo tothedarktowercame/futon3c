@@ -44,6 +44,24 @@
       (is (= "tid-123" (:session-id parsed)))
       (is (= "hello" (:text parsed))))))
 
+(deftest parse-output-retains-provider-token-usage
+  (let [raw (str "{\"type\":\"thread.started\",\"thread_id\":\"tid-usage\"}\n"
+                 "{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":12,\"output_tokens\":3}}\n")]
+    (is (= {:input_tokens 12 :output_tokens 3}
+           (:usage (codex-cli/parse-output raw nil))))))
+
+(deftest invoke-result-carries-provider-usage-and-requested-model
+  (let [invoke (codex-cli/make-invoke-fn {:model "gpt-test" :cwd "/tmp"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [& _]
+                    {:exit 0 :timed-out? false :session-id "sid-usage"
+                     :text "done" :stderr ""
+                     :raw-output
+                     "{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":7,\"output_tokens\":2}}\n"})]
+      (is (= {:input_tokens 7 :output_tokens 2
+              :model "gpt-test" :source :codex}
+             (:usage (invoke "work")))))))
+
 (deftest parse-output-falls-back-to-prior-session-and-error-message
   (testing "no thread.start event keeps prior session id"
     (let [raw "{\"type\":\"error\",\"message\":\"boom\"}\n"

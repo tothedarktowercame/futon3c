@@ -184,7 +184,7 @@
       :else nil)))
 
 (defn parse-output
-  "Parse `codex exec --json` output into {:session-id :text}.
+  "Parse `codex exec --json` output into {:session-id :text :usage}.
    Falls back to PRIOR-SESSION-ID when no thread.start event appears."
   [raw-output prior-session-id]
   (let [events (keep parse-json-line
@@ -208,9 +208,14 @@
                           last)
                  (when-not (seq events)
                    (some-> raw-output str/trim not-empty))
-                 no-assistant-message-sentinel)]
+                 no-assistant-message-sentinel)
+        usage (some->> events
+                       (filter #(= "turn.completed" (:type %)))
+                       (keep :usage)
+                       last)]
     {:session-id session-id
-     :text text}))
+     :text text
+     :usage usage}))
 
 (defn- tool-event?
   [evt]
@@ -666,7 +671,9 @@
                    :error (str "codex timed out after " (:timeout-ms r2) "ms")}
                   (zero? (:exit r2))
                   {:result (or txt2 "[Codex produced no text response]")
-                   :session-id sid2 :execution exec2}
+                   :session-id sid2 :execution exec2
+                   :usage (cond-> (:usage p2)
+                            model (assoc :model model :source :codex))}
                   :else
                   {:result nil :session-id sid2 :execution exec2
                    :error (str "Exit " (:exit r2) ": "
@@ -680,7 +687,9 @@
                    :error (str "codex timed out after " (:timeout-ms stream-result) "ms")}
                   (zero? exit)
                   {:result (or final-text "[Codex produced no text response]")
-                   :session-id final-sid :execution exec}
+                   :session-id final-sid :execution exec
+                   :usage (cond-> (:usage parsed)
+                            model (assoc :model model :source :codex))}
                   :else
                   {:result nil :session-id final-sid :execution exec
                    :error (str "Exit " exit ": "
