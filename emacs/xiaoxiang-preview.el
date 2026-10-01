@@ -146,12 +146,24 @@
   (intern (format "session-mode-mark-%s-face" stage)))
 
 (defun xiaoxiang--hydra-cell (text stage width)
-  "Give TEXT its STAGE face and pad it to WIDTH display columns."
-  (let ((padding (- width (string-width text))))
-    (when (< padding 0)
-      (error "Mark hydra cell is wider than %d columns: %s" width text))
-    (propertize (concat text (make-string padding ?\s))
-                'face (xiaoxiang--stage-face stage))))
+  "Give TEXT its STAGE face, refusing cells wider than WIDTH columns."
+  (when (> (string-width text) width)
+    (error "Mark hydra cell is wider than %d columns: %s" width text))
+  (propertize text 'face (xiaoxiang--stage-face stage)))
+
+(defun xiaoxiang--hydra-row (cells width)
+  "Place CELLS at absolute display positions WIDTH columns apart."
+  (let ((column 0))
+    (mapconcat
+     (lambda (cell)
+       (prog1
+           (if (zerop column)
+               (or cell "")
+             (concat
+              (propertize " " 'display `(space :align-to ,(* column width)))
+              (or cell "")))
+         (setq column (1+ column))))
+     cells "")))
 
 (defun xiaoxiang--mark-hydra-hint ()
   "Build the stage-coloured mark menu with PBASE stages as columns."
@@ -177,8 +189,8 @@
      "\nMarks by PBASE stage. Type a colon after a mark to answer it (🈸:yes).\n\n"
      (mapconcat
       (lambda (row)
-        (mapconcat (lambda (column) (or (nth row column) (make-string width ?\s)))
-                   columns ""))
+        (xiaoxiang--hydra-row (mapcar (lambda (column) (nth row column)) columns)
+                              width))
       (number-sequence 0 (1- height)) "\n")
      "\n\n_q_ quit\n")))
 
