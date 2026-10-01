@@ -1,0 +1,11 @@
+[Unit]
+Description=Drain explicitly queued test-registry warrant reruns
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/joe/code/futon3c
+ExecStart=/usr/bin/python3 /home/joe/code/futon3c/scripts/warrant_rerun_worker.py --once --parallel 2
+TimeoutStartSec=30min
+Nice=10
+

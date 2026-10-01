@@ -1,0 +1,11 @@
+[Unit]
+Description=Regularly drain queued test-registry warrant reruns
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=warrant-rerun-worker.service
+
+[Install]
+WantedBy=timers.target
