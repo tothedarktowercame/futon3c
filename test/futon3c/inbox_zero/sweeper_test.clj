@@ -459,6 +459,24 @@
     (is (= 1 (:skipped counts)))
     (is (empty? (removals calls)))))
 
+(deftest a-worktree-already-under-the-worktree-root-is-not-moved-again
+  (let [calls (atom [])
+        base (temp-dir)
+        worktree-root (java.io.File. base "worktrees")
+        wt (java.io.File. worktree-root "repo/already-there")]
+    (.mkdirs wt)
+    (let [counts (sweeper/retire-merged-worktrees!
+                  (wt-options [{:path (str wt) :head "feature" :locked? false}]
+                              calls
+                              {:worktree-root (str worktree-root)
+                               :ancestor-fn (fn [_ _ _] false)
+                               :idle-hours 0
+                               :cwd-busy-fn (constantly false)}))]
+      (is (= 0 (:failed counts)))
+      (is (= 0 (:moved counts)))
+      (is (= 1 (:skipped counts)))
+      (is (empty? (filter #(= :move (first %)) @calls))))))
+
 (deftest a-locked-worktree-is-never-removed
   (let [calls (atom [])
         counts (sweeper/retire-merged-worktrees!

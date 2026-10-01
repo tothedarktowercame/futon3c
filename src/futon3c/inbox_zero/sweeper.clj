@@ -887,6 +887,14 @@
                       (let [acc (update acc :unmerged inc)
                             destination (relocation-destination worktree-root path (:path wt))]
                         (cond
+                          (str/starts-with?
+                           (str (.getCanonicalPath (io/file (:path wt)))
+                                java.io.File/separator)
+                           (str (.getCanonicalPath (io/file worktree-root))
+                                java.io.File/separator))
+                          (-> acc (update :skipped inc)
+                              (update :rows conj {:label label :worktree (:path wt)
+                                                  :outcome :already-relocated}))
                           (seq (git-dirty (:path wt)))
                           (-> acc (update :skipped inc)
                               (update :rows conj {:label label :worktree (:path wt)
