@@ -14,7 +14,8 @@
    - clone-from shape donor: war_machine_pilot_shapes.clj
    - cycle/valid-domain-config? — the predicate this file aims to satisfy
    - INV catalog: E-street-sweeper.md §Hard structural invariants (1-9)
-     + this session's additions (10-17 per emacs-claude-repl 2026-05-25)")
+     + this session's additions (10-17 per emacs-claude-repl 2026-05-25)"
+  (:require [clojure.string :as str]))
 
 ;; =============================================================================
 ;; Phases
@@ -109,6 +110,7 @@
    #"(^|/)node_modules/" #"(^|/)__pycache__/" #"(^|/)\.pytest_cache/"
    #"(^|/)\.venv/" #"(^|/)venv/" #"\.pyc$" #"\.class$"
    #"(^|/)\.cpcache/" #"(^|/)\.lsp/" #"(^|/)\.clj-kondo/cache/"
+   #"(^|/)\.clj-kondo/\.cache/" #"(^|/)\.clj-kondo/inline-configs/"
    #"(^|/)\.shadow-cljs/"
    ;; editor / OS
    #"(^|/)\.idea/" #"(^|/)\.vscode/" #"\.DS_Store$"
@@ -265,7 +267,7 @@
     :check (fn [path {:keys [size repo-policy]}]
              (let [ext (path-ext path)
                    sz (or size 0)
-                   basename (or (last (clojure.string/split (str path) #"/")) "")
+                   basename (or (last (str/split (str path) #"/")) "")
                    path-str (str path)
                    hand-authored-filename? (contains? hand-authored-filenames basename)
                    ;; INV-26: per-repo policy allowlist (e.g. futon7a's
@@ -298,10 +300,10 @@
   (let [s (str path)
         i (.lastIndexOf s ".")]
     (when (and (pos? i) (< i (dec (count s))))
-      (clojure.string/lower-case (subs s (inc i))))))
+      (str/lower-case (subs s (inc i))))))
 
 (defn- common-prefix-segment [paths]
-  (let [parts (mapv #(clojure.string/split % #"/") paths)
+  (let [parts (mapv #(str/split % #"/") paths)
         n (apply min (map count parts))]
     (loop [i 0 acc []]
       (if (or (>= i n)
@@ -338,7 +340,7 @@
    (invariantly)' signal."
   [files]
   (and (seq files)
-       (every? #(clojure.string/starts-with? (str %) "holes/") files)))
+       (every? #(str/starts-with? (str %) "holes/") files)))
 
 (defn- all-prose-extensions?
   "INV-23: every file in `files` has an extension in the prose-extensions set."
@@ -409,16 +411,16 @@
              ;; Leiningen-vector form with version string, npm-package-with-version).
              (let [touches-dep-manifest?
                    (some #(contains? dep-manifest-files
-                                     (last (clojure.string/split (str %) #"/")))
+                                     (last (str/split (str %) #"/")))
                          files)]
                (cond
                  (not touches-dep-manifest?) true
                  (nil? diff-text)            false  ; can't verify safety; defer
                  :else
-                 (let [added-lines (->> (clojure.string/split-lines diff-text)
+                 (let [added-lines (->> (str/split-lines diff-text)
                                         (filter (fn [l]
-                                                  (and (clojure.string/starts-with? l "+")
-                                                       (not (clojure.string/starts-with? l "+++"))))))
+                                                  (and (str/starts-with? l "+")
+                                                       (not (str/starts-with? l "+++"))))))
                        ;; External coordinate markers in deps.edn / package.json:
                        has-mvn-coord?       (some #(re-find #":mvn/version" %) added-lines)
                        ;; Leiningen-vector form: [group/artifact "1.2.3"] or [artifact "1.2.3"]
@@ -460,12 +462,4 @@
   [path]
   (let [i (.lastIndexOf ^String path ".")]
     (when (and (pos? i) (< i (dec (count path))))
-      (clojure.string/lower-case (subs path (inc i))))))
-
-(defn- file-size-bytes
-  "Size of file at path, 0 if missing."
-  [path]
-  (try
-    (let [f (java.io.File. ^String path)]
-      (if (.exists f) (.length f) 0))
-    (catch Exception _ 0)))
+      (str/lower-case (subs path (inc i))))))

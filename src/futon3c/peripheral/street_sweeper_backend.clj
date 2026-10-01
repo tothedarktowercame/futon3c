@@ -205,6 +205,9 @@
 ;; =============================================================================
 
 (def ^:private clojure-extensions #{"clj" "cljc" "cljs"})
+(def ^:private code-extensions
+  #{"bb" "clj" "cljc" "cljs" "el" "java" "js" "jsx" "kt" "lean"
+    "mjs" "py" "rb" "rs" "sh" "ts" "tsx"})
 
 (defn- extension [path]
   (some->> (re-find #"\.([^.\/]+)$" (str path)) second str/lower-case))
@@ -241,8 +244,16 @@
   [{:keys [repo files repo-policy timeout-seconds]
     :or {timeout-seconds 60}}]
   (let [clj-files (filterv #(clojure-extensions (extension %)) files)]
-    (if (empty? clj-files)
-      {:ok? true :kind :non-clojure}
+    (cond
+      (and (empty? clj-files) (some #(code-extensions (extension %)) files))
+      {:ok? false :reason :verification-policy-absent
+       :unsupported-code-files
+       (filterv #(code-extensions (extension %)) files)}
+
+      (empty? clj-files)
+      {:ok? true :kind :non-code}
+
+      :else
       (let [test-prefix (:clojure-test-command repo-policy)
             test-paths (->> clj-files
                             (mapcat (fn [path]

@@ -103,10 +103,12 @@
                                        ".shadow-cljs/foo"
                                        "node_modules/lib.js"
                                        "__pycache__/x.pyc"
+                                       ".clj-kondo/.cache/v1/lock"
+                                       ".clj-kondo/inline-configs/foo/config.edn"
                                        "target/build.jar"
                                        "x.swp"
                                        "src/futon3c/foo.clj"])]
-    (is (= 7 (count (:rejected r))))
+    (is (= 9 (count (:rejected r))))
     (is (every? (fn [hit]
                   (= :universal-exclusion (-> hit :hits first :reason)))
                 (:rejected r)))
@@ -707,6 +709,14 @@
                (get-in result [:failed :command]))))
       (finally
         (delete-tree! base)))))
+
+(deftest code-without-an-implemented-verifier-is-deferred
+  (let [result (ssb/verify-packet
+                {:repo "futon6" :files ["scripts/not-yet-verified.py"]
+                 :repo-policy nil})]
+    (is (false? (:ok? result)))
+    (is (= :verification-policy-absent (:reason result)))
+    (is (= ["scripts/not-yet-verified.py"] (:unsupported-code-files result)))))
 
 (deftest run-full-sweep-empty-repos-list
   (testing "explicit empty repo list = no-op clean structure"
