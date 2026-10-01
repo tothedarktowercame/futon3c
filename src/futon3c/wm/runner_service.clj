@@ -25,6 +25,8 @@
   {:running? false
    :click-id nil
    :phase nil
+   :phase-transition nil
+   :phase-at nil
    :attempt-id nil
    :started-at nil
    :last-result nil
@@ -126,6 +128,8 @@
            (if (= click-id (:click-id current))
              (cond-> (assoc current
                             :phase (:phase event)
+                            :phase-transition (:transition event)
+                            :phase-at (:at event)
                             :registry-publication
                             {:status :pending :stage :phase})
                (:attempt-id event) (assoc :attempt-id (:attempt-id event)))

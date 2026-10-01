@@ -6,7 +6,8 @@
    checkout: disk state cannot reconstruct an already-loaded Var body."
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon2.aif.load-identity :as load-identity])
   (:import [java.security MessageDigest]
            [java.time Instant]))
 
@@ -71,12 +72,26 @@
       value)))
 
 (defn status []
-  (let [record (get @!reloads production-runner)]
+  (let [record (get @!reloads production-runner)
+        startup (get @load-identity/registry 'futon2.aif.full-loop-runner)
+        startup-check (when startup
+                        (load-identity/check startup
+                                             (str *futon2-root* "/" production-runner)
+                                             load-identity/read-bytes))
+        identity (or record
+                     (when startup
+                       {:schema schema-version
+                        :loaded-at (:captured-at startup)
+                        :path production-runner
+                        :content-sha256 (:sha256 startup)
+                        :source :namespace-load-registration
+                        :current-status (:status startup-check)
+                        :disk-sha256 (:disk-sha256 startup-check)}))]
     {:schema schema-version
      :required-file production-runner
-     :availability (if record :available :unavailable)
-     :reason (when-not record :not-recorded-in-this-process-image)
-     :identity record}))
+     :availability (if identity :available :unavailable)
+     :reason (when-not identity :not-recorded-in-this-process-image)
+     :identity identity}))
 
 (defn reset-for-test! [] (reset! !reloads {}))
 (defn install-for-test! [record] (swap! !reloads assoc production-runner record))
