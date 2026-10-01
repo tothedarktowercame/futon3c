@@ -215,6 +215,47 @@
     (is (integer? (:timer-due-ms @park-args)))
     (is (integer? (:deadline-ms @park-args)))))
 
+(deftest park-rejects-sessionless-emacs-surface
+  "E-park-lost-wake regression: an emacs* surface with no session queues its
+   resume under [agent \"\"] — a key agent-repl-park.el:307 never polls — while
+   the park's existence suppresses the caller's auto-bellback. The handler
+   must refuse the state at POST instead of accepting a lost wake."
+  (let [park-calls (atom [])
+        respond (fn [body]
+                  (with-redefs [http/parked-on-enabled? (constantly true)
+                               parked-on/park! (fn [args _opts]
+                                                  (swap! park-calls conj args)
+                                                  {:id "park-x" :status :parked})]
+                    ((var-get #'http/handle-park)
+                     {:body (json/generate-string body)} nil)))
+        rejected (let [response (respond {:agent "claude-4"
+                                          :surface "emacs-repl"
+                                          :awaiting ["job-1"]})]
+                   (assoc (json/parse-string (:body response) true)
+                          :status (:status response)))
+        accepted (let [response (respond {:agent "claude-4"
+                                          :surface "emacs-repl"
+                                          :session "sid-7"
+                                          :awaiting ["job-1"]})]
+                   (assoc (json/parse-string (:body response) true)
+                          :status (:status response)))
+        non-buffer (let [response (respond {:agent "war-machine"
+                                            :surface "morning-brief"
+                                            :awaiting ["repair-1"]})]
+                     (assoc (json/parse-string (:body response) true)
+                            :status (:status response)))]
+    (testing "the exact stuck shape is rejected and never reaches the store"
+      (is (= 400 (:status rejected)))
+      (is (= "session-required-for-buffer-park" (:error rejected))))
+    (testing "no lost-wake state was accepted"
+      (is (= [["claude-4" "sid-7"] ["war-machine" nil]]
+             (mapv (fn [a] [(str (:agent a)) (:session a)]) @park-calls))))
+    (testing "a sessioned emacs park and a non-buffer park are still accepted"
+      (is (= 200 (:status accepted)))
+      (is (true? (:ok accepted)))
+      (is (= 200 (:status non-buffer)))
+      (is (true? (:ok non-buffer))))))
+
 (deftest park-rejects-unconvertible-timestamps
   (doseq [[field value error] [[:timer-due-ms "tomorrow" "invalid-timer-due-ms"]
                                [:deadline-ms 1.5 "invalid-deadline-ms"]]]

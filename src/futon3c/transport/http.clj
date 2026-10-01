@@ -5823,6 +5823,21 @@
                           :message "Request body must be a JSON object"})
       (str/blank? (str (or (:agent payload) (get payload "agent"))))
       (json-response 400 {:ok false :error "agent-required"})
+      ;; E-park-lost-wake: a buffer-surfaced (emacs*) park with no session is
+      ;; undeliverable — the ready-inbox is keyed by [agent session] and
+      ;; agent-repl-park.el only ever polls with the buffer's real session, so
+      ;; the resume would sit under [agent ""] forever while its existence
+      ;; suppresses the caller's auto-bellback (auto-bellback-suppressing-park).
+      ;; Refuse the state at the boundary instead of accepting a lost wake.
+      (and (buffer-surface? (or (:surface payload) (get payload "surface")))
+           (str/blank? (str (or (:session payload) (get payload "session")))))
+      (json-response 400 {:ok false :error "session-required-for-buffer-park"
+                          :message (str "emacs* surfaces deliver resumes only through the "
+                                        "ready-inbox keyed by [agent session]; a park with no "
+                                        "session can never be delivered (the repl buffer polls "
+                                        "with its session id) and would suppress the "
+                                        "auto-bellback while waking no one. Pass the parking "
+                                        "buffer's session id.")})
       (not (:ok timer-result))
       (json-response 400 {:ok false :error "invalid-timer-due-ms"
                           :message "timer-due-ms must be a non-negative integer or decimal integer string"})
