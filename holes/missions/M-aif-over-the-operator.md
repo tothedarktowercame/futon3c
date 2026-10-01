@@ -51,11 +51,55 @@ as the basis. Gaps:
 
 ## Side B — what the War Machine's AIF implementation computes (codex-10)
 
-*To be filled by codex-10:* what is computed live today (generative model,
-observations, how a policy is chosen, where preferences come from); where an
-operator-response observation would enter, at what rate and shape; what it
-would update; and what the War Machine already learns from (pattern selection
-to get unstuck).
+The live selector constructs provisional cascades, not canonical declarations.
+`futon2.aif.wm.cascade-decision/cascade-decision` reads the current mission problems and
+their interpretation receipts, qualifies their tokens by target, and turns
+library patterns into guarded token transitions.  `token-belief-carry/stage`
+retains the initial/continuing belief and observation boundary.  The cascade
+lanes supply the finite rollout model and the retained risk, ambiguity and
+information terms; `policy/select-action-cascades` computes the posterior and
+selects an acting cascade.  Preferences come from the current live-C family
+schedule (`live-c/family-scales`, `live-c/family-schedule`) and are retained by
+`preference-audit/build`; empirical habit and verified pattern-use evidence
+enter separately as E, including `cascade-feedback/attach-pattern-evidence-menu`.
+Thus learned habit can change selection without being smuggled into the
+certificate's G decomposition.
+
+An operator response should enter as one observation occurrence per proposal,
+at response/withdrawal/expiry time rather than at an arbitrary polling rate.
+Its minimal shape is `{proposal-id, option-id?, outcome, offer-revision,
+operator-turn-evidence, observed-at}`, where `outcome` is one of `:accepted`,
+`:declined`, `:withdrawn`, or `:no-response`; acceptance additionally names
+exactly one option.  A proposal displayed without a response is censored until
+its response window closes, not immediately negative evidence.  The occurrence
+belongs at the same admitted-observation boundary used by the token carry and
+next-tick refresh (`token-belief-stage` / `token-belief-input`).  Initially it
+should update a proposal/action-class response model and its empirical E/habit
+term: for example, separate posterior counts for acceptance, decline and
+censoring, scoped by proposal class and option.  It should not silently rewrite
+C: an operator's response is evidence about likely response and practical
+usefulness, whereas an explicit statement of what outcomes are wanted is the
+preference input.  Once an observation model is declared and pinned, policy
+rollouts can also predict these response outcomes and G can score them normally.
+
+The machine already learns a narrower but complementary fact.  At close,
+`cascade-feedback/receipt` separates patterns merely selected from patterns
+whose selected-to-enacted bridge and accepted increment were verified.  Later
+construction receives target-local and global counts of successful and
+incomplete applications; the Beta(1,1) likelihood-ratio prior can therefore
+favour patterns that previously worked, including a mid-run pattern introduced
+to get unstuck.  This is evidence about *how a cascade worked on a task*.
+Operator records instead say *how a person responded to a particular proposed
+action or option*.  The two evidence families should remain distinguishable,
+then meet in policy selection rather than being collapsed into one success bit.
+
+**codex-10:** Side A's final enumeration currently overstates the evidence:
+`expired` establishes `:no-response` only when the offer, response window and
+absence of a linked response are all durably joined.  It does not establish
+that the operator considered the proposal, and neither an intent reading nor a
+display event alone should upgrade silence to `:declined`.  The proposal record
+also needs a stable proposal/action-class identity; otherwise the WR-0 credit
+update cannot be scoped or replayed.
 
 ## Zip (open)
 
