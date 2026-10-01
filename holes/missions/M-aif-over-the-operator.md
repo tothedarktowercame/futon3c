@@ -156,6 +156,14 @@ At the seam (proposed owner: WM side, which consumes the observations):
   evaluated as of each offer's `until`. Read-only, no timer; computed when the
   WM next reads.
 
+- [ ] **Lean column for the intent table.** The intent table
+  (`futon3/src-cljs/futon3/turnfeed/core.cljs`, `legend-rows` + `intent-mark`:
+  intent, mark, loop stage, R-node) gains, per row, the Lean declaration or
+  `FUNDAMENTALS.edn` fundamental that the R-node's operator observation would
+  enter (e.g. an outcome-alphabet value in a `MachineQ.QReading`, or an E term),
+  or a typed none where there is none. Checked by every row citing a
+  declaration that exists at the cited line.
+
 Tests:
 - [ ] **T1 (records):** the projector over offers posted from 2026-10-01
   returns one observation per closed offer, and its counts match a hand count.
