@@ -93,6 +93,53 @@
         (should (get-text-property (+ start offset) 'read-only)))
       (should-not (get-text-property end 'read-only)))))
 
+(ert-deftest agent-chat-repairs-displaced-prompt-space-after-quoted-input ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "$~devmap-coherence/baseline-freeze> ")))
+      (agent-chat-test--init-buffer))
+    (insert "I think it's been \"about an hour\"")
+    ;; Reproduce the live claude-4 corruption: a prompt-propertized space has
+    ;; been displaced to the end of otherwise ordinary pending input.
+    (let ((start (point)))
+      (let ((inhibit-read-only t)) (insert " "))
+      (add-text-properties
+       start (point)
+       '(read-only "Agent REPL prompt is read-only"
+         rear-nonsticky (face read-only))))
+    (agent-chat--repair-input-properties!)
+    (should (equal "I think it's been \"about an hour\" "
+                   (buffer-substring-no-properties
+                    agent-chat--input-start (point-max))))
+    (should-not (text-property-not-all agent-chat--input-start (point-max)
+                                       'read-only nil))
+    (should (get-text-property (1- (marker-position agent-chat--input-start))
+                               'read-only))))
+
+(ert-deftest agent-chat-send-repairs-prompt-property-after-triple-greater-text ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'agent-chat--fetch-prompt-line)
+               (lambda () "$~contracts/holder-states-the-claim> ")))
+      (agent-chat-test--init-buffer))
+    (insert "quoted block >>> Let me see if I can trigger it")
+    (add-text-properties
+     (- (point-max) 2) (point-max)
+     '(read-only "Agent REPL prompt is read-only"
+       rear-nonsticky (face read-only)))
+    (let (sent-text)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay) (lambda (&rest _) nil))
+                ((symbol-function 'url-retrieve) (lambda (&rest _) nil)))
+        (agent-chat-send-input
+         (lambda (text _callback) (setq sent-text text) nil) "agent"))
+      (should (equal "quoted block >>> Let me see if I can trigger it"
+                     sent-text)))))
+
 (ert-deftest agent-chat-large-backward-kill-preserves-prompt-wall ()
   (dolist (rendered '(nil "$~x/y> "))
     (with-temp-buffer

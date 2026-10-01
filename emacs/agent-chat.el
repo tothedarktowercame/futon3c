@@ -1021,6 +1021,22 @@ text-face overlays were removed, painting everything prompt-face orange
        read-only "Agent REPL prompt is read-only; type after its final \"> \""
        rear-nonsticky (face read-only)))))
 
+(defun agent-chat--repair-input-properties! ()
+  "Keep prompt-only text properties out of pending operator input.
+
+The prompt's final space can be displaced to the end of pending input when a
+command inserts immediately before that read-only character.  The input marker
+still identifies the correct text, but point then sits after a read-only space
+and further typing fails, making the input look as though it became part of the
+prompt.  Prompt protection belongs only before `agent-chat--input-start'; strip
+it anywhere at or after that boundary."
+  (when-let* ((start (and (markerp agent-chat--input-start)
+                          (marker-position agent-chat--input-start))))
+    (when (< start (point-max))
+      (let ((inhibit-read-only t))
+        (remove-list-of-text-properties
+         start (point-max) '(read-only rear-nonsticky))))))
+
 (defun agent-chat-beginning-of-line (&optional n)
   "Move to the start of the input, as C-a does in `shell-mode'.
 On the prompt line with point after the prompt, go to just after the
@@ -1087,6 +1103,7 @@ window points all end up after the new prompt with typed input untouched."
     ;; A same-turn offer first appears in the done-event prompt as `!`; fetch
     ;; its structured segment asynchronously so Joe sees its choices before
     ;; answering. The exact-seat shown set makes repeated refreshes harmless.
+    (agent-chat--repair-input-properties!)
     (when (and agent-chat-prompt-line-enabled
                (save-excursion
                  (goto-char (marker-position agent-chat--input-start))
@@ -3077,6 +3094,7 @@ additionally posted to the evidence HTTP endpoint."
     ;; guard that is a raw marker-position crash (seen live 2026-07-04,
     ;; mid switch-to-buffer).
     (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
+  (agent-chat--repair-input-properties!)
   (if (process-live-p agent-chat--pending-process)
       (if (eq agent-chat--pending-turn-origin 'unsolicited)
           (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
@@ -3216,6 +3234,7 @@ CONFIG keys:
     (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
     (set-marker-insertion-type agent-chat--prompt-marker t)
+    (add-hook 'post-command-hook #'agent-chat--repair-input-properties! nil t)
     (agent-chat-enable-markdown-font-lock)
     (goto-char (point-max))
     (agent-chat-scroll-to-bottom)
