@@ -2943,7 +2943,7 @@ Only `yes' is case-insensitive; either id may be nil."
    ((and (eql status 409)
          (equal "ambiguous" (agent-chat--agreement-reason body)))
     (agent-chat-insert-message
-     "system" "yes: ambiguous (the agent will ask which offer or option)"))
+     "system" "yes: ambiguous; the agent will ask which"))
    ((eql status 409)
     (agent-chat-insert-message
      "system" (format "yes: not recorded (%s)" (agent-chat--agreement-reason body))))
