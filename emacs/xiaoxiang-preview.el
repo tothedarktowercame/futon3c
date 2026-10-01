@@ -154,6 +154,18 @@ Type a colon after it to answer the agent's paragraph with that mark: 🈸:yes."
     (when (boundp (cdr feature-map))
       (define-key (symbol-value (cdr feature-map)) (kbd "C-c ;") #'xiaoxiang-insert-mark))))
 
+;; Some REPL buffers run on their own copy of the mode map (*claude-repl:claude-17*
+;; did on 2026-10-01: its map lacked even C-a), so binding the mode map misses them.
+(dolist (buf (buffer-list))
+  (with-current-buffer buf
+    (when (and (memq major-mode '(claude-repl-mode codex-repl-mode kimi-repl-mode zai-repl-mode))
+               (current-local-map)
+               (not (eq (lookup-key (current-local-map) (kbd "C-c ;")) #'xiaoxiang-insert-mark)))
+      (define-key (current-local-map) (kbd "C-c ;") #'xiaoxiang-insert-mark)
+      (define-key (current-local-map) (kbd "C-c x p") #'xiaoxiang-preview)
+      (define-key (current-local-map) (kbd "C-c x c") #'xiaoxiang-preview-correct)
+      (define-key (current-local-map) (kbd "C-c x k") #'xiaoxiang-preview-clear))))
+
 (with-eval-after-load 'claude-repl
   (when (boundp 'claude-repl-mode-map)
     (define-key claude-repl-mode-map (kbd "C-c x p") #'xiaoxiang-preview)
