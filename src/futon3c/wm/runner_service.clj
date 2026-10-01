@@ -192,6 +192,90 @@
    itself would read it."
   nil)
 
+(defn- roster!
+  [configured]
+  (let [roster-fn (or *roster-fn*
+                      (*resolve-var* 'futon2.aif.full-loop-runner/agent-roster))]
+    (try
+      (or (when roster-fn (roster-fn (:agency-base configured))) {})
+      (catch Throwable throwable
+        (throw (ex-info "WM click refused: Agency roster unreadable, casting cannot be checked"
+                        {:status 503
+                         :error :wm-click-roster-unavailable
+                         :cause (.getMessage throwable)}))))))
+
+(defn- seat-family
+  [seat]
+  (first (str/split seat #"-" 2)))
+
+(defn- nonblank-string?
+  [value]
+  (and (string? value) (not (str/blank? value))))
+
+(defn- available-cast-seats
+  [roster]
+  (->> roster
+       (keep (fn [[seat record]]
+               (let [seat (name seat)
+                     status (some-> (:status record) name)]
+                 (when (and (not= war-machine-agent-id seat)
+                            (true? (:invoke-ready? record))
+                            (contains? #{"idle" "restored"} status))
+                   {:seat seat :status status}))))
+       ;; Prefer already-idle seats, then make selection reproducible.
+       (sort-by (juxt #(if (= "idle" (:status %)) 0 1) :seat))))
+
+(defn- choose-seat
+  [available excluded prefer-other-family]
+  (let [candidates (remove #(contains? excluded (:seat %)) available)]
+    (or (some #(when (not= prefer-other-family
+                           (seat-family (:seat %)))
+                 (:seat %))
+              candidates)
+        (:seat (first candidates)))))
+
+(defn prepare-ordinary-click-opts
+  "Resolve an ordinary click's execution cast before its ration is spent.
+
+   Explicit/configured identities win. Missing author and reviewer identities
+   are selected deterministically from the current invoke-ready Agency roster;
+   independent provider families are preferred and the two roles are always
+   distinct. A missing repair reviewer follows the resolved reviewer. This is
+   a live caller-supplied cast, not the retired static runner default."
+  [opts]
+  (let [configured (configured-runner-opts opts)]
+    (if (and (nonblank-string? (:author configured))
+             (nonblank-string? (:reviewer configured)))
+      (cond-> configured
+        (not (nonblank-string? (:repair-reviewer configured)))
+        (assoc :repair-reviewer (:reviewer configured)))
+      (let [available (available-cast-seats (roster! configured))
+            explicit-author (when (nonblank-string? (:author configured))
+                              (:author configured))
+            explicit-reviewer (when (nonblank-string? (:reviewer configured))
+                                (:reviewer configured))
+            author (or explicit-author
+                       (choose-seat available
+                                    (cond-> #{} explicit-reviewer (conj explicit-reviewer))
+                                    (some-> explicit-reviewer seat-family)))
+            reviewer (or explicit-reviewer
+                         (choose-seat available
+                                      (cond-> #{} author (conj author))
+                                      (some-> author seat-family)))]
+        (when-not (and author reviewer (not= author reviewer))
+          (throw (ex-info "WM click refused: no distinct live execution cast is available"
+                          {:status 409
+                           :error :wm-click-cast-unavailable
+                           :available-seats (mapv :seat available)
+                           :author author
+                           :reviewer reviewer})))
+        (assoc configured
+               :author author
+               :reviewer reviewer
+               :repair-reviewer (or (when (nonblank-string? (:repair-reviewer configured))
+                                      (:repair-reviewer configured))
+                                    reviewer))))))
+
 (defn cast-preflight-refusal
   "Resolve the cast exactly as the runner will (same binding + config merge),
    read the roster, and return nil when every seat is invoke-ready -- or a
@@ -199,26 +283,18 @@
    :unready {role {:seat ... :reason ...}}} naming each offending seat.
    Reasons: :absent (not on the roster), :not-invoke-ready, :busy (registered
    but invoking -- the endpoint refuses rather than waits), or the observed
-   status keyword. Only the three cast seats are checked, and only when they
-   resolve to names; a configuration that cannot name a seat at all is the
-   runner's to surface, not a preflight invention."
+   status keyword. Only the three cast seats are checked. A missing cast is
+   first resolved from the live roster; inability to form two distinct roles
+   is itself a typed preflight refusal."
   [opts]
-  (let [configured (configured-runner-opts opts)
+  (let [configured (prepare-ordinary-click-opts opts)
         seats (->> [[:author (:author configured)]
                     [:reviewer (:reviewer configured)]
                     [:repair-reviewer (:repair-reviewer configured)]]
                    (filter (fn [[_ seat]] (and (string? seat)
                                                (not (str/blank? seat))))))]
     (when (seq seats)
-      (let [roster-fn (or *roster-fn*
-                          (*resolve-var* 'futon2.aif.full-loop-runner/agent-roster))
-            roster (try
-                     (when roster-fn (roster-fn (:agency-base configured)))
-                     (catch Throwable throwable
-                       (throw (ex-info "WM click refused: Agency roster unreadable, casting cannot be checked"
-                                       {:status 503
-                                        :error :wm-click-roster-unavailable
-                                        :cause (.getMessage throwable)}))))
+      (let [roster (roster! configured)
             unready (into {}
                           (keep (fn [[role seat]]
                                   (let [record (or (get roster (keyword seat))

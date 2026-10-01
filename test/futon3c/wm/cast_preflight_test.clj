@@ -31,6 +31,40 @@
 
 (def ^:private idle-seat {:status "idle" :invoke-ready? true})
 
+(deftest missing-cast-is-resolved-from-the-live-roster
+  (let [roster (roster-with {"claude-17" idle-seat
+                             "claude-1" idle-seat
+                             "codex-8" idle-seat
+                             "zai-4" {:status "restored" :invoke-ready? true}})]
+    (binding [service/*roster-fn* (fn [_] roster)
+              service/*resolve-var* (fn [sym]
+                                      (when (= sym 'futon2.aif.full-loop-runner/config)
+                                        identity))]
+      (with-redefs [cohort/apply-binding identity]
+        (is (= {:author "claude-1"
+                :reviewer "codex-8"
+                :repair-reviewer "codex-8"}
+               (select-keys (service/prepare-ordinary-click-opts {})
+                            [:author :reviewer :repair-reviewer])))))))
+
+(deftest explicit-cast-is-preserved-and-a-single-seat-cannot-self-review
+  (binding [service/*roster-fn* (fn [_] (roster-with {"codex-8" idle-seat}))
+            service/*resolve-var* (fn [sym]
+                                    (when (= sym 'futon2.aif.full-loop-runner/config)
+                                      identity))]
+    (with-redefs [cohort/apply-binding identity]
+      (is (= {:author "zai-4" :reviewer "codex-8" :repair-reviewer "codex-8"}
+             (select-keys
+              (service/prepare-ordinary-click-opts
+               {:author "zai-4" :reviewer "codex-8"})
+              [:author :reviewer :repair-reviewer])))
+      (let [failure (try
+                      (service/prepare-ordinary-click-opts {})
+                      nil
+                      (catch clojure.lang.ExceptionInfo throwable throwable))]
+        (is (= :wm-click-cast-unavailable (:error (ex-data failure))))
+        (is (= 409 (:status (ex-data failure))))))))
+
 (defn- run-click-post
   "POST one ordinary click through the real handler with the given roster;
    returns [response parsed-body]. The runner stub fails immediately after

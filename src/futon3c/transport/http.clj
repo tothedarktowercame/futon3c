@@ -9353,8 +9353,18 @@
                           (if commissioned?
                             'futon3c.wm.r10-click-adapter/commissioned-click!
                             'futon3c.wm.runner-service/click!))
-                  opts (cond-> (assoc (merge legacy-opts (:opts prepared))
-                                      :issuer-provenance issuer-provenance)
+                  base-opts (assoc (merge legacy-opts (:opts prepared))
+                                   :issuer-provenance issuer-provenance)
+                  ;; Ordinary clicks without an explicit cast acquire one
+                  ;; from the live Agency roster before their ration is
+                  ;; consumed. Keep that exact resolved cast through
+                  ;; preflight and execution; do not select it twice.
+                  base-opts (if (and (not commissioned?) (not prepared))
+                              ((requiring-resolve
+                                'futon3c.wm.runner-service/prepare-ordinary-click-opts)
+                               base-opts)
+                              base-opts)
+                  opts (cond-> base-opts
                          (and (not commissioned?) (not prepared))
                          (assoc :ordinary-click/issue!
                                 (fn [click-id issued-at]
@@ -9369,7 +9379,7 @@
                   _ (when (and (not commissioned?) (not prepared))
                       (when-let [refusal ((requiring-resolve
                                            'futon3c.wm.runner-service/cast-preflight-refusal)
-                                          legacy-opts)]
+                                          opts)]
                         (throw (ex-info "WM click refused: a cast seat cannot be invoked"
                                         refusal))))
                   result (if commissioned?
