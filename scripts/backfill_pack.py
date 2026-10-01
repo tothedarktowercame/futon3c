@@ -90,6 +90,17 @@ For each turn, in order:
    ("metadata", "line", "resets") is not a fit. A citation's rationale must quote the
    pattern's IF (or context) condition and say how this turn meets it. Expect to cite on
    roughly one fragment in five; a pack where most fragments cite will be rechecked.
+   Two refused citations from earlier readers, so you can see the mistakes:
+   - Topic, not move. In a conversation about a maturity audit, a reader cited
+     stack-coherence/maturity-evidence-audit on every sentence, including "Isn't actually
+     defined." and "Well, how is sea defined in lean?". The conversation is ABOUT an audit;
+     those sentences report and ask, they do not perform the audit move. Cite a pattern on
+     the sentence that makes its move, not on every sentence of the thread it is about.
+     The same pattern twice in one turn needs a rationale naming a different IF clause.
+   - Shared word, not move. "Yes, it should keep displaying in follow mode, can you fix that
+     directly?" was cited as peripherals/read-only-first-then-extend because "follow" and
+     "display" appear in that pattern. The pattern says a NEW peripheral should first only
+     observe; Joe is asking for a display bug to be fixed. No fit.
 4. Every uncited fragment needs a candidate (with `fragment` set to its sentence id and a real
    `parent`). If the same move genuinely recurs, reuse the earlier candidate id, and say why.
 5. Choose display_cues by hand, within the budget; do not truncate mechanically.
