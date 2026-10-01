@@ -87,30 +87,30 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
 
 ;; Reply-proforma marks (㊥, 🈸, ...) coloured by the loop stage of their intent,
 ;; in the stage colours of the Minard figures.  The 🈀-block marks are colour
-;; emoji and ignore the foreground, hence the background tint as well.
+;; emoji, which ignore the foreground, so only the ㊀-block marks change colour.
 (defface session-mode-mark-perceive-face
-  '((((background light)) :foreground "#2a78d6" :background "#dbe8f8" :weight bold)
-    (((background dark)) :foreground "#3987e5" :background "#16304f" :weight bold))
+  '((((background light)) :foreground "#2a78d6" :weight bold)
+    (((background dark)) :foreground "#3987e5" :weight bold))
   "Mark whose intent is a PERCEIVE stage (blue)." :group 'session-mode)
 (defface session-mode-mark-believe-face
-  '((((background light)) :foreground "#eb6834" :background "#fbe1d6" :weight bold)
-    (((background dark)) :foreground "#d95926" :background "#4a2213" :weight bold))
+  '((((background light)) :foreground "#eb6834" :weight bold)
+    (((background dark)) :foreground "#d95926" :weight bold))
   "Mark whose intent is a BELIEVE stage (orange)." :group 'session-mode)
 (defface session-mode-mark-evaluate-face
-  '((((background light)) :foreground "#1baf7a" :background "#d4f1e6" :weight bold)
-    (((background dark)) :foreground "#199e70" :background "#0d3b2b" :weight bold))
+  '((((background light)) :foreground "#1baf7a" :weight bold)
+    (((background dark)) :foreground "#199e70" :weight bold))
   "Mark whose intent is an EVALUATE stage (green)." :group 'session-mode)
 (defface session-mode-mark-select-face
-  '((((background light)) :foreground "#eda100" :background "#fbecc8" :weight bold)
-    (((background dark)) :foreground "#c98500" :background "#4a3500" :weight bold))
+  '((((background light)) :foreground "#eda100" :weight bold)
+    (((background dark)) :foreground "#c98500" :weight bold))
   "Mark whose intent is a SELECT stage (amber)." :group 'session-mode)
 (defface session-mode-mark-act-face
-  '((((background light)) :foreground "#e87ba4" :background "#fae1ea" :weight bold)
-    (((background dark)) :foreground "#d55181" :background "#4a1e2f" :weight bold))
+  '((((background light)) :foreground "#e87ba4" :weight bold)
+    (((background dark)) :foreground "#d55181" :weight bold))
   "Mark whose intent is an ACT stage (pink)." :group 'session-mode)
 (defface session-mode-mark-annotator-face
-  '((((background light)) :foreground "#66665e" :background "#ebebe7" :weight bold)
-    (((background dark)) :foreground "#b5b9bd" :background "#34373a" :weight bold))
+  '((((background light)) :foreground "#66665e" :weight bold)
+    (((background dark)) :foreground "#b5b9bd" :weight bold))
   "Mark outside the loop: gist and unresolved (grey)." :group 'session-mode)
 
 ;; --- Controlled vocabulary (loaded once, cached) ---
