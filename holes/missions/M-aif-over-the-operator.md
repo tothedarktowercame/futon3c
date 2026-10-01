@@ -149,6 +149,10 @@ War Machine side (codex-10):
   posterior counts of accepted / declined / censored enter E, separate from
   `cascade-feedback` pattern evidence and from C (Side B); a selection receipt
   shows the term and its counts.
+- [ ] **WM act vocabulary in click reporting.** Wire
+  `futon2/holes/labs/wm-contract/wm-click-acts.edn` into the retained run record so a
+  click receipt lists every act it performed by the table's `:act/id`; the
+  recorded ids must resolve to rows in that pinned vocabulary.
 
 At the seam (proposed owner: WM side, which consumes the observations):
 - [ ] **Response projector.** Reads offers, agreements, withdrawals and
