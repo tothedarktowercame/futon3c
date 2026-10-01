@@ -1002,9 +1002,9 @@ agent text is left alone."
 (ert-deftest session-mode-marks-take-their-stage-face ()
   (require 'xiaoxiang-preview)
   ;; The two mark tables are kept by hand; they must name the same marks and intents.
-  (should (equal (sort (mapcar (lambda (m) (list (nth 0 m) (nth 1 m))) session-mode--marks)
+  (should (equal (sort (mapcar (lambda (m) (list (nth 0 m) (nth 1 m) (nth 2 m))) session-mode--marks)
                        (lambda (a b) (string< (car a) (car b))))
-                 (sort (mapcar (lambda (k) (list (nth 2 k) (nth 1 k))) xiaoxiang-mark-keys)
+                 (sort (mapcar (lambda (k) (list (nth 2 k) (nth 1 k) (nth 3 k))) xiaoxiang-mark-keys)
                        (lambda (a b) (string< (car a) (car b))))))
   (with-temp-buffer
     (insert "㊥ (gist) fine. 🈸:yes ㊟ but 🈲 not that")
@@ -1019,6 +1019,19 @@ agent text is left alone."
         (should (eq 'session-mode-mark-act-face (cdr (assoc "🈸" faces))))
         (should (eq 'session-mode-mark-believe-face (cdr (assoc "㊟" faces))))
         (should (eq 'session-mode-mark-evaluate-face (cdr (assoc "🈲" faces))))))))
+
+(ert-deftest session-mode-mark-hydra-is-pbase-ordered-and-coloured ()
+  (require 'xiaoxiang-preview)
+  (let* ((hint (xiaoxiang--mark-hydra-hint))
+         (positions (mapcar (lambda (heading) (string-match (concat "\n" heading " +") hint))
+                            '("PERCEIVE" "BELIEVE" "EVALUATE" "SELECT" "ACT" "OTHER"))))
+    (should (equal positions (sort (copy-sequence positions) #'<)))
+    (dolist (stage xiaoxiang-mark-stage-order)
+      (let* ((heading (if (eq stage 'annotator)
+                          "OTHER" (upcase (symbol-name stage))))
+             (pos (1+ (string-match (concat "\n" heading " +") hint))))
+        (should (eq (xiaoxiang--stage-face stage)
+                    (get-text-property pos 'face hint)))))))
 
 (ert-deftest session-mode-turn-tags-paints-marks ()
   (with-temp-buffer
