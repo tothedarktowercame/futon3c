@@ -85,6 +85,34 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "An operator message that is a whole command (`undo', `yes 2', ...) (red)."
   :group 'session-mode)
 
+;; Reply-proforma marks (㊥, 🈸, ...) coloured by the loop stage of their intent,
+;; in the stage colours of the Minard figures.  The 🈀-block marks are colour
+;; emoji and ignore the foreground, hence the background tint as well.
+(defface session-mode-mark-perceive-face
+  '((((background light)) :foreground "#2a78d6" :background "#dbe8f8" :weight bold)
+    (((background dark)) :foreground "#3987e5" :background "#16304f" :weight bold))
+  "Mark whose intent is a PERCEIVE stage (blue)." :group 'session-mode)
+(defface session-mode-mark-believe-face
+  '((((background light)) :foreground "#eb6834" :background "#fbe1d6" :weight bold)
+    (((background dark)) :foreground "#d95926" :background "#4a2213" :weight bold))
+  "Mark whose intent is a BELIEVE stage (orange)." :group 'session-mode)
+(defface session-mode-mark-evaluate-face
+  '((((background light)) :foreground "#1baf7a" :background "#d4f1e6" :weight bold)
+    (((background dark)) :foreground "#199e70" :background "#0d3b2b" :weight bold))
+  "Mark whose intent is an EVALUATE stage (green)." :group 'session-mode)
+(defface session-mode-mark-select-face
+  '((((background light)) :foreground "#eda100" :background "#fbecc8" :weight bold)
+    (((background dark)) :foreground "#c98500" :background "#4a3500" :weight bold))
+  "Mark whose intent is a SELECT stage (amber)." :group 'session-mode)
+(defface session-mode-mark-act-face
+  '((((background light)) :foreground "#e87ba4" :background "#fae1ea" :weight bold)
+    (((background dark)) :foreground "#d55181" :background "#4a1e2f" :weight bold))
+  "Mark whose intent is an ACT stage (pink)." :group 'session-mode)
+(defface session-mode-mark-annotator-face
+  '((((background light)) :foreground "#66665e" :background "#ebebe7" :weight bold)
+    (((background dark)) :foreground "#b5b9bd" :background "#34373a" :weight bold))
+  "Mark outside the loop: gist and unresolved (grey)." :group 'session-mode)
+
 ;; --- Controlled vocabulary (loaded once, cached) ---
 (defvar session-mode--missions nil "Hash set of on-disk mission/excursion names.")
 (defvar session-mode--patterns nil "Hash set of on-disk pattern (flexiarg) names.")
@@ -235,6 +263,21 @@ instead is robust both ways.)"
 (defconst session-mode--word-re "\\b\\([a-z][a-z0-9-]\\{4,\\}\\)\\b")
 (defconst session-mode--mint-re "!{[^}]+}")
 (defconst session-mode--glyph-re "[香應咅鹽間専專蒲團]")
+
+(defconst session-mode--marks
+  ;; mark intent stage; stages from legend-rows in futon3/src-cljs/futon3/turnfeed/core.cljs
+  '(("㊩" "report-problem" perceive) ("🈖" "explain" perceive) ("㊢" "report" perceive)
+    ("🈯" "clarify" believe) ("㊟" "qualify" believe) ("㊣" "approve" believe)
+    ("🈚" "disagree" believe) ("㊮" "collect" believe) ("🈹" "retract" believe)
+    ("🈲" "constrain" evaluate) ("🈕" "extend" evaluate) ("㊫" "explore" evaluate)
+    ("㊭" "propose" select) ("㊝" "prioritize" select) ("🈘" "redirect" select)
+    ("🈝" "defer" select) ("㊯" "delegate" select) ("🈡" "withdraw" select)
+    ("🈸" "ask-action" act) ("🈰" "continue" act) ("㊬" "verify" act)
+    ("㊥" "gist" annotator) ("🈳" "unresolved" annotator))
+  "Reply-proforma marks with their intent and loop stage.")
+
+(defconst session-mode--mark-re
+  (regexp-opt (mapcar #'car session-mode--marks)))
 (defconst session-mode--correction-re
   (concat "\\b\\(not only\\|not just\\|not that\\|actually\\|no,\\|nope\\|isn'?t\\|wrong\\|"
           "instead\\|rather\\|i'?d say\\|let'?s not\\|don'?t\\|shouldn'?t\\|the issue is\\|too\\)\\b"))
@@ -335,6 +378,14 @@ line that starts a speaker name, a \"Cooked for\" line or a rule line."
           (session-mode--ov (match-beginning 0) (match-end 0) 'session-mode-glyph-face
                             "glyph" (match-string-no-properties 0) "futonic glyph (explicit)")
           (tally 'glyph)))
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward session-mode--mark-re nil t)
+          (pcase-let ((`(,mark ,intent ,stage) (assoc (match-string-no-properties 0) session-mode--marks)))
+            (session-mode--ov (match-beginning 0) (match-end 0)
+                              (intern (format "session-mode-mark-%s-face" stage))
+                              "mark" mark (format "%s %s — %s" mark intent (upcase (symbol-name stage))))
+            (tally 'mark))))
       ;; recognized: missions (clock vs mention) + patterns
       (save-excursion
         (goto-char (point-min))
