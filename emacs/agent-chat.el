@@ -49,9 +49,10 @@ Failure falls through to an ordinary agent turn with the original text."
   :type 'number
   :group 'agent-chat)
 
-(defcustom agent-chat-agreement-timeout 3
-  "Maximum seconds to wait while recording an operator acceptance.
-The original turn is sent to the agent after every outcome, including timeout."
+(defcustom agent-chat-agreement-timeout 60
+  "Seconds to wait in the background for an operator acceptance to be recorded.
+The request does not block: the turn goes to the agent at once, and the
+outcome line appears in the buffer when the server answers."
   :type 'number
   :group 'agent-chat)
 
@@ -2917,32 +2918,10 @@ Only `yes' is case-insensitive; either id may be nil."
           ((stringp reason) reason)
           (t "unknown"))))
 
-(defun agent-chat--check-acceptance (text evidence-id)
-  "Best-effort record classical acceptance TEXT backed by EVIDENCE-ID.
-This runs after the user-turn evidence hook and never consumes or changes TEXT."
-  (when-let* ((agent-id (and (stringp agent-chat--agent-id)
-                             (not (string-empty-p agent-chat--agent-id))
-                             agent-chat--agent-id))
-              (session-id (and (stringp agent-chat--session-id)
-                               (not (string-empty-p agent-chat--session-id))
-                               (not (equal agent-chat--session-id "pending"))
-                               agent-chat--session-id)))
-    (if (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
-        (agent-chat-insert-message "system" "yes: not checked (no evidence id)")
-      (if-let* ((request-fn (and (fboundp 'agent-chat-evidence-request-json)
-                                 #'agent-chat-evidence-request-json)))
-          (let* ((url (format "%s/api/alpha/agreement"
-                              (string-remove-suffix "/" agent-chat-agency-base-url)))
-                 (payload `((agent . ,agent-id) (session . ,session-id)
-                            (text . ,text) (evidence-id . ,evidence-id)))
-                 (response (condition-case nil
-                               (funcall request-fn "POST" url
-                                        agent-chat-agreement-timeout payload)
-                             (error nil)))
-                 (status (plist-get response :status))
-                 (body (plist-get response :json)))
-            (cond
-             ((eql status 200)
+(defun agent-chat--report-acceptance (status body)
+  "Insert the one-line outcome of an acceptance request: STATUS and parsed BODY."
+  (cond
+   ((eql status 200)
               (let* ((record (plist-get body :record))
                      (grant (plist-get body :grant))
                      (grant-reason (plist-get body :grant-reason))
@@ -2961,19 +2940,69 @@ This runs after the user-turn evidence hook and never consumes or changes TEXT."
                          (or (plist-get record :agreement/offer) "unknown")
                          (or (plist-get record :agreement/option-id) "unknown")
                          suffix))))
-             ((and (eql status 409)
-                   (equal "ambiguous" (agent-chat--agreement-reason body)))
-              (agent-chat-insert-message
-               "system" "yes: ambiguous; the agent will ask which"))
-             ((eql status 409)
-              (agent-chat-insert-message
-               "system" (format "yes: not recorded (%s)"
-                                (agent-chat--agreement-reason body))))
-             (t
-              (agent-chat-insert-message
-               "system" (format "yes: not checked (%s)"
-                                (if status (format "http %s" status) "timeout"))))))
-        (agent-chat-insert-message "system" "yes: not checked (request unavailable)")))))
+   ((and (eql status 409)
+         (equal "ambiguous" (agent-chat--agreement-reason body)))
+    (agent-chat-insert-message
+     "system" "yes: ambiguous (the agent will ask which offer or option)"))
+   ((eql status 409)
+    (agent-chat-insert-message
+     "system" (format "yes: not recorded (%s)" (agent-chat--agreement-reason body))))
+   (t
+    (agent-chat-insert-message
+     "system" (format "yes: not checked (%s)"
+                      (cond ((plist-get body :reason)
+                             (format "http %s, %s" status (agent-chat--agreement-reason body)))
+                            ((and status (not (eql status 0))) (format "http %s" status))
+                            (t "no answer")))))))
+
+(defun agent-chat--check-acceptance (text evidence-id)
+  "Record classical acceptance TEXT backed by EVIDENCE-ID, without blocking.
+The request runs in the background and its outcome line is inserted in this
+buffer when it returns: on 2026-10-01 the route took 11 s under futon1b load,
+so a blocking call either froze Emacs or reported a recorded agreement as
+\"not checked\".  TEXT is never consumed or changed."
+  (when-let* ((agent-id (and (stringp agent-chat--agent-id)
+                             (not (string-empty-p agent-chat--agent-id))
+                             agent-chat--agent-id))
+              (session-id (and (stringp agent-chat--session-id)
+                               (not (string-empty-p agent-chat--session-id))
+                               (not (equal agent-chat--session-id "pending"))
+                               agent-chat--session-id)))
+    (if (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
+        (agent-chat-insert-message "system" "yes: not checked (no evidence id)")
+      (let* ((origin (current-buffer))
+             (url (format "%s/api/alpha/agreement"
+                          (string-remove-suffix "/" agent-chat-agency-base-url)))
+             (url-request-method "POST")
+             (url-request-extra-headers '(("Content-Type" . "application/json")
+                                          ("Accept" . "application/json")))
+             (url-request-data
+              (encode-coding-string
+               (json-encode `((agent . ,agent-id) (session . ,session-id)
+                              (text . ,text) (evidence-id . ,evidence-id)))
+               'utf-8)))
+        (futon-url-retrieve
+         url agent-chat-agreement-timeout
+         (lambda (status)
+           (let* ((code (and (not (plist-get status :error))
+                             (boundp 'url-http-response-status)
+                             url-http-response-status))
+                  ;; url.el reports HTTP errors (409) as :error, with the
+                  ;; status still set, so read it whenever it is there.
+                  (code (or code (and (boundp 'url-http-response-status)
+                                      url-http-response-status)))
+                  (body (progn (goto-char (point-min))
+                               (when (re-search-forward "\n\n" nil t)
+                                 (let ((raw (buffer-substring-no-properties
+                                             (point) (point-max))))
+                                   (agent-chat--parse-json-string
+                                    (if (multibyte-string-p raw) raw
+                                      (decode-coding-string raw 'utf-8))))))))
+             (unless (string-prefix-p " *temp" (buffer-name))
+               (kill-buffer (current-buffer)))
+             (when (buffer-live-p origin)
+               (with-current-buffer origin
+                 (agent-chat--report-acceptance code body))))))))))
 
 (defun agent-chat--maybe-handle-undo (text)
   "Handle exact operator undo TEXT. Return non-nil only when consumed.
