@@ -561,6 +561,9 @@
 
 (def ^:private default-worktree-idle-hours 24)
 
+(def ^:private default-worktree-root
+  (str (io/file (System/getProperty "user.home") "worktrees")))
+
 (def ^:private lease-owned-prefixes
   "Worktree paths another lifecycle owns, which this lane never touches.
 
@@ -613,23 +616,54 @@
                     (filter #(.exists ^java.io.File %))
                     (map #(.lastModified ^java.io.File %))
                     (reduce max 0))]
-    (if (pos? newest) (- now-ms newest) Long/MAX_VALUE)))
+    (if (pos? newest) (max 0 (- now-ms newest)) Long/MAX_VALUE)))
 
-(defn- retirable
+(defn- pushed-tip
+  "The exact upstream ref this checkout can push normally, or nil.
+  Retirement is forbidden without this witness: local HEAD is not evidence
+  that a commit exists anywhere else."
+  [root]
+  (let [{:keys [exit out]} (shell/sh "git" "rev-parse" "--verify"
+                                     "@{upstream}" :dir root)]
+    (when (zero? exit) (str/trim out))))
+
+(defn- ancestor-of? [root ancestor descendant]
+  (zero? (:exit (shell/sh "git" "merge-base" "--is-ancestor"
+                          (str ancestor) (str descendant) :dir root))))
+
+(defn- process-cwd-under?
+  "True when a live process has PATH, or a descendant, as its cwd."
+  [path]
+  (let [prefix (str (.getCanonicalPath (io/file path)) java.io.File/separator)]
+    (boolean
+     (some (fn [pid]
+             (try
+               (let [cwd (.getCanonicalPath (io/file pid "cwd"))]
+                 (or (= cwd (subs prefix 0 (dec (count prefix))))
+                     (str/starts-with? cwd prefix)))
+               (catch Throwable _ false)))
+           (filter #(re-matches #"[0-9]+" (.getName ^java.io.File %))
+                   (or (seq (.listFiles (io/file "/proc"))) []))))))
+
+(defn- relocation-destination [worktree-root repo-root worktree-path]
+  (io/file worktree-root (.getName (io/file repo-root))
+           (.getName (io/file worktree-path))))
+
+(defn- retirement-refusal
   "Why WORKTREE may not be retired, or nil when every condition holds.
 
   Every commit in it must already be an ancestor of the branch this repo
   pushes, which is what makes removal a no-judgement act: the work is not in
   the worktree in any sense that matters, it is in the branch that went to the
   remote. The rest are refusals to act on something that is still somebody's."
-  [root {:keys [path head locked?]} now-ms idle-hours]
+  [root {:keys [path head locked?]} now-ms idle-hours upstream ancestor-fn]
   (cond
     locked? :locked
     (some #(str/starts-with? (str path) %) lease-owned-prefixes) :lease-owned
     (not (.isDirectory (io/file path))) :absent
     (seq (git-dirty path)) :dirty
-    (not (zero? (:exit (shell/sh "git" "merge-base" "--is-ancestor" (str head) "HEAD"
-                                 :dir root)))) :unmerged
+    (nil? upstream) :no-upstream
+    (not (ancestor-fn root head upstream)) :unmerged
     (< (worktree-idle-ms path now-ms) (* idle-hours 60 60 1000)) :in-use
     :else nil))
 
@@ -658,15 +692,31 @@
                               {:ok? (zero? exit)
                                :output (str/trim (str out " " err))})))
             idle-hours (or (:idle-hours options) default-worktree-idle-hours)
+            upstream-fn (or (:upstream-fn options) pushed-tip)
+            ancestor-fn (or (:ancestor-fn options) ancestor-of?)
+            cwd-busy-fn (or (:cwd-busy-fn options) process-cwd-under?)
+            worktree-root (or (:worktree-root options)
+                              (System/getenv "FUTON3C_WORKTREE_ROOT")
+                              default-worktree-root)
+            move-fn (or (:move-fn options)
+                        (fn [root from to]
+                          (.mkdirs (.getParentFile ^java.io.File to))
+                          (let [{:keys [exit out err]}
+                                (shell/sh "git" "worktree" "move" (str from) (str to)
+                                          :dir root)]
+                            {:ok? (zero? exit)
+                             :output (str/trim (str out " " err))})))
             now ((or (:now-fn options) #(Date.)))
             now-ms (.getTime ^Date now)
             log-path (or (:worktree-log-path options) default-worktree-log-path)
             result
             (reduce
              (fn [acc {:keys [path label]}]
-               (reduce
+               (let [upstream (upstream-fn path)]
+                (reduce
                 (fn [acc wt]
-                  (let [refusal (retirable path wt now-ms idle-hours)]
+                  (let [refusal (retirement-refusal path wt now-ms idle-hours
+                                                    upstream ancestor-fn)]
                     (cond
                       (nil? refusal)
                       (let [{:keys [ok? output]} (remove-fn path (:path wt))]
@@ -681,14 +731,46 @@
                                   (update :rows conj
                                           {:label label :worktree (:path wt)
                                            :outcome :failed :error output})))))
-                      (= :unmerged refusal) (update acc :unmerged inc)
+                      (= :unmerged refusal)
+                      (let [acc (update acc :unmerged inc)
+                            destination (relocation-destination worktree-root path (:path wt))]
+                        (cond
+                          (seq (git-dirty (:path wt)))
+                          (-> acc (update :skipped inc)
+                              (update :rows conj {:label label :worktree (:path wt)
+                                                  :outcome :dirty}))
+                          (< (worktree-idle-ms (:path wt) now-ms)
+                             (* idle-hours 60 60 1000))
+                          (-> acc (update :skipped inc)
+                              (update :rows conj {:label label :worktree (:path wt)
+                                                  :outcome :in-use}))
+                          (cwd-busy-fn (:path wt))
+                          (-> acc (update :skipped inc)
+                              (update :rows conj {:label label :worktree (:path wt)
+                                                  :outcome :process-cwd}))
+                          (.exists destination)
+                          (-> acc (update :failed inc)
+                              (update :rows conj {:label label :worktree (:path wt)
+                                                  :outcome :destination-exists
+                                                  :destination (str destination)}))
+                          :else
+                          (let [{:keys [ok? output]} (move-fn path (:path wt) destination)]
+                            (if ok?
+                              (do (print-fn (str "[inbox-zero] moved active worktree "
+                                                 (:path wt) " -> " destination))
+                                  (update acc :moved inc))
+                              (-> acc (update :failed inc)
+                                  (update :rows conj {:label label :worktree (:path wt)
+                                                      :outcome :move-failed
+                                                      :destination (str destination)
+                                                      :error output}))))))
                       :else
                       (-> acc (update :skipped inc)
                           (update :rows conj {:label label :worktree (:path wt)
                                               :outcome refusal})))))
                 acc
-                (records-fn path)))
-             {:repos (count watch-roots) :retired 0 :failed 0
+                (records-fn path))))
+             {:repos (count watch-roots) :retired 0 :moved 0 :failed 0
               :skipped 0 :unmerged 0 :rows []}
              watch-roots)]
         (try
@@ -696,8 +778,8 @@
                          {:at now
                           :generated-by "futon3c.inbox-zero.sweeper"
                           :note (str "Linked worktrees this lane did not retire, and "
-                                     "why. Unmerged ones are counted, not listed: "
-                                     "they hold work and are nobody's residue. "
+                                     "why. Clean idle unmerged worktrees move to the "
+                                     "declared worktree root; blocked moves remain listed. "
                                      "Current state, not a queue.")
                           :idle-hours idle-hours
                           :worktrees (vec (sort-by :worktree (:rows result)))})
@@ -709,7 +791,7 @@
       (catch Throwable error
         (try (print-fn (str "[inbox-zero] worktree pass failed: " (.getMessage error)))
              (catch Throwable _))
-        {:repos 0 :retired 0 :failed 0 :skipped 0 :unmerged 0}))))
+        {:repos 0 :retired 0 :moved 0 :failed 0 :skipped 0 :unmerged 0}))))
 
 (defn run-pass!
   "One full pass: inform about dirty files, act on unpushed commits.

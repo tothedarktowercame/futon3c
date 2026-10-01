@@ -1,5 +1,6 @@
 (ns futon3c.inbox-zero.sweeper-test
   (:require [clojure.string :as str]
+            [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
             [futon3c.inbox-zero.sweeper :as sweeper])
   (:import [java.util Date]))
@@ -305,6 +306,8 @@
 (defn wt-options [records calls & [extra]]
   (merge {:roots [{:path "/repo/mathlib4-d" :label "mathlib4-d"}]
           :worktrees-fn (fn [_] records)
+          :upstream-fn (constantly "upstream")
+          :ancestor-fn (fn [_ _ _] false)
           :remove-fn (fn [root path]
                        (swap! calls conj [:remove root path]) {:ok? true :output ""})
           :now-fn (constantly now)
@@ -313,6 +316,36 @@
          extra))
 
 (defn removals [calls] (filterv #(= :remove (first %)) @calls))
+
+(defn git! [dir & args]
+  (let [{:keys [exit out err]} (apply shell/sh "git" (concat args [:dir (str dir)]))]
+    (when-not (zero? exit)
+      (throw (ex-info (str out err) {:dir (str dir) :args args})))
+    (str/trim out)))
+
+(defn real-worktree-fixture []
+  (let [base (temp-dir)
+        repo (java.io.File. base "repo")
+        remote (java.io.File. base "remote.git")
+        wt (java.io.File. base "feature")]
+    (.mkdirs repo)
+    (git! repo "init" "-b" "main")
+    (git! repo "config" "user.name" "Inbox Zero Test")
+    (git! repo "config" "user.email" "inbox-zero@example.invalid")
+    (spit (java.io.File. repo "base.txt") "base\n")
+    (git! repo "add" "base.txt")
+    (git! repo "commit" "-m" "base")
+    (git! base "init" "--bare" (str remote))
+    (git! repo "remote" "add" "origin" (str remote))
+    (git! repo "push" "-u" "origin" "main")
+    (git! repo "worktree" "add" "-b" "feature" (str wt) "main")
+    (git! wt "config" "user.name" "Inbox Zero Test")
+    (git! wt "config" "user.email" "inbox-zero@example.invalid")
+    (spit (java.io.File. wt "feature.txt") "feature\n")
+    (git! wt "add" "feature.txt")
+    (git! wt "commit" "-m" "feature")
+    {:base base :repo repo :remote remote :wt wt
+     :head (git! wt "rev-parse" "HEAD")}))
 
 (deftest a-worktree-that-is-not-on-disk-is-never-removed
   ;; The path is gone; there is nothing to judge merged and nothing to remove.
@@ -353,6 +386,51 @@
         rows (:worktrees (read-string (slurp (:worktree-log-path options))))]
     (is (= 2 (count rows)))
     (is (= #{:locked :lease-owned} (set (map :outcome rows))))))
+
+(deftest local-main-containment-cannot-retire-work-missing-from-upstream
+  (let [{:keys [repo wt head]} (real-worktree-fixture)
+        _ (git! repo "merge" "--ff-only" "feature")
+        log (temp-backlog-path)
+        counts (sweeper/retire-merged-worktrees!
+                {:roots [{:path (str repo) :label "repo"}]
+                 :idle-hours 0
+                 :cwd-busy-fn (constantly true)
+                 :worktree-log-path log
+                 :print-fn (constantly nil)})
+        row (first (:worktrees (read-string (slurp log))))]
+    (is (.isDirectory wt))
+    (is (= head (git! wt "rev-parse" "HEAD")))
+    (is (= 0 (:retired counts)))
+    (is (= :process-cwd (:outcome row))
+        "the commit is local-only, so the tree reaches relocation guards, not retirement")))
+
+(deftest clean-unmerged-worktree-moves-out-of-code-style-root
+  (let [{:keys [repo wt head base]} (real-worktree-fixture)
+        destination-root (java.io.File. base "worktrees")
+        expected (java.io.File. (java.io.File. destination-root "repo") "feature")
+        counts (sweeper/retire-merged-worktrees!
+                {:roots [{:path (str repo) :label "repo"}]
+                 :idle-hours 0
+                 :cwd-busy-fn (constantly false)
+                 :worktree-root (str destination-root)
+                 :worktree-log-path (temp-backlog-path)
+                 :print-fn (constantly nil)})]
+    (is (= 1 (:moved counts)))
+    (is (not (.exists wt)))
+    (is (.isDirectory expected))
+    (is (= head (git! expected "rev-parse" "HEAD")))))
+
+(deftest pushed-containment-retires-the-real-worktree
+  (let [{:keys [repo wt]} (real-worktree-fixture)
+        _ (git! repo "merge" "--ff-only" "feature")
+        _ (git! repo "push")
+        counts (sweeper/retire-merged-worktrees!
+                {:roots [{:path (str repo) :label "repo"}]
+                 :idle-hours 0
+                 :worktree-log-path (temp-backlog-path)
+                 :print-fn (constantly nil)})]
+    (is (= 1 (:retired counts)))
+    (is (not (.exists wt)))))
 
 (deftest configured-interval-reaches-the-feed
   (let [calls (atom [])
