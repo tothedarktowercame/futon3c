@@ -79,6 +79,17 @@ export function selectedMatrixEvent(value: unknown): string | null {
     ? message.eventId : null;
 }
 
+export interface HighlightedIntent { eventId: string; intent: string | null; }
+
+/** Hover focus sent by the FUTON Element fork to the annotation widget. */
+export function highlightedIntent(value: unknown): HighlightedIntent | null {
+  if (!value || typeof value !== "object") return null;
+  const message = value as { type?: unknown; eventId?: unknown; intent?: unknown };
+  if (message.type !== "futon.highlight-intent" || typeof message.eventId !== "string" || !message.eventId.startsWith("$")) return null;
+  if (message.intent !== null && typeof message.intent !== "string") return null;
+  return { eventId: message.eventId, intent: message.intent };
+}
+
 /** Polling must never move the conversation while the operator is composing. */
 export function shouldAutoScroll(distanceFromBottom: number, composing: boolean): boolean {
   return !composing && distanceFromBottom <= 80;

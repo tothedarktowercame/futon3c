@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "../chat/model.js";
+import { addressedBody, anchorsAuthorChart, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "../chat/model.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
@@ -12,6 +12,12 @@ test("only the fork's explicit timeline selection identifies a Matrix event", ()
   assert.equal(selectedMatrixEvent({ type: "futon.select-event", eventId: "$old-turn" }), "$old-turn");
   assert.equal(selectedMatrixEvent({ type: "other", eventId: "$old-turn" }), null);
   assert.equal(selectedMatrixEvent({ type: "futon.select-event", eventId: "not-an-event" }), null);
+});
+
+test("hover focus accepts an intent or an explicit clear for one Matrix event", () => {
+  assert.deepEqual(highlightedIntent({ type: "futon.highlight-intent", eventId: "$old-turn", intent: "report-problem" }), { eventId: "$old-turn", intent: "report-problem" });
+  assert.deepEqual(highlightedIntent({ type: "futon.highlight-intent", eventId: "$old-turn", intent: null }), { eventId: "$old-turn", intent: null });
+  assert.equal(highlightedIntent({ type: "futon.highlight-intent", eventId: "$old-turn", intent: 3 }), null);
 });
 
 test("authored proforma marks remain distinct from inferred intentions", () => {

@@ -1,7 +1,7 @@
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "./model.js";
+import { addressedBody, anchorsAuthorChart, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const DEFAULT_ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -25,6 +25,7 @@ let views = new Map<string, TurnView>();
 let events: Event[] = [];
 let chartEvents: Event[] = [];
 let selectedEventId = "";
+let focusedIntent: string | null = null;
 let pageSize = annotationMode ? 3 : 12, loadSize = 30, pageOffset = 0;
 type MarkStyle = "css" | "text" | "png" | "gif";
 let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "css";
@@ -200,7 +201,7 @@ function showReading(eventId: string): void {
   const close = annotationMode ? "" : `<button id="close-reading" aria-label="Close">×</button>`;
   const heading = annotationMode ? "" : `<h2>象 reading</h2>`;
   const source = annotationMode ? "" : `<div class="source">${d.html}</div>`;
-  inspector.innerHTML = `${close}${heading}<p>${intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join(" ")}</p>${source}${d.fragments.map((f) => `<section class="stage-${intentStage(f.intent)}"><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
+  inspector.innerHTML = `${close}${heading}<p>${intents(view).map((m) => `<span data-annotation-intent="${escapeHtml(m.intent)}" class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)} ${focusedIntent === m.intent ? "intent-focused" : ""}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join(" ")}</p>${source}${d.fragments.map((f) => `<section data-annotation-intent="${escapeHtml(f.intent)}" class="stage-${intentStage(f.intent)} ${focusedIntent === f.intent ? "intent-focused" : ""}"><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
   if (!annotationMode) $("close-reading").onclick = () => { inspector.hidden = true; };
 }
 
@@ -217,9 +218,17 @@ loadSizeSelect.onchange = () => { loadSize = Number(loadSizeSelect.value); pageO
 markStyleSelect.onchange = () => { markStyle = markStyleSelect.value as MarkStyle; localStorage.setItem("futon.mark.style", markStyle); render(); };
 window.addEventListener("message", (event) => {
   if (event.origin !== location.origin) return;
+  const focus = highlightedIntent(event.data);
+  if (focus && events.some((item) => item.event_id === focus.eventId)) {
+    selectedEventId = focus.eventId;
+    focusedIntent = focus.intent;
+    render();
+    return;
+  }
   const eventId = selectedMatrixEvent(event.data);
   if (!eventId || !events.some((item) => item.event_id === eventId)) return;
   selectedEventId = eventId;
+  focusedIntent = null;
   render();
 });
 
