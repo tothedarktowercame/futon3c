@@ -141,11 +141,11 @@ class FumarimoPublisher:
         return cell_event_id, output_event_id
 
 
-def requests_posts_chart(body: object) -> bool:
+def requests_posts_chart(body: object, addressed: bool = False) -> bool:
     if not isinstance(body, str):
         return False
     text = body.lower()
-    addressed = "@fumarimo" in text
+    addressed = addressed or "@fumarimo" in text or text.lstrip().startswith("fumarimo:")
     asks_count = "posts per author" in text or "number of posts per author" in text
     return addressed and asks_count
 
@@ -263,8 +263,9 @@ class FumarimoAgent:
         if event.get("type") != "m.room.message" or event.get("sender") == self.client.mxid:
             return
         body = event.get("content", {}).get("body")
+        mentions = event.get("content", {}).get("m.mentions", {}).get("user_ids", [])
         event_id = event.get("event_id")
-        if not requests_posts_chart(body) or not isinstance(event_id, str):
+        if not requests_posts_chart(body, self.client.mxid in mentions) or not isinstance(event_id, str):
             return
         authors = self.room_authors(room_id)
         source = posts_chart_source(authors)

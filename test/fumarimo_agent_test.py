@@ -87,6 +87,8 @@ class FumarimoAgentTest(unittest.TestCase):
 
     def test_only_addressed_posts_per_author_request_triggers(self):
         self.assertTrue(fumarimo.requests_posts_chart("@fumarimo show posts per author"))
+        self.assertTrue(fumarimo.requests_posts_chart("fumarimo: show posts per author"))
+        self.assertTrue(fumarimo.requests_posts_chart("show posts per author", addressed=True))
         self.assertFalse(fumarimo.requests_posts_chart("show posts per author"))
         self.assertFalse(fumarimo.requests_posts_chart("@fumarimo execute os.system('id')"))
 
