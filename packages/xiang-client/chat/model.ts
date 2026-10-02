@@ -35,6 +35,17 @@ export function needsViewRefresh(summary: TurnSummary, cached: TurnView | undefi
   return !cached || (cached.record.analysis_status ?? "not-requested") !== (summary["analysis-status"] ?? "not-requested");
 }
 
+export function countByAuthor(events: Array<{ sender: string }>): Array<{ author: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const event of events) counts.set(event.sender, (counts.get(event.sender) ?? 0) + 1);
+  return [...counts].map(([author, count]) => ({ author, count })).sort((a, b) => b.count - a.count || a.author.localeCompare(b.author));
+}
+
+export function postsPerAuthorPython(events: Array<{ sender: string }>): string {
+  const authors = JSON.stringify(events.map((event) => event.sender));
+  return `from collections import Counter\nimport marimo as mo\n\nauthors = ${authors}\ncounts = Counter(authors)\nmo.ui.altair_chart({\n    "mark": "bar",\n    "data": {"values": [{"author": author, "posts": posts} for author, posts in counts.items()]},\n    "encoding": {\n        "x": {"field": "author", "type": "nominal", "sort": "-y"},\n        "y": {"field": "posts", "type": "quantitative"},\n    },\n})`;
+}
+
 export function intents(view: TurnView): Array<{ intent: string; glyph: string; declared: boolean }> {
   const record = view.record as typeof view.record & { proforma_marks?: Array<{ intent: string; mark: string }> };
   const declared = (record.proforma_marks ?? []).map((m) => ({ intent: m.intent, glyph: m.mark, declared: true }));

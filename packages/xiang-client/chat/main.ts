@@ -1,7 +1,7 @@
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, intentStage, intents, needsViewRefresh, pageBounds, shouldAutoScroll } from "./model.js";
+import { addressedBody, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -19,6 +19,7 @@ let token = sessionStorage.getItem("futon.matrix.token") ?? "";
 let userId = sessionStorage.getItem("futon.matrix.user") ?? "";
 let views = new Map<string, TurnView>();
 let events: Event[] = [];
+let chartEvents: Event[] = [];
 let pageSize = 3, loadSize = 30, pageOffset = 0;
 type MarkStyle = "css" | "text" | "png" | "gif";
 let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "css";
@@ -64,7 +65,24 @@ async function loadEvents(): Promise<void> {
   if (!response.ok) throw new Error(`Matrix history: http ${response.status}`);
   const body = await response.json();
   events = (body.chunk as Event[]).filter((e) => e.type === "m.room.message" && typeof e.content?.body === "string").reverse();
+  chartEvents = events;
   if (pageOffset > 0 && events.length > previousCount) pageOffset += events.length - previousCount;
+}
+
+async function loadCompleteChartHistory(): Promise<void> {
+  const collected: Event[] = [];
+  let from = "";
+  while (collected.length < 2000) {
+    const suffix = from ? `&from=${encodeURIComponent(from)}` : "";
+    const response = await matrix(`/rooms/${encodeURIComponent(ROOM)}/messages?dir=b&limit=100${suffix}`);
+    if (!response.ok) return;
+    const body = await response.json();
+    const chunk = (body.chunk as Event[]).filter((e) => e.type === "m.room.message" && typeof e.content?.body === "string");
+    collected.push(...chunk);
+    if (chunk.length < 100 || !body.end || body.end === from) break;
+    from = body.end;
+  }
+  chartEvents = collected.reverse();
 }
 
 async function xiang(path: string): Promise<Response> {
@@ -122,6 +140,18 @@ function sidenotes(view: TurnView | undefined): string {
   return turnDetail(view).fragments.map((f) => `<aside class="turn-note stage-${intentStage(f.intent)}"><b>${escapeHtml(f.intent)}</b>${f.target ? ` → ${escapeHtml(f.target)}` : ""}<br>${escapeHtml(f.rationale)}${f.patterns.length ? `<small>${f.patterns.map(escapeHtml).join(" · ")}</small>` : ""}</aside>`).join("");
 }
 
+function wantsAuthorChart(event: Event): boolean {
+  const body = event.content.body!.toLowerCase();
+  return body.includes("bar chart") && body.includes("posts per author");
+}
+
+function authorChart(): string {
+  const rows = countByAuthor(chartEvents), max = Math.max(1, ...rows.map((row) => row.count));
+  const bars = rows.map((row) => `<div class="chart-row"><span>${escapeHtml(row.author)}</span><i style="width:${Math.round(100 * row.count / max)}%"></i><b>${row.count}</b></div>`).join("");
+  const code = escapeHtml(postsPerAuthorPython(chartEvents));
+  return `<aside class="turn-note code-cell"><h3>Posts per author</h3><div class="bar-chart" role="img" aria-label="Bar chart of posts per author">${bars}</div><details><summary>Python cell · Marimo-ready</summary><pre><code>${code}</code></pre></details><small>${chartEvents.length} Matrix message events across room history · exact sender IDs</small></aside>`;
+}
+
 function render(): void {
   const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
   const composing = document.activeElement === $<HTMLTextAreaElement>("message");
@@ -133,7 +163,7 @@ function render(): void {
   messages.innerHTML = visible.map((event) => {
     const view = views.get(event.event_id);
     const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></button>`).join("") : "";
-    return `<li class="${event.sender === userId ? "mine" : "theirs"}"><article><div class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></div><div class="body">${annotatedBody(event, view)}</div><div class="badges">${badges}</div></article><div class="notes">${sidenotes(view)}</div></li>`;
+    return `<li class="${event.sender === userId ? "mine" : "theirs"}"><article><div class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></div><div class="body">${annotatedBody(event, view)}</div><div class="badges">${badges}</div></article><div class="notes">${sidenotes(view)}${wantsAuthorChart(event) ? authorChart() : ""}</div></li>`;
   }).join("");
   messages.querySelectorAll<HTMLElement>(".body").forEach(decorateRNodes);
   messages.querySelectorAll<HTMLButtonElement>("button.mark").forEach((button) => button.onclick = () => showReading(button.dataset.event!));
@@ -148,7 +178,11 @@ function showReading(eventId: string): void {
 }
 
 async function changePage(offset: number): Promise<void> { pageOffset = offset; await loadViews(); render(); }
-async function refresh(): Promise<void> { await loadEvents(); await loadViews(); render(); }
+async function refresh(): Promise<void> {
+  await loadEvents();
+  if (events.some(wantsAuthorChart)) await loadCompleteChartHistory();
+  await loadViews(); render();
+}
 older.onclick = () => void changePage(pageOffset + pageSize);
 newer.onclick = () => void changePage(Math.max(0, pageOffset - pageSize));
 pageSizeSelect.onchange = () => { pageSize = Number(pageSizeSelect.value); pageOffset = 0; void changePage(0); };

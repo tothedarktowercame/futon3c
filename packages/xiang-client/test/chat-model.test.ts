@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, intentStage, intents, needsViewRefresh, pageBounds, shouldAutoScroll } from "../chat/model.js";
+import { addressedBody, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "../chat/model.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
@@ -38,4 +38,13 @@ test("a cached requested turn is refreshed when asynchronous analysis lands", ()
   const cached = { record: { analysis_status: "requested" } } as TurnView;
   assert.equal(needsViewRefresh(summary, cached), true);
   assert.equal(needsViewRefresh(summary, { record: { analysis_status: "analyzed" } } as TurnView), false);
+});
+
+test("room posts become a deterministic Marimo-ready author count cell", () => {
+  const events = [{ sender: "@joe:example" }, { sender: "@bot:example" }, { sender: "@joe:example" }];
+  assert.deepEqual(countByAuthor(events), [{ author: "@joe:example", count: 2 }, { author: "@bot:example", count: 1 }]);
+  const code = postsPerAuthorPython(events);
+  assert.match(code, /import marimo as mo/);
+  assert.match(code, /mo\.ui\.altair_chart/);
+  assert.match(code, /@joe:example/);
 });
