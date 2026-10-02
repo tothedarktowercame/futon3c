@@ -871,6 +871,47 @@ already recorded the park-id, so refusing here would destroy the resume."
             (should (= 0 (alist-get 'attempts b)))))
       (delete-directory agent-chat-evidence-outbox-directory t))))
 
+(ert-deftest agent-chat-turn-commits-do-not-reanchor-the-chat-thread ()
+  "Commit evidence branches from, but does not replace, the assistant turn."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (session-id "session-threading")
+         (agent-chat--evidence-session-id session-id)
+         (agent-chat--last-evidence-id "previous-turn")
+         (payloads nil)
+         (response-index 0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (method _url _timeout &optional payload)
+                     (when (equal method "POST")
+                       (push payload payloads))
+                     (setq response-index (1+ response-index))
+                     `(:status 201 :json (:evidence/id
+                                          ,(format "response-%d" response-index)))))
+                  ((symbol-function 'agent-chat-finish-turn-commits)
+                   (lambda () '(((repo . "futon3c") (sha . "abc123"))))))
+          (agent-chat-emit-turn-evidence!
+           "http://store.test/api/alpha/evidence" 1 t session-id
+           "assistant" "I made the change." "test-agent" "test-transport"
+           '("test") 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id nil "assistant-X")
+          (agent-chat-emit-turn-commits-evidence!
+           "http://store.test/api/alpha/evidence" 1 session-id
+           "test-agent" "test-transport" 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id)
+          (agent-chat-emit-turn-evidence!
+           "http://store.test/api/alpha/evidence" 1 t session-id
+           "user" "Yes" "test-agent" "test-transport"
+           '("test") 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id nil "user-Y")
+          (setq payloads (nreverse payloads))
+          (should (= 3 (length payloads)))
+          (should (equal "assistant-X"
+                         (alist-get 'in-reply-to (nth 1 payloads))))
+          (should (equal "assistant-X"
+                         (alist-get 'in-reply-to (nth 2 payloads)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
 (ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
   (should (= 409 (agent-chat-evidence--curl-status
                   "409\n\nProcess agent-chat-evidence-replay finished\n")))

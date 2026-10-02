@@ -4035,7 +4035,7 @@ character the operator meant to write."
                                   `((in-reply-to . ,(symbol-value last-id-var))))))
           (when-let* ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
             (set session-var sid)
-            (set last-id-var new-id)))))))
+            new-id))))))
 
 (defconst agent-chat--session-turn-limit 1000
   "Maximum number of evidence entries to fetch when counting session turns.")
