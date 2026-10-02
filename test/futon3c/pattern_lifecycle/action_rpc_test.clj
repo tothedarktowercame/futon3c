@@ -1,5 +1,6 @@
 (ns futon3c.pattern-lifecycle.action-rpc-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.evidence.boundary :as evidence]
             [futon3c.pattern-lifecycle.action-rpc :as rpc]))
 
 (defn- entries [store]
@@ -65,3 +66,29 @@
            (:failure-kind (ex-data failure))))
     (is (false? @ran?))
     (is (empty? (:order @store)))))
+
+(deftest completed-pur-persistence-failure-is-not-an-action-failure
+  (testing "completed-PUR persistence failure must not emit a false failure PUR"
+    (let [append-calls (atom [])
+          action-runs (atom 0)
+          failure (with-redefs [evidence/append!
+                                (fn [_ entry]
+                                  (swap! append-calls conj entry)
+                                  (if (= :pattern-action/completed
+                                         (get-in entry [:body :event]))
+                                    {:ok false :error/code :store-unavailable}
+                                    {:ok true :evidence/id (:evidence-id entry)}))]
+                    (try
+                      (rpc/execute! (assoc base
+                                           :evidence-store ::store
+                                           :action #(swap! action-runs inc)))
+                      nil
+                      (catch clojure.lang.ExceptionInfo e e)))]
+      (is (= 1 @action-runs))
+      (is (= :pattern-action-evidence-not-persisted
+             (:failure-kind (ex-data failure))))
+      (is (= :pur (:stage (ex-data failure))))
+      (is (= [:pattern-action/selected :pattern-action/completed]
+             (mapv #(get-in % [:body :event]) @append-calls)))
+      (is (not-any? #(= :pattern-action/failed (get-in % [:body :event]))
+                    @append-calls)))))

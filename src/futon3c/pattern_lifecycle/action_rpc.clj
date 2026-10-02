@@ -57,39 +57,39 @@
                            :rationale rationale
                            :automatic? true}
                     :tags [:psr :pattern-action-rpc]})
-        psr-receipt (append-required! evidence-store psr :psr)]
-    (try
-      (let [result (action)
-            pur (merge common
-                       {:evidence-id (str "pur-" (UUID/randomUUID))
-                        :type :pattern-outcome
-                        :claim-type :conclusion
-                        :in-reply-to psr-id
-                        :body {:event :pattern-action/completed
-                               :task-id task-id
-                               :outcome :completed
-                               :automatic? true}
-                        :tags [:pur :pattern-action-rpc]})
-            pur-receipt (append-required! evidence-store pur :pur)]
-        {:ok true
-         :result result
-         :psr-receipt psr-receipt
-         :pur-receipt pur-receipt})
-      (catch Throwable action-error
-        (let [pur (merge common
-                         {:evidence-id (str "pur-" (UUID/randomUUID))
-                          :type :pattern-outcome
-                          :claim-type :conclusion
-                          :in-reply-to psr-id
-                          :body {:event :pattern-action/failed
-                                 :task-id task-id
-                                 :outcome :failed
-                                 :error-class (.getName (class action-error))
-                                 :automatic? true}
-                          :tags [:pur :pattern-action-rpc]})
-              pur-receipt (append-required! evidence-store pur :pur)]
-          (throw (ex-info "pattern action failed after outcome persistence"
-                          {:failure-kind :pattern-action-failed
-                           :pattern-action/psr-receipt psr-receipt
-                           :pattern-action/pur-receipt pur-receipt}
-                          action-error)))))))
+        psr-receipt (append-required! evidence-store psr :psr)
+        result (try
+                   (action)
+                   (catch Throwable action-error
+                     (let [pur (merge common
+                                      {:evidence-id (str "pur-" (UUID/randomUUID))
+                                       :type :pattern-outcome
+                                       :claim-type :conclusion
+                                       :in-reply-to psr-id
+                                       :body {:event :pattern-action/failed
+                                              :task-id task-id
+                                              :outcome :failed
+                                              :error-class (.getName (class action-error))
+                                              :automatic? true}
+                                       :tags [:pur :pattern-action-rpc]})
+                           pur-receipt (append-required! evidence-store pur :pur)]
+                       (throw (ex-info "pattern action failed after outcome persistence"
+                                       {:failure-kind :pattern-action-failed
+                                        :pattern-action/psr-receipt psr-receipt
+                                        :pattern-action/pur-receipt pur-receipt}
+                                       action-error)))))
+          pur (merge common
+                     {:evidence-id (str "pur-" (UUID/randomUUID))
+                      :type :pattern-outcome
+                      :claim-type :conclusion
+                      :in-reply-to psr-id
+                      :body {:event :pattern-action/completed
+                             :task-id task-id
+                             :outcome :completed
+                             :automatic? true}
+                      :tags [:pur :pattern-action-rpc]})
+        pur-receipt (append-required! evidence-store pur :pur)]
+    {:ok true
+     :result result
+     :psr-receipt psr-receipt
+     :pur-receipt pur-receipt}))
