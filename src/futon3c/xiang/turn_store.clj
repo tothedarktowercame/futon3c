@@ -170,8 +170,10 @@
 
 (defn list-records
   "Records in the store, newest first by created_at, optionally for one
-   SESSION-ID and/or AGENT-ID, as [{:id :record}]. LIMIT caps the result."
-  [store & {:keys [session-id agent-id limit] :or {limit 200}}]
+   SESSION-ID, AGENT-ID and/or SURFACE (exact, e.g. \"matrix (!room:server)\",
+   which is how a bridge names the room), as [{:id :record}]. LIMIT caps the
+   result."
+  [store & {:keys [session-id agent-id surface limit] :or {limit 200}}]
   (let [dir (io/file (:dir store))]
     (if-not (.isDirectory dir)
       []
@@ -184,7 +186,8 @@
                          record (try (read-json (.getPath f)) (catch Exception _ nil))]
                      (when (and (map? record)
                                 (or (nil? session-id) (= session-id (:session_id record)))
-                                (or (nil? agent-id) (= agent-id (:agent_id record))))
+                                (or (nil? agent-id) (= agent-id (:agent_id record)))
+                                (or (nil? surface) (= surface (:surface record))))
                        {:id id :record record}))))
            (sort-by #(str (get-in % [:record :created_at])))
            reverse

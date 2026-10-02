@@ -60,3 +60,31 @@ def test_upstream_is_read_only_internal_route(monkeypatch):
     assert status == 200
     assert body == b'{"ok":true}'
     assert seen == ["http://127.0.0.1:7070/api/alpha/xiang/turns?limit=2"]
+
+
+ROOM = "!room:example.org"
+HERE = {"id": "turn-here", "surface": "matrix (!room:example.org)", "source-text": "long"}
+ELSEWHERE = {"id": "turn-else", "surface": "emacs-repl", "source-text": "private"}
+
+
+def test_turn_list_is_scoped_to_the_verified_room():
+    seen = []
+
+    def fetch(target):
+        seen.append(target)
+        # an upstream that ignores the filter still leaks nothing
+        return 200, json.dumps({"ok": True, "turns": [HERE, ELSEWHERE]}).encode(), "application/json"
+
+    status, body, _ = chat.room_scoped("/api/xiang/turns", "limit=50&surface=emacs-repl&session=x", ROOM, fetch)
+    assert status == 200
+    assert seen == ["/api/alpha/xiang/turns?limit=50&surface=matrix+%28%21room%3Aexample.org%29"]
+    assert json.loads(body)["turns"] == [{"id": "turn-here", "surface": "matrix (!room:example.org)"}]
+
+
+def test_turn_detail_from_another_surface_is_not_found():
+    def fetch(target):
+        record = HERE if target.endswith("turn-here") else ELSEWHERE
+        return 200, json.dumps({"ok": True, "record": record}).encode(), "application/json"
+
+    assert chat.room_scoped("/api/xiang/turns/turn-here", "", ROOM, fetch)[0] == 200
+    assert chat.room_scoped("/api/xiang/turns/turn-else", "", ROOM, fetch)[0] == 404

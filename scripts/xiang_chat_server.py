@@ -149,12 +149,41 @@ class Handler(BaseHTTPRequestHandler):
         if not token or not matrix_joined(token, room_id):
             self.reply(403, b'{"ok":false,"reason":"matrix-room-membership-required"}')
             return
-        suffix = parsed.path.removeprefix("/api/xiang")
-        target = "/api/alpha/xiang" + suffix
-        if parsed.query:
-            target += "?" + parsed.query
-        status, body, content_type = upstream(target)
+        status, body, content_type = room_scoped(parsed.path, parsed.query, room_id)
         self.reply(status, body, content_type)
+
+
+def room_surface(room_id: str) -> str:
+    """The surface a bridge records for ROOM_ID (ngircd_bridge._xiang_surface)."""
+    return f"matrix ({room_id})"
+
+
+def room_scoped(path: str, query: str, room_id: str, fetch=None) -> tuple[int, bytes, str]:
+    """Answer a 象 read for one verified room: only turns recorded in that room.
+
+    Membership proves the caller may read ROOM_ID, not every session's turns,
+    so the list is filtered to the room's surface (upstream and again here, in
+    case upstream ignores the filter) and a turn from elsewhere reads as
+    not found.  The list drops source-text: the client already has the
+    messages, and it was most of the response's size."""
+    fetch = fetch or upstream
+    surface = room_surface(room_id)
+    if path == "/api/xiang/turns":
+        params = urllib.parse.parse_qs(query)
+        limit = (params.get("limit") or ["300"])[0]
+        target = "/api/alpha/xiang/turns?" + urllib.parse.urlencode({"limit": limit, "surface": surface})
+        status, body, content_type = fetch(target)
+        if status != 200:
+            return status, body, content_type
+        data = json.loads(body)
+        data["turns"] = [{k: v for k, v in turn.items() if k != "source-text"}
+                         for turn in data.get("turns", []) if turn.get("surface") == surface]
+        return status, json.dumps(data).encode(), "application/json"
+    turn_id = path.removeprefix("/api/xiang/turns/")
+    status, body, content_type = fetch("/api/alpha/xiang/turns/" + urllib.parse.quote(turn_id, safe=""))
+    if status == 200 and (json.loads(body).get("record") or {}).get("surface") != surface:
+        return 404, b'{"ok":false,"reason":"record-not-found"}', "application/json"
+    return status, body, content_type
 
 
 def main() -> None:

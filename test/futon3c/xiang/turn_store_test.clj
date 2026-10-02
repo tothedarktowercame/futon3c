@@ -48,12 +48,15 @@
   (let [s (temp-store)
         a (:id (ts/write-record! s (assoc (record "s1" "one") :created_at "2026-10-01T00:00:00Z")))
         b (:id (ts/write-record! s (assoc (record "s1" "two") :created_at "2026-10-02T00:00:00Z")))
-        c (:id (ts/write-record! s (assoc (record "s2" "three") :created_at "2026-10-03T00:00:00Z")))]
+        c (:id (ts/write-record! s (assoc (record "s2" "three") :created_at "2026-10-03T00:00:00Z"
+                                          :surface "matrix (!room:example.org)")))]
     (spit (str (:dir s) "/not-a-record.txt") "x")
     (ts/publish-analysis! s a {:status "analyzed"})
     (is (= [c b a] (map :id (ts/list-records s))))
     (is (= [b a] (map :id (ts/list-records s :session-id "s1"))))
     (is (= [c] (map :id (ts/list-records s :agent-id "claude-1" :limit 1))))
+    (is (= [c] (map :id (ts/list-records s :surface "matrix (!room:example.org)"))))
+    (is (= [] (ts/list-records s :surface "matrix (!other:example.org)")))
     (is (= [] (ts/list-records (ts/store (str (:dir s) "/missing")))))
     (testing "the analysis sibling is not listed as a record"
       (is (= 3 (count (ts/list-records s)))))))
