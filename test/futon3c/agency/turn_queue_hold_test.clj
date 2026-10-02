@@ -112,3 +112,38 @@
             (is (contains? (:held view) aid))))
         ;; Leave nothing draining behind for the next test.
         (turn-queue/release! aid)))))
+
+(deftest shunt-closes-intake-and-retirement-records-the-replacement
+  (with-temp-queue
+    (fn []
+      (let [aid "shunted-agent"
+            turn-ids (mapv (fn [n]
+                             (-> (turn-queue/accept!
+                                  {:to aid :from "bell" :surface "external"
+                                   :msg-id (str "s" n) :prompt (str "work " n)})
+                                 :entry :id))
+                           [1 2])
+            shunt (turn-queue/shunt! aid {:reason "operator review" :by "joe"})]
+        (is (= turn-ids (:turn-ids shunt)) "the pending FIFO is captured in order")
+        (is (empty? (get-in (turn-queue/snapshot) [:queues aid])))
+        (is (= :refused
+               (:status (turn-queue/accept!
+                         {:to aid :from "bell" :surface "external" :msg-id "late"})))
+            "closed intake refuses later turns")
+        (is (empty? (get-in (turn-queue/snapshot) [:queues aid]))
+            "a refusal cannot grow the queue")
+
+        (let [retired (turn-queue/retire-shunt!
+                       aid {:replacement-turn-id "consult-1"
+                            :summary "reviewed and collapsed" :by "joe"})
+              state (turn-queue/snapshot)]
+          (is (= 2 (:retired-count retired)))
+          (is (nil? (get-in state [:shunted aid])))
+          (is (= turn-ids (:turn-ids (last (:shunt-history state)))))
+          (is (every? #(= :retired (get-in state [:entries % :status])) turn-ids))
+          (is (contains? (:intake-closed state) aid)
+              "retirement does not silently reopen intake"))
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"no shunted queue"
+                              (turn-queue/retire-shunt!
+                               aid {:replacement-turn-id "consult-2"}))
+            "the same shunt cannot be retired twice")))))

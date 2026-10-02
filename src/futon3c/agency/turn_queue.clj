@@ -40,6 +40,7 @@
    :held {}
    :intake-closed #{}
    :shunted {}
+   :shunt-history []
    :drained-frontier {}
    :history []})
 
@@ -59,6 +60,7 @@
 (declare drainer-v2-enabled?)
 (declare ensure-drainer!)
 (declare signal-drainer!)
+(declare !finalizers)
 
 (defn- load-state []
   (let [f (io/file (queue-store-path))]
@@ -413,6 +415,50 @@
                         :reason reason :by by})))))
     {:agent-id aid :intake-closed true :shunted-count (count @captured)
      :turn-ids @captured :shunted-at at :reason reason :by by}))
+
+(defn retire-shunt!
+  "Resolve AGENT-ID's shunted turns as replaced by one reviewed operator turn.
+   Intake remains closed. The resolution record is durable and retains every
+   source turn id; pending processors/waiters/finalizers are released."
+  [agent-id {:keys [replacement-turn-id summary by]}]
+  (let [aid (clean-str agent-id)
+        replacement-id (clean-str replacement-turn-id)
+        resolution* (atom nil)]
+    (when-not aid
+      (throw (ex-info "agent-id required" {:reason :agent-id-required})))
+    (when-not replacement-id
+      (throw (ex-info "replacement-turn-id required"
+                      {:reason :replacement-turn-id-required :agent-id aid})))
+    (swap-state!
+     (fn [state]
+       (if-let [record (get-in state [:shunted aid])]
+         (let [ids (vec (:turn-ids record))
+               resolution {:agent-id aid :turn-ids ids :retired-at (now)
+                           :replacement-turn-id replacement-id
+                           :summary summary :by by}]
+           (reset! resolution* resolution)
+           (-> state
+               (update :shunted dissoc aid)
+               (update :shunt-history (fnil conj []) resolution)
+               (update :entries
+                       (fn [entries]
+                         (reduce (fn [m id]
+                                   (if-let [entry (get m id)]
+                                     (assoc m id (assoc entry :status :retired
+                                                       :finished-at (:retired-at resolution)
+                                                       :replacement-turn-id replacement-id))
+                                     m))
+                                 entries ids)))))
+         state)))
+    (when-not @resolution*
+      (throw (ex-info "agent has no shunted queue"
+                      {:reason :shunt-missing :agent-id aid})))
+    (let [ids (:turn-ids @resolution*)]
+      (swap! !processors #(apply dissoc % ids))
+      (swap! !waiters #(apply dissoc % ids))
+      (swap! !finalizers #(apply dissoc % ids))
+      {:agent-id aid :retired-count (count ids) :intake-closed true
+       :resolution @resolution*})))
 
 (defn- entry-view [entry]
   (let [prompt (:prompt entry)

@@ -7067,6 +7067,24 @@
                                                          :consult-refused))
                               :message (.getMessage e)}))))))
 
+(defn- handle-agency-queue-retire-shunt [request]
+  (let [{:keys [payload agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (try
+        (json-response 200
+                       (assoc (turn-queue/retire-shunt!
+                               agent {:replacement-turn-id
+                                      (or (:replacement-turn-id payload)
+                                          (get payload "replacement-turn-id"))
+                                      :summary (or (:summary payload) (get payload "summary"))
+                                      :by (or (:by payload) (get payload "by"))})
+                              :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 409 {:ok false :error (name (or (:reason (ex-data e))
+                                                         :retire-shunt-refused))
+                              :message (.getMessage e)}))))))
+
 (defn- interrupt-agent-process-tree!
   "Best-effort termination of AGENT-ID's live invoke subprocess tree.
    Returns a result map; never throws."
@@ -11746,6 +11764,9 @@
 
       (and (= :post method) (= "/api/alpha/agency/queue/consult" uri))
       (handle-agency-queue-consult request config)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/retire-shunt" uri))
+      (handle-agency-queue-retire-shunt request)
 
       (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
       (handle-jvm-incidents request)
