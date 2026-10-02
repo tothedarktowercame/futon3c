@@ -3357,6 +3357,13 @@ When FORCE is non-nil, refresh immediately."
     (cl-some (lambda (re) (string-match-p re s))
              codex-repl--irc-send-request-regexes)))
 
+(defun codex-repl--evidence-author ()
+  "Seat id to record as evidence author, falling back to \"codex\"."
+  (if (and (stringp codex-repl-agency-agent-id)
+           (not (string-empty-p codex-repl-agency-agent-id)))
+      codex-repl-agency-agent-id
+    "codex"))
+
 (defun codex-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
   (let ((logged? (and codex-repl-evidence-log-turns
@@ -3368,7 +3375,7 @@ When FORCE is non-nil, refresh immediately."
      codex-repl-session-id
      role
      text
-     "codex"
+     (codex-repl--evidence-author)
      "emacs-codex-repl"
      '("codex" "repl" "turn")
      'codex-repl--evidence-session-id
