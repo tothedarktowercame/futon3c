@@ -30,6 +30,11 @@ irc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(irc)
 IRCBot = irc.IRCBot
 
+_fumarimo_spec = importlib.util.spec_from_file_location(
+    "matrix_fumarimo_publisher", Path(__file__).with_name("fumarimo_agent.py"))
+fumarimo = importlib.util.module_from_spec(_fumarimo_spec)
+_fumarimo_spec.loader.exec_module(fumarimo)
+
 PROFORMA_COLORS = {
     "㊩": "#2a78d6", "🈖": "#2a78d6", "㊢": "#2a78d6",
     "🈯": "#eb6834", "㊟": "#eb6834", "㊣": "#eb6834", "🈚": "#eb6834", "㊮": "#eb6834", "🈹": "#eb6834",
@@ -52,6 +57,14 @@ FUMARIMO_BRIEF = (
     "For chart requests, include readable labels and the requested numeric values. Keep notebook work in "
     "the main chat; turn annotations belong to the separate annotation sidebar."
 )
+
+FENCED_PYTHON_RE = re.compile(r"```python[ \t]*\n(.*?)\n```", re.DOTALL | re.IGNORECASE)
+
+
+def fumarimo_python_source(text):
+    """Return the sole fenced Python cell in an LLM response, if present."""
+    matches = FENCED_PYTHON_RE.findall(str(text))
+    return matches[0].strip() if len(matches) == 1 and matches[0].strip() else None
 
 
 def proforma_formatted_body(text):
@@ -177,7 +190,14 @@ class MatrixBot(IRCBot):
 
     def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
         # Transport renderer: don't run IRC's pre-send summary/line truncation.
-        sent = self._say(response.get("result") or "[no response]", channel=reply_ch)
+        result = response.get("result") or "[no response]"
+        context = self._transport_context()
+        source = fumarimo_python_source(result) if self.nick == "fumarimo" else None
+        if source and context and context["room"] == reply_ch:
+            content = fumarimo.python_cell_content(source, context["event_id"], uuid.uuid4().hex)
+            sent = self._send_content(content, reply_ch)
+        else:
+            sent = self._say(result, channel=reply_ch)
         event_id = sent.get("event_id") if isinstance(sent, dict) else None
         if event_id:
             if not hasattr(self, "_xiang_reply_events"):
@@ -199,6 +219,12 @@ class MatrixBot(IRCBot):
         context = self._transport_context()
         if context and context["room"] == room:
             content["m.relates_to"] = {"m.in_reply_to": {"event_id": context["event_id"]}}
+        return self._send_content(content, room)
+
+    def _send_content(self, content, room):
+        """Send already-shaped Matrix message content to a configured room."""
+        if room not in self.channels:
+            raise ValueError("Matrix send to unlisted room refused")
         txn = uuid.uuid4().hex
         path = "/rooms/" + urllib.parse.quote(room, safe="") + "/send/m.room.message/" + txn
         # Same transaction for a bounded retry after an ambiguous transport failure.
@@ -206,7 +232,7 @@ class MatrixBot(IRCBot):
             try:
                 result = self._request("PUT", path, content)
                 if self._handles_bare_command(room):
-                    irc.post_transport_evidence("matrix", room, self.mxid, text,
+                    irc.post_transport_evidence("matrix", room, self.mxid, content.get("body", ""),
                                                 "outbound", via_nick=self.nick)
                 return result
             except RuntimeError:

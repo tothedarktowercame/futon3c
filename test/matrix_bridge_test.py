@@ -33,6 +33,7 @@ class FakeHTTP:
         self.calls, self.posts, self.invokes, self.announces = [], {}, [], []
         self.syncs = []
         self.reply = 'answer'
+        self.user_id = '@codex:matrix.paragogy.net'
         self.fail_send_once = False
 
     def open(self, req, timeout=None):
@@ -40,7 +41,7 @@ class FakeHTTP:
         assert req.get_header('Authorization') == 'Bearer offline-token'
         path = unquote(urlsplit(req.full_url).path).removeprefix('/_matrix/client/v3')
         if path == '/account/whoami':
-            result = {'user_id': '@codex:matrix.paragogy.net'}
+            result = {'user_id': self.user_id}
         elif path == '/sync':
             result = self.syncs.pop(0)
         elif path.startswith('/join/'):
@@ -142,6 +143,40 @@ class MatrixTest(unittest.TestCase):
         self.assertIn('as its last expression', context)
         self.assertIn('do not say the cell ran', context)
         self.assertIn('annotation sidebar', context)
+
+    def test_fumarimo_reply_posts_a_typed_python_cell(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = 'Here is the cell.\n\n```python\nvalue = 6 * 7\nvalue\n```'
+        bot.process_sync(batch('b1', [event('$request', '@fumarimo calculate it')]))
+        self.drain(bot)
+        cell = next(p for p in self.http.posts.values()
+                    if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell')
+        self.assertEqual('value = 6 * 7\nvalue', cell['body'])
+        self.assertEqual('python', cell[m.fumarimo.EVENT_NAMESPACE]['language'])
+        self.assertEqual('$request', cell[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual('$request', cell['m.relates_to']['m.in_reply_to']['event_id'])
+
+    def test_fumarimo_clarification_remains_an_ordinary_reply(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = 'Which date range should I use?'
+        bot.process_sync(batch('b1', [event('$request', '@fumarimo make a chart')]))
+        self.drain(bot)
+        reply = next(p for p in self.http.posts.values()
+                     if p['body'] == 'Which date range should I use?')
+        self.assertNotIn(m.fumarimo.EVENT_NAMESPACE, reply)
+        self.assertEqual('$request', reply['m.relates_to']['m.in_reply_to']['event_id'])
 
     def test_inherited_gating_and_commands(self):
         bot = self.bot()
