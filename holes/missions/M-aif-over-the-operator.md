@@ -140,6 +140,12 @@ Interactive side (claude-17 / 象-2000):
 - [ ] **Agents post an offer for each 🈸.** The rule is written in the reply
   proforma; over a sample of later agent replies, every 🈸 paragraph has an
   offer id on the operator's prompt line in that turn.
+  *Mostly met from the reading side (2026-10-02, futon3c `6d579cfe`, Joe: "if
+  you ask me a yes-no 'Shall I...' question, then 🈸:yes does have an obvious
+  interpretation"):* with no stored offer, the agreement route follows the
+  acceptance turn's in-reply-to and mints the offer from the reply's 🈸
+  paragraphs (one option each). Agents need post an explicit offer only for
+  options the prose does not separate, or for a grant scope.
 
 War Machine side (codex-10):
 - [ ] **WM proposals become offers.** At least one nag / brief / silent
