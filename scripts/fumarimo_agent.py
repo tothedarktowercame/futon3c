@@ -12,7 +12,7 @@ import html
 import json
 import os
 from pathlib import Path
-import re
+import subprocess
 import time
 import urllib.parse
 import urllib.request
@@ -182,6 +182,20 @@ def execute_posts_chart(source: str) -> bytes:
     return svg.encode("utf-8")
 
 
+def svg_to_png(svg: bytes) -> bytes:
+    result = subprocess.run(
+        ["/usr/bin/convert", "svg:-", "png:-"],
+        input=svg,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+        timeout=10,
+    )
+    if not result.stdout.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise RuntimeError("SVG conversion did not produce PNG")
+    return result.stdout
+
+
 class MatrixClient:
     def __init__(self, homeserver: str, token_file: Path, rooms: list[str], state_file: Path):
         self.homeserver = homeserver.rstrip("/")
@@ -264,19 +278,30 @@ class FumarimoAgent:
         body = event.get("content", {}).get("body")
         mentions = event.get("content", {}).get("m.mentions", {}).get("user_ids", [])
         event_id = event.get("event_id")
-        if not requests_posts_chart(body, self.client.mxid in mentions) or not isinstance(event_id, str):
+        addressed = (
+            self.client.mxid in mentions
+            or (isinstance(body, str) and ("@fumarimo" in body.lower() or body.lower().lstrip().startswith("fumarimo:")))
+        )
+        if not addressed or not isinstance(event_id, str):
+            return
+        if not requests_posts_chart(body, addressed=True):
+            self.publisher._send(room_id, {
+                "msgtype": "m.notice",
+                "body": "Fumarimo currently supports: ‘show me the number of posts per author’. Other datasets need an explicit data source before I can execute them.",
+                EVENT_NAMESPACE: {"kind": "unsupported-request", "request_event_id": event_id},
+            })
             return
         authors = self.room_authors(room_id)
         source = posts_chart_source(authors)
-        svg = execute_posts_chart(source)
-        image_mxc = self.client.upload(svg, "image/svg+xml", "posts-per-author.svg")
+        png = svg_to_png(execute_posts_chart(source))
+        image_mxc = self.client.upload(png, "image/png", "posts-per-author.png")
         self.publisher.publish(
             room_id,
             event_id,
             source,
             image_mxc,
             f"Posts per author across {len(authors)} room messages",
-            mimetype="image/svg+xml",
+            mimetype="image/png",
         )
 
     def sync_once(self) -> None:

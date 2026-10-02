@@ -18,6 +18,7 @@ REQUEST = "$request"
 
 class FakeBot:
     channels = [ROOM]
+    mxid = "@fumarimo:matrix.paragogy.net"
 
     def __init__(self):
         self.sent = []
@@ -85,6 +86,7 @@ class FumarimoAgentTest(unittest.TestCase):
         self.assertIn(">1</text>", svg)
         self.assertIn(">joe</text>", svg)
         self.assertIn(">fucodex</text>", svg)
+        self.assertTrue(fumarimo.svg_to_png(svg.encode()).startswith(b"\x89PNG\r\n\x1a\n"))
 
     def test_only_addressed_posts_per_author_request_triggers(self):
         self.assertTrue(fumarimo.requests_posts_chart("@fumarimo show posts per author"))
@@ -92,6 +94,23 @@ class FumarimoAgentTest(unittest.TestCase):
         self.assertTrue(fumarimo.requests_posts_chart("show posts per author", addressed=True))
         self.assertFalse(fumarimo.requests_posts_chart("show posts per author"))
         self.assertFalse(fumarimo.requests_posts_chart("@fumarimo execute os.system('id')"))
+
+    def test_addressed_unsupported_request_gets_an_explicit_notice(self):
+        bot = FakeBot()
+        fumarimo.FumarimoAgent(bot).handle_event(ROOM, {
+            "type": "m.room.message",
+            "sender": "@joe:matrix.paragogy.net",
+            "event_id": "$wealth",
+            "content": {
+                "body": "fumarimo: show wealth by population",
+                "m.mentions": {"user_ids": [bot.mxid]},
+            },
+        })
+        self.assertEqual(1, len(bot.sent))
+        notice = bot.sent[0][2]
+        self.assertEqual("m.notice", notice["msgtype"])
+        self.assertEqual("unsupported-request", notice[fumarimo.EVENT_NAMESPACE]["kind"])
+        self.assertEqual("$wealth", notice[fumarimo.EVENT_NAMESPACE]["request_event_id"])
 
 
 if __name__ == "__main__":
