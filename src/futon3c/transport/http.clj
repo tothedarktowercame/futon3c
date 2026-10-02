@@ -76,6 +76,9 @@
             [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.turn-notice :as turn-notice]
+            [futon3c.xiang.turn-service :as xiang-turns]
+            [futon3c.xiang.turn-store :as xiang-store]
+            [futon3c.xiang.turn-record :as xiang-record]
             [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
@@ -11113,6 +11116,219 @@
           (json-response 500 {:ok false :reason :store-failure
                               :message (.getMessage e)}))))))
 
+
+;; ---------------------------------------------------------------------------
+;; 象 turn pipeline over HTTP (M-象-2000 frontend port). The record, dispatch,
+;; reap and publish steps that session-turn-analysis.el ran in Emacs with
+;; files and python3 run here against the same store directory, so a client
+;; with neither (a browser, an Element widget, the Matrix bridge) can drive
+;; them. Every effect is the in-process handler the Emacs side reached over
+;; HTTP: the bell, the job ledger, and the withdrawal, negation and notice
+;; routes above, called with a synthetic request so their validation is the
+;; same validation.
+
+(defonce ^:private !xiang-turn-service (atom nil))
+
+(defn- xiang-synthetic-request [payload]
+  {:request-method :post
+   :uri "/internal/xiang"
+   :headers {"content-type" "application/json"}
+   :body (json/generate-string payload)})
+
+(defn- xiang-ring->effect
+  "A Ring response as the service's effect result: {:status :json}."
+  [response]
+  {:status (:status response)
+   :json (parse-json-map (:body response))})
+
+(defn- xiang-library-dir []
+  (or (System/getenv "FUTON3_LIBRARY_DIR")
+      (str (System/getProperty "user.home") "/code/futon3/library")))
+
+(defn- xiang-pattern-source
+  "flexiarg content for a canonical pattern id under the library, or nil;
+   a path that escapes the library is nil too."
+  [pid]
+  (try
+    (let [lib (.getCanonicalFile (io/file (xiang-library-dir)))
+          f (.getCanonicalFile (io/file lib (str pid ".flexiarg")))]
+      (when (and (str/starts-with? (.getPath f) (str (.getPath lib) "/")) (.isFile f))
+        (slurp f :encoding "UTF-8")))
+    (catch Exception _ nil)))
+
+(defn- xiang-vocabulary
+  "The live cue vocabulary session-mode saves, else the default."
+  []
+  (let [path (or (System/getenv "FUTON3C_TURN_VOCABULARY_FILE")
+                 (str (System/getProperty "user.home") "/.emacs.d/session-turn-vocabulary.json"))]
+    (or (try (when (.exists (io/file path))
+               (xiang-record/vocabulary-from-json (json/parse-string (slurp path :encoding "UTF-8"))))
+             (catch Exception _ nil))
+        xiang-record/default-vocabulary)))
+
+(defn- xiang-turn-service
+  "The one service for this JVM, built on first use. Reload-safe: a
+   Drawbridge reload of this namespace keeps the running scheduler."
+  [config]
+  (or @!xiang-turn-service
+      (let [built (xiang-turns/service
+                   {:store (xiang-store/store)
+                    :vocabulary (xiang-vocabulary)
+                    :bell! (fn [{:keys [agent-id prompt caller surface mode type]}]
+                             (let [{:keys [status body]}
+                                   (handle-bell (xiang-synthetic-request
+                                                 {:agent-id agent-id :prompt prompt :caller caller
+                                                  :surface surface :mode mode :bell-type type})
+                                                config)
+                                   parsed (parse-json-map body)]
+                               (if (and (<= 200 status 299) (:job-id parsed))
+                                 {:ok true :job-id (:job-id parsed)}
+                                 {:ok false :status status :error (or (:message parsed) (:err parsed) (:error parsed))})))
+                    :job-status (fn [job-id] (some-> (get-invoke-job job-id) invoke-job-public-view))
+                    :reset-seat! (fn [agent]
+                                   ;; reset_seat_if_idle.py: only an idle seat is reset.
+                                   (let [agent-rec (reg/get-agent (str agent))]
+                                     (when (and agent-rec (not (compact-agent-busy? agent-rec (str agent))))
+                                       (reg/reset-session! (str agent)))))
+                    :post-withdrawal (fn [payload]
+                                       (xiang-ring->effect (handle-provisional-withdrawal (xiang-synthetic-request payload))))
+                    :post-negation (fn [payload]
+                                     (xiang-ring->effect (handle-negation-interpretation (xiang-synthetic-request payload) config)))
+                    :deliver-notice (fn [payload]
+                                      (xiang-ring->effect (handle-turn-notice (xiang-synthetic-request payload))))})]
+        (if (compare-and-set! !xiang-turn-service nil built)
+          built
+          (do (xiang-turns/stop! built) @!xiang-turn-service)))))
+
+(defn- xiang-turn-summary [{:keys [id record]}]
+  {:id id
+   :turn-id (:turn_id record)
+   :agent-id (:agent_id record)
+   :session-id (:session_id record)
+   :created-at (:created_at record)
+   :surface (:surface record)
+   :analysis-status (:analysis_status record)
+   :job-id (get-in record [:analysis_dispatch :job_id])
+   :source-text (:source_text record)})
+
+(defn- xiang-refusal [^clojure.lang.ExceptionInfo e]
+  (let [{:keys [reason] :as data} (ex-data e)
+        status (case reason
+                 :invalid-analysis 400
+                 :invalid-record-id 400
+                 :record-not-found 404
+                 :analysis-exists 409
+                 500)]
+    (json-response status (merge {:ok false :reason reason :message (.getMessage e)}
+                                 (select-keys data [:field :sentence])))))
+
+(defn- handle-xiang-record-turn [request config]
+  (let [payload (parse-json-map (read-body request))
+        text (:text payload)]
+    (cond
+      (nil? payload) (json-response 400 {:ok false :reason :invalid-json})
+      (not (string? text)) (json-response 400 {:ok false :reason :missing-field :field :text})
+      (some #(str/blank? (str (get payload %))) [:agent-id :session-id :turn-id])
+      (json-response 400 {:ok false :reason :missing-field
+                          :field (some #(when (str/blank? (str (get payload %))) %) [:agent-id :session-id :turn-id])})
+      (not (contains? #{nil "now" "later"} (:dispatch payload)))
+      (json-response 400 {:ok false :reason :invalid-dispatch})
+      :else
+      (try
+        (let [svc (xiang-turn-service config)
+              result (xiang-turns/record-turn!
+                      svc {:text text
+                           :original-text (:original-text payload)
+                           :agent-id (str (:agent-id payload))
+                           :session-id (str (:session-id payload))
+                           :turn-id (str (:turn-id payload))
+                           :evidence-id (some-> (:evidence-id payload) str)
+                           :surface (some-> (:surface payload) str)
+                           :failed? (boolean (:failed payload))
+                           :origin (or (some-> (:origin payload) str) "operator")
+                           :dispatch (if (= "now" (:dispatch payload)) :now :later)})]
+          (json-response 201 {:ok true :id (:id result) :record (:record result)
+                              :redacted (:redacted result) :dispatch (:dispatch result)}))
+        (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))))
+
+(defn- handle-xiang-turn-action [request config id action]
+  (let [svc (xiang-turn-service config)
+        payload (or (parse-json-map (read-body request)) {})]
+    (try
+      (case action
+        "happened"
+        (let [happened (cond (string? (:summary payload)) (:summary payload)
+                             (or (:reply payload) (:commits payload))
+                             {:reply (:reply payload)
+                              :commits (mapv #(select-keys % [:repo :repo-path :sha :subject :numstat])
+                                             (or (:commits payload) []))}
+                             :else nil)
+              result (xiang-turns/attach-happened! svc id happened)]
+          (json-response (if (= :record-not-found (:reason result)) 404 200)
+                         (assoc result :ok (boolean (:dispatched result)))))
+
+        "dispatch"
+        (let [result (xiang-turns/dispatch! svc id {:agent (some-> (:agent payload) str)})]
+          (json-response (if (= :record-not-found (:reason result)) 404 200)
+                         (assoc (dissoc result :response) :ok (boolean (:dispatched result)))))
+
+        "reap"
+        (let [result (xiang-turns/reap! svc id {:agent (some-> (:agent payload) str)})]
+          (json-response (if (= :record-not-found (:outcome result)) 404 200)
+                         (assoc result :ok true)))
+
+        "analysis"
+        (let [result (xiang-turns/publish-analysis!
+                      svc id payload {:pattern-source xiang-pattern-source})]
+          (json-response 201 {:ok true :id id :path (:path result) :analysis (:analysis result)}))
+
+        (json-response 404 {:ok false :reason :unknown-action :action action}))
+      (catch clojure.lang.ExceptionInfo e (xiang-refusal e)))))
+
+(defn- handle-xiang
+  "Routes under /api/alpha/xiang/. Returns a response, or nil for an unknown path."
+  [request config]
+  (let [method (:request-method request)
+        uri (:uri request)]
+    (cond
+      (and (= :post method) (= "/api/alpha/xiang/turns" uri))
+      (handle-xiang-record-turn request config)
+
+      (and (= :get method) (= "/api/alpha/xiang/turns" uri))
+      (let [params (parse-query-params request)
+            svc (xiang-turn-service config)
+            limit (or (some-> (get params "limit") parse-long) 50)]
+        (json-response 200 {:ok true
+                            :turns (mapv xiang-turn-summary
+                                         (xiang-store/list-records (get-in svc [:config :store])
+                                                                   :session-id (get params "session")
+                                                                   :agent-id (get params "agent")
+                                                                   :limit (max 1 (min 1000 limit))))}))
+
+      (and (= :get method) (= "/api/alpha/xiang/health" uri))
+      (let [svc (xiang-turn-service config)]
+        (json-response 200 {:ok true
+                            :health (xiang-turns/health svc)
+                            :seat (xiang-turns/analysis-seat svc)
+                            :benched (:benched @(:state svc))
+                            :outstanding (count (:outstanding @(:state svc)))
+                            :store (get-in svc [:config :store :dir])}))
+
+      (and (= :get method) (re-matches #"/api/alpha/xiang/turns/([^/]+)" uri))
+      (let [[_ raw] (re-find #"/api/alpha/xiang/turns/([^/]+)" uri)
+            id (enc/decode-uri-component raw)]
+        (try
+          (if-let [view (xiang-turns/turn-view (xiang-turn-service config) id)]
+            (json-response 200 (assoc view :ok true))
+            (json-response 404 {:ok false :reason :record-not-found :id id}))
+          (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))
+
+      (and (= :post method) (re-matches #"/api/alpha/xiang/turns/([^/]+)/([a-z]+)" uri))
+      (let [[_ raw action] (re-find #"/api/alpha/xiang/turns/([^/]+)/([a-z]+)" uri)]
+        (handle-xiang-turn-action request config (enc/decode-uri-component raw) action))
+
+      :else nil)))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -11227,6 +11443,10 @@
 
       (and (= :post method) (= "/api/alpha/turn-notice" uri))
       (handle-turn-notice request)
+
+      (str/starts-with? uri "/api/alpha/xiang/")
+      (or (handle-xiang request config)
+          (json-response 404 {:ok false :reason :unknown-route :uri uri}))
 
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)

@@ -1,0 +1,20 @@
+{
+  "name": "@futon/xiang-client",
+  "version": "0.1.0",
+  "description": "TypeScript client for the 象 (M-象-2000) turn pipeline: records, marks, acceptance and undo, invoke-stream, Matrix rendering.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": ["dist/src", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test \"dist/test/**/*.test.js\"",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
