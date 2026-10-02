@@ -25,11 +25,12 @@ let views = new Map<string, TurnView>();
 let events: Event[] = [];
 let chartEvents: Event[] = [];
 let selectedEventId = "";
-let pageSize = 3, loadSize = 30, pageOffset = 0;
+let pageSize = annotationMode ? 3 : 12, loadSize = 30, pageOffset = 0;
 type MarkStyle = "css" | "text" | "png" | "gif";
 let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "css";
 if (!["css", "text", "png", "gif"].includes(markStyle)) markStyle = "css";
 markStyleSelect.value = markStyle;
+pageSizeSelect.value = String(pageSize);
 document.body.classList.toggle("annotations", annotationMode);
 if (annotationMode) {
   document.querySelector("h1")!.innerHTML = "FUTON room <span>· annotations</span>";
