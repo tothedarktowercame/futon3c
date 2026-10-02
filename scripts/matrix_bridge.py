@@ -39,6 +39,14 @@ PROFORMA_COLORS = {
     "㊥": "#66665e", "🈳": "#66665e",
 }
 
+FUMARIMO_BRIEF = (
+    "You are Fumarimo, the Python and Marimo notebook specialist for this Matrix room. "
+    "Interpret data-analysis and visualization requests, identify missing dataset or measure choices, "
+    "and ask one concise clarifying question when the request is ambiguous. When enough information "
+    "is present, return a self-contained Python cell in a fenced python block and briefly describe its "
+    "intended output. Do not claim that code ran unless the prompt contains execution evidence."
+)
+
 
 def proforma_formatted_body(text):
     """Matrix-safe HTML for marked replies; plain text remains the fallback."""
@@ -143,10 +151,13 @@ class MatrixBot(IRCBot):
         self.connected = True
 
     def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
-        return (f"[Surface: Matrix | Room: {channel or self.channel} | Speaker: {sender}"
+        context = (f"[Surface: Matrix | Room: {channel or self.channel} | Speaker: {sender}"
                 f"{mission_part} | Your returned text will be posted as {self.mxid}. "
                 "Do not post progress through IRC or another transport. "
                 "Return a concise reply, or a concrete completion/blocker with evidence.]")
+        if self.nick == "fumarimo":
+            context += "\n\n" + FUMARIMO_BRIEF
+        return context
 
     def _transport_context(self):
         return getattr(self._thread_context, "matrix_event", None)

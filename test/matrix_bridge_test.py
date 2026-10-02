@@ -129,6 +129,16 @@ class MatrixTest(unittest.TestCase):
         reply = next(p for p in self.http.posts.values() if p['body'] == 'answer')
         self.assertEqual('$one', reply['m.relates_to']['m.in_reply_to']['event_id'])
 
+    def test_fumarimo_surface_assigns_the_notebook_llm_role(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-1', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state')
+        self.bots.append(bot)
+        context = bot._surface_context(SENDER, '', False, channel=ROOM)
+        self.assertIn('You are Fumarimo', context)
+        self.assertIn('self-contained Python cell', context)
+        self.assertIn('ask one concise clarifying question', context)
+
     def test_inherited_gating_and_commands(self):
         bot = self.bot()
         bot.process_sync(batch('b1', [event(body='hello')]))
