@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, intentStage, intents, pageBounds, shouldAutoScroll } from "../chat/model.js";
-import type { TurnView } from "../src/types.js";
+import { addressedBody, intentStage, intents, needsViewRefresh, pageBounds, shouldAutoScroll } from "../chat/model.js";
+import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
   assert.equal(addressedBody("fucodex", " hello "), "@fucodex hello");
@@ -31,4 +31,11 @@ test("intent stages mirror the Emacs proforma palette", () => {
   assert.equal(intentStage("report"), "perceive");
   assert.equal(intentStage("redirect"), "select");
   assert.equal(intentStage("verify"), "act");
+});
+
+test("a cached requested turn is refreshed when asynchronous analysis lands", () => {
+  const summary = { "analysis-status": "analyzed" } as TurnSummary;
+  const cached = { record: { analysis_status: "requested" } } as TurnView;
+  assert.equal(needsViewRefresh(summary, cached), true);
+  assert.equal(needsViewRefresh(summary, { record: { analysis_status: "analyzed" } } as TurnView), false);
 });

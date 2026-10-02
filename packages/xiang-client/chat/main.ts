@@ -1,7 +1,7 @@
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, intentStage, intents, pageBounds, shouldAutoScroll } from "./model.js";
+import { addressedBody, intentStage, intents, needsViewRefresh, pageBounds, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -81,7 +81,10 @@ async function loadViews(): Promise<void> {
   if (!response.ok) return;
   const body = await response.json() as { turns: TurnSummary[] };
   const ids = new Set(visibleEvents().map((e) => e.event_id));
-  const relevant = body.turns.filter((t) => t["evidence-id"] && ids.has(t["evidence-id"]!) && !views.has(t["evidence-id"]!));
+  const relevant = body.turns.filter((t) => {
+    const evidenceId = t["evidence-id"];
+    return evidenceId && ids.has(evidenceId) && needsViewRefresh(t, views.get(evidenceId));
+  });
   await Promise.all(relevant.map(async (summary) => {
     const detailResponse = await xiang(`/api/xiang/turns/${encodeURIComponent(summary.id)}`);
     if (detailResponse.ok) views.set(summary["evidence-id"]!, await detailResponse.json());

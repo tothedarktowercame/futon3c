@@ -1,4 +1,4 @@
-import type { TurnView } from "../src/types.js";
+import type { TurnSummary, TurnView } from "../src/types.js";
 
 export const GLYPHS: Record<string, string> = {
   gist: "㊥", constrain: "🈲", propose: "㊭", "ask-action": "🈸", approve: "㊣",
@@ -28,6 +28,11 @@ export function pageBounds(total: number, pageSize: number, offset: number): { s
   const boundedOffset = Math.max(0, Math.min(Math.floor(offset), Math.max(0, total - 1)));
   const end = Math.max(0, total - boundedOffset);
   return { start: Math.max(0, end - size), end, offset: boundedOffset };
+}
+
+/** A requested turn is mutable: fetch it again once the summary says analysis landed. */
+export function needsViewRefresh(summary: TurnSummary, cached: TurnView | undefined): boolean {
+  return !cached || (cached.record.analysis_status ?? "not-requested") !== (summary["analysis-status"] ?? "not-requested");
 }
 
 export function intents(view: TurnView): Array<{ intent: string; glyph: string; declared: boolean }> {
