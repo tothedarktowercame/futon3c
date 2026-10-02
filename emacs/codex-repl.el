@@ -2474,15 +2474,25 @@ DETAIL is attached to the start event when non-nil."
     (setq codex-repl--rendered-assistant-text
           (concat (or codex-repl--rendered-assistant-text "") text))))
 
+(defun codex-repl--stream-event-boundary! ()
+  "Start a new semantic stream event on a fresh line.
+The first event follows the speaker prefix on that line.  Later events get a
+line break when the preceding event did not provide one itself."
+  (when (and agent-chat--streaming-marker
+             (marker-position agent-chat--streaming-marker)
+             (or (not (string-empty-p
+                       (or codex-repl--rendered-assistant-text "")))
+                 codex-repl--last-stream-summary))
+    (let ((pos (marker-position agent-chat--streaming-marker)))
+      (unless (or (= pos (point-min))
+                  (eq (char-before pos) ?\n))
+        (agent-chat-stream-text "\n")))))
+
 (defun codex-repl--stream-agent-message-text! (text)
   "Stream completed agent-message TEXT as a separate visible segment."
   (when (and (stringp text)
              (not (string-empty-p (string-trim text))))
-    (when (and (not (string-empty-p
-                     (string-trim (or codex-repl--rendered-assistant-text ""))))
-               (not (string-suffix-p "\n" codex-repl--rendered-assistant-text)))
-      (agent-chat-stream-text "\n")
-      (codex-repl--record-rendered-assistant-text! "\n"))
+    (codex-repl--stream-event-boundary!)
     (agent-chat-stream-text text)
     (codex-repl--record-rendered-assistant-text! text)))
 
@@ -2941,8 +2951,7 @@ or when it is a clear suffix of the streamed assistant text."
           (setq codex-repl--streamed-text-seen t
                 codex-repl--final-text-rendered t)
           (codex-repl--record-invoke-timing! "first-text-event" type t)
-          (codex-repl--record-rendered-assistant-text! text)
-          (agent-chat-stream-text text))))
+          (codex-repl--stream-agent-message-text! text))))
      ((string= type "item.completed")
       (let* ((item (alist-get 'item evt))
              (item-type (and (listp item) (alist-get 'type item)))
@@ -2971,6 +2980,7 @@ or when it is a clear suffix of the streamed assistant text."
       (unless agent-chat--streaming-started
         (agent-chat-begin-streaming-message "codex")
         (setq codex-repl--last-stream-summary nil))
+      (codex-repl--stream-event-boundary!)
       (setq codex-repl--last-stream-summary summary)
       (agent-chat-stream-text (concat summary "\n"))))))
 

@@ -718,6 +718,28 @@
     (is (= :verification-policy-absent (:reason result)))
     (is (= ["scripts/not-yet-verified.py"] (:unsupported-code-files result)))))
 
+(deftest elisp-packet-runs-declared-ert-policy
+  (let [commands (atom [])
+        run-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                            'run-command)
+        result (with-redefs-fn
+                 {run-var (fn [_repo _timeout command]
+                            (swap! commands conj command)
+                            {:ok? true :exit 0 :command command :output ""})}
+                 #(ssb/verify-packet
+                   {:repo "futon3c"
+                    :files ["emacs/codex-repl.el"
+                            "test/codex-repl-identity-test.el"]
+                    :repo-policy {:elisp-test-command
+                                  ["emacs" "-Q" "--batch" "-f"
+                                   "ert-run-tests-batch-and-exit"]}}))]
+    (is (:ok? result))
+    (is (= :elisp (:kind result)))
+    (is (= "emacs" (ffirst @commands)))
+    (is (= ["emacs" "-Q" "--batch" "-f"
+            "ert-run-tests-batch-and-exit"]
+           (second @commands)))))
+
 (deftest exact-policy-path-can-exempt-documentary-intent-markers
   (let [packet {:repo "futon2"
                 :files ["holes/labs/M-aif-full-loop-94/cohort.edn"]

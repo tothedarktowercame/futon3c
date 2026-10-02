@@ -1,0 +1,8 @@
+{:clojure-test-command
+ ["clojure" "-J-XX:ActiveProcessorCount=2" "-M:test"]
+
+ :elisp-test-command
+ ["emacs" "-Q" "--batch" "-L" "emacs" "-L" "test" "-L" "emacs/test"
+   "-l" "test/codex-repl-identity-test.el"
+   "-l" "emacs/test/inbox-zero-reazon-reminder-test.el"
+   "-f" "ert-run-tests-batch-and-exit"]}
