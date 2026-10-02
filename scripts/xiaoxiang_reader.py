@@ -13,9 +13,8 @@ For a person, --verbose prints typed turns containing a structured credential
 match; high-entropy and keyword-assignment findings are excluded.  A shell
 without a TTY (including Emacs comint) requires explicit --yes.  Which files
 hold findings is printed only with --list-files, and neither mode is available
-when a coding agent is
-running the scan (CLAUDECODE, CLAUDE_CODE_*, CODEX_*, AI_AGENT in the
-environment): a list of files holding credentials is a map, and an agent that
+when a coding agent is running the scan (detected by Claude/Codex process
+identity markers or AI_AGENT): a list of files holding credentials is a map, and an agent that
 was handed one went and read them.
 Credentials are also grouped by where they sit (what you typed, tool output,
 files the agent wrote, test fixtures or documented example keys), since "13
@@ -497,19 +496,22 @@ def terminal_text(text: str) -> str:
     return "".join(ch if ch in "\n\t" or ord(ch) >= 32 else f"\\x{ord(ch):02x}" for ch in text)
 
 
-_AGENT_ENV = ("CLAUDECODE", "CLAUDE_CODE_", "CODEX_", "AI_AGENT")
+_AGENT_ENV = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CODEX_THREAD_ID",
+              "CODEX_SESSION_ID", "AI_AGENT"}
 
 
 def run_by_agent(environ=None) -> bool:
     """True when a coding agent, not a person at a terminal, is running this.
-    Claude Code exports CLAUDECODE and CLAUDE_CODE_*, Codex CODEX_*, and this
-    machine's harness AI_AGENT.  Rob (2026-10-02) asked his agent to run the
+    Use process identity markers, not every vendor-prefixed preference: Joe's
+    ordinary Emacs shell inherits CLAUDE_CODE_DISABLE_TERMINAL_TITLE.  Claude
+    Code exports CLAUDECODE or CLAUDE_CODE_ENTRYPOINT, Codex exports a thread
+    or session id, and this machine's harness exports AI_AGENT.  Rob
+    (2026-10-02) asked his agent to run the
     scan and the agent, handed the list of files holding credentials, went
     and read them: "now I see all your secrets".  The report must not be a
     map for whoever runs it, and under an agent it says so."""
     environ = os.environ if environ is None else environ
-    return any(k == "CLAUDECODE" or k.startswith(("CLAUDE_CODE_", "CODEX_")) or k == "AI_AGENT"
-               for k in environ)
+    return any(k in _AGENT_ENV for k in environ)
 
 
 def preamble(claude_root: str, codex_root: str, days: float | None,

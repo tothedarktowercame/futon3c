@@ -286,8 +286,10 @@ class UnderAnAgent(unittest.TestCase):
         self.assertTrue(rd.run_by_agent({"CLAUDECODE": "1"}))
         self.assertTrue(rd.run_by_agent({"CLAUDE_CODE_ENTRYPOINT": "cli"}))
         self.assertTrue(rd.run_by_agent({"CODEX_THREAD_ID": "x"}))
+        self.assertTrue(rd.run_by_agent({"CODEX_SESSION_ID": "x"}))
         self.assertTrue(rd.run_by_agent({"AI_AGENT": "1"}))
         self.assertFalse(rd.run_by_agent({"HOME": "/home/rob", "CLAUDE_MD": "x"}))
+        self.assertFalse(rd.run_by_agent({"CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"}))
 
     def test_paths_are_withheld_by_default_and_named_only_on_request(self):
         report = self.report()
