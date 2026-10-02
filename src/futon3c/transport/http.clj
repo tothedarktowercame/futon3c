@@ -7025,6 +7025,16 @@
       (json-response 400 {:ok false :error "agent-required"})
       (json-response 200 (assoc (turn-queue/release! agent) :ok true)))))
 
+(defn- handle-agency-queue-shunt [request]
+  (let [{:keys [payload agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (json-response 200
+                     (assoc (turn-queue/shunt!
+                             agent {:reason (or (:reason payload) (get payload "reason"))
+                                    :by (or (:by payload) (get payload "by"))})
+                            :ok true)))))
+
 (defn- interrupt-agent-process-tree!
   "Best-effort termination of AGENT-ID's live invoke subprocess tree.
    Returns a result map; never throws."
@@ -11698,6 +11708,9 @@
 
       (and (= :post method) (= "/api/alpha/agency/queue/release" uri))
       (handle-agency-queue-release request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/shunt" uri))
+      (handle-agency-queue-shunt request)
 
       (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
       (handle-jvm-incidents request)

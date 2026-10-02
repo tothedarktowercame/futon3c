@@ -38,6 +38,8 @@
    :msg-index {}
    :draining #{}
    :held {}
+   :intake-closed #{}
+   :shunted {}
    :drained-frontier {}
    :history []})
 
@@ -270,7 +272,13 @@
                duplicate-id (or (get-in state [:msg-index to msg-id])
                                 (when (contains? (:entries state) id) id))
                accepted-at (now)]
-           (if duplicate-id
+           (cond
+             (contains? (:intake-closed state) to)
+             (do (reset! result {:status :refused :reason :intake-closed
+                                 :agent-id to :entry entry* :waiter waiter})
+                 state)
+
+             duplicate-id
              (let [original (get-in state [:entries duplicate-id])
                    deduped (-> entry*
                                (assoc :id id
@@ -282,6 +290,7 @@
                (-> state
                    (assoc-in [:entries id] deduped)
                    (update :history #(vec (take-last max-history (conj (or % []) deduped))))))
+             :else
              (let [seq* (inc (long (get-in state [:seqs to] 0)))
                    queued (-> entry*
                               (assoc :id id
@@ -294,6 +303,9 @@
                    (assoc-in [:msg-index to msg-id] id)
                    (assoc-in [:entries id] queued)
                    (update-in [:queues to] (fnil conj []) id)))))))
+      (when (= :refused (:status @result))
+        (when @waiter-installed? (swap! !waiters dissoc id))
+        (when @processor-installed? (swap! !processors dissoc id)))
       (when (= :deduped (:status @result))
         (deliver waiter {:result "[deduped turn: msg-id already accepted]"
                          :turn-queue/status :deduped
@@ -378,6 +390,27 @@
           (signal-drainer! aid))
         {:agent-id aid :released had? :pending pending}))))
 
+(defn shunt!
+  "Atomically close intake and move AGENT-ID's pending FIFO out of execution."
+  [agent-id {:keys [reason by]}]
+  (let [aid (clean-str agent-id)
+        captured (atom [])
+        at (now)]
+    (when-not aid
+      (throw (ex-info "agent-id required" {:reason :agent-id-required})))
+    (swap-state!
+     (fn [state]
+       (let [ids (vec (get-in state [:queues aid] []))]
+         (reset! captured ids)
+         (-> state
+             (assoc-in [:queues aid] [])
+             (update :intake-closed (fnil conj #{}) aid)
+             (assoc-in [:shunted aid]
+                       {:agent-id aid :turn-ids ids :shunted-at at
+                        :reason reason :by by})))))
+    {:agent-id aid :intake-closed true :shunted-count (count @captured)
+     :turn-ids @captured :shunted-at at :reason reason :by by}))
+
 (defn- entry-view [entry]
   (let [prompt (:prompt entry)
         text (cond
@@ -404,20 +437,27 @@
          ;; Union, not just (:queues state): an agent can be held (or mid-drain)
          ;; before it has ever had a queue key, and a hold that is invisible in
          ;; the operator view is the whole failure this endpoint exists to fix.
-         aids (into #{} cat [(keys (:queues state)) (keys held) (:draining state)])
+         aids (into #{} cat [(keys (:queues state)) (keys held) (:draining state)
+                             (:intake-closed state) (keys (:shunted state))])
          rows (for [aid aids
                     :let [ids (get-in state [:queues aid] [])
                           pending (count ids)
                           draining? (contains? (:draining state) aid)
                           hold (get held aid)]
-                    :when (or all? (pos? pending) draining? hold)]
+                    :when (or all? (pos? pending) draining? hold
+                              (contains? (:intake-closed state) aid))]
                 (cond-> {:agent-id aid
                          :pending pending
                          :draining draining?
+                         :intake-closed (contains? (:intake-closed state) aid)
                          :queued (mapv #(entry-view (get-in state [:entries %])) ids)}
-                  hold (assoc :held hold)))]
+                  hold (assoc :held hold)
+                  (get-in state [:shunted aid])
+                  (assoc :shunted (get-in state [:shunted aid]))))]
      {:agents (vec (sort-by (juxt (comp - :pending) :agent-id) rows))
       :held held
+      :intake-closed (:intake-closed state)
+      :shunted (:shunted state)
       :total-pending (reduce + 0 (map (comp count val) (:queues state)))})))
 
 (defn- acquire-drain! [agent-id]
@@ -700,6 +740,11 @@
                      (assoc m turn-id finalize-fn))))))
     (try
       (let [{:keys [status entry] :as r} (accept! entry*)]
+        (when (= :refused status)
+          (when @installed? (swap! !finalizers dissoc turn-id))
+          (throw (ex-info "agent intake is closed"
+                          {:reason :intake-closed :agent-id (:to entry*)
+                           :turn-id turn-id})))
         (if (and (= :deduped status) @installed?)
           (swap! !finalizers dissoc turn-id)
           (when-not (= :deduped status)
