@@ -8,8 +8,13 @@ the read-only 象 routes.  Tokens are never logged or forwarded to futon3c.
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import base64
+from http.cookies import SimpleCookie
+import hashlib
+import hmac
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +27,9 @@ ROOM_IDS = frozenset(filter(None, os.environ.get(
 FUTON3C = os.environ.get("FUTON3C_BASE", "http://127.0.0.1:7070").rstrip("/")
 LISTEN = os.environ.get("XIANG_CHAT_LISTEN", "127.0.0.1")
 PORT = int(os.environ.get("XIANG_CHAT_PORT", "8131"))
+SESSION_SECRET = os.environ.get("MARIMO_SESSION_SECRET", "").encode()
+MARIMO_COOKIE = "futon_marimo_session"
+MARIMO_SESSION_SECONDS = 60 * 60
 
 
 def matrix_joined(token: str, room_id: str) -> bool:
@@ -33,6 +41,34 @@ def matrix_joined(token: str, room_id: str) -> bool:
         with urllib.request.urlopen(req, timeout=8) as response:
             return room_id in json.load(response).get("joined_rooms", [])
     except Exception:
+        return False
+
+
+def mint_marimo_session(room_id: str, now: int | None = None) -> str:
+    if not SESSION_SECRET:
+        raise RuntimeError("MARIMO_SESSION_SECRET is required")
+    expires = (now if now is not None else int(time.time())) + MARIMO_SESSION_SECONDS
+    payload = base64.urlsafe_b64encode(f"{room_id}\n{expires}".encode()).decode().rstrip("=")
+    signature = hmac.new(SESSION_SECRET, payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def valid_marimo_session(cookie_header: str, now: int | None = None) -> bool:
+    if not SESSION_SECRET:
+        return False
+    cookies = SimpleCookie()
+    try:
+        cookies.load(cookie_header)
+        value = cookies[MARIMO_COOKIE].value
+        payload, signature = value.rsplit(".", 1)
+        expected = hmac.new(SESSION_SECRET, payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return False
+        padded = payload + "=" * (-len(payload) % 4)
+        room_id, expires_text = base64.urlsafe_b64decode(padded).decode().split("\n", 1)
+        current = now if now is not None else int(time.time())
+        return room_id in ROOM_IDS and int(expires_text) >= current
+    except (KeyError, ValueError, UnicodeError):
         return False
 
 
@@ -61,10 +97,45 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_POST(self):
+        parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path != "/api/marimo/session":
+            self.reply(404, b'{"ok":false,"reason":"not-found"}')
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            request = json.loads(self.rfile.read(length))
+        except (ValueError, json.JSONDecodeError):
+            self.reply(400, b'{"ok":false,"reason":"invalid-json"}')
+            return
+        room_id = request.get("room_id", "")
+        auth = self.headers.get("Authorization", "")
+        token = auth[7:] if auth.startswith("Bearer ") else ""
+        if room_id not in ROOM_IDS:
+            self.reply(403, b'{"ok":false,"reason":"matrix-room-not-allowed"}')
+            return
+        if not token or not matrix_joined(token, room_id):
+            self.reply(403, b'{"ok":false,"reason":"matrix-room-membership-required"}')
+            return
+        session = mint_marimo_session(room_id)
+        self.send_response(204)
+        self.send_header(
+            "Set-Cookie",
+            f"{MARIMO_COOKIE}={session}; Path=/marimo/; Max-Age={MARIMO_SESSION_SECONDS}; Secure; HttpOnly; SameSite=Strict",
+        )
+        self.send_header("Cache-Control", "private, no-store")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlsplit(self.path)
         if parsed.path == "/health":
             self.reply(200, b'{"ok":true}')
+            return
+        if parsed.path == "/api/marimo/check":
+            if valid_marimo_session(self.headers.get("Cookie", "")):
+                self.reply(204, b"")
+            else:
+                self.reply(401, b'{"ok":false,"reason":"matrix-room-session-required"}')
             return
         if not (parsed.path == "/api/xiang/turns" or parsed.path.startswith("/api/xiang/turns/")):
             self.reply(404, b'{"ok":false,"reason":"not-found"}')

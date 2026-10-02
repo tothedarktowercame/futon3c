@@ -23,6 +23,31 @@ handle_path /chat-api/* {
 	reverse_proxy 127.0.0.1:8131
 }
 
+# The Element client exchanges its Matrix access token for a short-lived,
+# HttpOnly cookie. Caddy checks that cookie before proxying Marimo HTTP or
+# WebSocket traffic; the Python-execution service is never public.
+redir /marimo /marimo/ 308
+handle /marimo/* {
+	forward_auth 127.0.0.1:8131 {
+		uri /api/marimo/check
+	}
+	header {
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Content-Type-Options "nosniff"
+	}
+	@marimo_foreign_origin {
+		header Origin *
+		not header Origin https://zone.hyperreal.enterprises
+	}
+	respond @marimo_foreign_origin 403
+	request_header X-Marimo-Chat-User "matrix-room-member"
+	# Provision MARIMO_UPSTREAM_BASIC_AUTH in Caddy's service environment; do not
+	# put the Marimo execution credential in this tracked deployment fragment.
+	request_header Authorization "Basic {$MARIMO_UPSTREAM_BASIC_AUTH}"
+	reverse_proxy 127.0.0.1:2718
+}
+
 handle_path /xiang-widget/* {
 	header {
 		Cache-Control "private, no-cache"
