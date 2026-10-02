@@ -845,6 +845,32 @@ already recorded the park-id, so refusing here would destroy the resume."
                                                 (car (agent-chat-evidence--failed-files))))))))
       (delete-directory agent-chat-evidence-outbox-directory t))))
 
+;; Review addition (claude-17): the 2026-10-02 incident had a failed record
+;; whose own parent WAS stored, so the child must be re-pointed to that parent,
+;; not made a root.  The test above only covers the root case.
+(ert-deftest agent-chat-evidence-outbox-repoints-child-to-stored-ancestor ()
+  "A child of a failed chain A2 -> A1 -> P is re-pointed to P, the first id not in failed/."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (failed-directory
+          (expand-file-name "failed" agent-chat-evidence-outbox-directory))
+         (b-path (expand-file-name "b.json" agent-chat-evidence-outbox-directory)))
+    (unwind-protect
+        (progn
+          (agent-chat-evidence--write-record
+           (expand-file-name "a1.json" failed-directory)
+           '((payload . ((id . "A1") (in-reply-to . "P"))) (attempts . 8) (next-at . 0)))
+          (agent-chat-evidence--write-record
+           (expand-file-name "a2.json" failed-directory)
+           '((payload . ((id . "A2") (in-reply-to . "A1"))) (attempts . 8) (next-at . 0)))
+          (agent-chat-evidence--write-record
+           b-path '((payload . ((id . "B") (in-reply-to . "A2"))) (attempts . 8) (next-at . 99)))
+          (agent-chat-evidence--repair-broken-reply-chains!)
+          (let ((b (agent-chat-evidence--read-record b-path)))
+            (should (equal "P" (alist-get 'in-reply-to (alist-get 'payload b))))
+            (should (= 0 (alist-get 'attempts b)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
 (ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
   (should (= 409 (agent-chat-evidence--curl-status
                   "409\n\nProcess agent-chat-evidence-replay finished\n")))
