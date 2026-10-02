@@ -317,7 +317,7 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
                     not_sure += 1
                 else:
                     intents[intent] += 1
-    return {"path": str(path), "size": path.stat().st_size, "intents": intents,
+    return {"source": source, "path": str(path), "size": path.stat().st_size, "intents": intents,
             "secret_kinds": secret_kinds, "distinct": {k: list(v) for k, v in distinct.items()},
             "secret_where": secret_where,
             "distinct_where": {k: list(v) for k, v in distinct_where.items()},
@@ -351,9 +351,11 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
     seen_calls: set[str] = set()
+    source_files: Counter = Counter()
     verbose_turns: list[dict] = []
     seen_verbose: set[tuple] = set()
     for part in parts:
+        source_files[part.get("source", "unknown")] += 1
         intents.update(part["intents"])
         secret_kinds.update(part["secret_kinds"])
         secret_where.update(part.get("secret_where", {}))
@@ -390,7 +392,8 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
                 seen_verbose.add(key)
                 verbose_turns.append(item)
     precision = (model or {}).get("precision") or {}
-    return {"files": len(parts), "turns": turns, "intents": dict(intents.most_common()),
+    return {"files": len(parts), "source_files": dict(source_files),
+            "turns": turns, "intents": dict(intents.most_common()),
             "intent_precision": {k: precision[k] for k in intents if k in precision},
             "too_little_to_go_on": unsure, "not_sure": not_sure,
             "secrets": sum(secret_kinds.values()),
@@ -447,7 +450,10 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
 
 
 def render(report: dict, list_files: bool = False) -> str:
-    out = [f"Read {report['turns']} turns you typed, in {report['files']} log files.", ""]
+    sources = report.get("source_files") or {}
+    out = [f"Read {report['turns']} turns you typed, in {report['files']} log files.",
+           f"Sources: Claude Code ({sources.get('claude', 0)} files) and "
+           f"Codex ({sources.get('codex', 0)} files).", ""]
     if report.get("run_by_agent"):
         out += [AGENT_NOTICE, ""]
     if report["turns"]:
@@ -490,13 +496,19 @@ def render(report: dict, list_files: bool = False) -> str:
     by_kind = report.get("secret_kind_where") or {}
     structured = [kind for kind in report["secret_kinds"] if kind in VERBOSE_KINDS]
     if structured:
-        out += ["", "Structured matches by provenance (the kinds --verbose inspects):"]
+        out += ["", "Structured matches by provenance (the kinds --verbose inspects).",
+                "Provenance means: your typed turns; tool output read from the machine;",
+                "commands/files written by an agent; agent prose; fixtures/examples; or",
+                "log metadata and other unclassified content."]
         for kind in structured:
             places = by_kind.get(kind, {})
-            typed = places.get("typed", {"distinct": 0, "occurrences": 0})
-            elsewhere = sum(n["occurrences"] for place, n in places.items() if place != "typed")
-            out.append(f"  {kind:<20} typed: {typed['distinct']} distinct / "
-                       f"{typed['occurrences']} times; elsewhere: {elsewhere} times")
+            out.append(f"  {kind}:")
+            for place in ("typed", "tool-output", "agent-wrote", "agent-said", "fixture",
+                          "elsewhere"):
+                n = places.get(place, {"distinct": 0, "occurrences": 0})
+                if place == "typed" or n["occurrences"]:
+                    out.append(f"    {_WHERE.get(place, place):<42} "
+                               f"{n['distinct']:>4} distinct / {n['occurrences']:>6} times")
     if report["secret_kinds"]:
         out.append("What to do: rotate first; a value in a log an agent has read is spent whether"
                    " or not the log is cleaned.")
@@ -515,7 +527,7 @@ def render(report: dict, list_files: bool = False) -> str:
         verbose_turns = report.get("verbose_turns") or []
         if not verbose_turns:
             out += ["", "Verbose inspection: no structured credential matches were found "
-                    "in turns you typed. The structured matches above occur elsewhere in the logs."]
+                    "in turns you typed. Their non-turn locations are itemized above."]
         else:
             out += ["", "Verbose matches in turns you typed (structured credential kinds only;",
                     "high-entropy and keyword-assignment are excluded):"]
@@ -622,7 +634,7 @@ _WHERE = {
     "agent-wrote": "in files or commands the agent wrote",
     "fixture": "in test fixtures or documented example keys",
     "agent-said": "in the agent's prose",
-    "elsewhere": "elsewhere in the log",
+    "elsewhere": "in log metadata or unclassified content",
 }
 
 
