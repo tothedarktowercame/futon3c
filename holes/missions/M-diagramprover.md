@@ -1798,3 +1798,84 @@ chase and the cohort are the same instrumented process). The document
 that instantiates this section — the capability-proof skeleton with
 live certificate links — is the next M-diagramprover artifact
 (queued 2026-08-03; the morning opener).
+
+## Second-opinion review: use in the Lean compiler-port session (2026-10-02, Codex-17)
+
+### What was actually used
+
+The session did not run the existing Clojure DiagramProver engine over Lean
+source. It used the wiring-checker idea to design a new Lean-native reference
+checker in `/home/joe/code/lean-wiring`. That distinction matters. The
+existing checker established the questions and output vocabulary — passes as
+boxes, values/extensions/fields as wires, discontinuities and unsupported
+claims as findings — while Lean's own environment supplied the facts. The new
+checker imports `Lean`, reads `Lean.Compiler.LCNF.builtinPassManager` as a Lean
+value, follows referenced constants, and emits EDN. It therefore avoided both
+a hand-maintained pass inventory and a second parser for `.lean` files.
+
+The use was iterative rather than ceremonial. The first slice inventoried 50
+LCNF passes and checked phase hand-offs and duplicate occurrences. Later
+slices classified environment-extension reads and writes, checked declared
+field dependencies, reported which passes reach a declaration, and built a
+field matrix for `Param.borrow`, `Decl.recursive`, `Decl.inlineAttr?`, and
+`Signature.safe`. The repository history records those increments through
+`87bb512`, `8a711b1`, `d827e8c`, `c2a52e6`, `80fba30`, and `876b07d` (with
+intermediate corrective commits).
+
+### Evidence that it was useful
+
+The method produced a working, independently testable artifact rather than
+only a diagram or analogy. On 2026-10-02 I ran `lake build`, `lake exe
+lean-wiring selftest`, and `lake exe lean-wiring check` at `876b07d`. The
+build passed; all planted cases were detected, including phase discontinuity,
+duplicate occurrence, missing/exogenous extension writers, misattributed
+same-family operations, reader-before-writer, overwrite-between, copied-field
+false writes, `@[implemented_by]` traversal, inherited fields, and an
+unreached declaration. The real-pipeline check returned `[]`. The generated
+EDN inventory was 148,972 bytes.
+
+More importantly, review of the checker itself found mistakes that ordinary
+happy-path execution had not exposed. Claude-4's transcript records planted
+mutations and two corrections in `d827e8c`: operations had been attributed to
+every same-typed extension in a shared body, and alias-family operations had
+been matched too narrowly. Subsequent slices added tests for partial/opaque
+boundaries, `@[implemented_by]`, field-copy semantics, structure inheritance,
+and reachability. This is a useful application of DiagramProver's central
+discipline: make the claimed flow explicit, then construct a nearby bad graph
+or bad classifier that must be rejected.
+
+The output is also suitable for the collaboration that motivated the session.
+Because the reference facts come from Lean and are serialized as EDN, the
+Python port can emit comparable facts without sharing the Lean implementation.
+A difference can then be stated as a particular pass, extension, declaration,
+or field edge rather than as a broad claim that the compilers “work
+differently.”
+
+### Limits of the result
+
+This does not yet validate the Python port, and it does not prove semantic
+equivalence of either compiler. `check` returning no findings means only that
+the properties currently encoded by the checker hold. Constant reachability
+over-approximates execution; opaque constants and generic attribute machinery
+remain named analysis boundaries; copying a structure field creates many real
+but low-information reads. The README states these limits, which is preferable
+to silently treating absent edges as evidence of absence.
+
+Nor does this session exercise DiagramProver's causal-identification, DPO/MPZ,
+Bayesian, TPG, or proof-string-diagram layers. It supports a narrower claim:
+the wiring-checker programme transferred successfully to an external,
+self-hosted compiler and generated evidence useful for port comparison. It
+would be inaccurate to count this as validation of the mission's larger
+theorem-proving programme.
+
+### Judgment
+
+The use was worthwhile. DiagramProver contributed the right unit of inquiry —
+explicit, checkable flow through a pipeline — and the insistence on planted
+counterexamples turned several plausible but false classifications into tested
+repairs. Its best next test is concrete: have MFUTON emit the corresponding
+facts for one bounded compiler path, compare them with `lean-wiring`, and
+require every difference to end as either a port defect, a checker defect, or a
+documented representation difference. Until that comparison is performed,
+the session has established a credible reference instrument, not yet a result
+about the port.
