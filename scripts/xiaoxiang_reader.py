@@ -451,9 +451,11 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
 
 def render(report: dict, list_files: bool = False) -> str:
     sources = report.get("source_files") or {}
-    out = [f"Read {report['turns']} turns you typed, in {report['files']} log files.",
-           f"Sources: Claude Code ({sources.get('claude', 0)} files) and "
-           f"Codex ({sources.get('codex', 0)} files).", ""]
+    files_n = report["files"]
+    claude_n, codex_n = sources.get("claude", 0), sources.get("codex", 0)
+    out = [f"Read {report['turns']} turns you typed, in {files_n} log file{'s' * (files_n != 1)}.",
+           f"Sources: Claude Code ({claude_n} file{'s' * (claude_n != 1)}) and "
+           f"Codex ({codex_n} file{'s' * (codex_n != 1)}).", ""]
     if report.get("run_by_agent"):
         out += [AGENT_NOTICE, ""]
     if report["turns"]:
