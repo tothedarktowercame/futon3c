@@ -244,3 +244,35 @@ http.clj reads (575 forms). Nothing live. What to measure on the box once
 it runs: the reading's duration before and after (the job ledger has
 started-at and finished-at), and how often the published refs are among the
 precomputed hits, which says whether five per fragment is enough.
+
+## Aside (2026-10-02): xiaoxiang-local.py made fast
+
+Joe: make the downloadable log reader fast as well as good. Measured on
+this container's one real Claude Code log (4.5 MB, 1,079 lines, 9 typed
+turns): 2.4 s, of which the secret scan was 2.3 s (1.8 MB/s), JSON 0.03 s,
+classification 0.1 ms per turn. Three changes, findings identical before
+and after on the same corpus (97 findings, compared line by line):
+
+- `secret_scan.py`: each structural rule declares the literal it cannot
+  match without (`AKIA`/`ASIA`, `ghp_`…, `sk-`, `xox`, `AIza`, `eyJ`,
+  `bearer`, `://`, `-----BEGIN`) and is skipped when the line lacks it; the
+  keyword rule runs only when a keyword is followed by `:` or `=` somewhere
+  in the line (so `"input_tokens": 4096` on every assistant record no
+  longer costs a position walk); the entropy net runs only when a 32-run of
+  token characters exists. A pattern opening with a lookbehind gets no
+  literal fast path from `re`, which is why each rule cost 0.2 s per 4 MB.
+  Scanner alone: 2.8× faster.
+- `xiaoxiang_reader.py`: `read_file` + `merge`, with `--jobs` (default the
+  CPU count) reading files in a `multiprocessing` pool, largest first.
+  Four-way split of the same log: 1.0 s with one worker, 0.47 s with four.
+  Serial and parallel reports are equal (tested).
+- Line-level dedupe, which I had proposed, measured useless: 1,041 distinct
+  of 1,145 lines but 99.8% of the bytes distinct. Dropped. What is real is
+  a resumed session copying its transcript into a new file; `merge` counts
+  such a file's turns and tokens once, keyed on the replies' message ids,
+  while its secret occurrences still count (each copy is a place the value
+  sits). Tested with a copied fixture file.
+
+Not changed yet, from the earlier assessment: credential provenance
+(typed / agent-written / tool output), precision shipped in the bundle,
+and the end-of-window gap.

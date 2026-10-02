@@ -112,6 +112,64 @@ def fake_home(root):
     return os.path.join(root, "claude"), os.path.join(root, "codex")
 
 
+def stub_model():
+    """A model from a handful of labelled phrases: enough to classify the
+    fixture's turns without any real readings on the machine."""
+    rows = [{"turn": f"t{i}", "labeller": "x", "text": t, "intent": k} for i, (t, k) in enumerate([
+        ("I reject your claim", "disagree"), ("I disagree with that", "disagree"),
+        ("sounds good, go ahead", "approve"), ("looks good to me", "approve"),
+        ("please change the plan", "redirect")])]
+    return json.loads(json.dumps(xx.export(rows, None)))
+
+
+class Parallel(unittest.TestCase):
+    def files_in(self, d):
+        cl, cx = fake_home(d)
+        return ([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+                + [("codex", p) for p in rd.log_files(cx, "*/*/*/rollout-*.jsonl", None)])
+
+    def test_parallel_and_serial_reports_agree(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            files = self.files_in(d)
+            serial = rd.read(files, model, jobs=1)
+            parallel = rd.read(files, model, jobs=2)
+        self.assertEqual(serial, parallel)
+        self.assertEqual((2, 3, 2, 1), (serial["files"], serial["turns"], serial["secrets"],
+                                        serial["distinct_secrets"]))
+        self.assertEqual([500], [g["tokens"] for g in serial["gaps"]])
+
+    def test_progress_covers_every_file_in_either_mode(self):
+        model = stub_model()
+        for jobs in (1, 3):
+            seen = []
+            with tempfile.TemporaryDirectory() as d:
+                rd.read(self.files_in(d), model, progress=lambda n, t, s: seen.append((n, t, round(s, 3))),
+                        jobs=jobs)
+            self.assertEqual([(1, 2), (2, 2)], [(n, t) for n, t, _ in seen], jobs)
+            self.assertEqual(1.0, seen[-1][2])
+
+    def test_a_copied_transcript_is_counted_once(self):
+        """A resumed Claude session writes the earlier transcript again into a
+        new file; its replies carry the same message ids, so the second copy
+        adds no turns and no tokens.  Secret occurrences are still counted
+        per line, since each copy is a place the value sits."""
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            src = os.path.join(cl, "proj", "s1.jsonl")
+            with open(src) as a, open(os.path.join(cl, "proj", "s2.jsonl"), "w") as b:
+                b.write(a.read())
+            files = ([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+                     + [("codex", p) for p in rd.log_files(cx, "*/*/*/rollout-*.jsonl", None)])
+            report = rd.read(files, model, jobs=1)
+        self.assertEqual(3, report["files"])
+        self.assertEqual(3, report["turns"])
+        self.assertEqual(500, report["agent_tokens"])
+        self.assertEqual(1, report["distinct_secrets"])
+        self.assertEqual(4, report["secrets"])
+
+
 class Report(unittest.TestCase):
     def setUp(self):
         rows = xx.load(xx.DEFAULT_DIR)
