@@ -950,6 +950,11 @@ Only underline existing characters: no inserted display strings or line shifts."
         (cl-pushnew tag tags :test #'equal)
         (overlay-put ov 'session-mode-turn-tag tag)
         (overlay-put ov 'priority 30)
+        ;; An intent cue and an R-node term never share characters; the
+        ;; intent reading wins whichever painter ran first.
+        (mapc #'delete-overlay
+              (session-mode--overlays-with-property
+               (overlay-start ov) (overlay-end ov) 'session-mode-rnode-tag))
         (overlay-put ov 'face (pcase tag
                                ((or "agree" "approve") 'session-mode-turn-agree-face)
                                ((or "object" "disagree") 'session-mode-turn-object-face)
@@ -1645,6 +1650,8 @@ dotted underline in STAGE's transcript colour."
               (save-excursion
                 (goto-char beg)
                 (while (re-search-forward (nth 1 cue) end t)
+                  (unless (session-mode--overlays-with-property
+                           (match-beginning 0) (match-end 0) 'session-mode-turn-tag)
                   (let ((o (make-overlay (match-beginning 0) (match-end 0))))
                     (overlay-put o 'session-mode-rnode-tag t)
                     (overlay-put o 'evaporate t)
@@ -1653,7 +1660,14 @@ dotted underline in STAGE's transcript colour."
                     (overlay-put o 'help-echo
                                  (format "%s %s (%s) — cue “%s” — %s"
                                          id label (upcase stage) (car cue)
-                                         (nth 2 cue)))))))))))))
+                                         (nth 2 cue))))))))))))))
+
+(defun session-mode--overlays-with-property (beg end prop)
+  "Return overlays carrying PROP that share a character with BEG..END."
+  (seq-filter (lambda (o) (and (overlay-get o prop)
+                               (< (overlay-start o) end)
+                               (> (overlay-end o) beg)))
+              (overlays-in beg end)))
 
 (defun session-mode--paint-rnode-tags (jit-beg jit-end)
   "Paint R-node cues in operator regions overlapping JIT-BEG..JIT-END."

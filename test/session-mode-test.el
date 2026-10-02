@@ -1186,6 +1186,34 @@ agent text is left alone."
             (should (null (session-mode-test--rnode-overlays)))))
       (delete-file path))))
 
+(ert-deftest session-mode-rnode-tags-never-share-characters-with-intent-tags ()
+  ;; Joe, 2026-10-02: "for now" (intent) and "now I think" (R-node) both
+  ;; painted the "now" of "for now I think" in a codex-10 buffer.
+  (let ((path (make-temp-file "rnode-vocabulary-" nil ".json"))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (with-temp-file path
+      (insert (json-serialize
+               '((version . 1)
+                 (nodes . [((id . "R3") (label . "Belief update")
+                            (stage . "believe") (cues . ["now i think"]))])))))
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file path)
+              (session-mode-turn-vocabulary '(("defer" "for now"))))
+          (dolist (intent-first '(t nil))
+            (with-temp-buffer
+              (insert "joe: but for now I think we need to\ncodex: ok\n")
+              (when intent-first
+                (session-mode--paint-turn-tags (point-min) (point-max) nil))
+              (session-mode--paint-rnode-tags (point-min) (point-max))
+              (unless intent-first
+                (should (session-mode-test--rnode-overlays))
+                (session-mode--paint-turn-tags (point-min) (point-max) nil))
+              (should (session-mode--overlays-with-property
+                       (point-min) (point-max) 'session-mode-turn-tag))
+              (should (null (session-mode-test--rnode-overlays))))))
+      (delete-file path))))
+
 (defun session-mode-test--rnode-analysis (evidence seat text node)
   "Return one validated R-node cue analysis for EVIDENCE by SEAT."
   `((status . "analyzed") (evidence_id . ,evidence) (labeller . ,seat)
