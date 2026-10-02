@@ -307,6 +307,18 @@
 
 (defn- draft-of [record fragments] (tr/validate-draft record fragments {:now-ms 0}))
 
+(deftest a-draft-keeps-declared-basis-and-mark
+  (let [declared (assoc (first raw-draft) :basis "declared" :mark "㊣")
+        d (draft-of draft-record [declared (second raw-draft)])]
+    (is (= "declared" (:basis (first (:fragments d)))))
+    (is (= "㊣" (:mark (first (:fragments d)))))
+    (is (nil? (:basis (second (:fragments d)))) "an unmarked fragment keeps no basis field"))
+  (let [bad (fn [frag] (try (draft-of draft-record [frag]) nil
+                            (catch clojure.lang.ExceptionInfo e (.getMessage e))))]
+    (is (re-find #"basis" (bad (assoc (first raw-draft) :basis "vibes"))))
+    (is (re-find #"proforma mark" (bad (assoc (first raw-draft) :basis "declared" :mark "X"))))
+    (is (nil? (bad (assoc (first raw-draft) :basis "model"))) "\"model\" is a valid basis")))
+
 (deftest routine-drafts-are-conservative
   (let [sure (fn [f] (assoc f :intent (first (:guesses f))))]
     (is (tr/routine-draft? draft-record (draft-of draft-record (map sure raw-draft))))

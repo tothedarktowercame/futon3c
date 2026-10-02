@@ -991,7 +991,9 @@
    guesses precision}], or a map holding it under :fragments) against RECORD
    and return the canonical draft map. Offsets must be exact codepoint spans
    of source_text; an intent, when present, must be a vocabulary label; a
-   fragment with no sure intent keeps its guesses."
+   fragment with no sure intent keeps its guesses. A fragment may carry a
+   :basis (\"declared\" or \"model\") and, when declared, the proforma :mark it
+   came from; both are kept, anything else is invalid."
   [record draft {:keys [now-ms]}]
   (let [source (str (g record :source_text))
         fragments (if (map? draft) (or (g draft :fragments) []) draft)
@@ -1008,12 +1010,20 @@
                                  _ (when (and intent (not (re-matches #"[a-z][a-z0-9_-]*" (str intent))))
                                      (invalid! "draft intent must be a vocabulary label"))
                                  guesses (vec (filter string? (or (g f :guesses) [])))
-                                 precision (g f :precision)]]
+                                 precision (g f :precision)
+                                 basis (g f :basis)
+                                 _ (when (and (some? basis) (not (#{"declared" "model"} (str basis))))
+                                     (invalid! "draft basis must be \"declared\" or \"model\""))
+                                 mark (g f :mark)
+                                 _ (when (and (some? mark) (not (contains? mark-table (str mark))))
+                                     (invalid! "draft mark must be a proforma mark"))]]
                        (cond-> {:start start :end end :text (g f :text)
                                 :intent intent :sure (boolean intent)
                                 :guesses guesses
                                 :sentence (sentence-of start end)}
-                         (number? precision) (assoc :precision (double precision)))))]
+                         (number? precision) (assoc :precision (double precision))
+                         (some? basis) (assoc :basis (str basis))
+                         (some? mark) (assoc :mark (str mark)))))]
     {:version 1 :status "drafted" :method "xiaoxiang-naive-bayes" :labeller draft-labeller
      :created_at (str (java.time.Instant/ofEpochMilli (long (or now-ms (System/currentTimeMillis)))))
      :source_text source :source_sha256 (sha256 source) :offset_unit (g record :offset_unit)

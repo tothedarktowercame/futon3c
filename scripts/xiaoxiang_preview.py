@@ -69,16 +69,40 @@ def load_model(rebuild=False):
         return json.load(fh)
 
 
+def _declared_marks(text):
+    """(start, end, mark, intent) of each proforma-marked paragraph of TEXT,
+    found with the reply parser in xiaoxiang.py (single mark table:
+    REPLY_KEY via _paragraphs/_parse_mark)."""
+    out = []
+    for a, b in xx._paragraphs(text):
+        par = text[a:b]
+        pa = a + (len(par) - len(par.lstrip()))
+        pb = b - (len(par) - len(par.rstrip()))
+        parsed = xx._parse_mark(text[pa:pb])
+        if parsed:
+            mark, intent, _target = parsed
+            out.append((pa, pb, mark, intent))
+    return out
+
+
 def preview(text, model):
+    declared = _declared_marks(text)
     out = []
     for frag in xx.segment(text):
         ranked = xx.classify(model, frag["text"], n=2)
         top = ranked[0][0]
         sure = bool(xx.evidence(model, frag["text"])) and model["precision"].get(top, 0) >= SURE
-        out.append({"start": frag["start"], "end": frag["end"], "text": frag["text"],
-                    "intent": top if sure else None,
-                    "guesses": [c for c, _ in ranked],
-                    "precision": model["precision"].get(top)})
+        entry = {"start": frag["start"], "end": frag["end"], "text": frag["text"],
+                 "intent": top if sure else None,
+                 "guesses": [c for c, _ in ranked],
+                 "precision": model["precision"].get(top)}
+        mark = next((m for m in declared if m[0] <= frag["start"] < m[1]), None)
+        if mark:
+            entry.update({"intent": mark[3], "precision": 1.0,
+                          "basis": "declared", "mark": mark[2]})
+        else:
+            entry["basis"] = "model"
+        out.append(entry)
     return out
 
 
