@@ -20,13 +20,14 @@ let userId = sessionStorage.getItem("futon.matrix.user") ?? "";
 let views = new Map<string, TurnView>();
 let events: Event[] = [];
 let pageSize = 3, loadSize = 30, pageOffset = 0;
-type MarkStyle = "text" | "png" | "gif";
-let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "text";
-if (!["text", "png", "gif"].includes(markStyle)) markStyle = "text";
+type MarkStyle = "css" | "text" | "png" | "gif";
+let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "css";
+if (!["css", "text", "png", "gif"].includes(markStyle)) markStyle = "css";
 markStyleSelect.value = markStyle;
 const rasterMarks = new Set(["approve", "ask-action", "clarify", "collect", "constrain", "continue", "defer", "delegate", "disagree", "explain", "explore", "extend", "prioritize", "propose", "qualify", "redirect", "report-problem", "report", "retract", "verify", "withdraw"]);
 
 function markGlyph(intent: string, glyph: string): string {
+  if (markStyle === "css") return `<span class="glyph-css" aria-hidden="true">${escapeHtml(glyph)}&#xfe0e;</span>`;
   if (markStyle === "text" || !rasterMarks.has(intent)) return `<span class="glyph-text">${escapeHtml(glyph)}</span>`;
   const format = markStyle === "gif" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "gif" : "png";
   return `<img class="glyph-image" src="marks/${format}/${encodeURIComponent(intent)}.${format}" alt="${escapeHtml(glyph)}">`;
