@@ -11475,6 +11475,7 @@
                                          (xiang-store/list-records (get-in svc [:config :store])
                                                                    :session-id (get params "session")
                                                                    :agent-id (get params "agent")
+                                                                   :surface (get params "surface")
                                                                    :limit (max 1 (min 1000 limit))))}))
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
