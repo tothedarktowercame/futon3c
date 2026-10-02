@@ -6231,13 +6231,26 @@
                               :job-id (str job-id) :state prior-state
                               :status-url (str "/api/alpha/invoke/jobs/" job-id)})
           (try
-            (.submit invoke-executor
-                     ^Runnable
-                     (fn []
-                       (build-invoke-response
-                        {:payload (assoc payload :job-id (str job-id))
-                         :agent-id (str agent-id) :prompt prompt
-                         :evidence-store (evidence-store-for-config config)})))
+            ;; Activation is an execution ingress, not merely a ledger update.
+            ;; It must join the same per-agent FIFO as bells and REPL turns.
+            ;; Submitting directly to invoke-executor allowed an externally
+            ;; activated turn to own a Codex thread while the REPL drainer
+            ;; started a second `codex resume` for that thread.
+            (turn-queue/accept-async!
+             {:id (str job-id)
+              :msg-id (str job-id)
+              :to (str agent-id)
+              :from caller
+              :surface surface
+              :prompt prompt
+              :process-fn
+              (fn [_entry]
+                (binding [turn-queue/*drained-by-outer* true
+                          turn-queue/*turn-id* (str job-id)]
+                  (build-invoke-response
+                   {:payload (assoc payload :job-id (str job-id))
+                    :agent-id (str agent-id) :prompt prompt
+                    :evidence-store (evidence-store-for-config config)})))})
             (json-response 202 {:ok true :accepted true :reused? false
                                 :job-id (str job-id) :state "activating"
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)})

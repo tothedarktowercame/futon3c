@@ -2270,6 +2270,59 @@
                                [:job :state])))
         (is (= 1 @invocations))))))
 
+(deftest invoke-activation-serializes-with-turns-from-other-surfaces
+  (testing "an external activation owns the same per-agent FIFO as a later REPL turn"
+    (let [external-started (promise)
+          release-external (promise)
+          repl-started (promise)
+          order (atom [])
+          invocation-count (atom 0)]
+      (reg/register-agent!
+       {:agent-id {:id/value "codex-activate-cross-surface" :id/type :continuity}
+        :type :codex :capabilities [:explore :edit]
+        :invoke-fn (fn [_prompt _session-id]
+                     (let [invocation (swap! invocation-count inc)]
+                       (swap! order conj invocation)
+                       (if (= 1 invocation)
+                       (do (deliver external-started true)
+                           @release-external)
+                         (deliver repl-started true)))
+                     {:result "ok" :session-id nil
+                      :invoke-meta {:execution {:executed? true
+                                                :tool-events 1
+                                                :command-events 1}}})})
+      (let [handler (make-handler)
+            authority {"agent-id" "codex-activate-cross-surface"
+                       "prompt" "external work"
+                       "caller" "matrix:joe"
+                       "surface" "matrix (#work)"
+                       "mode" "brief"}
+            announced (parse-body
+                       (post handler "/api/alpha/invoke/announce"
+                             (json/generate-string authority)))
+            job-id (:job-id announced)
+            activation (post handler "/api/alpha/invoke/activate"
+                             (json/generate-string
+                              (assoc authority "job-id" job-id)))]
+        (is (= 202 (:status activation)))
+        (is (true? (deref external-started 1000 false)))
+        (turn-queue/accept-async!
+         {:id "repl-after-external"
+          :msg-id "repl-after-external"
+          :to "codex-activate-cross-surface"
+          :from "joe"
+          :surface "emacs-repl"
+          :prompt "repl work"
+          :process-fn (fn [entry]
+                        (reg/invoke-agent! (:to entry) (:prompt entry)))})
+        (is (false? (deref repl-started 100 false))
+            "the REPL turn remains queued while the external surface owns the agent")
+        (deliver release-external true)
+        (is (true? (deref repl-started 1000 false)))
+        (is (= [1 2] @order))
+        (is (= "done" (get-in (:parsed (wait-for-job-state handler job-id 2000))
+                               [:job :state])))))))
+
 (deftest invoke-activation-rejects-authority-mismatch-without-execution
   (let [invocations (atom 0)]
     (reg/register-agent!
