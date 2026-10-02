@@ -71,6 +71,14 @@ export function addressedBody(agent: string, body: string): string {
   return agent ? `@${agent} ${text}` : text;
 }
 
+/** Event selection sent by the FUTON Element fork to the annotation widget. */
+export function selectedMatrixEvent(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const message = value as { type?: unknown; eventId?: unknown };
+  return message.type === "futon.select-event" && typeof message.eventId === "string" && message.eventId.startsWith("$")
+    ? message.eventId : null;
+}
+
 /** Polling must never move the conversation while the operator is composing. */
 export function shouldAutoScroll(distanceFromBottom: number, composing: boolean): boolean {
   return !composing && distanceFromBottom <= 80;

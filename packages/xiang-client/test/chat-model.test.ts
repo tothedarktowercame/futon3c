@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "../chat/model.js";
+import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "../chat/model.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
   assert.equal(addressedBody("fucodex", " hello "), "@fucodex hello");
   assert.equal(addressedBody("", " room note "), "room note");
+});
+
+test("only the fork's explicit timeline selection identifies a Matrix event", () => {
+  assert.equal(selectedMatrixEvent({ type: "futon.select-event", eventId: "$old-turn" }), "$old-turn");
+  assert.equal(selectedMatrixEvent({ type: "other", eventId: "$old-turn" }), null);
+  assert.equal(selectedMatrixEvent({ type: "futon.select-event", eventId: "not-an-event" }), null);
 });
 
 test("authored proforma marks remain distinct from inferred intentions", () => {
