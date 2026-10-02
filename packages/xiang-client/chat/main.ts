@@ -87,7 +87,7 @@ async function refresh(): Promise<void> { await loadEvents(); await loadViews();
 async function enter(): Promise<void> {
   await checkMembership(); login.hidden = true; app.hidden = false;
   identity.innerHTML = `${escapeHtml(userId)} <button id="logout">sign out</button>`;
-  $("logout").onclick = () => { sessionStorage.clear(); location.reload(); };
+  $("logout").onclick = () => { void matrix("/logout", { method: "POST", body: "{}" }).finally(() => { sessionStorage.clear(); location.reload(); }); };
   await refresh(); setInterval(() => void refresh(), 5000);
 }
 
