@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-**Status:** OPEN — active — programme of work adopted 2026-08-02 (see §Programme of Work below)
+**Status:** OPEN — active — programme of work adopted 2026-08-02; re-scoped 2026-10-02 to flow claims with theorem proving as one application (see §Generalisation)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -1879,3 +1879,101 @@ require every difference to end as either a port defect, a checker defect, or a
 documented representation difference. Until that comparison is performed,
 the session has established a credible reference instrument, not yet a result
 about the port.
+
+## Generalisation (2026-10-02) — from proof search to flow claims
+
+Dated delta, per the revision contract. Nothing above is withdrawn; this
+section re-scopes the mission so its most-reused part can be carried into
+the next project deliberately rather than by analogy. The portable recipe
+is `holes/labs/M-diagramprover/flow-claim-kit.md`.
+
+### What the record shows
+
+The mission's name and opening scope are about theorem proving, but its
+most-transferred output has been the WS-E flow checker: four applications
+so far (APM problem peripheral, proof peripheral, futon2 War Machine belief
+path, Lean LCNF compiler), with findings in each and no new machinery in
+two of them. The fourth is different in kind. It reused the method and
+none of the code: Lean's own environment supplied the facts, and
+`lean-wiring` re-implemented the checks natively, adding order-aware checks
+(reader-before-writer, overwrite-between, phase discontinuity) and
+reachability that `wiring.clj` does not have. The second-opinion review
+above judged that use worthwhile and named its limit: a reference
+instrument, not yet a result about the port.
+
+### Argument
+
+**IF** the next project is another port, migration or successor system
+(Lean→Python is ongoing; the futon/mfuton successor requirements in
+`holes/E-futon-mfuton-successor-requirements.md` are queued), **HOWEVER**
+the checker's reusable part is entangled with Clojure-specific conformance
+scanning, its fact format is implicit in `wiring/ingest`, and the one
+external application had to rebuild everything from the idea, **THEN**
+M-diagramprover should state its core as a language-neutral flow-claim
+method (fact schema, check catalogue, warrant discipline, differential
+comparison), with theorem proving as one application of it, **BECAUSE**
+the expensive and error-prone part of each application has been sourcing
+facts and earning trust in a clean result, not the graph checks, and a
+shared schema lets the checks, the trust discipline and the comparison
+travel even when the code cannot.
+
+### Revised shape of the mission
+
+Three layers, each usable without the ones above it:
+
+1. **Flow claims (core).** Boxes, wires, reads/writes, optional order and
+   sites; facts extracted where the host can reflect, declared and
+   conformance-checked where it cannot; analysis boundaries stated in the
+   output. Applies to any pipeline.
+2. **Causal lift (optional).** The flow map read as a causal DAG; WS-A/B/C
+   machinery for identification and interventional questions.
+3. **Claim skeleton (optional).** A project's top claim as typed holes with
+   graded warrants (§Application to theorem-proving capability
+   construction).
+
+Theorem proving (sorry atlas, Bayesian intervention ranking, TPG/LeanDojo,
+proofs as diagrams) remains in scope as an application of layers 2 and 3
+and keeps its own acceptance checklist above. It is no longer the
+definition of the mission.
+
+New capability this adds to the core: **differential comparison of two
+implementations**. Facts from both, an explicit correspondence table, and
+every difference classified as a port defect, a checker defect, or a
+documented representation difference. Unclassified differences block a
+"matches" claim.
+
+### Acceptance for the generalisation
+
+- [ ] **G1 Schema.** The fact format is written down (kit §4). Today
+      `wiring/ingest` reads only `:spec/id` and `:boxes` and silently
+      ignores other keys; G1 makes it carry `:referent`, `:source`,
+      `:order` and `:boundaries` through, report a missing `:referent`,
+      and attach `:boundaries` to every findings report, without changing
+      the findings on the three existing maps (regression: their
+      snapshots unchanged).
+- [ ] **G2 Order-aware checks.** reader-before-writer, overwrite-between,
+      phase discontinuity and duplicate occurrence exist in `wiring.clj`
+      over `:order`, each with a planted case and a known-clean case.
+- [ ] **G3 Cross-checker agreement.** `lean-wiring`'s EDN, converted to the
+      schema by a small adapter, runs through the futon3c checks; every
+      disagreement with `lean-wiring check` is classified (the two checkers
+      are each other's oracle, as dagitty and NetworkX were for WS-B).
+- [ ] **G4 First differential result.** For one bounded Lean compiler path,
+      MFUTON's facts are compared with `lean-wiring`'s and every difference
+      ends in one of the three classes. This is the review's own next test
+      and the first result about the port rather than about the instrument.
+- [ ] **G5 Fresh-project test.** A fifth application, outside futon and
+      outside compilers, is set up from the kit alone by an agent that did
+      not write it, and recorded with its reuse level (kit §9). If it needs
+      undocumented help, that is a kit defect to fix, not a pass.
+
+Non-goals: a universal source parser (prefer the host's own reflection);
+semantic equivalence proofs (a clean diff says the encoded flow
+properties agree, nothing more); renaming the mission (references to
+M-diagramprover are widespread, and the name still fits the layer-3 use).
+
+### Owner and next step
+
+Owner unchanged. G1 and G2 are bounded Codex slices with Claude review, in
+the WS-E pattern (author ≠ reviewer, gates re-run). G3 and G4 need the
+`lean-wiring` repo and MFUTON output on hand, so they run where those live.
