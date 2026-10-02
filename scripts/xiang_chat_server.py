@@ -15,20 +15,23 @@ import urllib.parse
 import urllib.request
 
 HOMESERVER = os.environ.get("MATRIX_HOMESERVER_URL", "https://matrix.paragogy.net").rstrip("/")
-ROOM_ID = os.environ.get("MATRIX_ROOM_ID", "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw")
+DEFAULT_ROOM_ID = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw"
+ROOM_IDS = frozenset(filter(None, os.environ.get(
+    "MATRIX_ROOM_IDS", os.environ.get("MATRIX_ROOM_ID", DEFAULT_ROOM_ID)
+).split(",")))
 FUTON3C = os.environ.get("FUTON3C_BASE", "http://127.0.0.1:7070").rstrip("/")
 LISTEN = os.environ.get("XIANG_CHAT_LISTEN", "127.0.0.1")
 PORT = int(os.environ.get("XIANG_CHAT_PORT", "8131"))
 
 
-def matrix_joined(token: str) -> bool:
+def matrix_joined(token: str, room_id: str) -> bool:
     req = urllib.request.Request(
         HOMESERVER + "/_matrix/client/v3/joined_rooms",
         headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
     )
     try:
         with urllib.request.urlopen(req, timeout=8) as response:
-            return ROOM_ID in json.load(response).get("joined_rooms", [])
+            return room_id in json.load(response).get("joined_rooms", [])
     except Exception:
         return False
 
@@ -68,7 +71,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         auth = self.headers.get("Authorization", "")
         token = auth[7:] if auth.startswith("Bearer ") else ""
-        if not token or not matrix_joined(token):
+        room_id = self.headers.get("X-Matrix-Room", "")
+        if room_id not in ROOM_IDS:
+            self.reply(403, b'{"ok":false,"reason":"matrix-room-not-allowed"}')
+            return
+        if not token or not matrix_joined(token, room_id):
             self.reply(403, b'{"ok":false,"reason":"matrix-room-membership-required"}')
             return
         suffix = parsed.path.removeprefix("/api/xiang")

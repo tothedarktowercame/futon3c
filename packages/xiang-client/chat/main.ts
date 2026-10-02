@@ -4,7 +4,9 @@ import { turnDetail } from "../widget/model.js";
 import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
-const ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
+const DEFAULT_ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
+const requestedRoom = new URLSearchParams(location.search).get("room") ?? "";
+const ROOM = /^![^\s/]+(?::[^\s/]+)?$/.test(requestedRoom) ? requestedRoom : DEFAULT_ROOM;
 const ELEMENT = `https://app.element.io/#/room/${ROOM}?via=matrix.paragogy.net`;
 type Event = { event_id: string; sender: string; origin_server_ts: number; type: string; content: { body?: string; msgtype?: string } };
 
@@ -86,7 +88,7 @@ async function loadCompleteChartHistory(): Promise<void> {
 }
 
 async function xiang(path: string): Promise<Response> {
-  return fetch(`/chat-api${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+  return fetch(`/chat-api${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "X-Matrix-Room": ROOM } });
 }
 
 function visibleEvents(): Event[] {
