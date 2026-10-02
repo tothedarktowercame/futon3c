@@ -21,6 +21,26 @@
 
 (def war-machine-agent-id "war-machine")
 
+(def ordinary-click-triggers
+  "The complete trigger vocabulary admitted by the rationed ordinary-click
+   entrypoint.  Commissioned and RUN4 clicks have separate admission
+   contracts and do not consult this declaration."
+  #{:duree-click-on-demand})
+
+(defn admit-ordinary-click-trigger!
+  "Return OPTS with its ordinary trigger normalized, or throw before click
+   lifecycle state exists.  A missing trigger denotes the ordinary on-demand
+   trigger; arbitrary caller keywords are never admitted by default."
+  [opts]
+  (let [trigger (or (:trigger opts) :duree-click-on-demand)]
+    (when-not (contains? ordinary-click-triggers trigger)
+      (throw (ex-info "WM ordinary click refused: unsupported trigger"
+                      {:status 400
+                       :error :wm-click-trigger-unsupported
+                       :trigger trigger
+                       :accepted-triggers ordinary-click-triggers})))
+    (assoc opts :trigger trigger)))
+
 (def initial-status
   {:running? false
    :click-id nil
@@ -631,12 +651,18 @@
    running, returns {:rejected :already-running :click-id ...} without
    starting another thread."
   [opts]
-  (loop []
-    (let [current @!status]
-      (if (:running? current)
-        {:rejected :already-running
-         :click-id (:click-id current)}
-        (let [click-id (str "wm-click-" (UUID/randomUUID))
+  ;; The issue callback identifies the rationed ordinary path.  Validate it
+  ;; before reading or mutating !status, allocating an id, publishing registry
+  ;; state, starting a worker, or giving the callback any chance to consume.
+  (let [opts (if (:ordinary-click/issue! opts)
+               (admit-ordinary-click-trigger! opts)
+               opts)]
+    (loop []
+      (let [current @!status]
+        (if (:running? current)
+          {:rejected :already-running
+           :click-id (:click-id current)}
+          (let [click-id (str "wm-click-" (UUID/randomUUID))
               started-at (str (Instant/now))
               next-status (assoc current
                                  :running? true
@@ -673,4 +699,4 @@
                       (finally
                         (deliver completion {:status :start-failed
                                              :click-id click-id}))))
-                  (throw throwable))))))))))
+                    (throw throwable)))))))))))

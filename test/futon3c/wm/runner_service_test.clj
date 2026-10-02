@@ -71,6 +71,36 @@
         (do (Thread/sleep 5) (recur))
         :else false))))
 
+(deftest unsupported-ordinary-trigger-is-rejected-before-any-lifecycle-side-effect
+  (let [issued (atom 0)
+        before (service/status)]
+    (binding [service/*click-run-binding-dir*
+              (.getPath (.toFile (java.nio.file.Files/createTempDirectory
+                                  "unsupported-trigger-"
+                                  (make-array java.nio.file.attribute.FileAttribute 0))))]
+      (let [failure (try
+                      (service/click! {:trigger :custom-operator-trigger
+                                       :ordinary-click/issue! #(swap! issued inc)})
+                      nil
+                      (catch clojure.lang.ExceptionInfo throwable throwable))]
+        (is (= :wm-click-trigger-unsupported (:error (ex-data failure))))
+        (is (= :custom-operator-trigger (:trigger (ex-data failure))))
+        (is (= #{:duree-click-on-demand}
+               (:accepted-triggers (ex-data failure))))
+        (is (zero? @issued) "ration callback was not invoked")
+        (is (= (dissoc before :serving-runner-code)
+               (dissoc (service/status) :serving-runner-code))
+            "no click id or running status was published")
+        (is (empty? (seq (.listFiles (io/file service/*click-run-binding-dir*))))
+            "no click/run binding was created")))))
+
+(deftest supported-ordinary-trigger-passes-the-authoritative-admission
+  (is (= :duree-click-on-demand
+         (:trigger (service/admit-ordinary-click-trigger! {}))))
+  (is (= :duree-click-on-demand
+         (:trigger (service/admit-ordinary-click-trigger!
+                    {:trigger :duree-click-on-demand})))))
+
 (defn- resolver
   [run! select]
   (fn [sym]

@@ -9358,6 +9358,17 @@
                   (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
                                   {:status 400
                                    :error :r10-commissioned-with-run4-pin-ref})))
+              ordinary? (and (not (true? (:r10-commissioned payload)))
+                             (not (contains? payload :run4-pin-ref)))
+              ;; Ordinary-trigger admission precedes RUN4 reservation, cast
+              ;; resolution, click-id allocation, running-state publication,
+              ;; worker creation and the ration callback.  The runner repeats
+              ;; this same predicate at click! for non-HTTP ordinary callers.
+              legacy-opts (if ordinary?
+                            ((requiring-resolve
+                              'futon3c.wm.runner-service/admit-ordinary-click-trigger!)
+                             legacy-opts)
+                            legacy-opts)
               prepared (when (contains? payload :run4-pin-ref)
                          (run4-entry/prepare config (:headers request) payload))
               _ (when (and prepared (not (:ok prepared)))
@@ -9425,7 +9436,8 @@
                                        "wm-click-start-failed")
                             :message (.getMessage throwable)
                             :details (select-keys data [:authorization :allocated :consumed :renewal
-                                                        :unready :cause])})))))))
+                                                        :unready :cause :trigger
+                                                        :accepted-triggers])})))))))
 
 (defn- handle-wm-click-status
   []
