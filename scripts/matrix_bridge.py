@@ -117,6 +117,10 @@ class MatrixBot(IRCBot):
             # HTTP bodies/headers (including credentials) never reach bridge logs.
             raise RuntimeError("Matrix transport request failed: " + type(exc).__name__) from None
 
+    @staticmethod
+    def quote_room(room):
+        return urllib.parse.quote(room, safe="")
+
     def _save_state(self):
         temporary = self.state_path.with_suffix(".tmp")
         with open(temporary, "w", encoding="utf-8") as stream:
