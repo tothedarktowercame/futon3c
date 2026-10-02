@@ -243,3 +243,43 @@
   (is (= "no-grant" (:kind (tr/withdrawal-notice {:status 403 :reason "no-grant"}))))
   (is (= "unresolved" (:kind (tr/withdrawal-notice {:status 422 :reason "target-unresolved"}))))
   (is (nil? (tr/withdrawal-notice {:status 500 :reason "store-failure"}))))
+
+;; ---------------------------------------------------------------------------
+;; Agent turns: proforma marks read, not inferred
+
+(deftest reply-marks-are-read-off-marked-paragraphs
+  (let [reply (str "㊥ Fixed the three faults.\n\n"
+                   "Some plain prose\nover two lines.\n\n"
+                   "🈸: May we adopt a transparent provisional numeric prior?\n\n"
+                   "  🈡 I withdraw the earlier 象 suggestion.")
+        marks (tr/reply-marks reply)]
+    (is (= ["gist" "ask-action" "withdraw"] (map :intent marks)))
+    (is (= ["annotator" "act" "select"] (map :stage marks)))
+    (is (= "May we adopt a transparent provisional numeric prior?" (:text (second marks))))
+    (doseq [m marks]
+      (is (str/starts-with? (tr/cp-subs reply (:start m) (:end m)) (:mark m)) (:mark m)))
+    (is (= "🈡 I withdraw the earlier 象 suggestion." (tr/cp-subs reply (:start (nth marks 2)) (:end (nth marks 2))))))
+  (is (= [] (tr/reply-marks "no marks here\n\nnone")))
+  (is (= [] (tr/reply-marks nil))))
+
+(deftest an-agent-turn-carries-its-marks-and-author
+  (let [{:keys [record]} (tr/make-record {:text "㊥ Done.\n\n🈸 Shall I continue?" :origin "agent"
+                                          :agent-id "claude-17" :session-id "s" :turn-id "t-reply"
+                                          :now-ms 0})]
+    (is (= "agent" (:origin record)))
+    (is (= "claude-17" (:author record)))
+    (is (= ["gist" "ask-action"] (map :intent (:proforma_marks record))))
+    (is (nil? (:operator_id record))))
+  (testing "an operator turn names who typed it"
+    (let [{:keys [record]} (tr/make-record {:text "yes" :agent-id "claude-17" :session-id "s" :turn-id "t"
+                                            :operator-id "@joe:matrix.paragogy.net"})]
+      (is (= "operator" (:origin record)))
+      (is (= "@joe:matrix.paragogy.net" (:operator_id record) (:author record)))
+      (is (nil? (:proforma_marks record))))))
+
+(deftest the-agent-brief-is-for-a-reply
+  (let [brief (tr/agent-brief "turn-x" "/p/turn-x.json" {})]
+    (is (str/starts-with? brief "Requisition: M-futon-seams — interpret agent turn turn-x\n"))
+    (is (str/includes? brief "Do NOT label withdraw on an agent turn"))
+    (is (str/includes? brief "🈸"))
+    (is (str/includes? brief "/p/turn-x.json"))))

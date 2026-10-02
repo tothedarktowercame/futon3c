@@ -449,6 +449,8 @@
       (.truncatedTo java.time.temporal.ChronoUnit/SECONDS)
       str))
 
+(declare reply-marks)
+
 (defn make-record
   "The turn record for one operator turn, as session-mode--record-turn writes
    it, minus the file. Secrets are redacted before parsing, storage, dispatch
@@ -462,7 +464,7 @@
    :now-ms, :redact (fn text -> {:text :kinds}; default `redact-secrets`),
    :analysis-requested? (fn record -> bool; default: every turn)."
   [{:keys [text original-text agent-id session-id turn-id evidence-id surface
-           failed? origin vocabulary now-ms redact analysis-requested?]
+           failed? origin vocabulary now-ms redact analysis-requested? operator-id author]
     :or {origin "operator" vocabulary default-vocabulary
          redact redact-secrets}}]
   (let [text-scan (redact (str text))
@@ -475,6 +477,12 @@
         requested? (or failed?
                        (if analysis-requested? (boolean (analysis-requested? record)) true))]
     {:record (merge record
+                    (when (= origin "agent")
+                      ;; An agent's reply: the marks it wrote are read, not inferred.
+                      {:proforma_marks (reply-marks elided)})
+                    (when-let [a (or author (when (= origin "agent") agent-id) operator-id)]
+                      {:author a})
+                    (when operator-id {:operator_id operator-id})
                     {:created_at (iso-now (or now-ms (System/currentTimeMillis)))
                      :vocabulary_version vocabulary-version
                      :interpretation_version interpretation-version
@@ -646,6 +654,92 @@
      "  python3 .../xlate.py census shows what the whole corpus has "
      "cited and proposed, and which proposals have recurred three "
      "times and are therefore ripe.\n")))
+
+;; ---------------------------------------------------------------------------
+;; Reply-proforma marks (session-mode--marks) read straight off an agent reply
+
+(def proforma-marks
+  "The reply-proforma marks with their intent and loop stage, as
+   session-mode.el lists them (stages from futon3's turnfeed legend). An
+   agent writing one declares its own act; 象 reads the declaration rather
+   than inferring it, and the mark-act alignment (futon2
+   holes/labs/wm-contract/mark-act-alignment.md) says which have a click act."
+  [["㊩" "report-problem" "perceive"] ["🈖" "explain" "perceive"] ["㊢" "report" "perceive"]
+   ["🈯" "clarify" "believe"] ["㊟" "qualify" "believe"] ["㊣" "approve" "believe"]
+   ["🈚" "disagree" "believe"] ["㊮" "collect" "believe"] ["🈹" "retract" "believe"]
+   ["🈲" "constrain" "evaluate"] ["🈕" "extend" "evaluate"] ["㊫" "explore" "evaluate"]
+   ["㊭" "propose" "select"] ["㊝" "prioritize" "select"] ["🈘" "redirect" "select"]
+   ["🈝" "defer" "select"] ["㊯" "delegate" "select"] ["🈡" "withdraw" "select"]
+   ["🈸" "ask-action" "act"] ["🈰" "continue" "act"] ["㊬" "verify" "act"]
+   ["㊥" "gist" "annotator"] ["🈳" "unresolved" "annotator"]])
+
+(def ^:private mark-table (into {} (map (fn [[m i s]] [m {:intent i :stage s}]) proforma-marks)))
+
+(defn- leading-mark
+  "The proforma mark PARAGRAPH opens with, or nil."
+  [^String paragraph]
+  (some (fn [[m _ _]] (when (str/starts-with? paragraph m) m)) proforma-marks))
+
+(defn reply-marks
+  "The marked paragraphs of an agent reply TEXT, in order, with codepoint
+   offsets into TEXT: [{:mark :intent :stage :start :end :text}]. A paragraph
+   is a run of lines between blank lines, as `agreement-record/reply-asks`
+   splits them; it is marked when its first character is a proforma mark.
+   An optional `:` after the mark (the \"🈸: yes\" convention) is part of the
+   mark, not the text."
+  [text]
+  (let [^String s (str text)
+        m (.matcher #"(?s)[^\n]+(?:\n[^\n]+)*" s)]   ; paragraphs: no blank line inside
+    (loop [acc []]
+      (if-not (.find m)
+        acc
+        (let [raw (.group m)
+              lead (- (count raw) (count (str/triml raw)))
+              para (str/trim raw)
+              start (+ (.start m) lead)
+              end (+ start (count para))]
+          (recur (if-let [mark (leading-mark para)]
+                   (let [{:keys [intent stage]} (get mark-table mark)
+                         body (str/triml (str/replace-first (subs para (count mark)) #"^:\s*" ""))]
+                     (conj acc {:mark mark :intent intent :stage stage
+                                :start (utf16->cp s start) :end (utf16->cp s end)
+                                :text body}))
+                   acc)))))))
+
+(defn agent-brief
+  "The brief for an agent-origin record (an agent's reply recorded as a
+   turn). Shorter than the operator brief: the marks are the author's own
+   declarations and are given; 象 fills fragments and cues per sentence as
+   before, cites patterns, and never infers a withdrawal. The withdraw and
+   acceptance machinery is for operator turns only."
+  [record-id record-path {:keys [requisition paths vocabulary]
+                          :or {requisition "M-futon-seams" paths default-brief-paths
+                               vocabulary default-vocabulary}}]
+  (let [tool (shell-quote (:tool paths))]
+    (str
+     "Requisition: " requisition " — interpret agent turn " record-id "\n\n"
+     "Interpret one AGENT reply, recorded as a turn. This is the whole task; "
+     "there is no conversation attached to it. You did NOT write this reply and "
+     "nobody is waiting on an answer.\n\n"
+     "The reply, its sentence offsets, its metadata and its proforma_marks are in "
+     "the record named below. Read it first: " record-path "\n\n"
+     "proforma_marks are the author's own declarations (" (str/join " " (map first proforma-marks))
+     "), one per marked paragraph, with the intent each mark declares. Take them as given: "
+     "a fragment inside a marked paragraph carries that paragraph's declared intent unless "
+     "the text plainly does something else, and then say so in rationale.\n"
+     "Use python3 " tool " template REQUEST to obtain the JSON shape, then fill every "
+     "sentence with one or more fragments (exact offsets/text, intent, target, rationale, "
+     "relations) or an explicit unresolved reason. Each fragment has a separate display_cues "
+     "array of exact short keyword spans (at most 8 words / 80 characters each); leave most of "
+     "each long sentence unmarked. Suggested intents: " (str/join ", " (map first vocabulary)) ". "
+     "Do NOT label withdraw on an agent turn; an agent's 🈹 or 🈡 is a declaration the "
+     "operator may act on, not an act. This brief is interpretation version "
+     interpretation-version ".\n"
+     "Search the pattern library for every fragment (python3 " (:find paths)
+     " find \"<the move>\" -n 8) and cite only a pattern whose context/IF/THEN fits; record "
+     "near misses in pattern_rejections. Leave pattern_refs empty when nothing fits and say so.\n"
+     "Publish with: python3 " tool " complete REQUEST ANALYSIS.json. If you cannot, say so; "
+     "the record remains requested, never silently complete.\n")))
 
 ;; ---------------------------------------------------------------------------
 ;; Analysis validation (session_turn_analysis.py validate)

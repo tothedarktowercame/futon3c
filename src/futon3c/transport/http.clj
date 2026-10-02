@@ -11222,6 +11222,15 @@
     (json-response status (merge {:ok false :reason reason :message (.getMessage e)}
                                  (select-keys data [:field :sentence])))))
 
+(defn- xiang-forwarded-user
+  "The authenticated user a trusted reverse proxy put in X-Forwarded-User,
+   only when FUTON3C_TRUST_FORWARDED_USER is set: without a proxy that strips
+   the header from clients, anyone could claim to be anyone."
+  [request]
+  (when (contains? #{"1" "true" "yes"} (some-> (System/getenv "FUTON3C_TRUST_FORWARDED_USER") str/lower-case))
+    (let [u (get-in request [:headers "x-forwarded-user"])]
+      (when-not (str/blank? (str u)) (str u)))))
+
 (defn- handle-xiang-record-turn [request config]
   (let [payload (parse-json-map (read-body request))
         text (:text payload)]
@@ -11233,6 +11242,8 @@
                           :field (some #(when (str/blank? (str (get payload %))) %) [:agent-id :session-id :turn-id])})
       (not (contains? #{nil "now" "later"} (:dispatch payload)))
       (json-response 400 {:ok false :reason :invalid-dispatch})
+      (not (contains? #{nil "operator" "agent"} (:origin payload)))
+      (json-response 400 {:ok false :reason :invalid-origin})
       :else
       (try
         (let [svc (xiang-turn-service config)
@@ -11246,6 +11257,12 @@
                            :surface (some-> (:surface payload) str)
                            :failed? (boolean (:failed payload))
                            :origin (or (some-> (:origin payload) str) "operator")
+                           ;; Who typed it: the proxy's authenticated user when the
+                           ;; deployment says to trust it (Caddy in front), else what
+                           ;; the transport reports (an MXID, an IRC nick), else nothing.
+                           :operator-id (or (xiang-forwarded-user request)
+                                            (some-> (:operator-id payload) str))
+                           :author (some-> (:author payload) str)
                            :dispatch (if (= "now" (:dispatch payload)) :now :later)})]
           (json-response 201 {:ok true :id (:id result) :record (:record result)
                               :redacted (:redacted result) :dispatch (:dispatch result)}))

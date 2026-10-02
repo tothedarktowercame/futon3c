@@ -132,3 +132,43 @@ lines); `matrix.ts` (an `m.room.message` with marks in `formatted_body`);
   the client sends every turn and recognises nothing. Not done here.
 - The Matrix bridge does not yet call the routes; `matrix.ts` is the
   renderer it would use.
+
+## Second packet (2026-10-02): proforma marks, the bridge, the widget
+
+Joe: "the proforma-to-象 would be good to add in any case. Beyond that, I
+approve the build plan" (a local widget behind Caddy, friends in a Matrix room,
+annotations for co-operators and contributing agents, a side pane of open
+obligations).
+
+- **Proforma marks read, not inferred.** `turn-record/proforma-marks` is the
+  23-mark table from `session-mode--marks`; `reply-marks` finds the marked
+  paragraphs of a reply with codepoint offsets. A record with `origin
+  "agent"` carries them as `proforma_marks` and `author` = the agent;
+  `agent-brief` tells 象 the marks are the author's declarations and that
+  withdraw is never labelled on an agent turn. Withdrawal processing was
+  already operator-only. An operator turn carries `operator_id` and
+  `author` when the transport knows who typed it.
+- **Identity.** `POST /api/alpha/xiang/turns` takes `operator-id`; with
+  `FUTON3C_TRUST_FORWARDED_USER=1` the JVM takes `X-Forwarded-User` instead,
+  which `deploy/Caddyfile` sets from the login and strips from clients. Acts
+  (agreement, undo, provisional withdrawal) still assume the one operator;
+  an allowlist for co-operators is the next identity packet.
+- **Bridge.** `scripts/xiang_turns.py` (6 pytest cases) plus two hooks in
+  `ngircd_bridge.py`, inherited by `MatrixBot`: the routed message is
+  recorded as an operator turn when the job is queued (turn id
+  `<transport>:<job-id>`, operator id the sender), and at reply end the
+  record gets `happened` and the reply is recorded as an agent turn
+  (`…:reply`, dispatched at once). Best effort, logged, never in the
+  conversation's path; `FUTON3C_XIANG_BRIDGE=0` disables it. Not done: the
+  bridge does not pass an evidence id, so a "yes" typed in a room is a turn,
+  not an agreement, until the identity packet.
+- **Widget.** `packages/xiang-client/widget/` (model.ts tested: 6 cases, 33
+  TypeScript tests in all), bundled by esbuild to `dist/widget`;
+  `deploy/Caddyfile` with basic_auth, same-origin proxy of the six routes
+  the widget and bridge use, NDJSON unbuffered, everything else under
+  `/api` refused. The obligations pane reads `GET /api/alpha/obligations`
+  (`owes`/`owed`); the health pane reads `/api/alpha/xiang/health`.
+
+Verified here: Clojure 36 tests / 250 assertions; TypeScript 33; pytest 6;
+`ngircd_bridge.py` and `matrix_bridge.py` byte-compile; http.clj reads
+(571 forms). Not verified: anything live, as before.

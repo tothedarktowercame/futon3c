@@ -110,3 +110,31 @@ npm test        # tsc, then node --test over dist/test
 ```
 
 Node 22 and TypeScript 5.5; no runtime dependencies.
+
+## The widget as a local frontend (behind Caddy)
+
+`widget/` is a static page over this package: a session's turns with their
+marks (operator turns green, agent turns blue, with the author), one turn's
+reading in detail (the agent's own proforma marks, 象's fragments, patterns,
+notices), and a side pane with the agent's open obligations and the 象 seats'
+health.
+
+```sh
+npm run build:widget          # esbuild → dist/widget/{index.html,main.js,style.css}
+```
+
+Serve `dist/widget` with `deploy/Caddyfile`: Caddy authenticates, serves the
+files, and proxies only the routes the widget uses to the JVM on the same
+origin, putting the login in `X-Forwarded-User`. Set
+`FUTON3C_TRUST_FORWARDED_USER=1` in the JVM's environment and every turn
+recorded through Caddy carries that user as `operator_id`. Open
+`https://xiang.example.org/?agent=claude-17` (add `&session=…` to narrow to
+one session, `&every=5000` to poll faster). In Element, add the same URL as a
+room widget; it needs no widget-API capabilities, since the room's turns
+reach it through the bridge.
+
+Turns arrive from two producers: the Emacs REPL, and the IRC/Matrix bridge,
+which records each routed message as an operator turn (`operator_id` is the
+sender's nick or MXID) and each reply as an agent turn whose proforma marks
+(㊥ 🈸 …) are read, not inferred. `scripts/xiang_turns.py` is the bridge's
+client; `FUTON3C_XIANG_BRIDGE=0` turns it off.

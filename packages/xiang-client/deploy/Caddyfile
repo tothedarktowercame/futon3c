@@ -1,0 +1,46 @@
+# The 象 widget behind Caddy, on the operator's own machine.
+#
+#   xiang.example.org          the built widget (static files)
+#   xiang.example.org/api/...  the futon3c JVM on 7070, same origin
+#
+# One login covers both: the page and every fetch it makes carry the same
+# session, so the JVM is never reached without it. Caddy puts the
+# authenticated user in X-Forwarded-User and strips any copy a client sent,
+# and the JVM records it as operator_id on every turn when
+# FUTON3C_TRUST_FORWARDED_USER=1 is set in its environment.
+#
+# Replace the host, the users, and the password hashes (`caddy hash-password`).
+# For friends, prefer forward_auth to an identity provider (Authelia,
+# Pocket ID) over basic auth; the shape below is the same, only the auth
+# block changes.
+
+xiang.example.org {
+	basic_auth {
+		joe   $2a$14$replace-with-caddy-hash-password-output
+		alice $2a$14$replace-with-caddy-hash-password-output
+	}
+
+	# Static widget: the esbuild output. `npm run build:widget` writes it.
+	root * /home/joe/code/futon3c/packages/xiang-client/dist/widget
+	file_server
+
+	# The JVM, same origin. Only the routes the widget and bridge use.
+	@api path /api/alpha/xiang/* /api/alpha/obligations /api/alpha/prompt-line /api/alpha/agreement /api/alpha/withdrawal/undo /api/alpha/invoke-stream
+	handle @api {
+		reverse_proxy 127.0.0.1:7070 {
+			header_up -X-Forwarded-User
+			header_up X-Forwarded-User {http.auth.user.id}
+			# invoke-stream is NDJSON: do not buffer it.
+			flush_interval -1
+		}
+	}
+
+	# Everything else under /api is refused: the widget needs nothing more.
+	@other_api path /api/*
+	respond @other_api 403
+
+	encode gzip
+	log {
+		output file /var/log/caddy/xiang.log
+	}
+}

@@ -276,3 +276,22 @@
     (is (str/includes? s "c20"))
     (is (not (str/includes? s "c21"))))
   (is (= [5 1 3] (svc/summarize-numstat "3\t1\tfoo.el\n-\t-\tbin.png\n2\t0\tbar.py\n"))))
+
+(deftest an-agent-turn-gets-the-agent-brief-and-no-withdrawals
+  (let [h (harness)
+        {:keys [id record]} (svc/record-turn! (:svc h) {:text "㊥ Done.\n\n🈡 I withdraw that pattern."
+                                                        :origin "agent" :agent-id "claude-17"
+                                                        :session-id "sess-1" :turn-id "t-reply" :dispatch :now})]
+    (is (= ["gist" "withdraw"] (map :intent (:proforma_marks record))))
+    (is (str/starts-with? (:prompt (first @(:bells h))) (str "Requisition: M-futon-seams — interpret agent turn " id)))
+    (let [[s1 s2] (:sentences record)
+          analysis {:labeller "象-1"
+                    :sentences [{:id "s1" :fragments [{:start (:start s1) :end (:end s1) :text (:text s1) :intent "gist"
+                                                       :target "t" :rationale "r" :relations ["action"]
+                                                       :display_cues [] :no_surface_cue "x"}]}
+                                {:id "s2" :fragments [{:start (:start s2) :end (:end s2) :text (:text s2) :intent "withdraw"
+                                                       :target nil :rationale "r" :relations ["action"]
+                                                       :display_cues [] :no_surface_cue "x"}]}]}]
+      (svc/publish-analysis! (:svc h) id analysis {})
+      (is (empty? @(:posted h)) "withdrawals are inferred for operator turns only")
+      (is (nil? (:withdrawal_effects (ts/read-record (get-in (:svc h) [:config :store]) id)))))))
