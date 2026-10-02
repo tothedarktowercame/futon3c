@@ -1,8 +1,23 @@
 # Routes installed inside the zone.hyperreal.enterprises site block.
-# /chat is the phone-friendly full FUTON room; Element remains available
-# independently for conventional Matrix access.
-redir /chat "/xiang-widget/?room=%21WXULllaFhTOchbIrmo%3Amatrix.paragogy.net" 302
-redir /chat/ "/xiang-widget/?room=%21WXULllaFhTOchbIrmo%3Amatrix.paragogy.net" 302
+# /chat is the forked Element Web client; /xiang-widget remains the FUTON
+# room widget while its features move into Element itself.
+redir /chat /chat/ 308
+
+@element_uncached path /chat/ /chat/index.html /chat/config*.json /chat/i18n/* /chat/version
+header @element_uncached Cache-Control "private, no-cache"
+
+handle_path /chat/* {
+	header {
+		X-Frame-Options SAMEORIGIN
+		X-Content-Type-Options nosniff
+		X-XSS-Protection "1; mode=block"
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Robots-Tag "noindex, nofollow, noarchive"
+	}
+	root * /srv/futon-element-current
+	try_files {path} /index.html
+	file_server
+}
 
 handle_path /chat-api/* {
 	reverse_proxy 127.0.0.1:8131
