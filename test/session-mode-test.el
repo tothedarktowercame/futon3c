@@ -1185,3 +1185,143 @@ agent text is left alone."
             (session-mode--paint-rnode-tags (point-min) (point-max))
             (should (null (session-mode-test--rnode-overlays)))))
       (delete-file path))))
+
+(defun session-mode-test--rnode-analysis (evidence seat text node)
+  "Return one validated R-node cue analysis for EVIDENCE by SEAT."
+  `((status . "analyzed") (evidence_id . ,evidence) (labeller . ,seat)
+    (created_at . "2026-10-02T01:00:00Z")
+    (rnode_cues . (((text . ,text) (node . ,node)
+                    (label . ,(if (equal node "R14")
+                                  "Commitment temperature" "Candidate action space"))
+                    (stage . "select") (operation . "set")
+                    (justification . "sets precision over policies"))))))
+
+(defun session-mode-test--read-rnode-store (path)
+  "Decode R-node cue store PATH as alists and lists."
+  (let ((json-object-type 'alist) (json-array-type 'list))
+    (json-read-file path)))
+
+(ert-deftest session-mode-rnode-valid-proposal-is-stored ()
+  (let ((path (make-temp-file "rnode-store-"))
+        (session-mode--learned-rnode-key nil)
+        (session-mode--learned-rnode-vocabulary nil))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file path))
+          (should (session-mode--record-rnode-cues
+                   (session-mode-test--rnode-analysis "e1" "seat-a" "settle lightly" "R14")))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (equal "settle lightly" (alist-get 'text entry)))
+            (should (= 1 (alist-get 'proposals entry)))
+            (should (equal '("e1") (alist-get 'turns entry)))
+            (should (equal '("seat-a") (alist-get 'seats entry)))
+            (should (equal "candidate" (alist-get 'status entry)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-promotion-needs-three-turns-and-two-seats ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file path))
+          (dolist (pair '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-a")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car pair) (cadr pair)
+                                                "settle lightly" "R14")))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (= 3 (length (alist-get 'turns entry))))
+            (should (equal "candidate" (alist-get 'status entry))))
+          (session-mode--record-rnode-cues
+           (session-mode-test--rnode-analysis "e3" "seat-b" "settle lightly" "R14"))
+          ;; Reprocessing the same turn is idempotent, including its seat, so
+          ;; use a distinct third turn from seat-b for the exact threshold.
+          (session-mode--record-rnode-cues
+           (session-mode-test--rnode-analysis "e4" "seat-b" "settle lightly" "R14"))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (equal "active" (alist-get 'status entry)))
+            (should (= 4 (length (alist-get 'turns entry))))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-promotion-occurs-at-exact-threshold ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file path))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                "hold gently" "R14")))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (= 3 (length (alist-get 'turns entry))))
+            (should (= 2 (length (alist-get 'seats entry))))
+            (should (equal "active" (alist-get 'status entry)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-two-node-conflict-blocks-promotion ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file path))
+          (dolist (node '("R14" "R6"))
+            (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+              (session-mode--record-rnode-cues
+               (session-mode-test--rnode-analysis
+                (concat node "-" (car row)) (cadr row) "keep options open" node))))
+          (let* ((store (session-mode-test--read-rnode-store path))
+                 (entries (alist-get 'entries store))
+                 (conflict (car (alist-get 'conflicts store))))
+            (should (cl-every (lambda (entry) (equal "candidate" (alist-get 'status entry)))
+                              entries))
+            (should (equal '("R14" "R6") (sort (alist-get 'nodes conflict) #'string<)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-active-learned-cue-paints-operator-red ()
+  (let ((vocab (session-mode-test--rnode-vocabulary))
+        (store (make-temp-file "rnode-store-"))
+        (session-mode--rnode-vocabulary nil) (session-mode--rnode-vocabulary-key nil)
+        (session-mode--learned-rnode-vocabulary nil) (session-mode--learned-rnode-key nil)
+        (session-mode-turn-vocabulary nil))
+    (delete-file store)
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file vocab)
+              (session-mode-rnode-cues-file store)
+              (session-mode-rnode-red t))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                "settle lightly" "R14")))
+          (with-temp-buffer
+            (insert "joe: settle lightly\ncodex: settle lightly\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face)))
+              (should (string-suffix-p "— learned" (overlay-get (car overlays) 'help-echo))))))
+      (delete-file vocab)
+      (when (file-exists-p store) (delete-file store)))))
+
+(ert-deftest session-mode-rnode-missing-or-corrupt-store-fails-soft ()
+  (let ((missing (make-temp-name "/tmp/missing-rnode-store-"))
+        (corrupt (make-temp-file "corrupt-rnode-store-"))
+        messages)
+    (unwind-protect
+        (progn
+          (with-temp-file corrupt (insert "{not json"))
+          (cl-letf (((symbol-function 'message)
+                     (lambda (format-string &rest args)
+                       (push (apply #'format format-string args) messages))))
+            (let ((session-mode-rnode-cues-file missing)
+                  (session-mode--learned-rnode-key nil))
+              (should-not (session-mode--load-learned-rnode-vocabulary)))
+            (let ((session-mode-rnode-cues-file corrupt)
+                  (session-mode--learned-rnode-key nil)
+                  (session-mode--rnode-store-error-reported nil))
+              (should-not (session-mode--load-learned-rnode-vocabulary))
+              (should-not (session-mode--record-rnode-cues
+                           (session-mode-test--rnode-analysis
+                            "e1" "seat-a" "settle lightly" "R14")))))
+          (should messages))
+      (when (file-exists-p corrupt) (delete-file corrupt)))))

@@ -258,6 +258,10 @@ The addressed agent has already received the original turn and is out of scope."
            "To improve future draft tagging, optionally propose top-level reusable_cues with exact start/end/text, intent and rationale for reuse. "
            "Propose only short communicative phrases that generalize, not project names or arbitrary subject words. "
            "Emacs persists unassigned phrases as provisional cue hypotheses with provenance; existing assignments and human corrections win. Do not edit the vocabulary file directly. "
+           "R-node reading is optional and most fragments have none. Read /home/joe/code/futon0/analysis/audits/rnode-tree/rnode-definitions.edn once per seat session, and re-read it whenever unsure. "
+           "A fragment may include rnode: {\"node\", \"quantity\", \"operation\", \"justification\"}; use a node from that file, one of its operations, and a one-line justification naming the quantity as in the admission example. "
+           "Optionally propose top-level rnode_cues: [{\"text\", \"start\", \"end\", \"node\", \"operation\", \"justification\"}] using exact source spans. "
+           "Seeds stay inside the definitions file: never show the operator cue lists. "
            "Save the filled JSON to a temporary file and validate/publish with: "
            "python3 %s complete REQUEST ANALYSIS.json. Replace REQUEST with the record path above. "
            "If you cannot do this, say so; the record remains requested, never silently complete.\n"
@@ -338,7 +342,8 @@ Existing phrase assignments, including human corrections, always take precedence
               ;; underlines cannot be drawn -- a later turn already sent, a
               ;; region whose markers have gone. Measured 2026-09-23: 10 of 38
               ;; analyses learned nothing for exactly that reason.
-              (session-mode--learn-analysis-cues data result))
+              (session-mode--learn-analysis-cues data result)
+              (session-mode--record-rnode-cues data))
             (when (and (equal (alist-get 'status data) "analyzed")
                        (equal source stripped)
                        session-mode--last-operator-region

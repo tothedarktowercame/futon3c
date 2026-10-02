@@ -55,6 +55,11 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "When non-nil, lightly tag R-node cues in operator regions."
   :type 'boolean :group 'session-mode)
 
+(defcustom session-mode-rnode-cues-file
+  (expand-file-name "~/.emacs-graph/rnode-cues.json")
+  "Atomic store of recurrent R-node cue proposals and promotion state."
+  :type 'file :group 'session-mode)
+
 ;; --- Faces, keyed by typology tier/type (colours mirror typology.json) ---
 (defface session-mode-clock-face
   '((((background light)) :background "#cdeee9" :weight bold)
@@ -132,6 +137,12 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "File and modification-time key for the compiled R-node vocabulary.")
 (defvar session-mode--rnode-missing-reported nil
   "Non-nil after reporting one missing R-node vocabulary message.")
+(defvar session-mode--learned-rnode-vocabulary nil
+  "Compiled active cues loaded from `session-mode-rnode-cues-file'.")
+(defvar session-mode--learned-rnode-key nil
+  "File and modification-time key for active learned R-node cues.")
+(defvar session-mode--rnode-store-error-reported nil
+  "Non-nil after reporting one unreadable learned R-node cue store.")
 
 (defcustom session-mode-typology-file
   "/home/joe/code/futon6/data/c-vector/typology.json"
@@ -1020,6 +1031,156 @@ Use the real inserted span, including any agent-chat text transformations."
               (mapconcat #'regexp-quote parts "\\(?:.\\|\n\\)\\{0,40\\}")
               "\\_>"))))
 
+(defun session-mode--empty-rnode-cue-store ()
+  "Return a fresh empty R-node cue store."
+  (list (cons 'version 1)
+        (cons 'entries nil)
+        (cons 'conflicts nil)))
+
+(defun session-mode--read-rnode-cue-store ()
+  "Read the R-node cue store; return nil on corrupt input without throwing."
+  (if (not (file-exists-p session-mode-rnode-cues-file))
+      (session-mode--empty-rnode-cue-store)
+    (condition-case err
+        (let ((json-object-type 'alist) (json-array-type 'list))
+          (let ((data (json-read-file session-mode-rnode-cues-file)))
+            (unless (= 1 (alist-get 'version data))
+              (error "unsupported version"))
+            data))
+      (error
+       (unless session-mode--rnode-store-error-reported
+         (setq session-mode--rnode-store-error-reported t)
+         (message "session-mode: cannot read R-node cue store %s: %s"
+                  session-mode-rnode-cues-file (error-message-string err)))
+       nil))))
+
+(defun session-mode--write-rnode-cue-store (data)
+  "Atomically write R-node cue store DATA."
+  (let* ((file (expand-file-name session-mode-rnode-cues-file))
+         (directory (file-name-directory file)) temp
+         (entries
+          (mapcar
+           (lambda (entry)
+             (let ((copy (copy-tree entry)))
+               (dolist (field '(turns seats justifications))
+                 (setf (alist-get field copy) (vconcat (alist-get field copy))))
+               copy))
+           (alist-get 'entries data)))
+         (json `((version . 1)
+                 (entries . ,(vconcat entries))
+                 (conflicts . ,(vconcat (alist-get 'conflicts data))))))
+    (make-directory directory t)
+    (unwind-protect
+        (progn
+          (setq temp (make-temp-file (expand-file-name ".rnode-cues-" directory)))
+          (with-temp-file temp
+            (insert (json-encode json) "\n"))
+          (rename-file temp file t)
+          (setq temp nil))
+      (when (and temp (file-exists-p temp)) (delete-file temp)))
+    (setq session-mode--learned-rnode-key nil
+          session-mode--learned-rnode-vocabulary nil
+          session-mode--rnode-store-error-reported nil)))
+
+(defun session-mode--recompute-rnode-promotions (entries)
+  "Set promotion status on ENTRIES and return their text conflicts."
+  (let ((by-text (make-hash-table :test #'equal)) conflicts)
+    (dolist (entry entries)
+      (push entry (gethash (alist-get 'text entry) by-text))
+      (setf (alist-get 'status entry) "candidate"))
+    (maphash
+     (lambda (text group)
+       (let ((nodes (delete-dups (mapcar (lambda (e) (alist-get 'node e)) group))))
+         (if (> (length nodes) 1)
+             (push `((text . ,text) (nodes . ,(vconcat (sort nodes #'string<)))) conflicts)
+           (let ((entry (car group)))
+             (when (and (>= (length (alist-get 'turns entry)) 3)
+                        (>= (length (alist-get 'seats entry)) 2))
+               (setf (alist-get 'status entry) "active"))))))
+     by-text)
+    (nreverse conflicts)))
+
+(defun session-mode--record-rnode-cues (data)
+  "Merge validated R-node cues from analysis DATA into the recurrence store.
+Returns non-nil when the store was updated; every error is reported softly."
+  (condition-case err
+      (let* ((store (session-mode--read-rnode-cue-store))
+             (entries (and store (alist-get 'entries store)))
+             (evidence-id (alist-get 'evidence_id data))
+             (seat (alist-get 'labeller data))
+             (seen-at (or (alist-get 'created_at data)
+                          (format-time-string "%FT%TZ" nil t)))
+             changed)
+        (when (and store (stringp evidence-id) (not (string-empty-p evidence-id))
+                   (stringp seat) (not (string-empty-p seat)))
+          (dolist (cue (alist-get 'rnode_cues data))
+            (let* ((text (downcase (string-trim (alist-get 'text cue))))
+                   (node (alist-get 'node cue))
+                   (entry (seq-find
+                           (lambda (e) (and (equal text (alist-get 'text e))
+                                            (equal node (alist-get 'node e))))
+                           entries)))
+              (unless entry
+                (setq entry (list (cons 'text text)
+                                  (cons 'node node)
+                                  (cons 'label (alist-get 'label cue))
+                                  (cons 'stage (alist-get 'stage cue))
+                                  (cons 'proposals 0)
+                                  (cons 'turns nil)
+                                  (cons 'seats nil)
+                                  (cons 'first_seen seen-at)
+                                  (cons 'last_seen seen-at)
+                                  (cons 'justifications nil)
+                                  (cons 'status "candidate"))
+                      entries (append entries (list entry))))
+              (unless (member evidence-id (alist-get 'turns entry))
+                (cl-incf (alist-get 'proposals entry))
+                (setf (alist-get 'turns entry)
+                      (append (alist-get 'turns entry) (list evidence-id))
+                      (alist-get 'last_seen entry) seen-at)
+                (unless (member seat (alist-get 'seats entry))
+                  (setf (alist-get 'seats entry)
+                        (append (alist-get 'seats entry) (list seat))))
+                (let ((justification (alist-get 'justification cue)))
+                  (when (and (stringp justification)
+                             (not (member justification (alist-get 'justifications entry)))
+                             (< (length (alist-get 'justifications entry)) 3))
+                    (setf (alist-get 'justifications entry)
+                          (append (alist-get 'justifications entry)
+                                  (list justification)))))
+                (setq changed t))))
+          (when changed
+            (setf (alist-get 'entries store) entries
+                  (alist-get 'conflicts store)
+                  (session-mode--recompute-rnode-promotions entries))
+            (session-mode--write-rnode-cue-store store)))
+        changed)
+    (error
+     (message "session-mode: could not record R-node cues: %s"
+              (error-message-string err))
+     nil)))
+
+(defun session-mode--load-learned-rnode-vocabulary ()
+  "Return compiled active cues from the recurrence store, failing softly."
+  (let* ((attrs (file-attributes session-mode-rnode-cues-file))
+         (key (and attrs (list session-mode-rnode-cues-file
+                               (file-attribute-modification-time attrs)))))
+    (unless (equal key session-mode--learned-rnode-key)
+      (let ((store (session-mode--read-rnode-cue-store)))
+        (setq session-mode--learned-rnode-vocabulary
+              (delq nil
+                    (mapcar
+                     (lambda (entry)
+                       (when (equal "active" (alist-get 'status entry))
+                         (when-let* ((rx (session-mode--rnode-cue-regexp
+                                          (alist-get 'text entry))))
+                           (list (alist-get 'node entry) (alist-get 'label entry)
+                                 (alist-get 'stage entry)
+                                 (list (list (alist-get 'text entry) rx "learned"))))))
+                     (and store (alist-get 'entries store))))
+              session-mode--learned-rnode-key key)))
+    session-mode--learned-rnode-vocabulary))
+
 (defun session-mode--load-rnode-vocabulary ()
   "Load and compile the generated R-node vocabulary, failing softly."
   (if (not (file-readable-p session-mode-rnode-vocabulary-file))
@@ -1047,7 +1208,7 @@ Use the real inserted span, including any agent-chat text transformations."
                                  (mapcar
                                   (lambda (cue)
                                     (when-let* ((rx (session-mode--rnode-cue-regexp cue)))
-                                      (cons cue rx)))
+                                      (list cue rx "provisional")))
                                   (alist-get 'cues row))))))
                  (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
                 session-mode--rnode-vocabulary-key key
@@ -1072,15 +1233,44 @@ dotted underline in STAGE's transcript colour."
          (colour (face-foreground face nil t)))
     `(:underline (:style dots :color ,colour)))))
 
+(defun session-mode--paint-rnode-region (beg region-end vocab intent-phrases)
+  "Paint VOCAB in one operator region, excluding its quoted tail."
+  (let ((end (save-excursion
+               (goto-char beg)
+               (if (re-search-forward "^[ \t]*>>>" region-end t)
+                   (match-beginning 0)
+                 region-end)))
+        (seen (make-hash-table :test #'equal)))
+    (dolist (row vocab)
+      (pcase-let ((`(,id ,label ,stage ,cues) row))
+        (dolist (cue cues)
+          (let ((key (list id (downcase (car cue)))))
+            (unless (or (gethash (downcase (car cue)) intent-phrases)
+                        (gethash key seen))
+              (puthash key t seen)
+              (save-excursion
+                (goto-char beg)
+                (while (re-search-forward (nth 1 cue) end t)
+                  (let ((o (make-overlay (match-beginning 0) (match-end 0))))
+                    (overlay-put o 'session-mode-rnode-tag t)
+                    (overlay-put o 'evaporate t)
+                    (overlay-put o 'priority 40) ; above intent tags (30)
+                    (overlay-put o 'face (session-mode--rnode-stage-face stage))
+                    (overlay-put o 'help-echo
+                                 (format "%s %s (%s) — cue “%s” — %s"
+                                         id label (upcase stage) (car cue)
+                                         (nth 2 cue)))))))))))))
+
 (defun session-mode--paint-rnode-tags (jit-beg jit-end)
-  "Paint deterministic R-node cues in the operator regions overlapping JIT-BEG..JIT-END."
+  "Paint R-node cues in operator regions overlapping JIT-BEG..JIT-END."
   ;; Each overlapping operator region is repainted whole, so a JIT boundary
   ;; never splits a multiword cue and repeated calls stay idempotent; regions
   ;; outside the chunk are left alone, so typing does not rescan the buffer.
   (let ((case-fold-search t)
-        (vocab (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary)))
-        ;; A phrase already in the intent vocabulary marks the act, not the requirement
-        ;; (R-nodes are not conversational acts), so it is not also an R-node cue.
+        (vocab (and session-mode-rnode-tags
+                    (append (session-mode--load-learned-rnode-vocabulary)
+                            (session-mode--load-rnode-vocabulary))))
+        ;; Intent phrases mark conversational acts, not R-node quantities.
         (intent-phrases (let ((h (make-hash-table :test 'equal)))
                           (dolist (group session-mode-turn-vocabulary h)
                             (dolist (phrase (cdr group))
@@ -1089,25 +1279,7 @@ dotted underline in STAGE's transcript colour."
       (when (and (< beg jit-end) (> region-end jit-beg))
         (remove-overlays beg region-end 'session-mode-rnode-tag t)
         (when vocab
-          (let ((end (save-excursion
-                       (goto-char beg)
-                       (if (re-search-forward "^[ \t]*>>>" region-end t)
-                           (match-beginning 0)
-                         region-end))))
-            (dolist (row session-mode--rnode-vocabulary)
-              (pcase-let ((`(,id ,label ,stage ,cues) row))
-                (dolist (cue (seq-remove (lambda (c) (gethash (downcase (car c)) intent-phrases)) cues))
-                  (save-excursion
-                    (goto-char beg)
-                    (while (re-search-forward (cdr cue) end t)
-                      (let ((o (make-overlay (match-beginning 0) (match-end 0))))
-                        (overlay-put o 'session-mode-rnode-tag t)
-                        (overlay-put o 'evaporate t)
-                        (overlay-put o 'priority 40)   ; above intent tags (30)
-                        (overlay-put o 'face (session-mode--rnode-stage-face stage))
-                        (overlay-put o 'help-echo
-                                     (format "%s %s (%s) — cue “%s” — provisional"
-                                             id label (upcase stage) (car cue)))))))))))))))
+          (session-mode--paint-rnode-region beg region-end vocab intent-phrases))))))
 
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
