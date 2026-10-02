@@ -1,8 +1,11 @@
 # Flow-claim kit — taking M-diagramprover to the next project
 
-Working kit. The reasoning and acceptance criteria live in
-`holes/missions/M-diagramprover.md` §Generalisation (2026-10-02); this file
-is the part you carry into a new project. It is written from four
+Working kit for **rung 0** (flow maps) of the ladder in
+`holes/missions/M-diagramprover.md` §Generalisation (2026-10-02). Use it
+when a project needs "is it wired?"; climb the ladder (typed string
+diagrams, rewriting, the mixed regime, causal, proofs) when it needs "does
+it behave?", as in the Agency skeleton. The proposals in §4–§5 marked as
+mission items are now unnumbered follow-ups. It is written from four
 applications, not from first principles:
 
 | # | Target | Facts came from | What was reused from futon3c | Record |
@@ -81,7 +84,7 @@ Rules:
   graph checks in §5 then run unchanged; only conformance is per-language.
 
 `:referent`, `:source`, `:order` and `:boundaries` are **not yet read** by
-`wiring/ingest`; they are the schema extension proposed in the mission's G1.
+`wiring/ingest`; they are a proposed schema extension, not yet built.
 
 ## 5. Step 3 — run the check catalogue
 
@@ -99,7 +102,7 @@ Rules:
 | field matrix (box × field, read/write) | boxes | lean-wiring only | the readable summary for humans and diffs |
 
 The bottom four rows are the Lean application's contribution. Porting them
-into `wiring.clj` as order-aware checks over `:order` is mission item G2.
+into `wiring.clj` as order-aware checks over `:order` is a follow-up.
 
 ## 6. Step 4 — earn trust in a clean result
 

@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-**Status:** OPEN — active — programme of work adopted 2026-08-02; re-scoped 2026-10-02 to flow claims with theorem proving as one application (see §Generalisation)
+**Status:** OPEN — active — programme of work adopted 2026-08-02; generalised 2026-10-02 to a ladder of diagram flavours with skeleton use cases, first one Agency behaviour (see §Generalisation)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -1880,100 +1880,138 @@ documented representation difference. Until that comparison is performed,
 the session has established a credible reference instrument, not yet a result
 about the port.
 
-## Generalisation (2026-10-02) — from proof search to flow claims
+## Generalisation (2026-10-02) — stronger diagrams, skeleton use cases
 
-Dated delta, per the revision contract. Nothing above is withdrawn; this
-section re-scopes the mission so its most-reused part can be carried into
-the next project deliberately rather than by analogy. The portable recipe
-is `holes/labs/M-diagramprover/flow-claim-kit.md`.
+Dated delta, per the revision contract. It replaces an earlier draft of
+the same date (commit `f0ce648`), which generalised in the wrong
+direction: down to the flow checker, the weakest kind of diagram here. That
+draft's portable recipe survives as `holes/labs/M-diagramprover/
+flow-claim-kit.md` and is rung 0 below. The direction Joe asked for is up:
+use the stronger kinds of diagram the mission has built, develop the
+prover through skeleton use cases, and let each skeleton show what the
+engine still lacks. The first skeleton, verifying agent behaviour in
+Agency, is built and tested here.
 
-### What the record shows
+### The ladder of diagram flavours
 
-The mission's name and opening scope are about theorem proving, but its
-most-transferred output has been the WS-E flow checker: four applications
-so far (APM problem peripheral, proof peripheral, futon2 War Machine belief
-path, Lean LCNF compiler), with findings in each and no new machinery in
-two of them. The fourth is different in kind. It reused the method and
-none of the code: Lean's own environment supplied the facts, and
-`lean-wiring` re-implemented the checks natively, adding order-aware checks
-(reader-before-writer, overwrite-between, phase discontinuity) and
-reachability that `wiring.clj` does not have. The second-opinion review
-above judged that use worthwhile and named its limit: a reference
-instrument, not yet a result about the port.
+| Rung | Flavour | What it can say | Built in | State |
+|---|---|---|---|---|
+| R0 | Flow maps | which stage reads/writes which field | `wiring.clj` | four applications (WS-E + Lean) |
+| R1 | Typed string diagrams (SMC) | composition type-checks; independent steps commute for free | `graph.clj` | WS-A, landed |
+| R2 | DPO rewriting modulo SMC | equations between processes; normal forms; refinement | `rule`/`matcher`/`rewrite` | WS-A, landed |
+| R3 | Markov / comonoid regime | copy and discard of data; probabilistic semantics | `rmgraph`/`rmdiagram` (MPZ) | A1 landed; A2 (rewriting) open |
+| R3′ | **Mixed regime (new)** | some wires linear (sessions, obligations), others shareable (evidence) | `regime.clj` | **landed today as checks** |
+| R4 | Causal inference | identification, surgery, counterfactuals | `causal/*` | WS-B/C, landed, oracle-checked |
+| R5 | Proofs as diagrams | typed ports = goals; open ports = sorry | — | WS-D, not started |
 
-### Argument
+Two things only show up when the rungs are used together. First, agent
+behaviour is **neither** plain-SMC nor Markov: an agent's session may never
+be copied (I-1), while evidence may be read by anyone or no one. That is
+the linear/non-linear split (Benton's LNL models), so R3′ is the regime
+Agency needs; neither existing kernel provides it alone. Second, R5's
+"open ports are what is left to do" works beyond proofs: in a run of
+Agency the unanswered bells are exactly the open output ports.
 
-**IF** the next project is another port, migration or successor system
-(Lean→Python is ongoing; the futon/mfuton successor requirements in
-`holes/E-futon-mfuton-successor-requirements.md` are queued), **HOWEVER**
-the checker's reusable part is entangled with Clojure-specific conformance
-scanning, its fact format is implicit in `wiring/ingest`, and the one
-external application had to rebuild everything from the idea, **THEN**
-M-diagramprover should state its core as a language-neutral flow-claim
-method (fact schema, check catalogue, warrant discipline, differential
-comparison), with theorem proving as one application of it, **BECAUSE**
-the expensive and error-prone part of each application has been sourcing
-facts and earning trust in a clean result, not the graph checks, and a
-shared schema lets the checks, the trust discipline and the comparison
-travel even when the code cannot.
+### Skeleton use case 1 — Agency behaviour (BUILT 2026-10-02)
 
-### Revised shape of the mission
+`src/futon3c/diagramprover/regime.clj` (generic laws) and
+`src/futon3c/diagramprover/skeleton/agency.clj` (the Agency signature,
+ingest, readings, refinement rule and causal receipt), with tests in
+`test/futon3c/diagramprover/regime_test.clj` and
+`test/futon3c/diagramprover/skeleton/agency_test.clj`.
 
-Three layers, each usable without the ones above it:
+An ordered window of Agency events (register, ring, accept, drain/deliver,
+answer/reply, hop, publish/read) becomes one open string diagram. Each
+agent's session is a wire through its own actions; a bell is a wire from
+its ring to its answer; the turn queue is a box that touches the bell and
+never the agent. The laws, all in the diagram's types:
 
-1. **Flow claims (core).** Boxes, wires, reads/writes, optional order and
-   sites; facts extracted where the host can reflect, declared and
-   conformance-checked where it cannot; analysis boundaries stated in the
-   output. Applies to any pipeline.
-2. **Causal lift (optional).** The flow map read as a causal DAG; WS-A/B/C
-   machinery for identification and interventional questions.
-3. **Claim skeleton (optional).** A project's top claim as typed holes with
-   graded warrants (§Application to theorem-proving capability
-   construction).
+| Law | Agency meaning | Planted case that must fail |
+|---|---|---|
+| signature | every step has the declared wire sorts | answering a bell never delivered; answering a request as a query |
+| linearity (per sort) | sessions and bells are used exactly once; evidence is cartesian | a bell answered twice |
+| identity preservation | I-2 and I-3: no step conjures or substitutes an agent | `:transport/create`; `:spawn` |
+| concurrency | I-1: an identity's vertices are totally ordered | a second concurrent session; a clone |
+| routing | a bell is taken only by its addressee | delivery to the wrong agent |
 
-Theorem proving (sorry atlas, Bayesian intervention ranking, TPG/LeanDojo,
-proofs as diagrams) remains in scope as an application of layers 2 and 3
-and keeps its own acceptance checklist above. It is no longer the
-definition of the mission.
+Readings: open bells (the output boundary), crossings (two agents each
+owing the other, E-crossed-bells), and what the window assumed from before
+it started (the input boundary). Equivalence and refinement use R1/R2
+directly: two event orders that differ only in the order of independent
+steps give isomorphic diagrams (`same-run?`). The queue-level steps
+`accept ; drain` rewrite by DPO to the protocol step `deliver`, so a
+queue-level trace is checked against a protocol trace by normalising and
+testing for isomorphism (`refines?`). This holds even when the agent does
+other work between accept and drain, because the queue box never touches
+the agent wire. The R4 tier asks whether turning on typed bells reduces
+crossings. It gives backdoor-identifiable if mesh load is recorded,
+front-door through query threads if it is not, and a refusal if typed
+bells also act directly. So the recording requirement (record load) comes
+out before any experiment is run.
 
-New capability this adds to the core: **differential comparison of two
-implementations**. Facts from both, an explicit correspondence table, and
-every difference classified as a port defect, a checker defect, or a
-documented representation difference. Unclassified differences block a
-"matches" claim.
+Evidence: 21 new tests / 42 assertions plus the 24 existing kernel and
+identify tests, all green (45 / 111) on a standalone classpath. Four
+mutations, each disabling one law, were each caught by the tests named
+for that law (6, 3, 3 and 1 failures), then reverted.
+
+Relation to `futon3c.agency.logic`: that namespace checks the registry at
+one instant (e.g. `ag-1-session-collisiono`); this checks a run. Where they
+overlap they should agree, and that agreement is a test to write once
+real windows are ingested (S2).
+
+Limits, stated: events are a schema written for this skeleton, and the
+adapter from the invoke-jobs ledger and turn-queue store is not written;
+the causal DAG is authored, not evidenced; `find-iso` is backtracking and
+untested on large windows; rules are instantiated per agent because the
+kernel has no type variables.
+
+### What the skeleton showed the engine lacks
+
+1. **Rewriting in the mixed regime.** DPO rewrites only the plain kernel;
+   R3′ is a check, not a rewriting regime. Rewriting that touches shared
+   evidence needs MPZ A2 (weak boundary complements), with sharing allowed
+   per sort, not globally.
+2. **Kernel constructors.** `graph.clj` has `compose` but no `tensor` or
+   identity wires, so the skeleton builds diagrams vertex by vertex.
+3. **Rule schemas.** A law such as delivery holds for every agent; today it
+   is instantiated once per agent and bell type. Rules need type variables.
+4. **Derivation certificates.** `normalise` reports a step count; it should
+   return the sequence of (rule, match) applications as a checkable
+   certificate. This is the same object WS-D needs for proofs as diagrams,
+   so the two should share it.
+
+### Further skeleton use cases (queued, in order)
+
+1. **Detach/reattach (PAR punctuation)** — R1/R2. An autonomous window is a
+   box on the agent's own wire whose interface must be typed by what it
+   promised (`promise_record`); reattaching with less than was promised is
+   an open port.
+2. **Handoff with warrant** — R1 + R4. A handoff wire must travel tensored
+   with its warrant (`agency/warrant.clj`); the reviewer lane
+   (`:full-rerun` vs `:spot-check`) is a causal question about what a
+   stale warrant does to defects caught.
+3. **futon3b gate pipeline G5→G0** — R5. Evidence as a proof-carrying
+   diagram; a gate not passed is an open port; shares the certificate
+   object from gap 4.
+4. **Lean→Python port** — R2. Compiler passes as generators, and the
+   correspondence table as a map between two signatures. A port difference
+   is a square that fails to commute, classified as port defect, checker
+   defect or representation difference (the review's next test, one rung
+   up from R0).
 
 ### Acceptance for the generalisation
 
-- [ ] **G1 Schema.** The fact format is written down (kit §4). Today
-      `wiring/ingest` reads only `:spec/id` and `:boxes` and silently
-      ignores other keys; G1 makes it carry `:referent`, `:source`,
-      `:order` and `:boundaries` through, report a missing `:referent`,
-      and attach `:boundaries` to every findings report, without changing
-      the findings on the three existing maps (regression: their
-      snapshots unchanged).
-- [ ] **G2 Order-aware checks.** reader-before-writer, overwrite-between,
-      phase discontinuity and duplicate occurrence exist in `wiring.clj`
-      over `:order`, each with a planted case and a known-clean case.
-- [ ] **G3 Cross-checker agreement.** `lean-wiring`'s EDN, converted to the
-      schema by a small adapter, runs through the futon3c checks; every
-      disagreement with `lean-wiring check` is classified (the two checkers
-      are each other's oracle, as dagitty and NetworkX were for WS-B).
-- [ ] **G4 First differential result.** For one bounded Lean compiler path,
-      MFUTON's facts are compared with `lean-wiring`'s and every difference
-      ends in one of the three classes. This is the review's own next test
-      and the first result about the port rather than about the instrument.
-- [ ] **G5 Fresh-project test.** A fifth application, outside futon and
-      outside compilers, is set up from the kit alone by an agent that did
-      not write it, and recorded with its reuse level (kit §9). If it needs
-      undocumented help, that is a kit defect to fix, not a pass.
+- [x] **S1** Agency skeleton: laws, readings, refinement and causal
+      receipt, with planted cases and mutation check (this section).
+- [ ] **S2** Ledger adapter: one real day's invoke-jobs and turn-queue
+      window ingested; every finding triaged; agreement with
+      `agency.logic` on session collisions.
+- [ ] **S3** Kernel: `tensor`/identity, rule schemas with type variables,
+      derivation certificates from `normalise`.
+- [ ] **S4** Mixed-regime rewriting: MPZ A2 with per-sort sharing.
+- [ ] **S5** A second skeleton at R5 (gate pipeline or WS-D proof) reusing
+      `regime.clj` and the S3 certificate.
+- [ ] **S6** Port skeleton, once `lean-wiring` and MFUTON facts are on hand.
 
-Non-goals: a universal source parser (prefer the host's own reflection);
-semantic equivalence proofs (a clean diff says the encoded flow
-properties agree, nothing more); renaming the mission (references to
-M-diagramprover are widespread, and the name still fits the layer-3 use).
-
-### Owner and next step
-
-Owner unchanged. G1 and G2 are bounded Codex slices with Claude review, in
-the WS-E pattern (author ≠ reviewer, gates re-run). G3 and G4 need the
-`lean-wiring` repo and MFUTON output on hand, so they run where those live.
+Ownership as before: architecture and review Claude owner; S2–S4 are
+bounded Codex slices in the WS-E pattern (author ≠ reviewer, gates re-run).
