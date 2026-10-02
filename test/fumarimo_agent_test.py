@@ -71,6 +71,23 @@ class FumarimoAgentTest(unittest.TestCase):
                 "!other:test", REQUEST, "x = 1", "mxc://test/chart", "chart"
             )
 
+    def test_fixed_posts_cell_executes_to_svg_with_real_counts(self):
+        source = fumarimo.posts_chart_source([
+            "@joe:matrix.paragogy.net",
+            "@fucodex:matrix.paragogy.net",
+            "@joe:matrix.paragogy.net",
+        ])
+        svg = fumarimo.execute_posts_chart(source).decode()
+        self.assertIn(">2</text>", svg)
+        self.assertIn(">1</text>", svg)
+        self.assertIn(">joe</text>", svg)
+        self.assertIn(">fucodex</text>", svg)
+
+    def test_only_addressed_posts_per_author_request_triggers(self):
+        self.assertTrue(fumarimo.requests_posts_chart("@fumarimo show posts per author"))
+        self.assertFalse(fumarimo.requests_posts_chart("show posts per author"))
+        self.assertFalse(fumarimo.requests_posts_chart("@fumarimo execute os.system('id')"))
+
 
 if __name__ == "__main__":
     unittest.main()
