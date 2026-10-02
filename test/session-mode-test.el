@@ -1088,7 +1088,8 @@ agent text is left alone."
 (ert-deftest session-mode-rnode-tags-only-operator-regions ()
   (let ((path (session-mode-test--rnode-vocabulary))
         (session-mode--rnode-vocabulary nil)
-        (session-mode--rnode-vocabulary-key nil))
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
     (unwind-protect
         (with-temp-buffer
           (let ((session-mode-rnode-vocabulary-file path)
@@ -1112,7 +1113,8 @@ agent text is left alone."
 (ert-deftest session-mode-rnode-tags-ignore-quoted-tail ()
   (let ((path (session-mode-test--rnode-vocabulary))
         (session-mode--rnode-vocabulary nil)
-        (session-mode--rnode-vocabulary-key nil))
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
     (unwind-protect
         (with-temp-buffer
           (let ((session-mode-rnode-vocabulary-file path))
@@ -1124,7 +1126,8 @@ agent text is left alone."
 (ert-deftest session-mode-rnode-tags-repaint-does-not-stack ()
   (let ((path (session-mode-test--rnode-vocabulary))
         (session-mode--rnode-vocabulary nil)
-        (session-mode--rnode-vocabulary-key nil))
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
     (unwind-protect
         (with-temp-buffer
           (let ((session-mode-rnode-vocabulary-file path))
@@ -1153,7 +1156,8 @@ agent text is left alone."
 (ert-deftest session-mode-rnode-tags-red-while-trialling ()
   (let ((path (session-mode-test--rnode-vocabulary))
         (session-mode--rnode-vocabulary nil)
-        (session-mode--rnode-vocabulary-key nil))
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
     (unwind-protect
         (with-temp-buffer
           (let ((session-mode-rnode-vocabulary-file path)
@@ -1166,4 +1170,18 @@ agent text is left alone."
               ;; red replaces, not adds to, an intent underline on the same words
               (should (> (overlay-get (car overlays) 'priority) 30))
               (should (null (face-attribute 'session-mode-rnode-red-face :underline))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-skip-intent-phrases ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-turn-vocabulary '(("defer" "for now"))))
+            (insert "joe: for now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should (null (session-mode-test--rnode-overlays)))))
       (delete-file path))))

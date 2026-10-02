@@ -1078,7 +1078,13 @@ dotted underline in STAGE's transcript colour."
   ;; never splits a multiword cue and repeated calls stay idempotent; regions
   ;; outside the chunk are left alone, so typing does not rescan the buffer.
   (let ((case-fold-search t)
-        (vocab (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary))))
+        (vocab (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary)))
+        ;; A phrase already in the intent vocabulary marks the act, not the requirement
+        ;; (R-nodes are not conversational acts), so it is not also an R-node cue.
+        (intent-phrases (let ((h (make-hash-table :test 'equal)))
+                          (dolist (group session-mode-turn-vocabulary h)
+                            (dolist (phrase (cdr group))
+                              (puthash (downcase phrase) t h))))))
     (pcase-dolist (`(,beg . ,region-end) (session-mode--operator-regions))
       (when (and (< beg jit-end) (> region-end jit-beg))
         (remove-overlays beg region-end 'session-mode-rnode-tag t)
@@ -1090,7 +1096,7 @@ dotted underline in STAGE's transcript colour."
                          region-end))))
             (dolist (row session-mode--rnode-vocabulary)
               (pcase-let ((`(,id ,label ,stage ,cues) row))
-                (dolist (cue cues)
+                (dolist (cue (seq-remove (lambda (c) (gethash (downcase (car c)) intent-phrases)) cues))
                   (save-excursion
                     (goto-char beg)
                     (while (re-search-forward (cdr cue) end t)
