@@ -800,6 +800,51 @@ already recorded the park-id, so refusing here would destroy the resume."
     (should (eq 'acked (agent-chat-evidence--classify-response
                         '(:status 409 :json (:err "duplicate-id")))))))
 
+(ert-deftest agent-chat-evidence-outbox-repairs-child-of-failed-parent ()
+  "A permanently failed parent must not poison its queued child."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (agent-chat--evidence-outbox-process nil)
+         (agent-chat--evidence-outbox-timer nil)
+         (failed-directory
+          (expand-file-name "failed" agent-chat-evidence-outbox-directory))
+         (a-path (expand-file-name "a.json" failed-directory))
+         (b-path (expand-file-name "b.json" agent-chat-evidence-outbox-directory))
+         (a-record '((evidence-url . "http://store.test/api/alpha/evidence")
+                     (payload . ((id . "A")
+                                 (type . "coordination")))
+                     (attempts . 8) (next-at . 0)))
+         (b-record '((evidence-url . "http://store.test/api/alpha/evidence")
+                     (payload . ((id . "B")
+                                 (in-reply-to . "A")
+                                 (type . "coordination")))
+                     (attempts . 8) (next-at . 0))))
+    (unwind-protect
+        (progn
+          (agent-chat-evidence--write-record a-path a-record)
+          (agent-chat-evidence--write-record b-path b-record)
+          (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                     (lambda (_method _url _timeout payload)
+                       (if (equal "A" (alist-get 'in-reply-to payload))
+                           '(:status 409 :json (:err "reply-not-found"))
+                         '(:status 201 :json (:evidence/id "B")))))
+                    ((symbol-function 'agent-chat-evidence--start-replay!)
+                     (lambda (path record)
+                       (pcase (agent-chat-evidence--attempt-record record)
+                         ('acked (delete-file path))
+                         ('failed (rename-file
+                                   path (agent-chat-evidence--failed-path path) t)))
+                       (agent-chat-evidence--release-drain-lease))))
+            (agent-chat-evidence-drain-outbox!))
+          (should-not (file-exists-p b-path))
+          (should (= 1 (length (agent-chat-evidence--failed-files))))
+          (should (equal "A"
+                         (alist-get 'id
+                                    (alist-get 'payload
+                                               (agent-chat-evidence--read-record
+                                                (car (agent-chat-evidence--failed-files))))))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
 (ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
   (should (= 409 (agent-chat-evidence--curl-status
                   "409\n\nProcess agent-chat-evidence-replay finished\n")))

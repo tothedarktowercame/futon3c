@@ -3472,6 +3472,46 @@ long a `reply-not-found' 409 keeps being retried."
     (when (file-directory-p directory)
       (directory-files directory t "\\.json\\'" t))))
 
+(defun agent-chat-evidence--repair-broken-reply-chains! ()
+  "Splice queued replies around terminally failed outbox records.
+Each failed evidence id maps to its own parent.  A queued descendant naming
+that failed id is rewritten to the nearest ancestor not present in `failed/',
+or becomes a root when none exists.  Its retry budget is reset because earlier
+attempts addressed an edge the server can never satisfy."
+  (let ((failed-parents (make-hash-table :test #'equal))
+        (missing (make-symbol "missing-failed-parent")))
+    (dolist (path (agent-chat-evidence--failed-files))
+      (when-let* ((record (agent-chat-evidence--read-record path))
+                  (payload (alist-get 'payload record))
+                  (id (or (alist-get 'id payload)
+                          (alist-get 'evidence-id payload)
+                          (alist-get 'evidence/id payload))))
+        (puthash id (alist-get 'in-reply-to payload) failed-parents)))
+    (dolist (path (agent-chat-evidence--queue-files))
+      (when-let* ((record (agent-chat-evidence--read-record path))
+                  (payload (alist-get 'payload record))
+                  (parent (alist-get 'in-reply-to payload)))
+        (let ((resolved parent)
+              (seen (make-hash-table :test #'equal)))
+          (while (and resolved
+                      (not (eq (gethash resolved failed-parents missing)
+                               missing))
+                      (not (gethash resolved seen)))
+            (puthash resolved t seen)
+            (setq resolved (gethash resolved failed-parents)))
+          ;; Corrupt failed-record ancestry must not leave a queued record
+          ;; pointing into the same failed cycle.
+          (when (and resolved (gethash resolved seen))
+            (setq resolved nil))
+          (when (not (equal parent resolved))
+            (setq payload (assq-delete-all 'in-reply-to payload))
+            (when resolved
+              (setq payload (cons (cons 'in-reply-to resolved) payload)))
+            (setf (alist-get 'payload record) payload)
+            (setf (alist-get 'attempts record) 0)
+            (setf (alist-get 'next-at record) 0)
+            (agent-chat-evidence--write-record path record)))))))
+
 (defcustom agent-chat-evidence-failed-retention-seconds 86400
   "Delete a terminally failed outbox record once it is this many seconds old.
 A failed record is one the server refused permanently; it will never be
@@ -3646,6 +3686,7 @@ sentinel runs, so the status is not necessarily the final text."
   (interactive)
   (when (and (not (process-live-p agent-chat--evidence-outbox-process))
              (agent-chat-evidence--acquire-drain-lease))
+    (agent-chat-evidence--repair-broken-reply-chains!)
     (if-let* ((candidate (agent-chat-evidence--eligible-record)))
         (agent-chat-evidence--start-replay! (car candidate) (cadr candidate))
       (agent-chat-evidence--release-drain-lease)))
