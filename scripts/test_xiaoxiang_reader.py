@@ -270,6 +270,71 @@ class Precision(unittest.TestCase):
         self.assertIn("often wrong", rd.render(report))
 
 
+class UnderAnAgent(unittest.TestCase):
+    """Rob's report (2026-10-02): his agent ran the scan, was told which files
+    held credentials, and read them.  The report is not a map."""
+
+    def report(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            files = [("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+            return rd.read(files, model, jobs=1)
+
+    def test_detection(self):
+        self.assertTrue(rd.run_by_agent({"CLAUDECODE": "1"}))
+        self.assertTrue(rd.run_by_agent({"CLAUDE_CODE_ENTRYPOINT": "cli"}))
+        self.assertTrue(rd.run_by_agent({"CODEX_THREAD_ID": "x"}))
+        self.assertTrue(rd.run_by_agent({"AI_AGENT": "1"}))
+        self.assertFalse(rd.run_by_agent({"HOME": "/home/rob", "CLAUDE_MD": "x"}))
+
+    def test_paths_are_withheld_by_default_and_named_only_on_request(self):
+        report = self.report()
+        path = next(iter(report["files_with_secrets"]))
+        text = rd.render(report)
+        self.assertNotIn(path, text)
+        self.assertIn("They sit in 1 of the files read; --list-files names them.", text)
+        self.assertIn(path, rd.render(report, list_files=True))
+
+    def test_an_agent_gets_the_notice_and_never_the_paths(self):
+        report = dict(self.report(), run_by_agent=True)
+        path = next(iter(report["files_with_secrets"]))
+        text = rd.render(report, list_files=True)
+        self.assertNotIn(path, text)
+        self.assertIn("do not open the log files", text)
+        self.assertNotIn("--list-files names them", text)
+
+    def test_main_refuses_list_files_under_an_agent_and_strips_paths_from_json(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            mp = os.path.join(d, "model.json")
+            with open(mp, "w") as fh:
+                json.dump(model, fh)
+            base = ["--claude", cl, "--codex", cx, "--model", mp, "--html", "", "--jobs", "1"]
+            env_agent = {"PATH": os.environ.get("PATH", ""), "HOME": d, "CLAUDECODE": "1"}
+            env_human = {"PATH": os.environ.get("PATH", ""), "HOME": d}
+            here = os.path.dirname(os.path.abspath(rd.__file__))
+            refused = subprocess.run([sys.executable, rd.__file__, *base, "--list-files"], cwd=here,
+                                     capture_output=True, text=True, env=env_agent)
+            self.assertEqual(2, refused.returncode)
+            self.assertIn("refused", refused.stderr)
+            self.assertEqual("", refused.stdout)
+            agent = subprocess.run([sys.executable, rd.__file__, *base, "--json"], cwd=here,
+                                   capture_output=True, text=True, env=env_agent)
+            self.assertEqual(0, agent.returncode, agent.stderr)
+            out = json.loads(agent.stdout)
+            self.assertEqual(1, out["files_with_secrets"], "a count, not the paths")
+            self.assertIn("do not open the log files", out["notice"])
+            self.assertNotIn(cl, agent.stdout)
+            human = subprocess.run([sys.executable, rd.__file__, *base, "--list-files"], cwd=here,
+                                   capture_output=True, text=True, env=env_human)
+            self.assertEqual(0, human.returncode, human.stderr)
+            self.assertIn("Files holding them", human.stdout)
+            self.assertIn("s1.jsonl", human.stdout)
+            self.assertNotIn(SECRET, human.stdout + agent.stdout)
+
+
 class Report(unittest.TestCase):
     def setUp(self):
         rows = xx.load(xx.DEFAULT_DIR)

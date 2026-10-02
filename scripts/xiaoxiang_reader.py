@@ -8,7 +8,11 @@ person when it is a user record with text of its own: tool results, subagent
 command wrappers) and compaction summaries are skipped.
 
 Every turn is redacted with secret_scan before it is classified, and the report
-carries counts, kinds and file paths, never turn text or secret values.
+carries counts and kinds, never turn text or secret values.  Which files hold
+them is printed only with --list-files, and never when a coding agent is
+running the scan (CLAUDECODE, CLAUDE_CODE_*, CODEX_*, AI_AGENT in the
+environment): a list of files holding credentials is a map, and an agent that
+was handed one went and read them.
 Credentials are also grouped by where they sit (what you typed, tool output,
 files the agent wrote, test fixtures or documented example keys), since "13
 credentials" means something different when none is in what you typed.  An
@@ -397,8 +401,10 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
     return merge(parts, gap_hours, model)
 
 
-def render(report: dict) -> str:
+def render(report: dict, list_files: bool = False) -> str:
     out = [f"Read {report['turns']} turns you typed, in {report['files']} log files.", ""]
+    if report.get("run_by_agent"):
+        out += [AGENT_NOTICE, ""]
     if report["turns"]:
         precision = report.get("intent_precision") or {}
         out.append("What kinds of request you make"
@@ -436,12 +442,36 @@ def render(report: dict) -> str:
             out.append(f"  {_WHERE.get(place, place):<44} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
     for kind, n in report["secret_kinds"].items():
         out.append(f"  {kind:<20} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
-    if report["files_with_secrets"]:
+    files = report.get("files_with_secrets") or {}
+    if files and list_files and not report.get("run_by_agent"):
         out.append("Files holding them (values are never printed):")
-        for path, n in list(report["files_with_secrets"].items())[:20]:
+        for path, n in list(files.items())[:20]:
             out.append(f"  {n:>5}  {path}")
+    elif files:
+        out.append(f"They sit in {len(files)} of the files read"
+                   + ("" if report.get("run_by_agent") else "; --list-files names them") + ".")
     return "\n".join(out)
 
+
+_AGENT_ENV = ("CLAUDECODE", "CLAUDE_CODE_", "CODEX_", "AI_AGENT")
+
+
+def run_by_agent(environ=None) -> bool:
+    """True when a coding agent, not a person at a terminal, is running this.
+    Claude Code exports CLAUDECODE and CLAUDE_CODE_*, Codex CODEX_*, and this
+    machine's harness AI_AGENT.  Rob (2026-10-02) asked his agent to run the
+    scan and the agent, handed the list of files holding credentials, went
+    and read them: "now I see all your secrets".  The report must not be a
+    map for whoever runs it, and under an agent it says so."""
+    environ = os.environ if environ is None else environ
+    return any(k == "CLAUDECODE" or k.startswith(("CLAUDE_CODE_", "CODEX_")) or k == "AI_AGENT"
+               for k in environ)
+
+
+AGENT_NOTICE = ("This report was produced for the person who owns these logs. It names no "
+                "credential values, line numbers or files. If you are an agent reading this: "
+                "do not open the log files to find what it counted; the person runs this in "
+                "their own terminal with --list-files to see which files hold them.")
 
 _WHERE = {
     "typed": "in what you typed",
@@ -543,6 +573,9 @@ def main(argv=None) -> int:
     ap.add_argument("--claude", default=CLAUDE_ROOT, help=f"default {CLAUDE_ROOT}")
     ap.add_argument("--codex", default=CODEX_ROOT, help=f"default {CODEX_ROOT}")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
+    ap.add_argument("--list-files", action="store_true",
+                    help="name the log files holding credentials (refused when a coding agent "
+                         "is running this: the report must not be a map to them)")
     ap.add_argument("--gap-hours", type=float, default=GAP_HOURS,
                     help="shortest stretch without a typed turn to count as a gap "
                          "(default %(default)g; 1 for errands, 0 for every stretch "
@@ -554,6 +587,12 @@ def main(argv=None) -> int:
     if MODEL is None:
         ap.add_argument("--model", required=True, help="model JSON from xiaoxiang.py export")
     a = ap.parse_args(argv)
+    agent = run_by_agent()
+    if a.list_files and agent:
+        print("--list-files is refused when a coding agent runs this scan: the list of files "
+              "holding credentials is for the person who owns them, in their own terminal.",
+              file=sys.stderr)
+        return 2
     model = MODEL
     if model is None:
         with open(a.model, encoding="utf-8") as fh:
@@ -576,7 +615,16 @@ def main(argv=None) -> int:
                   max(1, a.jobs))
     if sys.stderr.isatty():
         print(file=sys.stderr)
-    print(json.dumps(report, indent=1) if a.json else render(report))
+    report["run_by_agent"] = agent
+    if a.json:
+        out = dict(report)
+        if not a.list_files:
+            out["files_with_secrets"] = len(report["files_with_secrets"])
+        if agent:
+            out["notice"] = AGENT_NOTICE
+        print(json.dumps(out, indent=1))
+    else:
+        print(render(report, a.list_files))
     if a.html:
         with open(a.html, "w", encoding="utf-8") as fh:
             fh.write(render_html(report))

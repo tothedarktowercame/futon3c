@@ -306,3 +306,18 @@ file was counted and classified whatever its date.
 Tests: 67 passed across the five python suites (2 skipped for want of
 labelled turns here). Not in this packet: a deterministic "phrases you use"
 column from the cue vocabulary.
+
+## Aside (2026-10-02): the scan is not a map
+
+Rob asked his agent to run the scan; the report named the files holding
+credentials; the agent read them ("now I see all your secrets"). Fixed in
+`xiaoxiang_reader.py`: file paths are never printed by default (the report
+says how many files, and that `--list-files` names them); `--list-files` is
+refused with exit 2 when a coding agent is running the scan (`CLAUDECODE`,
+`CLAUDE_CODE_*`, `CODEX_*` or `AI_AGENT` in the environment); under an agent
+the text and JSON carry a notice addressed to the agent: do not open the
+log files to find what was counted, the person runs this in their own
+terminal. An agent with a shell can still read `~/.claude` on its own; what
+the tool can do is refuse to be the map and say so where the person will
+read it. Four tests, including the refusal and the JSON stripping through
+the real CLI.
