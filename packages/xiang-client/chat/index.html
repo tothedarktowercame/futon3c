@@ -32,7 +32,8 @@
       <form id="composer">
         <select id="agent" aria-label="agent"><option value="fucodex">codex-1</option><option value="fuclaude">claude-1</option><option value="fuzai">zai-1</option><option value="">room only</option></select>
         <textarea id="message" rows="3" placeholder="Write to the room…" required></textarea>
-        <button>Send</button>
+        <button id="send" type="submit">Send</button>
+        <span id="send-status" role="status" aria-live="polite"></span>
       </form>
     </section>
     <aside id="inspector" hidden></aside>

@@ -1,8 +1,8 @@
 # Routes installed inside the zone.hyperreal.enterprises site block.
-# /chat is the memorable Element entrance; Element embeds the annotation UI
-# from /xiang-widget, so these paths must remain distinct.
-redir /chat "https://app.element.io/#/room/!WXULllaFhTOchbIrmo:matrix.paragogy.net?via=matrix.paragogy.net" 302
-redir /chat/ "https://app.element.io/#/room/!WXULllaFhTOchbIrmo:matrix.paragogy.net?via=matrix.paragogy.net" 302
+# /chat is the phone-friendly full FUTON room; Element remains available
+# independently for conventional Matrix access.
+redir /chat "/xiang-widget/?room=%21WXULllaFhTOchbIrmo%3Amatrix.paragogy.net" 302
+redir /chat/ "/xiang-widget/?room=%21WXULllaFhTOchbIrmo%3Amatrix.paragogy.net" 302
 
 handle_path /chat-api/* {
 	reverse_proxy 127.0.0.1:8131

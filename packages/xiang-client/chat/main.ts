@@ -222,5 +222,24 @@ async function enter(): Promise<void> {
 }
 
 $("login-form").addEventListener("submit", (event) => { event.preventDefault(); status.textContent = "signing in…"; void signIn(($<HTMLInputElement>("username")).value, ($<HTMLInputElement>("password")).value).then(enter).catch((e: Error) => status.textContent = e.message); });
-$("composer").addEventListener("submit", (event) => { event.preventDefault(); const textarea = $<HTMLTextAreaElement>("message"); const body = addressedBody($<HTMLSelectElement>("agent").value, textarea.value); if (!body) return; textarea.value = ""; const txn = crypto.randomUUID(); void matrix(`/rooms/${encodeURIComponent(ROOM)}/send/m.room.message/${txn}`, { method: "PUT", body: JSON.stringify({ msgtype: "m.text", body }) }).then(refresh); });
+$("composer").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const textarea = $<HTMLTextAreaElement>("message"), button = $<HTMLButtonElement>("send"), sendStatus = $("send-status");
+  const draft = textarea.value, body = addressedBody($<HTMLSelectElement>("agent").value, draft);
+  if (!body) { textarea.reportValidity(); return; }
+  button.disabled = true; sendStatus.textContent = "sending…";
+  const txn = crypto.randomUUID();
+  void matrix(`/rooms/${encodeURIComponent(ROOM)}/send/m.room.message/${txn}`, { method: "PUT", body: JSON.stringify({ msgtype: "m.text", body }) })
+    .then(async (response) => {
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(error.error ?? `Matrix send: http ${response.status}`);
+      }
+      if (textarea.value === draft) textarea.value = "";
+      sendStatus.textContent = "sent";
+      await refresh();
+    })
+    .catch((error: Error) => { sendStatus.textContent = `not sent: ${error.message}`; textarea.focus(); })
+    .finally(() => { button.disabled = false; });
+});
 if (token) void enter().catch(() => { sessionStorage.clear(); token = ""; login.hidden = false; });
