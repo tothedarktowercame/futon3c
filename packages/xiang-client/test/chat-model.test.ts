@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "../chat/model.js";
+import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "../chat/model.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
@@ -47,4 +47,5 @@ test("room posts become a deterministic Marimo-ready author count cell", () => {
   assert.match(code, /import marimo as mo/);
   assert.match(code, /mo\.ui\.altair_chart/);
   assert.match(code, /@joe:example/);
+  assert.equal(anchorsAuthorChart("㊥ (first Python-cell chart) Implemented"), true);
 });

@@ -1,7 +1,7 @@
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "./model.js";
+import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -141,8 +141,7 @@ function sidenotes(view: TurnView | undefined): string {
 }
 
 function wantsAuthorChart(event: Event): boolean {
-  const body = event.content.body!.toLowerCase();
-  return body.includes("bar chart") && body.includes("posts per author");
+  return anchorsAuthorChart(event.content.body!);
 }
 
 function authorChart(): string {

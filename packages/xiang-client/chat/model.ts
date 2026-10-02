@@ -46,6 +46,12 @@ export function postsPerAuthorPython(events: Array<{ sender: string }>): string 
   return `from collections import Counter\nimport marimo as mo\n\nauthors = ${authors}\ncounts = Counter(authors)\nmo.ui.altair_chart({\n    "mark": "bar",\n    "data": {"values": [{"author": author, "posts": posts} for author, posts in counts.items()]},\n    "encoding": {\n        "x": {"field": "author", "type": "nominal", "sort": "-y"},\n        "y": {"field": "posts", "type": "quantitative"},\n    },\n})`;
 }
 
+export function anchorsAuthorChart(body: string): boolean {
+  const text = body.toLowerCase();
+  return (text.includes("bar chart") && text.includes("posts per author"))
+    || text.includes("first python-cell chart");
+}
+
 export function intents(view: TurnView): Array<{ intent: string; glyph: string; declared: boolean }> {
   const record = view.record as typeof view.record & { proforma_marks?: Array<{ intent: string; mark: string }> };
   const declared = (record.proforma_marks ?? []).map((m) => ({ intent: m.intent, glyph: m.mark, declared: true }));
