@@ -206,6 +206,16 @@ class MatrixTest(unittest.TestCase):
         self.assertLessEqual(len(last), bot.text_cap)
         self.assertTrue(last.endswith('[truncated]'))
 
+    def test_marked_reply_adds_sanitizer_safe_stage_colours(self):
+        bot = self.bot()
+        bot._say('㊢ (result) <safe>\n\n㊬ (check) done')
+        content = list(self.http.posts.values())[-1]
+        self.assertEqual('㊢ (result) <safe>\n\n㊬ (check) done', content['body'])
+        self.assertEqual('org.matrix.custom.html', content['format'])
+        self.assertIn('<span data-mx-color="#2a78d6">㊢&#xfe0e;</span>', content['formatted_body'])
+        self.assertIn('<span data-mx-color="#e87ba4">㊬&#xfe0e;</span>', content['formatted_body'])
+        self.assertIn('&lt;safe&gt;', content['formatted_body'])
+
     def test_queue_preserves_distinct_event_reply_contexts(self):
         bot = self.bot()
         bot.process_sync(batch('b1', [event('$a'), event('$b')]))

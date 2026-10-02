@@ -12,6 +12,7 @@ lose work; the inherited in-memory queue is not a durable outbox. Dedup retains
 One process must own each bot's state directory. Tokens never enter argv/logs.
 """
 import importlib.util
+import html
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,37 @@ _spec = importlib.util.spec_from_file_location(
 irc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(irc)
 IRCBot = irc.IRCBot
+
+PROFORMA_COLORS = {
+    "㊩": "#2a78d6", "🈖": "#2a78d6", "㊢": "#2a78d6",
+    "🈯": "#eb6834", "㊟": "#eb6834", "㊣": "#eb6834", "🈚": "#eb6834", "㊮": "#eb6834", "🈹": "#eb6834",
+    "🈲": "#1baf7a", "🈕": "#1baf7a", "㊫": "#1baf7a",
+    "㊭": "#eda100", "㊝": "#eda100", "🈘": "#eda100", "🈝": "#eda100", "㊯": "#eda100", "🈡": "#eda100",
+    "🈸": "#e87ba4", "🈰": "#e87ba4", "㊬": "#e87ba4",
+    "㊥": "#66665e", "🈳": "#66665e",
+}
+
+
+def proforma_formatted_body(text):
+    """Matrix-safe HTML for marked replies; plain text remains the fallback."""
+    found = False
+    lines = []
+    glyphs = "|".join(map(re.escape, PROFORMA_COLORS))
+    pattern = re.compile(rf"^(\s*)({glyphs})(?=\s)")
+    for line in text.split("\n"):
+        match = pattern.match(line)
+        if not match:
+            lines.append(html.escape(line))
+            continue
+        found = True
+        color = PROFORMA_COLORS[match.group(2)]
+        prefix = html.escape(match.group(1))
+        # Ask clients to render the enclosed Unicode mark as text so its
+        # foreground colour is not replaced by an emoji presentation.
+        glyph = html.escape(match.group(2)) + '&#xfe0e;'
+        rest = html.escape(line[match.end():])
+        lines.append(f'{prefix}<span data-mx-color="{color}">{glyph}</span>{rest}')
+    return "<br>".join(lines) if found else None
 
 
 class MatrixBot(IRCBot):
@@ -140,6 +172,9 @@ class MatrixBot(IRCBot):
         if len(text) > self.text_cap:
             text = text[:self.text_cap - 13] + "\n[truncated]"
         content = {"msgtype": "m.text", "body": text}
+        formatted = proforma_formatted_body(text)
+        if formatted:
+            content.update({"format": "org.matrix.custom.html", "formatted_body": formatted})
         context = self._transport_context()
         if context and context["room"] == room:
             content["m.relates_to"] = {"m.in_reply_to": {"event_id": context["event_id"]}}
