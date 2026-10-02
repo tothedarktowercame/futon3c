@@ -28,11 +28,15 @@
   "Run ACTION inside an automatic pattern lifecycle.
 
   Required opts: :evidence-store, :pattern-id, :agent-id, :session-id,
-  :task-id, :rationale, and zero-argument :action. The returned value includes
-  the action result and both verified persistence receipts. If ACTION throws,
-  a failure PUR is persisted with the same pattern/agent/session and the
-  exception is rethrown with :pattern-action/pur-receipt attached."
-  [{:keys [evidence-store pattern-id agent-id session-id task-id rationale action]}]
+  :task-id, :rationale, and zero-argument :action. Optional :success? classifies
+  a returned result (default: every return succeeds). The returned value
+  includes the action result and both verified persistence receipts. A result
+  rejected by :success? gets a failure PUR but is returned unchanged. If
+  ACTION throws, a failure PUR is persisted with the same pattern/agent/session
+  and the exception is rethrown with :pattern-action/pur-receipt attached."
+  [{:keys [evidence-store pattern-id agent-id session-id task-id rationale
+           action success?]
+    :or {success? (constantly true)}}]
   (doseq [[field value] [[:pattern-id pattern-id]
                          [:agent-id agent-id]
                          [:session-id session-id]
@@ -42,6 +46,9 @@
   (when-not (ifn? action)
     (throw (ex-info "pattern action requires an executable action"
                     {:failure-kind :pattern-action-missing-action})))
+  (when-not (ifn? success?)
+    (throw (ex-info "pattern action requires an executable result classifier"
+                    {:failure-kind :pattern-action-missing-result-classifier})))
   (let [psr-id (str "psr-" (UUID/randomUUID))
         common {:subject {:ref/type :pattern :ref/id pattern-id}
                 :author agent-id
@@ -78,14 +85,17 @@
                                         :pattern-action/psr-receipt psr-receipt
                                         :pattern-action/pur-receipt pur-receipt}
                                        action-error)))))
+          succeeded? (boolean (success? result))
           pur (merge common
                      {:evidence-id (str "pur-" (UUID/randomUUID))
                       :type :pattern-outcome
                       :claim-type :conclusion
                       :in-reply-to psr-id
-                      :body {:event :pattern-action/completed
+                      :body {:event (if succeeded?
+                                      :pattern-action/completed
+                                      :pattern-action/failed)
                              :task-id task-id
-                             :outcome :completed
+                             :outcome (if succeeded? :completed :failed)
                              :automatic? true}
                       :tags [:pur :pattern-action-rpc]})
         pur-receipt (append-required! evidence-store pur :pur)]

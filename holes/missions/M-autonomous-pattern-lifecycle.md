@@ -14,7 +14,9 @@ PUR, so a selected pattern is not left without an outcome merely because the
 work failed. `tickle-orchestrate/assign-issue!` now exposes this boundary at
 the real agent invocation seam when its controller supplies `:pattern-action`;
 the controller, rather than the invoked agent, stamps the issue, agent, and
-workflow-session identity. Focused tests use the real atom evidence backend
+workflow-session identity. A returned `{:ok false}` assignment is classified
+as a failed pattern outcome without changing the assignment's return contract.
+Focused tests use the real atom evidence backend
 and prove pattern/agent/session continuity, linkage, pre-action identity
 refusal, and the thrown-action case, including a controller-level invocation.
 Gate A remains open until a non-test coding session supplies a selected pattern

@@ -363,6 +363,7 @@
                       :session-id session-id
                       :task-id (str "issue-" issue-number)
                       :rationale (:rationale pattern-action)
+                      :success? #(true? (:ok %))
                       :action invoke}))
                    (invoke))
           elapsed (- (System/currentTimeMillis) start)

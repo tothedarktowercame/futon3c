@@ -212,6 +212,30 @@
           (is (= [:musn/pattern-action-rpc :musn/pattern-action-rpc]
                  (mapv :evidence/pattern-id [psr pur]))))))))
 
+(deftest failed-assignment-persists-failed-pattern-outcome
+  (testing "the exact bad case: {:ok false} must not become a completed PUR"
+    (let [store (make-evidence-store)]
+      (with-redefs [reg/invoke-agent!
+                    (fn [_agent-id _prompt _timeout-ms]
+                      {:ok false :error "sandbox timeout"})]
+        (let [result (orch/assign-issue!
+                      sample-issue
+                      {:evidence-store store
+                       :repo-dir "/tmp/test-repo"
+                       :timeout-ms 5000
+                       :session-id "workflow-session-failed"
+                       :pattern-action
+                       {:pattern-id "musn/pattern-action-rpc"
+                        :rationale "record the assignment outcome truthfully"}})
+              pur (some #(when (= :pattern-outcome (:evidence/type %)) %)
+                        (estore/query* store {}))]
+          (is (false? (:ok result)))
+          (is (= "sandbox timeout" (:error result)))
+          (is (= :pattern-action/failed (get-in pur [:evidence/body :event])))
+          (is (= :failed (get-in pur [:evidence/body :outcome])))
+          (is (not= :pattern-action/completed
+                    (get-in pur [:evidence/body :event]))))))))
+
 (deftest assign-issue-mfuton-mode-rewrites-github-issue-language
   (testing "mfuton mode rewrites assignment prompt issue language to mfuton gitlab issue"
     (let [invoked (atom nil)]
