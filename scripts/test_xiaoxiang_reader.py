@@ -321,6 +321,12 @@ class UnderAnAgent(unittest.TestCase):
             self.assertEqual(2, refused.returncode)
             self.assertIn("refused", refused.stderr)
             self.assertEqual("", refused.stdout)
+            verbose_refused = subprocess.run([sys.executable, rd.__file__, *base, "--verbose"],
+                                             cwd=here, capture_output=True, text=True,
+                                             env=env_agent)
+            self.assertEqual(2, verbose_refused.returncode)
+            self.assertIn("refused", verbose_refused.stderr)
+            self.assertEqual("", verbose_refused.stdout)
             agent = subprocess.run([sys.executable, rd.__file__, *base, "--json"], cwd=here,
                                    capture_output=True, text=True, env=env_agent)
             self.assertEqual(0, agent.returncode, agent.stderr)
@@ -372,7 +378,7 @@ class VerboseTurns(unittest.TestCase):
         self.assertIn("high-entropy and keyword-assignment matches stay excluded", text)
         self.assertNotIn("Never:   the credential values", text)
 
-    def test_cli_refuses_verbose_without_a_persons_terminal(self):
+    def test_cli_allows_verbose_with_explicit_consent_without_a_tty(self):
         here = os.path.dirname(os.path.abspath(rd.__file__))
         with tempfile.TemporaryDirectory() as d:
             model = os.path.join(d, "model.json")
@@ -380,12 +386,12 @@ class VerboseTurns(unittest.TestCase):
                 json.dump(stub_model(), fh)
             env = {"PATH": os.environ.get("PATH", ""), "HOME": d}
             run = subprocess.run([sys.executable, rd.__file__, "--model", model,
-                                  "--verbose", "--yes"], cwd=here,
+                                  "--verbose", "--yes", "--claude", d,
+                                  "--codex", d, "--html", ""], cwd=here,
                                  capture_output=True, text=True, env=env,
                                  stdin=subprocess.DEVNULL)
-        self.assertEqual(2, run.returncode)
-        self.assertIn("only available to a person", run.stderr)
-        self.assertEqual("", run.stdout)
+        self.assertEqual(1, run.returncode)
+        self.assertIn("No Claude Code or Codex logs found", run.stderr)
 
 
 class Consent(unittest.TestCase):

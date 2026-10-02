@@ -9,10 +9,11 @@ command wrappers) and compaction summaries are skipped.
 
 Every turn is redacted with secret_scan before it is classified, and the
 default report carries counts and kinds, never turn text or secret values.
-At a person's interactive terminal, --verbose prints typed turns containing a
-structured credential match; high-entropy and keyword-assignment findings are
-excluded.  Which files hold findings is printed only with --list-files, and
-neither mode is available when a coding agent is
+For a person, --verbose prints typed turns containing a structured credential
+match; high-entropy and keyword-assignment findings are excluded.  A shell
+without a TTY (including Emacs comint) requires explicit --yes.  Which files
+hold findings is printed only with --list-files, and neither mode is available
+when a coding agent is
 running the scan (CLAUDECODE, CLAUDE_CODE_*, CODEX_*, AI_AGENT in the
 environment): a list of files holding credentials is a map, and an agent that
 was handed one went and read them.
@@ -526,7 +527,8 @@ def preamble(claude_root: str, codex_root: str, days: float | None,
         "           you weren't typing.\n"
         + ("  Verbose: prints the complete text of your turns containing a structured\n"
            "           credential match, including its suspected value and source file;\n"
-           "           high-entropy and keyword-assignment matches stay excluded.\n"
+           "           high-entropy and keyword-assignment matches stay excluded;\n"
+           "           Emacs comint and other non-TTY shells require --yes.\n"
            if verbose else
            "  Never:   the credential values, your turns' text, or which files hold what\n"
            "           (--list-files names the files, at a terminal only).\n") +
@@ -685,7 +687,7 @@ def main(argv=None) -> int:
     ap.add_argument("--verbose", action="store_true",
                     help="print complete user turns containing structured credential matches; "
                          "excludes high-entropy and keyword-assignment, and requires a person's "
-                         "interactive terminal")
+                         "shell (--yes is required without a TTY)")
     ap.add_argument("--gap-hours", type=float, default=GAP_HOURS,
                     help="shortest stretch without a typed turn to count as a gap "
                          "(default %(default)g; 1 for errands, 0 for every stretch "
@@ -703,9 +705,9 @@ def main(argv=None) -> int:
               "holding credentials is for the person who owns them, in their own terminal.",
               file=sys.stderr)
         return 2
-    if a.verbose and (agent or not sys.stdin.isatty()):
-        print("--verbose reveals suspected credential values in your turn text and is only "
-              "available to a person running it in an interactive terminal.", file=sys.stderr)
+    if a.verbose and agent:
+        print("--verbose reveals suspected credential values in your turn text and is refused "
+              "when a coding agent runs the scan.", file=sys.stderr)
         return 2
     model = MODEL
     if model is None:
