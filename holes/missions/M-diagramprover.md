@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-**Status:** OPEN — active — programme of work adopted 2026-08-02; generalised 2026-10-02 to a ladder of diagram flavours with skeleton use cases, first one Agency behaviour (see §Generalisation)
+**Status:** OPEN — active — programme of work adopted 2026-08-02; generalised 2026-10-02 to a ladder of diagram flavours with skeleton use cases: Agency behaviour, and M-象-2000 via Fong-style open causal theories (see §Generalisation)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -1902,6 +1902,7 @@ Agency, is built and tested here.
 | R3 | Markov / comonoid regime | copy and discard of data; probabilistic semantics | `rmgraph`/`rmdiagram` (MPZ) | A1 landed; A2 (rewriting) open |
 | R3′ | **Mixed regime (new)** | some wires linear (sessions, obligations), others shareable (evidence) | `regime.clj` | **landed today as checks** |
 | R4 | Causal inference | identification, surgery, counterfactuals | `causal/*` | WS-B/C, landed, oracle-checked |
+| R4′ | **Open causal theories (Fong, finite fragment; new)** | patterns as open theories; incidents as their gluing | `causal/open_theory.clj` | **landed today** |
 | R5 | Proofs as diagrams | typed ports = goals; open ports = sorry | — | WS-D, not started |
 
 Two things only show up when the rungs are used together. First, agent
@@ -1965,6 +1966,64 @@ the causal DAG is authored, not evidenced; `find-iso` is backtracking and
 untested on large windows; rules are instantiated per agent because the
 kernel has no type variables.
 
+### Skeleton use case 2 — M-象-2000 with Fong-style open theories (BUILT 2026-10-02)
+
+Which Fong. Two of his ideas, used together. **Causal theories**: a causal
+model presented as syntax (the DAG generates the processes) separate from
+its mechanisms (a model of that syntax), so one syntax can carry
+alternative mechanisms and interventions act on the syntax. **Decorated
+cospans**: systems made *open* by a declared boundary, composed by gluing
+along it. Together these give *open causal theories*. A design pattern is a
+small theory with an interface, and an incident is the gluing of the
+patterns that bear on it.
+
+Built: `src/futon3c/diagramprover/causal/open_theory.clj`. It holds the
+finite, deterministic fragment: Boolean mechanisms in the `causal.scm`
+grammar, gluing by shared names, and typed refusals (:undeclared-sharing,
+:double-mechanism, :cycle). The composite is an ordinary closed theory, so
+every existing receipt applies to it. The specimen is
+`src/futon3c/diagramprover/skeleton/xiang2000.clj`. Five pattern-sized
+theories (operator proposals, followup delivery, rule reporting, Kimi
+refusals, capture default) glue into the 09-24 Kimi red-tape incident,
+M-象-2000's own acceptance case. The skeleton then asks the questions that
+mission left open or answered by hand:
+
+| M-象-2000 question | Where the mission stands | Computed here |
+|---|---|---|
+| Derivation of R | "a bounded session/order reconstruction, not a stored causal edge" (P0) | the causal cone of R. For the commit it is exactly the hand table's report → constrain → propose |
+| Hole `:反事实世界模型`: "if P had been in force at T0, would the incident have happened?" | hungry. ARGUE-0: needs a world model; P14 narrowed for want of one | counterfactual by abduction/action/prediction: no red tape. The world model is the glued mechanisms, written out and reviewable |
+| Withdrawal semantics | the requisition gate "never reads rule records", so withdrawal changes reports, not enforcement | do(withdraw rule record): red tape persists as built, stops if enforcement reads the record. One syntax, two wirings, both computed |
+| Capture drop held apart from the rule | stated by hand | d-separated, and the counterfactual "no commit" leaves the drop in place. This holds *relative to the glued patterns*: gluing a pattern that links them would change it, so it is a checkable claim |
+| "0 of 1,227 flexiargs carry predictions" (WM never runs a pattern's prose) | open | the glued theory implies 103 testable independencies at conditioning size ≤ 1. These are joint predictions of the patterns, ready for the WS-B falsification pass against the act history |
+
+Evidence: 12 new tests (gluing laws, every receipt, a non-composing
+pattern), 71 tests / 185 assertions green with the kernel, causal and
+Agency suites. Four mutations were each caught: disabling either gluing
+refusal, turning the guard's `and` into `or`, and rewiring the rule
+record's mechanism.
+
+Limits, stated: the mechanisms are authored from M-象-2000's text, not
+mined from the store. Values are Boolean, with no probabilities. Variables
+are identified by name. The 103 predictions have not yet been tested
+against the act history. Fong's full setting (mechanisms in a Markov
+category such as Stoch, surgery as a functor on the diagram rather than on
+the DAG) is the D3 tier of `capability-proof-diagramprover.tex` and stays
+registered, not built.
+
+What it opens for M-象-2000, in order of payoff:
+1. **Q5 prevention, prospectively.** When an act arrives (a proposed
+   enforcement rule, say), glue it into the theory of the patterns in force
+   and ask the counterfactual *before* it lands. The 16:20 proposal is the
+   test: would the guard pattern, already on file, have flagged it?
+2. **Patterns that predict.** Author each flexiarg's IF/HOWEVER/THEN/BECAUSE
+   as an open theory. Its implied independencies are its predictions, and
+   the act history is the data that can falsify them.
+3. **Q4 promises as combs.** A promise is a process with a hole the debtor
+   fills later. The Agency skeleton already shows the open-port half (an
+   unanswered bell is an output port). The semantic half is combs in Markov
+   categories (arXiv:2404.02017), the bridge object this mission's
+   capability proof already names.
+
 ### What the skeleton showed the engine lacks
 
 1. **Rewriting in the mixed regime.** DPO rewrites only the plain kernel;
@@ -2012,6 +2071,14 @@ kernel has no type variables.
 - [ ] **S5** A second skeleton at R5 (gate pipeline or WS-D proof) reusing
       `regime.clj` and the S3 certificate.
 - [ ] **S6** Port skeleton, once `lean-wiring` and MFUTON facts are on hand.
+- [x] **S7** M-象-2000 skeleton: open causal theories with gluing, and the
+      Kimi red-tape receipts (derivation, prevention counterfactual,
+      withdrawal semantics, held-apart attribution, predictions).
+- [ ] **S8** Prospective 象 check: glue an arriving act into the theory of
+      patterns in force and return the counterfactual before it lands;
+      replay the 09-24 16:20 proposal as the acceptance case.
+- [ ] **S9** Falsification pass of the glued theory's predictions against
+      the act history (dagitty/y0 oracles as in WS-B D2).
 
 Ownership as before: architecture and review Claude owner; S2–S4 are
 bounded Codex slices in the WS-E pattern (author ≠ reviewer, gates re-run).
