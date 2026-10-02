@@ -1068,3 +1068,83 @@ agent text is left alone."
                           (overlays-in (point-min) (point-max)))))
       (should (= 2 (length os)))
       (should (eq 'session-mode-mark-act-face (overlay-get (car (overlays-at 1)) 'face))))))
+
+(defun session-mode-test--rnode-vocabulary ()
+  "Write and return a minimal generated R-node vocabulary fixture."
+  (let ((path (make-temp-file "rnode-vocabulary-" nil ".json")))
+    (with-temp-file path
+      (insert
+       (json-serialize
+        '((version . 1)
+          (nodes . [((id . "R14") (label . "Commitment temperature")
+                     (stage . "select") (cues . ["for now"]))])))))
+    path))
+
+(defun session-mode-test--rnode-overlays ()
+  "Return the R-node overlays in the current buffer."
+  (seq-filter (lambda (o) (overlay-get o 'session-mode-rnode-tag))
+              (overlays-in (point-min) (point-max))))
+
+(ert-deftest session-mode-rnode-tags-only-operator-regions ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path))
+            (insert "joe: let's go with option 2 for now\ncodex: for now ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (let ((underline (plist-get (overlay-get (car overlays) 'face) :underline)))
+                (should (eq 'dots (plist-get underline :style)))
+                (should (equal (face-foreground 'session-mode-mark-select-face nil t)
+                               (plist-get underline :color))))
+              (should (equal "for now" (buffer-substring-no-properties
+                                         (overlay-start (car overlays))
+                                         (overlay-end (car overlays)))))
+              (should (equal
+                       "R14 Commitment temperature (SELECT) — cue “for now” — provisional"
+                       (overlay-get (car overlays) 'help-echo))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-ignore-quoted-tail ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path))
+            (insert "joe: consider this\n>>> quoted material\nfor now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should-not (session-mode-test--rnode-overlays))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-repaint-does-not-stack ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path))
+            (insert "joe: for now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should (= 1 (length (session-mode-test--rnode-overlays))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-missing-vocabulary-fails-soft ()
+  (with-temp-buffer
+    (let ((session-mode-rnode-vocabulary-file "/definitely/missing/rnode-vocabulary.json")
+          (session-mode--rnode-vocabulary nil)
+          (session-mode--rnode-vocabulary-key nil)
+          (session-mode--rnode-missing-reported nil)
+          messages)
+      (insert "joe: for now\ncodex: ok\n")
+      (cl-letf (((symbol-function 'message)
+                 (lambda (format-string &rest args)
+                   (push (apply #'format format-string args) messages))))
+        (should-not (session-mode--paint-rnode-tags (point-min) (point-max)))
+        (should-not (session-mode--paint-rnode-tags (point-min) (point-max))))
+      (should-not (session-mode-test--rnode-overlays))
+      (should (= 1 (length messages))))))

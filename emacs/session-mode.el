@@ -46,6 +46,15 @@ are styled faintly to distinguish them from the deterministic recognized/explici
 lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   :type 'boolean :group 'session-mode)
 
+(defcustom session-mode-rnode-vocabulary-file
+  "/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-vocabulary.json"
+  "Generated deterministic R-node cue vocabulary."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-rnode-tags t
+  "When non-nil, lightly tag R-node cues in operator regions."
+  :type 'boolean :group 'session-mode)
+
 ;; --- Faces, keyed by typology tier/type (colours mirror typology.json) ---
 (defface session-mode-clock-face
   '((((background light)) :background "#cdeee9" :weight bold)
@@ -117,6 +126,12 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
 (defvar session-mode--missions nil "Hash set of on-disk mission/excursion names.")
 (defvar session-mode--patterns nil "Hash set of on-disk pattern (flexiarg) names.")
 (defvar session-mode--typology nil "type -> alist(glyph tier recognizer colour), from typology.json.")
+(defvar session-mode--rnode-vocabulary nil
+  "Compiled R-node rows loaded from `session-mode-rnode-vocabulary-file'.")
+(defvar session-mode--rnode-vocabulary-key nil
+  "File and modification-time key for the compiled R-node vocabulary.")
+(defvar session-mode--rnode-missing-reported nil
+  "Non-nil after reporting one missing R-node vocabulary message.")
 
 (defcustom session-mode-typology-file
   "/home/joe/code/futon6/data/c-vector/typology.json"
@@ -997,6 +1012,83 @@ Use the real inserted span, including any agent-chat text transformations."
         (overlay-put o 'face (intern (format "session-mode-mark-%s-face" stage)))
         (overlay-put o 'help-echo (format "%s %s — %s" mark intent (upcase (symbol-name stage))))))))
 
+(defun session-mode--rnode-cue-regexp (cue)
+  "Compile CUE with evaluator-compatible boundaries and ellipsis span."
+  (let ((parts (split-string cue "\\(?:\\.\\.\\.\\|…\\)" t "[ \t\n]+")))
+    (when parts
+      (concat "\\_<"
+              (mapconcat #'regexp-quote parts "\\(?:.\\|\n\\)\\{0,40\\}")
+              "\\_>"))))
+
+(defun session-mode--load-rnode-vocabulary ()
+  "Load and compile the generated R-node vocabulary, failing softly."
+  (if (not (file-readable-p session-mode-rnode-vocabulary-file))
+      (progn
+        (unless session-mode--rnode-missing-reported
+          (setq session-mode--rnode-missing-reported t)
+          (message "session-mode: R-node vocabulary missing at %s"
+                   session-mode-rnode-vocabulary-file))
+        (setq session-mode--rnode-vocabulary nil
+              session-mode--rnode-vocabulary-key nil)
+        nil)
+    (let ((key (list session-mode-rnode-vocabulary-file
+                     (file-attribute-modification-time
+                      (file-attributes session-mode-rnode-vocabulary-file)))))
+      (unless (equal key session-mode--rnode-vocabulary-key)
+        (let ((json-object-type 'alist) (json-array-type 'list))
+          (setq session-mode--rnode-vocabulary
+                (mapcar
+                 (lambda (row)
+                   (let ((id (alist-get 'id row))
+                         (label (alist-get 'label row))
+                         (stage (alist-get 'stage row)))
+                     (list id label stage
+                           (delq nil
+                                 (mapcar
+                                  (lambda (cue)
+                                    (when-let* ((rx (session-mode--rnode-cue-regexp cue)))
+                                      (cons cue rx)))
+                                  (alist-get 'cues row))))))
+                 (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
+                session-mode--rnode-vocabulary-key key
+                session-mode--rnode-missing-reported nil)))
+      session-mode--rnode-vocabulary)))
+
+(defun session-mode--rnode-stage-face (stage)
+  "Return a dotted underline face using STAGE's transcript colour."
+  (let* ((face-stage (if (equal stage "assurance") "annotator" stage))
+         (face (intern (format "session-mode-mark-%s-face" face-stage)))
+         (colour (face-foreground face nil t)))
+    `(:underline (:style dots :color ,colour))))
+
+(defun session-mode--paint-rnode-tags (_beg _end)
+  "Paint deterministic R-node cues in operator regions only."
+  ;; Repaint the small deterministic layer as a unit.  JIT regions can split a
+  ;; multiword cue; whole-operator repainting avoids boundary misses and makes
+  ;; repeated or overlapping JIT calls idempotent.
+  (remove-overlays (point-min) (point-max) 'session-mode-rnode-tag t)
+  (when (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary))
+    (let ((case-fold-search t))
+      (pcase-dolist (`(,beg . ,region-end) (session-mode--operator-regions))
+        (let ((end (save-excursion
+                     (goto-char beg)
+                     (if (re-search-forward "^[ \t]*>>>" region-end t)
+                         (match-beginning 0)
+                       region-end))))
+          (dolist (row session-mode--rnode-vocabulary)
+            (pcase-let ((`(,id ,label ,stage ,cues) row))
+              (dolist (cue cues)
+                (save-excursion
+                  (goto-char beg)
+                  (while (re-search-forward (cdr cue) end t)
+                    (let ((o (make-overlay (match-beginning 0) (match-end 0))))
+                      (overlay-put o 'session-mode-rnode-tag t)
+                      (overlay-put o 'evaporate t)
+                      (overlay-put o 'face (session-mode--rnode-stage-face stage))
+                      (overlay-put o 'help-echo
+                                   (format "%s %s (%s) — cue “%s” — provisional"
+                                           id label (upcase stage) (car cue))))))))))))))
+
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
 Also annotate the latest sent operator turn.  Drafts use local cues only;
@@ -1018,9 +1110,13 @@ Kept separate from full session markup so typing never triggers retrieval."
         (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
         (add-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation nil t)
         (jit-lock-register #'session-mode--paint-marks)
+        (jit-lock-register #'session-mode--paint-rnode-tags)
+        (session-mode--paint-rnode-tags (point-min) (point-max))
         (session-mode-turn-tags-refresh))
     (jit-lock-unregister #'session-mode--paint-marks)
+    (jit-lock-unregister #'session-mode--paint-rnode-tags)
     (remove-overlays (point-min) (point-max) 'session-mode-mark t)
+    (remove-overlays (point-min) (point-max) 'session-mode-rnode-tag t)
     (remove-hook 'after-change-functions #'session-mode--tags-after-change t)
     (remove-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation t)
     (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
