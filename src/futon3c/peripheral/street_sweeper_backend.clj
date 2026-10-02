@@ -482,12 +482,17 @@
                                             [:repo-policy
                                              :intent-marker-exempt-path-regexes]
                                             []))
-        intent-exempt? (and (seq intent-exempt-patterns)
-                            (seq (:files packet))
-                            (every? (fn [path]
-                                      (some #(re-matches % path)
-                                            intent-exempt-patterns))
-                                    (:files packet)))
+        versioned-generated (set (get-in packet
+                                         [:repo-policy
+                                          :versioned-generated-paths]
+                                         #{}))
+        intent-exempt? (and (seq (:files packet))
+                            (or (every? versioned-generated (:files packet))
+                                (and (seq intent-exempt-patterns)
+                                     (every? (fn [path]
+                                               (some #(re-matches % path)
+                                                     intent-exempt-patterns))
+                                             (:files packet)))))
         results (mapv (fn [{:keys [id name check defer-reason-if-fails defer-reason]}]
                         (let [pass? (if (and (= id :inv-15-no-intent-markers)
                                              intent-exempt?)

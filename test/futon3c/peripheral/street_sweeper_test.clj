@@ -460,6 +460,17 @@
     (is (empty? (:proposed r)))
     (is (= [path] (:ok r)))))
 
+(deftest versioned-generated-content-does-not-trigger-source-intent-markers
+  (let [path "resources/capability_zones/live-map-pca3-v1.json"
+        c (ssb/classify-packet
+           {:repo "futon3c"
+            :files [path]
+            :file-statuses {path :modified}
+            :diff-text "{\"mission-id\":\"M-TODO-analysis\"}"
+            :loc 1
+            :repo-policy {:versioned-generated-paths #{path}}})]
+    (is (:auto-approve? c))))
+
 (deftest inv-28-mission-docs-free-pass-on-loc-cap
   (testing "INV-28: all-holes/-packet auto-approves regardless of LoC"
     (let [c (ssb/classify-packet
