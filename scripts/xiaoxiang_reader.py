@@ -442,6 +442,12 @@ def render(report: dict, list_files: bool = False) -> str:
             out.append(f"  {_WHERE.get(place, place):<44} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
     for kind, n in report["secret_kinds"].items():
         out.append(f"  {kind:<20} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
+    if report["secret_kinds"]:
+        out.append("What to do: rotate first; a value in a log an agent has read is spent whether"
+                   " or not the log is cleaned.")
+        for kind in report["secret_kinds"]:
+            if kind in ACTION:
+                out.append(f"  {kind:<20} {ACTION[kind]}")
     files = report.get("files_with_secrets") or {}
     if files and list_files and not report.get("run_by_agent"):
         out.append("Files holding them (values are never printed):")
@@ -466,6 +472,62 @@ def run_by_agent(environ=None) -> bool:
     environ = os.environ if environ is None else environ
     return any(k == "CLAUDECODE" or k.startswith(("CLAUDE_CODE_", "CODEX_")) or k == "AI_AGENT"
                for k in environ)
+
+
+def preamble(claude_root: str, codex_root: str, days: float | None) -> str:
+    """What this run will do, said before it does it, so a person can decline."""
+    window = f"the last {days:g} days of" if days else "all of"
+    return (
+        "小象 is about to read your agent logs on this machine.\n"
+        f"  Reads:   {window} {claude_root} and {codex_root}\n"
+        "  Sends:   nothing; no network, no language model, standard library only.\n"
+        "  Prints:  how many turns you typed and what kinds of request they were;\n"
+        "           how many suspected credentials sit in the logs, by kind (GitHub token,\n"
+        "           AWS key, ...) and by where they sit (what you typed, tool output,\n"
+        "           files the agent wrote, test fixtures); how much agents worked while\n"
+        "           you weren't typing.\n"
+        "  Never:   the credential values, your turns' text, or which files hold what\n"
+        "           (--list-files names the files, at a terminal only).\n"
+        "  Writes:  one HTML page with the chart, in this directory (--html '' for none).\n"
+        "  If an agent runs this, it learns the counts and kinds above and nothing more;\n"
+        "  a kind is what you need in order to rotate the credential at its issuer.\n")
+
+
+def consent(a, environ=None) -> bool:
+    """Show the preamble; at a terminal ask for a y, otherwise require --yes.
+    An agent passing --yes is visible in its transcript, which is the record
+    of who decided."""
+    environ = os.environ if environ is None else environ
+    text = preamble(a.claude, a.codex, a.days)
+    if a.yes:
+        print(text, file=sys.stderr)
+        return True
+    if not sys.stdin.isatty():
+        print(text + "\nNot at a terminal, so nobody can be asked: pass --yes to proceed.",
+              file=sys.stderr)
+        return False
+    print(text, file=sys.stderr)
+    try:
+        answer = input("Type y to proceed: ")
+    except EOFError:
+        answer = ""
+    return answer.strip().lower() in ("y", "yes")
+
+
+ACTION = {
+    "github-token": "revoke it at github.com/settings/tokens and make a new one",
+    "aws-access-key": "deactivate it in the IAM console and issue another",
+    "anthropic-key": "delete it in the Anthropic console and make a new one",
+    "openai-key": "delete it in the OpenAI dashboard and make a new one",
+    "slack-token": "revoke it in Slack's app settings",
+    "google-api-key": "regenerate it in Google Cloud and restrict the new one",
+    "jwt": "it expires on its own; if long-lived, revoke the session that issued it",
+    "bearer": "find which service issued it and revoke it there",
+    "url-credentials": "change that account's password; URLs with passwords get logged everywhere",
+    "keyword-assignment": "look at which setting it was; usually an env dump or a dotfile shown to the agent",
+    "high-entropy": "look before acting; long random strings are often ids, not keys",
+    "private-key": "generate a new key pair and remove the old public key wherever it is trusted",
+}
 
 
 AGENT_NOTICE = ("This report was produced for the person who owns these logs. It names no "
@@ -573,6 +635,8 @@ def main(argv=None) -> int:
     ap.add_argument("--claude", default=CLAUDE_ROOT, help=f"default {CLAUDE_ROOT}")
     ap.add_argument("--codex", default=CODEX_ROOT, help=f"default {CODEX_ROOT}")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
+    ap.add_argument("--yes", action="store_true",
+                    help="proceed without the y prompt (needed when not at a terminal)")
     ap.add_argument("--list-files", action="store_true",
                     help="name the log files holding credentials (refused when a coding agent "
                          "is running this: the report must not be a map to them)")
@@ -597,6 +661,9 @@ def main(argv=None) -> int:
     if model is None:
         with open(a.model, encoding="utf-8") as fh:
             model = json.load(fh)
+    if not consent(a):
+        print("Nothing was read.", file=sys.stderr)
+        return 3
     files = ([("claude", p) for p in log_files(a.claude, "*/*.jsonl", a.days)]
              + [("codex", p) for p in log_files(a.codex, "*/*/*/rollout-*.jsonl", a.days)])
     if not files:

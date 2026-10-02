@@ -321,3 +321,16 @@ terminal. An agent with a shell can still read `~/.claude` on its own; what
 the tool can do is refuse to be the map and say so where the person will
 read it. Four tests, including the refusal and the JSON stripping through
 the real CLI.
+
+## Aside (2026-10-02): informed consent, and what to do per kind
+
+Joe: have the script describe itself and wait for a y. `xiaoxiang_reader.py`
+now prints a preamble before reading anything (what it reads, sends,
+prints, never prints, writes, and what an agent running it learns), then
+asks "Type y to proceed" at a terminal; without a terminal it refuses with
+exit 3 unless `--yes` is passed, and an agent passing `--yes` is visible in
+its transcript. The kinds table gained a "what to do" block: rotate first,
+since a value in a log an agent has read is spent whether or not the log
+is cleaned, then one line per kind naming where to revoke it. The TTY-only
+file list and the kind-by-provenance crossed table from the earlier
+assessment are not done.

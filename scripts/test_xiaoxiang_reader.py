@@ -311,7 +311,7 @@ class UnderAnAgent(unittest.TestCase):
             mp = os.path.join(d, "model.json")
             with open(mp, "w") as fh:
                 json.dump(model, fh)
-            base = ["--claude", cl, "--codex", cx, "--model", mp, "--html", "", "--jobs", "1"]
+            base = ["--claude", cl, "--codex", cx, "--model", mp, "--html", "", "--jobs", "1", "--yes"]
             env_agent = {"PATH": os.environ.get("PATH", ""), "HOME": d, "CLAUDECODE": "1"}
             env_human = {"PATH": os.environ.get("PATH", ""), "HOME": d}
             here = os.path.dirname(os.path.abspath(rd.__file__))
@@ -333,6 +333,45 @@ class UnderAnAgent(unittest.TestCase):
             self.assertIn("Files holding them", human.stdout)
             self.assertIn("s1.jsonl", human.stdout)
             self.assertNotIn(SECRET, human.stdout + agent.stdout)
+
+
+class Consent(unittest.TestCase):
+    def test_without_a_terminal_nothing_is_read_unless_yes(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            mp = os.path.join(d, "model.json")
+            with open(mp, "w") as fh:
+                json.dump(model, fh)
+            here = os.path.dirname(os.path.abspath(rd.__file__))
+            env = {"PATH": os.environ.get("PATH", ""), "HOME": d}
+            base = [sys.executable, rd.__file__, "--claude", cl, "--codex", cx, "--model", mp, "--html", "", "--json"]
+            declined = subprocess.run(base, cwd=here, capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
+            self.assertEqual(3, declined.returncode)
+            self.assertEqual("", declined.stdout)
+            self.assertIn("about to read your agent logs", declined.stderr)
+            self.assertIn("pass --yes to proceed", declined.stderr)
+            self.assertIn("Nothing was read.", declined.stderr)
+            agreed = subprocess.run(base + ["--yes"], cwd=here, capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
+            self.assertEqual(0, agreed.returncode, agreed.stderr)
+            self.assertIn("about to read your agent logs", agreed.stderr)
+            self.assertEqual(3, json.loads(agreed.stdout)["turns"])
+
+    def test_preamble_says_what_it_never_prints_and_what_an_agent_learns(self):
+        text = rd.preamble("~/.claude/projects", "~/.codex/sessions", 7)
+        self.assertIn("the last 7 days of ~/.claude/projects", text)
+        self.assertIn("Never:   the credential values", text)
+        self.assertIn("If an agent runs this, it learns the counts and kinds above and nothing more", text)
+        self.assertIn("all of ~/.claude/projects", rd.preamble("~/.claude/projects", "~/.codex/sessions", None))
+
+    def test_report_tells_the_person_what_to_do_per_kind(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            report = rd.read([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)], model, jobs=1)
+        text = rd.render(report)
+        self.assertIn("What to do: rotate first", text)
+        self.assertIn("keyword-assignment   look at which setting it was", text)
 
 
 class Report(unittest.TestCase):
@@ -379,7 +418,7 @@ class Bundle(unittest.TestCase):
             with open(path, "w") as fh:
                 fh.write(xx.bundle(rows))
             cl, cx = fake_home(d)
-            out = subprocess.run([sys.executable, path, "--claude", cl, "--codex", cx, "--json"],
+            out = subprocess.run([sys.executable, path, "--claude", cl, "--codex", cx, "--json", "--yes"],
                                  cwd=d, capture_output=True, text=True, timeout=120,
                                  env={"PATH": os.environ.get("PATH", ""), "HOME": d})
         self.assertEqual(0, out.returncode, out.stderr)

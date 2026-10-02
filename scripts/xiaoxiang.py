@@ -940,7 +940,7 @@ def bundle(rows) -> str:
     body[a:b + 1] = ["MODEL = " + repr(model)]
     return "\n".join([
         "#!/usr/bin/env python3",
-        '"""小象 (xiaoxiang) v' + model["version"] + ": " + doc + "\n\nRun: python3 xiaoxiang-local.py [--days N] [--json]",
+        '"""小象 (xiaoxiang) v' + model["version"] + ": " + doc + "\n\nRun: python3 xiaoxiang-local.py [--days N] [--json]\nIt says what it will read and print, then waits for a y; --yes when not at a terminal.",
         "Standard library only; no network access.  Built " + __import__("datetime").date.today().isoformat() + '."""',
         "from __future__ import annotations",
         "",
