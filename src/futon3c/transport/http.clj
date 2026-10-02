@@ -10702,6 +10702,33 @@
                       {:reason :evidence-not-operator-turn :field :evidence-id})))
     entry))
 
+(defn- reply-offer!
+  "Mint the offer an agent made in prose: the 🈸 paragraphs of the reply that
+   ACCEPTANCE (Joe's turn) answers, read from its :evidence/in-reply-to. Nil
+   unless that reply is this seat's assistant turn, has a 🈸 paragraph, and the
+   agent holds an offer grant. Keyed to the reply, so it is minted once."
+  [base acceptance agent session]
+  (let [reply-id (:evidence/in-reply-to acceptance)
+        reply (when reply-id
+                (try (rule-record-store/request!
+                      base "GET" (str "/api/alpha/evidence/"
+                                      (java.net.URLEncoder/encode (str reply-id) "UTF-8")) nil)
+                     (catch Throwable _ nil)))
+        body (evidence-body-map reply)
+        field (fn [m k] (or (get m k) (get m (name k))))]
+    (when (and reply
+               (= (str agent) (str (:evidence/author reply)))
+               (= (str session) (str (:evidence/session-id reply)))
+               (= "chat-turn" (str (field body :event)))
+               (= "assistant" (str (field body :role))))
+      (when-let [record (agreement-record/reply-offer-record
+                         (assoc reply :evidence/body body) (str agent) (str session))]
+        (when-let [grant-id (offer-grant-id base (str agent))]
+          (:record (offer-cli/write!
+                    base {:record record :idempotency-key (str "reply-ask:" reply-id)}
+                    (act-harness/plain "route:futon3c.agreement-reply-ask")
+                    (act-stamp/stamp (str agent) (str agent) {:grant grant-id} :declared))))))))
+
 (defn- list-hyperedges! [base type endpoint]
   (:hyperedges
    (rule-record-store/request!
@@ -10846,7 +10873,17 @@
                              records)
               visible (offer-record/active-offers-as-of
                        records {:agent agent :session session} at)
-              resolution (agreement-record/resolve-acceptance visible parsed)]
+              resolution (agreement-record/resolve-acceptance visible parsed)
+              ;; No stored offer: the agent may have asked in prose. A 🈸
+              ;; paragraph in the reply this turn answers is that offer.
+              reply-offer (when (and (nil? existing) (nil? (:offer-id parsed))
+                                     (= :no-visible-offer
+                                        (get-in resolution [:refused :reason])))
+                            (reply-offer! base evidence agent session))
+              resolution (if reply-offer
+                           (agreement-record/resolve-acceptance
+                            {:offers [reply-offer]} parsed)
+                           resolution)]
           (cond
             existing
             (let [offer (some #(when (= (:agreement/offer existing) (:id %)) %) offers)
