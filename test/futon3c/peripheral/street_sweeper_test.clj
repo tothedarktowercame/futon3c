@@ -114,6 +114,14 @@
                 (:rejected r)))
     (is (= ["src/futon3c/foo.clj"] (:ok r)))))
 
+(deftest declared-versioned-generated-data-is-stageable
+  (let [path "data/mission-wholeness.edn"
+        r (ssb/apply-stage-invariants
+           "futon6" [path] {:versioned-generated-paths #{path}})]
+    (is (empty? (:rejected r)))
+    (is (empty? (:proposed r)))
+    (is (= [path] (:ok r)))))
+
 ;; =============================================================================
 ;; INV-10: regenerable-artifact relocation proposal
 ;; =============================================================================
@@ -444,6 +452,13 @@
     (let [r (ssb/apply-stage-invariants "futon7a" ["vsatarcs.html"] nil)]
       (is (= 1 (count (:proposed r)))
           "no policy → .html in generated-extensions → relocation proposal"))))
+
+(deftest versioned-generated-json-is-committable-not-a-relocation-proposal
+  (let [path "resources/capability_zones/live-map-pca3-v1.json"
+        r (ssb/apply-stage-invariants
+           "futon3c" [path] {:versioned-generated-paths #{path}})]
+    (is (empty? (:proposed r)))
+    (is (= [path] (:ok r)))))
 
 (deftest inv-28-mission-docs-free-pass-on-loc-cap
   (testing "INV-28: all-holes/-packet auto-approves regardless of LoC"

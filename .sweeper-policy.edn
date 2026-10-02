@@ -1,4 +1,7 @@
-{:clojure-test-command
+{:versioned-generated-paths
+ #{"resources/capability_zones/live-map-pca3-v1.json"}
+
+ :clojure-test-command
  ["clojure" "-J-XX:ActiveProcessorCount=2" "-M:test"]
 
  :elisp-test-command

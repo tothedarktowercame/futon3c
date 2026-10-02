@@ -245,6 +245,10 @@
 
 (declare ^:private path-ext file-size-bytes)
 
+(defn- versioned-generated-path?
+  [path repo-policy]
+  (contains? (set (:versioned-generated-paths repo-policy #{})) (str path)))
+
 (def stage-invariants
   [{:id :inv-2 :name "secret-pattern-reject" :rejects? true
     :defer-reason :rejected-secret
@@ -256,8 +260,9 @@
 
    {:id :inv-13 :name "extended-exclusion" :rejects? true
     :defer-reason :rejected-excluded
-    :check (fn [path _]
-             (when (some #(re-find % path) exclusion-patterns)
+    :check (fn [path {:keys [repo-policy]}]
+             (when (and (not (versioned-generated-path? path repo-policy))
+                        (some #(re-find % path) exclusion-patterns))
                {:envelope-rejected true
                 :reason :universal-exclusion
                 :path path}))}
@@ -275,7 +280,8 @@
                    policy-allowlist (set (:additional-hand-authored-paths repo-policy #{}))
                    policy-authored? (or (contains? policy-allowlist basename)
                                         (contains? policy-allowlist path-str))]
-               (when (and (not hand-authored-filename?)
+               (when (and (not (versioned-generated-path? path repo-policy))
+                          (not hand-authored-filename?)
                           (not policy-authored?)
                           (or (contains? generated-extensions ext)
                               (and (> sz regenerable-size-threshold-bytes)
