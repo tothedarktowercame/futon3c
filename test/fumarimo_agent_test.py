@@ -55,6 +55,7 @@ class FumarimoAgentTest(unittest.TestCase):
         self.assertEqual(fumarimo.OUTPUT_MSGTYPE, output["msgtype"])
         self.assertEqual("image-output", output[fumarimo.EVENT_NAMESPACE]["kind"])
         self.assertEqual("$cell", output["m.relates_to"]["event_id"])
+        self.assertNotIn("m.in_reply_to", output["m.relates_to"])
         self.assertEqual("$cell", output[fumarimo.EVENT_NAMESPACE]["cell_event_id"])
         self.assertEqual(REQUEST, output[fumarimo.EVENT_NAMESPACE]["request_event_id"])
         self.assertEqual("run-1", output[fumarimo.EVENT_NAMESPACE]["execution_id"])

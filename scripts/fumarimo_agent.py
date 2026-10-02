@@ -70,7 +70,6 @@ def image_output_content(
         "m.relates_to": {
             "rel_type": OUTPUT_RELATION,
             "event_id": cell_event_id,
-            "m.in_reply_to": {"event_id": cell_event_id},
         },
         EVENT_NAMESPACE: {
             "kind": "image-output",
