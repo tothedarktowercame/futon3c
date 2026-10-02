@@ -162,3 +162,15 @@ three sentences, not a `yes` or `undo`) be settled by the draft with
 The widget draws three tiers: lexical cues at once, the draft's labelled
 spans within a second (dotted, with the intent in superscript), 象's cues
 when the reading lands; the fragment table shows each fragment's basis.
+
+## Precomputed pattern candidates
+
+Before a turn is dispatched, the JVM runs `xlate.py find-many` once over the
+draft's fragments (or the sentences, when there is no draft): BM25 over the
+library, top five per fragment, each hit with its title, context and
+conclusion read from the flexiarg. The result is stored beside the record
+as `turn-X.json.patterns.json` and appended to the brief, so 象 reads
+candidates and decides fit instead of running two or three searches per
+fragment inside its loop. `FUTON3C_XLATE` names the script;
+`FUTON3C_XIANG_CANDIDATES=0` turns it off. The widget shows the candidate
+ids beside each draft fragment until the reading lands.

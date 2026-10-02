@@ -214,3 +214,33 @@ wall clock and needs only a JSON output mode on `xlate.py find` plus a
 
 Verified here: Clojure 43 tests / 293 assertions; TypeScript 35; the rest as
 before. Nothing live.
+
+## Fourth packet (2026-10-02): pattern candidates precomputed before dispatch
+
+The largest remaining chunk of a reading's wall clock was the seat's own
+pattern search: two or three `xlate.py find` calls per fragment, inside the
+LLM loop. Now:
+
+- `xlate.py find-many [-n N] [--with-candidates]` reads a JSON array of
+  queries on stdin and answers one JSON object, one index load; `find --json`
+  for a single query. Each hit carries id, score, title and the pattern's
+  context and conclusion, read from its file (`excerpt`), since the index
+  keeps tokens only and a reader deciding fit needs the IF/THEN text.
+  `scripts/test_xlate_find_many.py` (4 cases) runs it over a three-pattern
+  fake index.
+- `turn-service/find-pattern-candidates!` runs the `:pattern-candidates`
+  effect at dispatch over the draft's fragments (else the sentences; a
+  one-word query is skipped), stores the result as `turn-X.json.patterns.json`,
+  and `analysis-brief` appends a section listing the hits per query with
+  the instruction to read them first, cite only a fit, and record near
+  misses in `pattern_rejections`. A failing finder is logged in health and
+  the brief goes without the section. http binds the effect to
+  `python3 xlate.py find-many -n 5` over stdin, 30 s cap.
+- `GET …/turns/:id` returns `pattern_candidates`; the widget shows the ids
+  beside each draft fragment.
+
+Verified here: Clojure 45 tests / 306 assertions; TypeScript 36; pytest 10;
+http.clj reads (575 forms). Nothing live. What to measure on the box once
+it runs: the reading's duration before and after (the job ledger has
+started-at and finished-at), and how often the published refs are among the
+precomputed hits, which says whether five per fragment is enough.

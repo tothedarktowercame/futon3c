@@ -203,11 +203,21 @@ export interface Notice {
   fragment_id?: string;
 }
 
+export interface PatternCandidate {
+  id: string;
+  score: number;
+  title: string;
+  context?: string;
+  conclusion?: string;
+}
+
 export interface TurnView {
   ok: true;
   id: string;
   record: TurnRecord;
   draft?: Draft | null;
+  /** BM25 hits per fragment query, precomputed before dispatch. */
+  pattern_candidates?: Record<string, PatternCandidate[]> | null;
   analysis: Analysis | null;
   candidates: unknown | null;
   notices: Notice[];

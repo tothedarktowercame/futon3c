@@ -66,7 +66,7 @@ export interface TurnDetail {
   html: string;
   marks: Array<{ mark: string; intent: string; stage: string; text: string }>;
   fragments: Array<{ sentence: string; intent: string; target: string | null; rationale: string; patterns: string[]; basis: string }>;
-  draft: Array<{ intent: string | null; guesses: string[]; precision: number | null; text: string }>;
+  draft: Array<{ intent: string | null; guesses: string[]; precision: number | null; text: string; candidates: string[] }>;
   agreement: DraftAgreement | null;
   notices: Notice[];
   labeller: string | null;
@@ -103,7 +103,13 @@ export function turnDetail(view: TurnView): TurnDetail {
           })),
         )
       : [],
-    draft: (view.draft?.fragments ?? []).map((f) => ({ intent: f.intent, guesses: f.guesses, precision: f.precision ?? null, text: f.text })),
+    draft: (view.draft?.fragments ?? []).map((f) => ({
+      intent: f.intent,
+      guesses: f.guesses,
+      precision: f.precision ?? null,
+      text: f.text,
+      candidates: (view.pattern_candidates?.[f.text] ?? []).map((c) => c.id),
+    })),
     agreement: analysis?.draft_agreement ?? null,
     notices: view.notices ?? [],
     labeller: analysis?.labeller ?? null,

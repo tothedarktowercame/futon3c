@@ -26,6 +26,9 @@
      :reset-seat!     (fn [agent]) optional; clears the seat's conversation
      :draft           (fn [source-text] -> xiaoxiang_preview.py fragments or nil)
                       optional; run at record time, about 0.1 s
+     :pattern-candidates (fn [queries] -> {query [{:id :score :title ..}]} or nil)
+                      optional; BM25 per fragment before dispatch, so the seat
+                      reads candidates instead of searching
      :skip-routine?   true to record a routine turn (tr/routine-draft?) as
                       \"drafted\" and never queue it; default false until
                       the agreement numbers justify it
@@ -325,15 +328,45 @@
               {:dispatched false :reason :drafted :agent nil})
           (dispatch-to! svc id agent store-busy-delays record draft path))))))
 
+(defn candidate-queries
+  "What to search the library for before dispatch: the draft's fragments
+   when there is a draft, else the record's sentences. Short tokens such as
+   \"Yes.\" are skipped; BM25 over them returns noise."
+  [record draft]
+  (->> (if (seq (:fragments draft)) (map :text (:fragments draft)) (map :text (:sentences record)))
+       (map str)
+       (remove #(< (tr/word-count %) 2))
+       distinct
+       vec))
+
+(defn find-pattern-candidates!
+  "Run the :pattern-candidates effect for ID and store the result; nil when
+   there is no effect, nothing to ask, or it failed (logged in health)."
+  [svc id record draft]
+  (when-let [find (cfg svc :pattern-candidates)]
+    (let [queries (candidate-queries record draft)]
+      (when (seq queries)
+        (try
+          (when-let [found (find queries)]
+            (when (map? found)
+              (ts/write-pattern-candidates! (cfg svc :store) id found)
+              found))
+          (catch Exception e
+            (set-health! svc nil (str id ": pattern candidates failed: " (.getMessage e)))
+            nil))))))
+
 (defn- dispatch-to!
   [svc id agent store-busy-delays record draft path]
   (let [store (cfg svc :store)]
       (let [_ (note-dispatch! svc id agent)
+            candidates (find-pattern-candidates! svc id record draft)
             brief-fn (if (= "agent" (:origin record)) tr/agent-brief tr/analysis-brief)
             brief (brief-fn id path (cond-> {:requisition (cfg svc :requisition)
                                              :paths (cfg svc :brief-paths)
                                              :vocabulary (cfg svc :vocabulary)}
-                                      draft (assoc :draft draft :draft-path (ts/draft-path store id))))
+                                      draft (assoc :draft draft :draft-path (ts/draft-path store id))
+                                      candidates (assoc :candidates candidates
+                                                        :candidates-path (ts/pattern-candidates-path store id))))
             reset-every (cfg svc :reset-every)
             count-before (:dispatch-count @(:state svc))
             reset? (and reset-every (>= count-before reset-every) (cfg svc :reset-seat!))
@@ -610,6 +643,7 @@
       {:id id
        :record record
        :draft (ts/read-draft store id)
+       :pattern_candidates (ts/read-pattern-candidates store id)
        :analysis (ts/read-analysis store id)
        :candidates (ts/read-candidates store id)
        :notices (vec (keep (fn [o] (when-let [n (tr/withdrawal-notice o)]

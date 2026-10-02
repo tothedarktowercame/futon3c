@@ -11193,6 +11193,33 @@
                 (when (sequential? parsed) parsed)))))
         (catch Exception _ nil)))))
 
+(defn- xiang-xlate-script []
+  (or (System/getenv "FUTON3C_XLATE")
+      (str (or (System/getenv "FUTON3C_ROOT") (str (System/getProperty "user.home") "/code/futon3c"))
+           "/scripts/xlate.py")))
+
+(defn- xiang-pattern-candidates
+  "BM25 candidates for QUERIES: `xlate.py find-many -n 5` over stdin, one
+   process per turn (the index is cached on disk). Nil when the script is
+   absent, fails, or FUTON3C_XIANG_CANDIDATES=0. A helper process, not an
+   agent (I-1/I-3)."
+  [queries]
+  (let [script (xiang-xlate-script)]
+    (when (and (not (contains? #{"0" "false" "no" "off"}
+                               (some-> (System/getenv "FUTON3C_XIANG_CANDIDATES") str/lower-case)))
+               (.isFile (io/file script)))
+      (try
+        (let [p (.start (doto (ProcessBuilder. ["python3" script "find-many" "-n" "5"])
+                          (.redirectErrorStream false)))]
+          (with-open [w (io/writer (.getOutputStream p) :encoding "UTF-8")]
+            (.write w (json/generate-string (vec queries))))
+          (let [out (slurp (.getInputStream p) :encoding "UTF-8")
+                ok? (.waitFor p 30 java.util.concurrent.TimeUnit/SECONDS)]
+            (when (and ok? (zero? (.exitValue p)))
+              (let [parsed (json/parse-string out)]
+                (when (map? parsed) parsed)))))
+        (catch Exception _ nil)))))
+
 (defn- xiang-turn-service
   "The one service for this JVM, built on first use. Reload-safe: a
    Drawbridge reload of this namespace keeps the running scheduler."
@@ -11202,6 +11229,7 @@
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
                     :draft xiang-draft
+                    :pattern-candidates xiang-pattern-candidates
                     :skip-routine? (contains? #{"1" "true" "yes"}
                                               (some-> (System/getenv "FUTON3C_XIANG_SKIP_ROUTINE") str/lower-case))
                     :bell! (fn [{:keys [agent-id prompt caller surface mode type]}]

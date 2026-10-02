@@ -551,7 +551,7 @@
      "If you cannot do this, say so; the record remains requested, never silently complete.\n"
      "[End structural analysis request]")))
 
-(declare draft-brief-section)
+(declare draft-brief-section candidates-brief-section)
 
 (defn analysis-brief
   "The self-contained brief a delegate seat receives for RECORD-ID at
@@ -559,8 +559,8 @@
    know nothing: the record is everything; nobody waits on a reply. With
    :draft and :draft-path, the brief hands over 小象's draft to confirm or
    correct."
-  [record-id record-path {:keys [requisition paths draft draft-path] :or {requisition "M-futon-seams"
-                                                                         paths default-brief-paths}
+  [record-id record-path {:keys [requisition paths draft draft-path candidates candidates-path]
+                          :or {requisition "M-futon-seams" paths default-brief-paths}
                           :as opts}]
   (let [find-tool (:find paths)]
     (str
@@ -658,7 +658,8 @@
      "  python3 .../xlate.py census shows what the whole corpus has "
      "cited and proposed, and which proposals have recurred three "
      "times and are therefore ripe.\n"
-     (when (and draft draft-path) (draft-brief-section draft-path draft)))))
+     (when (and draft draft-path) (draft-brief-section draft-path draft))
+     (when (and candidates candidates-path) (candidates-brief-section candidates-path candidates)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Reply-proforma marks (session-mode--marks) read straight off an agent reply
@@ -1086,6 +1087,31 @@
                                :unsure (count (remove :intent dfs))
                                :draft_fragments (count dfs)
                                :published_fragments (count published)}))))
+
+(defn candidates-brief-section
+  "The paragraph the brief adds when pattern candidates were precomputed at
+   CANDIDATES-PATH: BM25 already ran for every fragment (or sentence), and
+   the seat reads IF/THEN of the hits instead of searching. The search
+   stays available for a phrasing the precompute did not try."
+  [candidates-path candidates]
+  (let [entries (seq candidates)]
+    (str
+     "\n\nPATTERN CANDIDATES WERE PRECOMPUTED: " candidates-path "\n"
+     "BM25 over the library has already run for each fragment below, one line per hit: id, "
+     "score, title, then the pattern's context and conclusion. Read those lines FIRST and cite a "
+     "hit only when its context/IF/THEN describes the operator's move; put a near miss in "
+     "pattern_rejections with the query that surfaced it. Search again only for a phrasing of the "
+     "MOVE that these did not try. A query with no fitting hit is a real finding: leave "
+     "pattern_refs empty and propose a candidate as the instruction says.\n"
+     (str/join "\n"
+               (for [[query hits] entries]
+                 (str "  Q " (pr-str (let [q (str query)] (subs q 0 (min 80 (count q))))) "\n"
+                      (if (seq hits)
+                        (str/join "\n" (for [h hits]
+                                          (str "    " (g h :id) " (" (g h :score) ") " (g h :title)
+                                               (when-let [c (g h :context)] (str "\n      context: " c))
+                                               (when-let [c (g h :conclusion)] (str "\n      conclusion: " c)))))
+                        "    (no hits)")))))))
 
 (defn draft-brief-section
   "The paragraph the brief adds when a draft exists at DRAFT-PATH: what is

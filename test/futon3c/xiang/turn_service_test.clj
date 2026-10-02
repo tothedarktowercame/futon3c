@@ -356,3 +356,24 @@
     (is (= ["xiaoxiang" "xiang-relabelled"]
            (map :basis (mapcat :fragments (:sentences (ts/read-analysis store id))))))
     (is (= "小象" (:labeller (:draft (svc/turn-view (:svc h) id)))))))
+
+(deftest pattern-candidates-are-found-once-per-dispatch-and-ride-the-brief
+  (let [asked (atom [])
+        h (harness {:draft fake-draft
+                    :pattern-candidates (fn [queries] (swap! asked conj queries)
+                                          (into {} (map (fn [q] [q [{:id "social/x" :score 1.0 :title "X"}]]) queries)))})
+        store (get-in (:svc h) [:config :store])
+        {:keys [id]} (turn! h {:text "Yes. Please continue with the port." :dispatch :now})]
+    (is (= [["Please continue with the port."]] @asked) "the draft's fragments are the queries; a one-word fragment is skipped")
+    (is (= [{:id "social/x" :score 1.0 :title "X"}]
+           (get (ts/read-pattern-candidates store id) (keyword "Please continue with the port."))))
+    (is (str/includes? (:prompt (first @(:bells h))) "PATTERN CANDIDATES WERE PRECOMPUTED"))
+    (is (str/includes? (:prompt (first @(:bells h))) "social/x (1.0) X"))
+    (is (some? (:pattern_candidates (svc/turn-view (:svc h) id)))))
+  (testing "without a draft the sentences are the queries; a failing finder is logged and the brief still goes"
+    (let [h (harness {:pattern-candidates (fn [_] (throw (ex-info "index missing" {})))})
+          {:keys [id]} (turn! h {:text "Please continue with the port." :dispatch :now})]
+      (is (= 1 (count @(:bells h))))
+      (is (not (str/includes? (:prompt (first @(:bells h))) "PRECOMPUTED")))
+      (is (re-find #"pattern candidates failed" (:detail (svc/health (:svc h)))))
+      (is (nil? (ts/read-pattern-candidates (get-in (:svc h) [:config :store]) id))))))

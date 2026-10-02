@@ -350,3 +350,13 @@
     (is (str/includes? brief "[0,11) approve (p 0.84)"))
     (is (str/includes? brief "[12,42) ? continue/ask-action"))
     (is (not (str/includes? (tr/analysis-brief "turn-d" "/p/turn-d.json" {}) "CLASSICAL DRAFT")))))
+
+(deftest the-brief-hands-over-precomputed-candidates
+  (let [cands {"Please continue with the port." [{"id" "social/keep-going" "score" 4.2 "title" "Keep going"
+                                                    "context" "a task is underway" "conclusion" "continue it"}]
+               "Looks good." []}
+        brief (tr/analysis-brief "turn-c" "/p/turn-c.json" {:candidates cands :candidates-path "/p/turn-c.json.patterns.json"})]
+    (is (str/includes? brief "PATTERN CANDIDATES WERE PRECOMPUTED: /p/turn-c.json.patterns.json"))
+    (is (str/includes? brief "social/keep-going (4.2) Keep going\n      context: a task is underway\n      conclusion: continue it"))
+    (is (str/includes? brief "Q \"Looks good.\"\n    (no hits)"))
+    (is (not (str/includes? (tr/analysis-brief "turn-c" "/p/turn-c.json" {}) "PRECOMPUTED")))))

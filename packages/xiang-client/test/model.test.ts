@@ -106,3 +106,18 @@ test("the agreement line", async () => {
   assert.equal(agreementLine({ analysed: 0, totals: {} }), "小象 vs 象: no data over 0 fragments · 0 turns settled by the draft · 0/0 readings had a draft");
   assert.equal(agreementLine(null), "agreement: unavailable");
 });
+
+test("draft rows carry the precomputed candidates for their text", async () => {
+  const { turnDetail } = await import("../widget/model.js");
+  const view = {
+    ok: true as const,
+    id: "turn-z",
+    record: { version: 1 as const, source_text: "Please continue.", offset_unit: "unicode-codepoints-zero-based-end-exclusive" as const, sentences: [], unmatched: [], created_at: "x", agent_id: "a", session_id: "s", turn_id: "t", analysis_status: "requested" as const },
+    draft: { version: 1 as const, status: "drafted" as const, labeller: "小象", source_text: "Please continue.", offset_unit: "unicode-codepoints-zero-based-end-exclusive" as const, fragments: [{ start: 0, end: 16, text: "Please continue.", intent: "continue", sure: true, guesses: ["continue", "ask-action"] }] },
+    pattern_candidates: { "Please continue.": [{ id: "social/keep-going", score: 3.1, title: "Keep going" }] },
+    analysis: null,
+    candidates: null,
+    notices: [],
+  };
+  assert.deepEqual(turnDetail(view).draft[0]!.candidates, ["social/keep-going"]);
+});

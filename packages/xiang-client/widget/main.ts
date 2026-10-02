@@ -86,8 +86,8 @@ function renderDetail(d: TurnDetail): void {
         d.agreement ? `<p class="muted">draft: ${d.agreement.agreed} agreed · ${d.agreement.relabelled} relabelled · ${d.agreement.resegmented} resegmented · ${d.agreement.new} new · ${d.agreement.dropped} dropped</p>` : ""
       }`
     : d.draft.length
-      ? `<table class="fragments draft"><tr><th>小象</th><th>text</th></tr>${d.draft
-          .map((f) => `<tr><td>${f.intent ? escapeHtml(f.intent) + (f.precision != null ? ` <span class="muted">p ${f.precision.toFixed(2)}</span>` : "") : `? ${f.guesses.map(escapeHtml).join(" / ")}`}</td><td>${escapeHtml(f.text.slice(0, 120))}</td></tr>`)
+      ? `<table class="fragments draft"><tr><th>小象</th><th>text</th><th>candidates</th></tr>${d.draft
+          .map((f) => `<tr><td>${f.intent ? escapeHtml(f.intent) + (f.precision != null ? ` <span class="muted">p ${f.precision.toFixed(2)}</span>` : "") : `? ${f.guesses.map(escapeHtml).join(" / ")}`}</td><td>${escapeHtml(f.text.slice(0, 120))}</td><td>${f.candidates.map(escapeHtml).join("<br>")}</td></tr>`)
           .join("")}</table><p class="muted">${d.status === "drafted" ? "settled by the draft; 象 did not read it" : `draft only; 象's reading is ${escapeHtml(d.status)}`}</p>`
       : `<p class="muted">no reading yet (${escapeHtml(d.status)})</p>`;
   const notices = d.notices.map((n) => `<p class="notice">象: ${escapeHtml(n.text)}</p>`).join("");

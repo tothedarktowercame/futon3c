@@ -49,6 +49,7 @@
 (defn analysis-path ^String [store id] (str (record-path store id) ".analysis.json"))
 (defn candidates-path ^String [store id] (str (record-path store id) ".candidates.json"))
 (defn draft-path ^String [store id] (str (record-path store id) ".draft.json"))
+(defn pattern-candidates-path ^String [store id] (str (record-path store id) ".patterns.json"))
 
 (defn- ensure-dir! [{:keys [dir]}]
   (let [f (io/file dir)]
@@ -137,6 +138,19 @@
     {:id id :path path}))
 
 (defn read-candidates [store id] (read-json (candidates-path store id)))
+
+(defn read-pattern-candidates
+  "The precomputed pattern candidates for ID ({query [hit ...]}), or nil."
+  [store id]
+  (read-json (pattern-candidates-path store id)))
+
+(defn write-pattern-candidates!
+  "Keep the candidates xlate.py found for ID's fragments beside the record.
+   Replaceable: a later dispatch may recompute them."
+  [store id candidates]
+  (let [path (pattern-candidates-path store id)]
+    (write-json! path candidates)
+    {:id id :path path}))
 
 (defn read-draft
   "小象's draft for ID, or nil."
