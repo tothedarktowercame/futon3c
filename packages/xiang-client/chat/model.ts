@@ -26,3 +26,8 @@ export function addressedBody(agent: string, body: string): string {
   const text = body.trim();
   return agent ? `@${agent} ${text}` : text;
 }
+
+/** Polling must never move the conversation while the operator is composing. */
+export function shouldAutoScroll(distanceFromBottom: number, composing: boolean): boolean {
+  return !composing && distanceFromBottom <= 80;
+}

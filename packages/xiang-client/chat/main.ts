@@ -1,7 +1,7 @@
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, intents } from "./model.js";
+import { addressedBody, intents, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -67,13 +67,18 @@ async function loadViews(): Promise<void> {
 }
 
 function render(): void {
+  const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+  const composing = document.activeElement === $<HTMLTextAreaElement>("message");
+  const autoScroll = shouldAutoScroll(distanceFromBottom, composing);
   messages.innerHTML = events.map((event) => {
     const view = views.get(event.event_id);
     const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${escapeHtml(m.glyph)} ${escapeHtml(m.intent)}</button>`).join("") : "";
     return `<li class="${event.sender === userId ? "mine" : "theirs"}"><div class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></div><div class="body">${escapeHtml(event.content.body!).replace(/\n/g, "<br>")}</div><div class="badges">${badges}</div></li>`;
   }).join("");
   messages.querySelectorAll<HTMLButtonElement>("button.mark").forEach((button) => button.onclick = () => showReading(button.dataset.event!));
-  messages.lastElementChild?.scrollIntoView({ block: "end" });
+  // Scroll only the conversation pane.  scrollIntoView also moved the page's
+  // outer viewport every five-second poll, which made the composer bounce.
+  if (autoScroll) messages.scrollTop = messages.scrollHeight;
 }
 
 function showReading(eventId: string): void {
