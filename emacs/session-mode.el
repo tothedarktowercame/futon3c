@@ -79,7 +79,7 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "Risk cost of failing to paint a correct R-node cue."
   :type 'number :group 'session-mode)
 
-(defcustom session-mode-xiang-temperature 0.1
+(defcustom session-mode-xiang-temperature 0.0
   "Softmax temperature tau for 象 policy selection; nonpositive means argmin."
   :type 'number :group 'session-mode)
 

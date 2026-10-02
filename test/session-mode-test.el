@@ -1239,15 +1239,24 @@ agent text is left alone."
     (delete-file path)
     (unwind-protect
         (let ((session-mode-rnode-cues-file path))
-          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+          ;; Under the default argmin (tau 0): weighted evidence 1 + 1.5 + 0.5 + 0.5 = 3.5
+          ;; (p_top 0.78) keeps a two-seat cue a candidate; a third seat (1 + 1.5 + 1.5 = 4,
+          ;; p_top 0.8) promotes it.  Promotion follows G, not a sampled draw.
+          (let ((session-mode-xiang-temperature 0.0))
+            (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-a") ("e4" "seat-b")))
+              (session-mode--record-rnode-cues
+               (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                  "hold gently" "R14")))
+            (should (equal "candidate"
+                           (alist-get 'status (car (alist-get 'entries
+                                                              (session-mode-test--read-rnode-store path))))))
             (session-mode--record-rnode-cues
-             (session-mode-test--rnode-analysis (car row) (cadr row)
-                                                "hold gently" "R14")))
-          (let ((entry (car (alist-get 'entries
-                                       (session-mode-test--read-rnode-store path)))))
-            (should (= 3 (length (alist-get 'turns entry))))
-            (should (= 2 (length (alist-get 'seats entry))))
-            (should (equal "active" (alist-get 'status entry)))))
+             (session-mode-test--rnode-analysis "e5" "seat-c" "hold gently" "R14"))
+            (let ((entry (car (alist-get 'entries
+                                         (session-mode-test--read-rnode-store path)))))
+              (should (= 5 (length (alist-get 'turns entry))))
+              (should (= 3 (length (alist-get 'seats entry))))
+              (should (equal "active" (alist-get 'status entry))))))
       (when (file-exists-p path) (delete-file path)))))
 
 (ert-deftest session-mode-rnode-two-node-conflict-blocks-promotion ()
@@ -1256,7 +1265,7 @@ agent text is left alone."
     (unwind-protect
         (let ((session-mode-rnode-cues-file path))
           (dolist (node '("R14" "R6"))
-            (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+            (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
               (session-mode--record-rnode-cues
                (session-mode-test--rnode-analysis
                 (concat node "-" (car row)) (cadr row) "keep options open" node))))
@@ -1279,7 +1288,7 @@ agent text is left alone."
         (let ((session-mode-rnode-vocabulary-file vocab)
               (session-mode-rnode-cues-file store)
               (session-mode-rnode-red t))
-          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
             (session-mode--record-rnode-cues
              (session-mode-test--rnode-analysis (car row) (cadr row)
                                                 "settle lightly" "R14")))
@@ -1325,7 +1334,7 @@ agent text is left alone."
         (let ((session-mode-rnode-cues-file store)
               (session-mode-xiang-decisions-file log)
               (session-mode-rnode-vocabulary-file vocab))
-          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
             (session-mode--record-rnode-cues
              (session-mode-test--rnode-analysis (car row) (cadr row)
                                                 "settle lightly" "R14")))
