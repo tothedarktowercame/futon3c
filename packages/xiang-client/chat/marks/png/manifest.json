@@ -1,0 +1,212 @@
+{
+  "approve": {
+    "glyph": "㊣",
+    "filename": "approve.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "disagree": {
+    "glyph": "🈚",
+    "filename": "disagree.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "clarify": {
+    "glyph": "🈯",
+    "filename": "clarify.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "report": {
+    "glyph": "㊢",
+    "filename": "report.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "report-problem": {
+    "glyph": "㊩",
+    "filename": "report-problem.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "verify": {
+    "glyph": "㊬",
+    "filename": "verify.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "retract": {
+    "glyph": "🈹",
+    "filename": "retract.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "withdraw": {
+    "glyph": "🈡",
+    "filename": "withdraw.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "propose": {
+    "glyph": "㊭",
+    "filename": "propose.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "qualify": {
+    "glyph": "㊟",
+    "filename": "qualify.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "explain": {
+    "glyph": "🈖",
+    "filename": "explain.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "constrain": {
+    "glyph": "🈲",
+    "filename": "constrain.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "ask-action": {
+    "glyph": "🈸",
+    "filename": "ask-action.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "delegate": {
+    "glyph": "㊯",
+    "filename": "delegate.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "prioritize": {
+    "glyph": "㊝",
+    "filename": "prioritize.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "collect": {
+    "glyph": "㊮",
+    "filename": "collect.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "extend": {
+    "glyph": "🈕",
+    "filename": "extend.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "continue": {
+    "glyph": "🈰",
+    "filename": "continue.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "defer": {
+    "glyph": "🈝",
+    "filename": "defer.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "redirect": {
+    "glyph": "🈘",
+    "filename": "redirect.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  },
+  "explore": {
+    "glyph": "㊫",
+    "filename": "explore.png",
+    "pixels": [
+      160,
+      160
+    ],
+    "background": "transparent",
+    "effect": "static 3D bevel/extrusion"
+  }
+}

@@ -12,6 +12,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const login = $("login"), app = $("app"), messages = $("messages"), inspector = $("inspector");
 const status = $("login-status"), identity = $("identity");
 const pageSizeSelect = $<HTMLSelectElement>("page-size"), loadSizeSelect = $<HTMLSelectElement>("load-size");
+const markStyleSelect = $<HTMLSelectElement>("mark-style");
 const older = $<HTMLButtonElement>("older"), newer = $<HTMLButtonElement>("newer"), range = $("range");
 ($("element-link") as HTMLAnchorElement).href = ELEMENT;
 let token = sessionStorage.getItem("futon.matrix.token") ?? "";
@@ -19,6 +20,17 @@ let userId = sessionStorage.getItem("futon.matrix.user") ?? "";
 let views = new Map<string, TurnView>();
 let events: Event[] = [];
 let pageSize = 3, loadSize = 30, pageOffset = 0;
+type MarkStyle = "text" | "png" | "gif";
+let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "text";
+if (!["text", "png", "gif"].includes(markStyle)) markStyle = "text";
+markStyleSelect.value = markStyle;
+const rasterMarks = new Set(["approve", "ask-action", "clarify", "collect", "constrain", "continue", "defer", "delegate", "disagree", "explain", "explore", "extend", "prioritize", "propose", "qualify", "redirect", "report-problem", "report", "retract", "verify", "withdraw"]);
+
+function markGlyph(intent: string, glyph: string): string {
+  if (markStyle === "text" || !rasterMarks.has(intent)) return `<span class="glyph-text">${escapeHtml(glyph)}</span>`;
+  const format = markStyle === "gif" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "gif" : "png";
+  return `<img class="glyph-image" src="marks/${format}/${encodeURIComponent(intent)}.${format}" alt="${escapeHtml(glyph)}">`;
+}
 
 async function matrix(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
@@ -116,7 +128,7 @@ function render(): void {
   older.textContent = `← back ${pageSize}`; newer.textContent = `newer ${pageSize} →`;
   messages.innerHTML = visible.map((event) => {
     const view = views.get(event.event_id);
-    const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${escapeHtml(m.glyph)} ${escapeHtml(m.intent)}</button>`).join("") : "";
+    const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></button>`).join("") : "";
     return `<li class="${event.sender === userId ? "mine" : "theirs"}"><article><div class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></div><div class="body">${annotatedBody(event, view)}</div><div class="badges">${badges}</div></article><div class="notes">${sidenotes(view)}</div></li>`;
   }).join("");
   messages.querySelectorAll<HTMLElement>(".body").forEach(decorateRNodes);
@@ -127,7 +139,7 @@ function render(): void {
 function showReading(eventId: string): void {
   const view = views.get(eventId); if (!view) return;
   const d = turnDetail(view); inspector.hidden = false;
-  inspector.innerHTML = `<button id="close-reading" aria-label="Close">×</button><h2>象 reading</h2><p>${intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${escapeHtml(m.glyph)} ${escapeHtml(m.intent)}</span>`).join(" ")}</p><div class="source">${d.html}</div>${d.fragments.map((f) => `<section><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
+  inspector.innerHTML = `<button id="close-reading" aria-label="Close">×</button><h2>象 reading</h2><p>${intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join(" ")}</p><div class="source">${d.html}</div>${d.fragments.map((f) => `<section><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
   $("close-reading").onclick = () => { inspector.hidden = true; };
 }
 
@@ -137,6 +149,7 @@ older.onclick = () => void changePage(pageOffset + pageSize);
 newer.onclick = () => void changePage(Math.max(0, pageOffset - pageSize));
 pageSizeSelect.onchange = () => { pageSize = Number(pageSizeSelect.value); pageOffset = 0; void changePage(0); };
 loadSizeSelect.onchange = () => { loadSize = Number(loadSizeSelect.value); pageOffset = 0; void refresh(); };
+markStyleSelect.onchange = () => { markStyle = markStyleSelect.value as MarkStyle; localStorage.setItem("futon.mark.style", markStyle); render(); };
 
 async function enter(): Promise<void> {
   await checkMembership(); login.hidden = true; app.hidden = false;
