@@ -551,12 +551,16 @@
      "If you cannot do this, say so; the record remains requested, never silently complete.\n"
      "[End structural analysis request]")))
 
+(declare draft-brief-section candidates-brief-section)
+
 (defn analysis-brief
   "The self-contained brief a delegate seat receives for RECORD-ID at
    RECORD-PATH (session-mode--dispatch-analysis). The delegate is assumed to
-   know nothing: the record is everything; nobody waits on a reply."
-  [record-id record-path {:keys [requisition paths] :or {requisition "M-futon-seams"
-                                                        paths default-brief-paths}
+   know nothing: the record is everything; nobody waits on a reply. With
+   :draft and :draft-path, the brief hands over 小象's draft to confirm or
+   correct."
+  [record-id record-path {:keys [requisition paths draft draft-path candidates candidates-path]
+                          :or {requisition "M-futon-seams" paths default-brief-paths}
                           :as opts}]
   (let [find-tool (:find paths)]
     (str
@@ -653,7 +657,9 @@
      "minting at all; say in tried that you tried.\n"
      "  python3 .../xlate.py census shows what the whole corpus has "
      "cited and proposed, and which proposals have recurred three "
-     "times and are therefore ripe.\n")))
+     "times and are therefore ripe.\n"
+     (when (and draft draft-path) (draft-brief-section draft-path draft))
+     (when (and candidates candidates-path) (candidates-brief-section candidates-path candidates)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Reply-proforma marks (session-mode--marks) read straight off an agent reply
@@ -968,6 +974,168 @@
      :source_sha256 (sha256 source)
      :offset_unit (g record :offset_unit)
      :sentences canonical}))
+
+;; ---------------------------------------------------------------------------
+;; 小象 drafts: a classical best-effort reading given to 象 before it reads
+;;
+;; The pre-parse is the proforma move on the reader's side: the structure
+;; (fragments, offsets, candidate intents) is given, and 象 confirms or
+;; corrects instead of producing. Every published fragment then records its
+;; basis, so the corpus can measure how often the LLM pass changed anything,
+;; and a reading confirmed from a draft can be kept out of 小象's training.
+
+(def draft-labeller "小象")
+
+(defn validate-draft
+  "Validate DRAFT (xiaoxiang_preview.py's output: [{start end text intent|nil
+   guesses precision}], or a map holding it under :fragments) against RECORD
+   and return the canonical draft map. Offsets must be exact codepoint spans
+   of source_text; an intent, when present, must be a vocabulary label; a
+   fragment with no sure intent keeps its guesses."
+  [record draft {:keys [now-ms]}]
+  (let [source (str (g record :source_text))
+        fragments (if (map? draft) (or (g draft :fragments) []) draft)
+        _ (when-not (sequential? fragments) (invalid! "draft fragments must be an array"))
+        sentences (g record :sentences)
+        sentence-of (fn [start end]
+                      (some (fn [s] (when (and (<= (g s :start) start) (<= end (g s :end))) (g s :id)))
+                            sentences))
+        checked (vec (for [f fragments
+                           :let [start (g f :start) end (g f :end)
+                                 _ (when-not (exact-span? source start end (g f :text))
+                                     (invalid! "draft fragment offsets/text must match source_text exactly"))
+                                 intent (g f :intent)
+                                 _ (when (and intent (not (re-matches #"[a-z][a-z0-9_-]*" (str intent))))
+                                     (invalid! "draft intent must be a vocabulary label"))
+                                 guesses (vec (filter string? (or (g f :guesses) [])))
+                                 precision (g f :precision)]]
+                       (cond-> {:start start :end end :text (g f :text)
+                                :intent intent :sure (boolean intent)
+                                :guesses guesses
+                                :sentence (sentence-of start end)}
+                         (number? precision) (assoc :precision (double precision)))))]
+    {:version 1 :status "drafted" :method "xiaoxiang-naive-bayes" :labeller draft-labeller
+     :created_at (str (java.time.Instant/ofEpochMilli (long (or now-ms (System/currentTimeMillis)))))
+     :source_text source :source_sha256 (sha256 source) :offset_unit (g record :offset_unit)
+     :fragments checked}))
+
+(def act-bearing-intents
+  "Intents a draft may not settle on its own: each starts something the
+   operator or an agent must act on, so 象 reads these turns."
+  #{"withdraw" "retract" "ask-action" "delegate" "disagree" "constrain" "redirect"})
+
+(def ^:private acceptance-or-undo
+  (re-pattern "(?i)^\\s*(?:🈸:\\s*)?(?:yes|undo)\\b"))
+
+(defn routine-draft?
+  "True when DRAFT settles RECORD well enough that no LLM reading is needed:
+   every fragment has a sure intent, none is act-bearing, every sentence has
+   a fragment, the turn is short (at most MAX-SENTENCES, default 3), the
+   origin is operator, and the text is not an acceptance or an undo. A
+   conservative predicate on purpose: a skipped reading is an unrecorded
+   act if the predicate is wrong."
+  [record draft & {:keys [max-sentences] :or {max-sentences 3}}]
+  (let [fragments (or (g draft :fragments) [])
+        sentences (or (g record :sentences) [])
+        covered (set (keep :sentence fragments))]
+    (boolean
+     (and (= "operator" (or (g record :origin) "operator"))
+          (seq fragments)
+          (<= (count sentences) max-sentences)
+          (every? :sure fragments)
+          (not-any? #(contains? act-bearing-intents (:intent %)) fragments)
+          (every? #(contains? covered (g % :id)) sentences)
+          (not (re-find acceptance-or-undo (str (g record :source_text))))
+          (not (g record :tagging_failed))))))
+
+(defn- overlaps? [a b]
+  (and (< (:start a) (g b :end)) (> (:end a) (g b :start))))
+
+(defn annotate-with-draft
+  "Stamp each fragment of the canonical ANALYSIS with its :basis against
+   DRAFT: \"xiaoxiang\" (same span, same intent), \"xiang-relabelled\" (same
+   span, other intent), \"xiang-resegmented\" (overlaps a draft fragment with
+   another span), \"xiang\" (no draft fragment there). Adds :draft_agreement
+   counts, including :dropped (draft fragments no published fragment
+   overlaps) and :unsure (draft fragments 小象 did not label). Without a
+   draft every basis is \"xiang\" and :draft_agreement is nil."
+  [analysis draft]
+  (if-not draft
+    (assoc analysis :draft_agreement nil
+           :sentences (mapv (fn [s] (update s :fragments #(mapv (fn [f] (assoc f :basis "xiang")) %)))
+                            (:sentences analysis)))
+    (let [dfs (or (g draft :fragments) [])
+          basis-of (fn [f]
+                     (let [same (some (fn [d] (when (and (= (:start f) (g d :start)) (= (:end f) (g d :end))) d)) dfs)]
+                       (cond
+                         (and same (:intent same) (= (:intent same) (:intent f))) "xiaoxiang"
+                         (and same (:intent same)) "xiang-relabelled"
+                         same "xiang"              ; 小象 had the span but no label
+                         (some #(overlaps? f %) dfs) "xiang-resegmented"
+                         :else "xiang")))
+          sentences (mapv (fn [s] (update s :fragments #(mapv (fn [f] (assoc f :basis (basis-of f))) %)))
+                          (:sentences analysis))
+          published (mapcat :fragments sentences)
+          counts (frequencies (map :basis published))
+          dropped (count (remove (fn [d] (some #(overlaps? % d) published)) dfs))]
+      (assoc analysis :sentences sentences
+             :draft_agreement {:agreed (get counts "xiaoxiang" 0)
+                               :relabelled (get counts "xiang-relabelled" 0)
+                               :resegmented (get counts "xiang-resegmented" 0)
+                               :new (get counts "xiang" 0)
+                               :dropped dropped
+                               :unsure (count (remove :intent dfs))
+                               :draft_fragments (count dfs)
+                               :published_fragments (count published)}))))
+
+(defn candidates-brief-section
+  "The paragraph the brief adds when pattern candidates were precomputed at
+   CANDIDATES-PATH: BM25 already ran for every fragment (or sentence), and
+   the seat reads IF/THEN of the hits instead of searching. The search
+   stays available for a phrasing the precompute did not try."
+  [candidates-path candidates]
+  (let [entries (seq candidates)]
+    (str
+     "\n\nPATTERN CANDIDATES WERE PRECOMPUTED: " candidates-path "\n"
+     "BM25 over the library has already run for each fragment below, one line per hit: id, "
+     "score, title, then the pattern's context and conclusion. Read those lines FIRST and cite a "
+     "hit only when its context/IF/THEN describes the operator's move; put a near miss in "
+     "pattern_rejections with the query that surfaced it. Search again only for a phrasing of the "
+     "MOVE that these did not try. A query with no fitting hit is a real finding: leave "
+     "pattern_refs empty and propose a candidate as the instruction says.\n"
+     (str/join "\n"
+               (for [[query hits] entries]
+                 (str "  Q " (pr-str (let [q (str query)] (subs q 0 (min 80 (count q))))) "\n"
+                      (if (seq hits)
+                        (str/join "\n" (for [h hits]
+                                          (str "    " (g h :id) " (" (g h :score) ") " (g h :title)
+                                               (when-let [c (g h :context)] (str "\n      context: " c))
+                                               (when-let [c (g h :conclusion)] (str "\n      conclusion: " c)))))
+                        "    (no hits)")))))))
+
+(defn draft-brief-section
+  "The paragraph the brief adds when a draft exists at DRAFT-PATH: what is
+   firm, what is a proposal, and what costs nothing."
+  [draft-path draft]
+  (let [fs (or (g draft :fragments) [])]
+    (str
+     "\n\nA CLASSICAL DRAFT EXISTS: " draft-path "\n"
+     "小象 (naive Bayes over 象's past readings, about 0.1 s) has already split this turn into "
+     (count fs) " fragment" (when (not= 1 (count fs)) "s") " with exact offsets and, where it was sure, an intent. "
+     "Start from the draft rather than from nothing:\n"
+     "- Offsets and fragment boundaries in the draft are firm. Keep them unless a boundary is wrong; "
+     "a fragment you keep costs you nothing, a split or merge must be exact.\n"
+     "- A fragment with an intent is a PROPOSAL (right about half the time or better for that intent). "
+     "Accept it or relabel it; say why in rationale when you relabel.\n"
+     "- A fragment with intent null carries two guesses; you decide.\n"
+     "- Display cues, target, relations, rationale and pattern_refs are yours as before.\n"
+     "The draft is not human-approved and your reading is recorded against it fragment by fragment "
+     "(agreed / relabelled / resegmented), so a rubber stamp is visible and so is a disagreement.\n"
+     (str/join "\n" (map (fn [f] (str "    [" (:start f) "," (:end f) ") "
+                                      (if (:intent f) (str (:intent f) (when-let [p (:precision f)] (format " (p %.2f)" p)))
+                                          (str "? " (str/join "/" (:guesses f))))
+                                      "  " (pr-str (let [t (str (:text f))] (subs t 0 (min 60 (count t)))))))
+                         fs)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Reading a dispatched job (turn_dispatch_reap.py)

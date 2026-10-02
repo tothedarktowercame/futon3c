@@ -172,3 +172,165 @@ obligations).
 Verified here: Clojure 36 tests / 250 assertions; TypeScript 33; pytest 6;
 `ngircd_bridge.py` and `matrix_bridge.py` byte-compile; http.clj reads
 (571 forms). Not verified: anything live, as before.
+
+## Third packet (2026-10-02): the 小象 draft tier ("BNF at the level of turns")
+
+Joe: 象 is slow; 小象 does basic annotation fast; can a classical best-effort
+pre-parse speed up the LLM pass, as proforma compliance is free for the
+coding agent? Yes, and the mechanism is the proforma move on the reader's
+side: the structure is given, 象 confirms or corrects.
+
+- **Draft.** `turn-record/validate-draft` canonicalises `xiaoxiang_preview.py`'s
+  output against the record (exact codepoint spans; an intent only when 小象
+  was sure, else the two guesses). `turn-store/write-draft!` keeps it as
+  `turn-X.json.draft.json` and flags the record `draft_status`. The service
+  runs the `:draft` effect at record time; http binds it to the preview
+  script over stdin (a helper process, 20 s cap, nil on any failure) and
+  also takes drafts at `POST …/turns/:id/draft`.
+- **Brief.** With a draft, `analysis-brief` appends a section listing the
+  fragments with their proposed intent and precision, saying offsets are
+  firm and intents are proposals, and that the reading is recorded against
+  the draft fragment by fragment.
+- **Basis.** `annotate-with-draft` at publish stamps every fragment
+  `xiaoxiang` / `xiang-relabelled` / `xiang-resegmented` / `xiang` and adds
+  `draft_agreement` counts (plus `dropped` and `unsure`). This is the field
+  that keeps a rubber stamp visible and lets 小象's editions exclude readings
+  that were confirmed from its own draft. `GET /api/alpha/xiang/agreement`
+  sums it over the store.
+- **Skip policy.** `routine-draft?` is deliberately conservative (every
+  fragment sure, none in the act-bearing set withdraw/retract/ask-action/
+  delegate/disagree/constrain/redirect, every sentence covered, at most 3
+  sentences, operator origin, not `yes`/`undo`, not tagging-failed). Behind
+  `FUTON3C_XIANG_SKIP_ROUTINE`, off by default: the service test's fake 小象
+  shows the failure mode, a mislabelled act would be swallowed, so the
+  agreement numbers come first.
+- **Widget.** Third tier of marks and a basis column; the health pane shows
+  the agreement line.
+
+Not done: precomputing pattern candidates per fragment (BM25 via `xlate.py
+find`) before dispatch. It is the largest remaining chunk of the reading's
+wall clock and needs only a JSON output mode on `xlate.py find` plus a
+`:pattern-candidates` effect in the service; next packet.
+
+Verified here: Clojure 43 tests / 293 assertions; TypeScript 35; the rest as
+before. Nothing live.
+
+## Fourth packet (2026-10-02): pattern candidates precomputed before dispatch
+
+The largest remaining chunk of a reading's wall clock was the seat's own
+pattern search: two or three `xlate.py find` calls per fragment, inside the
+LLM loop. Now:
+
+- `xlate.py find-many [-n N] [--with-candidates]` reads a JSON array of
+  queries on stdin and answers one JSON object, one index load; `find --json`
+  for a single query. Each hit carries id, score, title and the pattern's
+  context and conclusion, read from its file (`excerpt`), since the index
+  keeps tokens only and a reader deciding fit needs the IF/THEN text.
+  `scripts/test_xlate_find_many.py` (4 cases) runs it over a three-pattern
+  fake index.
+- `turn-service/find-pattern-candidates!` runs the `:pattern-candidates`
+  effect at dispatch over the draft's fragments (else the sentences; a
+  one-word query is skipped), stores the result as `turn-X.json.patterns.json`,
+  and `analysis-brief` appends a section listing the hits per query with
+  the instruction to read them first, cite only a fit, and record near
+  misses in `pattern_rejections`. A failing finder is logged in health and
+  the brief goes without the section. http binds the effect to
+  `python3 xlate.py find-many -n 5` over stdin, 30 s cap.
+- `GET …/turns/:id` returns `pattern_candidates`; the widget shows the ids
+  beside each draft fragment.
+
+Verified here: Clojure 45 tests / 306 assertions; TypeScript 36; pytest 10;
+http.clj reads (575 forms). Nothing live. What to measure on the box once
+it runs: the reading's duration before and after (the job ledger has
+started-at and finished-at), and how often the published refs are among the
+precomputed hits, which says whether five per fragment is enough.
+
+## Aside (2026-10-02): xiaoxiang-local.py made fast
+
+Joe: make the downloadable log reader fast as well as good. Measured on
+this container's one real Claude Code log (4.5 MB, 1,079 lines, 9 typed
+turns): 2.4 s, of which the secret scan was 2.3 s (1.8 MB/s), JSON 0.03 s,
+classification 0.1 ms per turn. Three changes, findings identical before
+and after on the same corpus (97 findings, compared line by line):
+
+- `secret_scan.py`: each structural rule declares the literal it cannot
+  match without (`AKIA`/`ASIA`, `ghp_`…, `sk-`, `xox`, `AIza`, `eyJ`,
+  `bearer`, `://`, `-----BEGIN`) and is skipped when the line lacks it; the
+  keyword rule runs only when a keyword is followed by `:` or `=` somewhere
+  in the line (so `"input_tokens": 4096` on every assistant record no
+  longer costs a position walk); the entropy net runs only when a 32-run of
+  token characters exists. A pattern opening with a lookbehind gets no
+  literal fast path from `re`, which is why each rule cost 0.2 s per 4 MB.
+  Scanner alone: 2.8× faster.
+- `xiaoxiang_reader.py`: `read_file` + `merge`, with `--jobs` (default the
+  CPU count) reading files in a `multiprocessing` pool, largest first.
+  Four-way split of the same log: 1.0 s with one worker, 0.47 s with four.
+  Serial and parallel reports are equal (tested).
+- Line-level dedupe, which I had proposed, measured useless: 1,041 distinct
+  of 1,145 lines but 99.8% of the bytes distinct. Dropped. What is real is
+  a resumed session copying its transcript into a new file; `merge` counts
+  such a file's turns and tokens once, keyed on the replies' message ids,
+  while its secret occurrences still count (each copy is a place the value
+  sits). Tested with a copied fixture file.
+
+Not changed yet, from the earlier assessment: credential provenance
+(typed / agent-written / tool output), precision shipped in the bundle,
+and the end-of-window gap.
+
+## Aside (2026-10-02): xiaoxiang-local.py made good
+
+The quality changes from the assessment, plus Rob's report that `--days`
+"doesn't actually filter the session file", which was true: files were
+chosen by mtime and old token events dropped, but every turn in a chosen
+file was counted and classified whatever its date.
+
+- `--days` now keeps only turns and agent work inside the window;
+  credentials are still counted wherever they sit in a chosen file, and the
+  help text says so. Test: a file with turns at 00:00 and a window from
+  04:00 reports one turn, not three.
+- Provenance: each finding is grouped by where it sits (`where_in`): what
+  you typed, tool output, files or commands the agent wrote, test fixtures
+  (an agent write to a path saying test/spec/fixture/example, or a
+  documented example key containing EXAMPLE), the agent's prose, elsewhere.
+  On this session's log: 0 in what was typed, 15 distinct in tool output,
+  9 in files the agent wrote, 6 fixtures.
+- Precision ships in the model: `export` adds each intent's cross-validated
+  precision; the reader labels a turn only when that is at least 0.5 and
+  counts the rest as "not sure", and the table shows the precision column
+  instead of the blanket "often wrong". An old model without precision
+  renders as before.
+- The gap after the last typed turn, closed by the last agent event, now
+  counts and is marked "after your last turn"; likewise before the first.
+  The chart's axis extends to it.
+
+Tests: 67 passed across the five python suites (2 skipped for want of
+labelled turns here). Not in this packet: a deterministic "phrases you use"
+column from the cue vocabulary.
+
+## Aside (2026-10-02): the scan is not a map
+
+Rob asked his agent to run the scan; the report named the files holding
+credentials; the agent read them ("now I see all your secrets"). Fixed in
+`xiaoxiang_reader.py`: file paths are never printed by default (the report
+says how many files, and that `--list-files` names them); `--list-files` is
+refused with exit 2 when a coding agent is running the scan (`CLAUDECODE`,
+`CLAUDE_CODE_*`, `CODEX_*` or `AI_AGENT` in the environment); under an agent
+the text and JSON carry a notice addressed to the agent: do not open the
+log files to find what was counted, the person runs this in their own
+terminal. An agent with a shell can still read `~/.claude` on its own; what
+the tool can do is refuse to be the map and say so where the person will
+read it. Four tests, including the refusal and the JSON stripping through
+the real CLI.
+
+## Aside (2026-10-02): informed consent, and what to do per kind
+
+Joe: have the script describe itself and wait for a y. `xiaoxiang_reader.py`
+now prints a preamble before reading anything (what it reads, sends,
+prints, never prints, writes, and what an agent running it learns), then
+asks "Type y to proceed" at a terminal; without a terminal it refuses with
+exit 3 unless `--yes` is passed, and an agent passing `--yes` is visible in
+its transcript. The kinds table gained a "what to do" block: rotate first,
+since a value in a log an agent has read is spent whether or not the log
+is cleaned, then one line per kind naming where to revoke it. The TTY-only
+file list and the kind-by-provenance crossed table from the earlier
+assessment are not done.

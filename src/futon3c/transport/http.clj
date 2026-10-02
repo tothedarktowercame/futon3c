@@ -11255,6 +11255,60 @@
              (catch Exception _ nil))
         xiang-record/default-vocabulary)))
 
+(defn- xiang-preview-script []
+  (or (System/getenv "FUTON3C_XIAOXIANG_PREVIEW")
+      (str (or (System/getenv "FUTON3C_ROOT") (str (System/getProperty "user.home") "/code/futon3c"))
+           "/scripts/xiaoxiang_preview.py")))
+
+(defn- xiang-draft
+  "小象's draft for SOURCE-TEXT: `xiaoxiang_preview.py preview -` over stdin,
+   about 0.1 s with a built model (a rebuild, at most daily, takes longer).
+   Nil when the script is absent, fails, or FUTON3C_XIAOXIANG=0. A helper
+   process, not an agent (I-1/I-3)."
+  [source-text]
+  (let [script (xiang-preview-script)]
+    (when (and (not (contains? #{"0" "false" "no" "off"}
+                               (some-> (System/getenv "FUTON3C_XIAOXIANG") str/lower-case)))
+               (.isFile (io/file script)))
+      (try
+        (let [p (.start (doto (ProcessBuilder. ["python3" script "preview" "-"])
+                          (.redirectErrorStream false)))]
+          (with-open [w (io/writer (.getOutputStream p) :encoding "UTF-8")]
+            (.write w (str source-text)))
+          (let [out (slurp (.getInputStream p) :encoding "UTF-8")
+                ok? (.waitFor p 20 java.util.concurrent.TimeUnit/SECONDS)]
+            (when (and ok? (zero? (.exitValue p)))
+              (let [parsed (json/parse-string out true)]
+                (when (sequential? parsed) parsed)))))
+        (catch Exception _ nil)))))
+
+(defn- xiang-xlate-script []
+  (or (System/getenv "FUTON3C_XLATE")
+      (str (or (System/getenv "FUTON3C_ROOT") (str (System/getProperty "user.home") "/code/futon3c"))
+           "/scripts/xlate.py")))
+
+(defn- xiang-pattern-candidates
+  "BM25 candidates for QUERIES: `xlate.py find-many -n 5` over stdin, one
+   process per turn (the index is cached on disk). Nil when the script is
+   absent, fails, or FUTON3C_XIANG_CANDIDATES=0. A helper process, not an
+   agent (I-1/I-3)."
+  [queries]
+  (let [script (xiang-xlate-script)]
+    (when (and (not (contains? #{"0" "false" "no" "off"}
+                               (some-> (System/getenv "FUTON3C_XIANG_CANDIDATES") str/lower-case)))
+               (.isFile (io/file script)))
+      (try
+        (let [p (.start (doto (ProcessBuilder. ["python3" script "find-many" "-n" "5"])
+                          (.redirectErrorStream false)))]
+          (with-open [w (io/writer (.getOutputStream p) :encoding "UTF-8")]
+            (.write w (json/generate-string (vec queries))))
+          (let [out (slurp (.getInputStream p) :encoding "UTF-8")
+                ok? (.waitFor p 30 java.util.concurrent.TimeUnit/SECONDS)]
+            (when (and ok? (zero? (.exitValue p)))
+              (let [parsed (json/parse-string out)]
+                (when (map? parsed) parsed)))))
+        (catch Exception _ nil)))))
+
 (defn- xiang-turn-service
   "The one service for this JVM, built on first use. Reload-safe: a
    Drawbridge reload of this namespace keeps the running scheduler."
@@ -11263,6 +11317,10 @@
       (let [built (xiang-turns/service
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
+                    :draft xiang-draft
+                    :pattern-candidates xiang-pattern-candidates
+                    :skip-routine? (contains? #{"1" "true" "yes"}
+                                              (some-> (System/getenv "FUTON3C_XIANG_SKIP_ROUTINE") str/lower-case))
                     :bell! (fn [{:keys [agent-id prompt caller surface mode type]}]
                              (let [{:keys [status body]}
                                    (handle-bell (xiang-synthetic-request
@@ -11389,6 +11447,11 @@
                       svc id payload {:pattern-source xiang-pattern-source})]
           (json-response 201 {:ok true :id id :path (:path result) :analysis (:analysis result)}))
 
+        "draft"
+        (let [raw (or (:fragments payload) (:draft payload))
+              draft (xiang-turns/store-draft! svc id raw)]
+          (json-response 201 {:ok true :id id :draft draft}))
+
         (json-response 404 {:ok false :reason :unknown-action :action action}))
       (catch clojure.lang.ExceptionInfo e (xiang-refusal e)))))
 
@@ -11411,6 +11474,13 @@
                                                                    :session-id (get params "session")
                                                                    :agent-id (get params "agent")
                                                                    :limit (max 1 (min 1000 limit))))}))
+
+      (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
+      (let [params (parse-query-params request)]
+        (json-response 200 (assoc (xiang-turns/draft-agreement (xiang-turn-service config)
+                                                               :session-id (get params "session")
+                                                               :agent-id (get params "agent"))
+                                  :ok true)))
 
       (and (= :get method) (= "/api/alpha/xiang/health" uri))
       (let [svc (xiang-turn-service config)]

@@ -14,7 +14,7 @@
 export const OFFSET_UNIT = "unicode-codepoints-zero-based-end-exclusive" as const;
 
 export type SentenceStatus = "unresolved" | "cue-only" | "analyzed";
-export type AnalysisStatus = "requested" | "not-requested" | "analyzed" | "refused" | "failed";
+export type AnalysisStatus = "requested" | "not-requested" | "analyzed" | "refused" | "failed" | "drafted";
 
 export interface Cue {
   start: number;
@@ -124,6 +124,8 @@ export interface Fragment {
   pattern_refs?: PatternRef[];
   pattern_rejections?: PatternRejection[];
   rnode?: Record<string, unknown>;
+  /** How this fragment relates to 小象's draft; set by the server at publish. */
+  basis?: FragmentBasis;
 }
 
 export interface AnalysedSentence {
@@ -147,6 +149,7 @@ export interface Analysis {
   interpretation_version?: number;
   vocabulary_version?: number;
   human_approved?: boolean;
+  draft_agreement?: DraftAgreement | null;
 }
 
 /** The analysis a delegate submits; the server canonicalises it. */
@@ -157,6 +160,42 @@ export interface AnalysisSubmission {
   rnode_cues?: unknown[];
 }
 
+export interface DraftFragment {
+  start: number;
+  end: number;
+  text: string;
+  /** 小象's intent when it was sure, else null with two guesses. */
+  intent: string | null;
+  sure: boolean;
+  guesses: string[];
+  precision?: number;
+  sentence?: string | null;
+}
+
+/** 小象's classical draft, published beside the record before 象 reads. */
+export interface Draft {
+  version: 1;
+  status: "drafted";
+  labeller: string;
+  source_text: string;
+  offset_unit: typeof OFFSET_UNIT;
+  created_at?: string;
+  fragments: DraftFragment[];
+}
+
+export type FragmentBasis = "xiaoxiang" | "xiang-relabelled" | "xiang-resegmented" | "xiang";
+
+export interface DraftAgreement {
+  agreed: number;
+  relabelled: number;
+  resegmented: number;
+  new: number;
+  dropped: number;
+  unsure: number;
+  draft_fragments: number;
+  published_fragments: number;
+}
+
 export interface Notice {
   kind: "effect" | "no-grant" | "unresolved";
   text: string;
@@ -164,10 +203,21 @@ export interface Notice {
   fragment_id?: string;
 }
 
+export interface PatternCandidate {
+  id: string;
+  score: number;
+  title: string;
+  context?: string;
+  conclusion?: string;
+}
+
 export interface TurnView {
   ok: true;
   id: string;
   record: TurnRecord;
+  draft?: Draft | null;
+  /** BM25 hits per fragment query, precomputed before dispatch. */
+  pattern_candidates?: Record<string, PatternCandidate[]> | null;
   analysis: Analysis | null;
   candidates: unknown | null;
   notices: Notice[];

@@ -12,9 +12,9 @@
  */
 
 import { codepointLength, cpSubstring, cpToUtf16, exactSpan, wordCount } from "./offsets.js";
-import type { Analysis, Fragment, TurnRecord } from "./types.js";
+import type { Analysis, Draft, Fragment, TurnRecord } from "./types.js";
 
-export type MarkKind = "cue" | "lexical";
+export type MarkKind = "cue" | "draft" | "lexical";
 
 export interface Mark {
   kind: MarkKind;
@@ -99,13 +99,41 @@ export function lexicalMarks(record: TurnRecord): Mark[] {
 }
 
 /**
- * The marks to show for a turn: the analysis's cues when it has landed, else
- * the record's lexical cues, as the Emacs buffer did.
+ * 小象's sure fragments as marks. A draft fragment is an interpretation span,
+ * not a cue, so it is drawn as a labelled span, never an underline.
  */
-export function marksFor(record: TurnRecord, analysis: Analysis | null | undefined): Mark[] {
+export function draftMarks(draft: Draft, source: string): Mark[] {
+  if (draft.source_text !== source) return [];
+  const marks: Mark[] = [];
+  for (const f of draft.fragments) {
+    if (!f.intent || !exactSpan(source, f.start, f.end, f.text)) continue;
+    marks.push({
+      kind: "draft",
+      start: f.start,
+      end: f.end,
+      utf16Start: cpToUtf16(source, f.start),
+      utf16End: cpToUtf16(source, f.end),
+      text: f.text,
+      intent: f.intent,
+      help: `${f.intent} (小象${f.precision != null ? `, p ${f.precision.toFixed(2)}` : ""})`,
+      sentenceId: f.sentence ?? "",
+    });
+  }
+  return marks.sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+/**
+ * The marks to show for a turn, by tier: 象's cues once the reading has
+ * landed, else 小象's draft, else the record's lexical cues.
+ */
+export function marksFor(record: TurnRecord, analysis: Analysis | null | undefined, draft?: Draft | null): Mark[] {
   if (analysis) {
     const cues = analysisMarks(analysis, record.source_text);
     if (cues.length > 0) return cues;
+  }
+  if (draft) {
+    const d = draftMarks(draft, record.source_text);
+    if (d.length > 0) return d;
   }
   return lexicalMarks(record);
 }
@@ -154,7 +182,7 @@ export function marksHtml(source: string, marks: Mark[]): string {
       const html = escapeHtml(text).replace(/\n/g, "<br>");
       if (!mark) return html;
       const tag = mark.kind === "cue" ? "mark" : "span";
-      const cls = mark.kind === "cue" ? "xiang-cue" : "xiang-lexical";
+      const cls = mark.kind === "cue" ? "xiang-cue" : mark.kind === "draft" ? "xiang-draft" : "xiang-lexical";
       return `<${tag} class="${cls}" data-intent="${escapeHtml(mark.intent)}" title="${escapeHtml(mark.help)}">${html}</${tag}>`;
     })
     .join("");

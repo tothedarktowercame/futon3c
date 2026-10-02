@@ -67,7 +67,7 @@ test("the detail panel: marks, fragments, notices, author", () => {
   assert.equal(d.author, "claude-17");
   assert.equal(d.labeller, "象-2");
   assert.deepEqual(d.marks.map((m) => m.intent), ["gist", "ask-action"]);
-  assert.deepEqual(d.fragments, [{ sentence: "s1", intent: "gist", target: "the fix", rationale: "declared", patterns: ["social/report-done"] }]);
+  assert.deepEqual(d.fragments, [{ sentence: "s1", intent: "gist", target: "the fix", rationale: "declared", patterns: ["social/report-done"], basis: "xiang" }]);
   assert.ok(d.html.includes('<mark class="xiang-cue" data-intent="gist"'));
   assert.equal(d.notices.length, 1);
 });
@@ -98,4 +98,26 @@ test("the health pane", () => {
     outstanding: 3,
   });
   assert.equal(healthPane(null).seat, "?");
+});
+
+test("the agreement line", async () => {
+  const { agreementLine } = await import("../widget/model.js");
+  assert.equal(agreementLine({ analysed: 10, drafted: 4, "with-draft": 8, totals: { agreed: 12, relabelled: 3, resegmented: 1 } }), "小象 vs 象: 75% agreed over 16 fragments · 4 turns settled by the draft · 8/10 readings had a draft");
+  assert.equal(agreementLine({ analysed: 0, totals: {} }), "小象 vs 象: no data over 0 fragments · 0 turns settled by the draft · 0/0 readings had a draft");
+  assert.equal(agreementLine(null), "agreement: unavailable");
+});
+
+test("draft rows carry the precomputed candidates for their text", async () => {
+  const { turnDetail } = await import("../widget/model.js");
+  const view = {
+    ok: true as const,
+    id: "turn-z",
+    record: { version: 1 as const, source_text: "Please continue.", offset_unit: "unicode-codepoints-zero-based-end-exclusive" as const, sentences: [], unmatched: [], created_at: "x", agent_id: "a", session_id: "s", turn_id: "t", analysis_status: "requested" as const },
+    draft: { version: 1 as const, status: "drafted" as const, labeller: "小象", source_text: "Please continue.", offset_unit: "unicode-codepoints-zero-based-end-exclusive" as const, fragments: [{ start: 0, end: 16, text: "Please continue.", intent: "continue", sure: true, guesses: ["continue", "ask-action"] }] },
+    pattern_candidates: { "Please continue.": [{ id: "social/keep-going", score: 3.1, title: "Keep going" }] },
+    analysis: null,
+    candidates: null,
+    notices: [],
+  };
+  assert.deepEqual(turnDetail(view).draft[0]!.candidates, ["social/keep-going"]);
 });

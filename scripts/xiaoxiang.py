@@ -667,14 +667,25 @@ def collisions(rows, keep: set[str], max_words: int = 3) -> list[dict]:
 
 
 def export(rows, keep: set[str]) -> dict:
+    """The model as JSON, with each intent's cross-validated precision when
+    predicted: the reader labels a turn outright only when its intent is
+    right at least half the time, and says so, instead of apologising for
+    every label at once.  Precision is left out when the rows are too few
+    to fold."""
     model = NaiveBayes().fit(rows, keep=keep)
-    return {
+    out = {
         "name": "xiaoxiang", "version": "0.2", "alpha": model.alpha,
         "prior": dict(model.prior), "totals": dict(model.totals),
         "vocab_size": len(model.vocab),
         "common": sorted(model.common),
         "counts": {c: dict(v) for c, v in model.counts.items()},
     }
+    try:
+        per = evaluate(rows)["per_intent"]
+        out["precision"] = {c: round(v["precision"], 3) for c, v in per.items()}
+    except (ZeroDivisionError, ValueError, IndexError):
+        pass
+    return out
 
 
 def evidence(model: dict, text: str) -> list[str]:
@@ -929,7 +940,7 @@ def bundle(rows) -> str:
     body[a:b + 1] = ["MODEL = " + repr(model)]
     return "\n".join([
         "#!/usr/bin/env python3",
-        '"""小象 (xiaoxiang) v' + model["version"] + ": " + doc + "\n\nRun: python3 xiaoxiang-local.py [--days N] [--json]",
+        '"""小象 (xiaoxiang) v' + model["version"] + ": " + doc + "\n\nRun: python3 xiaoxiang-local.py [--days N] [--json]\nIt says what it will read and print, then waits for a y; --yes when not at a terminal.",
         "Standard library only; no network access.  Built " + __import__("datetime").date.today().isoformat() + '."""',
         "from __future__ import annotations",
         "",

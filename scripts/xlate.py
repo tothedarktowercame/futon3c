@@ -7,7 +7,8 @@ concept to candidate ids, title reads to disambiguate them, and a one-off
 python script to recover character offsets.  No model is involved here --
 BM25 over the library's own text, and exact string work on the turn.
 
-  xlate.py find "defer a decision, sort it out later" [-n 8]
+  xlate.py find "defer a decision, sort it out later" [-n 8] [--json]
+  xlate.py find-many [-n 5] < '["query one", "query two"]'   # JSON per query
   xlate.py offsets TURN.json "exact span text" ["another span"]
   xlate.py lint CASCADE.md --turn TURN.json
 
@@ -108,15 +109,76 @@ def bm25(query, docs, n=8, k1=1.5, b=0.75):
     return sorted(scores.items(), key=lambda kv: -kv[1])[:n]
 
 
-def cmd_find(args):
-    n, cands = 8, False
+def _opts(args):
+    """Pull -n N, --with-candidates and --json out of ARGS."""
+    n, cands, as_json = 8, False, False
     if "--with-candidates" in args:
         cands = True; args = [a for a in args if a != "--with-candidates"]
+    if "--json" in args:
+        as_json = True; args = [a for a in args if a != "--json"]
     if "-n" in args:
         i = args.index("-n"); n = int(args[i + 1]); args = args[:i] + args[i + 2:]
+    return n, cands, as_json, args
+
+
+EXCERPT = (("context", re.compile(r"^\s*\+ context: (.+)$", re.M)),
+           ("conclusion", re.compile(r"^! (?:conclusion|summary): (.+)$", re.M)))
+
+
+def excerpt(pid):
+    """Title, context and conclusion of one pattern, read from its file.
+    The index keeps only tokens; a reader deciding whether a hit FITS needs
+    the IF/THEN text, and reading five files per fragment is cheap."""
+    base = CANDIDATES if pid.startswith("?") else LIB
+    path = f"{base}/{pid.lstrip('?')}.flexiarg"
+    out = {}
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        return out
+    for key, rx in EXCERPT:
+        m = rx.search(text)
+        if m:
+            out[key] = m.group(1).strip()[:300]
+    return out
+
+
+def find_many(queries, n=5, with_candidates=False, docs=None):
+    """BM25 hits for each query, one index load: {query: [{id, score, title,
+    context, conclusion}, ...]}. The server runs this once per turn before
+    dispatch so the reading seat reads candidates instead of searching."""
+    docs = docs if docs is not None else load_index(with_candidates)
+    out = {}
+    for q in queries:
+        q = str(q)
+        hits = []
+        for pid, s in bm25(q, docs, n):
+            hit = {"id": pid, "score": round(s, 2), "title": docs[pid]["title"][:100]}
+            hit.update(excerpt(pid))
+            hits.append(hit)
+        out[q] = hits
+    return out
+
+
+def cmd_find(args):
+    n, cands, as_json, args = _opts(args)
+    query = " ".join(args)
+    if as_json:
+        print(json.dumps(find_many([query], n, cands)[query], ensure_ascii=False))
+        return
     docs = load_index(cands)
-    for pid, s in bm25(" ".join(args), docs, n):
+    for pid, s in bm25(query, docs, n):
         print(f"{s:7.2f}  {pid}\n         {docs[pid]['title'][:100]}")
+
+
+def cmd_find_many(args):
+    """find-many [-n N] [--with-candidates]: JSON array of queries on stdin,
+    JSON object of hits per query on stdout."""
+    n, cands, _, _ = _opts(args)
+    queries = json.load(sys.stdin)
+    if not isinstance(queries, list):
+        sys.exit("find-many: stdin must be a JSON array of query strings")
+    print(json.dumps(find_many(queries, n, cands), ensure_ascii=False))
 
 
 def cmd_offsets(args):
@@ -312,5 +374,5 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     cmd, rest = sys.argv[1], sys.argv[2:]
-    sys.exit({"find": cmd_find, "offsets": cmd_offsets, "lint": cmd_lint,
-              "census": cmd_census}[cmd](rest) or 0)
+    sys.exit({"find": cmd_find, "find-many": cmd_find_many, "offsets": cmd_offsets,
+              "lint": cmd_lint, "census": cmd_census}[cmd](rest) or 0)
