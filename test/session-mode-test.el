@@ -1162,5 +1162,8 @@ agent text is left alone."
             (session-mode--paint-rnode-tags (point-min) (point-max))
             (let ((overlays (session-mode-test--rnode-overlays)))
               (should (= 1 (length overlays)))
-              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face))))))
+              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face)))
+              ;; red replaces, not adds to, an intent underline on the same words
+              (should (> (overlay-get (car overlays) 'priority) 30))
+              (should (null (face-attribute 'session-mode-rnode-red-face :underline))))))
       (delete-file path))))

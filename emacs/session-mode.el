@@ -1059,8 +1059,9 @@ Use the real inserted span, including any agent-chat text transformations."
 vocabulary is being tried; when nil, a dotted underline in the stage colour."
   :type 'boolean :group 'session-mode)
 
-(defface session-mode-rnode-red-face '((t :foreground "red"))
-  "R-node cue tag while `session-mode-rnode-red' is on.")
+(defface session-mode-rnode-red-face '((t :foreground "red" :underline nil))
+  "R-node cue tag while `session-mode-rnode-red' is on.  Red alone marks it: the
+explicit nil underline, at a priority above the intent tags, removes theirs.")
 
 (defun session-mode--rnode-stage-face (stage)
   "Return the R-node tag face: red while `session-mode-rnode-red', else a
@@ -1096,6 +1097,7 @@ dotted underline in STAGE's transcript colour."
                       (let ((o (make-overlay (match-beginning 0) (match-end 0))))
                         (overlay-put o 'session-mode-rnode-tag t)
                         (overlay-put o 'evaporate t)
+                        (overlay-put o 'priority 40)   ; above intent tags (30)
                         (overlay-put o 'face (session-mode--rnode-stage-face stage))
                         (overlay-put o 'help-echo
                                      (format "%s %s (%s) — cue “%s” — provisional"
