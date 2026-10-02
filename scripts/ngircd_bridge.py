@@ -49,6 +49,11 @@ import urllib.request
 import urllib.error
 
 try:
+    import xiang_turns  # 象 turn routes (M-象-2000 P23); optional
+except Exception:  # pragma: no cover - the bridge runs without it
+    xiang_turns = None
+
+try:
     import fcntl  # POSIX only
 except ImportError:
     fcntl = None
@@ -613,6 +618,7 @@ class IRCBot:
         self._thread_context = threading.local()
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
+        self._xiang_records = {}  # job id -> 象 record id, between mention and reply
         self._job_seq = 0
         self._job_seq_lock = threading.Lock()
         self._send_lock = threading.Lock()
@@ -1402,6 +1408,43 @@ class IRCBot:
             return None
         return job_id
 
+    # -- 象 turn records (M-象-2000 P23) -------------------------------------
+    # The room's turns are recorded through the same routes the web widget
+    # uses, so they get the same annotations an Emacs REPL's turns do. Best
+    # effort: a failure is logged and never reaches the conversation.
+
+    def _xiang_surface(self, channel):
+        return f"{self.transport_name} ({channel or self.channel})"
+
+    def _xiang_record_turn(self, job_id, sender, prompt_text, channel):
+        if xiang_turns is None or not xiang_turns.enabled():
+            return None
+        try:
+            status = self._agent_status() or {}
+            rid = xiang_turns.record_turn(
+                INVOKE_BASE, prompt_text, self.agent_id, status.get("session_id") or "unknown",
+                f"{self.transport_name}:{job_id}", operator_id=sender,
+                surface=self._xiang_surface(channel), log=lambda m: log(self.nick, m))
+            if rid:
+                self._xiang_records[job_id] = rid
+            return rid
+        except Exception as e:
+            log(self.nick, f"象: record failed for {job_id}: {e}")
+            return None
+
+    def _xiang_after_reply(self, job_id, response, channel):
+        if xiang_turns is None or not xiang_turns.enabled():
+            return None
+        try:
+            rid = self._xiang_records.pop(job_id, None)
+            return xiang_turns.after_reply(
+                INVOKE_BASE, rid, response.get("result") or "", self.agent_id,
+                response.get("session_id") or "unknown", f"{self.transport_name}:{job_id}",
+                surface=self._xiang_surface(channel), log=lambda m: log(self.nick, m))
+        except Exception as e:
+            log(self.nick, f"象: after-reply failed for {job_id}: {e}")
+            return None
+
     def _invoke_worker_loop(self):
         """Process queued invoke jobs serially and post completion updates."""
         while True:
@@ -1431,6 +1474,7 @@ class IRCBot:
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
                     self._emit_success_reply(response, reply_ch, job_id, multi_message=multi_message)
+                    self._xiang_after_reply(job_id, response, reply_ch)
                     self._maybe_emit_frontiermath_completion_bell(prompt, sender, response, reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
@@ -1756,6 +1800,9 @@ class IRCBot:
         job_id = self._enqueue_invoke(announced["job_id"], sender, full_prompt, self.focused_mission,
                                       reply_channel=channel,
                                       multi_message=multi_message)
+        if job_id:
+            # 象 sees what the person said, not the surface contract wrapped round it.
+            self._xiang_record_turn(job_id, sender, prompt_text, channel)
         if not job_id:
             self._say("[bridge enqueue failed] invoke queue changed after announce; inspect job ledger",
                       max_lines=1, channel=channel)
