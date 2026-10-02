@@ -1054,12 +1054,22 @@ Use the real inserted span, including any agent-chat text transformations."
                 session-mode--rnode-missing-reported nil)))
       session-mode--rnode-vocabulary)))
 
+(defcustom session-mode-rnode-red t
+  "When non-nil, R-node cue tags are plain red text, so they stand out while the
+vocabulary is being tried; when nil, a dotted underline in the stage colour."
+  :type 'boolean :group 'session-mode)
+
+(defface session-mode-rnode-red-face '((t :foreground "red"))
+  "R-node cue tag while `session-mode-rnode-red' is on.")
+
 (defun session-mode--rnode-stage-face (stage)
-  "Return a dotted underline face using STAGE's transcript colour."
+  "Return the R-node tag face: red while `session-mode-rnode-red', else a
+dotted underline in STAGE's transcript colour."
+  (if session-mode-rnode-red 'session-mode-rnode-red-face
   (let* ((face-stage (if (equal stage "assurance") "annotator" stage))
          (face (intern (format "session-mode-mark-%s-face" face-stage)))
          (colour (face-foreground face nil t)))
-    `(:underline (:style dots :color ,colour))))
+    `(:underline (:style dots :color ,colour)))))
 
 (defun session-mode--paint-rnode-tags (jit-beg jit-end)
   "Paint deterministic R-node cues in the operator regions overlapping JIT-BEG..JIT-END."

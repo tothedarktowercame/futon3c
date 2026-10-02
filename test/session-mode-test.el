@@ -1091,7 +1091,8 @@ agent text is left alone."
         (session-mode--rnode-vocabulary-key nil))
     (unwind-protect
         (with-temp-buffer
-          (let ((session-mode-rnode-vocabulary-file path))
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-rnode-red nil))
             (insert "joe: let's go with option 2 for now\ncodex: for now ok\n")
             (session-mode--paint-rnode-tags (point-min) (point-max))
             (let ((overlays (session-mode-test--rnode-overlays)))
@@ -1148,3 +1149,18 @@ agent text is left alone."
         (should-not (session-mode--paint-rnode-tags (point-min) (point-max))))
       (should-not (session-mode-test--rnode-overlays))
       (should (= 1 (length messages))))))
+
+(ert-deftest session-mode-rnode-tags-red-while-trialling ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-rnode-red t))
+            (insert "joe: for now\ncodex: for now\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face))))))
+      (delete-file path))))
