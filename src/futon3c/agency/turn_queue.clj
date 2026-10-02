@@ -52,6 +52,8 @@
 (defonce ^:private !processors
   (atom {}))
 
+(def ^:private closed-intake-ticket (Object.))
+
 (declare run-finalizer!)
 (declare stop-all-drainers!)
 (declare drainer-v2-enabled?)
@@ -246,6 +248,7 @@
    enters the work queue."
   [entry]
   (let [entry* (normalized-entry entry)
+        closed-bypass? (identical? closed-intake-ticket (:intake-ticket entry*))
         id (or (clean-str (:id entry*)) (str "turn-" (UUID/randomUUID)))
         waiter (promise)
         waiter-installed? (atom false)
@@ -264,7 +267,7 @@
                  m
                  (do (reset! processor-installed? true)
                      (assoc m id process-fn))))))
-    (let [entry* (dissoc entry* :process-fn)]
+    (let [entry* (dissoc entry* :process-fn :intake-ticket)]
       (swap-state!
        (fn [state]
          (let [to (:to entry*)
@@ -273,7 +276,7 @@
                                 (when (contains? (:entries state) id) id))
                accepted-at (now)]
            (cond
-             (contains? (:intake-closed state) to)
+             (and (contains? (:intake-closed state) to) (not closed-bypass?))
              (do (reset! result {:status :refused :reason :intake-closed
                                  :agent-id to :entry entry* :waiter waiter})
                  state)
@@ -765,6 +768,16 @@
     (if (= :deduped status)
       {:result "[deduped turn]" :turn-queue/status :deduped}
       @waiter)))
+
+(defn accept-operator-block!
+  "Admit exactly one operator-owned turn while AGENT-ID intake remains closed.
+   The private ticket is never persisted or exposed to request data."
+  [entry]
+  (let [aid (clean-str (:to entry))]
+    (when-not (contains? (:intake-closed (snapshot)) aid)
+      (throw (ex-info "operator consultation requires closed intake"
+                      {:reason :intake-not-closed :agent-id aid})))
+    (accept-block! (assoc entry :intake-ticket closed-intake-ticket))))
 
 (defn stop-all-drainers!
   "Stop and clear every per-agent drainer thread + pending finalizers.

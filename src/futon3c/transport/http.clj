@@ -7035,6 +7035,38 @@
                                     :by (or (:by payload) (get payload "by"))})
                             :ok true)))))
 
+(defn- handle-agency-queue-consult [request config]
+  (let [{:keys [payload agent]} (queue-agent-param request)
+        prompt (or (:prompt payload) (get payload "prompt"))
+        caller (str (or (:caller payload) (get payload "caller") "joe"))]
+    (cond
+      (nil? agent) (json-response 400 {:ok false :error "agent-required"})
+      (str/blank? (str prompt)) (json-response 400 {:ok false :error "prompt-required"})
+      :else
+      (try
+        (let [turn-id (str "consult-" (UUID/randomUUID))
+              session-id (some-> (reg/get-agent agent) :agent/session-id)
+              effective-prompt (wrap-agent-facing-surface
+                                prompt "operator-consult" caller agent nil session-id)
+              result (turn-queue/accept-operator-block!
+                      {:id turn-id :msg-id turn-id :to agent :from caller
+                       :surface "operator-consult" :prompt effective-prompt
+                       :process-fn
+                       (fn [entry]
+                         (binding [turn-queue/*drained-by-outer* true
+                                   turn-queue/*turn-id* (:id entry)]
+                           (reg/invoke-agent!
+                            agent effective-prompt
+                            {:turn-id turn-id :surface "operator-consult"
+                             :caller caller
+                             :evidence-store (evidence-store-for-config config)})))})]
+          (json-response 200 (assoc result :ok (not (contains? result :error))
+                                    :turn-id turn-id)))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 409 {:ok false :error (name (or (:reason (ex-data e))
+                                                         :consult-refused))
+                              :message (.getMessage e)}))))))
+
 (defn- interrupt-agent-process-tree!
   "Best-effort termination of AGENT-ID's live invoke subprocess tree.
    Returns a result map; never throws."
@@ -11711,6 +11743,9 @@
 
       (and (= :post method) (= "/api/alpha/agency/queue/shunt" uri))
       (handle-agency-queue-shunt request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/consult" uri))
+      (handle-agency-queue-consult request config)
 
       (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
       (handle-jvm-incidents request)
