@@ -5,8 +5,10 @@ import { addressedBody, anchorsAuthorChart, countByAuthor, intentStage, intents,
 
 const HS = "https://matrix.paragogy.net";
 const DEFAULT_ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
-const requestedRoom = new URLSearchParams(location.search).get("room") ?? "";
+const params = new URLSearchParams(location.search);
+const requestedRoom = params.get("room") ?? "";
 const ROOM = /^![^\s/]+(?::[^\s/]+)?$/.test(requestedRoom) ? requestedRoom : DEFAULT_ROOM;
+const annotationMode = params.get("mode") === "annotations";
 const ELEMENT = `https://app.element.io/#/room/${ROOM}?via=matrix.paragogy.net`;
 type Event = { event_id: string; sender: string; origin_server_ts: number; type: string; content: { body?: string; msgtype?: string } };
 
@@ -22,11 +24,17 @@ let userId = sessionStorage.getItem("futon.matrix.user") ?? "";
 let views = new Map<string, TurnView>();
 let events: Event[] = [];
 let chartEvents: Event[] = [];
+let selectedEventId = "";
 let pageSize = 3, loadSize = 30, pageOffset = 0;
 type MarkStyle = "css" | "text" | "png" | "gif";
 let markStyle = (localStorage.getItem("futon.mark.style") as MarkStyle | null) ?? "css";
 if (!["css", "text", "png", "gif"].includes(markStyle)) markStyle = "css";
 markStyleSelect.value = markStyle;
+document.body.classList.toggle("annotations", annotationMode);
+if (annotationMode) {
+  document.querySelector("h1")!.innerHTML = "FUTON room <span>· annotations</span>";
+  $("composer").hidden = true;
+}
 const rasterMarks = new Set(["approve", "ask-action", "clarify", "collect", "constrain", "continue", "defer", "delegate", "disagree", "explain", "explore", "extend", "prioritize", "propose", "qualify", "redirect", "report-problem", "report", "retract", "verify", "withdraw"]);
 
 function markGlyph(intent: string, glyph: string): string {
@@ -161,6 +169,20 @@ function render(): void {
   range.textContent = events.length ? `${bounds.start + 1}–${bounds.end} of ${events.length} loaded` : "no turns";
   older.disabled = bounds.start === 0; newer.disabled = pageOffset === 0;
   older.textContent = `← back ${pageSize}`; newer.textContent = `newer ${pageSize} →`;
+  if (annotationMode) {
+    if (!visible.some((event) => event.event_id === selectedEventId)) {
+      selectedEventId = [...visible].reverse().find((event) => views.has(event.event_id))?.event_id ?? visible.at(-1)?.event_id ?? "";
+    }
+    messages.innerHTML = visible.map((event) => {
+      const view = views.get(event.event_id);
+      const badges = view ? intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join("") : `<span class="pending">analysis pending</span>`;
+      return `<li class="annotation-turn ${event.event_id === selectedEventId ? "selected" : ""}"><button class="turn-picker" data-event="${escapeHtml(event.event_id)}"><span class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></span><span class="turn-preview">${escapeHtml(event.content.body!.replace(/\s+/g, " ").slice(0, 120))}</span><span class="badges">${badges}</span></button></li>`;
+    }).join("");
+    messages.querySelectorAll<HTMLButtonElement>(".turn-picker").forEach((button) => button.onclick = () => { selectedEventId = button.dataset.event!; render(); });
+    if (views.has(selectedEventId)) showReading(selectedEventId);
+    else { inspector.hidden = false; inspector.innerHTML = `<h2>Turn annotations</h2><p class="muted">No 象 reading is attached to this Matrix event.</p>`; }
+    return;
+  }
   messages.innerHTML = visible.map((event) => {
     const view = views.get(event.event_id);
     const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></button>`).join("") : "";
@@ -174,8 +196,9 @@ function render(): void {
 function showReading(eventId: string): void {
   const view = views.get(eventId); if (!view) return;
   const d = turnDetail(view); inspector.hidden = false;
-  inspector.innerHTML = `<button id="close-reading" aria-label="Close">×</button><h2>象 reading</h2><p>${intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join(" ")}</p><div class="source">${d.html}</div>${d.fragments.map((f) => `<section><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
-  $("close-reading").onclick = () => { inspector.hidden = true; };
+  const close = annotationMode ? "" : `<button id="close-reading" aria-label="Close">×</button>`;
+  inspector.innerHTML = `${close}<h2>${annotationMode ? "Turn annotations" : "象 reading"}</h2><p>${intents(view).map((m) => `<span class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></span>`).join(" ")}</p><div class="source">${d.html}</div>${d.fragments.map((f) => `<section class="stage-${intentStage(f.intent)}"><h3>${escapeHtml(f.intent)} ${f.target ? `→ ${escapeHtml(f.target)}` : ""}</h3><p>${escapeHtml(f.rationale)}</p>${f.patterns.length ? `<p class="small">${f.patterns.map(escapeHtml).join(" · ")}</p>` : ""}</section>`).join("")}<p class="small">${d.labeller ? `read by ${escapeHtml(d.labeller)}` : "declared by author"} · ${escapeHtml(d.status)}</p>`;
+  if (!annotationMode) $("close-reading").onclick = () => { inspector.hidden = true; };
 }
 
 async function changePage(offset: number): Promise<void> { pageOffset = offset; await loadViews(); render(); }
