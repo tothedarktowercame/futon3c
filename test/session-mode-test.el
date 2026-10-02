@@ -1207,7 +1207,7 @@ agent text is left alone."
         (session-mode--learned-rnode-vocabulary nil))
     (delete-file path)
     (unwind-protect
-        (let ((session-mode-rnode-cues-file path))
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
           (should (session-mode--record-rnode-cues
                    (session-mode-test--rnode-analysis "e1" "seat-a" "settle lightly" "R14")))
           (let ((entry (car (alist-get 'entries
@@ -1223,7 +1223,7 @@ agent text is left alone."
   (let ((path (make-temp-file "rnode-store-")))
     (delete-file path)
     (unwind-protect
-        (let ((session-mode-rnode-cues-file path))
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
           (dolist (pair '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-a")))
             (session-mode--record-rnode-cues
              (session-mode-test--rnode-analysis (car pair) (cadr pair)
@@ -1238,7 +1238,7 @@ agent text is left alone."
   (let ((path (make-temp-file "rnode-store-")))
     (delete-file path)
     (unwind-protect
-        (let ((session-mode-rnode-cues-file path))
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
           ;; Under the default argmin (tau 0): weighted evidence 1 + 1.5 + 0.5 + 0.5 = 3.5
           ;; (p_top 0.78) keeps a two-seat cue a candidate; a third seat (1 + 1.5 + 1.5 = 4,
           ;; p_top 0.8) promotes it.  Promotion follows G, not a sampled draw.
@@ -1263,7 +1263,7 @@ agent text is left alone."
   (let ((path (make-temp-file "rnode-store-")))
     (delete-file path)
     (unwind-protect
-        (let ((session-mode-rnode-cues-file path))
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
           (dolist (node '("R14" "R6"))
             (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
               (session-mode--record-rnode-cues
@@ -1286,7 +1286,7 @@ agent text is left alone."
     (delete-file store)
     (unwind-protect
         (let ((session-mode-rnode-vocabulary-file vocab)
-              (session-mode-rnode-cues-file store)
+              (session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file store)
               (session-mode-rnode-red t))
           (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
             (session-mode--record-rnode-cues
@@ -1312,10 +1312,10 @@ agent text is left alone."
           (cl-letf (((symbol-function 'message)
                      (lambda (format-string &rest args)
                        (push (apply #'format format-string args) messages))))
-            (let ((session-mode-rnode-cues-file missing)
+            (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file missing)
                   (session-mode--learned-rnode-key nil))
               (should-not (session-mode--load-learned-rnode-vocabulary)))
-            (let ((session-mode-rnode-cues-file corrupt)
+            (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file corrupt)
                   (session-mode--learned-rnode-key nil)
                   (session-mode--rnode-store-error-reported nil))
               (should-not (session-mode--load-learned-rnode-vocabulary))
@@ -1406,7 +1406,7 @@ agent text is left alone."
         (session-mode--learned-rnode-key '(1 "old")))
     (unwind-protect
         (let ((session-mode-rnode-vocabulary-file path)
-              (session-mode-rnode-cues-file (make-temp-name "/tmp/no-rnode-store-")))
+              (session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file (make-temp-name "/tmp/no-rnode-store-")))
           (let ((rows (session-mode--load-rnode-vocabulary)))
             (should (equal "R14" (caar rows)))
             (should (= session-mode--rnode-cache-format-version
