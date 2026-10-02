@@ -6,6 +6,14 @@ operator turn, and when the reply lands tells 象 what happened and records
 the reply as an agent turn, so the room's turns get the same annotations an
 Emacs REPL's do (M-象-2000, P23).
 
+The reply is recorded with dispatch "none" (analysis_status "declared"): it
+is stored but never read by 象. Joe 2026-10-02: an agent's turn carries its
+own proforma marks (stored as proforma_marks on agent-origin records), 象
+readings of them were not wanted, and the extra jobs slowed 象's readings of
+operator turns. FUTON3C_XIANG_AGENT_DISPATCH=1 restores the old dispatch
+"now" for when agent-turn readings are wanted again (e.g. to measure the
+marks against 象's reading).
+
   record_turn(text, agent_id, session_id, turn_id, operator_id=…, surface=…)
       -> record id, or None when the route refused or was unreachable
   after_reply(record_id, reply, agent_id, session_id, turn_id, surface=…)
@@ -28,6 +36,12 @@ TIMEOUT = float(os.environ.get("FUTON3C_XIANG_BRIDGE_TIMEOUT", "5"))
 
 def enabled() -> bool:
     return os.environ.get("FUTON3C_XIANG_BRIDGE", "1").strip().lower() not in ("0", "false", "no", "off")
+
+
+def agent_dispatch_enabled() -> bool:
+    """Whether agent replies are dispatched to 象. Off by default; see the
+    module docstring for why and for when to turn it back on."""
+    return os.environ.get("FUTON3C_XIANG_AGENT_DISPATCH", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 def post_json(url: str, payload: dict, timeout: float = TIMEOUT) -> tuple[int, dict | None]:
@@ -92,12 +106,13 @@ def happened(base: str, record_id: str, reply: str, *, log=None) -> dict | None:
 def after_reply(base: str, record_id: str | None, reply: str, agent_id: str, session_id: str,
                 turn_id: str, *, surface: str | None = None,
                 reply_evidence_id: str | None = None, log=None) -> dict:
-    """Reply end: dispatch the operator turn, then record the reply as an agent turn
-    (dispatched at once, since nothing further happens to it)."""
+    """Reply end: dispatch the operator turn, then record the reply as an agent turn.
+    The reply is recorded with dispatch "none" (stored, never read by 象; see the
+    module docstring) unless FUTON3C_XIANG_AGENT_DISPATCH restores dispatch "now"."""
     out = {"happened": None, "reply_record": None}
     if record_id:
         out["happened"] = happened(base, record_id, reply, log=log)
     out["reply_record"] = record_turn(base, reply, agent_id, session_id, f"{turn_id}:reply",
                                       origin="agent", surface=surface, evidence_id=reply_evidence_id,
-                                      dispatch="now", log=log)
+                                      dispatch="now" if agent_dispatch_enabled() else "none", log=log)
     return out

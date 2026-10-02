@@ -39,6 +39,7 @@ def test_a_refused_or_unreachable_record_is_none_and_logged(monkeypatch):
 
 
 def test_after_reply_dispatches_the_turn_then_records_the_reply_as_an_agent_turn(monkeypatch):
+    monkeypatch.delenv("FUTON3C_XIANG_AGENT_DISPATCH", raising=False)
     fake = FakePost([(200, {"ok": True, "dispatched": True, "job-id": "job-9"}),
                      (201, {"ok": True, "id": "turn-reply"})])
     monkeypatch.setattr(xiang_turns, "POST", fake)
@@ -50,10 +51,21 @@ def test_after_reply_dispatches_the_turn_then_records_the_reply_as_an_agent_turn
     assert fake.calls[0][1] == {"reply": "㊥ Done.\n\n🈸 Shall I go on?", "commits": []}
     reply_payload = fake.calls[1][1]
     assert reply_payload["origin"] == "agent"
-    assert reply_payload["dispatch"] == "now"
+    # Off by default (M-象-2000, Joe 2026-10-02): the reply is recorded but
+    # never read by 象. Planted check: reverting the default to "now" fails here.
+    assert reply_payload["dispatch"] == "none"
     assert reply_payload["turn-id"] == "matrix:job-1:reply"
     assert reply_payload["evidence-id"] == "$reply"
     assert "operator-id" not in reply_payload
+
+
+def test_agent_dispatch_switch_restores_dispatch_now(monkeypatch):
+    monkeypatch.setenv("FUTON3C_XIANG_AGENT_DISPATCH", "1")
+    fake = FakePost([(201, {"ok": True, "id": "turn-reply"})])
+    monkeypatch.setattr(xiang_turns, "POST", fake)
+    out = xiang_turns.after_reply("http://h", None, "reply", "a", "s", "irc:job-2")
+    assert out["reply_record"] == "turn-reply"
+    assert fake.calls[0][1]["dispatch"] == "now"
 
 
 def test_after_reply_without_a_record_still_records_the_reply(monkeypatch):

@@ -81,6 +81,24 @@
     (is (= {:dispatched false :reason :addressed-to-seat} (svc/attach-happened! (:svc h) id "summary")))
     (is (empty? @(:bells h)))))
 
+(deftest a-declared-turn-is-recorded-settled-and-never-dispatched
+  ;; M-象-2000, Joe 2026-10-02: the bridges' agent replies are recorded with
+  ;; dispatch :none — stored with their proforma_marks, never read by 象, and
+  ;; no later dispatch or retry may queue them.
+  (let [h (harness)
+        {:keys [id dispatch record]} (turn! h {:dispatch :none :origin "agent"
+                                               :text "㊥ Done.\n\n🈸 Shall I go on?"})]
+    (is (= :declared dispatch))
+    (is (= "declared" (:analysis_status record)))
+    (is (= "agent" (:origin record)))
+    (is (seq (:proforma_marks record)) "the author's own marks are stored")
+    (is (empty? @(:bells h)))
+    (is (= {:dispatched false :reason :declared} (svc/dispatch! (:svc h) id {})))
+    (svc/retry! (:svc h) id)
+    (is (= "declared" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id)))
+        "retry leaves a declared record settled")
+    (is (empty? @(:bells h)))))
+
 (deftest an-external-turn-dispatches-at-once-and-a-failed-send-stays-requested
   (let [h (harness {:bell! (fn [_] {:ok false :status 404 :error "agent not registered"})})
         {:keys [id dispatch]} (turn! h {:dispatch :now})]

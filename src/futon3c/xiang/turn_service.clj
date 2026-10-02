@@ -232,8 +232,10 @@
 (defn record-turn!
   "Record one operator turn. OPTS are `tr/make-record`'s, plus :dispatch
    (:later, the default, waits for `attach-happened!`; :now dispatches at
-   once, as an externally captured turn does). Returns {:id :record
-   :dispatch} where :dispatch is the dispatch result or :pending/:skipped.
+   once, as an externally captured turn does; :none records only and marks
+   the record \"declared\" — settled without a reading, never dispatched).
+   Returns {:id :record :dispatch} where :dispatch is the dispatch result or
+   :pending/:skipped/:declared.
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
@@ -244,6 +246,9 @@
         to-seat? (= (cfg svc :seat) agent-id)
         result (cond
                  to-seat? :skipped
+                 (= dispatch :none) (do (ts/update-record! (cfg svc :store) id
+                                                           #(assoc % :analysis_status "declared"))
+                                        :declared)
                  (= dispatch :now) (dispatch! svc id {})
                  :else :pending)]
     {:id id :record (ts/read-record (cfg svc :store) id) :redacted redacted
@@ -318,6 +323,10 @@
         path (ts/record-path store id)]
     (if-not (ts/read-record store id)
       {:dispatched false :reason :record-not-found}
+      (if (= "declared" (:analysis_status (ts/read-record store id)))
+        ;; Declared (dispatch :none) records are settled without a reading;
+        ;; no dispatch, retry or sweep may queue them.
+        {:dispatched false :reason :declared}
       (let [record (ts/read-record store id)
             draft (ts/read-draft store id)]
         (if (and draft (cfg svc :skip-routine?) (tr/routine-draft? record draft)
@@ -326,7 +335,7 @@
           (do (ts/update-record! store id #(assoc % :analysis_status "drafted"))
               (set-health! svc nil (str id ": routine, settled by the draft"))
               {:dispatched false :reason :drafted :agent nil})
-          (dispatch-to! svc id agent store-busy-delays record draft path))))))
+          (dispatch-to! svc id agent store-busy-delays record draft path)))))))
 
 (defn candidate-queries
   "What to search the library for before dispatch: the draft's fragments
@@ -395,15 +404,18 @@
 
 (defn retry!
   "Put ID back to `requested` before re-dispatching it; the old attempt is
-   kept under analysis_dispatch.attempts."
+   kept under analysis_dispatch.attempts. A \"declared\" record (dispatch
+   :none) is settled without a reading and is left alone."
   [svc id]
   (ts/update-record! (cfg svc :store) id
                      (fn [record]
-                       (let [disp (or (:analysis_dispatch record) {})
-                             old (select-keys disp [:job_id :outcome])
-                             disp (cond-> (dissoc disp :job_id :outcome)
-                                    (seq old) (update :attempts (fnil conj []) old))]
-                         (assoc record :analysis_dispatch disp :analysis_status "requested"))))
+                       (if (= "declared" (:analysis_status record))
+                         record
+                         (let [disp (or (:analysis_dispatch record) {})
+                               old (select-keys disp [:job_id :outcome])
+                               disp (cond-> (dissoc disp :job_id :outcome)
+                                      (seq old) (update :attempts (fnil conj []) old))]
+                           (assoc record :analysis_dispatch disp :analysis_status "requested")))))
   nil)
 
 ;; ---------------------------------------------------------------------------
