@@ -1061,33 +1061,35 @@ Use the real inserted span, including any agent-chat text transformations."
          (colour (face-foreground face nil t)))
     `(:underline (:style dots :color ,colour))))
 
-(defun session-mode--paint-rnode-tags (_beg _end)
-  "Paint deterministic R-node cues in operator regions only."
-  ;; Repaint the small deterministic layer as a unit.  JIT regions can split a
-  ;; multiword cue; whole-operator repainting avoids boundary misses and makes
-  ;; repeated or overlapping JIT calls idempotent.
-  (remove-overlays (point-min) (point-max) 'session-mode-rnode-tag t)
-  (when (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary))
-    (let ((case-fold-search t))
-      (pcase-dolist (`(,beg . ,region-end) (session-mode--operator-regions))
-        (let ((end (save-excursion
-                     (goto-char beg)
-                     (if (re-search-forward "^[ \t]*>>>" region-end t)
-                         (match-beginning 0)
-                       region-end))))
-          (dolist (row session-mode--rnode-vocabulary)
-            (pcase-let ((`(,id ,label ,stage ,cues) row))
-              (dolist (cue cues)
-                (save-excursion
-                  (goto-char beg)
-                  (while (re-search-forward (cdr cue) end t)
-                    (let ((o (make-overlay (match-beginning 0) (match-end 0))))
-                      (overlay-put o 'session-mode-rnode-tag t)
-                      (overlay-put o 'evaporate t)
-                      (overlay-put o 'face (session-mode--rnode-stage-face stage))
-                      (overlay-put o 'help-echo
-                                   (format "%s %s (%s) — cue “%s” — provisional"
-                                           id label (upcase stage) (car cue))))))))))))))
+(defun session-mode--paint-rnode-tags (jit-beg jit-end)
+  "Paint deterministic R-node cues in the operator regions overlapping JIT-BEG..JIT-END."
+  ;; Each overlapping operator region is repainted whole, so a JIT boundary
+  ;; never splits a multiword cue and repeated calls stay idempotent; regions
+  ;; outside the chunk are left alone, so typing does not rescan the buffer.
+  (let ((case-fold-search t)
+        (vocab (and session-mode-rnode-tags (session-mode--load-rnode-vocabulary))))
+    (pcase-dolist (`(,beg . ,region-end) (session-mode--operator-regions))
+      (when (and (< beg jit-end) (> region-end jit-beg))
+        (remove-overlays beg region-end 'session-mode-rnode-tag t)
+        (when vocab
+          (let ((end (save-excursion
+                       (goto-char beg)
+                       (if (re-search-forward "^[ \t]*>>>" region-end t)
+                           (match-beginning 0)
+                         region-end))))
+            (dolist (row session-mode--rnode-vocabulary)
+              (pcase-let ((`(,id ,label ,stage ,cues) row))
+                (dolist (cue cues)
+                  (save-excursion
+                    (goto-char beg)
+                    (while (re-search-forward (cdr cue) end t)
+                      (let ((o (make-overlay (match-beginning 0) (match-end 0))))
+                        (overlay-put o 'session-mode-rnode-tag t)
+                        (overlay-put o 'evaporate t)
+                        (overlay-put o 'face (session-mode--rnode-stage-face stage))
+                        (overlay-put o 'help-echo
+                                     (format "%s %s (%s) — cue “%s” — provisional"
+                                             id label (upcase stage) (car cue)))))))))))))))
 
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
