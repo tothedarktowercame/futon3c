@@ -25,8 +25,9 @@
   needs a person, so that lane never stages, commits or mints a claim.
   Unpushed commits ACT: pushing a commit already written decides nothing, so
   that lane pushes rather than asking anyone to (Joe, 2026-09-18).
-  Clean behind-only repos ACT: fast-forwarding to their upstream decides
-  nothing and prevents canonical checkouts from remaining stale indefinitely.
+  Behind-only repos ACT when the upstream paths do not overlap local dirt:
+  fast-forwarding then preserves every uncommitted byte while preventing
+  canonical checkouts from remaining stale indefinitely.
   Merged worktrees ACT: every commit in them is already on the pushed branch,
   so removing one loses nothing there is any way to lose.
 
@@ -40,6 +41,7 @@
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.watcher.roots :as roots])
@@ -521,17 +523,34 @@
         (shell/sh "git" "pull" "--ff-only" :dir root)]
     {:ok? (zero? exit) :output (str/trim (str out " " err))}))
 
+(defn git-incoming-paths
+  "Return the exact paths changed between HEAD and ROOT's upstream.
+  Failure is explicit because an unknown incoming set cannot establish that a
+  dirty checkout is safe to fast-forward."
+  [root]
+  (let [{:keys [exit out err]}
+        (shell/sh "git" "diff" "--name-only" "-z" "HEAD..@{upstream}" :dir root)]
+    (if (zero? exit)
+      {:ok? true
+       :paths (->> (str/split out #"\x00")
+                   (remove str/blank?)
+                   set)}
+      {:ok? false :paths #{}
+       :error (str/trim (str out " " err))})))
+
 (defn sync-behind-repos!
-  "Fast-forward clean repos that are behind upstream and have no local commits.
+  "Fast-forward behind-only repos when upstream cannot overwrite local dirt.
 
   Diverged repos belong to the push-reconciliation lane. Dirty and mid-Git-
-  operation repositories are recorded but never touched."
+  operation repositories refuse unless every dirty path is disjoint from the
+  exact incoming path set."
   [options]
   (let [print-fn (or (:print-fn options) println)]
     (try
       (let [watch-roots (or (:roots options) roots/sweep-roots)
             counts-fn (or (:ahead-behind-fn options) git-ahead-behind)
             dirty-fn (or (:git-fn options) git-dirty)
+            incoming-fn (or (:incoming-paths-fn options) git-incoming-paths)
             busy-fn (or (:busy-fn options) mid-operation?)
             pull-fn (or (:pull-fn options) git-fast-forward!)
             log-path (or (:sync-log-path options) default-sync-log-path)
@@ -554,22 +573,40 @@
                        (update :rows conj {:label label :root path
                                            :behind behind :outcome :mid-operation}))
 
-                   (seq (dirty-fn path))
-                   (-> acc (update :skipped inc)
-                       (update :rows conj {:label label :root path
-                                           :behind behind :outcome :dirty}))
-
                    :else
-                   (let [{:keys [ok? output]} (pull-fn path)]
-                     (if ok?
-                       (do
-                         (print-fn (str "[inbox-zero] fast-forwarded " label
-                                        " by " behind " commit(s)"))
-                         (update acc :updated inc))
+                   (let [dirty (dirty-fn path)
+                         incoming (when (seq dirty) (incoming-fn path))
+                         dirty-paths (set (map :path dirty))
+                         overlap (when (:ok? incoming)
+                                   (set/intersection dirty-paths (:paths incoming)))]
+                     (cond
+                       (and (seq dirty) (not (:ok? incoming)))
                        (-> acc (update :failed inc)
                            (update :rows conj {:label label :root path
-                                               :behind behind :outcome :failed
-                                               :error output})))))))
+                                               :behind behind
+                                               :outcome :incoming-measurement-failed
+                                               :error (:error incoming)}))
+
+                       (seq overlap)
+                       (-> acc (update :skipped inc)
+                           (update :rows conj {:label label :root path
+                                               :behind behind
+                                               :outcome :dirty-overlap
+                                               :paths (vec (sort overlap))}))
+
+                       :else
+                       (let [{:keys [ok? output]} (pull-fn path)]
+                         (if ok?
+                           (do
+                             (print-fn (str "[inbox-zero] fast-forwarded " label
+                                            " by " behind " commit(s)"
+                                            (when (seq dirty)
+                                              " around disjoint local dirt")))
+                             (update acc :updated inc))
+                           (-> acc (update :failed inc)
+                               (update :rows conj {:label label :root path
+                                                   :behind behind :outcome :failed
+                                                   :error output})))))))))
              {:repos (count watch-roots) :updated 0 :failed 0 :skipped 0 :rows []}
              watch-roots)]
         (atomic-write! log-path
