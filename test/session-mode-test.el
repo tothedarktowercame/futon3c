@@ -1219,7 +1219,7 @@ agent text is left alone."
             (should (equal "candidate" (alist-get 'status entry)))))
       (when (file-exists-p path) (delete-file path)))))
 
-(ert-deftest session-mode-rnode-promotion-needs-three-turns-and-two-seats ()
+(ert-deftest session-mode-rnode-three-turns-one-seat-is-not-promoted ()
   (let ((path (make-temp-file "rnode-store-")))
     (delete-file path)
     (unwind-protect
@@ -1231,17 +1231,7 @@ agent text is left alone."
           (let ((entry (car (alist-get 'entries
                                        (session-mode-test--read-rnode-store path)))))
             (should (= 3 (length (alist-get 'turns entry))))
-            (should (equal "candidate" (alist-get 'status entry))))
-          (session-mode--record-rnode-cues
-           (session-mode-test--rnode-analysis "e3" "seat-b" "settle lightly" "R14"))
-          ;; Reprocessing the same turn is idempotent, including its seat, so
-          ;; use a distinct third turn from seat-b for the exact threshold.
-          (session-mode--record-rnode-cues
-           (session-mode-test--rnode-analysis "e4" "seat-b" "settle lightly" "R14"))
-          (let ((entry (car (alist-get 'entries
-                                       (session-mode-test--read-rnode-store path)))))
-            (should (equal "active" (alist-get 'status entry)))
-            (should (= 4 (length (alist-get 'turns entry))))))
+            (should (equal "candidate" (alist-get 'status entry)))))
       (when (file-exists-p path) (delete-file path)))))
 
 (ert-deftest session-mode-rnode-promotion-occurs-at-exact-threshold ()
@@ -1273,8 +1263,8 @@ agent text is left alone."
           (let* ((store (session-mode-test--read-rnode-store path))
                  (entries (alist-get 'entries store))
                  (conflict (car (alist-get 'conflicts store))))
-            (should (cl-every (lambda (entry) (equal "candidate" (alist-get 'status entry)))
-                              entries))
+            (should-not (seq-some (lambda (entry) (equal "active" (alist-get 'status entry)))
+                                  entries))
             (should (equal '("R14" "R6") (sort (alist-get 'nodes conflict) #'string<)))))
       (when (file-exists-p path) (delete-file path)))))
 
@@ -1325,3 +1315,105 @@ agent text is left alone."
                             "e1" "seat-a" "settle lightly" "R14")))))
           (should messages))
       (when (file-exists-p corrupt) (delete-file corrupt)))))
+
+(ert-deftest session-mode-xiang-operator-none-retires-learned-and-seed ()
+  (let ((store (make-temp-file "xiang-store-"))
+        (log (make-temp-file "xiang-log-"))
+        (vocab (session-mode-test--rnode-vocabulary)))
+    (delete-file store) (delete-file log)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file store)
+              (session-mode-xiang-decisions-file log)
+              (session-mode-rnode-vocabulary-file vocab))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-b")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                "settle lightly" "R14")))
+          (should (session-mode-xiang-correct-rnode "settle lightly" "none"))
+          (should (session-mode-xiang-correct-rnode "for now" "none"))
+          (let ((entries (alist-get 'entries (session-mode-test--read-rnode-store store))))
+            (dolist (text '("settle lightly" "for now"))
+              (should (equal "retired"
+                             (alist-get 'status
+                                        (seq-find (lambda (entry)
+                                                    (equal text (alist-get 'text entry)))
+                                                  entries)))))))
+      (dolist (path (list store log vocab))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-turn-policy-defaults ()
+  (let ((store (make-temp-file "xiang-store-"))
+        (log (make-temp-file "xiang-log-")))
+    (delete-file store) (delete-file log)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file store)
+              (session-mode-xiang-decisions-file log))
+          (should (equal "ask" (session-mode--xiang-turn-policy "A normal turn." "e1")))
+          (should (equal "cue-only" (session-mode--xiang-turn-policy "  \n" "e2"))))
+      (dolist (path (list store log))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-never-policy-wins-before-scoring ()
+  (let ((session-mode-turn-analysis-policy 'never))
+    (cl-letf (((symbol-function 'session-mode--xiang-turn-policy)
+               (lambda (&rest _) (ert-fail "象 policy should not run"))))
+      (should-not (session-mode--analysis-requested-p
+                   (session-mode--structure-turn "A normal turn."))))))
+
+(ert-deftest session-mode-xiang-decision-log-is-complete-jsonl ()
+  (let ((log (make-temp-file "xiang-log-"))
+        (store (make-temp-file "xiang-store-")))
+    (delete-file log) (delete-file store)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file log)
+              (session-mode-rnode-cues-file store))
+          (session-mode--xiang-turn-policy "A normal turn." "e1")
+          (let* ((json-object-type 'alist) (json-array-type 'list)
+                 (line (car (split-string
+                             (with-temp-buffer (insert-file-contents log) (buffer-string))
+                             "\n" t)))
+                 (record (json-read-from-string line))
+                 (terms (alist-get 'rnode_terms record)))
+            (should (equal "turn" (alist-get 'kind record)))
+            (dolist (key '(R1 R7 R6 R5 R14 R3/R17))
+              (should (assq key terms)))))
+      (dolist (path (list log store))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-nonpositive-tau-is-argmin ()
+  (let ((session-mode-xiang-temperature 0))
+    (should (equal "low"
+                   (alist-get 'option
+                              (session-mode--xiang-choose
+                               '(((option . "high") (G . 2.0))
+                                 ((option . "low") (G . -1.0)))
+                               '((none . 1.0))))))))
+
+(ert-deftest session-mode-rnode-old-cache-format-is-rebuilt ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary '(("old-format" . "row")))
+        (session-mode--rnode-vocabulary-key '(1 "old"))
+        (session-mode--learned-rnode-vocabulary '(("old-learned" . "row")))
+        (session-mode--learned-rnode-key '(1 "old")))
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file path)
+              (session-mode-rnode-cues-file (make-temp-name "/tmp/no-rnode-store-")))
+          (let ((rows (session-mode--load-rnode-vocabulary)))
+            (should (equal "R14" (caar rows)))
+            (should (= session-mode--rnode-cache-format-version
+                       (car session-mode--rnode-vocabulary-key)))
+            (should-not (session-mode--load-learned-rnode-vocabulary))
+            (should (= session-mode--rnode-cache-format-version
+                       (car session-mode--learned-rnode-key)))))
+      (delete-file path))))
+
+(ert-deftest session-mode-xiang-corrupt-log-fails-soft ()
+  (let ((log (make-temp-file "xiang-log-")))
+    (unwind-protect
+        (progn
+          (with-temp-file log (insert "not-json\n"))
+          (let ((session-mode-xiang-decisions-file log))
+            (should-not (condition-case nil
+                            (progn (session-mode--xiang-log '((kind . "turn"))) nil)
+                          (error t)))))
+      (delete-file log))))

@@ -20,9 +20,21 @@ no lexical cues; `never' records structure without requesting interpretation."
 
 (defun session-mode--analysis-requested-p (record)
   "Whether RECORD should request interpretation under the current policy."
-  (or (eq session-mode-turn-analysis-policy 'all)
-      (and (eq session-mode-turn-analysis-policy 'unmatched)
-           (> (length (alist-get 'unmatched record)) 0))))
+  (and (or (eq session-mode-turn-analysis-policy 'all)
+           (and (eq session-mode-turn-analysis-policy 'unmatched)
+                (> (length (alist-get 'unmatched record)) 0)))
+       (equal "ask"
+              (session-mode--xiang-turn-policy
+               (or (alist-get 'source_text record) "")
+               (or (alist-get 'evidence_id record)
+                   agent-chat--last-evidence-id)))))
+
+(defun session-mode--record-requests-analysis-p (path)
+  "Return whether the already-scored turn record at PATH requests analysis."
+  (condition-case nil
+      (let ((json-object-type 'alist))
+        (equal "requested" (alist-get 'analysis_status (json-read-file path))))
+    (error nil)))
 
 (defconst session-mode--analysis-tool
   (expand-file-name "../scripts/session_turn_analysis.py"
@@ -1519,8 +1531,7 @@ building or storing the summary warns once and still dispatches the turn."
                      session-mode--turn-reply-text nil
                      session-mode--turn-commits-seen nil)
                (when (and (not session-mode-analysis-agent)
-                          (or failed (session-mode--analysis-requested-p
-                                      (session-mode--structure-turn sent))))
+                          (or failed (session-mode--record-requests-analysis-p path)))
                  (setq prompt (concat sent (session-mode--analysis-instruction path)
                                       (when failed
                                         "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))

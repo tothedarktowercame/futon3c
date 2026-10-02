@@ -60,6 +60,37 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "Atomic store of recurrent R-node cue proposals and promotion state."
   :type 'file :group 'session-mode)
 
+(defcustom session-mode-xiang-decisions-file
+  (expand-file-name "~/.emacs-graph/xiang-decisions.jsonl")
+  "Append-only log of 象 cue and turn policy decisions."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-xiang-source-precision
+  '((operator-correction . 4.0) (second-distinct-seat . 1.5)
+    (same-seat-repeat . 0.5) (first-proposal . 1.0))
+  "Precision weights used to turn independent R-node evidence into counts."
+  :type '(alist :key-type symbol :value-type number) :group 'session-mode)
+
+(defcustom session-mode-xiang-cost-wrong-red 1.0
+  "Risk cost of painting an incorrect learned R-node cue red."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-cost-missed-red 0.3
+  "Risk cost of failing to paint a correct R-node cue."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-temperature 0.1
+  "Softmax temperature tau for 象 policy selection; nonpositive means argmin."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-token-cost 1.0
+  "Cost assigned to requesting one turn interpretation."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-intent-value 5.0
+  "Value of intent interpretation on a substantive operator turn."
+  :type 'number :group 'session-mode)
+
 ;; --- Faces, keyed by typology tier/type (colours mirror typology.json) ---
 (defface session-mode-clock-face
   '((((background light)) :background "#cdeee9" :weight bold)
@@ -143,6 +174,8 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "File and modification-time key for active learned R-node cues.")
 (defvar session-mode--rnode-store-error-reported nil
   "Non-nil after reporting one unreadable learned R-node cue store.")
+(defconst session-mode--rnode-cache-format-version 2
+  "Format of compiled R-node vocabulary rows kept across live reloads.")
 
 (defcustom session-mode-typology-file
   "/home/joe/code/futon6/data/c-vector/typology.json"
@@ -1035,7 +1068,8 @@ Use the real inserted span, including any agent-chat text transformations."
   "Return a fresh empty R-node cue store."
   (list (cons 'version 1)
         (cons 'entries nil)
-        (cons 'conflicts nil)))
+        (cons 'conflicts nil)
+        (cons 'corrections nil)))
 
 (defun session-mode--read-rnode-cue-store ()
   "Read the R-node cue store; return nil on corrupt input without throwing."
@@ -1062,13 +1096,14 @@ Use the real inserted span, including any agent-chat text transformations."
           (mapcar
            (lambda (entry)
              (let ((copy (copy-tree entry)))
-               (dolist (field '(turns seats justifications))
+               (dolist (field '(turns seats seats_by_turn justifications))
                  (setf (alist-get field copy) (vconcat (alist-get field copy))))
                copy))
            (alist-get 'entries data)))
          (json `((version . 1)
                  (entries . ,(vconcat entries))
-                 (conflicts . ,(vconcat (alist-get 'conflicts data))))))
+                 (conflicts . ,(vconcat (alist-get 'conflicts data)))
+                 (corrections . ,(vconcat (alist-get 'corrections data))))))
     (make-directory directory t)
     (unwind-protect
         (progn
@@ -1082,23 +1117,268 @@ Use the real inserted span, including any agent-chat text transformations."
           session-mode--learned-rnode-vocabulary nil
           session-mode--rnode-store-error-reported nil)))
 
-(defun session-mode--recompute-rnode-promotions (entries)
-  "Set promotion status on ENTRIES and return their text conflicts."
-  (let ((by-text (make-hash-table :test #'equal)) conflicts)
+(defun session-mode--xiang-precision (source)
+  "Return configured precision for evidence SOURCE."
+  (float (or (alist-get source session-mode-xiang-source-precision) 0.0)))
+
+(defun session-mode--xiang-entry-sources (entry)
+  "Describe the independent precision sources represented by ENTRY."
+  (let (seen sources)
+    (cl-mapc
+     (lambda (_turn seat)
+       (let ((source (cond ((null sources) 'first-proposal)
+                           ((member seat seen) 'same-seat-repeat)
+                           (t 'second-distinct-seat))))
+         (push seat seen)
+         (setq sources (append sources (list source)))))
+     (alist-get 'turns entry) (alist-get 'seats_by_turn entry))
+    ;; Version-1 stores have only distinct seats. Reconstruct the only ordering
+    ;; they retained: first seat, then repeats, with each later seat distinct.
+    (unless sources
+      (let ((turns (alist-get 'turns entry)) (seats (alist-get 'seats entry)))
+        (dotimes (i (length turns))
+          (setq sources
+                (append sources
+                        (list (cond ((zerop i) 'first-proposal)
+                                    ((< i (length seats)) 'second-distinct-seat)
+                                    (t 'same-seat-repeat))))))))
+    sources))
+
+(defun session-mode--xiang-belief (text entries corrections)
+  "Return the Dirichlet belief and R7 source account for cue TEXT."
+  (let ((alpha '((none . 1.0))) sources)
     (dolist (entry entries)
-      (push entry (gethash (alist-get 'text entry) by-text))
-      (setf (alist-get 'status entry) "candidate"))
-    (maphash
-     (lambda (text group)
-       (let ((nodes (delete-dups (mapcar (lambda (e) (alist-get 'node e)) group))))
-         (if (> (length nodes) 1)
-             (push `((text . ,text) (nodes . ,(vconcat (sort nodes #'string<)))) conflicts)
-           (let ((entry (car group)))
-             (when (and (>= (length (alist-get 'turns entry)) 3)
-                        (>= (length (alist-get 'seats entry)) 2))
-               (setf (alist-get 'status entry) "active"))))))
-     by-text)
+      (when (equal text (alist-get 'text entry))
+        (let* ((node (intern (alist-get 'node entry)))
+               (prior (if (eq t (alist-get 'seed entry)) 2.0 0.0)))
+          (setf (alist-get node alpha nil nil #'eq)
+                (+ prior (or (alist-get node alpha nil nil #'eq) 0.0)))
+          (dolist (source (session-mode--xiang-entry-sources entry))
+            (let ((weight (session-mode--xiang-precision source)))
+              (cl-incf (alist-get node alpha nil nil #'eq) weight)
+              (push `((source . ,(symbol-name source)) (node . ,(symbol-name node))
+                      (weight . ,weight)) sources))))))
+    (dolist (correction corrections)
+      (when (equal text (alist-get 'text correction))
+        (let* ((name (or (alist-get 'node correction) "none"))
+               (node (intern name)) (weight (session-mode--xiang-precision
+                                              'operator-correction)))
+          (cl-incf (alist-get node alpha 0.0 nil #'eq) weight)
+          (push `((source . "operator-correction") (node . ,name)
+                  (weight . ,weight)) sources))))
+    (list alpha (nreverse sources))))
+
+(defun session-mode--xiang-entropy (probabilities)
+  "Return entropy in nats for PROBABILITIES."
+  (- (apply #'+ (mapcar (lambda (p) (if (> p 0.0) (* p (log p)) 0.0))
+                         probabilities))))
+
+(defun session-mode--xiang-epistemic (alphas)
+  "Expected entropy reduction from one Dirichlet-multinomial observation.
+This exact one-step calculation compares entropy of the current posterior mean
+with predictive-probability-weighted entropy after incrementing each outcome."
+  (let* ((values (mapcar (lambda (pair) (float (cdr pair))) alphas))
+         (total (apply #'+ values))
+         (before (session-mode--xiang-entropy
+                  (mapcar (lambda (a) (/ a total)) values)))
+         (after
+          (cl-loop for observed from 0 below (length values)
+                   for predictive = (/ (nth observed values) total)
+                   sum (* predictive
+                          (session-mode--xiang-entropy
+                           (cl-loop for a in values for i from 0
+                                    collect (/ (+ a (if (= i observed) 1.0 0.0))
+                                               (1+ total))))))))
+    (max 0.0 (- before after))))
+
+(defun session-mode--xiang-seeded-unit (alphas)
+  "Return a stable pseudo-random unit value derived solely from ALPHAS."
+  (let* ((ordered (sort (copy-sequence alphas)
+                        (lambda (a b) (string< (symbol-name (car a))
+                                                (symbol-name (car b))))))
+         (seed (mapconcat (lambda (pair) (format "%s:%.6f" (car pair) (cdr pair)))
+                          ordered ","))
+         ;; The leading digest word is a reproducible draw without global RNG state.
+         (prefix (substring (secure-hash 'sha256 seed) 0 8)))
+    (/ (string-to-number prefix 16) 4294967296.0)))
+
+(defun session-mode--xiang-choose (options alphas)
+  "Choose one of OPTIONS by softmax over -G, deterministically seeded by ALPHAS."
+  (if (<= session-mode-xiang-temperature 0)
+      (car (sort (copy-sequence options)
+                 (lambda (a b) (< (alist-get 'G a) (alist-get 'G b)))))
+    (let* ((tau (float session-mode-xiang-temperature))
+           (minimum (apply #'min (mapcar (lambda (o) (alist-get 'G o)) options)))
+           (weights (mapcar (lambda (o) (exp (/ (- minimum (alist-get 'G o)) tau)))
+                            options))
+           (total (apply #'+ weights))
+           (draw (* total (session-mode--xiang-seeded-unit alphas)))
+           (remaining options) (remaining-weights weights) chosen)
+      (while (and remaining (not chosen))
+        (if (<= draw (car remaining-weights))
+            (setq chosen (car remaining))
+          (setq draw (- draw (car remaining-weights))
+                remaining (cdr remaining)
+                remaining-weights (cdr remaining-weights))))
+      (or chosen (car (last options))))))
+
+(defun session-mode--xiang-log (record)
+  "Append one JSON decision RECORD, failing softly."
+  (condition-case err
+      (let* ((file (expand-file-name session-mode-xiang-decisions-file))
+             (directory (file-name-directory file)))
+        (make-directory directory t)
+        (write-region (concat (json-encode record) "\n") nil file t 'silent))
+    (error (message "session-mode: could not append 象 decision: %s"
+                    (error-message-string err)) nil)))
+
+(defun session-mode--xiang-cue-policy (text entries corrections)
+  "Score, select and log the R-node policy for TEXT; return chosen option."
+  (let* ((belief (session-mode--xiang-belief text entries corrections))
+         (alphas (car belief)) (sources (cadr belief))
+         (total (apply #'+ (mapcar #'cdr alphas)))
+         (top (car (sort (copy-sequence alphas)
+                         (lambda (a b) (> (cdr a) (cdr b))))))
+         (top-name (symbol-name (car top)))
+         (p-top (/ (cdr top) total))
+         (epistemic (session-mode--xiang-epistemic alphas))
+         (active (seq-some (lambda (e) (and (equal text (alist-get 'text e))
+                                             (equal "active" (alist-get 'status e))))
+                           entries))
+         (node-top (not (equal top-name "none")))
+         (promote-risk (* (if node-top (- 1.0 p-top) p-top)
+                          session-mode-xiang-cost-wrong-red))
+         (keep-risk (* p-top (if node-top session-mode-xiang-cost-missed-red
+                               session-mode-xiang-cost-wrong-red)))
+         (options (list `((option . "promote") (risk . ,promote-risk)
+                          (epistemic . 0.0) (G . ,promote-risk))
+                        `((option . "keep") (risk . ,keep-risk)
+                          (epistemic . ,epistemic)
+                          (G . ,(- keep-risk epistemic)))))
+         chosen-row chosen correction-none changed)
+    (when active
+      (let ((risk (* (if node-top p-top (- 1.0 p-top))
+                     session-mode-xiang-cost-missed-red 2.0)))
+        (setq options
+              (list (car options)
+                    `((option . "retire") (risk . ,risk)
+                      (epistemic . 0.0) (G . ,risk))
+                    (cadr options)))))
+    (setq chosen-row (session-mode--xiang-choose options alphas)
+          chosen (alist-get 'option chosen-row)
+          correction-none
+          (seq-some (lambda (c) (and (equal text (alist-get 'text c))
+                                     (equal "none" (alist-get 'node c))))
+                    corrections))
+    (cond
+     ((and (equal chosen "promote") node-top)
+      (dolist (entry entries)
+        (when (equal text (alist-get 'text entry))
+          (let ((status (if (equal top-name (alist-get 'node entry))
+                            "active" "candidate")))
+            (unless (equal status (alist-get 'status entry)) (setq changed t))
+            (setf (alist-get 'status entry) status)))))
+     ((equal chosen "keep")
+      (dolist (entry entries)
+        (when (and (equal text (alist-get 'text entry))
+                   (not (eq t (alist-get 'seed entry))))
+          (unless (equal "candidate" (alist-get 'status entry)) (setq changed t))
+          (setf (alist-get 'status entry) "candidate"))))
+     ((and (equal chosen "retire") active)
+      (dolist (entry entries)
+        (when (and (equal text (alist-get 'text entry))
+                   (or (not (eq t (alist-get 'seed entry))) correction-none))
+          (unless (equal "retired" (alist-get 'status entry)) (setq changed t))
+          (setf (alist-get 'status entry) "retired")))))
+    (session-mode--xiang-log
+     `((at . ,(format-time-string "%FT%TZ" nil t)) (kind . "cue") (subject . ,text)
+       (options . ,(vconcat options)) (tau . ,session-mode-xiang-temperature)
+       (chosen . ,chosen)
+       (rnode_terms . ((R1 . ((top . ,top-name) (p_top . ,p-top)
+                              (alpha . ,alphas)))
+                       (R7 . ,(vconcat sources)) (R6 . ,(vconcat (mapcar
+                                                                  (lambda (o) (alist-get 'option o))
+                                                                  options)))
+                       (R5 . ,(vconcat (mapcar (lambda (o) (alist-get 'G o)) options)))
+                       (R14 . ,session-mode-xiang-temperature)
+                       (R3/R17 . ((changed . ,(if changed t :json-false))
+                                  (status_change . ,(if changed chosen "none"))))))))
+    (list chosen changed options alphas)))
+
+(defun session-mode--rnode-conflicts (entries)
+  "Return display conflicts among ENTRIES without affecting policy selection."
+  (let ((by-text (make-hash-table :test #'equal)) conflicts)
+    (dolist (entry entries) (push (alist-get 'node entry)
+                                  (gethash (alist-get 'text entry) by-text)))
+    (maphash (lambda (text nodes)
+               (setq nodes (delete-dups nodes))
+               (when (> (length nodes) 1)
+                 (push `((text . ,text) (nodes . ,(vconcat (sort nodes #'string<))))
+                       conflicts)))
+             by-text)
     (nreverse conflicts)))
+
+(defun session-mode--xiang-turn-rnode-info (text)
+  "Sum one-step information value for uncertain stored cues present in TEXT."
+  (let ((store (session-mode--read-rnode-cue-store)) (case-fold-search t) total seen)
+    (when store
+      (dolist (entry (alist-get 'entries store))
+        (let ((cue (alist-get 'text entry)))
+          (when (and (not (member cue seen))
+                     (string-match-p (regexp-quote cue) text))
+            (push cue seen)
+            (pcase-let ((`(,alphas ,_sources)
+                         (session-mode--xiang-belief
+                          cue (alist-get 'entries store) (alist-get 'corrections store))))
+              (setq total (+ (or total 0.0)
+                             (session-mode--xiang-epistemic alphas))))))))
+      (dolist (row (session-mode--load-rnode-vocabulary))
+        (dolist (compiled (nth 3 row))
+          (let ((cue (downcase (car compiled))))
+            (when (and (not (member cue seen))
+                       (string-match-p (nth 1 compiled) text))
+              (push cue seen)
+              (let* ((seed-entry
+                      (list (cons 'text cue) (cons 'node (car row)) (cons 'seed t)
+                            (cons 'turns nil) (cons 'seats nil)
+                            (cons 'seats_by_turn nil)))
+                     (entries (alist-get 'entries store))
+                     (has-seed (seq-some
+                                (lambda (entry)
+                                  (and (equal cue (alist-get 'text entry))
+                                       (equal (car row) (alist-get 'node entry))
+                                       (eq t (alist-get 'seed entry))))
+                                entries))
+                     (belief (session-mode--xiang-belief
+                              cue (if has-seed entries (cons seed-entry entries))
+                              (alist-get 'corrections store))))
+                (setq total (+ (or total 0.0)
+                               (session-mode--xiang-epistemic (car belief)))))))))
+    (or total 0.0)))
+
+(defun session-mode--xiang-turn-policy (text &optional evidence-id)
+  "Choose and log `ask' or `cue-only' for operator turn TEXT."
+  (let* ((substantive (not (string-empty-p (string-trim (or text "")))))
+         (rnode-info (if substantive (session-mode--xiang-turn-rnode-info text) 0.0))
+         (intent-value (if substantive session-mode-xiang-intent-value 0.0))
+         (ask-g (- session-mode-xiang-token-cost (+ intent-value rnode-info)))
+         (options (list `((option . "ask") (risk . ,session-mode-xiang-token-cost)
+                          (epistemic . ,(+ intent-value rnode-info)) (G . ,ask-g))
+                        '((option . "cue-only") (risk . 0.0)
+                          (epistemic . 0.0) (G . 0.0))))
+         (seed `((ask . ,(+ 1.0 intent-value rnode-info))
+                 (cue-only . 1.0)))
+         (chosen-row (session-mode--xiang-choose options seed))
+         (chosen (alist-get 'option chosen-row)))
+    (session-mode--xiang-log
+     `((at . ,(format-time-string "%FT%TZ" nil t)) (kind . "turn")
+       (subject . ,(or evidence-id "unrecorded")) (options . ,(vconcat options))
+       (tau . ,session-mode-xiang-temperature) (chosen . ,chosen)
+       (rnode_terms . ((R1 . ((substantive . ,(if substantive t :json-false))))
+                       (R7 . []) (R6 . ["ask" "cue-only"])
+                       (R5 . [,ask-g 0.0]) (R14 . ,session-mode-xiang-temperature)
+                       (R3/R17 . ((changed . :json-false)))))))
+    chosen))
 
 (defun session-mode--record-rnode-cues (data)
   "Merge validated R-node cues from analysis DATA into the recurrence store.
@@ -1116,6 +1396,7 @@ Returns non-nil when the store was updated; every error is reported softly."
           (dolist (cue (alist-get 'rnode_cues data))
             (let* ((text (downcase (string-trim (alist-get 'text cue))))
                    (node (alist-get 'node cue))
+                   (seed (session-mode--rnode-seed-definition text))
                    (entry (seq-find
                            (lambda (e) (and (equal text (alist-get 'text e))
                                             (equal node (alist-get 'node e))))
@@ -1123,20 +1404,32 @@ Returns non-nil when the store was updated; every error is reported softly."
               (unless entry
                 (setq entry (list (cons 'text text)
                                   (cons 'node node)
-                                  (cons 'label (alist-get 'label cue))
-                                  (cons 'stage (alist-get 'stage cue))
+                                  (cons 'label (or (nth 1 seed) (alist-get 'label cue)))
+                                  (cons 'stage (or (nth 2 seed) (alist-get 'stage cue)))
+                                  (cons 'seed (if (and seed (equal node (car seed)))
+                                                  t :json-false))
                                   (cons 'proposals 0)
                                   (cons 'turns nil)
                                   (cons 'seats nil)
+                                  (cons 'seats_by_turn nil)
                                   (cons 'first_seen seen-at)
                                   (cons 'last_seen seen-at)
                                   (cons 'justifications nil)
-                                  (cons 'status "candidate"))
+                                  (cons 'status (if (and seed (equal node (car seed)))
+                                                    "active" "candidate")))
                       entries (append entries (list entry))))
               (unless (member evidence-id (alist-get 'turns entry))
+                (when (and (alist-get 'turns entry)
+                           (null (alist-get 'seats_by_turn entry)))
+                  (let ((known (alist-get 'seats entry)))
+                    (setf (alist-get 'seats_by_turn entry)
+                          (cl-loop for i below (length (alist-get 'turns entry))
+                                   collect (or (nth i known) (car known))))))
                 (cl-incf (alist-get 'proposals entry))
                 (setf (alist-get 'turns entry)
                       (append (alist-get 'turns entry) (list evidence-id))
+                      (alist-get 'seats_by_turn entry)
+                      (append (alist-get 'seats_by_turn entry) (list seat))
                       (alist-get 'last_seen entry) seen-at)
                 (unless (member seat (alist-get 'seats entry))
                   (setf (alist-get 'seats entry)
@@ -1152,7 +1445,13 @@ Returns non-nil when the store was updated; every error is reported softly."
           (when changed
             (setf (alist-get 'entries store) entries
                   (alist-get 'conflicts store)
-                  (session-mode--recompute-rnode-promotions entries))
+                  (session-mode--rnode-conflicts entries))
+            (dolist (text (delete-dups
+                           (mapcar (lambda (cue)
+                                     (downcase (string-trim (alist-get 'text cue))))
+                                   (alist-get 'rnode_cues data))))
+              (session-mode--xiang-cue-policy
+               text entries (alist-get 'corrections store)))
             (session-mode--write-rnode-cue-store store)))
         changed)
     (error
@@ -1160,11 +1459,94 @@ Returns non-nil when the store was updated; every error is reported softly."
               (error-message-string err))
      nil)))
 
+(defun session-mode--rnode-seed-definition (text)
+  "Return static vocabulary metadata when TEXT is a generated seed cue."
+  (condition-case nil
+      (let ((json-object-type 'alist) (json-array-type 'list) found)
+        (dolist (row (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
+          (when (seq-some (lambda (cue) (equal (downcase cue) text))
+                          (alist-get 'cues row))
+            (setq found (list (alist-get 'id row) (alist-get 'label row)
+                              (alist-get 'stage row)))))
+        found)
+    (error nil)))
+
+(defun session-mode--rnode-node-definition (node)
+  "Return (NODE LABEL STAGE) from the generated vocabulary."
+  (condition-case nil
+      (let ((json-object-type 'alist) (json-array-type 'list))
+        (when-let* ((row (seq-find
+                          (lambda (candidate) (equal node (alist-get 'id candidate)))
+                          (alist-get 'nodes (json-read-file
+                                             session-mode-rnode-vocabulary-file)))))
+          (list node (alist-get 'label row) (alist-get 'stage row))))
+    (error nil)))
+
+(defun session-mode-xiang-correct-rnode (text node-or-none)
+  "Record Joe's correction of cue TEXT to NODE-OR-NONE and rerun its policy."
+  (interactive
+   (list (downcase (string-trim (read-string "R-node cue text: ")))
+         (completing-read "Correct node (or none): "
+                          (cons "none"
+                                (condition-case nil
+                                    (let ((json-object-type 'alist)
+                                          (json-array-type 'list))
+                                      (mapcar (lambda (row) (alist-get 'id row))
+                                              (alist-get 'nodes
+                                                         (json-read-file
+                                                          session-mode-rnode-vocabulary-file))))
+                                  (error nil)))
+                          nil t nil nil "none")))
+  (setq text (downcase (string-trim text))
+        node-or-none (if (or (null node-or-none) (equal node-or-none "none"))
+                         "none" node-or-none))
+  (condition-case err
+      (let* ((store (session-mode--read-rnode-cue-store))
+             (entries (and store (alist-get 'entries store)))
+             (corrections (and store (alist-get 'corrections store)))
+             (seed (session-mode--rnode-seed-definition text))
+             (definition (and (not (equal node-or-none "none"))
+                              (session-mode--rnode-node-definition node-or-none)))
+             (existing (seq-find (lambda (entry)
+                                   (and (equal text (alist-get 'text entry))
+                                        (equal (if (equal node-or-none "none")
+                                                   (car seed) node-or-none)
+                                               (alist-get 'node entry))))
+                                 entries)))
+        (when (and (not (equal node-or-none "none")) (not definition))
+          (user-error "Unknown R-node %s" node-or-none))
+        (when (and store (not (string-empty-p text)))
+          (unless (or existing (and (equal node-or-none "none") (not seed)))
+            (let ((node (if (equal node-or-none "none") (car seed) node-or-none)))
+              (setq existing
+                    (list (cons 'text text) (cons 'node node)
+                          (cons 'label (nth 1 (or seed definition)))
+                          (cons 'stage (nth 2 (or seed definition)))
+                          (cons 'seed (if seed t :json-false))
+                          (cons 'proposals 0) (cons 'turns nil) (cons 'seats nil)
+                          (cons 'seats_by_turn nil) (cons 'first_seen nil)
+                          (cons 'last_seen nil) (cons 'justifications nil)
+                          (cons 'status (if seed "active" "candidate")))
+                    entries (append entries (list existing)))))
+          (setq corrections
+                (append corrections
+                        (list `((text . ,text) (node . ,node-or-none)
+                                (at . ,(format-time-string "%FT%TZ" nil t))))))
+          (setf (alist-get 'entries store) entries
+                (alist-get 'corrections store) corrections
+                (alist-get 'conflicts store) (session-mode--rnode-conflicts entries))
+          (session-mode--xiang-cue-policy text entries corrections)
+          (session-mode--write-rnode-cue-store store)
+          t))
+    (error (message "session-mode: could not correct R-node cue: %s"
+                    (error-message-string err)) nil)))
+
 (defun session-mode--load-learned-rnode-vocabulary ()
   "Return compiled active cues from the recurrence store, failing softly."
   (let* ((attrs (file-attributes session-mode-rnode-cues-file))
-         (key (and attrs (list session-mode-rnode-cues-file
-                               (file-attribute-modification-time attrs)))))
+         (key (list session-mode--rnode-cache-format-version
+                    session-mode-rnode-cues-file
+                    (and attrs (file-attribute-modification-time attrs)))))
     (unless (equal key session-mode--learned-rnode-key)
       (let ((store (session-mode--read-rnode-cue-store)))
         (setq session-mode--learned-rnode-vocabulary
@@ -1192,11 +1574,22 @@ Returns non-nil when the store was updated; every error is reported softly."
         (setq session-mode--rnode-vocabulary nil
               session-mode--rnode-vocabulary-key nil)
         nil)
-    (let ((key (list session-mode-rnode-vocabulary-file
-                     (file-attribute-modification-time
-                      (file-attributes session-mode-rnode-vocabulary-file)))))
+    (let* ((store-attrs (file-attributes session-mode-rnode-cues-file))
+           (key (list session-mode--rnode-cache-format-version
+                      session-mode-rnode-vocabulary-file
+                      (file-attribute-modification-time
+                       (file-attributes session-mode-rnode-vocabulary-file))
+                      (and store-attrs (file-attribute-modification-time store-attrs)))))
       (unless (equal key session-mode--rnode-vocabulary-key)
-        (let ((json-object-type 'alist) (json-array-type 'list))
+        (let* ((json-object-type 'alist) (json-array-type 'list)
+               (store (session-mode--read-rnode-cue-store))
+               (retired-seeds
+                (mapcar (lambda (entry) (cons (alist-get 'node entry)
+                                              (alist-get 'text entry)))
+                        (seq-filter (lambda (entry)
+                                      (and (eq t (alist-get 'seed entry))
+                                           (equal "retired" (alist-get 'status entry))))
+                                    (and store (alist-get 'entries store))))))
           (setq session-mode--rnode-vocabulary
                 (mapcar
                  (lambda (row)
@@ -1207,8 +1600,9 @@ Returns non-nil when the store was updated; every error is reported softly."
                            (delq nil
                                  (mapcar
                                   (lambda (cue)
-                                    (when-let* ((rx (session-mode--rnode-cue-regexp cue)))
-                                      (list cue rx "provisional")))
+                                    (unless (member (cons id (downcase cue)) retired-seeds)
+                                      (when-let* ((rx (session-mode--rnode-cue-regexp cue)))
+                                        (list cue rx "provisional"))))
                                   (alist-get 'cues row))))))
                  (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
                 session-mode--rnode-vocabulary-key key
