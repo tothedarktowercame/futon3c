@@ -64,6 +64,9 @@
 (def ^:dynamic *click-run-binding-dir*
   "/home/joe/code/futon3c/data/wm-click-run-bindings")
 
+(def ^:dynamic *run-record-dir*
+  "/home/joe/code/futon2/data/wm-runs")
+
 (def ^:dynamic *run4-terminal-projection-dir*
   "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
 
@@ -384,6 +387,38 @@
          vec)
     []))
 
+(def ^:private canonical-run-id-pattern
+  #"\d{4}-\d{2}-\d{2}-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+
+(defn admit-run-id!
+  "Validate an explicitly supplied click run id before lifecycle mutation.
+  Omission is preserved so the Futon2 runner remains the sole minter."
+  [opts]
+  (if-not (contains? opts :run-id)
+    opts
+    (let [run-id (:run-id opts)
+          record (io/file *run-record-dir* (str "tick-run-record-" run-id ".edn"))
+          prior-clicks (when (and (string? run-id)
+                                  (re-matches canonical-run-id-pattern run-id))
+                         (existing-run-id-clicks (io/file *click-run-binding-dir*)
+                                                 nil run-id))]
+      (cond
+        (not (and (string? run-id)
+                  (re-matches canonical-run-id-pattern run-id)))
+        (throw (ex-info "WM click refused: malformed caller run id"
+                        {:status 400 :error :wm-click-run-id-malformed
+                         :run-id run-id
+                         :format :utc-date-plus-rfc4122-uuid}))
+
+        (or (.exists record) (seq prior-clicks))
+        (throw (ex-info "WM click refused: caller run id already exists"
+                        {:status 409 :error :wm-click-run-id-collision
+                         :run-id run-id
+                         :run-record (when (.exists record) (.getPath record))
+                         :prior-click-ids (vec prior-clicks)}))
+
+        :else opts))))
+
 (defn- persist-click-run-binding!
   [click-id result]
   (let [terminal-projection (run4-terminal/persist!
@@ -656,7 +691,8 @@
   ;; state, starting a worker, or giving the callback any chance to consume.
   (let [opts (if (:ordinary-click/issue! opts)
                (admit-ordinary-click-trigger! opts)
-               opts)]
+               opts)
+        opts (admit-run-id! opts)]
     (loop []
       (let [current @!status]
         (if (:running? current)

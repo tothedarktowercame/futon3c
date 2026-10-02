@@ -9333,7 +9333,7 @@
                      (nonblank-string? (:repair-reviewer payload))
                      (assoc :repair-reviewer (:repair-reviewer payload))
 
-                     (nonblank-string? (:run-id payload))
+                     (contains? payload :run-id)
                      (assoc :run-id (:run-id payload))
 
                      (nonblank-string? (:trigger payload))
@@ -9368,6 +9368,9 @@
                             ((requiring-resolve
                               'futon3c.wm.runner-service/admit-ordinary-click-trigger!)
                              legacy-opts)
+                            legacy-opts)
+              legacy-opts ((requiring-resolve
+                             'futon3c.wm.runner-service/admit-run-id!)
                             legacy-opts)
               prepared (when (contains? payload :run4-pin-ref)
                          (run4-entry/prepare config (:headers request) payload))
@@ -9436,7 +9439,8 @@
                                        "wm-click-start-failed")
                             :message (.getMessage throwable)
                             :details (select-keys data [:authorization :allocated :consumed :renewal
-                                                        :unready :cause :trigger
+                                                        :unready :cause :trigger :run-id :format
+                                                        :run-record :prior-click-ids
                                                         :accepted-triggers])})))))))
 
 (defn- handle-wm-click-status
