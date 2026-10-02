@@ -9,6 +9,13 @@ command wrappers) and compaction summaries are skipped.
 
 Every turn is redacted with secret_scan before it is classified, and the report
 carries counts, kinds and file paths, never turn text or secret values.
+Credentials are also grouped by where they sit (what you typed, tool output,
+files the agent wrote, test fixtures or documented example keys), since "13
+credentials" means something different when none is in what you typed.  An
+intent is reported only when the model was right on it at least half the time
+in cross-validation; the rest are counted as not sure.  --days keeps turns and
+agent work from the window, and the stretch after your last turn counts as a
+gap, closed by the last agent event.
 
 Files are read in parallel processes (--jobs, default the CPU count) and the
 secret scan, which is nearly all of the work, skips a rule when the line
@@ -30,6 +37,7 @@ import html
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 
@@ -120,9 +128,13 @@ def codex_tokens(record: dict) -> tuple[str, int] | None:
 
 
 def gaps(turn_times: list[float], events: list[tuple[float, int]],
-         min_hours: float = GAP_HOURS) -> list[dict]:
+         min_hours: float = GAP_HOURS, edges: bool = True) -> list[dict]:
     """Stretches of at least MIN_HOURS with no typed turn, and the agent tokens
-    logged inside each.  Only stretches where agents logged something are kept."""
+    logged inside each.  Only stretches where agents logged something are kept.
+    With EDGES, the stretch after the last typed turn (up to the last agent
+    event) counts too, marked "after": that is the "asked, then went to bed"
+    case the chart exists for, and it has no later turn to close it.  So does
+    the stretch before the first typed turn, marked "before"."""
     times = sorted(set(turn_times))
     events = sorted(events)
     at = [t for t, _ in events]
@@ -130,13 +142,27 @@ def gaps(turn_times: list[float], events: list[tuple[float, int]],
     for _, n in events:
         prefix.append(prefix[-1] + n)
     out = []
-    for a, b in zip(times, times[1:]):
+
+    def stretch(a, b, edge=None):
         if b - a < min_hours * 3600:
-            continue
+            return
         i, j = bisect_right(at, a), bisect_left(at, b)
+        if edge == "after":
+            j = len(at)  # the last event is inside the stretch, not its boundary
+        if edge == "before":
+            i = 0  # likewise the first
         if prefix[j] - prefix[i] > 0:
-            out.append({"start": a, "end": b, "hours": (b - a) / 3600,
-                        "tokens": prefix[j] - prefix[i]})
+            g = {"start": a, "end": b, "hours": (b - a) / 3600, "tokens": prefix[j] - prefix[i]}
+            if edge:
+                g["edge"] = edge
+            out.append(g)
+
+    if edges and times and at and at[0] < times[0]:
+        stretch(at[0], times[0], "before")
+    for a, b in zip(times, times[1:]):
+        stretch(a, b)
+    if edges and times and at and at[-1] > times[-1]:
+        stretch(times[-1], at[-1], "after")
     return out
 
 
@@ -156,54 +182,123 @@ def _init_worker(model: dict) -> None:
     _WORKER_MODEL = model
 
 
+SURE = 0.5  # an intent is reported outright when its cross-validated precision is at least this
+_FIXTURE_PATH = re.compile(r"(?i)(?:^|[/_.-])(?:tests?|spec|specs|fixtures?|examples?|mock|fake|dummy)(?:[/_.-]|$)")
+_EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit", "create_file", "apply_patch"}
+
+
+def where_in(source: str, record: dict | None) -> tuple[str, bool]:
+    """Where a line's content came from, and whether it is a file the agent
+    wrote to a test-like path.  A credential in what you typed is yours; one
+    in a tool result was read off your machine; one in a file or command the
+    agent wrote is in your repository now, and if the path says test, spec or
+    fixture it is most likely a made-up value.  The report groups by this so
+    "13 credentials" can be read as "0 of yours; 13 in test fixtures"."""
+    if not isinstance(record, dict):
+        return "elsewhere", False
+    if source == "codex":
+        payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        kind = payload.get("type")
+        if kind == "message":
+            return ("typed" if payload.get("role") == "user" else "agent-said"), False
+        if kind in ("function_call", "custom_tool_call", "local_shell_call"):
+            args = str(payload.get("arguments") or payload.get("input") or "")
+            return "agent-wrote", bool(_FIXTURE_PATH.search(args[:400]))
+        if kind in ("function_call_output", "custom_tool_call_output"):
+            return "tool-output", False
+        return "elsewhere", False
+    kind = record.get("type")
+    content = (record.get("message") or {}).get("content") if isinstance(record.get("message"), dict) else None
+    if kind == "user":
+        if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+            return "tool-output", False
+        return "typed", False
+    if kind == "assistant":
+        blocks = content if isinstance(content, list) else []
+        uses = [b for b in blocks if isinstance(b, dict) and b.get("type") == "tool_use"]
+        if uses:
+            fixture = any(
+                u.get("name") in _EDIT_TOOLS
+                and _FIXTURE_PATH.search(str((u.get("input") or {}).get("file_path")
+                                             or (u.get("input") or {}).get("path") or ""))
+                for u in uses)
+            return "agent-wrote", fixture
+        return "agent-said", False
+    return "elsewhere", False
+
+
 def read_file(source: str, path: Path, model: dict | None = None, since: float = 0) -> dict:
     """Everything one log file contributes: counts, times and token events,
     and the secret kinds with a hash per distinct value.  Pure in the sense
-    that two files can be read in any order or in parallel and merged."""
+    that two files can be read in any order or in parallel and merged.
+    SINCE drops turns and token events before it; credentials are counted
+    wherever they sit in the file, since a value in an old line is still in
+    the log."""
     model = model if model is not None else _WORKER_MODEL
+    precision = model.get("precision") or {}
     intents: Counter = Counter()
     secret_kinds: Counter = Counter()
+    secret_where: Counter = Counter()
     # Logs repeat themselves (compaction copies history), so count distinct
     # values.  Only a hash is kept, in memory, for the length of the run.
     distinct: dict[str, set] = {}
-    turns = unsure = secrets_here = 0
+    distinct_where: dict[str, set] = {}
+    turns = unsure = not_sure = secrets_here = 0
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
     seen_calls: set[str] = set()
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
-            found = scan(line)
-            for f in found:
-                secret_kinds[f.kind] += 1
-                distinct.setdefault(f.kind, set()).add(
-                    hashlib.sha256(line[f.start:f.end].encode()).digest())
-            secrets_here += len(found)
             try:
                 record = json.loads(line)
             except ValueError:
+                record = None
+            if record is not None and not isinstance(record, dict):
+                record = None
+            found = scan(line)
+            if found:
+                where, fixture = where_in(source, record)
+                for f in found:
+                    secret_kinds[f.kind] += 1
+                    value = line[f.start:f.end]
+                    digest = hashlib.sha256(value.encode()).digest()
+                    distinct.setdefault(f.kind, set()).add(digest)
+                    # Documented example keys (AWS's AKIAIOSFODNN7EXAMPLE and
+                    # friends) are fixtures wherever they sit.
+                    place = "fixture" if fixture or "EXAMPLE" in value else where
+                    secret_where[place] += 1
+                    distinct_where.setdefault(place, set()).add(digest)
+                secrets_here += len(found)
+            if record is None:
                 continue
-            if not isinstance(record, dict):
-                continue
+            when = _epoch(record.get("timestamp"))
+            in_window = when is None or when >= since
             call = (claude_tokens if source == "claude" else codex_tokens)(record)
             if call and call[1] > 0:
                 key = f"{source}/{path}/{call[0]}" if source == "codex" else call[0]
-                when = _epoch(record.get("timestamp"))
                 if when is not None and when >= since and key not in seen_calls:
                     seen_calls.add(key)
                     token_events.append((when, call[1]))
             for text in (claude_turns if source == "claude" else codex_turns)(record):
+                if not in_window:
+                    continue
                 clean, _ = redact(text)
                 turns += 1
-                when = _epoch(record.get("timestamp"))
-                if when is not None and when >= since:
+                if when is not None:
                     turn_times.append(when)
-                if evidence(model, clean):
-                    intents[classify(model, clean, 1)[0][0]] += 1
-                else:
+                if not evidence(model, clean):
                     unsure += 1
+                    continue
+                intent = classify(model, clean, 1)[0][0]
+                if precision and precision.get(intent, 0) < SURE:
+                    not_sure += 1
+                else:
+                    intents[intent] += 1
     return {"path": str(path), "size": path.stat().st_size, "intents": intents,
             "secret_kinds": secret_kinds, "distinct": {k: list(v) for k, v in distinct.items()},
-            "secrets": secrets_here, "turns": turns, "unsure": unsure,
+            "secret_where": secret_where,
+            "distinct_where": {k: list(v) for k, v in distinct_where.items()},
+            "secrets": secrets_here, "turns": turns, "unsure": unsure, "not_sure": not_sure,
             "turn_times": turn_times, "token_events": token_events,
             # Claude writes one reply as several lines with the same usage; a
             # reply's key is global, so the merge drops repeats across files too.
@@ -215,25 +310,31 @@ def _read_file_task(args):
     return read_file(source, Path(path), None, since)
 
 
-def merge(parts: list[dict], gap_hours: float = GAP_HOURS) -> dict:
+def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = None) -> dict:
     """Combine per-file results into the report."""
     intents: Counter = Counter()
     secret_kinds: Counter = Counter()
+    secret_where: Counter = Counter()
     secret_files: Counter = Counter()
     distinct: dict[str, set] = {}
-    turns = unsure = 0
+    distinct_where: dict[str, set] = {}
+    turns = unsure = not_sure = 0
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
     seen_calls: set[str] = set()
     for part in parts:
         intents.update(part["intents"])
         secret_kinds.update(part["secret_kinds"])
+        secret_where.update(part.get("secret_where", {}))
         for kind, digests in part["distinct"].items():
             distinct.setdefault(kind, set()).update(digests)
+        for place, digests in part.get("distinct_where", {}).items():
+            distinct_where.setdefault(place, set()).update(digests)
         if part["secrets"]:
             secret_files[part["path"]] += part["secrets"]
         turns += part["turns"]
         unsure += part["unsure"]
+        not_sure += part.get("not_sure", 0)
         turn_times.extend(part["turn_times"])
         dup = seen_calls.intersection(part["seen_calls"])
         if dup and len(dup) == len(part["seen_calls"]):
@@ -241,16 +342,22 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS) -> dict:
             # already counted, and the same turns are in both files
             turns -= part["turns"]
             unsure -= part["unsure"]
+            not_sure -= part.get("not_sure", 0)
             intents.subtract(part["intents"])
             turn_times = turn_times[:len(turn_times) - len(part["turn_times"])]
         else:
             token_events.extend(part["token_events"])
         seen_calls.update(part["seen_calls"])
+    precision = (model or {}).get("precision") or {}
     return {"files": len(parts), "turns": turns, "intents": dict(intents.most_common()),
-            "too_little_to_go_on": unsure, "secrets": sum(secret_kinds.values()),
+            "intent_precision": {k: precision[k] for k in intents if k in precision},
+            "too_little_to_go_on": unsure, "not_sure": not_sure,
+            "secrets": sum(secret_kinds.values()),
             "distinct_secrets": sum(len(v) for v in distinct.values()),
             "secret_kinds": {k: {"distinct": len(distinct[k]), "occurrences": n}
                              for k, n in secret_kinds.most_common()},
+            "secret_where": {k: {"distinct": len(distinct_where.get(k, ())), "occurrences": n}
+                             for k, n in secret_where.most_common()},
             "files_with_secrets": dict(secret_files.most_common()),
             "agent_tokens": sum(n for _, n in token_events),
             "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
@@ -287,17 +394,24 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
             done += parts[-1]["size"]
             if progress:
                 progress(len(parts), len(ordered), done / total)
-    return merge(parts, gap_hours)
+    return merge(parts, gap_hours, model)
 
 
 def render(report: dict) -> str:
     out = [f"Read {report['turns']} turns you typed, in {report['files']} log files.", ""]
     if report["turns"]:
-        out.append("What kinds of request you make (小象's reading, which is often wrong):")
+        precision = report.get("intent_precision") or {}
+        out.append("What kinds of request you make"
+                   + (" (小象's reading; the last column is how often that label was right"
+                      " in cross-validation):" if precision
+                      else " (小象's reading, which is often wrong):"))
         classified = sum(report["intents"].values()) or 1
         for intent, n in report["intents"].items():
             out.append(f"  {intent:<16} {n:>6}  {100 * n / classified:5.1f}%  "
-                       + "#" * round(40 * n / classified))
+                       + f"{'#' * round(40 * n / classified):<40}"
+                       + (f"  {100 * precision[intent]:3.0f}%" if intent in precision else ""))
+        if report.get("not_sure"):
+            out.append(f"  ({report['not_sure']} turns got a label 小象 is right on less than half the time; not shown)")
         if report["too_little_to_go_on"]:
             out.append(f"  ({report['too_little_to_go_on']} turns had too little to go on)")
         out.append("")
@@ -311,10 +425,15 @@ def render(report: dict) -> str:
                    f"logged tokens ({100 * in_gaps / max(1, report['agent_tokens']):.0f}%).")
         for x in sorted(g, key=lambda x: -x["tokens"])[:5]:
             out.append(f"  {_day(x['start'])} to {_day(x['end'])}  {x['hours']:5.1f} h  "
-                       f"{x['tokens']:>14,} tokens")
+                       f"{x['tokens']:>14,} tokens" + _edge_note(x))
         out.append("")
     out.append(f"Suspected credentials in these logs: {report['distinct_secrets']} distinct "
                f"values, appearing {report['secrets']} times")
+    where = report.get("secret_where") or {}
+    if where:
+        out.append("Where they sit:")
+        for place, n in where.items():
+            out.append(f"  {_WHERE.get(place, place):<44} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
     for kind, n in report["secret_kinds"].items():
         out.append(f"  {kind:<20} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
     if report["files_with_secrets"]:
@@ -322,6 +441,21 @@ def render(report: dict) -> str:
         for path, n in list(report["files_with_secrets"].items())[:20]:
             out.append(f"  {n:>5}  {path}")
     return "\n".join(out)
+
+
+_WHERE = {
+    "typed": "in what you typed",
+    "tool-output": "in tool output (read off your machine)",
+    "agent-wrote": "in files or commands the agent wrote",
+    "fixture": "in test fixtures or documented example keys",
+    "agent-said": "in the agent's prose",
+    "elsewhere": "elsewhere in the log",
+}
+
+
+def _edge_note(gap: dict) -> str:
+    edge = gap.get("edge")
+    return {"after": "  (after your last turn)", "before": "  (before your first turn)"}.get(edge, "")
 
 
 def _day(t: float) -> str:
@@ -339,7 +473,12 @@ def gap_svg(report: dict) -> str:
     tokens agents logged during it."""
     W, H, left, right, mid, half = 1000, 300, 40, 20, 150, 110
     t0, t1 = report["first_turn"], report["last_turn"]
-    if not report["gaps"] or t0 is None or t1 <= t0:
+    if not report["gaps"] or t0 is None:
+        return f"<p>No {_gap_phrase(report)} with agent activity was found.</p>"
+    # An edge gap reaches past the first or last typed turn.
+    t0 = min([t0] + [g["start"] for g in report["gaps"]])
+    t1 = max([t1] + [g["end"] for g in report["gaps"]])
+    if t1 <= t0:
         return f"<p>No {_gap_phrase(report)} with agent activity was found.</p>"
     x = lambda t: left + (W - left - right) * (t - t0) / (t1 - t0)
     top = max(g["tokens"] for g in report["gaps"])
@@ -367,8 +506,10 @@ def gap_svg(report: dict) -> str:
 
 def render_html(report: dict) -> str:
     rows = "".join(f"<tr><td>{_day(g['start'])}</td><td>{_day(g['end'])}</td>"
-                   f"<td>{g['hours']:.1f}</td><td>{g['tokens']:,}</td></tr>"
+                   f"<td>{g['hours']:.1f}</td><td>{g['tokens']:,}</td><td>{_edge_note(g).strip(' ()')}</td></tr>"
                    for g in sorted(report["gaps"], key=lambda g: -g["tokens"]))
+    where = "".join(f"<tr><td>{html.escape(_WHERE.get(k, k))}</td><td>{n['distinct']}</td><td>{n['occurrences']}</td></tr>"
+                    for k, n in (report.get("secret_where") or {}).items())
     classified = sum(report["intents"].values()) or 1
     intents = "".join(f"<tr><td>{html.escape(k)}</td><td>{n}</td><td><span style='display:inline-block;"
                       f"height:.6em;width:{300 * n / classified:.0f}px;background:#555'></span></td></tr>"
@@ -382,11 +523,12 @@ table{{border-collapse:collapse;font-size:13px}}td,th{{padding:.15rem .7rem;bord
 <h2>Work that ran while you weren't typing</h2>
 {gap_svg(report)}
 <p><i>Each bar is a {_gap_phrase(report)}: its width is how long the gap lasted, and its height the tokens agents logged during it (input, cached input and output). A gap in typing is not proof you were away. Hover a bar for its values.</i></p>
-<table><tr><th>from (UTC)</th><th>to</th><th>hours</th><th>tokens</th></tr>{rows}</table>
+<table><tr><th>from (UTC)</th><th>to</th><th>hours</th><th>tokens</th><th></th></tr>{rows}</table>
 <h2>What kinds of request you make</h2>
 <p>小象's reading, which is often wrong.</p><table>{intents}</table>
 <h2>Suspected credentials</h2>
 <p>{report['distinct_secrets']} distinct values, appearing {report['secrets']} times. Values are never shown; the terminal report lists the files.</p>
+<table><tr><th>where they sit</th><th>distinct</th><th>times</th></tr>{where}</table>
 </body></html>"""
 
 
@@ -394,7 +536,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Read your own Claude Code and Codex logs locally: the kinds of "
                     "request you make, and credentials left in the logs.")
-    ap.add_argument("--days", type=float, help="only logs modified in the last N days")
+    ap.add_argument("--days", type=float,
+                    help="only logs modified in the last N days; inside them, only turns and "
+                         "agent work from the last N days are counted (credentials are counted "
+                         "wherever they sit in those files)")
     ap.add_argument("--claude", default=CLAUDE_ROOT, help=f"default {CLAUDE_ROOT}")
     ap.add_argument("--codex", default=CODEX_ROOT, help=f"default {CODEX_ROOT}")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")

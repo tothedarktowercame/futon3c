@@ -276,3 +276,33 @@ and after on the same corpus (97 findings, compared line by line):
 Not changed yet, from the earlier assessment: credential provenance
 (typed / agent-written / tool output), precision shipped in the bundle,
 and the end-of-window gap.
+
+## Aside (2026-10-02): xiaoxiang-local.py made good
+
+The quality changes from the assessment, plus Rob's report that `--days`
+"doesn't actually filter the session file", which was true: files were
+chosen by mtime and old token events dropped, but every turn in a chosen
+file was counted and classified whatever its date.
+
+- `--days` now keeps only turns and agent work inside the window;
+  credentials are still counted wherever they sit in a chosen file, and the
+  help text says so. Test: a file with turns at 00:00 and a window from
+  04:00 reports one turn, not three.
+- Provenance: each finding is grouped by where it sits (`where_in`): what
+  you typed, tool output, files or commands the agent wrote, test fixtures
+  (an agent write to a path saying test/spec/fixture/example, or a
+  documented example key containing EXAMPLE), the agent's prose, elsewhere.
+  On this session's log: 0 in what was typed, 15 distinct in tool output,
+  9 in files the agent wrote, 6 fixtures.
+- Precision ships in the model: `export` adds each intent's cross-validated
+  precision; the reader labels a turn only when that is at least 0.5 and
+  counts the rest as "not sure", and the table shows the precision column
+  instead of the blanket "often wrong". An old model without precision
+  renders as before.
+- The gap after the last typed turn, closed by the last agent event, now
+  counts and is marked "after your last turn"; likewise before the first.
+  The chart's axis extends to it.
+
+Tests: 67 passed across the five python suites (2 skipped for want of
+labelled turns here). Not in this packet: a deterministic "phrases you use"
+column from the cue vocabulary.

@@ -68,6 +68,20 @@ class Gaps(unittest.TestCase):
                   "last_turn": 3 * H}
         self.assertIn("stretch between turns you typed", rd.gap_svg(report) + rd._gap_phrase(report))
 
+    def test_the_stretch_after_the_last_turn_counts(self):
+        """Asked, then went to bed: no later turn closes the gap, so the last
+        agent event does, and the gap is marked."""
+        found = rd.gaps([0, 2 * H], [(1 * H, 10), (9 * H, 100), (12 * H, 1)])
+        self.assertEqual([(2 * H, 12 * H, 101, "after")],
+                         [(g["start"], g["end"], g["tokens"], g.get("edge")) for g in found])
+        self.assertEqual([], rd.gaps([0, 2 * H], [(1 * H, 10), (9 * H, 100)], edges=False))
+        before = rd.gaps([10 * H], [(1 * H, 50), (11 * H, 5)])
+        self.assertEqual([(1 * H, 10 * H, 50, "before")],
+                         [(g["start"], g["end"], g["tokens"], g.get("edge")) for g in before])
+        page = rd.gap_svg({"gaps": found, "first_turn": 0, "last_turn": 2 * H, "gap_hours": 6})
+        self.assertIn("<rect", page)
+        self.assertIn("after your last turn", rd._edge_note(found[0]))
+
     def test_events_at_a_turn_belong_to_neither_side(self):
         found = rd.gaps([0, 8 * H], [(0, 5), (8 * H, 5), (4 * H, 1)])
         self.assertEqual([1], [g["tokens"] for g in found])
@@ -119,7 +133,9 @@ def stub_model():
         ("I reject your claim", "disagree"), ("I disagree with that", "disagree"),
         ("sounds good, go ahead", "approve"), ("looks good to me", "approve"),
         ("please change the plan", "redirect")])]
-    return json.loads(json.dumps(xx.export(rows, None)))
+    model = json.loads(json.dumps(xx.export(rows, None)))
+    model["common"] = []  # five rows make every word "common"; keep them as evidence
+    return model
 
 
 class Parallel(unittest.TestCase):
@@ -168,6 +184,90 @@ class Parallel(unittest.TestCase):
         self.assertEqual(500, report["agent_tokens"])
         self.assertEqual(1, report["distinct_secrets"])
         self.assertEqual(4, report["secrets"])
+
+
+class Window(unittest.TestCase):
+    def test_days_drops_old_turns_and_tokens_but_not_old_credentials(self):
+        """Rob (2026-10-02): --days did not filter the session file.  It chose
+        files by mtime and dropped old token events, but every turn in a chosen
+        file was counted and classified whatever its date."""
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            files = ([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+                     + [("codex", p) for p in rd.log_files(cx, "*/*/*/rollout-*.jsonl", None)])
+            whole = rd.read(files, model, jobs=1)
+            late = rd.read(files, model, since=rd._epoch("2026-09-01T04:00:00Z"), jobs=1)
+        self.assertEqual(3, whole["turns"])
+        self.assertEqual(1, late["turns"], "only the codex turn at 09:00 is inside the window")
+        self.assertEqual({"approve": 1}, late["intents"])
+        self.assertEqual(0, late["agent_tokens"] - 500, "the 05:00 reply is inside the window")
+        self.assertEqual(whole["secrets"], late["secrets"], "credentials are counted wherever they sit")
+
+
+class Provenance(unittest.TestCase):
+    def test_where_credentials_sit(self):
+        model = stub_model()
+        key = "AKIAABCDEFGHIJKLMNOP"
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            with open(os.path.join(cl, "proj", "s3.jsonl"), "w") as fh:
+                write = {"type": "assistant", "timestamp": "2026-09-02T00:00:00Z",
+                         "message": {"content": [{"type": "tool_use", "name": "Write",
+                                                  "input": {"file_path": "tests/keys_test.py",
+                                                            "content": f"KEY = '{key}'"}}]}}
+                prose = {"type": "assistant", "timestamp": "2026-09-02T00:00:01Z",
+                         "message": {"content": [{"type": "text", "text": f"use AKIAIOSFODNN7EXAMPLE or sk-ant-{'q' * 24}"}]}}
+                for r in (write, prose):
+                    fh.write(json.dumps(r) + "\n")
+            files = [("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+            report = rd.read(files, model, jobs=1)
+        where = report["secret_where"]
+        self.assertEqual(1, where["typed"]["occurrences"])
+        self.assertEqual(1, where["tool-output"]["occurrences"])
+        self.assertEqual(2, where["fixture"]["occurrences"], "the test-path write and the documented example key")
+        self.assertEqual(1, where["agent-said"]["occurrences"])
+        text = rd.render(report)
+        self.assertIn("in what you typed", text)
+        self.assertIn("in test fixtures or documented example keys", text)
+        self.assertNotIn(key, text)
+        self.assertIn("where they sit", rd.render_html(report))
+
+    def test_where_in_for_codex_records(self):
+        self.assertEqual(("typed", False), rd.where_in("codex", codex("hi")))
+        self.assertEqual(("agent-said", False), rd.where_in("codex", codex("hi", role="assistant")))
+        call = {"type": "response_item", "payload": {"type": "function_call", "name": "shell",
+                                                     "arguments": "{\"cmd\": \"cat tests/fixture.py\"}"}}
+        self.assertEqual(("agent-wrote", True), rd.where_in("codex", call))
+        self.assertEqual(("elsewhere", False), rd.where_in("codex", None))
+
+
+class Precision(unittest.TestCase):
+    def test_export_carries_cross_validated_precision(self):
+        model = stub_model()
+        self.assertIn("precision", model)
+        self.assertTrue(set(model["precision"]) <= {"disagree", "approve", "redirect"})
+
+    def test_unsure_intents_are_not_reported_as_labels(self):
+        model = dict(stub_model(), precision={"disagree": 0.9, "approve": 0.3})
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            files = ([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)]
+                     + [("codex", p) for p in rd.log_files(cx, "*/*/*/rollout-*.jsonl", None)])
+            report = rd.read(files, model, jobs=1)
+        self.assertEqual({"disagree": 1}, report["intents"])
+        self.assertEqual(1, report["not_sure"])
+        self.assertEqual({"disagree": 0.9}, report["intent_precision"])
+        text = rd.render(report)
+        self.assertIn(" 90%", text)
+        self.assertIn("right on less than half the time", text)
+        self.assertNotIn("often wrong", text)
+        old = dict(stub_model())
+        old.pop("precision", None)
+        with tempfile.TemporaryDirectory() as d:
+            cl, cx = fake_home(d)
+            report = rd.read([("claude", p) for p in rd.log_files(cl, "*/*.jsonl", None)], old, jobs=1)
+        self.assertIn("often wrong", rd.render(report))
 
 
 class Report(unittest.TestCase):
