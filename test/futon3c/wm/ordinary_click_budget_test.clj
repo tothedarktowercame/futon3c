@@ -107,6 +107,21 @@
         (is (= {:issued budget/allocated :ordinary-click-budget-exhausted 7} outcomes))
         (is (= budget/allocated (count (rows))))))))
 
+(deftest availability-is-source-pinned-and-does-not-consume
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "ordinary-availability" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+      (let [empty-receipt (budget/availability)]
+        (is (= {:allocated budget/allocated :consumed 0
+                :available budget/allocated :unit :ordinary-click}
+               (select-keys empty-receipt [:allocated :consumed :available :unit])))
+        (is (= 64 (count (get-in empty-receipt [:ledger-source :sha256])))))
+      (budget/consume! "click-one" "now" "test")
+      (let [receipt (budget/availability)]
+        (is (= 1 (:consumed receipt)))
+        (is (= (dec budget/allocated) (:available receipt)))
+        (is (= 1 (count (rows))))))))
+
 (deftest busy-click-does-not-consume
   (let [h (http/make-handler {}) calls (atom 0)]
     (reset! service/!status (assoc service/initial-status :running? true :click-id "in-flight"))

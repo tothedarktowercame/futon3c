@@ -52,6 +52,40 @@
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
 
+(defn- parse-ledger [text]
+  (mapv #(json/parse-string % true)
+        (remove str/blank? (str/split-lines text))))
+
+(defn- ledger-entries [file]
+  (if (.exists file) (parse-ledger (slurp file)) []))
+
+(defn availability
+  "Return a non-consuming, source-pinned snapshot of the ordinary-click ration.
+   The same lock as `consume!` makes the ledger bytes and count one observation."
+  []
+  (locking issue-lock
+    (let [file (io/file *ledger-path*)
+          bytes (if (.exists file)
+                  (with-open [channel (FileChannel/open
+                                       (.toPath file)
+                                       (into-array StandardOpenOption
+                                                   [StandardOpenOption/READ]))
+                              _file-lock (.lock channel 0 Long/MAX_VALUE true)]
+                    (java.nio.file.Files/readAllBytes (.toPath file)))
+                  (byte-array 0))
+          entries (parse-ledger (String. bytes "UTF-8"))
+          consumed (count (filter #(= authorization (:authorization %)) entries))]
+      {:schema :wm/ordinary-click-availability-v1
+       :authorization authorization
+       :allocated allocated
+       :consumed consumed
+       :available (max 0 (- allocated consumed))
+       :unit :ordinary-click
+       :ledger-source
+       {:path *ledger-path*
+        :sha256 (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256") bytes)]
+                   (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))}})))
+
 (defn consume!
   "Append and force consumption before the worker starts. Serialize the count
    and append across threads and processes; failed runs never refund a grant."
@@ -65,8 +99,7 @@
                                       [StandardOpenOption/CREATE StandardOpenOption/READ
                                        StandardOpenOption/WRITE]))
                   _file-lock (.lock channel)]
-        (let [entries (mapv #(json/parse-string % true)
-                            (remove str/blank? (str/split-lines (slurp file))))
+        (let [entries (ledger-entries file)
               consumed (count (filter #(= authorization (:authorization %)) entries))]
           (when (>= consumed allocated)
             (throw (ex-info
