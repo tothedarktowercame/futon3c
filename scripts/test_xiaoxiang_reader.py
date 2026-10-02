@@ -2,6 +2,7 @@
 Run: python3 -m unittest scripts/test_xiaoxiang_reader.py"""
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
@@ -333,6 +334,58 @@ class UnderAnAgent(unittest.TestCase):
             self.assertIn("Files holding them", human.stdout)
             self.assertIn("s1.jsonl", human.stdout)
             self.assertNotIn(SECRET, human.stdout + agent.stdout)
+
+
+class VerboseTurns(unittest.TestCase):
+    def test_only_structured_matches_in_typed_turns_are_shown(self):
+        github = "ghp_" + "A" * 24
+        random = "Z" * 40
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "turns.jsonl")
+            with open(path, "w") as fh:
+                fh.write(json.dumps({**claude(f"please inspect {github}"),
+                                     "timestamp": "2026-10-02T12:00:00Z"}) + "\n")
+                fh.write(json.dumps({**claude(f"ignore this random id {random}"),
+                                     "timestamp": "2026-10-02T12:01:00Z"}) + "\n")
+            report = rd.read([("claude", Path(path))], model, jobs=1, verbose=True)
+        text = rd.render(report)
+        self.assertIn(github, text)
+        self.assertIn("github-token", text)
+        self.assertNotIn(random, text)
+        self.assertNotIn("--- high-entropy", text)
+        self.assertNotIn("--- keyword-assignment", text)
+
+    def test_agent_render_never_includes_verbose_turns(self):
+        report = {"turns": 0, "files": 1, "gaps": [], "distinct_secrets": 0,
+                  "secrets": 0, "secret_kinds": {}, "files_with_secrets": {},
+                  "verbose_turns": [{"kinds": ["github-token"], "text": "SECRET",
+                                     "path": "/private/log", "timestamp": None}],
+                  "run_by_agent": True}
+        text = rd.render(report)
+        self.assertNotIn("SECRET", text)
+        self.assertNotIn("/private/log", text)
+
+    def test_preamble_discloses_verbose_output(self):
+        text = rd.preamble("claude", "codex", 7, verbose=True)
+        self.assertIn("complete text of your turns", text)
+        self.assertIn("high-entropy and keyword-assignment matches stay excluded", text)
+        self.assertNotIn("Never:   the credential values", text)
+
+    def test_cli_refuses_verbose_without_a_persons_terminal(self):
+        here = os.path.dirname(os.path.abspath(rd.__file__))
+        with tempfile.TemporaryDirectory() as d:
+            model = os.path.join(d, "model.json")
+            with open(model, "w") as fh:
+                json.dump(stub_model(), fh)
+            env = {"PATH": os.environ.get("PATH", ""), "HOME": d}
+            run = subprocess.run([sys.executable, rd.__file__, "--model", model,
+                                  "--verbose", "--yes"], cwd=here,
+                                 capture_output=True, text=True, env=env,
+                                 stdin=subprocess.DEVNULL)
+        self.assertEqual(2, run.returncode)
+        self.assertIn("only available to a person", run.stderr)
+        self.assertEqual("", run.stdout)
 
 
 class Consent(unittest.TestCase):

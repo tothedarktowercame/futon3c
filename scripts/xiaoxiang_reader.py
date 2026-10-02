@@ -7,9 +7,12 @@ person when it is a user record with text of its own: tool results, subagent
 (sidechain) traffic, injected context (<environment_context>, AGENTS.md, slash
 command wrappers) and compaction summaries are skipped.
 
-Every turn is redacted with secret_scan before it is classified, and the report
-carries counts and kinds, never turn text or secret values.  Which files hold
-them is printed only with --list-files, and never when a coding agent is
+Every turn is redacted with secret_scan before it is classified, and the
+default report carries counts and kinds, never turn text or secret values.
+At a person's interactive terminal, --verbose prints typed turns containing a
+structured credential match; high-entropy and keyword-assignment findings are
+excluded.  Which files hold findings is printed only with --list-files, and
+neither mode is available when a coding agent is
 running the scan (CLAUDECODE, CLAUDE_CODE_*, CODEX_*, AI_AGENT in the
 environment): a list of files holding credentials is a map, and an agent that
 was handed one went and read them.
@@ -189,6 +192,11 @@ def _init_worker(model: dict) -> None:
 SURE = 0.5  # an intent is reported outright when its cross-validated precision is at least this
 _FIXTURE_PATH = re.compile(r"(?i)(?:^|[/_.-])(?:tests?|spec|specs|fixtures?|examples?|mock|fake|dummy)(?:[/_.-]|$)")
 _EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit", "create_file", "apply_patch"}
+VERBOSE_KINDS = {
+    "private-key", "aws-access-key", "github-token", "anthropic-key",
+    "openai-key", "slack-token", "google-api-key", "jwt", "bearer",
+    "url-credentials",
+}
 
 
 def where_in(source: str, record: dict | None) -> tuple[str, bool]:
@@ -231,7 +239,8 @@ def where_in(source: str, record: dict | None) -> tuple[str, bool]:
     return "elsewhere", False
 
 
-def read_file(source: str, path: Path, model: dict | None = None, since: float = 0) -> dict:
+def read_file(source: str, path: Path, model: dict | None = None, since: float = 0,
+              verbose: bool = False) -> dict:
     """Everything one log file contributes: counts, times and token events,
     and the secret kinds with a hash per distinct value.  Pure in the sense
     that two files can be read in any order or in parallel and merged.
@@ -250,6 +259,7 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
     turns = unsure = not_sure = secrets_here = 0
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
+    verbose_turns: list[dict] = []
     seen_calls: set[str] = set()
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
@@ -286,6 +296,11 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
             for text in (claude_turns if source == "claude" else codex_turns)(record):
                 if not in_window:
                     continue
+                if verbose:
+                    kinds = sorted({f.kind for f in scan(text)} & VERBOSE_KINDS)
+                    if kinds:
+                        verbose_turns.append({"kinds": kinds, "text": text,
+                                              "path": str(path), "timestamp": record.get("timestamp")})
                 clean, _ = redact(text)
                 turns += 1
                 if when is not None:
@@ -304,14 +319,15 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
             "distinct_where": {k: list(v) for k, v in distinct_where.items()},
             "secrets": secrets_here, "turns": turns, "unsure": unsure, "not_sure": not_sure,
             "turn_times": turn_times, "token_events": token_events,
+            "verbose_turns": verbose_turns,
             # Claude writes one reply as several lines with the same usage; a
             # reply's key is global, so the merge drops repeats across files too.
             "seen_calls": list(seen_calls) if source == "claude" else []}
 
 
 def _read_file_task(args):
-    source, path, since = args
-    return read_file(source, Path(path), None, since)
+    source, path, since, verbose = args
+    return read_file(source, Path(path), None, since, verbose)
 
 
 def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = None) -> dict:
@@ -326,6 +342,8 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
     seen_calls: set[str] = set()
+    verbose_turns: list[dict] = []
+    seen_verbose: set[tuple] = set()
     for part in parts:
         intents.update(part["intents"])
         secret_kinds.update(part["secret_kinds"])
@@ -352,6 +370,11 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
         else:
             token_events.extend(part["token_events"])
         seen_calls.update(part["seen_calls"])
+        for item in part.get("verbose_turns", []):
+            key = (tuple(item["kinds"]), item["text"])
+            if key not in seen_verbose:
+                seen_verbose.add(key)
+                verbose_turns.append(item)
     precision = (model or {}).get("precision") or {}
     return {"files": len(parts), "turns": turns, "intents": dict(intents.most_common()),
             "intent_precision": {k: precision[k] for k in intents if k in precision},
@@ -366,13 +389,14 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
             "agent_tokens": sum(n for _, n in token_events),
             "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
             "gap_hours": gap_hours, "gaps": gaps(turn_times, token_events, gap_hours),
+            "verbose_turns": verbose_turns,
             # The same logs at other thresholds, so one run can show all three views.
             "gap_views": {str(h): gaps(turn_times, token_events, h)
                           for h in sorted({GAP_HOURS, 1, 0, gap_hours}, reverse=True)}}
 
 
 def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float = 0,
-         gap_hours: float = GAP_HOURS, jobs: int = 1) -> dict:
+         gap_hours: float = GAP_HOURS, jobs: int = 1, verbose: bool = False) -> dict:
     """SINCE (epoch seconds) drops turns and token events before it: a log
     file picked by --days can reach back weeks before the window.  JOBS > 1
     reads files in parallel processes (standard library only); the secret
@@ -387,14 +411,14 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
         import multiprocessing  # noqa: PLC0415
         with multiprocessing.Pool(min(jobs, len(ordered)), _init_worker, (model,)) as pool:
             for part in pool.imap_unordered(_read_file_task,
-                                            [(s, str(p), since) for s, p in ordered]):
+                                            [(s, str(p), since, verbose) for s, p in ordered]):
                 parts.append(part)
                 done += part["size"]
                 if progress:
                     progress(len(parts), len(ordered), done / total)
     else:
         for source, path in ordered:
-            parts.append(read_file(source, path, model, since))
+            parts.append(read_file(source, path, model, since, verbose))
             done += parts[-1]["size"]
             if progress:
                 progress(len(parts), len(ordered), done / total)
@@ -456,7 +480,20 @@ def render(report: dict, list_files: bool = False) -> str:
     elif files:
         out.append(f"They sit in {len(files)} of the files read"
                    + ("" if report.get("run_by_agent") else "; --list-files names them") + ".")
+    verbose_turns = report.get("verbose_turns") or []
+    if verbose_turns and not report.get("run_by_agent"):
+        out += ["", "Verbose matches in turns you typed (structured credential kinds only;",
+                "high-entropy and keyword-assignment are excluded):"]
+        for item in verbose_turns:
+            stamp = f" at {item['timestamp']}" if item.get("timestamp") else ""
+            out.append(f"\n--- {', '.join(item['kinds'])}{stamp}\n{item['path']}\n"
+                       + terminal_text(item["text"]))
     return "\n".join(out)
+
+
+def terminal_text(text: str) -> str:
+    """Keep turn text readable without letting logged control bytes operate a terminal."""
+    return "".join(ch if ch in "\n\t" or ord(ch) >= 32 else f"\\x{ord(ch):02x}" for ch in text)
 
 
 _AGENT_ENV = ("CLAUDECODE", "CLAUDE_CODE_", "CODEX_", "AI_AGENT")
@@ -474,7 +511,8 @@ def run_by_agent(environ=None) -> bool:
                for k in environ)
 
 
-def preamble(claude_root: str, codex_root: str, days: float | None) -> str:
+def preamble(claude_root: str, codex_root: str, days: float | None,
+             verbose: bool = False) -> str:
     """What this run will do, said before it does it, so a person can decline."""
     window = f"the last {days:g} days of" if days else "all of"
     return (
@@ -486,8 +524,12 @@ def preamble(claude_root: str, codex_root: str, days: float | None) -> str:
         "           AWS key, ...) and by where they sit (what you typed, tool output,\n"
         "           files the agent wrote, test fixtures); how much agents worked while\n"
         "           you weren't typing.\n"
-        "  Never:   the credential values, your turns' text, or which files hold what\n"
-        "           (--list-files names the files, at a terminal only).\n"
+        + ("  Verbose: prints the complete text of your turns containing a structured\n"
+           "           credential match, including its suspected value and source file;\n"
+           "           high-entropy and keyword-assignment matches stay excluded.\n"
+           if verbose else
+           "  Never:   the credential values, your turns' text, or which files hold what\n"
+           "           (--list-files names the files, at a terminal only).\n") +
         "  Writes:  one HTML page with the chart, in this directory (--html '' for none).\n"
         "  If an agent runs this, it learns the counts and kinds above and nothing more;\n"
         "  a kind is what you need in order to rotate the credential at its issuer.\n")
@@ -498,7 +540,7 @@ def consent(a, environ=None) -> bool:
     An agent passing --yes is visible in its transcript, which is the record
     of who decided."""
     environ = os.environ if environ is None else environ
-    text = preamble(a.claude, a.codex, a.days)
+    text = preamble(a.claude, a.codex, a.days, a.verbose)
     if a.yes:
         print(text, file=sys.stderr)
         return True
@@ -640,6 +682,10 @@ def main(argv=None) -> int:
     ap.add_argument("--list-files", action="store_true",
                     help="name the log files holding credentials (refused when a coding agent "
                          "is running this: the report must not be a map to them)")
+    ap.add_argument("--verbose", action="store_true",
+                    help="print complete user turns containing structured credential matches; "
+                         "excludes high-entropy and keyword-assignment, and requires a person's "
+                         "interactive terminal")
     ap.add_argument("--gap-hours", type=float, default=GAP_HOURS,
                     help="shortest stretch without a typed turn to count as a gap "
                          "(default %(default)g; 1 for errands, 0 for every stretch "
@@ -656,6 +702,10 @@ def main(argv=None) -> int:
         print("--list-files is refused when a coding agent runs this scan: the list of files "
               "holding credentials is for the person who owns them, in their own terminal.",
               file=sys.stderr)
+        return 2
+    if a.verbose and (agent or not sys.stdin.isatty()):
+        print("--verbose reveals suspected credential values in your turn text and is only "
+              "available to a person running it in an interactive terminal.", file=sys.stderr)
         return 2
     model = MODEL
     if model is None:
@@ -679,7 +729,7 @@ def main(argv=None) -> int:
 
     since = time.time() - a.days * 86400 if a.days else 0
     report = read(files, model, progress if sys.stderr.isatty() else None, since, a.gap_hours,
-                  max(1, a.jobs))
+                  max(1, a.jobs), a.verbose)
     if sys.stderr.isatty():
         print(file=sys.stderr)
     report["run_by_agent"] = agent
