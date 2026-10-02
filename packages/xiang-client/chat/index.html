@@ -20,7 +20,13 @@
   </section>
   <main id="app" hidden>
     <section class="conversation">
-      <div class="legend"><span class="declared">declared mark</span><span class="inferred">象 interpretation</span></div>
+      <nav class="history" aria-label="Conversation history">
+        <button id="older" type="button">← back 3</button>
+        <span id="range">latest turns</span>
+        <button id="newer" type="button">newer 3 →</button>
+        <label>show <select id="page-size"><option>3</option><option>6</option><option>12</option></select></label>
+        <label>load <select id="load-size"><option>30</option><option>60</option><option>100</option></select></label>
+      </nav>
       <ol id="messages"></ol>
       <form id="composer">
         <select id="agent" aria-label="agent"><option value="fucodex">codex-1</option><option value="fuclaude">claude-1</option><option value="fuzai">zai-1</option><option value="">room only</option></select>
@@ -28,7 +34,7 @@
         <button>Send</button>
       </form>
     </section>
-    <aside id="inspector"><h2>象 reading</h2><p class="muted">Select a marked turn.</p></aside>
+    <aside id="inspector" hidden></aside>
   </main>
   <script type="module" src="main.js"></script>
 </body>

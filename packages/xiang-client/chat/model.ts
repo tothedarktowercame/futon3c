@@ -8,6 +8,28 @@ export const GLYPHS: Record<string, string> = {
   retract: "🈹", withdraw: "🈡", unresolved: "🈳",
 };
 
+export type IntentStage = "perceive" | "believe" | "evaluate" | "select" | "act" | "annotator";
+
+const STAGES: Record<string, IntentStage> = {
+  "report-problem": "perceive", explain: "perceive", report: "perceive",
+  clarify: "believe", qualify: "believe", approve: "believe", disagree: "believe", collect: "believe", retract: "believe",
+  constrain: "evaluate", extend: "evaluate", explore: "evaluate",
+  propose: "select", prioritize: "select", redirect: "select", defer: "select", delegate: "select", withdraw: "select",
+  "ask-action": "act", continue: "act", verify: "act",
+  gist: "annotator", unresolved: "annotator",
+};
+
+export function intentStage(intent: string): IntentStage {
+  return STAGES[intent] ?? "annotator";
+}
+
+export function pageBounds(total: number, pageSize: number, offset: number): { start: number; end: number; offset: number } {
+  const size = Math.max(1, Math.floor(pageSize));
+  const boundedOffset = Math.max(0, Math.min(Math.floor(offset), Math.max(0, total - 1)));
+  const end = Math.max(0, total - boundedOffset);
+  return { start: Math.max(0, end - size), end, offset: boundedOffset };
+}
+
 export function intents(view: TurnView): Array<{ intent: string; glyph: string; declared: boolean }> {
   const record = view.record as typeof view.record & { proforma_marks?: Array<{ intent: string; mark: string }> };
   const declared = (record.proforma_marks ?? []).map((m) => ({ intent: m.intent, glyph: m.mark, declared: true }));
