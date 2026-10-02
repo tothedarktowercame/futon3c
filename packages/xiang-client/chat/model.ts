@@ -81,6 +81,23 @@ export function selectedMatrixEvent(value: unknown): string | null {
 
 export interface HighlightedIntent { eventId: string; intent: string | null; }
 
+export interface AnnotationTheme {
+  theme: "light" | "dark";
+  fontFamily: string;
+  foreground: string;
+  background: string;
+}
+
+/** Element's resolved appearance setting, constrained before touching CSS. */
+export function annotationTheme(value: unknown): AnnotationTheme | null {
+  if (!value || typeof value !== "object") return null;
+  const message = value as Record<string, unknown>;
+  if (message.type !== "futon.annotation-theme" || (message.theme !== "light" && message.theme !== "dark")) return null;
+  const fields = [message.fontFamily, message.foreground, message.background];
+  if (!fields.every((field) => typeof field === "string" && field.length > 0 && field.length <= 200)) return null;
+  return { theme: message.theme, fontFamily: message.fontFamily as string, foreground: message.foreground as string, background: message.background as string };
+}
+
 /** Hover focus sent by the FUTON Element fork to the annotation widget. */
 export function highlightedIntent(value: unknown): HighlightedIntent | null {
   if (!value || typeof value !== "object") return null;
