@@ -360,9 +360,20 @@ class VerboseTurns(unittest.TestCase):
         text = rd.render(report)
         self.assertIn(github, text)
         self.assertIn("github-token", text)
+        self.assertIn("github-token         typed: 1 distinct / 1 times; elsewhere: 0 times", text)
         self.assertNotIn(random, text)
         self.assertNotIn("--- high-entropy", text)
         self.assertNotIn("--- keyword-assignment", text)
+
+    def test_verbose_says_when_no_typed_structured_match_exists(self):
+        model = stub_model()
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "turns.jsonl")
+            with open(path, "w") as fh:
+                fh.write(json.dumps(claude("ordinary request")) + "\n")
+            report = rd.read([("claude", Path(path))], model, jobs=1, verbose=True)
+        self.assertIn("no structured credential matches were found in turns you typed",
+                      rd.render(report))
 
     def test_agent_render_never_includes_verbose_turns(self):
         report = {"turns": 0, "files": 1, "gaps": [], "distinct_secrets": 0,

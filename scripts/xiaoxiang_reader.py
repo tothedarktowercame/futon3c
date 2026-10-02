@@ -252,10 +252,12 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
     intents: Counter = Counter()
     secret_kinds: Counter = Counter()
     secret_where: Counter = Counter()
+    secret_kind_where: dict[str, Counter] = {}
     # Logs repeat themselves (compaction copies history), so count distinct
     # values.  Only a hash is kept, in memory, for the length of the run.
     distinct: dict[str, set] = {}
     distinct_where: dict[str, set] = {}
+    distinct_kind_where: dict[str, dict[str, set]] = {}
     turns = unsure = not_sure = secrets_here = 0
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
@@ -282,6 +284,8 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
                     place = "fixture" if fixture or "EXAMPLE" in value else where
                     secret_where[place] += 1
                     distinct_where.setdefault(place, set()).add(digest)
+                    secret_kind_where.setdefault(f.kind, Counter())[place] += 1
+                    distinct_kind_where.setdefault(f.kind, {}).setdefault(place, set()).add(digest)
                 secrets_here += len(found)
             if record is None:
                 continue
@@ -317,6 +321,9 @@ def read_file(source: str, path: Path, model: dict | None = None, since: float =
             "secret_kinds": secret_kinds, "distinct": {k: list(v) for k, v in distinct.items()},
             "secret_where": secret_where,
             "distinct_where": {k: list(v) for k, v in distinct_where.items()},
+            "secret_kind_where": secret_kind_where,
+            "distinct_kind_where": {kind: {place: list(values) for place, values in places.items()}
+                                    for kind, places in distinct_kind_where.items()},
             "secrets": secrets_here, "turns": turns, "unsure": unsure, "not_sure": not_sure,
             "turn_times": turn_times, "token_events": token_events,
             "verbose_turns": verbose_turns,
@@ -335,9 +342,11 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
     intents: Counter = Counter()
     secret_kinds: Counter = Counter()
     secret_where: Counter = Counter()
+    secret_kind_where: dict[str, Counter] = {}
     secret_files: Counter = Counter()
     distinct: dict[str, set] = {}
     distinct_where: dict[str, set] = {}
+    distinct_kind_where: dict[str, dict[str, set]] = {}
     turns = unsure = not_sure = 0
     turn_times: list[float] = []
     token_events: list[tuple[float, int]] = []
@@ -352,6 +361,11 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
             distinct.setdefault(kind, set()).update(digests)
         for place, digests in part.get("distinct_where", {}).items():
             distinct_where.setdefault(place, set()).update(digests)
+        for kind, places in part.get("secret_kind_where", {}).items():
+            secret_kind_where.setdefault(kind, Counter()).update(places)
+        for kind, places in part.get("distinct_kind_where", {}).items():
+            for place, digests in places.items():
+                distinct_kind_where.setdefault(kind, {}).setdefault(place, set()).update(digests)
         if part["secrets"]:
             secret_files[part["path"]] += part["secrets"]
         turns += part["turns"]
@@ -385,6 +399,11 @@ def merge(parts: list[dict], gap_hours: float = GAP_HOURS, model: dict | None = 
                              for k, n in secret_kinds.most_common()},
             "secret_where": {k: {"distinct": len(distinct_where.get(k, ())), "occurrences": n}
                              for k, n in secret_where.most_common()},
+            "secret_kind_where": {
+                kind: {place: {"distinct": len(distinct_kind_where.get(kind, {}).get(place, ())),
+                               "occurrences": n}
+                       for place, n in places.most_common()}
+                for kind, places in secret_kind_where.items()},
             "files_with_secrets": dict(secret_files.most_common()),
             "agent_tokens": sum(n for _, n in token_events),
             "first_turn": min(turn_times, default=None), "last_turn": max(turn_times, default=None),
@@ -422,7 +441,9 @@ def read(files: list[tuple[str, Path]], model: dict, progress=None, since: float
             done += parts[-1]["size"]
             if progress:
                 progress(len(parts), len(ordered), done / total)
-    return merge(parts, gap_hours, model)
+    report = merge(parts, gap_hours, model)
+    report["verbose_requested"] = verbose
+    return report
 
 
 def render(report: dict, list_files: bool = False) -> str:
@@ -466,6 +487,16 @@ def render(report: dict, list_files: bool = False) -> str:
             out.append(f"  {_WHERE.get(place, place):<44} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
     for kind, n in report["secret_kinds"].items():
         out.append(f"  {kind:<20} {n['distinct']:>6} distinct  {n['occurrences']:>8} times")
+    by_kind = report.get("secret_kind_where") or {}
+    structured = [kind for kind in report["secret_kinds"] if kind in VERBOSE_KINDS]
+    if structured:
+        out += ["", "Structured matches by provenance (the kinds --verbose inspects):"]
+        for kind in structured:
+            places = by_kind.get(kind, {})
+            typed = places.get("typed", {"distinct": 0, "occurrences": 0})
+            elsewhere = sum(n["occurrences"] for place, n in places.items() if place != "typed")
+            out.append(f"  {kind:<20} typed: {typed['distinct']} distinct / "
+                       f"{typed['occurrences']} times; elsewhere: {elsewhere} times")
     if report["secret_kinds"]:
         out.append("What to do: rotate first; a value in a log an agent has read is spent whether"
                    " or not the log is cleaned.")
@@ -480,14 +511,18 @@ def render(report: dict, list_files: bool = False) -> str:
     elif files:
         out.append(f"They sit in {len(files)} of the files read"
                    + ("" if report.get("run_by_agent") else "; --list-files names them") + ".")
-    verbose_turns = report.get("verbose_turns") or []
-    if verbose_turns and not report.get("run_by_agent"):
-        out += ["", "Verbose matches in turns you typed (structured credential kinds only;",
-                "high-entropy and keyword-assignment are excluded):"]
-        for item in verbose_turns:
-            stamp = f" at {item['timestamp']}" if item.get("timestamp") else ""
-            out.append(f"\n--- {', '.join(item['kinds'])}{stamp}\n{item['path']}\n"
-                       + terminal_text(item["text"]))
+    if report.get("verbose_requested") and not report.get("run_by_agent"):
+        verbose_turns = report.get("verbose_turns") or []
+        if not verbose_turns:
+            out += ["", "Verbose inspection: no structured credential matches were found "
+                    "in turns you typed. The structured matches above occur elsewhere in the logs."]
+        else:
+            out += ["", "Verbose matches in turns you typed (structured credential kinds only;",
+                    "high-entropy and keyword-assignment are excluded):"]
+            for item in verbose_turns:
+                stamp = f" at {item['timestamp']}" if item.get("timestamp") else ""
+                out.append(f"\n--- {', '.join(item['kinds'])}{stamp}\n{item['path']}\n"
+                           + terminal_text(item["text"]))
     return "\n".join(out)
 
 
