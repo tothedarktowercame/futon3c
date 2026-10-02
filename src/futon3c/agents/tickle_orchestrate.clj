@@ -20,6 +20,7 @@
             [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.pattern-lifecycle.action-rpc :as action-rpc]
             [futon3c.blackboard :as bb]
             [futon3c.dev.config :as config])
   (:import [java.time Instant Duration]
@@ -331,9 +332,13 @@
      :evidence-store — for workflow tracking
      :repo-dir — repository root
      :timeout-ms — invoke timeout (default 180000 = 3 min)
-     :session-id — workflow session id"
+     :session-id — workflow session id
+     :pattern-action — optional {:pattern-id string :rationale string}; when
+       present, the real invocation is enclosed by the automatic PSR/PUR
+       boundary using the controller-owned agent, session, and issue identity"
   [issue config]
-  (let [{:keys [evidence-store repo-dir timeout-ms session-id agent-id]} config
+  (let [{:keys [evidence-store repo-dir timeout-ms session-id agent-id
+                pattern-action]} config
         agent-id (or agent-id (roles/seat-for :implementer))
         timeout-ms (or timeout-ms 180000)
         prompt (make-assign-prompt issue repo-dir agent-id)
@@ -348,7 +353,18 @@
             :body {:agent agent-id
                    :prompt-preview (subs prompt 0 (min 200 (count prompt)))}})
     (project! {:issue issue :status :running :phase (str "Invoking " agent-id "...")})
-    (let [result (reg/invoke-agent! agent-id prompt timeout-ms)
+    (let [invoke #(reg/invoke-agent! agent-id prompt timeout-ms)
+          result (if pattern-action
+                   (:result
+                    (action-rpc/execute!
+                     {:evidence-store evidence-store
+                      :pattern-id (:pattern-id pattern-action)
+                      :agent-id agent-id
+                      :session-id session-id
+                      :task-id (str "issue-" issue-number)
+                      :rationale (:rationale pattern-action)
+                      :action invoke}))
+                   (invoke))
           elapsed (- (System/currentTimeMillis) start)
           ok? (:ok result)]
       (emit! evidence-store

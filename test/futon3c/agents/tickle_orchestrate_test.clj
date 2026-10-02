@@ -181,6 +181,37 @@
         (let [entries (estore/query* store {})]
           (is (= 2 (count entries))))))))
 
+(deftest assign-issue-pattern-action-persists-automatic-lifecycle
+  (testing "the real assignment seam persists matching PSR and PUR around invocation"
+    (let [store (make-evidence-store)]
+      (with-redefs [reg/invoke-agent!
+                    (fn [_agent-id _prompt _timeout-ms]
+                      {:ok true
+                       :result "Implemented through the selected pattern."
+                       :session-id "agent-session-gate-a"})]
+        (let [result (orch/assign-issue!
+                      sample-issue
+                      {:evidence-store store
+                       :repo-dir "/tmp/test-repo"
+                       :timeout-ms 5000
+                       :session-id "workflow-session-gate-a"
+                       :pattern-action
+                       {:pattern-id "musn/pattern-action-rpc"
+                        :rationale "exercise the selected pattern at the controller seam"}})
+              entries (estore/query* store {})
+              psr (some #(when (= :pattern-selection (:evidence/type %)) %) entries)
+              pur (some #(when (= :pattern-outcome (:evidence/type %)) %) entries)]
+          (is (true? (:ok result)))
+          (is (= :pattern-action/selected (get-in psr [:evidence/body :event])))
+          (is (= :pattern-action/completed (get-in pur [:evidence/body :event])))
+          (is (= (:evidence/id psr) (:evidence/in-reply-to pur)))
+          (is (= ["codex-1" "codex-1"]
+                 (mapv :evidence/author [psr pur])))
+          (is (= ["workflow-session-gate-a" "workflow-session-gate-a"]
+                 (mapv :evidence/session-id [psr pur])))
+          (is (= [:musn/pattern-action-rpc :musn/pattern-action-rpc]
+                 (mapv :evidence/pattern-id [psr pur]))))))))
+
 (deftest assign-issue-mfuton-mode-rewrites-github-issue-language
   (testing "mfuton mode rewrites assignment prompt issue language to mfuton gitlab issue"
     (let [invoked (atom nil)]

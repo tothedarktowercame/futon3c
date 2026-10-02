@@ -11,11 +11,15 @@ throw. Both records go through the evidence single-routing authority and must
 be readable back before execution continues. The action cannot override the
 identity stamped onto either record. A thrown action retains a typed failure
 PUR, so a selected pattern is not left without an outcome merely because the
-work failed. Focused tests use the real atom evidence backend and prove
-pattern/agent/session continuity, linkage, pre-action identity refusal, and the
-thrown-action case. Gate A remains open until an actual agent controller calls
-this boundary for a coding task and its durable evidence-store pair is
-retained; this parcel does not manufacture that operational observation.
+work failed. `tickle-orchestrate/assign-issue!` now exposes this boundary at
+the real agent invocation seam when its controller supplies `:pattern-action`;
+the controller, rather than the invoked agent, stamps the issue, agent, and
+workflow-session identity. Focused tests use the real atom evidence backend
+and prove pattern/agent/session continuity, linkage, pre-action identity
+refusal, and the thrown-action case, including a controller-level invocation.
+Gate A remains open until a non-test coding session supplies a selected pattern
+and retains its durable evidence-store pair; this parcel does not manufacture
+that operational observation.
 
 - [ ] An agent completes Gate A without manual `!psr`/`!pur` commands, and the evidence store contains matching PSR and PUR records with pattern, agent, and session continuity.
 - [ ] A Gate B evidence record contains candidate G scores, temperature, probabilities, the suggested pattern, and either adherence or a justified deviation.
