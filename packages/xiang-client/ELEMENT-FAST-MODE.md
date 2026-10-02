@@ -7,6 +7,24 @@ item 1 reads what they produce.
 
 Line numbers are for `element-web-futon` at fd64e618af.
 
+## Handoff
+
+Implement items 1 and 4 below in `element-web-futon` on `futon/main`. Make
+one commit per item, item 4 first: it changes the call sites that item 1
+then extends. Each commit carries the tests listed for its item. Gates:
+
+- the fork's lint (`pnpm lint:types`, plus eslint on the touched files);
+- the unit tests for `src/customisations/` (`pnpm test:unit`, vitest, filtered to those files);
+- a build with `apps/web/scripts/build-futon.sh`.
+
+Then check by hand in a room where the 象 widget is mounted:
+
+- a new operator message shows dotted 小象 marks within a few seconds;
+- they are replaced by 象's marks once the analysis lands;
+- the network panel shows one turn-list request per 10 s per room.
+
+Report the commit shas, the test output, and what the manual check showed.
+
 ## Item 1: show 小象's draft before 象's analysis arrives
 
 **Today.** `apps/web/src/customisations/FutonIntentMarks.ts:79`
@@ -67,9 +85,9 @@ as `"model"`.
   fetches and 50 DOM rewrites every 10 s, including for turns whose analysis
   is final.
 - `FutonIntentMarks.ts:161`: the shared list is
-  `/api/xiang/turns?limit=300`. It covers all sessions and carries every
-  turn's full `source-text`, which is 167 KB per fetch. A Matrix event older
-  than the newest 300 turns system-wide gets no marks at all.
+  `/api/xiang/turns?limit=300`. Since futon3c 67758c73 the proxy returns
+  only turns recorded in the verified room, without `source-text`, so this
+  response is now small. Its `limit` counts this room's turns only.
 - `TextualBodyFactory.tsx:340-347`: each render of each body maps the whole
   live timeline to collect authors for `requestsPostsPerAuthorCell`. This is
   quadratic in the number of messages, and it runs for every message, even
@@ -85,10 +103,7 @@ as `"model"`.
   Stop polling a turn once its status is final. Final statuses are
   `analyzed`, `refused` and `failed`, plus whatever status item 3 introduces
   for recorded agent replies; read it from that commit.
-- Narrow the list query. The route already accepts `session=` and `agent=`
-  (futon3c `http.clj` `handle-xiang`). If the room-to-session mapping is not
-  available to the client, ask claude-17 for a `room=` filter rather than
-  raising `limit`.
+- Leave the list query as it is: the proxy already scopes it to the room.
 - Compute `authors` only when `requestsPostsPerAuthorCell(content.body)` is
   true, and compute it inside that branch.
 
@@ -108,9 +123,3 @@ as `"model"`.
 
 Neither change alters the `turn-view` response shape beyond the optional
 `basis`/`mark` fields above.
-
-## Not covered
-
-Correcting a mark from Element (click an underline and choose the right
-intent, which 小象 then trains on) has no route yet. The chat proxy forwards
-GETs only, and futon3c has no correction action. It is a later step.
