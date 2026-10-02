@@ -31,6 +31,7 @@ def batch(token, events=(), room=ROOM, invites=()):
 class FakeHTTP:
     def __init__(self):
         self.calls, self.posts, self.invokes, self.announces = [], {}, [], []
+        self.uploads = []
         self.syncs = []
         self.reply = 'answer'
         self.user_id = '@codex:matrix.paragogy.net'
@@ -39,7 +40,11 @@ class FakeHTTP:
     def open(self, req, timeout=None):
         self.calls.append(req)
         assert req.get_header('Authorization') == 'Bearer offline-token'
-        path = unquote(urlsplit(req.full_url).path).removeprefix('/_matrix/client/v3')
+        raw_path = unquote(urlsplit(req.full_url).path)
+        if raw_path == '/_matrix/media/v3/upload':
+            self.uploads.append((req.get_header('Content-type'), req.data))
+            return io.BytesIO(json.dumps({'content_uri': 'mxc://offline/chart'}).encode())
+        path = raw_path.removeprefix('/_matrix/client/v3')
         if path == '/account/whoami':
             result = {'user_id': self.user_id}
         elif path == '/sync':
@@ -161,6 +166,51 @@ class MatrixTest(unittest.TestCase):
         self.assertEqual('python', cell[m.fumarimo.EVENT_NAMESPACE]['language'])
         self.assertEqual('$request', cell[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
         self.assertEqual('$request', cell['m.relates_to']['m.in_reply_to']['event_id'])
+
+    def test_fumarimo_literal_wealth_chart_publishes_linked_image_output(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = '''```python
+import pandas as pd
+# Federal Reserve Distributional Financial Accounts, 2026 Q2.
+wealth = pd.DataFrame({
+    "Group": ["Bottom 50%", "50th-90th", "Top 10%"],
+    "Population (%)": [50.0, 40.0, 10.0],
+    "Net wealth ($T)": [4.28, 53.43, 127.95],
+})
+wealth
+```'''
+        bot.process_sync(batch('b1', [event('$wealth', '@fumarimo plot wealth')]))
+        self.drain(bot)
+
+        cell = next(p for p in self.http.posts.values()
+                    if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell')
+        output = next(p for p in self.http.posts.values()
+                      if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'image-output')
+        self.assertEqual(1, len(self.http.uploads))
+        self.assertEqual('image/svg+xml', self.http.uploads[0][0])
+        self.assertTrue(self.http.uploads[0][1].startswith(b'<svg'))
+        self.assertIn(b'100%: $185.66T', self.http.uploads[0][1])
+        self.assertEqual('mxc://offline/chart', output['url'])
+        self.assertEqual(cell[m.fumarimo.EVENT_NAMESPACE]['cell_id'],
+                         output[m.fumarimo.EVENT_NAMESPACE]['cell_id'])
+        self.assertEqual('$sent', output[m.fumarimo.EVENT_NAMESPACE]['cell_event_id'])
+        self.assertEqual('$wealth', output[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual('$sent', output['m.relates_to']['event_id'])
+
+    def test_fumarimo_does_not_execute_unrecognized_python(self):
+        marker = self.root / 'must-not-exist'
+        source = f'''import os
+os.system("touch {marker}")
+fig
+'''
+        self.assertIsNone(m.fumarimo.safe_cumulative_wealth_svg(source))
+        self.assertFalse(marker.exists())
 
     def test_fumarimo_clarification_remains_an_ordinary_reply(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')

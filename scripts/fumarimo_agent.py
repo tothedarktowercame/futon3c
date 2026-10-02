@@ -8,10 +8,13 @@ output events.
 """
 from __future__ import annotations
 
+import ast
 import html
+import math
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 import urllib.parse
@@ -25,6 +28,103 @@ EVENT_NAMESPACE = "org.paragogy.marimo"
 PYTHON_MSGTYPE = "m.text"
 OUTPUT_MSGTYPE = "m.image"
 OUTPUT_RELATION = EVENT_NAMESPACE + ".output"
+
+
+def safe_cumulative_wealth_svg(source: str) -> bytes | None:
+    """Render one narrow chart vocabulary without executing Python.
+
+    Fumarimo cells are untrusted Matrix/LLM output.  This recognizer reads only
+    literal arguments to ``pd.DataFrame`` and refuses every other dataset
+    shape.  It deliberately does not import, evaluate, or execute the cell.
+    """
+    if len(source) > 50_000:
+        return None
+    try:
+        tree = ast.parse(source, mode="exec")
+    except (SyntaxError, ValueError):
+        return None
+    data = None
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not any(
+            isinstance(target, ast.Name) and target.id == "wealth" for target in node.targets
+        ):
+            continue
+        call = node.value
+        if not (
+            isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and call.func.attr == "DataFrame"
+            and isinstance(call.func.value, ast.Name)
+            and call.func.value.id == "pd"
+            and len(call.args) == 1
+            and not call.keywords
+        ):
+            return None
+        try:
+            data = ast.literal_eval(call.args[0])
+        except (ValueError, TypeError, MemoryError, RecursionError):
+            return None
+        break
+    if not isinstance(data, dict) or set(data) != {
+        "Group", "Population (%)", "Net wealth ($T)"
+    }:
+        return None
+    groups = data["Group"]
+    population = data["Population (%)"]
+    wealth = data["Net wealth ($T)"]
+    if not (
+        isinstance(groups, list)
+        and isinstance(population, list)
+        and isinstance(wealth, list)
+        and 2 <= len(groups) == len(population) == len(wealth) <= 20
+        and all(isinstance(group, str) and len(group) <= 80 for group in groups)
+        and all(type(value) in (int, float) and math.isfinite(value) and value >= 0
+                for value in population + wealth)
+        and abs(sum(population) - 100.0) < 1e-6
+        and sum(wealth) > 0
+    ):
+        return None
+
+    cumulative_population = [0.0]
+    cumulative_wealth = [0.0]
+    for pop_value, wealth_value in zip(population, wealth):
+        cumulative_population.append(cumulative_population[-1] + pop_value)
+        cumulative_wealth.append(cumulative_wealth[-1] + wealth_value)
+
+    width, height = 900, 540
+    left, right, top, bottom = 90, 35, 70, 75
+    plot_width, plot_height = width - left - right, height - top - bottom
+    maximum = cumulative_wealth[-1] * 1.08
+    x = lambda value: left + plot_width * value / 100.0
+    y = lambda value: top + plot_height * (1.0 - value / maximum)
+    points = " ".join(
+        f"{x(pop_value):.1f},{y(wealth_value):.1f}"
+        for pop_value, wealth_value in zip(cumulative_population, cumulative_wealth)
+    )
+    quarter_match = re.search(r"\b(20\d{2} Q[1-4])\b", source)
+    period = quarter_match.group(1) if quarter_match else "period stated in cell"
+    labels = []
+    for pop_value, wealth_value in zip(cumulative_population[1:], cumulative_wealth[1:]):
+        labels.append(
+            f'<circle cx="{x(pop_value):.1f}" cy="{y(wealth_value):.1f}" r="5" fill="#1565c0"/>'
+            f'<text x="{x(pop_value) - 7:.1f}" y="{y(wealth_value) - 10:.1f}" '
+            f'text-anchor="end">{pop_value:g}%: ${wealth_value:.2f}T</text>'
+        )
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="sans-serif" font-size="13" fill="#202020">
+<text x="{width / 2}" y="30" text-anchor="middle" font-size="20" font-weight="bold">Cumulative U.S. Household Net Wealth by Population Percentile</text>
+<text x="{width / 2}" y="52" text-anchor="middle" font-size="14">{html.escape(period)}</text>
+<line x1="{left}" y1="{top}" x2="{left}" y2="{height - bottom}" stroke="#555"/>
+<line x1="{left}" y1="{height - bottom}" x2="{width - right}" y2="{height - bottom}" stroke="#555"/>
+<polyline points="{points}" fill="none" stroke="#1565c0" stroke-width="3"/>
+{''.join(labels)}
+<text x="{width / 2}" y="{height - 20}" text-anchor="middle">Cumulative population, ordered from lowest to highest wealth</text>
+<text transform="translate(24 {height / 2}) rotate(-90)" text-anchor="middle">Cumulative net wealth (trillions of dollars)</text>
+<text x="{left}" y="{height - bottom + 22}" text-anchor="middle">0%</text>
+<text x="{width - right}" y="{height - bottom + 22}" text-anchor="middle">100%</text>
+</g></svg>'''
+    return svg.encode("utf-8")
 
 
 def python_cell_content(source: str, request_event_id: str, cell_id: str) -> dict:
