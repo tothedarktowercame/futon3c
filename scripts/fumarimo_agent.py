@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-"""Matrix publisher for a Marimo code cell and its linked output.
+"""Marimo execution and Matrix publication for notebook cells and outputs.
 
-The execution boundary is deliberately absent here: callers supply reviewed
-Python source and an already-uploaded MXC image.  This module owns only the
-durable Matrix representation and provenance between the request, cell, and
-output events.
+Cells execute in the already-authorized Marimo notebook session.  This module
+also owns the durable Matrix representation and provenance between the request,
+cell, and output events.
 """
 from __future__ import annotations
 
-import ast
+import base64
 import html
-import math
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import time
 import urllib.parse
 import urllib.request
 import uuid
+from typing import NamedTuple
 
 
 EVENT_NAMESPACE = "org.paragogy.marimo"
@@ -30,101 +28,82 @@ OUTPUT_MSGTYPE = "m.image"
 OUTPUT_RELATION = EVENT_NAMESPACE + ".output"
 
 
-def safe_cumulative_wealth_svg(source: str) -> bytes | None:
-    """Render one narrow chart vocabulary without executing Python.
+class MarimoOutput(NamedTuple):
+    mimetype: str
+    data: bytes | str
 
-    Fumarimo cells are untrusted Matrix/LLM output.  This recognizer reads only
-    literal arguments to ``pd.DataFrame`` and refuses every other dataset
-    shape.  It deliberately does not import, evaluate, or execute the cell.
-    """
-    if len(source) > 50_000:
-        return None
-    try:
-        tree = ast.parse(source, mode="exec")
-    except (SyntaxError, ValueError):
-        return None
-    data = None
-    for node in tree.body:
-        if not isinstance(node, ast.Assign) or not any(
-            isinstance(target, ast.Name) and target.id == "wealth" for target in node.targets
-        ):
-            continue
-        call = node.value
-        if not (
-            isinstance(call, ast.Call)
-            and isinstance(call.func, ast.Attribute)
-            and call.func.attr == "DataFrame"
-            and isinstance(call.func.value, ast.Name)
-            and call.func.value.id == "pd"
-            and len(call.args) == 1
-            and not call.keywords
-        ):
-            return None
-        try:
-            data = ast.literal_eval(call.args[0])
-        except (ValueError, TypeError, MemoryError, RecursionError):
-            return None
-        break
-    if not isinstance(data, dict) or set(data) != {
-        "Group", "Population (%)", "Net wealth ($T)"
-    }:
-        return None
-    groups = data["Group"]
-    population = data["Population (%)"]
-    wealth = data["Net wealth ($T)"]
-    if not (
-        isinstance(groups, list)
-        and isinstance(population, list)
-        and isinstance(wealth, list)
-        and 2 <= len(groups) == len(population) == len(wealth) <= 20
-        and all(isinstance(group, str) and len(group) <= 80 for group in groups)
-        and all(type(value) in (int, float) and math.isfinite(value) and value >= 0
-                for value in population + wealth)
-        and abs(sum(population) - 100.0) < 1e-6
-        and sum(wealth) > 0
-    ):
-        return None
 
-    cumulative_population = [0.0]
-    cumulative_wealth = [0.0]
-    for pop_value, wealth_value in zip(population, wealth):
-        cumulative_population.append(cumulative_population[-1] + pop_value)
-        cumulative_wealth.append(cumulative_wealth[-1] + wealth_value)
+class MarimoExecutor:
+    """Execute cells through an existing authenticated Marimo session."""
 
-    width, height = 900, 540
-    left, right, top, bottom = 90, 35, 70, 75
-    plot_width, plot_height = width - left - right, height - top - bottom
-    maximum = cumulative_wealth[-1] * 1.08
-    x = lambda value: left + plot_width * value / 100.0
-    y = lambda value: top + plot_height * (1.0 - value / maximum)
-    points = " ".join(
-        f"{x(pop_value):.1f},{y(wealth_value):.1f}"
-        for pop_value, wealth_value in zip(cumulative_population, cumulative_wealth)
-    )
-    quarter_match = re.search(r"\b(20\d{2} Q[1-4])\b", source)
-    period = quarter_match.group(1) if quarter_match else "period stated in cell"
-    labels = []
-    for pop_value, wealth_value in zip(cumulative_population[1:], cumulative_wealth[1:]):
-        labels.append(
-            f'<circle cx="{x(pop_value):.1f}" cy="{y(wealth_value):.1f}" r="5" fill="#1565c0"/>'
-            f'<text x="{x(pop_value) - 7:.1f}" y="{y(wealth_value) - 10:.1f}" '
-            f'text-anchor="end">{pop_value:g}%: ${wealth_value:.2f}T</text>'
-        )
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-<rect width="100%" height="100%" fill="white"/>
-<g font-family="sans-serif" font-size="13" fill="#202020">
-<text x="{width / 2}" y="30" text-anchor="middle" font-size="20" font-weight="bold">Cumulative U.S. Household Net Wealth by Population Percentile</text>
-<text x="{width / 2}" y="52" text-anchor="middle" font-size="14">{html.escape(period)}</text>
-<line x1="{left}" y1="{top}" x2="{left}" y2="{height - bottom}" stroke="#555"/>
-<line x1="{left}" y1="{height - bottom}" x2="{width - right}" y2="{height - bottom}" stroke="#555"/>
-<polyline points="{points}" fill="none" stroke="#1565c0" stroke-width="3"/>
-{''.join(labels)}
-<text x="{width / 2}" y="{height - 20}" text-anchor="middle">Cumulative population, ordered from lowest to highest wealth</text>
-<text transform="translate(24 {height / 2}) rotate(-90)" text-anchor="middle">Cumulative net wealth (trillions of dollars)</text>
-<text x="{left}" y="{height - bottom + 22}" text-anchor="middle">0%</text>
-<text x="{width - right}" y="{height - bottom + 22}" text-anchor="middle">100%</text>
-</g></svg>'''
-    return svg.encode("utf-8")
+    def __init__(self, base_url: str, token_file: Path, notebook: str):
+        self.base_url = base_url.rstrip("/")
+        self.token = token_file.read_text().strip()
+        if not self.token or any(character.isspace() for character in self.token):
+            raise ValueError("missing or malformed Marimo token")
+        self.notebook = notebook
+
+    def _request(self, method: str, path: str, body: dict | None = None, *, session: str | None = None) -> bytes:
+        headers = {"Authorization": "Bearer " + self.token}
+        data = None
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+            data = json.dumps(body).encode()
+        if session is not None:
+            headers["Marimo-Session-Id"] = session
+        request = urllib.request.Request(self.base_url + path, data=data, method=method, headers=headers)
+        with urllib.request.build_opener().open(request, timeout=120) as response:
+            return response.read()
+
+    def _session_id(self) -> str:
+        sessions = json.loads(self._request("GET", "/api/sessions"))
+        matches = [
+            session_id for session_id, detail in sessions.items()
+            if detail.get("path") == self.notebook or detail.get("filename") == self.notebook
+        ]
+        if len(matches) != 1:
+            raise RuntimeError(f"expected one active Marimo session for notebook, found {len(matches)}")
+        return matches[0]
+
+    @staticmethod
+    def _decode_output(output: dict) -> MarimoOutput:
+        mimetype = output.get("mimetype")
+        data = output.get("data")
+        if mimetype == "application/vnd.marimo+mimebundle":
+            bundle = json.loads(data)
+            for preferred in ("image/png", "image/svg+xml", "text/plain", "text/html", "application/json"):
+                if preferred in bundle:
+                    mimetype, data = preferred, bundle[preferred]
+                    break
+            else:
+                mimetype, data = next(iter(bundle.items()))
+        if not isinstance(mimetype, str) or not isinstance(data, str):
+            raise RuntimeError("Marimo returned an invalid output")
+        if mimetype.startswith("image/"):
+            prefix = f"data:{mimetype};base64,"
+            if data.startswith(prefix):
+                return MarimoOutput(mimetype, base64.b64decode(data[len(prefix):], validate=True))
+            if mimetype == "image/svg+xml" and data.lstrip().startswith("<svg"):
+                return MarimoOutput(mimetype, data.encode())
+            raise RuntimeError("Marimo image output was not an accepted data URL")
+        return MarimoOutput(mimetype, data)
+
+    def execute(self, source: str) -> MarimoOutput:
+        stream = self._request("POST", "/api/kernel/execute", {"code": source}, session=self._session_id()).decode()
+        stderr = []
+        event = ""
+        for line in stream.splitlines():
+            if line.startswith("event: "):
+                event = line[7:]
+            elif line.startswith("data: "):
+                payload = json.loads(line[6:])
+                if event == "stderr":
+                    stderr.append(str(payload.get("data", "")))
+                elif event == "done":
+                    if not payload.get("success"):
+                        raise RuntimeError("Marimo execution failed: " + "".join(stderr)[-2000:])
+                    return self._decode_output(payload.get("output") or {"mimetype": "text/plain", "data": ""})
+        raise RuntimeError("Marimo execution ended without a done event")
 
 
 def python_cell_content(source: str, request_event_id: str, cell_id: str) -> dict:
@@ -173,6 +152,32 @@ def image_output_content(
         },
         EVENT_NAMESPACE: {
             "kind": "image-output",
+            "cell_id": cell_id,
+            "cell_event_id": cell_event_id,
+            "request_event_id": request_event_id,
+            "execution_id": execution_id,
+            "status": "ok",
+        },
+    }
+
+
+def value_output_content(
+    value: str,
+    mimetype: str,
+    request_event_id: str,
+    cell_event_id: str,
+    cell_id: str,
+    execution_id: str,
+) -> dict:
+    if not cell_event_id.startswith("$"):
+        raise ValueError("cell_event_id must be a Matrix event ID")
+    return {
+        "msgtype": "m.text",
+        "body": value,
+        "m.relates_to": {"rel_type": OUTPUT_RELATION, "event_id": cell_event_id},
+        EVENT_NAMESPACE: {
+            "kind": "value-output",
+            "mimetype": mimetype,
             "cell_id": cell_id,
             "cell_event_id": cell_event_id,
             "request_event_id": request_event_id,

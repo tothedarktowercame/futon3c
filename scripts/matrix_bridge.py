@@ -198,18 +198,25 @@ class MatrixBot(IRCBot):
             content = fumarimo.python_cell_content(source, context["event_id"], cell_id)
             sent = self._send_content(content, reply_ch)
             cell_event_id = sent.get("event_id") if isinstance(sent, dict) else None
-            svg = fumarimo.safe_cumulative_wealth_svg(source)
-            if svg is not None and cell_event_id:
-                image_mxc = self._upload_media(svg, "image/svg+xml", "wealth-by-population.svg")
-                self._send_content(fumarimo.image_output_content(
-                    image_mxc,
-                    "Cumulative U.S. household net wealth by population percentile; rendered from the cell's literal data",
-                    context["event_id"],
-                    cell_event_id,
-                    cell_id,
-                    uuid.uuid4().hex,
-                    "image/svg+xml",
-                ), reply_ch)
+            if cell_event_id:
+                executor = fumarimo.MarimoExecutor(
+                    os.environ.get("FUMARIMO_MARIMO_URL", "http://127.0.0.1:2718/marimo"),
+                    Path(os.environ.get("FUMARIMO_MARIMO_TOKEN_FILE", str(Path.home() / ".marimo-passphrase"))),
+                    os.environ.get("FUMARIMO_MARIMO_NOTEBOOK", "/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py"),
+                )
+                output = executor.execute(source)
+                execution_id = uuid.uuid4().hex
+                if output.mimetype.startswith("image/") and isinstance(output.data, bytes):
+                    suffix = "png" if output.mimetype == "image/png" else "svg"
+                    image_mxc = self._upload_media(output.data, output.mimetype, f"marimo-output.{suffix}")
+                    output_content = fumarimo.image_output_content(
+                        image_mxc, "Marimo cell output", context["event_id"], cell_event_id,
+                        cell_id, execution_id, output.mimetype)
+                else:
+                    value = output.data.decode(errors="replace") if isinstance(output.data, bytes) else output.data
+                    output_content = fumarimo.value_output_content(
+                        value, output.mimetype, context["event_id"], cell_event_id, cell_id, execution_id)
+                self._send_content(output_content, reply_ch)
         else:
             sent = self._say(result, channel=reply_ch)
         event_id = sent.get("event_id") if isinstance(sent, dict) else None

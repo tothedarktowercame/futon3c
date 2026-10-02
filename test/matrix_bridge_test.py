@@ -44,6 +44,24 @@ class FakeHTTP:
         if raw_path == '/_matrix/media/v3/upload':
             self.uploads.append((req.get_header('Content-type'), req.data))
             return io.BytesIO(json.dumps({'content_uri': 'mxc://offline/chart'}).encode())
+        if raw_path == '/marimo/api/sessions':
+            result = {'s-fumarimo': {
+                'filename': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+                'path': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+            }}
+            return io.BytesIO(json.dumps(result).encode())
+        if raw_path == '/marimo/api/kernel/execute':
+            code = json.loads(req.data)['code']
+            if code in ('6 * 7', 'value = 6 * 7\nvalue'):
+                output = {'mimetype': 'text/html', 'data': "<pre class='text-xs'>42</pre>"}
+            elif code == 'make_an_unrelated_plot()':
+                output = {'mimetype': 'application/vnd.marimo+mimebundle', 'data': json.dumps({
+                    'image/png': 'data:image/png;base64,iVBORw0KGgo=',
+                })}
+            else:
+                raise AssertionError('unexpected Marimo code: ' + code)
+            stream = 'event: done\ndata: ' + json.dumps({'success': True, 'output': output}) + '\n\n'
+            return io.BytesIO(stream.encode())
         path = raw_path.removeprefix('/_matrix/client/v3')
         if path == '/account/whoami':
             result = {'user_id': self.user_id}
@@ -76,6 +94,13 @@ class MatrixTest(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / 'codex.token').write_text('offline-token\n')
         self.http = FakeHTTP()
+        marimo_env = patch.dict(m.os.environ, {
+            'FUMARIMO_MARIMO_URL': 'https://offline.invalid/marimo',
+            'FUMARIMO_MARIMO_TOKEN_FILE': str(self.root / 'fumarimo.token'),
+            'FUMARIMO_MARIMO_NOTEBOOK': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+        })
+        marimo_env.start()
+        self.addCleanup(marimo_env.stop)
         evidence_patch = patch.object(m.irc, "post_transport_evidence")
         self.evidence = evidence_patch.start()
         self.addCleanup(evidence_patch.stop)
@@ -167,7 +192,7 @@ class MatrixTest(unittest.TestCase):
         self.assertEqual('$request', cell[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
         self.assertEqual('$request', cell['m.relates_to']['m.in_reply_to']['event_id'])
 
-    def test_fumarimo_literal_wealth_chart_publishes_linked_image_output(self):
+    def test_fumarimo_two_unrelated_cells_use_marimo_and_publish_linked_outputs(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')
         bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
                           self.root, self.root / 'fumarimo-state', handle_commands=True)
@@ -175,42 +200,31 @@ class MatrixTest(unittest.TestCase):
         self.http.user_id = '@fumarimo:matrix.paragogy.net'
         bot.connect()
         bot.process_sync(batch('baseline'))
-        self.http.reply = '''```python
-import pandas as pd
-# Federal Reserve Distributional Financial Accounts, 2026 Q2.
-wealth = pd.DataFrame({
-    "Group": ["Bottom 50%", "50th-90th", "Top 10%"],
-    "Population (%)": [50.0, 40.0, 10.0],
-    "Net wealth ($T)": [4.28, 53.43, 127.95],
-})
-wealth
-```'''
-        bot.process_sync(batch('b1', [event('$wealth', '@fumarimo plot wealth')]))
+        self.http.reply = '```python\n6 * 7\n```'
+        bot.process_sync(batch('b1', [event('$scalar', '@fumarimo calculate')]))
+        self.drain(bot)
+        self.http.reply = '```python\nmake_an_unrelated_plot()\n```'
+        bot.process_sync(batch('b2', [event('$plot', '@fumarimo plot')]))
         self.drain(bot)
 
-        cell = next(p for p in self.http.posts.values()
-                    if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell')
-        output = next(p for p in self.http.posts.values()
-                      if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'image-output')
+        cells = [p for p in self.http.posts.values()
+                 if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell']
+        values = [p for p in self.http.posts.values()
+                  if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'value-output']
+        images = [p for p in self.http.posts.values()
+                  if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'image-output']
+        self.assertEqual(2, len(cells))
+        self.assertEqual(1, len(values))
+        self.assertEqual(1, len(images))
+        self.assertIn('42', values[0]['body'])
+        self.assertEqual('$scalar', values[0][m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
         self.assertEqual(1, len(self.http.uploads))
-        self.assertEqual('image/svg+xml', self.http.uploads[0][0])
-        self.assertTrue(self.http.uploads[0][1].startswith(b'<svg'))
-        self.assertIn(b'100%: $185.66T', self.http.uploads[0][1])
-        self.assertEqual('mxc://offline/chart', output['url'])
-        self.assertEqual(cell[m.fumarimo.EVENT_NAMESPACE]['cell_id'],
-                         output[m.fumarimo.EVENT_NAMESPACE]['cell_id'])
-        self.assertEqual('$sent', output[m.fumarimo.EVENT_NAMESPACE]['cell_event_id'])
-        self.assertEqual('$wealth', output[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
-        self.assertEqual('$sent', output['m.relates_to']['event_id'])
-
-    def test_fumarimo_does_not_execute_unrecognized_python(self):
-        marker = self.root / 'must-not-exist'
-        source = f'''import os
-os.system("touch {marker}")
-fig
-'''
-        self.assertIsNone(m.fumarimo.safe_cumulative_wealth_svg(source))
-        self.assertFalse(marker.exists())
+        self.assertEqual('image/png', self.http.uploads[0][0])
+        self.assertTrue(self.http.uploads[0][1].startswith(b'\x89PNG'))
+        self.assertEqual('mxc://offline/chart', images[0]['url'])
+        self.assertEqual('$plot', images[0][m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual('$sent', images[0][m.fumarimo.EVENT_NAMESPACE]['cell_event_id'])
+        self.assertEqual('$sent', images[0]['m.relates_to']['event_id'])
 
     def test_fumarimo_clarification_remains_an_ordinary_reply(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')
