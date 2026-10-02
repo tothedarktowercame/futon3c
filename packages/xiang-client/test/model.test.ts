@@ -67,7 +67,7 @@ test("the detail panel: marks, fragments, notices, author", () => {
   assert.equal(d.author, "claude-17");
   assert.equal(d.labeller, "象-2");
   assert.deepEqual(d.marks.map((m) => m.intent), ["gist", "ask-action"]);
-  assert.deepEqual(d.fragments, [{ sentence: "s1", intent: "gist", target: "the fix", rationale: "declared", patterns: ["social/report-done"] }]);
+  assert.deepEqual(d.fragments, [{ sentence: "s1", intent: "gist", target: "the fix", rationale: "declared", patterns: ["social/report-done"], basis: "xiang" }]);
   assert.ok(d.html.includes('<mark class="xiang-cue" data-intent="gist"'));
   assert.equal(d.notices.length, 1);
 });
@@ -98,4 +98,11 @@ test("the health pane", () => {
     outstanding: 3,
   });
   assert.equal(healthPane(null).seat, "?");
+});
+
+test("the agreement line", async () => {
+  const { agreementLine } = await import("../widget/model.js");
+  assert.equal(agreementLine({ analysed: 10, drafted: 4, "with-draft": 8, totals: { agreed: 12, relabelled: 3, resegmented: 1 } }), "小象 vs 象: 75% agreed over 16 fragments · 4 turns settled by the draft · 8/10 readings had a draft");
+  assert.equal(agreementLine({ analysed: 0, totals: {} }), "小象 vs 象: no data over 0 fragments · 0 turns settled by the draft · 0/0 readings had a draft");
+  assert.equal(agreementLine(null), "agreement: unavailable");
 });

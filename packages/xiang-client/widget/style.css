@@ -25,6 +25,10 @@ main { display: grid; grid-template-columns: 22em 1fr 20em; height: calc(100vh -
 .detail .text { white-space: pre-wrap; font-size: 1.05em; padding: .6em; border: 1px solid var(--line); border-radius: 4px; }
 mark.xiang-cue { background: var(--cue); color: inherit; border-bottom: 2px solid #96c; padding: 0 1px; }
 span.xiang-lexical { text-decoration: underline wavy #96c; }
+span.xiang-draft { border-bottom: 1px dotted #c93; }
+span.xiang-draft::after { content: attr(data-intent); font-size: .7em; color: #c93; vertical-align: super; margin-left: 2px; }
+.basis-xiaoxiang { color: #c93; }
+.basis-xiang-relabelled, .basis-xiang-resegmented { color: #96c; }
 .marks { padding-left: 1.2em; }
 .glyph { font-size: 1.2em; }
 .fragments { border-collapse: collapse; margin-top: .6em; font-size: .9em; }

@@ -138,3 +138,27 @@ which records each routed message as an operator turn (`operator_id` is the
 sender's nick or MXID) and each reply as an agent turn whose proforma marks
 (㊥ 🈸 …) are read, not inferred. `scripts/xiang_turns.py` is the bridge's
 client; `FUTON3C_XIANG_BRIDGE=0` turns it off.
+
+## The 小象 draft tier
+
+Before 象 reads a turn, `xiaoxiang_preview.py` (naive Bayes over 象's past
+readings, about 0.1 s, no LLM) drafts it: fragments with exact offsets and,
+where it is sure, an intent. The JVM runs it at record time
+(`FUTON3C_XIAOXIANG_PREVIEW` names the script; `FUTON3C_XIAOXIANG=0` turns
+it off) or accepts one from outside at `POST …/turns/:id/draft`. The draft
+is stored beside the record as `turn-X.json.draft.json`, rides the brief 象
+gets ("start from the draft; offsets are firm, intents are proposals"), and
+every fragment 象 publishes is stamped with its `basis`: `xiaoxiang`
+(agreed), `xiang-relabelled`, `xiang-resegmented` or `xiang` (new). A reading
+confirmed from a draft is therefore distinguishable from one 象 produced,
+which keeps 小象 from training on its own guesses.
+
+`GET /api/alpha/xiang/agreement?agent=…` sums those bases over the store.
+When that number justifies it, `FUTON3C_XIANG_SKIP_ROUTINE=1` lets a routine
+turn (every fragment sure, none act-bearing, every sentence covered, at most
+three sentences, not a `yes` or `undo`) be settled by the draft with
+`analysis_status "drafted"` and never queued. Off by default.
+
+The widget draws three tiers: lexical cues at once, the draft's labelled
+spans within a second (dotted, with the intent in superscript), 象's cues
+when the reading lands; the fragment table shows each fragment's basis.

@@ -9,7 +9,7 @@
 import { XiangClient } from "../src/client.js";
 import { escapeHtml } from "../src/marks.js";
 import type { TurnSummary } from "../src/types.js";
-import { changedTurns, configFromUrl, healthPane, obligationsPane, turnDetail, turnRows, type TurnDetail } from "./model.js";
+import { agreementLine, changedTurns, configFromUrl, healthPane, obligationsPane, turnDetail, turnRows, type TurnDetail } from "./model.js";
 
 const config = configFromUrl(window.location.href);
 const api = new XiangClient({ base: config.base });
@@ -77,13 +77,19 @@ function renderDetail(d: TurnDetail): void {
     ? `<ul class="marks">${d.marks.map((m) => `<li><span class="glyph">${escapeHtml(m.mark)}</span> <b>${escapeHtml(m.intent)}</b> <i>${escapeHtml(m.stage)}</i> ${escapeHtml(m.text.slice(0, 160))}</li>`).join("")}</ul>`
     : "";
   const fragments = d.fragments.length
-    ? `<table class="fragments"><tr><th>s</th><th>intent</th><th>target</th><th>rationale</th><th>patterns</th></tr>${d.fragments
+    ? `<table class="fragments"><tr><th>s</th><th>intent</th><th>basis</th><th>target</th><th>rationale</th><th>patterns</th></tr>${d.fragments
         .map(
           (f) =>
-            `<tr><td>${escapeHtml(f.sentence)}</td><td>${escapeHtml(f.intent)}</td><td>${escapeHtml(f.target ?? "∅")}</td><td>${escapeHtml(f.rationale)}</td><td>${f.patterns.map(escapeHtml).join("<br>")}</td></tr>`,
+            `<tr><td>${escapeHtml(f.sentence)}</td><td>${escapeHtml(f.intent)}</td><td class="basis-${escapeHtml(f.basis)}">${escapeHtml(f.basis)}</td><td>${escapeHtml(f.target ?? "∅")}</td><td>${escapeHtml(f.rationale)}</td><td>${f.patterns.map(escapeHtml).join("<br>")}</td></tr>`,
         )
-        .join("")}</table>`
-    : `<p class="muted">no reading yet (${escapeHtml(d.status)})</p>`;
+        .join("")}</table>${
+        d.agreement ? `<p class="muted">draft: ${d.agreement.agreed} agreed · ${d.agreement.relabelled} relabelled · ${d.agreement.resegmented} resegmented · ${d.agreement.new} new · ${d.agreement.dropped} dropped</p>` : ""
+      }`
+    : d.draft.length
+      ? `<table class="fragments draft"><tr><th>小象</th><th>text</th></tr>${d.draft
+          .map((f) => `<tr><td>${f.intent ? escapeHtml(f.intent) + (f.precision != null ? ` <span class="muted">p ${f.precision.toFixed(2)}</span>` : "") : `? ${f.guesses.map(escapeHtml).join(" / ")}`}</td><td>${escapeHtml(f.text.slice(0, 120))}</td></tr>`)
+          .join("")}</table><p class="muted">${d.status === "drafted" ? "settled by the draft; 象 did not read it" : `draft only; 象's reading is ${escapeHtml(d.status)}`}</p>`
+      : `<p class="muted">no reading yet (${escapeHtml(d.status)})</p>`;
   const notices = d.notices.map((n) => `<p class="notice">象: ${escapeHtml(n.text)}</p>`).join("");
   el.detail.innerHTML = `
     <header><span class="who ${d.origin}">${escapeHtml(d.author)}</span> <span class="when">${escapeHtml(d.when)}</span>
@@ -108,11 +114,15 @@ async function refreshSide(): Promise<void> {
       ? `<p class="err">obligations: ${escapeHtml(pane.error)}</p>`
       : list("owes", pane.owes) + list("owed", pane.owed) + `<p class="muted">as of ${escapeHtml(pane.asOf ?? "?")} · ${pane.unchecked} unchecked · ${pane.incomplete} incomplete</p>`;
   }
+  const a = await fetch(`${config.base}/api/alpha/xiang/agreement${config.agent ? `?agent=${encodeURIComponent(config.agent)}` : ""}`).then(
+    async (resp) => (resp.ok ? await resp.json().catch(() => null) : null),
+    () => null,
+  );
   const h = await api.health();
   const pane = healthPane(h.json as Parameters<typeof healthPane>[0]);
   el.health.innerHTML = `<h3>象</h3><p>seat <b>${escapeHtml(pane.seat)}</b> · ${escapeHtml(pane.state)} · ${pane.outstanding} outstanding${
     pane.benched.length ? ` · benched: ${pane.benched.map(escapeHtml).join(", ")}` : ""
-  }</p><p class="muted">${escapeHtml(pane.detail)}</p>`;
+  }</p><p class="muted">${escapeHtml(pane.detail)}</p><p class="muted">${escapeHtml(agreementLine(a))}</p>`;
 }
 
 el.title.textContent = config.agent ? `象 · ${config.agent}${config.session ? ` · ${config.session.slice(0, 8)}` : ""}` : "象";

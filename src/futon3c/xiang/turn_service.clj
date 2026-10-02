@@ -24,6 +24,11 @@
      :post-negation   (fn [payload] -> {:status .. :json ..})   POST /interpretation/negation
      :deliver-notice  (fn [payload] -> {:status .. :json ..})   POST /turn-notice
      :reset-seat!     (fn [agent]) optional; clears the seat's conversation
+     :draft           (fn [source-text] -> xiaoxiang_preview.py fragments or nil)
+                      optional; run at record time, about 0.1 s
+     :skip-routine?   true to record a routine turn (tr/routine-draft?) as
+                      \"drafted\" and never queue it; default false until
+                      the agreement numbers justify it
      :schedule!       (fn [delay-seconds thunk]) default: a daemon scheduler
      :now-ms          (fn [] ms) default System/currentTimeMillis
 
@@ -219,7 +224,7 @@
 ;; ---------------------------------------------------------------------------
 ;; Record (session-mode--record-turn via the store)
 
-(declare dispatch!)
+(declare dispatch! draft!)
 
 (defn record-turn!
   "Record one operator turn. OPTS are `tr/make-record`'s, plus :dispatch
@@ -232,12 +237,41 @@
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
         {:keys [id]} (ts/write-record! (cfg svc :store) record)
+        draft (draft! svc id)
         to-seat? (= (cfg svc :seat) agent-id)
         result (cond
                  to-seat? :skipped
                  (= dispatch :now) (dispatch! svc id {})
                  :else :pending)]
-    {:id id :record record :redacted redacted :dispatch result}))
+    {:id id :record (ts/read-record (cfg svc :store) id) :redacted redacted
+     :dispatch result :draft (some? draft)}))
+
+(defn draft!
+  "Run the :draft effect over ID's source text and store the draft; nil when
+   there is no effect, it returned nothing, or its output did not validate
+   (a bad draft is logged in health, never stored)."
+  [svc id]
+  (when-let [draft-fn (cfg svc :draft)]
+    (let [store (cfg svc :store)]
+      (when-let [record (ts/read-record store id)]
+        (try
+          (when-let [raw (draft-fn (:source_text record))]
+            (let [draft (tr/validate-draft record raw {:now-ms (now-ms svc)})]
+              (ts/write-draft! store id draft)
+              draft))
+          (catch Exception e
+            (set-health! svc nil (str id ": draft rejected: " (.getMessage e)))
+            nil))))))
+
+(defn store-draft!
+  "Store a draft submitted from outside (the bridge, a widget) for ID."
+  [svc id raw]
+  (let [store (cfg svc :store)
+        record (or (ts/read-record store id)
+                   (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
+        draft (tr/validate-draft record raw {:now-ms (now-ms svc)})]
+    (ts/write-draft! store id draft)
+    draft))
 
 (defn attach-happened!
   "Attach what the agent did while answering turn ID, then dispatch it: 象
@@ -261,7 +295,7 @@
 ;; ---------------------------------------------------------------------------
 ;; Dispatch (session-mode--dispatch-analysis)
 
-(declare reap!)
+(declare reap! dispatch-to!)
 
 (defn- schedule-reap! [svc id agent tries store-busy-delays delay-s]
   ((cfg svc :schedule!) delay-s
@@ -281,12 +315,25 @@
         path (ts/record-path store id)]
     (if-not (ts/read-record store id)
       {:dispatched false :reason :record-not-found}
+      (let [record (ts/read-record store id)
+            draft (ts/read-draft store id)]
+        (if (and draft (cfg svc :skip-routine?) (tr/routine-draft? record draft)
+                 (contains? #{nil "requested"} (:analysis_status record)))
+          ;; Routine: the draft is the reading. Recorded as such, never queued.
+          (do (ts/update-record! store id #(assoc % :analysis_status "drafted"))
+              (set-health! svc nil (str id ": routine, settled by the draft"))
+              {:dispatched false :reason :drafted :agent nil})
+          (dispatch-to! svc id agent store-busy-delays record draft path))))))
+
+(defn- dispatch-to!
+  [svc id agent store-busy-delays record draft path]
+  (let [store (cfg svc :store)]
       (let [_ (note-dispatch! svc id agent)
-            record (ts/read-record store id)
             brief-fn (if (= "agent" (:origin record)) tr/agent-brief tr/analysis-brief)
-            brief (brief-fn id path {:requisition (cfg svc :requisition)
-                                     :paths (cfg svc :brief-paths)
-                                     :vocabulary (cfg svc :vocabulary)})
+            brief (brief-fn id path (cond-> {:requisition (cfg svc :requisition)
+                                             :paths (cfg svc :brief-paths)
+                                             :vocabulary (cfg svc :vocabulary)}
+                                      draft (assoc :draft draft :draft-path (ts/draft-path store id))))
             reset-every (cfg svc :reset-every)
             count-before (:dispatch-count @(:state svc))
             reset? (and reset-every (>= count-before reset-every) (cfg svc :reset-seat!))
@@ -308,7 +355,7 @@
                             (when-let [s (:status response)] (str " (http " s ")"))
                             (when-let [e (:error response)] (str ": " e)))]
             (set-health! svc :failing reason)
-            {:dispatched false :agent agent :reason reason :response response}))))))
+            {:dispatched false :agent agent :reason reason :response response})))))
 
 ;; ---------------------------------------------------------------------------
 ;; Retry (turn_dispatch_reap.py --retry)
@@ -543,6 +590,7 @@
         record (or (ts/read-record store id)
                    (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
         canonical (-> (tr/validate-analysis record analysis (assoc opts :now-ms (now-ms svc)))
+                      (tr/annotate-with-draft (ts/read-draft store id))
                       (assoc :request_file (ts/record-path store id)
                              :request_sha256 (tr/sha256 (slurp (ts/record-path store id) :encoding "UTF-8"))))
         published (ts/publish-analysis! store id canonical)]
@@ -561,8 +609,32 @@
     (when-let [record (ts/read-record store id)]
       {:id id
        :record record
+       :draft (ts/read-draft store id)
        :analysis (ts/read-analysis store id)
        :candidates (ts/read-candidates store id)
        :notices (vec (keep (fn [o] (when-let [n (tr/withdrawal-notice o)]
                                     (assoc n :fragment_id (:fragment_id o))))
                            (:withdrawal_effects record)))})))
+
+(defn draft-agreement
+  "How often 象's reading changed 小象's draft, summed over the store's
+   analysed records (optionally one :session-id / :agent-id): the
+   :draft_agreement counts, plus :drafted (settled without a reading),
+   :with-draft and :without-draft record counts. This is the number that
+   says whether the LLM pass still earns its cost for a given intent."
+  [svc & {:keys [session-id agent-id limit] :or {limit 1000}}]
+  (let [store (cfg svc :store)
+        records (ts/list-records store :session-id session-id :agent-id agent-id :limit limit)
+        analyses (keep (fn [{:keys [id record]}]
+                         (when (= "analyzed" (:analysis_status record))
+                           [(:draft_agreement (ts/read-analysis store id)) record]))
+                       records)]
+    {:records (count records)
+     :drafted (count (filter #(= "drafted" (get-in % [:record :analysis_status])) records))
+     :analysed (count analyses)
+     :with-draft (count (filter first analyses))
+     :without-draft (count (remove first analyses))
+     :totals (reduce (fn [acc [da _]] (merge-with + acc (or da {})))
+                     {:agreed 0 :relabelled 0 :resegmented 0 :new 0 :dropped 0 :unsure 0
+                      :draft_fragments 0 :published_fragments 0}
+                     analyses)}))

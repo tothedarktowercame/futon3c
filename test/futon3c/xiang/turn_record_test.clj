@@ -283,3 +283,70 @@
     (is (str/includes? brief "Do NOT label withdraw on an agent turn"))
     (is (str/includes? brief "🈸"))
     (is (str/includes? brief "/p/turn-x.json"))))
+
+;; ---------------------------------------------------------------------------
+;; 小象 drafts
+
+(def draft-record (tr/structure-turn "Looks good. Please continue with the port."))
+
+(def raw-draft
+  [{:start 0 :end 11 :text "Looks good." :intent "approve" :guesses ["approve" "report"] :precision 0.84}
+   {:start 12 :end 42 :text "Please continue with the port." :intent nil :guesses ["continue" "ask-action"] :precision 0.3}])
+
+(deftest a-draft-is-validated-against-the-record
+  (let [d (tr/validate-draft draft-record raw-draft {:now-ms 0})]
+    (is (= "drafted" (:status d)))
+    (is (= "小象" (:labeller d)))
+    (is (= [true false] (map :sure (:fragments d))))
+    (is (= ["s1" "s2"] (map :sentence (:fragments d))))
+    (is (= 0.84 (:precision (first (:fragments d))))))
+  (let [bad (fn [fragments] (try (tr/validate-draft draft-record fragments {}) nil
+                                 (catch clojure.lang.ExceptionInfo e (.getMessage e))))]
+    (is (re-find #"offsets/text" (bad [{:start 0 :end 10 :text "Looks good."}])))
+    (is (re-find #"vocabulary label" (bad [{:start 0 :end 11 :text "Looks good." :intent "Not Ok"}])))))
+
+(defn- draft-of [record fragments] (tr/validate-draft record fragments {:now-ms 0}))
+
+(deftest routine-drafts-are-conservative
+  (let [sure (fn [f] (assoc f :intent (first (:guesses f))))]
+    (is (tr/routine-draft? draft-record (draft-of draft-record (map sure raw-draft))))
+    (is (not (tr/routine-draft? draft-record (draft-of draft-record raw-draft))) "an unsure fragment needs 象")
+    (is (not (tr/routine-draft? draft-record (draft-of draft-record [(sure (first raw-draft))]))) "an uncovered sentence needs 象")
+    (is (not (tr/routine-draft? draft-record (draft-of draft-record (map #(assoc % :intent "withdraw") raw-draft)))) "an act-bearing intent needs 象")
+    (is (not (tr/routine-draft? (assoc draft-record :origin "agent") (draft-of draft-record (map sure raw-draft)))))
+    (let [yes (tr/structure-turn "Yes.")]
+      (is (not (tr/routine-draft? yes (draft-of yes [{:start 0 :end 4 :text "Yes." :intent "approve"}]))) "an acceptance needs the agreement path"))
+    (let [long (tr/structure-turn "One. Two. Three. Four.")]
+      (is (not (tr/routine-draft? long (draft-of long (map (fn [s] {:start (:start s) :end (:end s) :text (:text s) :intent "report"}) (:sentences long)))))))))
+
+(deftest publishing-against-a-draft-records-the-basis
+  (let [draft (draft-of draft-record raw-draft)
+        analysis {:labeller "象-1"
+                  :sentences [{:id "s1" :fragments [(fragment {:start 0 :end 11 :text "Looks good." :intent "approve" :target "the port"})]}
+                              {:id "s2" :fragments [(fragment {:start 12 :end 18 :text "Please" :intent "ask-action" :target "x"})
+                                                    (fragment {:start 19 :end 42 :text "continue with the port." :intent "continue" :target "x"})]}]}
+        out (tr/annotate-with-draft (tr/validate-analysis draft-record analysis {}) draft)
+        bases (map :basis (mapcat :fragments (:sentences out)))]
+    (is (= ["xiaoxiang" "xiang-resegmented" "xiang-resegmented"] bases))
+    (is (= {:agreed 1 :relabelled 0 :resegmented 2 :new 0 :dropped 0 :unsure 1 :draft_fragments 2 :published_fragments 3}
+           (:draft_agreement out))))
+  (testing "a relabelled fragment, and a draft nobody overlapped"
+    (let [draft (draft-of draft-record (assoc-in raw-draft [1 :intent] "continue"))
+          analysis {:labeller "象-1"
+                    :sentences [{:id "s1" :fragments [(fragment {:start 0 :end 11 :text "Looks good." :intent "qualify" :target "t"})]}
+                                {:id "s2" :fragments [] :unresolved_reason "garble"}]}
+          out (tr/annotate-with-draft (tr/validate-analysis draft-record analysis {}) draft)]
+      (is (= ["xiang-relabelled"] (map :basis (mapcat :fragments (:sentences out)))))
+      (is (= 1 (:dropped (:draft_agreement out))))))
+  (testing "no draft: every basis is xiang"
+    (let [out (tr/annotate-with-draft (tr/validate-analysis record-1 good-analysis {}) nil)]
+      (is (every? #(= "xiang" (:basis %)) (mapcat :fragments (:sentences out))))
+      (is (nil? (:draft_agreement out))))))
+
+(deftest the-brief-hands-over-the-draft
+  (let [draft (draft-of draft-record raw-draft)
+        brief (tr/analysis-brief "turn-d" "/p/turn-d.json" {:draft draft :draft-path "/p/turn-d.json.draft.json"})]
+    (is (str/includes? brief "A CLASSICAL DRAFT EXISTS: /p/turn-d.json.draft.json"))
+    (is (str/includes? brief "[0,11) approve (p 0.84)"))
+    (is (str/includes? brief "[12,42) ? continue/ask-action"))
+    (is (not (str/includes? (tr/analysis-brief "turn-d" "/p/turn-d.json" {}) "CLASSICAL DRAFT")))))

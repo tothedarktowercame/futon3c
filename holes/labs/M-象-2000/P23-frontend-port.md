@@ -172,3 +172,45 @@ obligations).
 Verified here: Clojure 36 tests / 250 assertions; TypeScript 33; pytest 6;
 `ngircd_bridge.py` and `matrix_bridge.py` byte-compile; http.clj reads
 (571 forms). Not verified: anything live, as before.
+
+## Third packet (2026-10-02): the 小象 draft tier ("BNF at the level of turns")
+
+Joe: 象 is slow; 小象 does basic annotation fast; can a classical best-effort
+pre-parse speed up the LLM pass, as proforma compliance is free for the
+coding agent? Yes, and the mechanism is the proforma move on the reader's
+side: the structure is given, 象 confirms or corrects.
+
+- **Draft.** `turn-record/validate-draft` canonicalises `xiaoxiang_preview.py`'s
+  output against the record (exact codepoint spans; an intent only when 小象
+  was sure, else the two guesses). `turn-store/write-draft!` keeps it as
+  `turn-X.json.draft.json` and flags the record `draft_status`. The service
+  runs the `:draft` effect at record time; http binds it to the preview
+  script over stdin (a helper process, 20 s cap, nil on any failure) and
+  also takes drafts at `POST …/turns/:id/draft`.
+- **Brief.** With a draft, `analysis-brief` appends a section listing the
+  fragments with their proposed intent and precision, saying offsets are
+  firm and intents are proposals, and that the reading is recorded against
+  the draft fragment by fragment.
+- **Basis.** `annotate-with-draft` at publish stamps every fragment
+  `xiaoxiang` / `xiang-relabelled` / `xiang-resegmented` / `xiang` and adds
+  `draft_agreement` counts (plus `dropped` and `unsure`). This is the field
+  that keeps a rubber stamp visible and lets 小象's editions exclude readings
+  that were confirmed from its own draft. `GET /api/alpha/xiang/agreement`
+  sums it over the store.
+- **Skip policy.** `routine-draft?` is deliberately conservative (every
+  fragment sure, none in the act-bearing set withdraw/retract/ask-action/
+  delegate/disagree/constrain/redirect, every sentence covered, at most 3
+  sentences, operator origin, not `yes`/`undo`, not tagging-failed). Behind
+  `FUTON3C_XIANG_SKIP_ROUTINE`, off by default: the service test's fake 小象
+  shows the failure mode, a mislabelled act would be swallowed, so the
+  agreement numbers come first.
+- **Widget.** Third tier of marks and a basis column; the health pane shows
+  the agreement line.
+
+Not done: precomputing pattern candidates per fragment (BM25 via `xlate.py
+find`) before dispatch. It is the largest remaining chunk of the reading's
+wall clock and needs only a JSON output mode on `xlate.py find` plus a
+`:pattern-candidates` effect in the service; next packet.
+
+Verified here: Clojure 43 tests / 293 assertions; TypeScript 35; the rest as
+before. Nothing live.

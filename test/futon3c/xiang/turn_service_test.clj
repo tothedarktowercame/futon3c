@@ -295,3 +295,64 @@
       (svc/publish-analysis! (:svc h) id analysis {})
       (is (empty? @(:posted h)) "withdrawals are inferred for operator turns only")
       (is (nil? (:withdrawal_effects (ts/read-record (get-in (:svc h) [:config :store]) id)))))))
+
+;; ---------------------------------------------------------------------------
+;; 小象 drafts in the pipeline
+
+(defn- fake-draft [text]
+  ;; 小象 over the record's source text: one sure fragment per sentence, its
+  ;; intent the sentence's first lexical cue, else approve. (A real 小象 that
+  ;; mislabels an act as approve would let the skip policy swallow the act;
+  ;; that is why the policy ships off and the agreement numbers come first.)
+  (mapv (fn [s] {:start (:start s) :end (:end s) :text (:text s)
+                 :intent (or (:label (first (:cues s))) "approve")
+                 :guesses ["approve" "report"] :precision 0.8})
+        (:sentences (tr/structure-turn text))))
+
+(deftest a-draft-is-taken-at-record-time-and-rides-the-brief
+  (let [h (harness {:draft fake-draft})
+        {:keys [id draft record]} (turn! h {:text "Looks good." :dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (is (true? draft))
+    (is (= "drafted" (:draft_status record)))
+    (is (= "小象" (:labeller (ts/read-draft store id))))
+    (is (str/includes? (:prompt (first @(:bells h))) "A CLASSICAL DRAFT EXISTS"))
+    (is (= "requested" (:analysis_status (ts/read-record store id))) "without the switch, 象 still reads it")
+    (testing "a bad draft is rejected and nothing is stored"
+      (let [h (harness {:draft (fn [_] [{:start 0 :end 99 :text "x"}])})
+            {:keys [id draft]} (turn! h {:text "Hello." :dispatch :now})]
+        (is (false? draft))
+        (is (nil? (ts/read-draft (get-in (:svc h) [:config :store]) id)))
+        (is (re-find #"draft rejected" (:detail (svc/health (:svc h)))))))))
+
+(deftest the-skip-policy-settles-routine-turns-without-a-reading
+  (let [h (harness {:draft fake-draft :skip-routine? true})
+        store (get-in (:svc h) [:config :store])
+        routine (turn! h {:text "Looks good." :dispatch :now})
+        act (turn! h {:text "Looks good. Please withdraw that pattern." :dispatch :now})]
+    (is (= {:dispatched false :reason :drafted :agent nil} (:dispatch routine)))
+    (is (= "drafted" (:analysis_status (ts/read-record store (:id routine)))))
+    (is (:dispatched (:dispatch act)) "a withdraw cue makes the draft act-bearing, so 象 reads it")
+    (is (= 1 (count @(:bells h))))
+    (is (= {:outcome :analyzed :status "drafted"} (select-keys (svc/reap! (:svc h) (:id routine) {}) [:outcome :status])))))
+
+(deftest the-agreement-aggregate-sums-the-store
+  (let [h (harness {:draft fake-draft :skip-routine? true})
+        store (get-in (:svc h) [:config :store])
+        _ (turn! h {:text "Looks good." :dispatch :now})
+        {:keys [id record]} (turn! h {:text "Fine. Please continue." :dispatch :now})
+        [s1 s2] (:sentences record)]
+    (svc/publish-analysis! (:svc h) id
+                           {:labeller "象-1"
+                            :sentences [{:id "s1" :fragments [{:start (:start s1) :end (:end s1) :text (:text s1) :intent "approve" :target "t" :rationale "r" :relations ["action"] :display_cues [] :no_surface_cue "x"}]}
+                                        ;; 象 reads "Please continue." as ask-action where 小象 drafted continue.
+                                        {:id "s2" :fragments [{:start (:start s2) :end (:end s2) :text (:text s2) :intent "ask-action" :target "t" :rationale "r" :relations ["action"] :display_cues [] :no_surface_cue "x"}]}]}
+                           {})
+    (let [a (svc/draft-agreement (:svc h) :session-id "sess-1")]
+      (is (= 2 (:records a)))
+      (is (= 1 (:drafted a)))
+      (is (= 1 (:analysed a) (:with-draft a)))
+      (is (= {:agreed 1 :relabelled 1} (select-keys (:totals a) [:agreed :relabelled]))))
+    (is (= ["xiaoxiang" "xiang-relabelled"]
+           (map :basis (mapcat :fragments (:sentences (ts/read-analysis store id))))))
+    (is (= "小象" (:labeller (:draft (svc/turn-view (:svc h) id)))))))

@@ -4,7 +4,7 @@
  */
 
 import { marksFor, marksHtml } from "../src/marks.js";
-import type { Analysis, Notice, TurnRecord, TurnSummary, TurnView } from "../src/types.js";
+import type { Analysis, DraftAgreement, Notice, TurnRecord, TurnSummary, TurnView } from "../src/types.js";
 
 export interface WidgetConfig {
   base: string;
@@ -65,7 +65,9 @@ export interface TurnDetail {
   status: string;
   html: string;
   marks: Array<{ mark: string; intent: string; stage: string; text: string }>;
-  fragments: Array<{ sentence: string; intent: string; target: string | null; rationale: string; patterns: string[] }>;
+  fragments: Array<{ sentence: string; intent: string; target: string | null; rationale: string; patterns: string[]; basis: string }>;
+  draft: Array<{ intent: string | null; guesses: string[]; precision: number | null; text: string }>;
+  agreement: DraftAgreement | null;
   notices: Notice[];
   labeller: string | null;
 }
@@ -87,7 +89,7 @@ export function turnDetail(view: TurnView): TurnDetail {
     author: record.author ?? record.operator_id ?? (origin === "agent" ? record.agent_id : "operator"),
     when: record.created_at,
     status: record.analysis_status ?? "not-requested",
-    html: marksHtml(record.source_text, marksFor(record, analysis)),
+    html: marksHtml(record.source_text, marksFor(record, analysis, view.draft)),
     marks: (record.proforma_marks ?? []).map((m) => ({ mark: m.mark, intent: m.intent, stage: m.stage, text: m.text })),
     fragments: analysis
       ? analysis.sentences.flatMap((s) =>
@@ -97,9 +99,12 @@ export function turnDetail(view: TurnView): TurnDetail {
             target: f.target,
             rationale: f.rationale,
             patterns: (f.pattern_refs ?? []).map((p) => p.id),
+            basis: f.basis ?? "xiang",
           })),
         )
       : [],
+    draft: (view.draft?.fragments ?? []).map((f) => ({ intent: f.intent, guesses: f.guesses, precision: f.precision ?? null, text: f.text })),
+    agreement: analysis?.draft_agreement ?? null,
     notices: view.notices ?? [],
     labeller: analysis?.labeller ?? null,
   };
@@ -185,4 +190,13 @@ export function healthPane(body: { seat?: string; health?: { state?: string | nu
 export function changedTurns(before: TurnSummary[], after: TurnSummary[]): string[] {
   const prev = new Map(before.map((t) => [t.id, t["analysis-status"] ?? ""]));
   return after.filter((t) => prev.get(t.id) !== (t["analysis-status"] ?? "")).map((t) => t.id);
+}
+
+/** One line for the agreement route: how often 象 changed 小象's draft. */
+export function agreementLine(body: { analysed?: number; drafted?: number; "with-draft"?: number; totals?: Partial<DraftAgreement> } | null): string {
+  if (!body) return "agreement: unavailable";
+  const t = body.totals ?? {};
+  const judged = (t.agreed ?? 0) + (t.relabelled ?? 0) + (t.resegmented ?? 0);
+  const pct = judged ? Math.round((100 * (t.agreed ?? 0)) / judged) : null;
+  return `小象 vs 象: ${pct == null ? "no data" : `${pct}% agreed`} over ${judged} fragments · ${body.drafted ?? 0} turns settled by the draft · ${body["with-draft"] ?? 0}/${body.analysed ?? 0} readings had a draft`;
 }

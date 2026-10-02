@@ -97,3 +97,24 @@ test("HTML is escaped and marked", () => {
   ]);
   assert.equal(html, 'a &lt;b&gt; &amp; <mark class="xiang-cue" data-intent="approve" title="say &quot;yes&quot;">I agree</mark><br>ok');
 });
+
+test("the draft tier sits between the reading and the lexical cues", async () => {
+  const { draftMarks } = await import("../src/marks.js");
+  const draft = {
+    version: 1 as const,
+    status: "drafted" as const,
+    labeller: "小象",
+    source_text: source,
+    offset_unit: "unicode-codepoints-zero-based-end-exclusive" as const,
+    fragments: [
+      { start: 0, end: 22, text: "I agree 🗣 with 象 here.", intent: "approve", sure: true, guesses: ["approve", "report"], precision: 0.84, sentence: "s1" },
+      { start: 24, end: 43, text: "Let's ask 象-2 next?", intent: null, sure: false, guesses: ["delegate", "clarify"], sentence: "s2" },
+    ],
+  };
+  const d = draftMarks(draft, source);
+  assert.deepEqual(d.map((m) => [m.kind, m.start, m.end, m.intent, m.help]), [["draft", 0, 22, "approve", "approve (小象, p 0.84)"]]);
+  assert.equal(marksFor(record, null, draft)[0]!.kind, "draft");
+  assert.equal(marksFor(record, analysis, draft)[0]!.kind, "cue");
+  assert.equal(marksFor(record, null, { ...draft, source_text: "other" })[0]!.kind, "lexical");
+  assert.ok(marksHtml(source, d).startsWith('<span class="xiang-draft" data-intent="approve"'));
+});
