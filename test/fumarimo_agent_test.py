@@ -49,9 +49,11 @@ class FumarimoAgentTest(unittest.TestCase):
         code = bot.sent[0][2]
         output = bot.sent[1][2]
         self.assertEqual(fumarimo.PYTHON_MSGTYPE, code["msgtype"])
+        self.assertEqual("python-cell", code[fumarimo.EVENT_NAMESPACE]["kind"])
         self.assertEqual(REQUEST, code["m.relates_to"]["m.in_reply_to"]["event_id"])
         self.assertEqual("cell-1", code[fumarimo.EVENT_NAMESPACE]["cell_id"])
         self.assertEqual(fumarimo.OUTPUT_MSGTYPE, output["msgtype"])
+        self.assertEqual("image-output", output[fumarimo.EVENT_NAMESPACE]["kind"])
         self.assertEqual("$cell", output["m.relates_to"]["event_id"])
         self.assertEqual("$cell", output[fumarimo.EVENT_NAMESPACE]["cell_event_id"])
         self.assertEqual(REQUEST, output[fumarimo.EVENT_NAMESPACE]["request_event_id"])

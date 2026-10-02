@@ -20,8 +20,10 @@ import uuid
 
 
 EVENT_NAMESPACE = "org.paragogy.marimo"
-PYTHON_MSGTYPE = EVENT_NAMESPACE + ".python"
-OUTPUT_MSGTYPE = EVENT_NAMESPACE + ".output"
+# Standard msgtypes keep the two turns useful in every Matrix client. The
+# namespaced payload carries the richer notebook semantics for our Element fork.
+PYTHON_MSGTYPE = "m.text"
+OUTPUT_MSGTYPE = "m.image"
 OUTPUT_RELATION = EVENT_NAMESPACE + ".output"
 
 
