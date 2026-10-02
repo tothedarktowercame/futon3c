@@ -73,6 +73,9 @@ class MatrixTest(unittest.TestCase):
         evidence_patch = patch.object(m.irc, "post_transport_evidence")
         self.evidence = evidence_patch.start()
         self.addCleanup(evidence_patch.stop)
+        xiang_patch = patch.object(m.irc, "xiang_turns", None)
+        xiang_patch.start()
+        self.addCleanup(xiang_patch.stop)
         self.bots = []
         m.irc.ungated_nicks.clear()
         for p in [patch.object(m.urllib.request, 'build_opener', return_value=self.http),
@@ -107,10 +110,18 @@ class MatrixTest(unittest.TestCase):
         self.assertEqual(0, bot._invoke_queue.unfinished_tasks)
 
     def test_mention_invokes_and_replies_with_full_sender_and_surface(self):
-        bot = self.bot()
-        bot.process_sync(batch('b1', [event()]))
-        self.drain(bot)
+        recorded = []
+        fake_xiang = type('FakeXiang', (), {
+            'enabled': staticmethod(lambda: True),
+            'record_turn': staticmethod(lambda *args, **kwargs: recorded.append((args, kwargs)) or 'turn-one'),
+            'after_reply': staticmethod(lambda *args, **kwargs: {}),
+        })
+        with patch.object(m.irc, 'xiang_turns', fake_xiang):
+            bot = self.bot()
+            bot.process_sync(batch('b1', [event()]))
+            self.drain(bot)
         self.assertEqual(1, len(self.http.invokes))
+        self.assertEqual('$one', recorded[0][1]['evidence_id'])
         for payload in self.http.invokes + self.http.announces:
             self.assertEqual('matrix:' + SENDER, payload['caller'])
             self.assertEqual('matrix (' + ROOM + ')', payload['surface'])

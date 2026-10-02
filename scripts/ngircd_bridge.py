@@ -1421,10 +1421,13 @@ class IRCBot:
             return None
         try:
             status = self._agent_status() or {}
+            transport_context = self._transport_context() or {}
             rid = xiang_turns.record_turn(
                 INVOKE_BASE, prompt_text, self.agent_id, status.get("session_id") or "unknown",
                 f"{self.transport_name}:{job_id}", operator_id=sender,
-                surface=self._xiang_surface(channel), log=lambda m: log(self.nick, m))
+                surface=self._xiang_surface(channel),
+                evidence_id=transport_context.get("event_id"),
+                log=lambda m: log(self.nick, m))
             if rid:
                 self._xiang_records[job_id] = rid
             return rid
@@ -1440,7 +1443,9 @@ class IRCBot:
             return xiang_turns.after_reply(
                 INVOKE_BASE, rid, response.get("result") or "", self.agent_id,
                 response.get("session_id") or "unknown", f"{self.transport_name}:{job_id}",
-                surface=self._xiang_surface(channel), log=lambda m: log(self.nick, m))
+                surface=self._xiang_surface(channel),
+                reply_evidence_id=getattr(self, "_xiang_reply_events", {}).pop(job_id, None),
+                log=lambda m: log(self.nick, m))
         except Exception as e:
             log(self.nick, f"象: after-reply failed for {job_id}: {e}")
             return None

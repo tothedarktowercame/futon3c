@@ -11207,6 +11207,7 @@
    :session-id (:session_id record)
    :created-at (:created_at record)
    :surface (:surface record)
+   :evidence-id (:evidence_id record)
    :analysis-status (:analysis_status record)
    :job-id (get-in record [:analysis_dispatch :job_id])
    :source-text (:source_text record)})

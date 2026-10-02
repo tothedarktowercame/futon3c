@@ -17,13 +17,15 @@ def test_record_turn_posts_the_operator_turn_and_returns_the_id(monkeypatch):
     fake = FakePost([(201, {"ok": True, "id": "turn-abc"})])
     monkeypatch.setattr(xiang_turns, "POST", fake)
     rid = xiang_turns.record_turn("http://h:7070/", "hello 象", "claude-17", "sess", "matrix:job-1",
-                                  operator_id="@joe:example.org", surface="matrix (!room:example.org)")
+                                  operator_id="@joe:example.org", surface="matrix (!room:example.org)",
+                                  evidence_id="$matrix-event")
     assert rid == "turn-abc"
     url, payload = fake.calls[0]
     assert url == "http://h:7070/api/alpha/xiang/turns"
     assert payload == {"text": "hello 象", "agent-id": "claude-17", "session-id": "sess",
                        "turn-id": "matrix:job-1", "origin": "operator", "dispatch": "later",
-                       "operator-id": "@joe:example.org", "surface": "matrix (!room:example.org)"}
+                       "operator-id": "@joe:example.org", "surface": "matrix (!room:example.org)",
+                       "evidence-id": "$matrix-event"}
 
 
 def test_a_refused_or_unreachable_record_is_none_and_logged(monkeypatch):
@@ -41,7 +43,7 @@ def test_after_reply_dispatches_the_turn_then_records_the_reply_as_an_agent_turn
                      (201, {"ok": True, "id": "turn-reply"})])
     monkeypatch.setattr(xiang_turns, "POST", fake)
     out = xiang_turns.after_reply("http://h", "turn-abc", "㊥ Done.\n\n🈸 Shall I go on?", "claude-17", "sess",
-                                  "matrix:job-1", surface="matrix (!r)")
+                                  "matrix:job-1", surface="matrix (!r)", reply_evidence_id="$reply")
     assert out["happened"]["dispatched"] is True
     assert out["reply_record"] == "turn-reply"
     assert fake.calls[0][0] == "http://h/api/alpha/xiang/turns/turn-abc/happened"
@@ -50,6 +52,7 @@ def test_after_reply_dispatches_the_turn_then_records_the_reply_as_an_agent_turn
     assert reply_payload["origin"] == "agent"
     assert reply_payload["dispatch"] == "now"
     assert reply_payload["turn-id"] == "matrix:job-1:reply"
+    assert reply_payload["evidence-id"] == "$reply"
     assert "operator-id" not in reply_payload
 
 

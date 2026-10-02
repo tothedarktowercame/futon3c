@@ -180,6 +180,7 @@ export interface TurnSummary {
   "session-id": string;
   "created-at": string;
   surface?: string;
+  "evidence-id"?: string;
   "analysis-status"?: AnalysisStatus;
   "job-id"?: string;
   "source-text": string;

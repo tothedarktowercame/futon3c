@@ -90,12 +90,14 @@ def happened(base: str, record_id: str, reply: str, *, log=None) -> dict | None:
 
 
 def after_reply(base: str, record_id: str | None, reply: str, agent_id: str, session_id: str,
-                turn_id: str, *, surface: str | None = None, log=None) -> dict:
+                turn_id: str, *, surface: str | None = None,
+                reply_evidence_id: str | None = None, log=None) -> dict:
     """Reply end: dispatch the operator turn, then record the reply as an agent turn
     (dispatched at once, since nothing further happens to it)."""
     out = {"happened": None, "reply_record": None}
     if record_id:
         out["happened"] = happened(base, record_id, reply, log=log)
     out["reply_record"] = record_turn(base, reply, agent_id, session_id, f"{turn_id}:reply",
-                                      origin="agent", surface=surface, dispatch="now", log=log)
+                                      origin="agent", surface=surface, evidence_id=reply_evidence_id,
+                                      dispatch="now", log=log)
     return out

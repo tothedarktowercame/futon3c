@@ -124,7 +124,12 @@ class MatrixBot(IRCBot):
 
     def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
         # Transport renderer: don't run IRC's pre-send summary/line truncation.
-        self._say(response.get("result") or "[no response]", channel=reply_ch)
+        sent = self._say(response.get("result") or "[no response]", channel=reply_ch)
+        event_id = sent.get("event_id") if isinstance(sent, dict) else None
+        if event_id:
+            if not hasattr(self, "_xiang_reply_events"):
+                self._xiang_reply_events = {}
+            self._xiang_reply_events[job_id] = event_id
 
     def _say(self, text, max_lines=6, channel=None):
         room = (channel or getattr(self._thread_context, "reply_channel", None)
