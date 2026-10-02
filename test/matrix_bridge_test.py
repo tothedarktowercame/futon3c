@@ -138,6 +138,10 @@ class MatrixTest(unittest.TestCase):
         self.assertIn('You are Fumarimo', context)
         self.assertIn('self-contained Python cell', context)
         self.assertIn('ask one concise clarifying question', context)
+        self.assertIn('Never invent Matrix history', context)
+        self.assertIn('as its last expression', context)
+        self.assertIn('do not say the cell ran', context)
+        self.assertIn('annotation sidebar', context)
 
     def test_inherited_gating_and_commands(self):
         bot = self.bot()
