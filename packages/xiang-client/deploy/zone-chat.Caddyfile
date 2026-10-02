@@ -1,0 +1,21 @@
+# Routes installed inside the zone.hyperreal.enterprises site block.
+# /chat is the memorable Element entrance; Element embeds the annotation UI
+# from /xiang-widget, so these paths must remain distinct.
+redir /chat "https://app.element.io/#/room/!WXULllaFhTOchbIrmo:matrix.paragogy.net?via=matrix.paragogy.net" 302
+redir /chat/ "https://app.element.io/#/room/!WXULllaFhTOchbIrmo:matrix.paragogy.net?via=matrix.paragogy.net" 302
+
+handle_path /chat-api/* {
+	reverse_proxy 127.0.0.1:8131
+}
+
+handle_path /xiang-widget/* {
+	header {
+		Cache-Control "private, no-cache"
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://matrix.paragogy.net; img-src 'self' data:; base-uri 'none'; frame-ancestors 'self' https://app.element.io https://*.element.io; form-action 'self'"
+	}
+	root * /srv/xiang-chat
+	file_server
+}
