@@ -460,6 +460,29 @@
       {:agent-id aid :retired-count (count ids) :intake-closed true
        :resolution @resolution*})))
 
+(defn open-intake!
+  "Reopen AGENT-ID after its shunt has been resolved. Refuses to reopen while
+   a shunt record still owns pending work."
+  [agent-id]
+  (let [aid (clean-str agent-id)
+        result (atom nil)]
+    (when-not aid
+      (throw (ex-info "agent-id required" {:reason :agent-id-required})))
+    (swap-state!
+     (fn [state]
+       (cond
+         (contains? (:shunted state) aid)
+         (do (reset! result {:reason :shunt-unresolved}) state)
+
+         :else
+         (do (reset! result {:agent-id aid
+                             :reopened (contains? (:intake-closed state) aid)})
+             (update state :intake-closed disj aid)))))
+    (when (= :shunt-unresolved (:reason @result))
+      (throw (ex-info "cannot reopen intake with an unresolved shunt"
+                      {:reason :shunt-unresolved :agent-id aid})))
+    (assoc @result :intake-closed false)))
+
 (defn- entry-view [entry]
   (let [prompt (:prompt entry)
         text (cond

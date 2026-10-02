@@ -6432,38 +6432,43 @@
                 ;; back to THIS channel. The event sink is installed INSIDE process-fn (drainer
                 ;; thread, exclusive to this turn) so a bell drained just before it cannot
                 ;; cross-talk onto this channel.
-                (do
-                (turn-queue/accept-async!
-                 {:id turn-id :msg-id turn-id
-                  :to aid :from caller :surface (or surface "repl")
-                  :prompt effective-prompt
-                  :process-fn
-                  (fn [entry]
-                    (reg/set-invoke-event-sink! aid sink-fn)
-                    (try
-                      (binding [turn-queue/*drained-by-outer* true
-                                turn-queue/*turn-id* (:id entry)]
-                        (maybe-route-surface-writes
-                         agent-id
-                         (reg/invoke-agent! aid effective-prompt
-                                            {:timeout-ms timeout-ms :turn-id turn-id
-                                             :surface surface :mission-id mission-id
-                                             :caller caller
-                                             :evidence-store evidence-store})))
-                      (finally
-                        (reg/clear-invoke-event-sink! aid))))
-                  :finalize-fn
-                  (fn [result]
-                    (try
-                      (emit-terminal! result)
-                      (catch Throwable t
-                        (sink-fn {:type "done" :ok false :error "invoke-error"
-                                  :message (.getMessage t)}))
-                      (finally
-                        (hk/close channel))))})
-                ;; Tell the operator what the turn is waiting on (if anything).
-                (when-let [ev (queued-turn-activity aid turn-id)]
-                  (sink-fn ev)))
+                (try
+                  (turn-queue/accept-async!
+                   {:id turn-id :msg-id turn-id
+                    :to aid :from caller :surface (or surface "repl")
+                    :prompt effective-prompt
+                    :process-fn
+                    (fn [entry]
+                      (reg/set-invoke-event-sink! aid sink-fn)
+                      (try
+                        (binding [turn-queue/*drained-by-outer* true
+                                  turn-queue/*turn-id* (:id entry)]
+                          (maybe-route-surface-writes
+                           agent-id
+                           (reg/invoke-agent! aid effective-prompt
+                                              {:timeout-ms timeout-ms :turn-id turn-id
+                                               :surface surface :mission-id mission-id
+                                               :caller caller
+                                               :evidence-store evidence-store})))
+                        (finally
+                          (reg/clear-invoke-event-sink! aid))))
+                    :finalize-fn
+                    (fn [result]
+                      (try
+                        (emit-terminal! result)
+                        (catch Throwable t
+                          (sink-fn {:type "done" :ok false :error "invoke-error"
+                                    :message (.getMessage t)}))
+                        (finally
+                          (hk/close channel))))})
+                  ;; Tell the operator what the turn is waiting on (if anything).
+                  (when-let [ev (queued-turn-activity aid turn-id)]
+                    (sink-fn ev))
+                  (catch clojure.lang.ExceptionInfo e
+                    (sink-fn {:type "done" :ok false
+                              :error (name (or (:reason (ex-data e)) :queue-refused))
+                              :message (.getMessage e)})
+                    (hk/close channel)))
                 ;; Legacy (flag OFF / no drainer-v2): direct invoke on a shared lane.
                 (.submit invoke-executor
                   ^Runnable
@@ -7083,6 +7088,17 @@
         (catch clojure.lang.ExceptionInfo e
           (json-response 409 {:ok false :error (name (or (:reason (ex-data e))
                                                          :retire-shunt-refused))
+                              :message (.getMessage e)}))))))
+
+(defn- handle-agency-queue-open-intake [request]
+  (let [{:keys [agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (try
+        (json-response 200 (assoc (turn-queue/open-intake! agent) :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 409 {:ok false :error (name (or (:reason (ex-data e))
+                                                         :open-intake-refused))
                               :message (.getMessage e)}))))))
 
 (defn- interrupt-agent-process-tree!
@@ -11767,6 +11783,9 @@
 
       (and (= :post method) (= "/api/alpha/agency/queue/retire-shunt" uri))
       (handle-agency-queue-retire-shunt request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/open-intake" uri))
+      (handle-agency-queue-open-intake request)
 
       (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
       (handle-jvm-incidents request)

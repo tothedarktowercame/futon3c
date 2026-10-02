@@ -486,6 +486,29 @@
               (is (apply = (map :turn-id events))
                   "every pushed event retains the request's stream identity"))))))))
 
+(deftest invoke-stream-closes-cleanly-when-queue-refuses-input
+  (let [handler (make-handler)]
+    (with-redefs [http/repl-through-queue? (constantly true)
+                  turn-queue/drainer-v2-enabled? (constantly true)
+                  turn-queue/accept-async!
+                  (fn [_]
+                    (throw (ex-info "agent intake is closed"
+                                    {:reason :intake-closed})))]
+      (with-live-server
+        handler
+        (fn [base-url]
+          (let [response (http-post-json
+                          base-url "/api/alpha/invoke-stream"
+                          (json/generate-string
+                           {:agent-id "codex-closed" :prompt "hello"
+                            :caller "joe" :surface "emacs-repl"}))
+                events (mapv #(json/parse-string % true)
+                             (str/split-lines (:body response)))]
+            (is (= 200 (:status response)))
+            (is (= ["started" "done"] (mapv :type events)))
+            (is (false? (:ok (second events))))
+            (is (= "intake-closed" (:error (second events))))))))))
+
 (defn- wait-for-job-state
   "Poll /api/alpha/invoke/jobs/:id until state is terminal or timeout."
   [handler job-id timeout-ms]

@@ -143,6 +143,13 @@
           (is (every? #(= :retired (get-in state [:entries % :status])) turn-ids))
           (is (contains? (:intake-closed state) aid)
               "retirement does not silently reopen intake"))
+        (is (= {:agent-id aid :reopened true :intake-closed false}
+               (turn-queue/open-intake! aid)))
+        (is (= :queued
+               (:status (turn-queue/accept!
+                         {:to aid :from "joe" :surface "emacs-repl"
+                          :msg-id "after-reopen"})))
+            "normal input is accepted after the explicit reopen")
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"no shunted queue"
                               (turn-queue/retire-shunt!
                                aid {:replacement-turn-id "consult-2"}))
