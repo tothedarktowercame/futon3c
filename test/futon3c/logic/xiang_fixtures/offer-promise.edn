@@ -1,0 +1,68 @@
+;; An agent offers, the operator accepts; another agent promises and delivers;
+;; 象 infers a withdrawal under a grant, the operator undoes it; the grant
+;; ends and a later inference has no authority. The 2026-10-02 shape of the
+;; agreement path (P11, P9, P10), with the two time axes exercised: the
+;; acceptance's evidence reaches the store late.
+{:name "offer-promise"
+ :parties {"joe" :operator "codex-10" :agent "claude-17" :agent "象" :seat}
+ :history
+ [{:id "ask1" :kind :ask-action :author "joe" :to "codex-10" :at "2026-10-02T09:00:00Z"
+   :agent "codex-10" :session "s10" :text "What prior should the numeric policy use?"}
+  {:id "o1" :kind :offer :author "codex-10" :to "joe" :at "2026-10-02T09:05:00Z"
+   :agent "codex-10" :session "s10" :cites "ask1" :option 1
+   :text "🈸 May we adopt a transparent provisional numeric prior?"}
+  {:id "o1b" :kind :offer :author "codex-10" :to "joe" :at "2026-10-02T09:05:00Z"
+   :agent "codex-10" :session "s10" :cites "ask1" :option 2
+   :text "🈸 Or keep the current prior and document it?"}
+  ;; typed at 09:07, but its evidence row reached futon1b only at 09:30 (a
+  ;; broken chain, replayed): valid time 09:07, system time 09:30.
+  {:id "y1" :kind :accept :author "joe" :to "codex-10" :at "2026-10-02T09:07:00Z" :sys "2026-10-02T09:30:00Z"
+   :agent "codex-10" :session "s10" :target "o1" :option 1 :cites "o1" :text "Yes"}
+  {:id "d1" :kind :delegate :author "joe" :to "claude-17" :at "2026-10-02T10:00:00Z"
+   :agent "claude-17" :session "s17" :text "bell me the sha when the port lands"}
+  {:id "p1" :kind :promise :author "claude-17" :to "joe" :at "2026-10-02T10:01:00Z"
+   :agent "claude-17" :session "s17" :cites "d1" :beneficiary "joe" :deadline "2026-10-02T18:00:00Z"
+   :text "I'll bell you the sha by 18:00"}
+  {:id "g1" :kind :grant :author "joe" :at "2026-10-02T10:30:00Z" :grantee "象" :scope :withdraw
+   :text "象 may infer provisional withdrawals of my pattern cards"}
+  {:id "sel1" :kind :select-card :author "claude-17" :at "2026-10-02T11:00:00Z"
+   :agent "claude-17" :session "s17" :text "pattern card musn/intent-restatement"}
+  {:id "t3" :kind :redirect :author "joe" :to "claude-17" :at "2026-10-02T11:20:00Z"
+   :agent "claude-17" :session "s17" :text "withdraw that pattern, let's not restate intents"}
+  {:id "iw1" :kind :withdraw :author "象" :at "2026-10-02T11:23:00Z"
+   :agent "claude-17" :session "s17" :target "sel1" :cites "t3"
+   :text "withdraw inferred: effect (provisional)"}
+  {:id "u1" :kind :reversal :author "joe" :to "claude-17" :at "2026-10-02T11:25:00Z"
+   :agent "claude-17" :session "s17" :target "iw1" :text "undo"}
+  {:id "f1" :kind :fulfil :author "claude-17" :to "joe" :at "2026-10-02T16:40:00Z"
+   :agent "claude-17" :session "s17" :target "p1" :cites "p1" :text "sha f9bf85b, as promised"}
+  {:id "gw1" :kind :withdraw :author "joe" :at "2026-10-02T17:00:00Z" :target "g1"
+   :text "turn inferred withdrawals off again"}
+  {:id "t4" :kind :redirect :author "joe" :to "claude-17" :at "2026-10-02T17:30:00Z"
+   :agent "claude-17" :session "s17" :text "drop that card too"}
+  {:id "iw2" :kind :withdraw :author "象" :at "2026-10-02T17:31:00Z"
+   :agent "claude-17" :session "s17" :target "sel1" :cites "t4"
+   :text "withdraw inferred (no grant: should be refused by the route)"}]
+ :expect
+ {:open-at {"2026-10-02T09:06:00Z" #{"ask1" "o1" "o1b"}
+            "2026-10-02T09:30:00Z" #{"ask1" "o1b"}           ; y1 answered o1; the ask itself is answered only when the kernel is told so
+            "2026-10-02T12:00:00Z" #{"ask1" "o1b" "p1"}       ; d1 answered by the promise; the promise awaits its fulfilment; cards and grants are standings, not ports
+            "2026-10-02T18:00:00Z" #{"ask1" "o1b"}}           ; p1 fulfilled
+  :flow {"y1" [["o1" :explicit :closes]]
+         "p1" [["d1" :explicit :closes]]
+         "iw1" [["sel1" :explicit :closes]]
+         "u1" [["iw1" :explicit :closes]]
+         "f1" [["p1" :explicit :closes]]}
+  :closes {"y1" ["o1"] "f1" ["p1"] "p1" ["d1"]}
+ :agreement {"y1" {:status :agreed :offer "o1"}}
+  :obligations {"2026-10-02T09:10:00Z" #{}                                     ; the acceptance is not yet KNOWN
+                ["2026-10-02T09:10:00Z" "2026-10-02T09:30:00Z"] #{{:debtor "codex-10" :creditor "joe" :source "y1"}}
+                "2026-10-02T12:00:00Z" #{{:debtor "codex-10" :creditor "joe" :source "y1"}
+                                         {:debtor "claude-17" :creditor "joe" :source "p1"}}
+                "2026-10-02T17:00:00Z" #{{:debtor "codex-10" :creditor "joe" :source "y1"}}}
+  :in-force {"2026-10-02T11:24:00Z" #{"o1" "o1b" "y1" "d1" "p1" "g1"}            ; the card is provisionally withdrawn
+             "2026-10-02T11:30:00Z" #{"o1" "o1b" "y1" "d1" "p1" "g1" "sel1"}     ; undo restored it
+             "2026-10-02T18:00:00Z" #{"o1" "o1b" "y1" "d1" "p1"}}                 ; grant withdrawn; iw2 ended the card (the route would have refused it: see :authority)
+  :authority {["象" :withdraw "2026-10-02T11:23:00Z"] true
+              ["象" :withdraw "2026-10-02T17:31:00Z"] false}
+  :derivation {"f1" #{"p1" "d1"} "iw1" #{"t3"}}}}
