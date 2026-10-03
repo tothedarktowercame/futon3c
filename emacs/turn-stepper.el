@@ -660,10 +660,16 @@ Frames are cached per session; use `g' in the stepper to refresh."
     (unless session-id
       (user-error
        "No session id here (agent-chat--session-id unset); not a REPL buffer?"))
+    ;; The cache is only refreshed while the stepper is on screen, so one
+    ;; kept across a closed stepper can be days old (182 of 286 frames,
+    ;; 2026-10-03).  Show it at once, then refresh behind it.
     (if (gethash session-id turn-stepper--cache)
-        (turn-stepper--open session-id source
-                            (1- (length (gethash session-id
-                                                 turn-stepper--cache))))
+        (progn
+          (turn-stepper--open session-id source
+                              (1- (length (gethash session-id
+                                                   turn-stepper--cache))))
+          (unless (get-process "turn-stepper-frames")
+            (turn-stepper--start-fetch session-id source t)))
       (turn-stepper--start-fetch session-id source))))
 
 ;;; ---------------------------------------------------------------- rewind
