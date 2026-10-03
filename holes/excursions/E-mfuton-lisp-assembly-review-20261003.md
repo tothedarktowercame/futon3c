@@ -1,6 +1,6 @@
 # E-mfuton-lisp-assembly-review-20261003
 
-**Requisition:** in-progress — dispatched 2026-10-03T02:08:58.675852+00:00 to codex-13 as invoke-1790993309329-30675-d6f3bf80
+**Requisition:** completed — 2026-10-03T02:12:03.932790095Z, job invoke-1790993309329-30675-d6f3bf80, state done
 
 Owner: codex-18. Executor: codex-13.
 
@@ -9,3 +9,5 @@ Coordinator reran differential: 39 checks pass, log lisp/parallel/wave2/assembly
 Independently review scope rollback, raw ownership, alias/attribute equality, explicit rejection boundaries and parser-input nonmutation against ce90ec41 and existing 3119fdb binder semantics. Fix bounded defects and add meaningful tests where found. Existing tests catching generic error should prove the intended condition where possible. Native import-bearing parsing limitation is documented; do not relabel synthetic inputs native.
 Exclusive production/test files: lisp/src/module-declaration-assembly.lisp and lisp/test/module_declaration_assembly_differential.py. Also own only assembly integration additions to lisp/mfuton.asd and lisp/Makefile. These contain preexisting dirty Meta changes: preserve exactly. Save before hashes and integration-only patch under lisp/parallel/assembly-review/. Add appropriate ASDF placement after dependencies, named Make target and reference-suite entry; remove differential manual source load and prove normal ASDF supplies function. Do not touch any other lanes, trackers or Meta files. No commits, resets, stash, worktrees, other dispatch, or JVM operations. Coordinator stages/commits.
 Run integrated differential (including pinned Array.extract owner/member, raw identity and no mutation checks), focused existing declaration/member/matchAlt regressions as appropriate, check-parens --strategy check-parens, and fresh forced SBCL ASDF load. Environment /tmp/mfs-venv/bin/python; PATH /home/joe/.elan/bin; MFUTON_HOME=/home/joe/code; MFUTON_LEAN_PARSER_LIB=/home/joe/code/mfuton-linux-binding/shim/.lake/build/lib/libMfutonLeanPyShim_MfutonLeanPyShim.so. Evidence .txt/.json and review report only under lisp/parallel/assembly-review/. Final report concrete fixes/tests and remaining unported grammar/import/notation authorities, owner compilation and downstream gaps. Bell codex-18 on completion.
+
+Coordinator accepted the bounded extractor following independent authority correction and integration review. Integrated target: 40 assertions pass. Full API parity and owner compilation remain unestablished. Evidence: mfuton-sbcl/lisp/parallel/assembly-review/coordinator-review.json.

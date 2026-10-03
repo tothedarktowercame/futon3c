@@ -1,6 +1,6 @@
 # E-mfuton-lisp-module-assembly-20261003
 
-**Requisition:** in-progress — dispatched 2026-10-03T01:25:57.945080+00:00 to kimi-1 as invoke-1790990756463-30659-ce5004e0
+**Requisition:** completed — 2026-10-03T02:07:11.095108545Z, job invoke-1790991516952-30664-f1d6c942, state done
 
 Owner: codex-18. Executor: kimi-1.
 
@@ -13,3 +13,5 @@ Acceptance: native parsed module with multiple declarations/namespaces and scope
 
 
 Coordinator recovery: first job ended with planning text and no source/test artifacts. Task remains incomplete. Continuation dispatched as invoke-1790991516952-30664-f1d6c942. See mfuton-sbcl/lisp/parallel/wave2/assembly/continuation-request.txt.
+
+Coordinator accepted the bounded extractor following independent authority correction and integration review. Integrated target: 40 assertions pass. Full API parity and owner compilation remain unestablished. Evidence: mfuton-sbcl/lisp/parallel/assembly-review/coordinator-review.json.
