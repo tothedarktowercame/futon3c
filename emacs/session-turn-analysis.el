@@ -18,6 +18,48 @@
 no lexical cues; `never' records structure without requesting interpretation."
   :type '(choice (const all) (const unmatched) (const never)) :group 'session-mode)
 
+(defvar session-mode--xiang-off nil
+  "Plist (:since TIME :rearm TEXT :policy OLD) while 象 is switched off.")
+
+(defun session-mode--xiang-off-log ()
+  (expand-file-name "xiang-off.log" session-mode-turn-analysis-directory))
+
+(defun 象-off (rearm)
+  "Stop sending turns to the 象 seats until REARM holds.
+REARM is the condition, in writing, under which 象 comes back on
+(war-room/wr-26); it is required.  Turns are still recorded.  The
+seats stay registered; a reading already running finishes.  Lasts
+until `象-on' or an Emacs restart."
+  (interactive (list (read-string "Re-arm 象 when: ")))
+  (when (string-blank-p rearm)
+    (user-error "象-off needs a re-arm condition"))
+  (unless session-mode--xiang-off
+    (setq session-mode--xiang-off
+          (list :since (current-time) :rearm rearm
+                :policy session-mode-turn-analysis-policy)))
+  (setq session-mode--xiang-off (plist-put session-mode--xiang-off :rearm rearm)
+        session-mode-turn-analysis-policy 'never)
+  (make-directory session-mode-turn-analysis-directory t)
+  (write-region (format "%s off  re-arm when: %s\n"
+                        (format-time-string "%FT%T%z") rearm)
+                nil (session-mode--xiang-off-log) t 'silent)
+  (message "象 off. Re-arm when: %s" rearm))
+
+(defun 象-on ()
+  "Resume sending turns to the 象 seats, undoing `象-off'."
+  (interactive)
+  (if (not session-mode--xiang-off)
+      (message "象 is not switched off (policy: %s)"
+               session-mode-turn-analysis-policy)
+    (let ((rearm (plist-get session-mode--xiang-off :rearm)))
+      (setq session-mode-turn-analysis-policy
+            (plist-get session-mode--xiang-off :policy)
+            session-mode--xiang-off nil)
+      (write-region (format "%s on   (was: %s)\n"
+                            (format-time-string "%FT%T%z") rearm)
+                    nil (session-mode--xiang-off-log) t 'silent)
+      (message "象 on (policy: %s)" session-mode-turn-analysis-policy))))
+
 (defun session-mode--analysis-requested-p (record)
   "Whether RECORD should request interpretation under the current policy."
   (and (or (eq session-mode-turn-analysis-policy 'all)
