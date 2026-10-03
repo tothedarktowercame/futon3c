@@ -1,6 +1,6 @@
 # E-mfuton-lisp-match-alt-20261003 — Match alternative reference scope
 
-**Requisition:** in-progress — dispatched 2026-10-03T00:41:39.672979+00:00 to kimi-1 as invoke-1790988067875-30654-67a7b97f
+**Requisition:** completed — 2026-10-03T00:50:13.093046896Z, job invoke-1790988067875-30654-67a7b97f, state done
 
 Owner: codex-18. Executor: kimi-1.
 
@@ -10,3 +10,5 @@ Implement ONLY Lean.Parser.Term.matchAlt reference scope. Preserve the field-cou
 Tests must exercise real native-parsed match alternatives, literal and constructor patterns, multiple discriminants, a binder name requiring Python legalization, RHS locals vs external names, and no scope leakage between alternatives. Include a negative control changing/removing a pattern binder so the corresponding RHS reference becomes external. Compare the appropriate Python authority path, explicitly documenting 3119fdb exception to ce90ec41. Exercise wrong field count with a malformed node. Existing test helpers may be reused. Do not just compare a count or swallow errors.
 Acceptance: run new differential; member_extraction_differential.py; declaration_extraction_differential.py; pattern_differential.py; check-parens on changed Lisp with /home/joe/code/futon4/dev/check-parens.el. Run the unchanged lisp/parallel/owner/probe.lisp with MFUTON_OWNER_REQUIRE_MEMBERS=1: it must discover Array.extract.loop with exit 0. If a new structural blocker is exposed, retain actual evidence and report incomplete rather than weakening the gate or adding unbounded fixes.
 Environment: PATH includes /home/joe/.elan/bin, Python /tmp/mfs-venv/bin/python, MFUTON_HOME=/home/joe/code, MFUTON_LEAN_PARSER_LIB=/home/joe/code/mfuton-linux-binding/shim/.lake/build/lib/libMfutonLeanPyShim_MfutonLeanPyShim.so. Retain command logs and exit codes in exclusive implementation dir. Report exact changes, validation, and remaining causal claims. Passing member extraction does not establish owner compilation or exact lookup.
+
+Coordinator review: new native differential, strict Array.extract.loop discovery, and check-parens pass. Executor regression evidence reviewed. This closes the matchAlt extraction prerequisite only; owner compilation and exact binding remain unestablished. Review artifact: mfuton-sbcl/lisp/parallel/owner/implementation/review.json.
