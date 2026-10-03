@@ -1,6 +1,6 @@
 # E-mfuton-typeclass-declaration-index-20261003
 
-**Requisition:** in-progress — codex-13 job invoke-1790996448169-30691-84f70b6b
+**Requisition:** completed — integrated as 97479d0; no curriculum credit
 
 Owner: codex-18. Executor: codex-13.
 
