@@ -1,6 +1,6 @@
 # E-mfuton-lisp-recursive-lifting-20261003
 
-**Requisition:** in-progress — dispatched 2026-10-03T01:26:01.285744+00:00 to kimi-2 as invoke-1790990760190-30660-efdd7548
+**Requisition:** completed — 2026-10-03T02:02:45.876177064Z, job invoke-1790990760190-30660-efdd7548, state done
 
 Owner: codex-18. Executor: kimi-2.
 
@@ -11,3 +11,5 @@ Use /tmp/mfs-venv/bin/python, PATH including /home/joe/.elan/bin, MFUTON_HOME=/h
 Implement generic recursive-let closure conversion and hoisting/publication from your reviewed lifting contract. Exclusive files: lisp/src/lexical-identifier-renaming.lisp, lisp/src/recursive-let-closure-conversion.lisp, lisp/src/lifted-member-publication.lisp, lisp/test/recursive_let_lowering_differential.py, and lisp/parallel/wave2/lifting/ only. fragment-let-binding helper may live in your new file; do not edit shared carriers or fragments.
 Metadata decision: explicit caller-owned EQ table mapping FunctionDef identity to source-kind and group identity; supplied/shared per declaration, returned alongside produced fragment. No global or dynamically scoped metadata. Tag only after tail-call rewriting. Hoisting preserves tagged FunctionDef objects and reconstructs surrounding containers; if any function reconstruction is required, explicitly transfer metadata and test it. Support multiple compile-recursive-let invocations sharing the table; test isolation of separate tables. Describe these ownership rules in code and tests.
 Differential tests against real Python producers must cover captured locals, unique fresh names, mutual recursion, returned/passed closure execution, multiple tagged definitions, nested If/Try/Match hoisting, semantic and private alias spellings, and metadata survival. Use reviewed corrected depth fixture: assert 50000 accumulator increments, not just a returned zero. Test wrong input and lexical shadowing. Execute Lisp-produced Python AST/code for behavioral comparison, label any Python-only evidence. Test existing tail lowering and fragment gates as appropriate. Report proposed load order. Do not special-case catalog spelling divergence; exact-name integration remains separate.
+
+Coordinator accepted and integrated through ASDF/Make. Differential plus existing tail/fragment gates pass; Lisp-produced source executes 50000 accumulator increments. Review: mfuton-sbcl/lisp/parallel/wave2/lifting/review.json. Owner compilation, native installation and exact end-to-end lookup remain unestablished.
