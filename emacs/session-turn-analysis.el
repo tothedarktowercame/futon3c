@@ -1524,7 +1524,10 @@ Runs when the agent's reply to the operator turn arrives, not at send time:
 building or storing the summary warns once and still dispatches the turn."
   (when (and path session-mode-analysis-agent
              (not (equal session-mode-analysis-agent
-                         agent-chat--agent-id)))
+                         agent-chat--agent-id))
+             ;; 象-off (policy `never') records turns as `not-requested';
+             ;; they are kept on disk but must not be belled to the seat.
+             (session-mode--record-requests-analysis-p path))
     (let ((summary
            (condition-case err
                (session-mode--turn-happened-summary response)
@@ -1587,7 +1590,8 @@ building or storing the summary warns once and still dispatches the turn."
                             (with-current-buffer buffer
                               (session-mode--dispatch-pending-turn response))
                           ;; Buffer gone: the turn still goes to 象, without a summary.
-                          (when path (session-mode--dispatch-analysis path)))
+                          (when (and path (session-mode--record-requests-analysis-p path))
+                            (session-mode--dispatch-analysis path)))
                       (error (display-warning
                               'session-mode
                               (format "象 dispatch after reply failed: %s; the record stays `requested'"
