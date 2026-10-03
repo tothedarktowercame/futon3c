@@ -323,10 +323,13 @@
         path (ts/record-path store id)]
     (if-not (ts/read-record store id)
       {:dispatched false :reason :record-not-found}
-      (if (= "declared" (:analysis_status (ts/read-record store id)))
-        ;; Declared (dispatch :none) records are settled without a reading;
-        ;; no dispatch, retry or sweep may queue them.
-        {:dispatched false :reason :declared}
+      (let [status (:analysis_status (ts/read-record store id))]
+        (if (#{"declared" "not-requested"} status)
+          ;; Declared (dispatch :none) records are settled without a reading;
+          ;; not-requested records were taken while the analysis policy was
+          ;; `never' (e.g. 象-off): recorded, but never to be read. Neither may
+          ;; be queued by dispatch, retry or sweep.
+          {:dispatched false :reason (keyword status)}
       (let [record (ts/read-record store id)
             draft (ts/read-draft store id)]
         (if (and draft (cfg svc :skip-routine?) (tr/routine-draft? record draft)
@@ -335,7 +338,7 @@
           (do (ts/update-record! store id #(assoc % :analysis_status "drafted"))
               (set-health! svc nil (str id ": routine, settled by the draft"))
               {:dispatched false :reason :drafted :agent nil})
-          (dispatch-to! svc id agent store-busy-delays record draft path)))))))
+          (dispatch-to! svc id agent store-busy-delays record draft path))))))))
 
 (defn candidate-queries
   "What to search the library for before dispatch: the draft's fragments

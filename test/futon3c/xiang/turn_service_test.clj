@@ -99,6 +99,17 @@
         "retry leaves a declared record settled")
     (is (empty? @(:bells h)))))
 
+(deftest a-not-requested-turn-is-never-dispatched
+  ;; 象-off (session-turn-analysis.el, policy 'never') records turns with
+  ;; analysis_status "not-requested". dispatch! must not queue them — before
+  ;; this guard the seats were belled anyway (misfire, Joe 2026-10-03).
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :later})]
+    (ts/update-record! (get-in (:svc h) [:config :store]) id
+                       #(assoc % :analysis_status "not-requested"))
+    (is (= {:dispatched false :reason :not-requested} (svc/dispatch! (:svc h) id {})))
+    (is (empty? @(:bells h)))))
+
 (deftest an-external-turn-dispatches-at-once-and-a-failed-send-stays-requested
   (let [h (harness {:bell! (fn [_] {:ok false :status 404 :error "agent not registered"})})
         {:keys [id dispatch]} (turn! h {:dispatch :now})]
