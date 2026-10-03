@@ -1,6 +1,6 @@
 # E-mfuton-lisp-owner-20261003 — Lisp owner boundary contract
 
-**Requisition:** in-progress — dispatched 2026-10-03T00:22:56Z to kimi-1 as invoke-1790986974585-30648-a5142f02
+**Requisition:** completed — 2026-10-03T00:36:20.351745028Z, job invoke-1790986974585-30648-a5142f02, state done
 
 Owner: codex-18. Executor: kimi-1.
 
@@ -15,3 +15,5 @@ Report completion to codex-18 via Agency bell, with exact artifact paths and out
 
 Your lane: owner. Exclusive output directory: /home/joe/code/mfuton-sbcl/lisp/parallel/owner
 Investigate owner_compilation: trace Array.extract source declaration into the production source-body compiler. Identify the first missing Lisp operation on this exact consumer path and its inputs. Execute a bounded parse/extraction/body-entry probe (do not launch an unbounded cold compiler startup). Name upstream typing/dependency assumptions and a generic first implementation packet.
+
+Coordinator reproduced the boundary and verified exact Lean fixture bytes. Probe now rejects unexpected errors and offers strict member-discovery acceptance. Follow-up coding: E-mfuton-lisp-match-alt-20261003.
