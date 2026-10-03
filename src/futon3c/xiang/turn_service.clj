@@ -234,14 +234,14 @@
    (:later, the default, waits for `attach-happened!`; :now dispatches at
    once, as an externally captured turn does; :none records only and marks
    the record \"declared\" — settled without a reading, never dispatched).
-   Returns {:id :record :dispatch} where :dispatch is the dispatch result or
+   Returns {:id :path :record :dispatch} where :dispatch is the dispatch result or
    :pending/:skipped/:declared.
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
-        {:keys [id]} (ts/write-record! (cfg svc :store) record)
+        {:keys [id path]} (ts/write-record! (cfg svc :store) record)
         draft (draft! svc id)
         to-seat? (= (cfg svc :seat) agent-id)
         result (cond
@@ -251,7 +251,7 @@
                                         :declared)
                  (= dispatch :now) (dispatch! svc id {})
                  :else :pending)]
-    {:id id :record (ts/read-record (cfg svc :store) id) :redacted redacted
+    {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
      :dispatch result :draft (some? draft)}))
 
 (defn draft!

@@ -110,6 +110,26 @@
     (is (= {:dispatched false :reason :not-requested} (svc/dispatch! (:svc h) id {})))
     (is (empty? @(:bells h)))))
 
+(deftest a-turn-recorded-with-analysis-not-requested-is-never-dispatched
+  ;; M-象-2000 step 1: under the `jvm' recorder Emacs sends the policy
+  ;; decision with the turn; with policy `never' (象-off) the flag is false,
+  ;; the record comes back not-requested, and no dispatch, happened or retry
+  ;; may bell a seat.
+  (let [h (harness)
+        {:keys [id dispatch record path]} (turn! h {:analysis-requested? (constantly false)})]
+    (is (= :pending dispatch))
+    (is (= "not-requested" (:analysis_status record)))
+    (is (string? path))
+    (is (empty? @(:bells h)))
+    (is (= {:dispatched false :reason :not-requested}
+           (svc/attach-happened! (:svc h) id {:reply "done" :commits []})))
+    (is (= {:dispatched false :reason :not-requested}
+           (svc/dispatch! (:svc h) id {})))
+    (is (empty? @(:bells h)))
+    (is (= "not-requested"
+           (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id)))
+        "the stored record keeps the policy's answer")))
+
 (deftest an-external-turn-dispatches-at-once-and-a-failed-send-stays-requested
   (let [h (harness {:bell! (fn [_] {:ok false :status 404 :error "agent not registered"})})
         {:keys [id dispatch]} (turn! h {:dispatch :now})]

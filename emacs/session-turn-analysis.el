@@ -3,6 +3,8 @@
 (require 'json)
 (require 'cl-lib)
 (require 'subr-x)
+(require 'url)
+(require 'url-util)
 
 (defvar agent-chat--last-evidence-id nil
   "Most recently acknowledged chat evidence id in the current REPL buffer.")
@@ -17,6 +19,29 @@
 `all' analyzes every ordinary turn; `unmatched' requests only sentences with
 no lexical cues; `never' records structure without requesting interpretation."
   :type '(choice (const all) (const unmatched) (const never)) :group 'session-mode)
+
+(defcustom session-mode-turn-recorder 'files
+  "How operator turns are recorded, dispatched to 象 and read back.
+`files' (the default): Emacs writes turn-*.json itself and dispatches and
+reaps with its own python scripts.  `jvm': Emacs POSTs each turn to the
+futon3c JVM's /api/alpha/xiang routes; the JVM writes the same files,
+dispatches the turn to the 象 seat when the reply lands, and Emacs polls
+the route until the reading settles.  小象 (local drafts) stays in Emacs
+either way."
+  :type '(choice (const files) (const jvm)) :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-base-url nil
+  "Base URL of the futon3c JVM serving /api/alpha/xiang, for the `jvm' recorder.
+Nil: `agent-chat-agency-base-url' when bound, else http://127.0.0.1:7070."
+  :type '(choice (const nil) string) :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-poll-delay 20
+  "Seconds between polls of a turn's reading under the `jvm' recorder."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-poll-tries 30
+  "How many polls a `jvm'-recorded turn gets before the lighter goes failing."
+  :type 'integer :group 'session-mode)
 
 (defvar session-mode--xiang-off nil
   "Plist (:since TIME :rearm TEXT :policy OLD) while 象 is switched off.")
@@ -230,6 +255,100 @@ A block runs to a closing >>> or, failing that, to the end of the turn."
       (string-trim (string-join (nreverse out) "\n")))))
 
 (defun session-mode--record-turn (text &optional failed original-text)
+  "Persist TEXT's structure before requesting interpretation; return its path.
+How it is persisted is `session-mode-turn-recorder': `files' writes here,
+`jvm' records through the futon3c JVM's /api/alpha/xiang routes."
+  (if (eq session-mode-turn-recorder 'jvm)
+      (session-mode--record-turn-via-jvm text failed original-text)
+    (session-mode--record-turn-via-files text failed original-text)))
+
+(defun session-mode--xiang-base-url ()
+  "The futon3c JVM base URL the `jvm' recorder talks to, without a trailing /."
+  (string-remove-suffix
+   "/" (or session-mode-turn-jvm-base-url
+           (and (boundp 'agent-chat-agency-base-url)
+                (stringp agent-chat-agency-base-url)
+                agent-chat-agency-base-url)
+           "http://127.0.0.1:7070")))
+
+(defun session-mode--xiang-parse-buffer ()
+  "The JSON response alist in the current url retrieval buffer, or nil."
+  (goto-char (point-min))
+  (when (re-search-forward "\\n\\n" nil 'move)
+    (let ((json-object-type 'alist)
+          (json-array-type 'list)
+          (json-false :json-false)
+          (json-null nil))
+      (condition-case nil
+          (json-read-from-string
+           (buffer-substring-no-properties (point) (point-max)))
+        (error nil)))))
+
+(defun session-mode--xiang-request (method api-path &optional payload callback)
+  "Send METHOD with JSON PAYLOAD to API-PATH on the futon3c JVM.
+Synchronous when CALLBACK is nil: returns the parsed response alist, or
+nil when the JVM did not answer in time (never an unfrozen error — the
+callers turn nil into a warning).  With CALLBACK, uses `url-retrieve' so
+a slow JVM never freezes the UI; CALLBACK gets the parsed alist, or nil
+on a transport failure."
+  (let ((url-request-method method)
+        (url-request-extra-headers '(("Content-Type" . "application/json")
+                                     ("Accept" . "application/json")))
+        (url-request-data (when payload
+                            (encode-coding-string (json-encode payload) 'utf-8)))
+        (url (concat (session-mode--xiang-base-url) api-path)))
+    (if callback
+        (url-retrieve url
+                      (lambda (_status cb)
+                        (funcall cb (session-mode--xiang-parse-buffer)))
+                      (list callback) t t)
+      (let ((buf (if (fboundp 'futon-url-retrieve-synchronously)
+                     (futon-url-retrieve-synchronously url 10)
+                   (url-retrieve-synchronously url t t 10))))
+        (unwind-protect
+            (and (buffer-live-p buf)
+                 (with-current-buffer buf (session-mode--xiang-parse-buffer)))
+          (when (buffer-live-p buf) (kill-buffer buf)))))))
+
+(defun session-mode--record-turn-via-jvm (text failed original-text)
+  "Record TEXT through the JVM 象 routes; return the record's path.
+The JVM redacts secrets, structures the turn and writes the same
+turn-*.json file the `files' recorder writes, so the stepper, painter
+and xiang-trace keep reading it.  The policy decision is computed here
+and sent as analysis-requested, so 象-off (policy `never') keeps the
+record `not-requested' and no seat is ever belled for it."
+  (let* ((record (session-mode--structure-turn
+                  (session-mode--elide-quotes
+                   (cdr (agent-chat-split-surface-marker
+                         (car (session-mode--redact-secrets text)))))))
+         (requested (or failed (session-mode--analysis-requested-p record)))
+         (payload (delq nil
+                        `(,(when original-text `(original-text . ,original-text))
+                          (text . ,text)
+                          (agent-id . ,(or agent-chat--agent-id ""))
+                          (session-id . ,(or agent-chat--session-id ""))
+                          (turn-id . ,(or agent-chat--current-turn-id ""))
+                          ,(when agent-chat--last-evidence-id
+                             `(evidence-id . ,agent-chat--last-evidence-id))
+                          (failed . ,(if failed t :json-false))
+                          (analysis-requested . ,(if requested t :json-false)))))
+         (response (session-mode--xiang-request "POST" "/api/alpha/xiang/turns" payload)))
+    (unless (and response (eq t (alist-get 'ok response)))
+      (error "象 turn recording was refused: %s" (or response "no answer")))
+    (when-let* ((kinds (alist-get 'redacted response)))
+      (display-warning
+       'session-mode
+       (format "Redacted secrets (%s) from your turn before capture; the turn itself still reached %s unredacted."
+               (string-join (mapcar #'format kinds) ", ")
+               (or agent-chat--agent-id "the addressed agent"))
+       :warning))
+    (let ((path (alist-get 'path response)))
+      (unless (stringp path)
+        (error "象 turn recording returned no path: %s" response))
+      (setq session-mode--last-analysis-request path)
+      path)))
+
+(defun session-mode--record-turn-via-files (text failed original-text)
   "Persist TEXT's structure before requesting interpretation; return its path.
 A leading surface marker is stripped first, so `source_text' and every offset
 computed against it describe what the operator said rather than how it
@@ -1519,6 +1638,67 @@ First reply lines plus one line per commit made during the turn."
       (let ((coding-system-for-write 'utf-8-unix))
         (insert (json-encode record))))))
 
+(defun session-mode--jvm-dispatch-after-reply (path response)
+  "Hand PATH's reply and commits to the JVM, then poll for the reading.
+The JVM attaches the happened_summary and dispatches the turn to the
+象 seat itself; a refusal here leaves the record `requested', which is
+the honest state."
+  (let* ((id (file-name-base path))
+         (commits (mapcar
+                   (lambda (c)
+                     (delq nil
+                           `(,(when (alist-get 'repo c) `(repo . ,(alist-get 'repo c)))
+                             ,(when (alist-get 'repo-path c) `(repo-path . ,(alist-get 'repo-path c)))
+                             ,(when (alist-get 'sha c) `(sha . ,(alist-get 'sha c)))
+                             ,(when (alist-get 'subject c) `(subject . ,(alist-get 'subject c))))))
+                   (session-mode--turn-commits-snapshot)))
+         (answer (session-mode--xiang-request
+                  "POST" (format "/api/alpha/xiang/turns/%s/happened"
+                                 (url-hexify-string id))
+                  `((reply . ,(or response ""))
+                    (commits . ,(vconcat commits))))))
+    (if answer
+        ;; Whatever the dispatch result (queued, drafted as routine), the
+        ;; record's own status is the truth: poll it.
+        (session-mode--jvm-poll-turn id path session-mode-turn-jvm-poll-tries)
+      (session-mode--set-analysis-health
+       'failing (format "%s: the JVM did not answer; the record stays `requested'" id)))))
+
+(defun session-mode--jvm-poll-turn (id path tries)
+  "Ask about ID's reading again after `session-mode-turn-jvm-poll-delay'.
+TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
+  (run-at-time session-mode-turn-jvm-poll-delay nil
+               #'session-mode--jvm-poll-now id path tries))
+
+(defun session-mode--jvm-poll-now (id path tries)
+  "GET ID's record once; land its hooks when the reading has settled."
+  (session-mode--xiang-request
+   "GET" (format "/api/alpha/xiang/turns/%s" (url-hexify-string id)) nil
+   (lambda (answer)
+     (let ((status (and answer (alist-get 'analysis_status
+                                          (alist-get 'record answer)))))
+       (cond
+        ((equal status "analyzed")
+         (session-mode--set-analysis-health 'ok (format "%s: analysed" id))
+         (run-hook-with-args 'session-mode-analysis-landed-functions path))
+        ((member status '("refused" "failed"))
+         (session-mode--analysis-note-done path)
+         (session-mode--set-analysis-health
+          'failing (format "%s: job refused or failed" id))
+         (display-warning 'session-mode
+                          (format "Turn analysis was not done for %s (%s)" id status)
+                          :warning))
+        ;; Settled without a reading (routine draft, declared, policy off):
+        ;; nothing more will land.
+        ((member status '("drafted" "declared" "not-requested"))
+         (session-mode--analysis-note-done path))
+        ((> tries 1)
+         (session-mode--jvm-poll-turn id path (1- tries)))
+        (t
+         (session-mode--set-analysis-health
+          'failing (format "%s: no reading after %d polls"
+                           id session-mode-turn-jvm-poll-tries))))))))
+
 (defun session-mode--dispatch-analysis-after-reply (path response)
   "Attach a what-happened summary to the record at PATH, then dispatch it.
 Runs when the agent's reply to the operator turn arrives, not at send time:
@@ -1530,26 +1710,28 @@ building or storing the summary warns once and still dispatches the turn."
              ;; 象-off (policy `never') records turns as `not-requested';
              ;; they are kept on disk but must not be belled to the seat.
              (session-mode--record-requests-analysis-p path))
-    (let ((summary
-           (condition-case err
-               (session-mode--turn-happened-summary response)
-             (error
-              (display-warning
-               'session-mode
-               (format "象 happened-summary failed (%s); dispatching without it"
-                       (error-message-string err))
-               :warning)
-              nil))))
-      (when summary
-        (condition-case err
-            (session-mode--record-add-field path 'happened_summary summary)
-          (error
-           (display-warning
-            'session-mode
-            (format "象 happened-summary could not be stored (%s); dispatching without it"
-                    (error-message-string err))
-            :warning))))
-      (session-mode--dispatch-analysis path))))
+    (if (eq session-mode-turn-recorder 'jvm)
+        (session-mode--jvm-dispatch-after-reply path response)
+      (let ((summary
+             (condition-case err
+                 (session-mode--turn-happened-summary response)
+               (error
+                (display-warning
+                 'session-mode
+                 (format "象 happened-summary failed (%s); dispatching without it"
+                         (error-message-string err))
+                 :warning)
+                nil))))
+        (when summary
+          (condition-case err
+              (session-mode--record-add-field path 'happened_summary summary)
+            (error
+             (display-warning
+              'session-mode
+              (format "象 happened-summary could not be stored (%s); dispatching without it"
+                      (error-message-string err))
+              :warning))))
+        (session-mode--dispatch-analysis path)))))
 
 (defvar agent-chat--agent-id)
 (defvar agent-chat--turn-git-heads)

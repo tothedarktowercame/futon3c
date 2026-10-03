@@ -11405,6 +11405,8 @@
       (json-response 400 {:ok false :reason :invalid-dispatch})
       (not (contains? #{nil "operator" "agent"} (:origin payload)))
       (json-response 400 {:ok false :reason :invalid-origin})
+      (not (contains? #{nil true false} (:analysis-requested payload)))
+      (json-response 400 {:ok false :reason :invalid-analysis-requested})
       :else
       (try
         (let [svc (xiang-turn-service config)
@@ -11424,10 +11426,15 @@
                            :operator-id (or (xiang-forwarded-user request)
                                             (some-> (:operator-id payload) str))
                            :author (some-> (:author payload) str)
+                           ;; The recorder's policy decision (Emacs, M-象-2000):
+                           ;; false marks the record "not-requested", which no
+                           ;; dispatch, retry or sweep may queue (象-off stays off).
+                           :analysis-requested? (when (contains? payload :analysis-requested)
+                                                  (constantly (boolean (:analysis-requested payload))))
                            ;; "none": record only, never dispatch to 象 — the bridges'
                            ;; agent replies (xiang_turns.py after_reply; M-象-2000).
                            :dispatch (case (:dispatch payload) "now" :now "none" :none :later)})]
-          (json-response 201 {:ok true :id (:id result) :record (:record result)
+          (json-response 201 {:ok true :id (:id result) :path (:path result) :record (:record result)
                               :redacted (:redacted result) :dispatch (:dispatch result)}))
         (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))))
 
