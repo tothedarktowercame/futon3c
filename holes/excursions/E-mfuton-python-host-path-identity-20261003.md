@@ -1,6 +1,6 @@
 # E-mfuton-python-host-path-identity-20261003
 
-**Requisition:** in-progress — dispatched 2026-10-03T01:26:08.768660+00:00 to kimi-3 as invoke-1790990763757-30661-8371d7f3
+**Requisition:** completed — 2026-10-03T01:49:38.401241005Z, job invoke-1790990763757-30661-8371d7f3, state done
 
 Owner: codex-18. Executor: kimi-3.
 
@@ -11,3 +11,5 @@ Use /tmp/mfs-venv/bin/python, PATH including /home/joe/.elan/bin, MFUTON_HOME=/h
 Repair the reproduced Python source-path identity defect before Lisp integration. Read lisp/parallel/lookup/contract.json coordinator_review and logs. Exclusive production file: src/mfuton/lean/ast/lean_parser/bootstrap_host_meta_carriers.py. Exclusive new test: test/mfuton/lean/lean_parser/parser_compiler_c_authority/host_meta_source_identity_test.py. Evidence only under lisp/parallel/wave2/identity/.
 Replace identity-breaking resolve use with the existing canonical_source_path policy where source identity crosses host-carrier ownership, parsing and constructor caching; inspect all three cited sites and use one consistent policy. Do not alter other identity authorities or symlinks. Add a regression using a REAL temporary symlink and real path consumers, not stubbed path normalization. Prove the old resolve behavior violates the root identity and the fixed production path preserves it. Exercise relevant cache/key behavior without leaking global state. Reproduce then fix the actual compile/publish boundary using run_private_alias_boundary.py or equivalent exact tests; preserve module import provenance because mfuton-share conftest can shadow this worktree. Do not bypass conftest invariants: report any runner constraints explicitly. If compilation proceeds to another defect, report that distinction and retain evidence rather than broaden scope.
 Acceptance: symlink regression passes, existing canonical host carrier tests appropriate to changed caching pass, and actual prior failure rerun with precise outcome. Record before/after Python revisions; this is an oracle repair, not native Lisp progress. Use pinned source fixture for any new Array.extract trace.
+
+Coordinator accepted after correcting the existing test registry-key assertion to canonical_source_path. Real pytest with conftest enabled: 18 passed in 326.05s, including real symlink regressions and previous compile/publish failure. Evidence: mfuton-sbcl/lisp/parallel/wave2/identity/review.json. Python oracle repair only, not native Lisp installation.
