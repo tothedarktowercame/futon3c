@@ -130,7 +130,7 @@
                (or (and (= 503 status)
                         (= :expensive-read-busy (:error body))
                         (< attempt admission-retries))
-                   (and (re-find #"authoritative substrate read timed out"
+                   (and (re-find #"timed out"
                                  (or (ex-message error) ""))
                         (< attempt transient-timeout-retries)))
                (< (inc attempt) remaining-budget))
@@ -141,14 +141,18 @@
           (assoc result :requests (inc attempt)))))))
 
 (defn- paged-hyperedges
-  [url-fn {:keys [limit timeout-ms request-budget]
+  [url-fn {:keys [limit timeout-ms request-budget page-size]
            :or {limit 10000 timeout-ms 60000
-                request-budget default-request-budget}}]
+                request-budget default-request-budget
+                page-size substrate-page-size}}]
   (let [target (long limit)
-        budget (long request-budget)]
-    (when-not (and (pos? target) (pos? budget))
-      (throw (ex-info "substrate pagination requires positive limit and request budget"
-                      {:limit target :request-budget budget})))
+        budget (long request-budget)
+        page-size (long page-size)]
+    (when-not (and (pos? target) (pos? budget) (pos? page-size)
+                   (<= page-size hyperedge-page-limit))
+      (throw (ex-info "substrate pagination requires positive bounds and supported page size"
+                      {:limit target :request-budget budget :page-size page-size
+                       :maximum-page-size hyperedge-page-limit})))
     (loop [after nil
            requests 0
            rows []]
@@ -159,7 +163,7 @@
              :next-cursor after
              :requests requests
              :request-budget budget})
-          (let [page-limit (min substrate-page-size remaining)
+          (let [page-limit (min page-size remaining)
                 page-result (get-page! (url-fn page-limit after) timeout-ms
                                        (- budget requests))
                 body (:body page-result)

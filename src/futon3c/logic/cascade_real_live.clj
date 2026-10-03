@@ -27,11 +27,12 @@
   (:import (java.util.concurrent Callable Executors TimeUnit TimeoutException)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-;; Cold live-store measurement, 2026-08-23, after evicting the 48-entry
-;; hyperedge-window cache with read-only type probes: 5 s completed all seven
-;; walks in 24.364 s; 4 s failed pattern, held and clock walks in 16.834 s.
-;; Five seconds is therefore the lowest observed complete per-page deadline.
-(def ^:private fetch-timeout-ms 5000)
+;; Re-measured 2026-10-03 against the serving store: a 50-row pattern page took
+;; 18.4 s while the complete 971-row relation in one supported 1,000-row page
+;; took 21.8 s. The fixed query cost now dominates hydration, so the old
+;; 100-row/5-second tuning multiplied latency and failed healthy reads.
+(def ^:private fetch-timeout-ms 30000)
+(def ^:private fetch-page-size 1000)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
@@ -41,7 +42,8 @@
   transport or incomplete pagination failure is loud; [] means the
   authoritative query was exhausted and empty."
   [hx-type]
-  (let [rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms})]
+  (let [rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms
+                                                     :page-size fetch-page-size})]
     (when (substrate/partial-result? rows)
       (throw (ex-info "authoritative substrate walk incomplete"
                       {:hyperedge-type hx-type
