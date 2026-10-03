@@ -1,6 +1,6 @@
 # E-mfuton-array-binder-repair-20261003
 
-**Requisition:** in-progress — follow-up queued 2026-10-03T02:53:48.976201+00:00 to codex-14 as invoke-1790996018189-30685-b11131b8
+**Requisition:** completed — reviewed and committed as 798319b; Python owner passes, member advances to publication mismatch; no Lisp credit.
 
 Owner: codex-18. Executor: codex-14.
 
