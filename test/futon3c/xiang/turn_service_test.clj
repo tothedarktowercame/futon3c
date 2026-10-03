@@ -20,6 +20,9 @@
         s (svc/service (merge {:store (temp-store)
                                :now-ms (fn [] @clock)
                                :schedule! (fn [delay thunk] (swap! scheduled conj [delay thunk]))
+                               ;; Run the evidence append inline, so the
+                               ;; schedule assertions see only the pipeline.
+                               :evidence-async! (fn [thunk] (thunk))
                                :bell! (fn [payload]
                                         (swap! bells conj payload)
                                         {:ok true :job-id (str "job-" (count @bells))})
@@ -491,3 +494,30 @@
       (is (not (str/includes? (:prompt (first @(:bells h))) "PRECOMPUTED")))
       (is (re-find #"pattern candidates failed" (:detail (svc/health (:svc h)))))
       (is (nil? (ts/read-pattern-candidates (get-in (:svc h) [:config :store]) id))))))
+
+(deftest a-missing-reply-parent-keeps-the-entry
+  ;; The real boundary refuses an in-reply-to it cannot resolve
+  ;; (:reply-not-found). The record must still become evidence, unlinked.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [entry]
+                                 (if (:in-reply-to entry)
+                                   {:ok false :error/code :reply-not-found}
+                                   (do (swap! appended conj entry) {:ok true})))})
+        {:keys [id]} (turn! h)]
+    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
+    (is (some #{:xiang-reply-parent-missing} (:tags (first @appended))))
+    (is (= "emacs-abc" (get-in (first @appended) [:body :evidence_id]))
+        "the operator turn's id survives in the body")
+    (is (nil? (:state (svc/health (:svc h)))))))
+
+(deftest the-record-append-is-off-the-request-path
+  ;; Emacs waits synchronously on POST /turns; a busy futon1b must not hold
+  ;; the response. With the default runner the append is scheduled, not run.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})
+                    :evidence-async! nil})
+        {:keys [id]} (turn! h)]
+    (is (empty? @appended) "record-turn! returned before the append ran")
+    (is (= 0 (first (delays h))))
+    (run-next! h)
+    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))))

@@ -69,7 +69,10 @@
    ;; M-象-2000 step 2: records and readings are also appended to the
    ;; evidence store. Default no-op so tests and existing callers are
    ;; unaffected; the real append is wired in http.clj's xiang-turn-service.
-   :evidence! (fn [_] {:ok true})})
+   :evidence! (fn [_] {:ok true})
+   ;; How the record's append is run off the request path (fn [thunk]); nil
+   ;; means on the scheduler at delay 0.
+   :evidence-async! nil})
 
 (defn- daemon-scheduler ^ScheduledExecutorService []
   (Executors/newSingleThreadScheduledExecutor
@@ -272,13 +275,24 @@
    DELAYS schedule (the store-busy one); an append that reports itself
    idempotent (a duplicate of an earlier success) is accepted quietly."
   [svc entry delays]
-  (let [result (try ((cfg svc :evidence!) entry)
+  ;; A service built before step 2 (the JVM's cached one) has no :evidence!:
+  ;; skip quietly rather than fail every turn's health.
+  (let [result (try ((or (cfg svc :evidence!) (constantly {:ok true})) entry)
                     (catch Exception e {:ok false :error/message (.getMessage e)}))]
     (cond
       (:ok result) result
 
       (or (:idempotent? result) (= :duplicate-id (:error/code result)))
       result
+
+      ;; The boundary refuses an in-reply-to whose parent it cannot find (an
+      ;; operator turn with no evidence row, or whose row has not landed).
+      ;; Keep the entry, drop the link: the body still carries the id.
+      (and (= :reply-not-found (:error/code result)) (:in-reply-to entry))
+      (append-evidence! svc (-> entry
+                                (dissoc :in-reply-to)
+                                (update :tags conj :xiang-reply-parent-missing))
+                        delays)
 
       (seq delays)
       (do (set-health! svc nil (str (:evidence-id entry) ": evidence append failed ("
@@ -312,7 +326,11 @@
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
-        _ (append-evidence! svc (turn-evidence-entry id record) (cfg svc :store-busy-delays))
+        ;; Off the request path: the caller (Emacs, synchronously) is waiting
+        ;; on this response, and a busy futon1b must not hold it up.
+        _ ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+           #(append-evidence! svc (turn-evidence-entry id record)
+                              (cfg svc :store-busy-delays)))
         draft (draft! svc id)
         to-seat? (= (cfg svc :seat) agent-id)
         result (cond
