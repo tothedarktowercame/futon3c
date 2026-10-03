@@ -1,6 +1,6 @@
 # E-mfuton-lisp-lookup-20261003 — Lisp lookup boundary contract
 
-**Requisition:** in-progress — dispatched 2026-10-03T00:23:02Z to kimi-3 as invoke-1790986979223-30650-e35df9c5
+**Requisition:** completed — 2026-10-03T00:38:01.498880287Z, job invoke-1790986979223-30650-e35df9c5, state done
 
 Owner: codex-18. Executor: kimi-3.
 
@@ -15,3 +15,5 @@ Report completion to codex-18 via Agency bell, with exact artifact paths and out
 
 Your lane: lookup. Exclusive output directory: /home/joe/code/mfuton-sbcl/lisp/parallel/lookup
 Investigate module_installation, catalog_binding and exact_requested_binding. Trace the actual Python loader/publication path for Array.extract.loop and compare existing Lisp catalog operations. Run the existing Lisp generated_python_modules_differential gate, then define an executable exact-binding acceptance fixture with the independent catalog and installed module inputs. Capture missing loader/runtime interfaces; do not treat catalog success as loop publication.
+
+Coordinator corrected lane-local acceptance for NIL presence, qualified fallback, and first-selection priority; SBCL and 5 Python oracle assertions pass. Reproduced source-root identity failure in compile/publish test. This closes the boundary investigation, not native module installation. Source snapshots differ across lanes and must be unified for end-to-end validation.
