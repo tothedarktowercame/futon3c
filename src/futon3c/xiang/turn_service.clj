@@ -72,7 +72,9 @@
    :evidence! (fn [_] {:ok true})
    ;; How the record's append is run off the request path (fn [thunk]); nil
    ;; means on the scheduler at delay 0.
-   :evidence-async! nil})
+   :evidence-async! nil
+   ;; Likewise for the 小象 draft of a turn not dispatched at once.
+   :draft-async! nil})
 
 (defn- daemon-scheduler ^ScheduledExecutorService []
   (Executors/newSingleThreadScheduledExecutor
@@ -331,8 +333,15 @@
         _ ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
            #(append-evidence! svc (turn-evidence-entry id record)
                               (cfg svc :store-busy-delays)))
-        draft (draft! svc id)
         to-seat? (= (cfg svc :seat) agent-id)
+        ;; The 小象 draft took 11 s on the live JVM (2026-10-03), past Emacs's
+        ;; 10 s wait on this request. A turn dispatched now needs its draft
+        ;; first; otherwise it is drafted off the request path, and dispatch!
+        ;; drafts any record still without one.
+        draft (when (= dispatch :now) (draft! svc id))
+        _ (when-not (= dispatch :now)
+            ((or (cfg svc :draft-async!) #((cfg svc :schedule!) 0 %))
+             #(draft! svc id)))
         result (cond
                  to-seat? :skipped
                  (= dispatch :none) (do (ts/update-record! (cfg svc :store) id
@@ -341,7 +350,7 @@
                  (= dispatch :now) (dispatch! svc id {})
                  :else :pending)]
     {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
-     :dispatch result :draft (some? draft)}))
+     :dispatch result :draft (some? (or draft (ts/read-draft (cfg svc :store) id)))}))
 
 (defn draft!
   "Run the :draft effect over ID's source text and store the draft; nil when
@@ -420,7 +429,7 @@
           ;; be queued by dispatch, retry or sweep.
           {:dispatched false :reason (keyword status)}
       (let [record (ts/read-record store id)
-            draft (ts/read-draft store id)]
+            draft (or (ts/read-draft store id) (draft! svc id))]
         (if (and draft (cfg svc :skip-routine?) (tr/routine-draft? record draft)
                  (contains? #{nil "requested"} (:analysis_status record)))
           ;; Routine: the draft is the reading. Recorded as such, never queued.

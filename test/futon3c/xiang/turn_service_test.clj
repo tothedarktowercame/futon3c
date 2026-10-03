@@ -23,6 +23,7 @@
                                ;; Run the evidence append inline, so the
                                ;; schedule assertions see only the pipeline.
                                :evidence-async! (fn [thunk] (thunk))
+                               :draft-async! (fn [thunk] (thunk))
                                :bell! (fn [payload]
                                         (swap! bells conj payload)
                                         {:ok true :job-id (str "job-" (count @bells))})
@@ -521,3 +522,15 @@
     (is (= 0 (first (delays h))))
     (run-next! h)
     (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))))
+
+(deftest the-draft-is-off-the-request-path
+  ;; A slow draft (11 s live) must not hold POST /turns; dispatch! drafts a
+  ;; record that still has none, so the routine check still sees one.
+  (let [drafted (atom 0)
+        h (harness {:draft (fn [_] (swap! drafted inc) nil)
+                    :draft-async! nil :evidence-async! (fn [t] (t))})
+        {:keys [id]} (turn! h)]
+    (is (zero? @drafted) "record-turn! returned before the draft ran")
+    (is (= [0] (delays h)))
+    (svc/dispatch! (:svc h) id {})
+    (is (= 1 @drafted) "dispatch drafted the record that had no draft yet")))
