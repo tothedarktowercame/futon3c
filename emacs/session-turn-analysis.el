@@ -39,8 +39,11 @@ Nil: `agent-chat-agency-base-url' when bound, else http://127.0.0.1:7070."
   "Seconds between polls of a turn's reading under the `jvm' recorder."
   :type 'number :group 'session-mode)
 
-(defcustom session-mode-turn-jvm-poll-tries 30
-  "How many polls a `jvm'-recorded turn gets before the lighter goes failing."
+(defcustom session-mode-turn-jvm-poll-tries 225
+  "How many polls a `jvm'-recorded turn gets before the lighter goes failing.
+With the 20 s delay this is 75 minutes: the JVM keeps reaping a reading for
+3 x 180 s and then 6 x 600 s (about 69 minutes, turn_service.clj :reap-*),
+and a shorter window would call a slow reading failed and never land it."
   :type 'integer :group 'session-mode)
 
 (defvar session-mode--xiang-off nil
