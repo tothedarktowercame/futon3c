@@ -100,6 +100,17 @@
                   sample-clock-edges)]
     (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
 
+(deftest fetch-edges-refuses-partial-authoritative-walk
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [_ _]
+                  (with-meta [{:hx/id "edge-1"}]
+                    {:partial? true :next-cursor "edge-1" :request-budget 1}))]
+    (let [error (try (live/fetch-edges "mission-scope/pattern") nil
+                     (catch clojure.lang.ExceptionInfo error error))]
+      (is (= "authoritative substrate walk incomplete" (ex-message error)))
+      (is (= "mission-scope/pattern" (:hyperedge-type (ex-data error))))
+      (is (= true (get-in (ex-data error) [:pagination :partial?]))))))
+
 (deftest o2-extractor-maps-memes
   (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
     (let [edges  [{:hx/type :mine/meme :hx/endpoints ["meme:ask-abc123"] :hx/props {}}

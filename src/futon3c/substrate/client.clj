@@ -111,6 +111,7 @@
 (def ^:private substrate-page-size 100)
 (def default-request-budget 50)
 (def ^:private admission-retries 3)
+(def ^:private transient-timeout-retries 1)
 
 (defn partial-result?
   "True when a bounded substrate walk stopped before the server was exhausted."
@@ -126,9 +127,12 @@
           error (:error result)
           {:keys [status body]} (some-> error ex-data)]
       (if (and error
-               (= 503 status)
-               (= :expensive-read-busy (:error body))
-               (< attempt admission-retries)
+               (or (and (= 503 status)
+                        (= :expensive-read-busy (:error body))
+                        (< attempt admission-retries))
+                   (and (re-find #"authoritative substrate read timed out"
+                                 (or (ex-message error) ""))
+                        (< attempt transient-timeout-retries)))
                (< (inc attempt) remaining-budget))
         (do (Thread/sleep (* 100 (bit-shift-left 1 attempt)))
             (recur (inc attempt)))

@@ -58,6 +58,22 @@
          (is (= "edge-1" (:next-cursor (meta rows))))
          (is (= 1 (:request-budget (meta rows))))))))
 
+(deftest hyperedge-page-retries-one-transient-timeout
+  (let [calls (atom 0)
+        get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn
+      {#'sut/configured-url (constantly "http://substrate.test")
+       get-edn-var
+       (fn [_url _timeout-ms]
+         (if (= 1 (swap! calls inc))
+           (throw (ex-info "authoritative substrate read timed out"
+                           {:timeout-ms 5}))
+           {:hyperedges [{:hx/id "edge-1"}]}))}
+      #(let [rows (sut/hyperedges-by-type :test/edge {:limit 10})]
+         (is (= ["edge-1"] (mapv :hx/id rows)))
+         (is (= 2 @calls))
+         (is (false? (sut/partial-result? rows)))))))
+
 (def projection-edge
   {:hx/id "attachment" :hx/type :memory/assert :hx/endpoints ["memory"]
    :hx/props {:state :current :attachment-status :reviewed}})

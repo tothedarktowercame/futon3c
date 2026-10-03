@@ -38,9 +38,15 @@
 
 (defn fetch-edges
   "GET currently-valid authoritative substrate hyperedges of HX-TYPE. A
-  transport failure is loud; [] means the authoritative query was empty."
+  transport or incomplete pagination failure is loud; [] means the
+  authoritative query was exhausted and empty."
   [hx-type]
-  (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms}))
+  (let [rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms})]
+    (when (substrate/partial-result? rows)
+      (throw (ex-info "authoritative substrate walk incomplete"
+                      {:hyperedge-type hx-type
+                       :pagination (meta rows)})))
+    rows))
 
 (defn- prop [props k] (or (get props k) (get props (name k))))
 
