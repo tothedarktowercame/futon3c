@@ -332,6 +332,49 @@
                                             :evidence (:evidence persisted)}})))
       persisted))
 
+(def ^:dynamic *store-busy-waits-ms*
+  "Pauses between attempts to record a turn's admission decision while futon1b
+  is busy; about ten minutes in all. On 2026-10-03 a 504 burst refused a
+  codex-18 turn outright (\"Turn not started: futon1b was busy\"): the operator's
+  message was dropped, though a turn is meant to wait its place, not give up
+  because the store is momentarily saturated. `record!` is idempotent on a
+  stable decision id, so retrying is safe; only after the whole schedule is the
+  turn refused."
+  [2000 5000 10000 20000 30000 60000 60000 60000 60000 60000 60000 60000 60000 60000])
+
+(defn- note-waiting! [agent-id activity]
+  (try
+    (when-let [update! (requiring-resolve 'futon3c.agency.registry/update-invoke-activity!)]
+      (update! agent-id activity))
+    (catch Throwable _ nil)))
+
+(defn- record-waiting-out-busy-store!
+  "`record!`, retried on :clock/store-busy per `*store-busy-waits-ms*`."
+  [context]
+  (loop [waits (seq *store-busy-waits-ms*)
+         attempt 1]
+    (let [outcome (try
+                    {:decision (record! context)}
+                    (catch clojure.lang.ExceptionInfo e
+                      (if (and waits (= :clock/store-busy (:error/code (ex-data e))))
+                        {:busy e}
+                        (throw e))))]
+      (if-let [e (:busy outcome)]
+        (let [wait-ms (first waits)]
+          (println (str "[clock-decision] futon1b busy at turn admission agent="
+                        (:agent-id context) " turn=" (:turn-id context)
+                        " attempt=" attempt "; retrying in " (quot wait-ms 1000) "s: "
+                        (or (get-in (ex-data e) [:receipt :error/message])
+                            (some-> (ex-cause e) ex-message)
+                            (ex-message e))))
+          (flush)
+          (note-waiting! (:agent-id context)
+                         (str "waiting for futon1b (busy), retry " attempt
+                              " in " (quot wait-ms 1000) "s"))
+          (Thread/sleep (long wait-ms))
+          (recur (next waits) (inc attempt)))
+        (:decision outcome)))))
+
 (defn start!
   [agent-id session-id prompt options]
   (let [text (if (map? prompt)
@@ -351,7 +394,7 @@
                                  (when (map? prompt)
                                    (or (:mission-id prompt) (get prompt "mission-id"))))
                  :evidence-store (:evidence-store options)}]
-    (record! context)
+    (record-waiting-out-busy-store! context)
     (swap! !active-turns assoc [agent-id id] context)
     context))
 
