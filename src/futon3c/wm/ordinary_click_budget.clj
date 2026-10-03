@@ -3,6 +3,7 @@
    requests retain their own authority; only the plain HTTP branch calls this."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str])
   (:import [java.nio ByteBuffer]
            [java.nio.channels FileChannel]
@@ -52,6 +53,15 @@
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
 
+(defn- charged-click-ids [entries]
+  (let [consumed (into #{} (keep #(when (and (= authorization (:authorization %))
+                                             (nil? (:event %)))
+                                    (:click-id %))) entries)
+        refunded (into #{} (keep #(when (and (= authorization (:authorization %))
+                                             (= "refund" (:event %)))
+                                    (:click-id %))) entries)]
+    (set/difference consumed refunded)))
+
 (defn- parse-ledger [text]
   (mapv #(json/parse-string % true)
         (remove str/blank? (str/split-lines text))))
@@ -74,7 +84,7 @@
                     (java.nio.file.Files/readAllBytes (.toPath file)))
                   (byte-array 0))
           entries (parse-ledger (String. bytes "UTF-8"))
-          consumed (count (filter #(= authorization (:authorization %)) entries))]
+          consumed (count (charged-click-ids entries))]
       {:schema :wm/ordinary-click-availability-v1
        :authorization authorization
        :allocated allocated
@@ -100,7 +110,7 @@
                                        StandardOpenOption/WRITE]))
                   _file-lock (.lock channel)]
         (let [entries (ledger-entries file)
-              consumed (count (filter #(= authorization (:authorization %)) entries))]
+              consumed (count (charged-click-ids entries))]
           (when (>= consumed allocated)
             (throw (ex-info
                     (str "Ordinary click budget exhausted. Return to Joe for renewal. Authority: "
@@ -123,4 +133,42 @@
                                      (.toPath dir)
                                      (into-array StandardOpenOption [StandardOpenOption/READ]))]
                 (.force directory true)))
+            entry))))))
+
+(defn refund!
+  "Append a compensating event for one previously consumed ordinary click.
+   This preserves the original charge and refuses unknown or already-refunded
+   click IDs. REASON names the operator-authorized reason for restoration."
+  [click-id refunded-at caller reason]
+  (locking issue-lock
+    (let [file (io/file *ledger-path*)]
+      (when-not (.exists file)
+        (throw (ex-info "ordinary click ledger is absent"
+                        {:error :ordinary-click-refund-unknown :click-id click-id})))
+      (with-open [channel (FileChannel/open
+                          (.toPath file)
+                          (into-array StandardOpenOption
+                                      [StandardOpenOption/READ StandardOpenOption/WRITE]))
+                  _file-lock (.lock channel)]
+        (let [entries (ledger-entries file)
+              charge (some #(when (and (= authorization (:authorization %))
+                                       (= click-id (:click-id %))
+                                       (nil? (:event %))) %) entries)
+              prior-refund (some #(when (and (= authorization (:authorization %))
+                                             (= click-id (:click-id %))
+                                             (= "refund" (:event %))) %) entries)]
+          (when-not charge
+            (throw (ex-info "ordinary click was not charged under this authority"
+                            {:error :ordinary-click-refund-unknown :click-id click-id})))
+          (when prior-refund
+            (throw (ex-info "ordinary click was already refunded"
+                            {:error :ordinary-click-already-refunded :click-id click-id})))
+          (let [entry {:event "refund" :click-id click-id :refunded-at refunded-at
+                       :authorization authorization :caller (or caller :caller-unknown)
+                       :reason reason}
+                buffer (ByteBuffer/wrap
+                        (.getBytes (str (json/generate-string entry) "\n") "UTF-8"))]
+            (.position channel (.size channel))
+            (while (.hasRemaining buffer) (.write channel buffer))
+            (.force channel true)
             entry))))))

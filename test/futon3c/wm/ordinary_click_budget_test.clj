@@ -122,6 +122,23 @@
         (is (= (dec budget/allocated) (:available receipt)))
         (is (= 1 (count (rows))))))))
 
+(deftest refund-is-compensating-idempotent-and-click-specific
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "ordinary-refund" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+      (budget/consume! "click-one" "issued" "test")
+      (is (= 1 (:consumed (budget/availability))))
+      (budget/refund! "click-one" "refunded" "joe" "debugger-proved wiring defect")
+      (is (= 0 (:consumed (budget/availability))))
+      (is (= budget/allocated (:available (budget/availability))))
+      (is (= [nil "refund"] (mapv :event (rows))))
+      (is (= :ordinary-click-already-refunded
+             (try (budget/refund! "click-one" "again" "joe" "duplicate")
+                  (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
+      (is (= :ordinary-click-refund-unknown
+             (try (budget/refund! "not-charged" "now" "joe" "unknown")
+                  (catch clojure.lang.ExceptionInfo e (:error (ex-data e)))))))))
+
 (deftest busy-click-does-not-consume
   (let [h (http/make-handler {}) calls (atom 0)]
     (reset! service/!status (assoc service/initial-status :running? true :click-id "in-flight"))
