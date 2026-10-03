@@ -43,6 +43,7 @@ until `象-on' or an Emacs restart."
   (write-region (format "%s off  re-arm when: %s\n"
                         (format-time-string "%FT%T%z") rearm)
                 nil (session-mode--xiang-off-log) t 'silent)
+  (force-mode-line-update t)
   (message "象 off. Re-arm when: %s" rearm))
 
 (defun 象-on ()
@@ -58,6 +59,7 @@ until `象-on' or an Emacs restart."
       (write-region (format "%s on   (was: %s)\n"
                             (format-time-string "%FT%T%z") rearm)
                     nil (session-mode--xiang-off-log) t 'silent)
+      (force-mode-line-update t)
       (message "象 on (policy: %s)" session-mode-turn-analysis-policy))))
 
 (defun session-mode--analysis-requested-p (record)

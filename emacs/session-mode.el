@@ -1730,15 +1730,21 @@ Kept separate from full session markup so typing never triggers retrieval."
 (defvar session-mode--analysis-health)        ; session-turn-analysis.el
 (defvar session-mode--analysis-health-detail)
 
+(defvar session-mode--xiang-off)              ; session-turn-analysis.el
+
 (defun session-mode--analysis-lighter ()
-  "The 象 lighter, pink while delegated analysis is known to be failing."
-  (let ((failing (eq session-mode--analysis-health 'failing)))
+  "The 象 lighter: red while turns are sent for interpretation, pink while
+delegated analysis is known to be failing, grey while `象-off' holds."
+  (let ((failing (eq session-mode--analysis-health 'failing))
+        (off (bound-and-true-p session-mode--xiang-off)))
     (propertize " 象"
-                'face `(:foreground ,(if failing "hot pink" "red"))
+                'face `(:foreground ,(cond (off "gray50") (failing "hot pink") (t "red")))
                 'help-echo
-                (concat (if failing
-                            "Turns are captured, but interpretation is FAILING"
-                          "Turns are captured and sent for interpretation")
+                (concat (cond
+                         (off (format "象 is OFF: turns are captured, not sent.\nRe-arm when: %s\nM-x 象-on to resume"
+                                      (plist-get off :rearm)))
+                         (failing "Turns are captured, but interpretation is FAILING")
+                         (t "Turns are captured and sent for interpretation"))
                         (if session-mode--analysis-health-detail
                             (concat "\nLast: " session-mode--analysis-health-detail)
                           "")))))
