@@ -102,6 +102,24 @@ All of it serves the requester; none of it holds the recipient to the order.
 8. **Visible.** `GET /api/alpha/work-orders?agent=` lists open orders, owed
    by and owed to; the REPL lighter can show a count.
 
+## Who does the reminding: Tickle, re-scoped (Joe, 2026-10-03)
+Joe, after unjamming codex-18 and codex-19 by hand: in this session he does
+knowledge work; relative to codex-18 he is "just going around unjamming the
+machine". That is the job the Tickle persona was made for
+(`src/futon3c/agents/tickle.clj`, M-tickle-overnight), unused for months
+because "as implemented Tickle was perpetually a pain".
+
+As built, Tickle pages any agent with no evidence for 300 s
+(`detect-stalls`, `:threshold-seconds`) and escalates to a restart. Silence is
+the wrong signal: an idle agent that owes nothing is not stalled, and an agent
+that is busy elsewhere while it owes something looks alive. With work orders
+the trigger becomes a fact the kernel can state: an order is open, its
+debtor has no running job and no park, and no reminder is in flight. Tickle
+then performs requirements 3 and 7 (the reminder; parking the agent on its
+open child), and escalates to Joe only after the bounded reminders are
+spent. Joe hears about orders that cannot move, not about agents that are
+quiet.
+
 ## Order of work
 1. Write both cases up as P24 fixtures (`test/futon3c/logic/xiang_fixtures/`):
    the claude-4/codex-19 half-done order (locate it first), expectation
