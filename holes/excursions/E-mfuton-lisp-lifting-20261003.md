@@ -1,6 +1,6 @@
 # E-mfuton-lisp-lifting-20261003 — Lisp lifting boundary contract
 
-**Requisition:** in-progress — dispatched 2026-10-03T00:22:59Z to kimi-2 as invoke-1790986976715-30649-68f36ee9
+**Requisition:** completed — 2026-10-03T00:34:09.882104672Z, job invoke-1790986976715-30649-68f36ee9, state done
 
 Owner: codex-18. Executor: kimi-2.
 
@@ -15,3 +15,7 @@ Report completion to codex-18 via Agency bell, with exact artifact paths and out
 
 Your lane: lifting. Exclusive output directory: /home/joe/code/mfuton-sbcl/lisp/parallel/lifting
 Investigate member_materialization and emitted_alias_publication: inspect local-recursive closure conversion and source declaration emission. Capture a real Python producer example with a captured local, plus returned/passed loop behavior if feasible, and identify the exact input representation for hoisting/publication. Distinguish existing Lisp self-tail-call lowering from closure conversion. Produce an implementation contract for the generic lifting boundary.
+
+## Coordinator review
+
+Reviewed and committed in mfuton-sbcl `38b59d2`. Corrected a vacuous depth fixture (immediate return) and colliding fresh names; corrected trace asserts 50,000 accumulator increments with recursion limit 1,000. Four reference boundary tests rerun successfully. Original trace retained as superseded evidence. This completes the boundary investigation only; Lisp production implementation and metadata preservation across AST reconstruction remain pending.
