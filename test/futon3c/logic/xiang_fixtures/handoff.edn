@@ -41,7 +41,19 @@
   {:id "ap1" :kind :approve :author "joe" :to "codex-16" :at "2026-10-03T12:05:00Z"
    :agent "codex-16" :session "s16" :cites "f2" :text "looks good"}]
  :expect
- {:obligations {"2026-10-03T09:10:00Z" #{{:debtor "codex-16" :creditor "claude-17" :source "p2"}}
+ {:open-at {"2026-10-03T09:10:00Z" #{"d1" "p2"}
+            "2026-10-03T10:44:00Z" #{"d1" "p2" "d3" "rp1"}
+            "2026-10-03T12:10:00Z" #{"d1" "rp1"}}      ; joe's own delegation was never answered to joe; codex-16's report never verified
+  :flow {"p2" [["d2" :explicit :closes]]
+         "q1" [["p2" :explicit :keeps]]
+         "df1" [["pr1" :explicit :closes]]
+         "rt1" [["d2" :explicit :closes]]
+         "f2" [["p2" :explicit :closes]]
+         "ex1" [["v1" :explicit :closes]]
+         "ds1" []}
+  :closes {"p2" ["d2"] "rt2" ["d3"] "ex1" ["v1"]}
+  :annotative #{"ds1" "ct1" "ap1"}
+ :obligations {"2026-10-03T09:10:00Z" #{{:debtor "codex-16" :creditor "claude-17" :source "p2"}}
                 "2026-10-03T10:41:00Z" #{{:debtor "codex-16" :creditor "claude-17" :source "p2"}}   ; the retracted request does not end the promise
                 "2026-10-03T12:00:00Z" #{}}
   :in-force {"2026-10-03T09:50:00Z" #{"d1" "d2" "p2"}      ; pr1 proposed, never carried out; df1 changes no standing

@@ -41,6 +41,7 @@
             [clojure.core.logic.pldb :as pldb]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set]
             [clojure.string :as str]))
 
 ;; ---------------------------------------------------------------------------
@@ -89,6 +90,57 @@
 (pldb/db-rel option ^:index id n)
 (pldb/db-rel grantee ^:index id who)
 (pldb/db-rel scope ^:index id kind)
+(pldb/db-rel answers ^:index id opener)          ; an explicit dialogical link
+(pldb/db-rel answers-inferred ^:index id opener) ; a link the flow inferred from the matrix
+
+;; ---------------------------------------------------------------------------
+;; Adjacency: which intents answer which (a prior, to be tuned on evidence)
+
+(def adjacency
+  "Opening intent -> {answering intent -> effect on the port}.
+   :closes  the port is answered and closes
+   :keeps   the answer bears on the port but leaves it open (a caveat, a
+            progress report)
+   An intent absent as a key opens no port: it is annotative or steering and
+   rides the flow. This is the operator's prior over the dialogue game
+   (2026-10-03); scripts/xiang_transitions.py tunes it against the readings."
+  {:propose        {:approve :closes :disagree :closes :defer :closes :redirect :closes
+                    :extend :closes :commit :closes :withdraw :closes :retract :closes}
+   :ask-action     {:accept :closes :disagree :closes :qualify :keeps :offer :keeps
+                    :report :closes :explain :closes}
+   :offer          {:accept :closes :disagree :closes :defer :closes :retract :closes :withdraw :closes}
+   :delegate       {:promise :closes :report-problem :keeps :retract :closes :disagree :closes :report :closes}
+   :promise        {:fulfil :closes :release :closes :lapse :closes :report-problem :keeps :qualify :keeps}
+   :report-problem {:verify :closes :explain :closes :redirect :closes :commit :closes :collect :keeps}
+   :clarify        {:explain :closes :report :closes}
+   :constrain      {:withdraw :closes :rule-withdraw :closes :qualify :keeps :commit :keeps}
+   :verify         {:report :closes :approve :closes :explain :closes :report-problem :closes}})
+;; Not ports: select-card, grant and withdraw are standings, answered by the
+;; vertical relations (in-forceo, reversedo), not moves awaiting a reply. A
+;; withdrawal's undo still links to it through its target.
+
+(def opening-kinds (set (keys adjacency)))
+
+(defn answer-effect
+  "What an act of kind ANSWER does to a port opened by OPENER, or nil."
+  [opener answer]
+  (get-in adjacency [opener answer]))
+
+(defn explicit-answers
+  "[[answer-id opener-id] ...]: the dialogical links a history states
+   outright. An act answers what it targets, what a commit carries out, and
+   what it cites when the adjacency table says that pair is an answer.
+   Targets and carries-out are links whatever the table says."
+  [history]
+  (let [kind-of (into {} (map (juxt :id :kind) history))
+        seqv (fn [x] (if (sequential? x) x (when x [x])))]
+    (vec (distinct
+          (for [{:keys [id kind] :as a} history
+                opener (concat (seqv (:target a))
+                               (seqv (:carries-out a))
+                               (filter #(answer-effect (kind-of %) kind) (seqv (:cites a))))
+                :when (contains? kind-of opener)]
+            [id opener])))))
 
 (defn- epoch
   "Seconds since the epoch for an ISO instant or a number."
@@ -120,10 +172,18 @@
               (when (:scope a) [[scope id (:scope a)]])))
            history)))
 
+(defn facts-with-links
+  "`facts` plus the explicit `answers` links, plus INFERRED [[answer opener] ..]."
+  [history & [inferred]]
+  (into (facts history)
+        (concat (for [[r a] (explicit-answers history)] [answers r a])
+                (for [[r a] inferred] [answers-inferred r a]))))
+
 (defn db
-  "A pldb database for HISTORY."
-  [history]
-  (apply pldb/db (facts history)))
+  "A pldb database for HISTORY, with its explicit dialogical links and any
+   INFERRED ones."
+  [history & [inferred]]
+  (apply pldb/db (facts-with-links history inferred)))
 
 (defn load-fixture
   "A history from an EDN file: {:name .. :history [..] :expect {..}}."
@@ -255,6 +315,37 @@
     (scope g kind)
     (in-forceo g t s)))
 
+(defn answerso
+  "R answers A, explicitly or by inference, with EFFECT from the adjacency
+   table (:closes or :keeps). A target or carries-out link whose pair the
+   table does not list closes the port: the act bore on it directly."
+  [r a effect]
+  (fresh [ko kr]
+    (conde [(answers r a)] [(answers-inferred r a)])
+    (kindo a ko)
+    (kindo r kr)
+    (l/project [ko kr] (== effect (or (answer-effect ko kr) :closes)))))
+
+(defn closes-porto
+  "A visible act closes the port A opened, unless that act was itself
+   reversed: an undone withdrawal leaves the move unanswered again."
+  [a t s]
+  (fresh [r]
+    (answerso r a :closes)
+    (visibleo r t s)
+    (l/nafc reversedo r t s)))
+
+(defn openo
+  "A is an open port as of [t s]: a visible opening act with no visible
+   closing answer. The horizontal counterpart of in-forceo: in-forceo asks
+   whether a standing was cancelled, openo asks whether a move was answered."
+  [a t s]
+  (fresh [k]
+    (kindo a k)
+    (l/membero k (vec opening-kinds))
+    (visibleo a t s)
+    (l/nafc closes-porto a t s)))
+
 (defn derivationo
   "R derives from A: A is cited by R, or carried out by R, or derives from
    something R derives from. The acts an answer was built from."
@@ -315,3 +406,96 @@
   "The acts of HISTORY grouped by kind: which intents a fixture exercises."
   [history]
   (into (sorted-map) (frequencies (map :kind history))))
+
+(defn open-ports
+  "Ids of the ports open as of T (and system time S)."
+  [db t & [s]]
+  (let [[t s] (as-of t s)]
+    (set (pldb/with-db db (run* [a] (openo a t s))))))
+
+(defn- deposits
+  "What an act leaves behind that outlives the conversation: a standing
+   created, ended, restored or closed, or a commit."
+  [{:keys [id kind target carries-out sha]}]
+  (case (kinds kind)
+    :creates [[:created id]]
+    :cancels [[:ended target]]
+    :reverses [[:restored target]]
+    :closes [[:closed target]]
+    (cond-> []
+      (= kind :commit) (conj [:commit (or sha id) (let [c carries-out] (if (sequential? c) (vec c) (when c [c])))]))))
+
+(defn infer-links
+  "For acts with no explicit answer whose kind can answer something: the
+   open port, at the act's own time, that the posterior MATRIX
+   ({opener-kind {answer-kind p}}) makes most probable, when p >= THRESHOLD.
+   Returns [[answer-id opener-id p] ...]. Classical: no model, only the
+   table tuned on counts."
+  [history matrix & {:keys [threshold] :or {threshold 0.2}}]
+  (let [explicit (set (map first (explicit-answers history)))
+        db0 (db history)
+        by-id (into {} (map (juxt :id identity) history))]
+    (vec
+     (for [{:keys [id kind at sys] :as a} (sort-by #(epoch (:at %)) history)
+           :when (not (explicit id))
+           :let [t (epoch at) s (epoch (or sys at))
+                 open (disj (open-ports db0 t s) id)
+                 scored (for [o open
+                              :let [p (get-in matrix [(:kind (by-id o)) kind] 0.0)]
+                              :when (>= p threshold)]
+                          [o p])]
+           :when (seq scored)
+           :let [[o p] (apply max-key second (sort-by first scored))]]
+       [id o p]))))
+
+(defn flow
+  "The exchange as a flow: for each act in time order, what it opened, what
+   it answered and how (:explicit or :inferred), which ports it closed, the
+   ports open after it, and what it deposited. OPTS :matrix enables
+   inferred links (see `infer-links`)."
+  [history & {:keys [matrix threshold] :or {threshold 0.2}}]
+  (let [inferred (when matrix (infer-links history matrix :threshold threshold))
+        inferred-by (into {} (map (fn [[r a p]] [r [a p]]) inferred))
+        linked (db history (map (fn [[r a _]] [r a]) inferred))
+        explicit (group-by first (explicit-answers history))]
+    (vec
+     (for [{:keys [id kind author at sys] :as a} (sort-by #(epoch (:at %)) history)
+           :let [t (epoch at) s (epoch (or sys at))
+                 answered (vec (map second (explicit id)))
+                 [io ip] (inferred-by id)
+                 links (cond-> (mapv (fn [o] {:opener o :link :explicit :effect (or (answer-effect (:kind (first (filter #(= o (:id %)) history))) kind) :closes)}) answered)
+                         io (conj {:opener io :link :inferred :p ip :effect (or (answer-effect (:kind (first (filter #(= io (:id %)) history))) kind) :closes)}))
+                 open-before (open-ports linked (dec t) s)
+                 open-after (open-ports linked t s)]]
+       {:id id :kind kind :author author :at at
+        :opens (boolean (and (opening-kinds kind) (contains? open-after id)))
+        :answers links
+        :closes (vec (sort (clojure.set/difference open-before open-after)))
+        :open-after (vec (sort open-after))
+        :deposits (deposits a)
+        :annotative (and (not (opening-kinds kind)) (empty? links) (empty? (deposits a)))}))))
+
+(defn transition-counts
+  "Evidence of transitions in HISTORY: {:consecutive {[k1 k2] n} :explicit
+   {[opener answer] n}}, the two matrices the census tunes the adjacency
+   prior with. Consecutive pairs are taken within a seat's session."
+  [history]
+  (let [by-session (group-by (juxt :agent :session) history)
+        consecutive (for [[_ acts] by-session
+                          [a b] (partition 2 1 (sort-by #(epoch (:at %)) acts))]
+                      [(:kind a) (:kind b)])
+        kind-of (into {} (map (juxt :id :kind) history))
+        explicit (for [[r a] (explicit-answers history)] [(kind-of a) (kind-of r)])]
+    {:consecutive (frequencies consecutive)
+     :explicit (frequencies explicit)}))
+
+(defn posterior
+  "The transition matrix {opener {answer p}} from COUNTS ({[opener answer] n})
+   with the adjacency table as PRIOR pseudo-counts (ALPHA each)."
+  [counts & {:keys [alpha] :or {alpha 1.0}}]
+  (let [pseudo (for [[o answers] adjacency [a _] answers] [[o a] alpha])
+        all (reduce (fn [m [k n]] (update m k (fnil + 0) n)) {} (concat pseudo counts))
+        by-opener (group-by (comp first key) all)]
+    (into {} (for [[o rows] by-opener
+                   :let [total (reduce + (map val rows))]]
+               [o (into {} (for [[[_ a] n] rows] [a (/ (double n) total)]))]))))

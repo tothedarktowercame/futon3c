@@ -38,6 +38,16 @@
       (is (= ok (x/authority db caller kind when)) (str name " authority " caller kind when)))
     (doseq [[r acts] (:derivation expect)]
       (is (= acts (x/derivation db r)) (str name " derivation of " r)))
+    (doseq [[when ids] (:open-at expect)]
+      (let [[t s] (t+s when)]
+        (is (= ids (x/open-ports db t s)) (str name " open ports as of " when))))
+    (let [rows (into {} (map (juxt :id identity) (x/flow history)))]
+      (doseq [[id links] (:flow expect)]
+        (is (= links (mapv (juxt :opener :link :effect) (:answers (rows id)))) (str name " flow " id)))
+      (doseq [[id closed] (:closes expect)]
+        (is (= closed (:closes (rows id))) (str name " closes at " id)))
+      (doseq [id (:annotative expect)]
+        (is (:annotative (rows id)) (str name " annotative " id))))
     (when-let [intents (:intents expect)]
       (is (set/subset? intents (set (keys (x/by-intent history)))) (str name " exercises its intents")))))
 
@@ -200,3 +210,49 @@
                           (and (= before restored)
                                (= withdrawn (disj before x0))))))))]
     (is (:pass? result) (pr-str result))))
+
+
+;; ---------------------------------------------------------------------------
+;; Flow: ports, inferred links, the matrix
+
+(deftest the-flow-deposits-what-outlives-the-conversation
+  (let [{:keys [history]} (fixture "red-tape")
+        rows (into {} (map (juxt :id identity) (x/flow history)))]
+    (is (= [[:commit "5146606d" ["r2" "r3"]]] (:deposits (rows "c1"))))
+    (is (= [[:ended "r2"]] (:deposits (rows "w1"))))
+    (is (= [[:created "r1"]] (:deposits (rows "r1"))))
+    (is (:annotative (rows "n1")) "a harness notice rides the flow")
+    (is (= ["t1" "r1" "r2" "r3" "c1" "n1" "n2" "t2" "w1" "c2"] (map :id (x/flow history))) "time order")))
+
+(deftest transition-counts-are-evidence-and-the-posterior-keeps-the-prior
+  (let [{:keys [history]} (fixture "handoff")
+        {:keys [consecutive explicit]} (x/transition-counts history)]
+    (is (= 1 (get explicit [:delegate :promise])))
+    (is (= 2 (get explicit [:delegate :retract])))
+    (is (= 1 (get consecutive [:delegate :promise])))
+    (let [m (x/posterior explicit)]
+      (is (> (get-in m [:delegate :retract]) (get-in m [:delegate :promise])) "two retractions outweigh one promise")
+      (is (pos? (get-in m [:propose :approve])) "a pair the table lists but the data lacks keeps its prior")
+      (is (nil? (get-in m [:propose :fulfil])) "a pair neither lists is absent")
+      (doseq [[_ row] m] (is (< (Math/abs (- 1.0 (reduce + (vals row)))) 1e-9) "rows are distributions")))))
+
+(deftest inferred-links-land-on-the-most-probable-open-port-and-are-kept-apart
+  (let [history [{:id "p" :kind :propose :author "joe" :at "2026-10-03T09:00:00Z" :agent "a" :session "s"}
+                 {:id "q" :kind :ask-action :author "joe" :at "2026-10-03T09:01:00Z" :agent "a" :session "s"}
+                 ;; approve, citing nothing: the matrix says a propose is what an approve answers
+                 {:id "ok" :kind :approve :author "joe" :at "2026-10-03T09:05:00Z" :agent "a" :session "s"}]
+        prior (x/posterior {})
+        rows (into {} (map (juxt :id identity) (x/flow history :matrix prior :threshold 0.1)))]
+    (is (= [["p" :inferred :closes]] (mapv (juxt :opener :link :effect) (:answers (rows "ok")))))
+    (is (= ["p"] (:closes (rows "ok"))))
+    (is (= ["q"] (:open-after (rows "ok"))))
+    (testing "without a matrix, or above the threshold, the approve is annotative and the propose stays open"
+      (is (:annotative (get (into {} (map (juxt :id identity) (x/flow history))) "ok")))
+      (is (= #{"p" "q"} (x/open-ports (x/db history) "2026-10-03T09:10:00Z")))
+      (is (= #{"q"} (x/open-ports (x/db history (map (fn [[r a _]] [r a]) (x/infer-links history prior :threshold 0.1)))
+                                  "2026-10-03T09:10:00Z"))))
+    (testing "an explicit link is never replaced by an inferred one"
+      (let [h (assoc-in history [2 :cites] "q")
+            ;; approve does not answer ask-action in the table, so the citation is not a link either
+            rows (into {} (map (juxt :id identity) (x/flow h :matrix prior :threshold 0.1)))]
+        (is (= [["p" :inferred :closes]] (mapv (juxt :opener :link :effect) (:answers (rows "ok")))))))))

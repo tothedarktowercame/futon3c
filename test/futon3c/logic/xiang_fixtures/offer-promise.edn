@@ -44,7 +44,17 @@
    :agent "claude-17" :session "s17" :target "sel1" :cites "t4"
    :text "withdraw inferred (no grant: should be refused by the route)"}]
  :expect
- {:agreement {"y1" {:status :agreed :offer "o1"}}
+ {:open-at {"2026-10-02T09:06:00Z" #{"ask1" "o1" "o1b"}
+            "2026-10-02T09:30:00Z" #{"ask1" "o1b"}           ; y1 answered o1; the ask itself is answered only when the kernel is told so
+            "2026-10-02T12:00:00Z" #{"ask1" "o1b" "p1"}       ; d1 answered by the promise; the promise awaits its fulfilment; cards and grants are standings, not ports
+            "2026-10-02T18:00:00Z" #{"ask1" "o1b"}}           ; p1 fulfilled
+  :flow {"y1" [["o1" :explicit :closes]]
+         "p1" [["d1" :explicit :closes]]
+         "iw1" [["sel1" :explicit :closes]]
+         "u1" [["iw1" :explicit :closes]]
+         "f1" [["p1" :explicit :closes]]}
+  :closes {"y1" ["o1"] "f1" ["p1"] "p1" ["d1"]}
+ :agreement {"y1" {:status :agreed :offer "o1"}}
   :obligations {"2026-10-02T09:10:00Z" #{}                                     ; the acceptance is not yet KNOWN
                 ["2026-10-02T09:10:00Z" "2026-10-02T09:30:00Z"] #{{:debtor "codex-10" :creditor "joe" :source "y1"}}
                 "2026-10-02T12:00:00Z" #{{:debtor "codex-10" :creditor "joe" :source "y1"}

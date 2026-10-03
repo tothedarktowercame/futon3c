@@ -96,3 +96,43 @@ Element through the TypeScript client in Playwright. Each replay is a
 warrant in the test registry. Not built yet: the replay harnesses for the
 routes, Emacs and Element, and the fixture-to-futon1b-record adapter the
 HTTP replay needs.
+
+## Second packet (2026-10-03): the horizontal relation, flow, and the transitions census
+
+Joe: the adjacency table is a prior for the dialogue game's transition
+matrix; the evidence should tune it; `answerso`/`openo` matter because
+dialogical connections are sometimes explicit; the flow can be classical.
+
+- **Adjacency** (`logic.xiang/adjacency`): opener intent → {answer intent →
+  :closes | :keeps}. Nine openers (propose, ask-action, offer, delegate,
+  promise, report-problem, clarify, constrain, verify). Select-card, grant and
+  withdraw were tried as openers and removed: they are standings, answered by
+  the vertical relations, and as ports they never close. The table is the
+  operator's to strike or extend; the python census mirrors it.
+- **Links.** `explicit-answers` derives `answers` facts from a history: an
+  act answers what it targets, what a commit carries out, and what it cites
+  when the table says that pair is an answer. `answers-inferred` is a
+  separate fact so the two grades never mix. `answerso r a effect`,
+  `closes-porto` (a reversed closer reopens the port), `openo a t s`:
+  the horizontal counterpart of `in-forceo`.
+- **Flow.** `flow history & {:matrix :threshold}`: per act in time order,
+  whether it opens a port, its links (explicit or inferred, with effect),
+  the ports it closed, the ports open after it, its deposits (created,
+  ended, restored, closed standings; commits with what they carry out),
+  and whether it is annotative. `infer-links` lands an unlinked answering
+  act on the most probable open port under the matrix at or above the
+  threshold. `transition-counts` and `posterior` (table as pseudo-counts)
+  live in the kernel too, so a fixture can be its own evidence.
+- **Fixtures** gained `:open-at`, `:flow`, `:closes`, `:annotative`. Two of
+  my first expectations were wrong and the kernel right: proposals are open
+  until the commit answers them, and a promise is a port until fulfilled.
+- **Census**: `scripts/xiang_transitions.py` over the readings store:
+  consecutive-turn intent pairs within a session and explicit pairs by reply
+  link; posterior with the mirrored table as prior; a report of pairs the
+  data has that the table lacks and rows the table has that no reading
+  shows; `--json` writes the matrix for `flow`'s `:matrix`. Runs on the box;
+  4 tests here over synthetic records.
+
+Kernel suite: 13 tests, 107 assertions, 0 failures. One known gap: the
+mirrored table in the python script is checked against the Clojure one only
+by eye; a test that loads both belongs with the HTTP replay packet.

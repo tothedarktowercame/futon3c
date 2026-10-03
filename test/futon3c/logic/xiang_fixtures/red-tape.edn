@@ -32,7 +32,14 @@
   {:id "c2" :kind :commit :author "claude-14" :at "2026-09-25T20:40:00Z"
    :agent "claude-14" :session "s14" :carries-out "w1" :cites "w1" :sha "2ef7a010"}]
  :expect
- {:in-force {"2026-09-24T16:00:00Z" #{}
+ {:open-at {"2026-09-24T16:30:00Z" #{"t1" "r1" "r2" "r3"}  ; proposals await an answer until the commit; nothing answers r1's constraint, t1 is open until verified or explained
+            "2026-09-24T17:00:00Z" #{"t1" "r1"}          ; c1 carried out r2 and r3
+            "2026-09-25T21:00:00Z" #{"t1" "r1" "t2"}}    ; t2 cites the notices; w1 answers r2, which c1 had closed already
+  :flow {"c1" [["r2" :explicit :closes] ["r3" :explicit :closes]]
+         "w1" [["r2" :explicit :closes]]
+         "c2" [["w1" :explicit :closes]]}
+  :closes {"c1" ["r2" "r3"]}
+ :in-force {"2026-09-24T16:00:00Z" #{}
              "2026-09-24T16:30:00Z" #{"r1"}          ; said plainly: promulgated and in force; r2 r3 proposed, not yet applied
              "2026-09-24T17:00:00Z" #{"r1" "r2" "r3"}
              "2026-09-25T21:00:00Z" #{"r1" "r3"}}      ; the followup half withdrawn
