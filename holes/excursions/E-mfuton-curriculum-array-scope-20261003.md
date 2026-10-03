@@ -1,6 +1,6 @@
 # E-mfuton-curriculum-array-scope-20261003
 
-**Requisition:** in-progress — dispatched 2026-10-03T02:50:00.393228+00:00 to codex-13 as invoke-1790995798229-30680-d865557c
+**Requisition:** completed — reviewed and integrated as b6d8b9c; kernel prerequisite only, curriculum unchanged.
 
 Owner: codex-18. Executor: codex-13.
 
