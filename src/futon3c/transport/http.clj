@@ -7873,6 +7873,19 @@
                         :turn-counts-included? include-turn-counts?
                         :turn-counts turn-counts})))
 
+(defn- handle-meta-preview
+  "GET /api/alpha/wm/meta-preview — read-only projection of the exact META
+  outer-policy receipt used by Futon2 production selection."
+  []
+  (try
+    (if-let [preview (requiring-resolve
+                      'futon2.aif.meta-live-outer-selector/preview-live)]
+      (json-response 200 {:ok true :receipt (preview)})
+      (json-response 503 {:ok false :error :meta-preview-unavailable}))
+    (catch Throwable t
+      (json-response 503 {:ok false :error :meta-preview-failed
+                          :message (ex-message t)}))))
+
 (defn- handle-mission-detail
   "GET /api/alpha/missions/:id — single mission info + wiring diagram."
   [_config mission-id]
@@ -11891,6 +11904,9 @@
       (and (= :get method) (= "/api/alpha/wm/click" uri))
       (handle-wm-click-status)
 
+      (and (= :get method) (= "/api/alpha/wm/meta-preview" uri))
+      (handle-meta-preview)
+
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
 
@@ -12260,6 +12276,9 @@
 
           (and (= :get method) (= "/api/alpha/missions" uri))
           (handle-missions request config)
+
+          (and (= :get method) (= "/api/alpha/wm/meta-preview" uri))
+          (handle-meta-preview)
 
           (and (= :get method) (string? uri)
                (str/starts-with? uri "/api/alpha/missions/")
