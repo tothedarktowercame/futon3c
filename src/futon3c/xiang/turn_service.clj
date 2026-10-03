@@ -65,7 +65,11 @@
    :notice-max-attempts 5                       ; session-mode-withdrawal-notice-max-attempts
    :surface "emacs-repl"                        ; agency_send.py --surface default
    :vocabulary tr/default-vocabulary
-   :brief-paths tr/default-brief-paths})
+   :brief-paths tr/default-brief-paths
+   ;; M-象-2000 step 2: records and readings are also appended to the
+   ;; evidence store. Default no-op so tests and existing callers are
+   ;; unaffected; the real append is wired in http.clj's xiang-turn-service.
+   :evidence! (fn [_] {:ok true})})
 
 (defn- daemon-scheduler ^ScheduledExecutorService []
   (Executors/newSingleThreadScheduledExecutor
@@ -225,6 +229,72 @@
            "(none)"))))
 
 ;; ---------------------------------------------------------------------------
+;; Evidence (M-象-2000 step 2: records and readings are also evidence)
+;;
+;; The files stay the source of truth in this step: a failed append never
+;; fails or blocks a turn. Deterministic entry ids make a retried append a
+;; quiet duplicate, never a second entry.
+
+(defn turn-evidence-entry
+  "The evidence entry for turn record ID, as stored. Cites the operator
+   turn's evidence_id when the record carries one."
+  [id record]
+  (cond-> {:evidence-id (str "e-xiang-turn-" id)
+           :subject {:ref/type :thread :ref/id id}
+           :type :memory
+           :claim-type :assert
+           :author "xiang-turn-service"
+           :body record
+           :tags (cond-> [:xiang-turn :xiang-turn-record]
+                   (:session_id record) (conj (:session_id record))
+                   (:agent_id record) (conj (:agent_id record)))}
+    (:session_id record) (assoc :session-id (:session_id record))
+    (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
+
+(defn reading-evidence-entry
+  "The evidence entry for ID's published reading; cites the record's entry."
+  [id record analysis]
+  (cond-> {:evidence-id (str "e-xiang-reading-" id)
+           :subject {:ref/type :thread :ref/id id}
+           :type :reflection
+           :claim-type :observation
+           :author "xiang-turn-service"
+           :in-reply-to (str "e-xiang-turn-" id)
+           :body analysis
+           :tags (cond-> [:xiang-turn :xiang-turn-reading]
+                   (:session_id record) (conj (:session_id record))
+                   (:agent_id record) (conj (:agent_id record)))}
+    (:session_id record) (assoc :session-id (:session_id record))))
+
+(defn append-evidence!
+  "Append ENTRY through the :evidence! effect; never throw, never block the
+   turn. A failed append is logged in health and retried on the bounded
+   DELAYS schedule (the store-busy one); an append that reports itself
+   idempotent (a duplicate of an earlier success) is accepted quietly."
+  [svc entry delays]
+  (let [result (try ((cfg svc :evidence!) entry)
+                    (catch Exception e {:ok false :error/message (.getMessage e)}))]
+    (cond
+      (:ok result) result
+
+      (or (:idempotent? result) (= :duplicate-id (:error/code result)))
+      result
+
+      (seq delays)
+      (do (set-health! svc nil (str (:evidence-id entry) ": evidence append failed ("
+                                    (or (:error/message result) (:error/code result) "unknown")
+                                    "); retrying in " (first delays) "s"))
+          ((cfg svc :schedule!) (first delays)
+           (fn [] (append-evidence! svc entry (rest delays))))
+          result)
+
+      :else
+      (do (set-health! svc :failing
+                       (str (:evidence-id entry)
+                            ": evidence append failed; the file record is the source of truth"))
+          result))))
+
+;; ---------------------------------------------------------------------------
 ;; Record (session-mode--record-turn via the store)
 
 (declare dispatch! draft!)
@@ -242,6 +312,7 @@
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
+        _ (append-evidence! svc (turn-evidence-entry id record) (cfg svc :store-busy-delays))
         draft (draft! svc id)
         to-seat? (= (cfg svc :seat) agent-id)
         result (cond
@@ -642,6 +713,7 @@
                       (assoc :request_file (ts/record-path store id)
                              :request_sha256 (tr/sha256 (slurp (ts/record-path store id) :encoding "UTF-8"))))
         published (ts/publish-analysis! store id canonical)]
+    (append-evidence! svc (reading-evidence-entry id record canonical) (cfg svc :store-busy-delays))
     (handle-analyzed! svc id)
     (assoc published :analysis canonical)))
 

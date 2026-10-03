@@ -11355,7 +11355,21 @@
                     :post-negation (fn [payload]
                                      (xiang-ring->effect (handle-negation-interpretation (xiang-synthetic-request payload) config)))
                     :deliver-notice (fn [payload]
-                                      (xiang-ring->effect (handle-turn-notice (xiang-synthetic-request payload))))})]
+                                      (xiang-ring->effect (handle-turn-notice (xiang-synthetic-request payload))))
+                    ;; M-象-2000 step 2: every record and reading is also
+                    ;; evidence. Duplicate appends are quiet; failures are
+                    ;; retried by the service on its store-busy schedule.
+                    :evidence! (fn [entry]
+                                 (try
+                                   (let [receipt (boundary/append! (evidence-store-for-config config) entry)]
+                                     (if (:ok receipt)
+                                       {:ok true :id (:evidence/id receipt)}
+                                       {:ok false
+                                        :error/code (:error/code receipt)
+                                        :error/message (:error/message receipt)
+                                        :idempotent? (boolean (get-in receipt [:invariant/violation :idempotent?]))}))
+                                   (catch Exception e
+                                     {:ok false :error/message (.getMessage e)})))})]
         (if (compare-and-set! !xiang-turn-service nil built)
           built
           (do (xiang-turns/stop! built) @!xiang-turn-service)))))
