@@ -23,6 +23,39 @@ codex-19 jobs show 27 bells codex-19 → claude-4 and none claude-4 → codex-19
 so the order may have travelled inside a reply. Finding it is the first task
 (below).
 
+## Second case: the handoff is a step, not a stop (codex-18, 2026-10-03)
+`*codex-repl:codex-18*` around line 6077, M-diagramprover. Joe asked codex-18
+to continue the validation harness; the row load stopped at missing `inspect`
+support. Joe: "I am confused who you are assigning this to." codex-18 belled
+codex-19 (`invoke-1791070189597-31303-13ddbb3b`, 23:29) asking it to *check*
+whether its latest revision covers `inspect`. codex-19 answered (23:38):
+"This is my transpiler/runtime blocker … No fix revision exists yet." The
+auto-bellback reached codex-18, which wrote "㊟ Lisp `atEnd` validation is
+blocked awaiting that fix. I own the independent retest afterward" and ended
+its turn. Not parked; no order on codex-19 to make the fix.
+
+The chain at that point: Joe → codex-18 (harness, open) → codex-19 (check,
+closed) → [fix: owned by codex-19 in words, ordered by no one] → codex-18
+(retest, waiting on nothing). Every job is `done`; the work is not. Two joints
+failed:
+- The order sent was the wrong one: "check" where the work needed "fix". An
+  ownership claim ("my blocker") is a promise without a deadline; nothing
+  records it as one.
+- The agent that handed off stopped at the tee instead of parking on the
+  branch it opened.
+
+The marks were there (codex-18 and codex-19 both mark their paragraphs);
+what is missing is the track they run on.
+
+## The marble run (Joe's image)
+The marks are the marbles; the adjacency table in `logic/xiang.clj`
+(`:delegate → :promise → :fulfil`, `:offer → :accept`, …) is the track. A
+handoff is a tee in the track (structure/cook-ting: a joint already in the
+structure). At a tee the marble must go down a branch and the run must know
+where the branches rejoin; a run that lets the marble rest at the tee is the
+codex-18 case. Strong words in the system prompt do not build track; this
+needs code at the joint.
+
 ## What exists, and on which side
 All of it serves the requester; none of it holds the recipient to the order.
 - Parking (`parked_on.clj`): the requester waits on a job id and wakes when
@@ -52,13 +85,29 @@ All of it serves the requester; none of it holds the recipient to the order.
 4. **One judge.** Whether an order is open is answered by
    `futon3c.logic.xiang`, not by a separate reader, so the Emacs stepper,
    the Element client and Agency agree.
-5. **Visible.** `GET /api/alpha/work-orders?agent=` lists open orders, owed
+5. **Multi-part orders close only when every part is delivered.** A report
+   that delivers part of an order keeps it open (`:keeps` in the adjacency
+   table), and the recipient carries on rather than waiting to be asked
+   again.
+6. **A handoff is a child order.** When fulfilling an order means asking
+   another agent, the bell records a child order under the parent. The
+   parent cannot close while a child is open. An ownership claim in a reply
+   ("this is mine", "my blocker") is recorded as a promise, i.e. a child order
+   on the claimant.
+7. **No resting at the tee, enforced in code.** When an agent's job ends with
+   its order open and an open child, Agency parks it on the child instead of
+   letting it go idle, and resumes it when the child closes, with the parent
+   order restated. When it ends with its order open and no child, requirement
+   3's reminder applies.
+8. **Visible.** `GET /api/alpha/work-orders?agent=` lists open orders, owed
    by and owed to; the REPL lighter can show a count.
 
 ## Order of work
-1. Locate the claude-4/codex-19 case in the job ledger or evidence, and write
-   it up as a P24 fixture (`test/futon3c/logic/xiang_fixtures/`) whose
-   expectation is "open after codex-19's job ends".
+1. Write both cases up as P24 fixtures (`test/futon3c/logic/xiang_fixtures/`):
+   the claude-4/codex-19 half-done order (locate it first), expectation
+   "open after codex-19's job ends"; and the codex-18 chain above,
+   expectations "Joe's order open, codex-19 owes the fix, codex-18 parked on
+   it" after 23:38.
 2. Kernel: let a report or commit that cites an order and claims completion
    close it (`:fulfil`), and refuse an agreement for a missing seat with its
    own reason rather than `:no-visible-offer`.
