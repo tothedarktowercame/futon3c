@@ -3,6 +3,8 @@
 (require 'json)
 (require 'cl-lib)
 (require 'subr-x)
+(require 'url)
+(require 'url-util)
 
 (defvar agent-chat--last-evidence-id nil
   "Most recently acknowledged chat evidence id in the current REPL buffer.")
@@ -18,11 +20,107 @@
 no lexical cues; `never' records structure without requesting interpretation."
   :type '(choice (const all) (const unmatched) (const never)) :group 'session-mode)
 
+(defcustom session-mode-turn-recorder 'files
+  "How operator turns are recorded, dispatched to 象 and read back.
+`files' (the default): Emacs writes turn-*.json itself and dispatches and
+reaps with its own python scripts.  `jvm': Emacs POSTs each turn to the
+futon3c JVM's /api/alpha/xiang routes; the JVM writes the same files,
+dispatches the turn to the 象 seat when the reply lands, and Emacs polls
+the route until the reading settles.  小象 (local drafts) stays in Emacs
+either way."
+  :type '(choice (const files) (const jvm)) :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-base-url nil
+  "Base URL of the futon3c JVM serving /api/alpha/xiang, for the `jvm' recorder.
+Nil: `agent-chat-agency-base-url' when bound, else http://127.0.0.1:7070."
+  :type '(choice (const nil) string) :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-poll-delay 20
+  "Seconds between polls of a turn's reading under the `jvm' recorder."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-turn-jvm-poll-tries 225
+  "How many polls a `jvm'-recorded turn gets before the lighter goes failing.
+With the 20 s delay this is 75 minutes: the JVM keeps reaping a reading for
+3 x 180 s and then 6 x 600 s (about 69 minutes, turn_service.clj :reap-*),
+and a shorter window would call a slow reading failed and never land it."
+  :type 'integer :group 'session-mode)
+
+(defvar session-mode--xiang-off nil
+  "Plist (:since TIME :rearm TEXT :policy OLD) while 象 is switched off.")
+
+(defun session-mode--xiang-off-log ()
+  (expand-file-name "xiang-off.log" session-mode-turn-analysis-directory))
+
+(defun 象-off (rearm)
+  "Stop sending turns to the 象 seats until REARM holds.
+REARM is the condition, in writing, under which 象 comes back on
+(war-room/wr-26); it is required.  Turns are still recorded.  The
+seats stay registered; a reading already running finishes.  Lasts
+until `象-on' or an Emacs restart."
+  (interactive (list (read-string "Re-arm 象 when: ")))
+  (when (string-blank-p rearm)
+    (user-error "象-off needs a re-arm condition"))
+  (unless session-mode--xiang-off
+    (setq session-mode--xiang-off
+          (list :since (current-time) :rearm rearm
+                :policy session-mode-turn-analysis-policy)))
+  (setq session-mode--xiang-off (plist-put session-mode--xiang-off :rearm rearm)
+        session-mode-turn-analysis-policy 'never)
+  (make-directory session-mode-turn-analysis-directory t)
+  (write-region (format "%s off  re-arm when: %s\n"
+                        (format-time-string "%FT%T%z") rearm)
+                nil (session-mode--xiang-off-log) t 'silent)
+  (force-mode-line-update t)
+  (message "象 off. Re-arm when: %s" rearm))
+
+(defun 象-on ()
+  "Resume sending turns to the 象 seats, undoing `象-off'."
+  (interactive)
+  (if (not session-mode--xiang-off)
+      (message "象 is not switched off (policy: %s)"
+               session-mode-turn-analysis-policy)
+    (let ((rearm (plist-get session-mode--xiang-off :rearm)))
+      (setq session-mode-turn-analysis-policy
+            (plist-get session-mode--xiang-off :policy)
+            session-mode--xiang-off nil)
+      (write-region (format "%s on   (was: %s)\n"
+                            (format-time-string "%FT%T%z") rearm)
+                    nil (session-mode--xiang-off-log) t 'silent)
+      (force-mode-line-update t)
+      (message "象 on (policy: %s)" session-mode-turn-analysis-policy))))
+
+(defun session-mode--autorunner-turn-p (record)
+  "Whether RECORD is a turn the Codex autorunner sent, not Joe.
+The autorunner repeats one prompt after every turn until
+`stop-codex-autorunner'; 象 reading it each time learns nothing.  This
+switch re-arms by itself: once the autorunner is stopped, or Joe types
+anything other than its prompt, turns are read again."
+  (and (bound-and-true-p codex-repl--autorunner-enabled)
+       (boundp 'codex-repl--autorunner-prompt)
+       (equal (string-trim (or (alist-get 'source_text record) ""))
+              (string-trim (or codex-repl--autorunner-prompt
+                               (bound-and-true-p codex-repl-autorunner-prompt)
+                               "")))))
+
 (defun session-mode--analysis-requested-p (record)
   "Whether RECORD should request interpretation under the current policy."
-  (or (eq session-mode-turn-analysis-policy 'all)
-      (and (eq session-mode-turn-analysis-policy 'unmatched)
-           (> (length (alist-get 'unmatched record)) 0))))
+  (and (not (session-mode--autorunner-turn-p record))
+       (or (eq session-mode-turn-analysis-policy 'all)
+           (and (eq session-mode-turn-analysis-policy 'unmatched)
+                (> (length (alist-get 'unmatched record)) 0)))
+       (equal "ask"
+              (session-mode--xiang-turn-policy
+               (or (alist-get 'source_text record) "")
+               (or (alist-get 'evidence_id record)
+                   agent-chat--last-evidence-id)))))
+
+(defun session-mode--record-requests-analysis-p (path)
+  "Return whether the already-scored turn record at PATH requests analysis."
+  (condition-case nil
+      (let ((json-object-type 'alist))
+        (equal "requested" (alist-get 'analysis_status (json-read-file path))))
+    (error nil)))
 
 (defconst session-mode--analysis-tool
   (expand-file-name "../scripts/session_turn_analysis.py"
@@ -175,6 +273,116 @@ A block runs to a closing >>> or, failing that, to the end of the turn."
 
 (defun session-mode--record-turn (text &optional failed original-text)
   "Persist TEXT's structure before requesting interpretation; return its path.
+How it is persisted is `session-mode-turn-recorder': `files' writes here,
+`jvm' records through the futon3c JVM's /api/alpha/xiang routes."
+  (if (eq session-mode-turn-recorder 'jvm)
+      (session-mode--record-turn-via-jvm text failed original-text)
+    (session-mode--record-turn-via-files text failed original-text)))
+
+(defun session-mode--xiang-base-url ()
+  "The futon3c JVM base URL the `jvm' recorder talks to, without a trailing /."
+  (string-remove-suffix
+   "/" (or session-mode-turn-jvm-base-url
+           (and (boundp 'agent-chat-agency-base-url)
+                (stringp agent-chat-agency-base-url)
+                agent-chat-agency-base-url)
+           "http://127.0.0.1:7070")))
+
+(defun session-mode--xiang-parse-buffer ()
+  "The JSON response alist in the current url retrieval buffer, or nil."
+  (goto-char (point-min))
+  ;; The headers end at the first blank line.  The body arrives as raw
+  ;; bytes, so decode it before reading (象 and every mark are multibyte).
+  (when (re-search-forward "\r?\n\r?\n" nil t)
+    (let ((json-object-type 'alist)
+          (json-array-type 'list)
+          (json-false :json-false)
+          (json-null nil))
+      (condition-case nil
+          (json-read-from-string
+           (decode-coding-string
+            (buffer-substring-no-properties (point) (point-max)) 'utf-8))
+        (error nil)))))
+
+(defun session-mode--xiang-request (method api-path &optional payload callback)
+  "Send METHOD with JSON PAYLOAD to API-PATH on the futon3c JVM.
+Synchronous when CALLBACK is nil: returns the parsed response alist, or
+nil when the JVM did not answer in time (never an unfrozen error — the
+callers turn nil into a warning).  With CALLBACK, uses `url-retrieve' so
+a slow JVM never freezes the UI; CALLBACK gets the parsed alist, or nil
+on a transport failure."
+  (let ((url-request-method method)
+        (url-request-extra-headers '(("Content-Type" . "application/json")
+                                     ("Accept" . "application/json")))
+        (url-request-data (when payload
+                            (encode-coding-string (json-encode payload) 'utf-8)))
+        (url (concat (session-mode--xiang-base-url) api-path)))
+    (if callback
+        (url-retrieve url
+                      (lambda (_status cb)
+                        (funcall cb (session-mode--xiang-parse-buffer)))
+                      (list callback) t t)
+      (let ((buf (if (fboundp 'futon-url-retrieve-synchronously)
+                     (futon-url-retrieve-synchronously url 10)
+                   (url-retrieve-synchronously url t t 10))))
+        (unwind-protect
+            (and (buffer-live-p buf)
+                 (with-current-buffer buf (session-mode--xiang-parse-buffer)))
+          (when (buffer-live-p buf) (kill-buffer buf)))))))
+
+(defun session-mode--record-turn-via-jvm (text failed original-text)
+  "Record TEXT through the JVM 象 routes; return the record's path.
+The JVM redacts secrets, structures the turn and writes the same
+turn-*.json file the `files' recorder writes, so the stepper, painter
+and xiang-trace keep reading it.  The policy decision is computed here
+and sent as analysis-requested, so 象-off (policy `never') keeps the
+record `not-requested' and no seat is ever belled for it."
+  (let* ((record (session-mode--structure-turn
+                  (session-mode--elide-quotes
+                   (cdr (agent-chat-split-surface-marker
+                         (car (session-mode--redact-secrets text)))))))
+         (requested (or failed (session-mode--analysis-requested-p record)))
+         (payload (delq nil
+                        `(,(when original-text `(original-text . ,original-text))
+                          (text . ,text)
+                          (agent-id . ,(or agent-chat--agent-id ""))
+                          (session-id . ,(or agent-chat--session-id ""))
+                          (turn-id . ,(or agent-chat--current-turn-id ""))
+                          ,(when agent-chat--last-evidence-id
+                             `(evidence-id . ,agent-chat--last-evidence-id))
+                          (failed . ,(if failed t :json-false))
+                          (analysis-requested . ,(if requested t :json-false))
+                          ;; The reading starts at send: the JVM dispatches
+                          ;; "soon" (off its request path).  A not-requested
+                          ;; turn carries no dispatch key and is never read.
+                          ,(when requested '(dispatch . "soon")))))
+         (response (session-mode--xiang-request "POST" "/api/alpha/xiang/turns" payload)))
+    (unless (and response (eq t (alist-get 'ok response)))
+      (error "象 turn recording was refused: %s" (or response "no answer")))
+    (when-let* ((kinds (alist-get 'redacted response)))
+      (display-warning
+       'session-mode
+       (format "Redacted secrets (%s) from your turn before capture; the turn itself still reached %s unredacted."
+               (string-join (mapcar #'format kinds) ", ")
+               (or agent-chat--agent-id "the addressed agent"))
+       :warning))
+    (let ((path (alist-get 'path response)))
+      (unless (stringp path)
+        (error "象 turn recording returned no path: %s" response))
+      (setq session-mode--last-analysis-request path)
+      ;; Let consumers read the record through their own canonical path.
+      ;; This runs after every successful record, including a slow draft;
+      ;; a refused response never reaches it.
+      (run-hook-with-args 'session-mode-turn-recorded-functions path)
+      ;; The reading started at send: ask about it until it settles.  It may
+      ;; land before the agent's reply ends; that is the point.
+      (when requested
+        (session-mode--jvm-poll-turn (file-name-base path) path
+                                     session-mode-turn-jvm-poll-tries))
+      path)))
+
+(defun session-mode--record-turn-via-files (text failed original-text)
+  "Persist TEXT's structure before requesting interpretation; return its path.
 A leading surface marker is stripped first, so `source_text' and every offset
 computed against it describe what the operator said rather than how it
 reached the buffer. The surface itself is kept in the record's metadata.
@@ -191,8 +399,13 @@ The addressed agent has already received the original turn and is out of scope."
          (split (agent-chat-split-surface-marker text))
          (surface (car split))
          (text (session-mode--elide-quotes (cdr split)))
+         (quotes session-mode--last-quotes)
+         ;; 象 reads the record file: the original keeps its >>> blocks
+         ;; elided too, and the quoted text goes to a display-only sidecar.
          (original-text (and original-text
-                             (cdr (agent-chat-split-surface-marker original-text))))
+                             (prog1 (session-mode--elide-quotes
+                                     (cdr (agent-chat-split-surface-marker original-text)))
+                               (setq session-mode--last-quotes quotes))))
          (record (session-mode--structure-turn text))
          (directory (file-name-as-directory session-mode-turn-analysis-directory)))
     (make-directory directory t)
@@ -214,13 +427,17 @@ The addressed agent has already received the original turn and is out of scope."
                       (evidence_id . ,agent-chat--last-evidence-id)
                       (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
-                      (quotes . ,(vconcat session-mode--last-quotes))
+                      (quote_count . ,(length quotes))
                       (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
                                              "requested" "not-requested")))))
       (condition-case err
           (with-temp-file path
             (let ((coding-system-for-write 'utf-8-unix))
-              (insert (json-encode (append record metadata)))))
+              (insert (json-encode (append record metadata))))
+            (when quotes
+              (let ((coding-system-for-write 'utf-8-unix))
+                (write-region (json-encode (vconcat quotes)) nil
+                              (concat path ".quotes.json") nil 'silent))))
         (error (delete-file path) (signal (car err) (cdr err))))
       (setq session-mode--last-analysis-request path)
       (when redaction-kinds
@@ -258,6 +475,10 @@ The addressed agent has already received the original turn and is out of scope."
            "To improve future draft tagging, optionally propose top-level reusable_cues with exact start/end/text, intent and rationale for reuse. "
            "Propose only short communicative phrases that generalize, not project names or arbitrary subject words. "
            "Emacs persists unassigned phrases as provisional cue hypotheses with provenance; existing assignments and human corrections win. Do not edit the vocabulary file directly. "
+           "R-node reading is optional and most fragments have none. Read /home/joe/code/futon0/analysis/audits/rnode-tree/rnode-definitions.edn once per seat session, and re-read it whenever unsure. "
+           "A fragment may include rnode: {\"node\", \"quantity\", \"operation\", \"justification\"}; use a node from that file, one of its operations, and a one-line justification naming the quantity as in the admission example. "
+           "Optionally propose top-level rnode_cues: [{\"text\", \"start\", \"end\", \"node\", \"operation\", \"justification\"}] using exact source spans. "
+           "Seeds stay inside the definitions file: never show the operator cue lists. "
            "Save the filled JSON to a temporary file and validate/publish with: "
            "python3 %s complete REQUEST ANALYSIS.json. Replace REQUEST with the record path above. "
            "If you cannot do this, say so; the record remains requested, never silently complete.\n"
@@ -338,7 +559,8 @@ Existing phrase assignments, including human corrections, always take precedence
               ;; underlines cannot be drawn -- a later turn already sent, a
               ;; region whose markers have gone. Measured 2026-09-23: 10 of 38
               ;; analyses learned nothing for exactly that reason.
-              (session-mode--learn-analysis-cues data result))
+              (session-mode--learn-analysis-cues data result)
+              (session-mode--record-rnode-cues data))
             (when (and (equal (alist-get 'status data) "analyzed")
                        (equal source stripped)
                        session-mode--last-operator-region
@@ -635,6 +857,16 @@ turn trace ever heard of it (claude-17, 2026-09-30)."
 Long enough that an ordinary interpretation has finished, so the usual
 answer is \"still running\" and nothing is written."
   :type 'integer
+  :group 'session-mode)
+
+(defcustom session-mode-analysis-store-busy-retry-delays '(60 180 600)
+  "Seconds to wait between analysis redispatches after futon1b is busy.
+Each delay permits one more attempt.  The evidence-store boundary prevents the
+agent from running when its clock decision was not recorded, and the turn's
+event identity is stable, so these retries neither duplicate analysis nor
+admit an unclocked turn.  After the final delay the failed job is reported
+normally."
+  :type '(repeat integer)
   :group 'session-mode)
 
 (defconst session-mode--dispatch-reaper
@@ -1021,9 +1253,35 @@ analysis health failing; it is not discarded."
 (defvar session-mode-analysis-landed-functions nil
   "Called with a record's path when the reaper finds its 象 reading done.")
 
+(defvar session-mode-turn-recorded-functions nil
+  "Called with PATH after the jvm recorder successfully records a turn.")
+
 (add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
 
-(defun session-mode--reap-dispatch (path &optional agent tries)
+(defun session-mode--store-busy-failure-p (out)
+  "Non-nil when reaper output OUT reports transient futon1b admission load."
+  (and (string-match-p "REFUSED\\|FAILED" out)
+       (string-match-p
+        "futon1b busy\\|clock/store-busy\\|Turn not started: futon1b"
+        out)))
+
+(defun session-mode--retry-analysis-after-store-busy (path agent delays)
+  "Archive PATH's failed attempt and redispatch it to AGENT.
+DELAYS is the tail of the bounded backoff schedule for later failures."
+  (let ((status (call-process "python3" nil nil nil
+                              session-mode--dispatch-reaper "--retry" path)))
+    (if (zerop status)
+        (session-mode--dispatch-analysis path agent delays)
+      (session-mode--set-analysis-health
+       'failing (format "%s: could not prepare store-busy retry"
+                        (file-name-base path)))
+      (display-warning
+       'session-mode
+       (format "Turn analysis retry could not reset %s to `requested'."
+               (file-name-base path))
+       :warning))))
+
+(defun session-mode--reap-dispatch (path &optional agent tries store-busy-delays)
   "Ask what became of PATH's dispatch and write the answer onto the record.
 A refusal and a busy seat both left `requested' before this existed.
 AGENT is the seat it went to: if that seat ran out of usage, bench it and
@@ -1032,7 +1290,7 @@ is asked about again: three times at `session-mode-analysis-reap-after',
 then `session-mode-analysis-reap-late-tries' times at
 `session-mode-analysis-reap-late-after'.  TRIES counts the reaps left.
 A single reap that found it running left the lighter's health unchanged
-for good."
+for good.  STORE-BUSY-DELAYS is the remaining bounded redispatch schedule."
   (let ((buf (generate-new-buffer " *session-analysis-reap*")))
     (make-process
      :name "session-analysis-reap" :buffer buf :noquery t
@@ -1060,6 +1318,20 @@ for good."
                                                agent other (file-name-base path)))
                                   (session-mode--dispatch-analysis path other)
                                   t))))
+                        ((and (session-mode--store-busy-failure-p out)
+                              (not (eq store-busy-delays :exhausted))
+                              (or store-busy-delays
+                                  session-mode-analysis-store-busy-retry-delays))
+                         (let* ((delays (or store-busy-delays
+                                           session-mode-analysis-store-busy-retry-delays))
+                                (delay (car delays)))
+                           (session-mode--set-analysis-health
+                            nil (format "%s: futon1b busy; retrying in %ss"
+                                        (file-name-base path) delay))
+                           (run-at-time
+                            delay nil
+                            #'session-mode--retry-analysis-after-store-busy
+                            path agent (or (cdr delays) :exhausted))))
                         ((string-match-p "REFUSED\\|FAILED" out)
                          (session-mode--analysis-note-done path)
                          (session-mode--set-analysis-health
@@ -1091,11 +1363,12 @@ for good."
                      (kill-buffer (process-buffer proc)))))
      :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
 
-(defun session-mode--dispatch-analysis (path &optional agent)
+(defun session-mode--dispatch-analysis (path &optional agent store-busy-delays)
   "Ask AGENT to interpret the turn recorded at PATH.
 AGENT defaults to `session-mode--analysis-seat': the analysis agent, or
 its alternate while the analysis agent is out of usage.
-Fire and forget: the dispatch must not delay the conversation, and a seat
+STORE-BUSY-DELAYS, when non-nil, is the remaining retry schedule inherited
+from a transient evidence-store failure.  Fire and forget: the dispatch must not delay the conversation, and a seat
 that is busy or absent leaves the record `requested', which is the honest
 state -- never silently complete."
   (let* ((agent (or agent (session-mode--analysis-seat)))
@@ -1242,7 +1515,8 @@ state -- never silently complete."
                    (let ((jid (match-string 1 out)))
                      (session-mode--record-dispatch-job path jid)
                      (run-at-time session-mode-analysis-reap-after nil
-                                  #'session-mode--reap-dispatch path agent)))))
+                                  #'session-mode--reap-dispatch path agent nil
+                                  store-busy-delays)))))
              (when (buffer-live-p (process-buffer proc))
                (kill-buffer (process-buffer proc)))))
          :command (list "sh" "-c"
@@ -1311,7 +1585,7 @@ Never includes diff text."
 (defvar-local session-mode--reply-pending-path nil
   "Record path of the operator turn whose reply has not ended yet.")
 (defvar-local session-mode--turn-reply-text nil
-  "First streamed reply segment of the pending turn, for the summary.")
+  "Streamed reply segments of the pending turn, joined.")
 (defvar-local session-mode--turn-commits-seen nil
   "Commits `agent-chat-finish-turn-commits' returned this turn.
 A streamed turn emits its turn-commits (which clears the heads) before
@@ -1328,10 +1602,16 @@ or from the end of the turn (streamed ones), whichever comes first."
       (session-mode--display-analysis path))))
 
 (defun session-mode--note-reply-segment (text &rest _)
-  "Keep the first reply segment TEXT of a pending turn."
-  (when (and session-mode--reply-pending-path (not session-mode--turn-reply-text)
-             (stringp text))
-    (setq session-mode--turn-reply-text text)))
+  "Append reply segment TEXT of a pending turn.
+All segments are kept: a streamed turn's marked reply (what 大象 reads)
+is its last segment, after the narration between tool calls.  The
+happened summary still reads the first lines."
+  (when (and session-mode--reply-pending-path (stringp text)
+             (not (string-empty-p (string-trim text))))
+    (setq session-mode--turn-reply-text
+          (if session-mode--turn-reply-text
+              (concat session-mode--turn-reply-text "\n\n" text)
+            text))))
 
 (defun session-mode--note-turn-commits (original &rest args)
   "Call ORIGINAL with ARGS and keep the commits it returns for the summary."
@@ -1409,6 +1689,81 @@ First reply lines plus one line per commit made during the turn."
       (let ((coding-system-for-write 'utf-8-unix))
         (insert (json-encode record))))))
 
+(defvar session-mode--jvm-turn-state (make-hash-table :test #'equal)
+  "Record path -> `polling' or `landed', for the `jvm' recorder.
+Polling starts at send and the landed hook fires once per turn; a reply
+that ends after the reading landed never restarts either.")
+
+(defun session-mode--jvm-dispatch-after-reply (path response)
+  "Hand PATH's reply and commits to the JVM at turn finalisation.
+\"What happened\" is classical (no LLM), like the \"Cooked for Ns\" line:
+it never triggers or waits for a reading.  Polling started at send is
+left alone; a record that is not being polled (a files-era one) gets
+polled here.  A refusal leaves the record `requested', the honest state."
+  (let* ((id (file-name-base path))
+         (commits (mapcar
+                   (lambda (c)
+                     (delq nil
+                           `(,(when (alist-get 'repo c) `(repo . ,(alist-get 'repo c)))
+                             ,(when (alist-get 'repo-path c) `(repo-path . ,(alist-get 'repo-path c)))
+                             ,(when (alist-get 'sha c) `(sha . ,(alist-get 'sha c)))
+                             ,(when (alist-get 'subject c) `(subject . ,(alist-get 'subject c))))))
+                   (session-mode--turn-commits-snapshot)))
+         (answer (session-mode--xiang-request
+                  "POST" (format "/api/alpha/xiang/turns/%s/happened"
+                                 (url-hexify-string id))
+                  `((reply . ,(or response ""))
+                    (commits . ,(vconcat commits))))))
+    (if answer
+        ;; Whatever the dispatch result (queued, drafted as routine), the
+        ;; record's own status is the truth: poll it — unless send already
+        ;; started a poll, or the reading already landed.
+        (unless (memq (gethash path session-mode--jvm-turn-state)
+                      '(polling landed))
+          (session-mode--jvm-poll-turn id path session-mode-turn-jvm-poll-tries))
+      (session-mode--set-analysis-health
+       'failing (format "%s: the JVM did not answer; the record stays `requested'" id)))))
+
+(defun session-mode--jvm-poll-turn (id path tries)
+  "Ask about ID's reading again after `session-mode-turn-jvm-poll-delay'.
+TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
+  (puthash path 'polling session-mode--jvm-turn-state)
+  (run-at-time session-mode-turn-jvm-poll-delay nil
+               #'session-mode--jvm-poll-now id path tries))
+
+(defun session-mode--jvm-poll-now (id path tries)
+  "GET ID's record once; land its hooks when the reading has settled."
+  (session-mode--xiang-request
+   "GET" (format "/api/alpha/xiang/turns/%s" (url-hexify-string id)) nil
+   (lambda (answer)
+     (let ((status (and answer (alist-get 'analysis_status
+                                          (alist-get 'record answer)))))
+       (cond
+        ((equal status "analyzed")
+         (puthash path 'landed session-mode--jvm-turn-state)
+         (session-mode--set-analysis-health 'ok (format "%s: analysed" id))
+         (run-hook-with-args 'session-mode-analysis-landed-functions path))
+        ((member status '("refused" "failed"))
+         (puthash path 'landed session-mode--jvm-turn-state)
+         (session-mode--analysis-note-done path)
+         (session-mode--set-analysis-health
+          'failing (format "%s: job refused or failed" id))
+         (display-warning 'session-mode
+                          (format "Turn analysis was not done for %s (%s)" id status)
+                          :warning))
+        ;; Settled without a reading (routine draft, declared, policy off):
+        ;; nothing more will land.
+        ((member status '("drafted" "declared" "not-requested"))
+         (puthash path 'landed session-mode--jvm-turn-state)
+         (session-mode--analysis-note-done path))
+        ((> tries 1)
+         (session-mode--jvm-poll-turn id path (1- tries)))
+        (t
+         (puthash path 'landed session-mode--jvm-turn-state)
+         (session-mode--set-analysis-health
+          'failing (format "%s: no reading after %d polls"
+                           id session-mode-turn-jvm-poll-tries))))))))
+
 (defun session-mode--dispatch-analysis-after-reply (path response)
   "Attach a what-happened summary to the record at PATH, then dispatch it.
 Runs when the agent's reply to the operator turn arrives, not at send time:
@@ -1416,27 +1771,32 @@ Runs when the agent's reply to the operator turn arrives, not at send time:
 building or storing the summary warns once and still dispatches the turn."
   (when (and path session-mode-analysis-agent
              (not (equal session-mode-analysis-agent
-                         agent-chat--agent-id)))
-    (let ((summary
-           (condition-case err
-               (session-mode--turn-happened-summary response)
-             (error
-              (display-warning
-               'session-mode
-               (format "象 happened-summary failed (%s); dispatching without it"
-                       (error-message-string err))
-               :warning)
-              nil))))
-      (when summary
-        (condition-case err
-            (session-mode--record-add-field path 'happened_summary summary)
-          (error
-           (display-warning
-            'session-mode
-            (format "象 happened-summary could not be stored (%s); dispatching without it"
-                    (error-message-string err))
-            :warning))))
-      (session-mode--dispatch-analysis path))))
+                         agent-chat--agent-id))
+             ;; 象-off (policy `never') records turns as `not-requested';
+             ;; they are kept on disk but must not be belled to the seat.
+             (session-mode--record-requests-analysis-p path))
+    (if (eq session-mode-turn-recorder 'jvm)
+        (session-mode--jvm-dispatch-after-reply path response)
+      (let ((summary
+             (condition-case err
+                 (session-mode--turn-happened-summary response)
+               (error
+                (display-warning
+                 'session-mode
+                 (format "象 happened-summary failed (%s); dispatching without it"
+                         (error-message-string err))
+                 :warning)
+                nil))))
+        (when summary
+          (condition-case err
+              (session-mode--record-add-field path 'happened_summary summary)
+            (error
+             (display-warning
+              'session-mode
+              (format "象 happened-summary could not be stored (%s); dispatching without it"
+                      (error-message-string err))
+              :warning))))
+        (session-mode--dispatch-analysis path)))))
 
 (defvar agent-chat--agent-id)
 (defvar agent-chat--turn-git-heads)
@@ -1465,8 +1825,7 @@ building or storing the summary warns once and still dispatches the turn."
                      session-mode--turn-reply-text nil
                      session-mode--turn-commits-seen nil)
                (when (and (not session-mode-analysis-agent)
-                          (or failed (session-mode--analysis-requested-p
-                                      (session-mode--structure-turn sent))))
+                          (or failed (session-mode--record-requests-analysis-p path)))
                  (setq prompt (concat sent (session-mode--analysis-instruction path)
                                       (when failed
                                         "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))
@@ -1480,7 +1839,8 @@ building or storing the summary warns once and still dispatches the turn."
                             (with-current-buffer buffer
                               (session-mode--dispatch-pending-turn response))
                           ;; Buffer gone: the turn still goes to 象, without a summary.
-                          (when path (session-mode--dispatch-analysis path)))
+                          (when (and path (session-mode--record-requests-analysis-p path))
+                            (session-mode--dispatch-analysis path)))
                       (error (display-warning
                               'session-mode
                               (format "象 dispatch after reply failed: %s; the record stays `requested'"

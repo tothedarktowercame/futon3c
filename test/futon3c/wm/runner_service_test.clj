@@ -71,6 +71,96 @@
         (do (Thread/sleep 5) (recur))
         :else false))))
 
+(deftest unsupported-ordinary-trigger-is-rejected-before-any-lifecycle-side-effect
+  (let [issued (atom 0)
+        before (service/status)]
+    (binding [service/*click-run-binding-dir*
+              (.getPath (.toFile (java.nio.file.Files/createTempDirectory
+                                  "unsupported-trigger-"
+                                  (make-array java.nio.file.attribute.FileAttribute 0))))]
+      (let [failure (try
+                      (service/click! {:trigger :custom-operator-trigger
+                                       :ordinary-click/issue! #(swap! issued inc)})
+                      nil
+                      (catch clojure.lang.ExceptionInfo throwable throwable))]
+        (is (= :wm-click-trigger-unsupported (:error (ex-data failure))))
+        (is (= :custom-operator-trigger (:trigger (ex-data failure))))
+        (is (= #{:duree-click-on-demand}
+               (:accepted-triggers (ex-data failure))))
+        (is (zero? @issued) "ration callback was not invoked")
+        (is (= (dissoc before :serving-runner-code)
+               (dissoc (service/status) :serving-runner-code))
+            "no click id or running status was published")
+        (is (empty? (seq (.listFiles (io/file service/*click-run-binding-dir*))))
+            "no click/run binding was created")))))
+
+(deftest supported-ordinary-trigger-passes-the-authoritative-admission
+  (is (= :duree-click-on-demand
+         (:trigger (service/admit-ordinary-click-trigger! {}))))
+  (is (= :duree-click-on-demand
+         (:trigger (service/admit-ordinary-click-trigger!
+                    {:trigger :duree-click-on-demand})))))
+
+(deftest caller-run-id-admission-precedes-click-lifecycle
+  (let [valid "2099-12-31-1084e87d-7154-46c8-a70b-681589061d3d"
+        before (service/status)
+        issued (atom 0)
+        malformed (try
+                    (service/click! {:run-id "2026-10-02-"
+                                     :ordinary-click/issue! #(swap! issued inc)})
+                    nil
+                    (catch clojure.lang.ExceptionInfo throwable throwable))]
+    (is (= :wm-click-run-id-malformed (:error (ex-data malformed))))
+    (is (= 400 (:status (ex-data malformed))))
+    (is (zero? @issued))
+    (is (= (dissoc before :serving-runner-code)
+           (dissoc (service/status) :serving-runner-code)))
+    (is (= valid (:run-id (service/admit-run-id! {:run-id valid}))))
+    (is (= {} (service/admit-run-id! {})))))
+
+(deftest existing-run-record-refuses-caller-id-before-click
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wm-run-id-collision-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        run-id "2026-10-02-1084e87d-7154-46c8-a70b-681589061d3d"]
+    (try
+      (spit (io/file root (str "tick-run-record-" run-id ".edn")) "{}")
+      (binding [service/*run-record-dir* (.getPath root)]
+        (let [failure (try (service/admit-run-id! {:run-id run-id}) nil
+                           (catch clojure.lang.ExceptionInfo throwable throwable))]
+          (is (= :wm-click-run-id-collision (:error (ex-data failure))))
+          (is (= 409 (:status (ex-data failure))))))
+      (finally (doseq [file (reverse (file-seq root))]
+                 (io/delete-file file true))))))
+
+(deftest http-rejects-truncated-run-id-before-calling-runner
+  (let [calls (atom 0)
+        response (with-redefs [service/click! (fn [_] (swap! calls inc))]
+                   ((handler) {:request-method :post
+                               :uri "/api/alpha/wm/click"
+                               :body (json/generate-string
+                                      {:run-id "2026-10-02-"})}))]
+    (is (= 400 (:status response)))
+    (is (= "wm-click-run-id-malformed" (:error (response-body response))))
+    (is (zero? @calls))))
+
+(deftest http-preserves-valid-and-omitted-run-id-contract
+  (let [seen (atom [])
+        valid "2099-12-31-3084e87d-7154-46c8-a70b-681589061d3d"
+        invoke (fn [payload]
+                 ((handler) {:request-method :post :uri "/api/alpha/wm/click"
+                             :body (json/generate-string payload)}))]
+    (with-redefs [service/prepare-ordinary-click-opts identity
+                  service/cast-preflight-refusal (constantly nil)
+                  service/click! (fn [opts]
+                                   (swap! seen conj opts)
+                                   {:click-id "not-launched" :started-at "fixture"})]
+      (is (= 200 (:status (invoke {:run-id valid}))))
+      (is (= 200 (:status (invoke {}))))
+      (is (= valid (:run-id (first @seen))))
+      (is (not (contains? (second @seen) :run-id))
+          "omission reaches the runner as omission, so it mints canonically"))))
+
 (defn- resolver
   [run! select]
   (fn [sym]
@@ -127,7 +217,7 @@
                        {:author "zai-2"
                         :reviewer "codex-2"
                         :repair-reviewer "codex-1"
-                        :run-id "row26-isolated-run"})})
+                        :run-id "2099-12-31-2084e87d-7154-46c8-a70b-681589061d3d"})})
             first-body (response-body first-response)
             _ (is (= true (deref phase-seen 1000 false)))
             second-response
@@ -162,7 +252,8 @@
         (is (= "zai-2" (:author @runner-opts-seen)))
         (is (= "codex-2" (:reviewer @runner-opts-seen)))
         (is (= "codex-1" (:repair-reviewer @runner-opts-seen)))
-        (is (= "row26-isolated-run" (:run-id @runner-opts-seen)))
+        (is (= "2099-12-31-2084e87d-7154-46c8-a70b-681589061d3d"
+               (:run-id @runner-opts-seen)))
         (deliver release true)
         (is (wait-until #(false? (:running? (service/status))) 5000))
         (let [closed (service/status)

@@ -96,9 +96,21 @@
   (with-redefs [substrate/hyperedges-by-type
                 (fn [type opts]
                   (is (= "clock/clocked-on" type))
-                  (is (= 5000 (:timeout-ms opts)))
+                  (is (= 30000 (:timeout-ms opts)))
+                  (is (= 1000 (:page-size opts)))
                   sample-clock-edges)]
     (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
+
+(deftest fetch-edges-refuses-partial-authoritative-walk
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [_ _]
+                  (with-meta [{:hx/id "edge-1"}]
+                    {:partial? true :next-cursor "edge-1" :request-budget 1}))]
+    (let [error (try (live/fetch-edges "mission-scope/pattern") nil
+                     (catch clojure.lang.ExceptionInfo error error))]
+      (is (= "authoritative substrate walk incomplete" (ex-message error)))
+      (is (= "mission-scope/pattern" (:hyperedge-type (ex-data error))))
+      (is (= true (get-in (ex-data error) [:pagination :partial?]))))))
 
 (deftest o2-extractor-maps-memes
   (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
@@ -367,6 +379,19 @@
         (testing "a clock edge on the ticket node takes it off the list"
           (is (= [] (:items ((var-get #'live/tickets-section)
                              [{:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]}])))))))))
+
+(deftest tickets-section-does-not-truncate-the-selection-field
+  (let [files (mapv (fn [n]
+                      (doto (io/file (str "/tmp/M-field-" n ".md"))
+                        (.setLastModified n)))
+                    (range 41))]
+    (with-redefs-fn {#'live/doc-files (constantly files)
+                     #'live/live-clocked-stems (constantly #{})}
+      (fn []
+        (let [tickets ((var-get #'live/tickets-section) [])]
+          (is (= 41 (:count-total tickets)))
+          (is (= 41 (count (:items tickets))))
+          (is (some #{"M-field-0"} (map :stem (:items tickets)))))))))
 
 ;; --- control: the mission part is unchanged on today's store (pinned) ---------
 ;; Edges read from futon1b around GET /api/alpha/cascade-real (as-of 1790358119151)

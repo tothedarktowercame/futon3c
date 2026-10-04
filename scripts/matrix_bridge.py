@@ -12,6 +12,7 @@ lose work; the inherited in-memory queue is not a durable outbox. Dedup retains
 One process must own each bot's state directory. Tokens never enter argv/logs.
 """
 import importlib.util
+import html
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,64 @@ _spec = importlib.util.spec_from_file_location(
 irc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(irc)
 IRCBot = irc.IRCBot
+
+_fumarimo_spec = importlib.util.spec_from_file_location(
+    "matrix_fumarimo_publisher", Path(__file__).with_name("fumarimo_agent.py"))
+fumarimo = importlib.util.module_from_spec(_fumarimo_spec)
+_fumarimo_spec.loader.exec_module(fumarimo)
+
+PROFORMA_COLORS = {
+    "㊩": "#2a78d6", "🈖": "#2a78d6", "㊢": "#2a78d6",
+    "🈯": "#eb6834", "㊟": "#eb6834", "㊣": "#eb6834", "🈚": "#eb6834", "㊮": "#eb6834", "🈹": "#eb6834",
+    "🈲": "#1baf7a", "🈕": "#1baf7a", "㊫": "#1baf7a",
+    "㊭": "#eda100", "㊝": "#eda100", "🈘": "#eda100", "🈝": "#eda100", "㊯": "#eda100", "🈡": "#eda100",
+    "🈸": "#e87ba4", "🈰": "#e87ba4", "㊬": "#e87ba4",
+    "㊥": "#66665e", "🈳": "#66665e",
+}
+
+FUMARIMO_BRIEF = (
+    "You are Fumarimo, the room's Python and Marimo notebook agent. Treat the user's message as a "
+    "request to create, explain, revise, or run notebook work, not as a request for generic chat. "
+    "Write correct, readable Python and preserve the user's stated data source and definitions. Never "
+    "invent Matrix history, files, columns, totals, execution results, or charts. If a required input "
+    "or measure is missing, ask one concise clarifying question instead of fabricating it. When the "
+    "request is sufficiently specified, reply with one self-contained Python cell in exactly one "
+    "fenced python block; put any short explanation outside the block. The cell should expose its final "
+    "table, figure, or value as its last expression so Marimo can render it. Distinguish proposed source "
+    "from observed output, and do not say the cell ran unless the prompt supplies execution evidence. "
+    "For chart requests, include readable labels and the requested numeric values. Keep notebook work in "
+    "the main chat; turn annotations belong to the separate annotation sidebar."
+)
+
+FENCED_PYTHON_RE = re.compile(r"```python[ \t]*\n(.*?)\n```", re.DOTALL | re.IGNORECASE)
+
+
+def fumarimo_python_source(text):
+    """Return the sole fenced Python cell in an LLM response, if present."""
+    matches = FENCED_PYTHON_RE.findall(str(text))
+    return matches[0].strip() if len(matches) == 1 and matches[0].strip() else None
+
+
+def proforma_formatted_body(text):
+    """Matrix-safe HTML for marked replies; plain text remains the fallback."""
+    found = False
+    lines = []
+    glyphs = "|".join(map(re.escape, PROFORMA_COLORS))
+    pattern = re.compile(rf"^(\s*)({glyphs})(?=\s)")
+    for line in text.split("\n"):
+        match = pattern.match(line)
+        if not match:
+            lines.append(html.escape(line))
+            continue
+        found = True
+        color = PROFORMA_COLORS[match.group(2)]
+        prefix = html.escape(match.group(1))
+        # Ask clients to render the enclosed Unicode mark as text so its
+        # foreground colour is not replaced by an emoji presentation.
+        glyph = html.escape(match.group(2)) + '&#xfe0e;'
+        rest = html.escape(line[match.end():])
+        lines.append(f'{prefix}<span data-mx-color="{color}">{glyph}</span>{rest}')
+    return "<br>".join(lines) if found else None
 
 
 class MatrixBot(IRCBot):
@@ -85,6 +144,10 @@ class MatrixBot(IRCBot):
             # HTTP bodies/headers (including credentials) never reach bridge logs.
             raise RuntimeError("Matrix transport request failed: " + type(exc).__name__) from None
 
+    @staticmethod
+    def quote_room(room):
+        return urllib.parse.quote(room, safe="")
+
     def _save_state(self):
         temporary = self.state_path.with_suffix(".tmp")
         with open(temporary, "w", encoding="utf-8") as stream:
@@ -107,10 +170,13 @@ class MatrixBot(IRCBot):
         self.connected = True
 
     def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
-        return (f"[Surface: Matrix | Room: {channel or self.channel} | Speaker: {sender}"
+        context = (f"[Surface: Matrix | Room: {channel or self.channel} | Speaker: {sender}"
                 f"{mission_part} | Your returned text will be posted as {self.mxid}. "
                 "Do not post progress through IRC or another transport. "
                 "Return a concise reply, or a concrete completion/blocker with evidence.]")
+        if self.nick == "fumarimo":
+            context += "\n\n" + FUMARIMO_BRIEF
+        return context
 
     def _transport_context(self):
         return getattr(self._thread_context, "matrix_event", None)
@@ -124,7 +190,40 @@ class MatrixBot(IRCBot):
 
     def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
         # Transport renderer: don't run IRC's pre-send summary/line truncation.
-        self._say(response.get("result") or "[no response]", channel=reply_ch)
+        result = response.get("result") or "[no response]"
+        context = self._transport_context()
+        source = fumarimo_python_source(result) if self.nick == "fumarimo" else None
+        if source and context and context["room"] == reply_ch:
+            cell_id = uuid.uuid4().hex
+            content = fumarimo.python_cell_content(source, context["event_id"], cell_id)
+            sent = self._send_content(content, reply_ch)
+            cell_event_id = sent.get("event_id") if isinstance(sent, dict) else None
+            if cell_event_id:
+                executor = fumarimo.MarimoExecutor(
+                    os.environ.get("FUMARIMO_MARIMO_URL", "http://127.0.0.1:2718/marimo"),
+                    Path(os.environ.get("FUMARIMO_MARIMO_TOKEN_FILE", str(Path.home() / ".marimo-passphrase"))),
+                    os.environ.get("FUMARIMO_MARIMO_NOTEBOOK", "/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py"),
+                )
+                output = executor.execute(source)
+                execution_id = uuid.uuid4().hex
+                if output.mimetype.startswith("image/") and isinstance(output.data, bytes):
+                    suffix = "png" if output.mimetype == "image/png" else "svg"
+                    image_mxc = self._upload_media(output.data, output.mimetype, f"marimo-output.{suffix}")
+                    output_content = fumarimo.image_output_content(
+                        image_mxc, "Marimo cell output", context["event_id"], cell_event_id,
+                        cell_id, execution_id, output.mimetype)
+                else:
+                    value = output.data.decode(errors="replace") if isinstance(output.data, bytes) else output.data
+                    output_content = fumarimo.value_output_content(
+                        value, output.mimetype, context["event_id"], cell_event_id, cell_id, execution_id)
+                self._send_content(output_content, reply_ch)
+        else:
+            sent = self._say(result, channel=reply_ch)
+        event_id = sent.get("event_id") if isinstance(sent, dict) else None
+        if event_id:
+            if not hasattr(self, "_xiang_reply_events"):
+                self._xiang_reply_events = {}
+            self._xiang_reply_events[job_id] = event_id
 
     def _say(self, text, max_lines=6, channel=None):
         room = (channel or getattr(self._thread_context, "reply_channel", None)
@@ -135,9 +234,18 @@ class MatrixBot(IRCBot):
         if len(text) > self.text_cap:
             text = text[:self.text_cap - 13] + "\n[truncated]"
         content = {"msgtype": "m.text", "body": text}
+        formatted = proforma_formatted_body(text)
+        if formatted:
+            content.update({"format": "org.matrix.custom.html", "formatted_body": formatted})
         context = self._transport_context()
         if context and context["room"] == room:
             content["m.relates_to"] = {"m.in_reply_to": {"event_id": context["event_id"]}}
+        return self._send_content(content, room)
+
+    def _send_content(self, content, room):
+        """Send already-shaped Matrix message content to a configured room."""
+        if room not in self.channels:
+            raise ValueError("Matrix send to unlisted room refused")
         txn = uuid.uuid4().hex
         path = "/rooms/" + urllib.parse.quote(room, safe="") + "/send/m.room.message/" + txn
         # Same transaction for a bounded retry after an ambiguous transport failure.
@@ -145,12 +253,29 @@ class MatrixBot(IRCBot):
             try:
                 result = self._request("PUT", path, content)
                 if self._handles_bare_command(room):
-                    irc.post_transport_evidence("matrix", room, self.mxid, text,
+                    irc.post_transport_evidence("matrix", room, self.mxid, content.get("body", ""),
                                                 "outbound", via_nick=self.nick)
                 return result
             except RuntimeError:
                 if attempt:
                     raise
+
+    def _upload_media(self, data, mimetype, filename):
+        """Upload generated bytes to Matrix without exposing the bearer token."""
+        query = urllib.parse.urlencode({"filename": filename})
+        url = self.homeserver + "/_matrix/media/v3/upload?" + query
+        request = urllib.request.Request(url, data=data, method="POST", headers={
+            "Authorization": "Bearer " + self._token,
+            "Content-Type": mimetype,
+        })
+        try:
+            with urllib.request.build_opener().open(request, timeout=40) as response:
+                uri = json.load(response).get("content_uri", "")
+        except Exception as exc:
+            raise RuntimeError("Matrix media upload failed: " + type(exc).__name__) from None
+        if not isinstance(uri, str) or not uri.startswith("mxc://"):
+            raise RuntimeError("Matrix media upload did not return an MXC URI")
+        return uri
 
     def _routable_text(self, content, text):
         """Body as the inherited IRC mention rules should see it.

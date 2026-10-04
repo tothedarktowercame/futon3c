@@ -254,4 +254,24 @@ turn and dispatching it are stubbed beneath the recorders."
                      (substring-no-properties
                       (session-mode--analysis-lighter)))))))
 
+(ert-deftest xiang-trace-jvm-dispatch-and-unrequested-turns ()
+  "Under the jvm recorder a requested turn is dispatched at send; a
+not-requested one (象-off, the Codex autorunner) owes no dispatch at reply end."
+  (require 'session-turn-analysis)
+  (let ((xiang-trace-file (make-temp-file "xiang-trace" nil ".jsonl"))
+        (xiang-trace--events nil)
+        (req (make-temp-file "turn-req" nil ".json" "{\"analysis_status\":\"requested\"}"))
+        (off (make-temp-file "turn-off" nil ".json" "{\"analysis_status\":\"not-requested\"}")))
+    (unwind-protect
+        (let ((session-mode-turn-recorder 'jvm))
+          (xiang-trace--on-record-turn (lambda (&rest _) req))
+          (xiang-trace--on-record-turn (lambda (&rest _) off))
+          (let ((session-mode--reply-pending-path off)) (xiang-trace--on-reply-end))
+          (should (equal (list (list 'sent (file-name-nondirectory req))
+                               (list 'dispatched (file-name-nondirectory req))
+                               (list 'sent (file-name-nondirectory off)))
+                         (mapcar (lambda (e) (list (plist-get e :kind) (plist-get e :path)))
+                                 (reverse xiang-trace--events)))))
+      (delete-file xiang-trace-file) (delete-file req) (delete-file off))))
+
 (provide 'xiang-trace-test)

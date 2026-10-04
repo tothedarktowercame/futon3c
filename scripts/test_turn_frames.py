@@ -4,6 +4,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -183,6 +184,13 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual(frames[1]["parse"]["status"], "missing")
         self.assertEqual(frames[1]["parse"]["fragments"], [])
 
+    def test_sidecars_are_not_records(self):
+        # A list-valued sidecar crashed the stepper's reload (2026-10-04).
+        self._write("turn-AAAAAA.json.quotes.json", ["quoted >>> block"])
+        self._write("turn-AAAAAA.json.draft.json", {"session_id": SID})
+        frames = self.build()
+        self.assertEqual(len(frames), 2)
+
     def test_both_candidates_spellings(self):
         frames = self.build()
         p1 = frames[0]["patterns"]["proposed_by_parent"]
@@ -196,6 +204,27 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual(frames[0]["patterns"]["matched"],
                          ["discourse/ask-plainly"])
         self.assertEqual(frames[0]["patterns"]["rejected"][0]["id"], "p/x")
+
+    def test_ports_pass_through_when_present(self):
+        rec_path = os.path.join(self.dir, "turn-AAAAAA.json")
+        with open(rec_path) as f:
+            rec = json.load(f)
+        rec["ports"] = {
+            "closed_this_turn": [{"act": "a1", "kind": "offer",
+                                  "text": "Reply yes 1 or yes 2"}],
+            "still_open": [{"act": "a2", "kind": "ask-action",
+                            "text": "Shall I read P11?", "since": T1}],
+        }
+        self._write("turn-AAAAAA.json", rec)
+        frames = self.build()
+        self.assertEqual(frames[0]["ports"]["closed_this_turn"][0]["act"], "a1")
+        self.assertEqual(frames[0]["ports"]["still_open"][0]["since"], T1)
+        self.assertNotIn("ports", frames[1])
+
+    def test_frames_without_ports_have_no_ports_key(self):
+        frames = self.build()
+        for f in frames:
+            self.assertNotIn("ports", f)
 
     def test_limit(self):
         self.assertEqual(len(self.build(limit=1)), 1)
@@ -284,6 +313,201 @@ class Operators(unittest.TestCase):
         ops = tf._operators_for(entry, None, self.rules)
         self.assertEqual([{"text": "is that", "intent": "clarify"}], ops["cues_without_operator"])
         self.assertTrue(ops["hits"][0]["agree"])
+
+
+# ---------------------------------------------------------------- M-象-2000 step 3
+
+RECORD = {"session_id": SID, "turn_id": "agent-turn-1",
+          "evidence_id": "emacs-t1", "created_at": T1,
+          "source_text": "do the thing please",
+          "original_text": "do the thing please",
+          "analysis_status": "analyzed"}
+
+ANALYSIS = {"labeller": "象-1", "source_text": "do the thing please",
+            "sentences": [{"id": "s1", "fragments": [
+                {"start": 0, "end": 16, "text": "do the thing",
+                 "intent": "continue", "display_cues": []}]}]}
+
+
+def write_turn_files(analysis_dir, record=RECORD, analysis=ANALYSIS):
+    path = os.path.join(analysis_dir, "turn-abc123.json")
+    with open(path, "w") as f:
+        json.dump(record, f)
+    if analysis is not None:
+        with open(path + ".analysis.json", "w") as f:
+            json.dump(analysis, f)
+    return path
+
+
+def frames_for(rows, analyses):
+    frames = tf.build_frames(rows, analyses, session_id=SID, operator_rules=[])
+    for f in frames:
+        f.pop("_join", None)
+    return frames
+
+
+DRAFT = {"source_text": "do the thing please",
+         "fragments": [
+             {"start": 0, "end": 16, "text": "do the thing", "sentence": "s1",
+              "intent": None, "guesses": ["continue", "explain"],
+              "precision": 0.281, "basis": "model", "sure": False},
+             {"start": 17, "end": 23, "text": "please", "sentence": "s1",
+              "intent": None, "guesses": ["ask-action"],
+              "precision": 0.9, "basis": "model", "sure": True}]}
+
+
+class ProvisionalDrafts(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="turn-frames-draft-")
+        self.addCleanup(shutil.rmtree, self.dir)
+        self.rows = [op_turn("emacs-t1", T1, "agent-turn-1", "do the thing please"),
+                     op_turn("emacs-t2", T2, "agent-turn-2", "now stop")]
+
+    def test_draft_only_turn_gets_a_provisional_parse(self):
+        write_turn_files(self.dir, analysis=None)
+        with open(os.path.join(self.dir, "turn-abc123.json.draft.json"), "w") as f:
+            json.dump(DRAFT, f)
+        frames = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        parse = frames[0]["parse"]
+        self.assertEqual("drafted-provisional", parse["status"])
+        self.assertEqual(2, len(parse["fragments"]))
+        self.assertEqual([{"source": "小象", "intent": "continue",
+                           "precision": 0.281, "weak": True}],
+                         parse["fragments"][0]["labels"])
+        self.assertEqual("continue", parse["fragments"][0]["combined"])
+        # the sure guess is not marked weak
+        self.assertEqual([{"source": "小象", "intent": "ask-action", "precision": 0.9}],
+                         parse["fragments"][1]["labels"])
+        # the second turn has no record at all: still missing
+        self.assertEqual("missing", frames[1]["parse"]["status"])
+
+    def test_read_turn_is_unchanged_when_a_draft_file_exists(self):
+        """A turn with a reading keeps exactly today's parse, even with a
+        draft file beside it (frames byte-identical to no-draft)."""
+        write_turn_files(self.dir)                      # record + analysis
+        without = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        with open(os.path.join(self.dir, "turn-abc123.json.draft.json"), "w") as f:
+            json.dump(DRAFT, f)
+        with_draft = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        self.assertEqual(without, with_draft)
+        self.assertEqual("analyzed", with_draft[0]["parse"]["status"])
+
+    def test_one_record_equals_the_same_frame_from_full_file_build(self):
+        """The fast path uses the same assembler and never fetches evidence."""
+        path = write_turn_files(self.dir, analysis=None)
+        with open(path + ".draft.json", "w") as f:
+            json.dump(DRAFT, f)
+        analyses = tf.load_analyses(SID, self.dir)
+        rules = tf.load_operators()
+        full = tf.build_frames(tf.rows_from_analyses(analyses, SID), analyses,
+                               session_id=SID, operator_rules=rules)
+        full[0].pop("_join", None)
+        one = tf.frame_for_record(path, operator_rules=rules)
+        self.assertEqual(full[0], one)
+
+        script = os.path.join(os.path.dirname(__file__), "turn_frames.py")
+        completed = subprocess.run(
+            [sys.executable, script, "--one-record", path],
+            check=True, text=True, capture_output=True, timeout=2)
+        self.assertEqual(full[0], json.loads(completed.stdout))
+        self.assertEqual("", completed.stderr)
+
+
+class XiangReadings(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="turn-frames-step3-")
+        self.addCleanup(shutil.rmtree, self.dir)
+        self.rows = [op_turn("emacs-t1", T1, "agent-turn-1", "do the thing please"),
+                     op_turn("emacs-t2", T2, "agent-turn-2", "now stop")]
+
+    def test_reading_from_entry_equals_reading_from_file(self):
+        """The same turn's reading, taken from its e-xiang-turn- entry or
+        from its .analysis.json file, builds the identical frame."""
+        write_turn_files(self.dir)
+        from_files = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+
+        empty = tempfile.mkdtemp(prefix="turn-frames-empty-")
+        self.addCleanup(shutil.rmtree, empty)
+        analyses = tf.load_analyses(SID, empty)
+        tf.merge_xiang_readings(analyses, {"turn-abc123": {
+            "record": RECORD, "reading": ANALYSIS, "settled": "analyzed"}}, SID)
+        from_evidence = frames_for(self.rows, analyses)
+
+        self.assertEqual(from_files, from_evidence)
+        self.assertEqual("analyzed", from_evidence[0]["parse"]["status"])
+        self.assertEqual([{"source": "象/象-1", "intent": "continue"}],
+                         from_evidence[0]["parse"]["fragments"][0]["labels"])
+
+    def test_older_shape_entry_falls_back_to_file(self):
+        """An e-xiang-turn- entry whose body is a bare record (the four
+        step-2 turns) is ignored by fetch_xiang_readings; the file's
+        .analysis.json is used instead."""
+        body = dict(RECORD)   # old shape: the record IS the body
+        row = {"evidence/id": "e-xiang-turn-turn-abc123",
+               "evidence/session-id": SID, "evidence/body": body}
+        server = StubEvidence(self, pages={None: {"entries": [row]}})
+        readings = tf.fetch_xiang_readings(SID, base=server.url)
+        self.assertEqual({}, readings)
+        write_turn_files(self.dir)
+        analyses = tf.load_analyses(SID, self.dir)
+        tf.merge_xiang_readings(analyses, readings, SID)
+        frames = frames_for(self.rows, analyses)
+        self.assertEqual("analyzed", frames[0]["parse"]["status"])
+
+
+class StubEvidence:
+    """A real local HTTP server answering /api/alpha/evidence.
+
+    PAGES maps a cursor (None for the first page) to the page body; STATUS
+    makes every answer that HTTP status (the futon1b-busy case)."""
+
+    def __init__(self, test, pages=None, status=200):
+        import http.server
+        import threading
+        pages = pages or {None: {"entries": []}}
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                body = pages.get(None, {"entries": []}) if status == 200 else {}
+                self.wfile.write(json.dumps(body).encode())
+
+            def log_message(self, *args):
+                pass
+
+        self.httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        self.url = "http://127.0.0.1:%d" % self.httpd.server_address[1]
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        self.thread.start()
+        test.addCleanup(self.httpd.shutdown)
+        test.addCleanup(self.httpd.server_close)
+
+
+class EvidenceBusy(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="turn-frames-busy-")
+        self.addCleanup(shutil.rmtree, self.dir)
+
+    def test_504_builds_frames_from_files_exit_0_one_warning(self):
+        """futon1b answering 504: frames still build from the files alone,
+        main exits 0, and one stderr line names the fallback."""
+        write_turn_files(self.dir)
+        server = StubEvidence(self, status=504)
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = tf.main([SID, "--base", server.url, "--analysis-dir", self.dir])
+        self.assertEqual(0, rc)
+        frames = json.loads(out.getvalue())
+        self.assertEqual(1, len(frames))
+        self.assertEqual("do the thing please", frames[0]["turn"]["text"])
+        self.assertEqual("analyzed", frames[0]["parse"]["status"])
+        warnings = [ln for ln in err.getvalue().splitlines() if ln.strip()]
+        self.assertEqual(1, len(warnings))
+        self.assertIn("files alone", warnings[0])
 
 
 if __name__ == "__main__":

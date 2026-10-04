@@ -114,6 +114,14 @@
                 (:rejected r)))
     (is (= ["src/futon3c/foo.clj"] (:ok r)))))
 
+(deftest declared-versioned-generated-data-is-stageable
+  (let [path "data/mission-wholeness.edn"
+        r (ssb/apply-stage-invariants
+           "futon6" [path] {:versioned-generated-paths #{path}})]
+    (is (empty? (:rejected r)))
+    (is (empty? (:proposed r)))
+    (is (= [path] (:ok r)))))
+
 ;; =============================================================================
 ;; INV-10: regenerable-artifact relocation proposal
 ;; =============================================================================
@@ -445,6 +453,24 @@
       (is (= 1 (count (:proposed r)))
           "no policy → .html in generated-extensions → relocation proposal"))))
 
+(deftest versioned-generated-json-is-committable-not-a-relocation-proposal
+  (let [path "resources/capability_zones/live-map-pca3-v1.json"
+        r (ssb/apply-stage-invariants
+           "futon3c" [path] {:versioned-generated-paths #{path}})]
+    (is (empty? (:proposed r)))
+    (is (= [path] (:ok r)))))
+
+(deftest versioned-generated-content-does-not-trigger-source-intent-markers
+  (let [path "resources/capability_zones/live-map-pca3-v1.json"
+        c (ssb/classify-packet
+           {:repo "futon3c"
+            :files [path]
+            :file-statuses {path :modified}
+            :diff-text "{\"mission-id\":\"M-TODO-analysis\"}"
+            :loc 1
+            :repo-policy {:versioned-generated-paths #{path}}})]
+    (is (:auto-approve? c))))
+
 (deftest inv-28-mission-docs-free-pass-on-loc-cap
   (testing "INV-28: all-holes/-packet auto-approves regardless of LoC"
     (let [c (ssb/classify-packet
@@ -717,6 +743,28 @@
     (is (false? (:ok? result)))
     (is (= :verification-policy-absent (:reason result)))
     (is (= ["scripts/not-yet-verified.py"] (:unsupported-code-files result)))))
+
+(deftest elisp-packet-runs-declared-ert-policy
+  (let [commands (atom [])
+        run-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                            'run-command)
+        result (with-redefs-fn
+                 {run-var (fn [_repo _timeout command]
+                            (swap! commands conj command)
+                            {:ok? true :exit 0 :command command :output ""})}
+                 #(ssb/verify-packet
+                   {:repo "futon3c"
+                    :files ["emacs/codex-repl.el"
+                            "test/codex-repl-identity-test.el"]
+                    :repo-policy {:elisp-test-command
+                                  ["emacs" "-Q" "--batch" "-f"
+                                   "ert-run-tests-batch-and-exit"]}}))]
+    (is (:ok? result))
+    (is (= :elisp (:kind result)))
+    (is (= "emacs" (ffirst @commands)))
+    (is (= ["emacs" "-Q" "--batch" "-f"
+            "ert-run-tests-batch-and-exit"]
+           (second @commands)))))
 
 (deftest exact-policy-path-can-exempt-documentary-intent-markers
   (let [packet {:repo "futon2"

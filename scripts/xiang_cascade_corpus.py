@@ -8,6 +8,7 @@ cached under /tmp; corpus assembly below is pure and is exercised by fixtures.
 from __future__ import annotations
 
 import argparse
+import re
 import datetime as dt
 import hashlib
 import json
@@ -95,7 +96,7 @@ def unique_operator_texts(records, session_id):
     """Exact local texts occurring once in this session's operator records."""
     counts = Counter()
     for path in records.glob("turn-*.json"):
-        if path.name.endswith((".analysis.json", ".candidates.json")):
+        if not re.fullmatch(r"turn-[^.]+\.json", path.name):
             continue
         try:
             record = json.loads(path.read_text(encoding="utf-8"))

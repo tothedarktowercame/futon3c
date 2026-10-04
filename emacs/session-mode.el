@@ -46,6 +46,51 @@ are styled faintly to distinguish them from the deterministic recognized/explici
 lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   :type 'boolean :group 'session-mode)
 
+(defcustom session-mode-rnode-vocabulary-file
+  "/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-vocabulary.json"
+  "Generated deterministic R-node cue vocabulary."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-rnode-tags t
+  "When non-nil, lightly tag R-node cues in operator regions."
+  :type 'boolean :group 'session-mode)
+
+(defcustom session-mode-rnode-cues-file
+  (expand-file-name "~/.emacs-graph/rnode-cues.json")
+  "Atomic store of recurrent R-node cue proposals and promotion state."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-xiang-decisions-file
+  (expand-file-name "~/.emacs-graph/xiang-decisions.jsonl")
+  "Append-only log of 象 cue and turn policy decisions."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-xiang-source-precision
+  '((operator-correction . 4.0) (second-distinct-seat . 1.5)
+    (same-seat-repeat . 0.5) (first-proposal . 1.0))
+  "Precision weights used to turn independent R-node evidence into counts."
+  :type '(alist :key-type symbol :value-type number) :group 'session-mode)
+
+(defcustom session-mode-xiang-cost-wrong-red 1.0
+  "Risk cost of painting an incorrect learned R-node cue red."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-cost-missed-red 0.3
+  "Risk cost of failing to paint a correct R-node cue."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-temperature 0.0
+  "Softmax temperature tau for 象 policy selection; nonpositive means argmin."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-token-cost 1.0
+  "Cost assigned to requesting one turn interpretation."
+  :type 'number :group 'session-mode)
+
+(defcustom session-mode-xiang-intent-value 5.0
+  "Value of intent interpretation on a substantive operator turn."
+  :type 'number :group 'session-mode)
+
 ;; --- Faces, keyed by typology tier/type (colours mirror typology.json) ---
 (defface session-mode-clock-face
   '((((background light)) :background "#cdeee9" :weight bold)
@@ -85,10 +130,52 @@ lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   "An operator message that is a whole command (`undo', `yes 2', ...) (red)."
   :group 'session-mode)
 
+;; Reply-proforma marks (㊥, 🈸, ...) coloured by the loop stage of their intent,
+;; in the stage colours of the Minard figures.  The 🈀-block marks are colour
+;; emoji, which ignore the foreground, so only the ㊀-block marks change colour.
+(defface session-mode-mark-perceive-face
+  '((((background light)) :foreground "#2a78d6" :weight bold)
+    (((background dark)) :foreground "#3987e5" :weight bold))
+  "Mark whose intent is a PERCEIVE stage (blue)." :group 'session-mode)
+(defface session-mode-mark-believe-face
+  '((((background light)) :foreground "#eb6834" :weight bold)
+    (((background dark)) :foreground "#d95926" :weight bold))
+  "Mark whose intent is a BELIEVE stage (orange)." :group 'session-mode)
+(defface session-mode-mark-evaluate-face
+  '((((background light)) :foreground "#1baf7a" :weight bold)
+    (((background dark)) :foreground "#199e70" :weight bold))
+  "Mark whose intent is an EVALUATE stage (green)." :group 'session-mode)
+(defface session-mode-mark-select-face
+  '((((background light)) :foreground "#eda100" :weight bold)
+    (((background dark)) :foreground "#c98500" :weight bold))
+  "Mark whose intent is a SELECT stage (amber)." :group 'session-mode)
+(defface session-mode-mark-act-face
+  '((((background light)) :foreground "#e87ba4" :weight bold)
+    (((background dark)) :foreground "#d55181" :weight bold))
+  "Mark whose intent is an ACT stage (pink)." :group 'session-mode)
+(defface session-mode-mark-annotator-face
+  '((((background light)) :foreground "#66665e" :weight bold)
+    (((background dark)) :foreground "#b5b9bd" :weight bold))
+  "Mark outside the loop: gist and unresolved (grey)." :group 'session-mode)
+
 ;; --- Controlled vocabulary (loaded once, cached) ---
 (defvar session-mode--missions nil "Hash set of on-disk mission/excursion names.")
 (defvar session-mode--patterns nil "Hash set of on-disk pattern (flexiarg) names.")
 (defvar session-mode--typology nil "type -> alist(glyph tier recognizer colour), from typology.json.")
+(defvar session-mode--rnode-vocabulary nil
+  "Compiled R-node rows loaded from `session-mode-rnode-vocabulary-file'.")
+(defvar session-mode--rnode-vocabulary-key nil
+  "File and modification-time key for the compiled R-node vocabulary.")
+(defvar session-mode--rnode-missing-reported nil
+  "Non-nil after reporting one missing R-node vocabulary message.")
+(defvar session-mode--learned-rnode-vocabulary nil
+  "Compiled active cues loaded from `session-mode-rnode-cues-file'.")
+(defvar session-mode--learned-rnode-key nil
+  "File and modification-time key for active learned R-node cues.")
+(defvar session-mode--rnode-store-error-reported nil
+  "Non-nil after reporting one unreadable learned R-node cue store.")
+(defconst session-mode--rnode-cache-format-version 2
+  "Format of compiled R-node vocabulary rows kept across live reloads.")
 
 (defcustom session-mode-typology-file
   "/home/joe/code/futon6/data/c-vector/typology.json"
@@ -235,6 +322,21 @@ instead is robust both ways.)"
 (defconst session-mode--word-re "\\b\\([a-z][a-z0-9-]\\{4,\\}\\)\\b")
 (defconst session-mode--mint-re "!{[^}]+}")
 (defconst session-mode--glyph-re "[香應咅鹽間専專蒲團]")
+
+(defconst session-mode--marks
+  ;; mark intent stage; stages from legend-rows in futon3/src-cljs/futon3/turnfeed/core.cljs
+  '(("㊩" "report-problem" perceive) ("🈖" "explain" perceive) ("㊢" "report" perceive)
+    ("🈯" "clarify" believe) ("㊟" "qualify" believe) ("㊣" "approve" believe)
+    ("🈚" "disagree" believe) ("㊮" "collect" believe) ("🈹" "retract" believe)
+    ("🈲" "constrain" evaluate) ("🈕" "extend" evaluate) ("㊫" "explore" evaluate)
+    ("㊭" "propose" select) ("㊝" "prioritize" select) ("🈘" "redirect" select)
+    ("🈝" "defer" select) ("㊯" "delegate" select) ("🈡" "withdraw" select)
+    ("🈸" "ask-action" act) ("🈰" "continue" act) ("㊬" "verify" act)
+    ("㊥" "gist" annotator) ("🈳" "unresolved" annotator))
+  "Reply-proforma marks with their intent and loop stage.")
+
+(defconst session-mode--mark-re
+  (regexp-opt (mapcar #'car session-mode--marks)))
 (defconst session-mode--correction-re
   (concat "\\b\\(not only\\|not just\\|not that\\|actually\\|no,\\|nope\\|isn'?t\\|wrong\\|"
           "instead\\|rather\\|i'?d say\\|let'?s not\\|don'?t\\|shouldn'?t\\|the issue is\\|too\\)\\b"))
@@ -335,6 +437,14 @@ line that starts a speaker name, a \"Cooked for\" line or a rule line."
           (session-mode--ov (match-beginning 0) (match-end 0) 'session-mode-glyph-face
                             "glyph" (match-string-no-properties 0) "futonic glyph (explicit)")
           (tally 'glyph)))
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward session-mode--mark-re nil t)
+          (pcase-let ((`(,mark ,intent ,stage) (assoc (match-string-no-properties 0) session-mode--marks)))
+            (session-mode--ov (match-beginning 0) (match-end 0)
+                              (intern (format "session-mode-mark-%s-face" stage))
+                              "mark" mark (format "%s %s — %s" mark intent (upcase (symbol-name stage))))
+            (tally 'mark))))
       ;; recognized: missions (clock vs mention) + patterns
       (save-excursion
         (goto-char (point-min))
@@ -840,6 +950,11 @@ Only underline existing characters: no inserted display strings or line shifts."
         (cl-pushnew tag tags :test #'equal)
         (overlay-put ov 'session-mode-turn-tag tag)
         (overlay-put ov 'priority 30)
+        ;; An intent cue and an R-node term never share characters; the
+        ;; intent reading wins whichever painter ran first.
+        (mapc #'delete-overlay
+              (session-mode--overlays-with-property
+               (overlay-start ov) (overlay-end ov) 'session-mode-rnode-tag))
         (overlay-put ov 'face (pcase tag
                                ((or "agree" "approve") 'session-mode-turn-agree-face)
                                ((or "object" "disagree") 'session-mode-turn-object-face)
@@ -929,6 +1044,651 @@ Use the real inserted span, including any agent-chat text transformations."
                  "no recognized phrase; intent not inferred")))))
 
 ;;;###autoload
+;; Marks are painted under turn-tags mode too, the mode REPL buffers run;
+;; jit-lock repaints them as text is shown or changed, on overlays that
+;; font-lock does not clear.
+(defun session-mode--paint-marks (beg end)
+  "Give each reply-proforma mark between BEG and END its stage face."
+  (dolist (o (overlays-in beg end))
+    (when (overlay-get o 'session-mode-mark) (delete-overlay o)))
+  (save-excursion
+    (goto-char beg)
+    (while (re-search-forward session-mode--mark-re end t)
+      (pcase-let ((`(,mark ,intent ,stage) (assoc (match-string-no-properties 0) session-mode--marks))
+                  (o (make-overlay (match-beginning 0) (match-end 0))))
+        (overlay-put o 'session-mode-mark t)
+        (overlay-put o 'evaporate t)
+        (overlay-put o 'face (intern (format "session-mode-mark-%s-face" stage)))
+        (overlay-put o 'help-echo (format "%s %s — %s" mark intent (upcase (symbol-name stage))))))))
+
+(defun session-mode--rnode-cue-regexp (cue)
+  "Compile CUE with evaluator-compatible boundaries and ellipsis span."
+  (let ((parts (split-string cue "\\(?:\\.\\.\\.\\|…\\)" t "[ \t\n]+")))
+    (when parts
+      (concat "\\_<"
+              (mapconcat #'regexp-quote parts "\\(?:.\\|\n\\)\\{0,40\\}")
+              "\\_>"))))
+
+(defun session-mode--empty-rnode-cue-store ()
+  "Return a fresh empty R-node cue store."
+  (list (cons 'version 1)
+        (cons 'entries nil)
+        (cons 'conflicts nil)
+        (cons 'corrections nil)))
+
+(defun session-mode--read-rnode-cue-store ()
+  "Read the R-node cue store; return nil on corrupt input without throwing."
+  (if (not (file-exists-p session-mode-rnode-cues-file))
+      (session-mode--empty-rnode-cue-store)
+    (condition-case err
+        (let ((json-object-type 'alist) (json-array-type 'list))
+          (let ((data (json-read-file session-mode-rnode-cues-file)))
+            (unless (= 1 (alist-get 'version data))
+              (error "unsupported version"))
+            data))
+      (error
+       (unless session-mode--rnode-store-error-reported
+         (setq session-mode--rnode-store-error-reported t)
+         (message "session-mode: cannot read R-node cue store %s: %s"
+                  session-mode-rnode-cues-file (error-message-string err)))
+       nil))))
+
+(defun session-mode--write-rnode-cue-store (data)
+  "Atomically write R-node cue store DATA."
+  (let* ((file (expand-file-name session-mode-rnode-cues-file))
+         (directory (file-name-directory file)) temp
+         (entries
+          (mapcar
+           (lambda (entry)
+             (let ((copy (copy-tree entry)))
+               (dolist (field '(turns seats seats_by_turn justifications))
+                 (setf (alist-get field copy) (vconcat (alist-get field copy))))
+               copy))
+           (alist-get 'entries data)))
+         (json `((version . 1)
+                 (entries . ,(vconcat entries))
+                 (conflicts . ,(vconcat (alist-get 'conflicts data)))
+                 (corrections . ,(vconcat (alist-get 'corrections data))))))
+    (make-directory directory t)
+    (unwind-protect
+        (progn
+          (setq temp (make-temp-file (expand-file-name ".rnode-cues-" directory)))
+          (with-temp-file temp
+            (insert (json-encode json) "\n"))
+          (rename-file temp file t)
+          (setq temp nil))
+      (when (and temp (file-exists-p temp)) (delete-file temp)))
+    (setq session-mode--learned-rnode-key nil
+          session-mode--learned-rnode-vocabulary nil
+          session-mode--rnode-store-error-reported nil)))
+
+(defun session-mode--xiang-precision (source)
+  "Return configured precision for evidence SOURCE."
+  (float (or (alist-get source session-mode-xiang-source-precision) 0.0)))
+
+(defun session-mode--xiang-entry-sources (entry)
+  "Describe the independent precision sources represented by ENTRY."
+  (let (seen sources)
+    (cl-mapc
+     (lambda (_turn seat)
+       (let ((source (cond ((null sources) 'first-proposal)
+                           ((member seat seen) 'same-seat-repeat)
+                           (t 'second-distinct-seat))))
+         (push seat seen)
+         (setq sources (append sources (list source)))))
+     (alist-get 'turns entry) (alist-get 'seats_by_turn entry))
+    ;; Version-1 stores have only distinct seats. Reconstruct the only ordering
+    ;; they retained: first seat, then repeats, with each later seat distinct.
+    (unless sources
+      (let ((turns (alist-get 'turns entry)) (seats (alist-get 'seats entry)))
+        (dotimes (i (length turns))
+          (setq sources
+                (append sources
+                        (list (cond ((zerop i) 'first-proposal)
+                                    ((< i (length seats)) 'second-distinct-seat)
+                                    (t 'same-seat-repeat))))))))
+    sources))
+
+(defun session-mode--xiang-belief (text entries corrections)
+  "Return the Dirichlet belief and R7 source account for cue TEXT."
+  (let ((alpha '((none . 1.0))) sources)
+    (dolist (entry entries)
+      (when (equal text (alist-get 'text entry))
+        (let* ((node (intern (alist-get 'node entry)))
+               (prior (if (eq t (alist-get 'seed entry)) 2.0 0.0)))
+          (setf (alist-get node alpha nil nil #'eq)
+                (+ prior (or (alist-get node alpha nil nil #'eq) 0.0)))
+          (dolist (source (session-mode--xiang-entry-sources entry))
+            (let ((weight (session-mode--xiang-precision source)))
+              (cl-incf (alist-get node alpha nil nil #'eq) weight)
+              (push `((source . ,(symbol-name source)) (node . ,(symbol-name node))
+                      (weight . ,weight)) sources))))))
+    (dolist (correction corrections)
+      (when (equal text (alist-get 'text correction))
+        (let* ((name (or (alist-get 'node correction) "none"))
+               (node (intern name)) (weight (session-mode--xiang-precision
+                                              'operator-correction)))
+          (cl-incf (alist-get node alpha 0.0 nil #'eq) weight)
+          (push `((source . "operator-correction") (node . ,name)
+                  (weight . ,weight)) sources))))
+    (list alpha (nreverse sources))))
+
+(defun session-mode--xiang-entropy (probabilities)
+  "Return entropy in nats for PROBABILITIES."
+  (- (apply #'+ (mapcar (lambda (p) (if (> p 0.0) (* p (log p)) 0.0))
+                         probabilities))))
+
+(defun session-mode--xiang-epistemic (alphas)
+  "Expected entropy reduction from one Dirichlet-multinomial observation.
+This exact one-step calculation compares entropy of the current posterior mean
+with predictive-probability-weighted entropy after incrementing each outcome."
+  (let* ((values (mapcar (lambda (pair) (float (cdr pair))) alphas))
+         (total (apply #'+ values))
+         (before (session-mode--xiang-entropy
+                  (mapcar (lambda (a) (/ a total)) values)))
+         (after
+          (cl-loop for observed from 0 below (length values)
+                   for predictive = (/ (nth observed values) total)
+                   sum (* predictive
+                          (session-mode--xiang-entropy
+                           (cl-loop for a in values for i from 0
+                                    collect (/ (+ a (if (= i observed) 1.0 0.0))
+                                               (1+ total))))))))
+    (max 0.0 (- before after))))
+
+(defun session-mode--xiang-seeded-unit (alphas)
+  "Return a stable pseudo-random unit value derived solely from ALPHAS."
+  (let* ((ordered (sort (copy-sequence alphas)
+                        (lambda (a b) (string< (symbol-name (car a))
+                                                (symbol-name (car b))))))
+         (seed (mapconcat (lambda (pair) (format "%s:%.6f" (car pair) (cdr pair)))
+                          ordered ","))
+         ;; The leading digest word is a reproducible draw without global RNG state.
+         (prefix (substring (secure-hash 'sha256 seed) 0 8)))
+    (/ (string-to-number prefix 16) 4294967296.0)))
+
+(defun session-mode--xiang-choose (options alphas)
+  "Choose one of OPTIONS by softmax over -G, deterministically seeded by ALPHAS."
+  (if (<= session-mode-xiang-temperature 0)
+      (car (sort (copy-sequence options)
+                 (lambda (a b) (< (alist-get 'G a) (alist-get 'G b)))))
+    (let* ((tau (float session-mode-xiang-temperature))
+           (minimum (apply #'min (mapcar (lambda (o) (alist-get 'G o)) options)))
+           (weights (mapcar (lambda (o) (exp (/ (- minimum (alist-get 'G o)) tau)))
+                            options))
+           (total (apply #'+ weights))
+           (draw (* total (session-mode--xiang-seeded-unit alphas)))
+           (remaining options) (remaining-weights weights) chosen)
+      (while (and remaining (not chosen))
+        (if (<= draw (car remaining-weights))
+            (setq chosen (car remaining))
+          (setq draw (- draw (car remaining-weights))
+                remaining (cdr remaining)
+                remaining-weights (cdr remaining-weights))))
+      (or chosen (car (last options))))))
+
+(defun session-mode--xiang-log (record)
+  "Append one JSON decision RECORD, failing softly."
+  (condition-case err
+      (let* ((file (expand-file-name session-mode-xiang-decisions-file))
+             (directory (file-name-directory file)))
+        (make-directory directory t)
+        (write-region (concat (json-encode record) "\n") nil file t 'silent))
+    (error (message "session-mode: could not append 象 decision: %s"
+                    (error-message-string err)) nil)))
+
+(defun session-mode--xiang-cue-policy (text entries corrections)
+  "Score, select and log the R-node policy for TEXT; return chosen option."
+  (let* ((belief (session-mode--xiang-belief text entries corrections))
+         (alphas (car belief)) (sources (cadr belief))
+         (total (apply #'+ (mapcar #'cdr alphas)))
+         (top (car (sort (copy-sequence alphas)
+                         (lambda (a b) (> (cdr a) (cdr b))))))
+         (top-name (symbol-name (car top)))
+         (p-top (/ (cdr top) total))
+         (epistemic (session-mode--xiang-epistemic alphas))
+         (active (seq-some (lambda (e) (and (equal text (alist-get 'text e))
+                                             (equal "active" (alist-get 'status e))))
+                           entries))
+         (node-top (not (equal top-name "none")))
+         (promote-risk (* (if node-top (- 1.0 p-top) p-top)
+                          session-mode-xiang-cost-wrong-red))
+         (keep-risk (* p-top (if node-top session-mode-xiang-cost-missed-red
+                               session-mode-xiang-cost-wrong-red)))
+         (options (list `((option . "promote") (risk . ,promote-risk)
+                          (epistemic . 0.0) (G . ,promote-risk))
+                        `((option . "keep") (risk . ,keep-risk)
+                          (epistemic . ,epistemic)
+                          (G . ,(- keep-risk epistemic)))))
+         chosen-row chosen correction-none changed)
+    (when active
+      (let ((risk (* (if node-top p-top (- 1.0 p-top))
+                     session-mode-xiang-cost-missed-red 2.0)))
+        (setq options
+              (list (car options)
+                    `((option . "retire") (risk . ,risk)
+                      (epistemic . 0.0) (G . ,risk))
+                    (cadr options)))))
+    (setq chosen-row (session-mode--xiang-choose options alphas)
+          chosen (alist-get 'option chosen-row)
+          correction-none
+          (seq-some (lambda (c) (and (equal text (alist-get 'text c))
+                                     (equal "none" (alist-get 'node c))))
+                    corrections))
+    (cond
+     ((and (equal chosen "promote") node-top)
+      (dolist (entry entries)
+        (when (equal text (alist-get 'text entry))
+          (let ((status (if (equal top-name (alist-get 'node entry))
+                            "active" "candidate")))
+            (unless (equal status (alist-get 'status entry)) (setq changed t))
+            (setf (alist-get 'status entry) status)))))
+     ((equal chosen "keep")
+      (dolist (entry entries)
+        (when (and (equal text (alist-get 'text entry))
+                   (not (eq t (alist-get 'seed entry))))
+          (unless (equal "candidate" (alist-get 'status entry)) (setq changed t))
+          (setf (alist-get 'status entry) "candidate"))))
+     ((and (equal chosen "retire") active)
+      (dolist (entry entries)
+        (when (and (equal text (alist-get 'text entry))
+                   (or (not (eq t (alist-get 'seed entry))) correction-none))
+          (unless (equal "retired" (alist-get 'status entry)) (setq changed t))
+          (setf (alist-get 'status entry) "retired")))))
+    (session-mode--xiang-log
+     `((at . ,(format-time-string "%FT%TZ" nil t)) (kind . "cue") (subject . ,text)
+       (options . ,(vconcat options)) (tau . ,session-mode-xiang-temperature)
+       (chosen . ,chosen)
+       (rnode_terms . ((R1 . ((top . ,top-name) (p_top . ,p-top)
+                              (alpha . ,alphas)))
+                       (R7 . ,(vconcat sources)) (R6 . ,(vconcat (mapcar
+                                                                  (lambda (o) (alist-get 'option o))
+                                                                  options)))
+                       (R5 . ,(vconcat (mapcar (lambda (o) (alist-get 'G o)) options)))
+                       (R14 . ,session-mode-xiang-temperature)
+                       (R3/R17 . ((changed . ,(if changed t :json-false))
+                                  (status_change . ,(if changed chosen "none"))))))))
+    (list chosen changed options alphas)))
+
+(defun session-mode--rnode-conflicts (entries)
+  "Return display conflicts among ENTRIES without affecting policy selection."
+  (let ((by-text (make-hash-table :test #'equal)) conflicts)
+    (dolist (entry entries) (push (alist-get 'node entry)
+                                  (gethash (alist-get 'text entry) by-text)))
+    (maphash (lambda (text nodes)
+               (setq nodes (delete-dups nodes))
+               (when (> (length nodes) 1)
+                 (push `((text . ,text) (nodes . ,(vconcat (sort nodes #'string<))))
+                       conflicts)))
+             by-text)
+    (nreverse conflicts)))
+
+(defun session-mode--xiang-turn-rnode-info (text)
+  "Sum one-step information value for uncertain stored cues present in TEXT."
+  (let ((store (session-mode--read-rnode-cue-store)) (case-fold-search t) total seen)
+    (when store
+      (dolist (entry (alist-get 'entries store))
+        (let ((cue (alist-get 'text entry)))
+          (when (and (not (member cue seen))
+                     (string-match-p (regexp-quote cue) text))
+            (push cue seen)
+            (pcase-let ((`(,alphas ,_sources)
+                         (session-mode--xiang-belief
+                          cue (alist-get 'entries store) (alist-get 'corrections store))))
+              (setq total (+ (or total 0.0)
+                             (session-mode--xiang-epistemic alphas))))))))
+      (dolist (row (session-mode--load-rnode-vocabulary))
+        (dolist (compiled (nth 3 row))
+          (let ((cue (downcase (car compiled))))
+            (when (and (not (member cue seen))
+                       (string-match-p (nth 1 compiled) text))
+              (push cue seen)
+              (let* ((seed-entry
+                      (list (cons 'text cue) (cons 'node (car row)) (cons 'seed t)
+                            (cons 'turns nil) (cons 'seats nil)
+                            (cons 'seats_by_turn nil)))
+                     (entries (alist-get 'entries store))
+                     (has-seed (seq-some
+                                (lambda (entry)
+                                  (and (equal cue (alist-get 'text entry))
+                                       (equal (car row) (alist-get 'node entry))
+                                       (eq t (alist-get 'seed entry))))
+                                entries))
+                     (belief (session-mode--xiang-belief
+                              cue (if has-seed entries (cons seed-entry entries))
+                              (alist-get 'corrections store))))
+                (setq total (+ (or total 0.0)
+                               (session-mode--xiang-epistemic (car belief)))))))))
+    (or total 0.0)))
+
+(defun session-mode--xiang-turn-policy (text &optional evidence-id)
+  "Choose and log `ask' or `cue-only' for operator turn TEXT."
+  (let* ((substantive (not (string-empty-p (string-trim (or text "")))))
+         (rnode-info (if substantive (session-mode--xiang-turn-rnode-info text) 0.0))
+         (intent-value (if substantive session-mode-xiang-intent-value 0.0))
+         (ask-g (- session-mode-xiang-token-cost (+ intent-value rnode-info)))
+         (options (list `((option . "ask") (risk . ,session-mode-xiang-token-cost)
+                          (epistemic . ,(+ intent-value rnode-info)) (G . ,ask-g))
+                        '((option . "cue-only") (risk . 0.0)
+                          (epistemic . 0.0) (G . 0.0))))
+         (seed `((ask . ,(+ 1.0 intent-value rnode-info))
+                 (cue-only . 1.0)))
+         (chosen-row (session-mode--xiang-choose options seed))
+         (chosen (alist-get 'option chosen-row)))
+    (session-mode--xiang-log
+     `((at . ,(format-time-string "%FT%TZ" nil t)) (kind . "turn")
+       (subject . ,(or evidence-id "unrecorded")) (options . ,(vconcat options))
+       (tau . ,session-mode-xiang-temperature) (chosen . ,chosen)
+       (rnode_terms . ((R1 . ((substantive . ,(if substantive t :json-false))))
+                       (R7 . []) (R6 . ["ask" "cue-only"])
+                       (R5 . [,ask-g 0.0]) (R14 . ,session-mode-xiang-temperature)
+                       (R3/R17 . ((changed . :json-false)))))))
+    chosen))
+
+(defun session-mode--record-rnode-cues (data)
+  "Merge validated R-node cues from analysis DATA into the recurrence store.
+Returns non-nil when the store was updated; every error is reported softly."
+  (condition-case err
+      (let* ((store (session-mode--read-rnode-cue-store))
+             (entries (and store (alist-get 'entries store)))
+             (evidence-id (alist-get 'evidence_id data))
+             (seat (alist-get 'labeller data))
+             (seen-at (or (alist-get 'created_at data)
+                          (format-time-string "%FT%TZ" nil t)))
+             changed)
+        (when (and store (stringp evidence-id) (not (string-empty-p evidence-id))
+                   (stringp seat) (not (string-empty-p seat)))
+          (dolist (cue (alist-get 'rnode_cues data))
+            (let* ((text (downcase (string-trim (alist-get 'text cue))))
+                   (node (alist-get 'node cue))
+                   (seed (session-mode--rnode-seed-definition text))
+                   (entry (seq-find
+                           (lambda (e) (and (equal text (alist-get 'text e))
+                                            (equal node (alist-get 'node e))))
+                           entries)))
+              (unless entry
+                (setq entry (list (cons 'text text)
+                                  (cons 'node node)
+                                  (cons 'label (or (nth 1 seed) (alist-get 'label cue)))
+                                  (cons 'stage (or (nth 2 seed) (alist-get 'stage cue)))
+                                  (cons 'seed (if (and seed (equal node (car seed)))
+                                                  t :json-false))
+                                  (cons 'proposals 0)
+                                  (cons 'turns nil)
+                                  (cons 'seats nil)
+                                  (cons 'seats_by_turn nil)
+                                  (cons 'first_seen seen-at)
+                                  (cons 'last_seen seen-at)
+                                  (cons 'justifications nil)
+                                  (cons 'status (if (and seed (equal node (car seed)))
+                                                    "active" "candidate")))
+                      entries (append entries (list entry))))
+              (unless (member evidence-id (alist-get 'turns entry))
+                (when (and (alist-get 'turns entry)
+                           (null (alist-get 'seats_by_turn entry)))
+                  (let ((known (alist-get 'seats entry)))
+                    (setf (alist-get 'seats_by_turn entry)
+                          (cl-loop for i below (length (alist-get 'turns entry))
+                                   collect (or (nth i known) (car known))))))
+                (cl-incf (alist-get 'proposals entry))
+                (setf (alist-get 'turns entry)
+                      (append (alist-get 'turns entry) (list evidence-id))
+                      (alist-get 'seats_by_turn entry)
+                      (append (alist-get 'seats_by_turn entry) (list seat))
+                      (alist-get 'last_seen entry) seen-at)
+                (unless (member seat (alist-get 'seats entry))
+                  (setf (alist-get 'seats entry)
+                        (append (alist-get 'seats entry) (list seat))))
+                (let ((justification (alist-get 'justification cue)))
+                  (when (and (stringp justification)
+                             (not (member justification (alist-get 'justifications entry)))
+                             (< (length (alist-get 'justifications entry)) 3))
+                    (setf (alist-get 'justifications entry)
+                          (append (alist-get 'justifications entry)
+                                  (list justification)))))
+                (setq changed t))))
+          (when changed
+            (setf (alist-get 'entries store) entries
+                  (alist-get 'conflicts store)
+                  (session-mode--rnode-conflicts entries))
+            (dolist (text (delete-dups
+                           (mapcar (lambda (cue)
+                                     (downcase (string-trim (alist-get 'text cue))))
+                                   (alist-get 'rnode_cues data))))
+              (session-mode--xiang-cue-policy
+               text entries (alist-get 'corrections store)))
+            (session-mode--write-rnode-cue-store store)))
+        changed)
+    (error
+     (message "session-mode: could not record R-node cues: %s"
+              (error-message-string err))
+     nil)))
+
+(defun session-mode--rnode-seed-definition (text)
+  "Return static vocabulary metadata when TEXT is a generated seed cue."
+  (condition-case nil
+      (let ((json-object-type 'alist) (json-array-type 'list) found)
+        (dolist (row (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
+          (when (seq-some (lambda (cue) (equal (downcase cue) text))
+                          (alist-get 'cues row))
+            (setq found (list (alist-get 'id row) (alist-get 'label row)
+                              (alist-get 'stage row)))))
+        found)
+    (error nil)))
+
+(defun session-mode--rnode-node-definition (node)
+  "Return (NODE LABEL STAGE) from the generated vocabulary."
+  (condition-case nil
+      (let ((json-object-type 'alist) (json-array-type 'list))
+        (when-let* ((row (seq-find
+                          (lambda (candidate) (equal node (alist-get 'id candidate)))
+                          (alist-get 'nodes (json-read-file
+                                             session-mode-rnode-vocabulary-file)))))
+          (list node (alist-get 'label row) (alist-get 'stage row))))
+    (error nil)))
+
+(defun session-mode-xiang-correct-rnode (text node-or-none)
+  "Record Joe's correction of cue TEXT to NODE-OR-NONE and rerun its policy."
+  (interactive
+   (list (downcase (string-trim (read-string "R-node cue text: ")))
+         (completing-read "Correct node (or none): "
+                          (cons "none"
+                                (condition-case nil
+                                    (let ((json-object-type 'alist)
+                                          (json-array-type 'list))
+                                      (mapcar (lambda (row) (alist-get 'id row))
+                                              (alist-get 'nodes
+                                                         (json-read-file
+                                                          session-mode-rnode-vocabulary-file))))
+                                  (error nil)))
+                          nil t nil nil "none")))
+  (setq text (downcase (string-trim text))
+        node-or-none (if (or (null node-or-none) (equal node-or-none "none"))
+                         "none" node-or-none))
+  (condition-case err
+      (let* ((store (session-mode--read-rnode-cue-store))
+             (entries (and store (alist-get 'entries store)))
+             (corrections (and store (alist-get 'corrections store)))
+             (seed (session-mode--rnode-seed-definition text))
+             (definition (and (not (equal node-or-none "none"))
+                              (session-mode--rnode-node-definition node-or-none)))
+             (existing (seq-find (lambda (entry)
+                                   (and (equal text (alist-get 'text entry))
+                                        (equal (if (equal node-or-none "none")
+                                                   (car seed) node-or-none)
+                                               (alist-get 'node entry))))
+                                 entries)))
+        (when (and (not (equal node-or-none "none")) (not definition))
+          (user-error "Unknown R-node %s" node-or-none))
+        (when (and store (not (string-empty-p text)))
+          (unless (or existing (and (equal node-or-none "none") (not seed)))
+            (let ((node (if (equal node-or-none "none") (car seed) node-or-none)))
+              (setq existing
+                    (list (cons 'text text) (cons 'node node)
+                          (cons 'label (nth 1 (or seed definition)))
+                          (cons 'stage (nth 2 (or seed definition)))
+                          (cons 'seed (if seed t :json-false))
+                          (cons 'proposals 0) (cons 'turns nil) (cons 'seats nil)
+                          (cons 'seats_by_turn nil) (cons 'first_seen nil)
+                          (cons 'last_seen nil) (cons 'justifications nil)
+                          (cons 'status (if seed "active" "candidate")))
+                    entries (append entries (list existing)))))
+          (setq corrections
+                (append corrections
+                        (list `((text . ,text) (node . ,node-or-none)
+                                (at . ,(format-time-string "%FT%TZ" nil t))))))
+          (setf (alist-get 'entries store) entries
+                (alist-get 'corrections store) corrections
+                (alist-get 'conflicts store) (session-mode--rnode-conflicts entries))
+          (session-mode--xiang-cue-policy text entries corrections)
+          (session-mode--write-rnode-cue-store store)
+          t))
+    (error (message "session-mode: could not correct R-node cue: %s"
+                    (error-message-string err)) nil)))
+
+(defun session-mode--load-learned-rnode-vocabulary ()
+  "Return compiled active cues from the recurrence store, failing softly."
+  (let* ((attrs (file-attributes session-mode-rnode-cues-file))
+         (key (list session-mode--rnode-cache-format-version
+                    session-mode-rnode-cues-file
+                    (and attrs (file-attribute-modification-time attrs)))))
+    (unless (equal key session-mode--learned-rnode-key)
+      (let ((store (session-mode--read-rnode-cue-store)))
+        (setq session-mode--learned-rnode-vocabulary
+              (delq nil
+                    (mapcar
+                     (lambda (entry)
+                       (when (equal "active" (alist-get 'status entry))
+                         (when-let* ((rx (session-mode--rnode-cue-regexp
+                                          (alist-get 'text entry))))
+                           (list (alist-get 'node entry) (alist-get 'label entry)
+                                 (alist-get 'stage entry)
+                                 (list (list (alist-get 'text entry) rx "learned"))))))
+                     (and store (alist-get 'entries store))))
+              session-mode--learned-rnode-key key)))
+    session-mode--learned-rnode-vocabulary))
+
+(defun session-mode--load-rnode-vocabulary ()
+  "Load and compile the generated R-node vocabulary, failing softly."
+  (if (not (file-readable-p session-mode-rnode-vocabulary-file))
+      (progn
+        (unless session-mode--rnode-missing-reported
+          (setq session-mode--rnode-missing-reported t)
+          (message "session-mode: R-node vocabulary missing at %s"
+                   session-mode-rnode-vocabulary-file))
+        (setq session-mode--rnode-vocabulary nil
+              session-mode--rnode-vocabulary-key nil)
+        nil)
+    (let* ((store-attrs (file-attributes session-mode-rnode-cues-file))
+           (key (list session-mode--rnode-cache-format-version
+                      session-mode-rnode-vocabulary-file
+                      (file-attribute-modification-time
+                       (file-attributes session-mode-rnode-vocabulary-file))
+                      (and store-attrs (file-attribute-modification-time store-attrs)))))
+      (unless (equal key session-mode--rnode-vocabulary-key)
+        (let* ((json-object-type 'alist) (json-array-type 'list)
+               (store (session-mode--read-rnode-cue-store))
+               (retired-seeds
+                (mapcar (lambda (entry) (cons (alist-get 'node entry)
+                                              (alist-get 'text entry)))
+                        (seq-filter (lambda (entry)
+                                      (and (eq t (alist-get 'seed entry))
+                                           (equal "retired" (alist-get 'status entry))))
+                                    (and store (alist-get 'entries store))))))
+          (setq session-mode--rnode-vocabulary
+                (mapcar
+                 (lambda (row)
+                   (let ((id (alist-get 'id row))
+                         (label (alist-get 'label row))
+                         (stage (alist-get 'stage row)))
+                     (list id label stage
+                           (delq nil
+                                 (mapcar
+                                  (lambda (cue)
+                                    (unless (member (cons id (downcase cue)) retired-seeds)
+                                      (when-let* ((rx (session-mode--rnode-cue-regexp cue)))
+                                        (list cue rx "provisional"))))
+                                  (alist-get 'cues row))))))
+                 (alist-get 'nodes (json-read-file session-mode-rnode-vocabulary-file)))
+                session-mode--rnode-vocabulary-key key
+                session-mode--rnode-missing-reported nil)))
+      session-mode--rnode-vocabulary)))
+
+(defcustom session-mode-rnode-red t
+  "When non-nil, R-node cue tags are plain red text, so they stand out while the
+vocabulary is being tried; when nil, a dotted underline in the stage colour."
+  :type 'boolean :group 'session-mode)
+
+(defface session-mode-rnode-red-face '((t :foreground "red" :underline nil))
+  "R-node cue tag while `session-mode-rnode-red' is on.  Red alone marks it: the
+explicit nil underline, at a priority above the intent tags, removes theirs.")
+
+(defun session-mode--rnode-stage-face (stage)
+  "Return the R-node tag face: red while `session-mode-rnode-red', else a
+dotted underline in STAGE's transcript colour."
+  (if session-mode-rnode-red 'session-mode-rnode-red-face
+  (let* ((face-stage (if (equal stage "assurance") "annotator" stage))
+         (face (intern (format "session-mode-mark-%s-face" face-stage)))
+         (colour (face-foreground face nil t)))
+    `(:underline (:style dots :color ,colour)))))
+
+(defun session-mode--paint-rnode-region (beg region-end vocab intent-phrases)
+  "Paint VOCAB in one operator region, excluding its quoted tail."
+  (let ((end (save-excursion
+               (goto-char beg)
+               (if (re-search-forward "^[ \t]*>>>" region-end t)
+                   (match-beginning 0)
+                 region-end)))
+        (seen (make-hash-table :test #'equal)))
+    (dolist (row vocab)
+      (pcase-let ((`(,id ,label ,stage ,cues) row))
+        (dolist (cue cues)
+          (let ((key (list id (downcase (car cue)))))
+            (unless (or (gethash (downcase (car cue)) intent-phrases)
+                        (gethash key seen))
+              (puthash key t seen)
+              (save-excursion
+                (goto-char beg)
+                (while (re-search-forward (nth 1 cue) end t)
+                  (unless (session-mode--overlays-with-property
+                           (match-beginning 0) (match-end 0) 'session-mode-turn-tag)
+                  (let ((o (make-overlay (match-beginning 0) (match-end 0))))
+                    (overlay-put o 'session-mode-rnode-tag t)
+                    (overlay-put o 'evaporate t)
+                    (overlay-put o 'priority 40) ; above intent tags (30)
+                    (overlay-put o 'face (session-mode--rnode-stage-face stage))
+                    (overlay-put o 'help-echo
+                                 (format "%s %s (%s) — cue “%s” — %s"
+                                         id label (upcase stage) (car cue)
+                                         (nth 2 cue))))))))))))))
+
+(defun session-mode--overlays-with-property (beg end prop)
+  "Return overlays carrying PROP that share a character with BEG..END."
+  (seq-filter (lambda (o) (and (overlay-get o prop)
+                               (< (overlay-start o) end)
+                               (> (overlay-end o) beg)))
+              (overlays-in beg end)))
+
+(defun session-mode--paint-rnode-tags (jit-beg jit-end)
+  "Paint R-node cues in operator regions overlapping JIT-BEG..JIT-END."
+  ;; Each overlapping operator region is repainted whole, so a JIT boundary
+  ;; never splits a multiword cue and repeated calls stay idempotent; regions
+  ;; outside the chunk are left alone, so typing does not rescan the buffer.
+  (let ((case-fold-search t)
+        (vocab (and session-mode-rnode-tags
+                    (append (session-mode--load-learned-rnode-vocabulary)
+                            (session-mode--load-rnode-vocabulary))))
+        ;; Intent phrases mark conversational acts, not R-node quantities.
+        (intent-phrases (let ((h (make-hash-table :test 'equal)))
+                          (dolist (group session-mode-turn-vocabulary h)
+                            (dolist (phrase (cdr group))
+                              (puthash (downcase phrase) t h))))))
+    (pcase-dolist (`(,beg . ,region-end) (session-mode--operator-regions))
+      (when (and (< beg jit-end) (> region-end jit-beg))
+        (remove-overlays beg region-end 'session-mode-rnode-tag t)
+        (when vocab
+          (session-mode--paint-rnode-region beg region-end vocab intent-phrases))))))
+
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
 Also annotate the latest sent operator turn.  Drafts use local cues only;
@@ -949,7 +1709,14 @@ Kept separate from full session markup so typing never triggers retrieval."
         (add-hook 'after-change-functions #'session-mode--tags-after-change nil t)
         (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
         (add-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation nil t)
+        (jit-lock-register #'session-mode--paint-marks)
+        (jit-lock-register #'session-mode--paint-rnode-tags)
+        (session-mode--paint-rnode-tags (point-min) (point-max))
         (session-mode-turn-tags-refresh))
+    (jit-lock-unregister #'session-mode--paint-marks)
+    (jit-lock-unregister #'session-mode--paint-rnode-tags)
+    (remove-overlays (point-min) (point-max) 'session-mode-mark t)
+    (remove-overlays (point-min) (point-max) 'session-mode-rnode-tag t)
     (remove-hook 'after-change-functions #'session-mode--tags-after-change t)
     (remove-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation t)
     (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
@@ -963,15 +1730,24 @@ Kept separate from full session markup so typing never triggers retrieval."
 (defvar session-mode--analysis-health)        ; session-turn-analysis.el
 (defvar session-mode--analysis-health-detail)
 
+(defvar session-mode--xiang-off)              ; session-turn-analysis.el
+
 (defun session-mode--analysis-lighter ()
-  "The 象 lighter, pink while delegated analysis is known to be failing."
-  (let ((failing (eq session-mode--analysis-health 'failing)))
+  "The 象 lighter: red while turns are sent for interpretation, pink while
+delegated analysis is known to be failing, grey while `象-off' holds."
+  (let ((failing (eq session-mode--analysis-health 'failing))
+        (off (bound-and-true-p session-mode--xiang-off))
+        (autorunner (bound-and-true-p codex-repl--autorunner-enabled)))
     (propertize " 象"
-                'face `(:foreground ,(if failing "hot pink" "red"))
+                'face `(:foreground ,(cond ((or off autorunner) "gray50")
+                                           (failing "hot pink") (t "red")))
                 'help-echo
-                (concat (if failing
-                            "Turns are captured, but interpretation is FAILING"
-                          "Turns are captured and sent for interpretation")
+                (concat (cond
+                         (off (format "象 is OFF: turns are captured, not sent.\nRe-arm when: %s\nM-x 象-on to resume"
+                                      (plist-get off :rearm)))
+                         (autorunner "Autorunner on: its repeated prompt is captured, not sent.\nOther text you type is still read; M-x stop-codex-autorunner resumes")
+                         (failing "Turns are captured, but interpretation is FAILING")
+                         (t "Turns are captured and sent for interpretation"))
                         (if session-mode--analysis-health-detail
                             (concat "\nLast: " session-mode--analysis-health-detail)
                           "")))))

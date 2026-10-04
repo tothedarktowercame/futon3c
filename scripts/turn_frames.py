@@ -7,6 +7,7 @@ calls, no writes.
 
 Usage:
     python3 scripts/turn_frames.py SESSION_ID [--limit N] [--base URL] > frames.json
+    python3 scripts/turn_frames.py --one-record PATH > frame.json
 
 Frame shape:
 {"turn": {"evidence_id", "at", "text"},
@@ -25,6 +26,7 @@ Frame shape:
 
 import argparse
 import glob
+import http.client
 import json
 import os
 import re
@@ -34,6 +36,8 @@ import urllib.request
 
 DEFAULT_BASE = "http://localhost:7073"
 ANALYSIS_DIR = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
+FETCH_TIMEOUT = 20          # seconds; bounds one HTTP call so the stepper
+                            # is never left waiting on a busy futon1b
 
 
 # ---------------------------------------------------------------- fetching
@@ -45,12 +49,44 @@ def fetch_evidence(session_id, base=DEFAULT_BASE, page_limit=1000):
     while True:
         url = base.rstrip("/") + "/api/alpha/evidence?" + urllib.parse.urlencode(params)
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:
             page = json.load(resp)
         rows.extend(page.get("entries", []))
         cursor = page.get("next-cursor")
         if not cursor:
             return rows
+        params["cursor-at"] = cursor["at"]
+        params["cursor-id"] = cursor["id"]
+
+
+def fetch_xiang_readings(session_id, base=DEFAULT_BASE, page_limit=1000):
+    """The session's settled 象 turn entries, paged like fetch_evidence.
+
+    Since M-象-2000 step 2 the JVM writes one evidence entry per settled
+    turn: id e-xiang-turn-<record-id>, body {:record ... :reading ...
+    :settled "analyzed"|"drafted"}.  Returns {record_id: body}.  Entries
+    whose body is a bare record (the four older step-2 turns) are skipped:
+    their readings come from the files, like turns with no entry.
+    """
+    out = {}
+    params = {"session-id": session_id, "limit": str(page_limit),
+              "tag": "xiang-turn"}
+    while True:
+        url = base.rstrip("/") + "/api/alpha/evidence?" + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:
+            page = json.load(resp)
+        for row in page.get("entries", []):
+            m = re.match(r"e-xiang-turn-(turn-[A-Za-z0-9_-]+)$",
+                         row.get("evidence/id") or "")
+            if not m:
+                continue
+            body = body_of(row)
+            if isinstance(body.get("record"), dict) and body.get("reading"):
+                out[m.group(1)] = body
+        cursor = page.get("next-cursor")
+        if not cursor:
+            return out
         params["cursor-at"] = cursor["at"]
         params["cursor-id"] = cursor["id"]
 
@@ -69,8 +105,8 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
     pattern = os.path.join(analysis_dir, "turn-*.json")
     for path in sorted(glob.glob(pattern)):
         base = os.path.basename(path)
-        if base.endswith(".analysis.json") or base.endswith(".candidates.json"):
-            continue
+        if not re.fullmatch(r"turn-[^.]+\.json", base):
+            continue  # a sidecar (.analysis, .candidates, .quotes, ...)
         try:
             with open(path) as f:
                 record = json.load(f)
@@ -86,6 +122,18 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
                     analysis = json.load(f)
             except (OSError, ValueError):
                 analysis = None
+        draft = None
+        if analysis is None:
+            # 小象's provisional parse, written within ~1 s of send; 象's
+            # reading replaces it when it lands.  The draft never goes to
+            # futon1b on its own.
+            dpath = path + ".draft.json"
+            if os.path.exists(dpath):
+                try:
+                    with open(dpath) as f:
+                        draft = json.load(f)
+                except (OSError, ValueError):
+                    draft = None
         candidates = []
         # both spellings exist: turn-XX.json.candidates.json and turn-XX.candidates.json
         for cpath in (path + ".candidates.json",
@@ -97,7 +145,8 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
                 except (OSError, ValueError):
                     candidates = []
                 break
-        entry = {"record": record, "analysis": analysis, "candidates": candidates}
+        entry = {"record": record, "analysis": analysis, "draft": draft,
+                 "candidates": candidates, "path": path}
         if record.get("evidence_id"):
             out["by_evidence_id"][record["evidence_id"]] = entry
         if record.get("turn_id"):
@@ -108,7 +157,127 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
     return out
 
 
+def load_one_record(path):
+    """Load PATH and its analysis/draft/candidate siblings into an index.
+
+    This is the single-record counterpart of ``load_analyses``.  It performs
+    no glob and no network access; frame construction still goes through
+    ``rows_from_analyses`` and ``build_frames`` below.
+    """
+    path = os.path.abspath(path)
+    with open(path) as f:
+        record = json.load(f)
+    session_id = record.get("session_id")
+    if not session_id:
+        raise ValueError("record has no session_id")
+    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {}}
+    analysis = None
+    try:
+        with open(path + ".analysis.json") as f:
+            analysis = json.load(f)
+    except (OSError, ValueError):
+        pass
+    draft = None
+    if analysis is None:
+        try:
+            with open(path + ".draft.json") as f:
+                draft = json.load(f)
+        except (OSError, ValueError):
+            pass
+    candidates = []
+    base = os.path.basename(path)
+    for cpath in (path + ".candidates.json",
+                  os.path.join(os.path.dirname(path),
+                               base[:-len(".json")] + ".candidates.json")):
+        try:
+            with open(cpath) as f:
+                candidates = json.load(f).get("candidates", [])
+            break
+        except (OSError, ValueError):
+            pass
+    entry = {"record": record, "analysis": analysis, "draft": draft,
+             "candidates": candidates, "path": path}
+    if record.get("evidence_id"):
+        out["by_evidence_id"][record["evidence_id"]] = entry
+    if record.get("turn_id"):
+        out["by_turn_id"][(session_id, record["turn_id"])] = entry
+    text_key = (record.get("source_text") or "").strip()
+    if text_key:
+        out["by_text"][text_key] = entry
+    return session_id, out
+
+
+def frame_for_record(path, operator_rules=None):
+    """Build exactly one frame from PATH and its local siblings."""
+    session_id, analyses = load_one_record(path)
+    frames = build_frames(rows_from_analyses(analyses, session_id), analyses,
+                          session_id=session_id,
+                          operator_rules=operator_rules)
+    if len(frames) != 1:
+        raise ValueError("record did not produce exactly one operator frame")
+    frames[0].pop("_join", None)
+    return frames[0]
+
+
 # ---------------------------------------------------------------- helpers
+
+def merge_xiang_readings(analyses, readings, session_id):
+    """Prefer each settled turn's evidence reading over its .analysis.json.
+
+    READINGS is fetch_xiang_readings' {record_id: body}.  When the turn has
+    a file entry, its reading becomes the evidence one (candidates, which
+    only exist as files, are kept); otherwise a new entry is indexed under
+    the same keys a file entry would be.
+    """
+    for body in readings.values():
+        record = body["record"]
+        entry = analyses["by_evidence_id"].get(record.get("evidence_id"))
+        if entry is None:
+            entry = analyses["by_turn_id"].get((session_id, record.get("turn_id")))
+        text_key = (record.get("source_text") or "").strip()
+        if entry is None and text_key:
+            entry = analyses["by_text"].get(text_key)
+        if entry is not None:
+            entry["analysis"] = body["reading"]
+            continue
+        entry = {"record": record, "analysis": body["reading"], "candidates": []}
+        if record.get("evidence_id"):
+            analyses["by_evidence_id"][record["evidence_id"]] = entry
+        if record.get("turn_id"):
+            analyses["by_turn_id"][(session_id, record["turn_id"])] = entry
+        if text_key:
+            analyses["by_text"][text_key] = entry
+    return analyses
+
+
+def rows_from_analyses(analyses, session_id):
+    """Synthetic operator-turn evidence rows from the turn record files.
+
+    Used when futon1b cannot be reached: the records carry source_text,
+    created_at and happened_summary, so the frames still build; the
+    happened lists are empty (those rows live only in the store).
+    """
+    rows = []
+    seen = set()
+    for key in ("by_evidence_id", "by_turn_id", "by_text"):
+        for entry in analyses.get(key, {}).values():
+            mark = entry.get("path") or id(entry)
+            if mark in seen:
+                continue
+            seen.add(mark)
+            record = entry["record"]
+            rows.append({
+                "evidence/id": record.get("evidence_id")
+                               or "file:" + str(record.get("turn_id")),
+                "evidence/type": "coordination",
+                "evidence/at": record.get("created_at") or "",
+                "evidence/origin": {"kind": "operator"},
+                "evidence/body": {"event": "chat-turn", "role": "user",
+                                  "turn-id": record.get("turn_id"),
+                                  "text": record.get("source_text")
+                                          or record.get("original_text")}})
+    return rows
+
 
 def at_key(row):
     """Sortable instant for evidence/at. The store mixes 3- and 9-digit
@@ -393,6 +562,28 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                     })
                     matched.extend(frag.get("pattern_refs") or [])
                     rejected.extend(frag.get("pattern_rejections") or [])
+        elif entry and entry.get("draft"):
+            # 小象's provisional parse, shown until 象's reading lands:
+            # the best guess, visibly weak when the draft is not sure.
+            status = "drafted-provisional"
+            for frag in (entry["draft"].get("fragments") or []):
+                best = (frag.get("guesses") or [frag.get("intent")])[0]
+                labels = []
+                if best is not None:
+                    label = {"source": "小象", "intent": best,
+                             "precision": frag.get("precision")}
+                    if not frag.get("sure"):
+                        label["weak"] = True
+                    labels.append(label)
+                fragments_out.append({
+                    "sentence": frag.get("sentence"),
+                    "text": frag.get("text"),
+                    "cues": [],
+                    "labels": labels,
+                    "_intents": [best] if best is not None else [],
+                    "_frag": frag,
+                    "_sid": frag.get("sentence"),
+                })
         # negation labels: attach to the fragment they name (fall back to
         # matching fragment-text)
         for nr in negs:
@@ -461,19 +652,54 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        # ports (HAPPENED / DIDN'T HAPPEN acts) ride the record; a frame
+        # without them stays byte-identical.
+        if entry is not None and entry["record"].get("ports"):
+            frames[-1]["ports"] = entry["record"]["ports"]
     return frames
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("session_id")
+    ap.add_argument("session_id", nargs="?")
+    ap.add_argument("--one-record", metavar="PATH")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--analysis-dir", default=ANALYSIS_DIR)
     args = ap.parse_args(argv)
 
-    rows = fetch_evidence(args.session_id, base=args.base)
+    if args.one_record:
+        if args.session_id or args.limit is not None:
+            ap.error("--one-record does not accept SESSION_ID or --limit")
+        try:
+            frame = frame_for_record(args.one_record, operator_rules=load_operators())
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            ap.error(str(e))
+        json.dump(frame, sys.stdout, ensure_ascii=False, indent=1)
+        sys.stdout.write("\n")
+        return 0
+    if not args.session_id:
+        ap.error("SESSION_ID is required unless --one-record is used")
+
     analyses = load_analyses(args.session_id, analysis_dir=args.analysis_dir)
+
+    rows, readings, failures = None, {}, []
+    try:
+        rows = fetch_evidence(args.session_id, base=args.base)
+    except (OSError, ValueError, http.client.HTTPException) as e:
+        failures.append("session rows")
+    try:
+        readings = fetch_xiang_readings(args.session_id, base=args.base)
+    except (OSError, ValueError, http.client.HTTPException) as e:
+        failures.append("readings")
+    if failures:
+        print("turn_frames: evidence fetch failed (%s); "
+              "building frames from the files alone" % ", ".join(failures),
+              file=sys.stderr)
+    merge_xiang_readings(analyses, readings, args.session_id)
+    if rows is None:
+        rows = rows_from_analyses(analyses, args.session_id)
+
     frames = build_frames(rows, analyses, session_id=args.session_id,
                           operator_rules=load_operators(),
                           limit=args.limit)

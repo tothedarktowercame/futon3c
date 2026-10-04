@@ -19,7 +19,7 @@ for ANY characters:
 import os, re, sys, json, argparse, time, urllib.request
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--to", required=True, help="recipient agent-id")
+ap.add_argument("--to", help="recipient agent-id")
 ap.add_argument("--from", dest="frm", help="sender agent-id (recorded as the mesh edge's caller; "
                                            "enables mesh_trace + auto-bellback routing)")
 ap.add_argument("--kind", choices=["bell", "whistle"], default="bell")
@@ -76,6 +76,9 @@ ap.add_argument("--cascade", metavar="PATH",
                      "REFUSED here rather than delivered for the receiver to guess at. "
                      "Prose on stdin becomes context beneath it, and may be empty.")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
+ap.add_argument("--close-order", metavar="ID",
+                help="close a work order instead of sending a bell")
+ap.add_argument("--reason", help="reason for --close-order")
 ap.add_argument("--warrant", action="append", metavar="ENTRY_ID:NAMESPACE:LANE:BASE_SHA",
                 help="test-registry warrant riding this handoff (repeatable). "
                      "LANE is routine|pre-push|invariant; BASE_SHA is 7-40 hex. "
@@ -83,7 +86,25 @@ ap.add_argument("--warrant", action="append", metavar="ENTRY_ID:NAMESPACE:LANE:B
                      "the warrant status on the coordination edge.")
 a = ap.parse_args()
 
+if a.close_order:
+    if not a.frm or not a.reason:
+        sys.exit("agency_send: --close-order requires --from and --reason")
+elif not a.to:
+    sys.exit("agency_send: --to is required unless --close-order is used")
+
 prompt = sys.stdin.read()
+
+if a.close_order:
+    body = {"by": a.frm, "reason": a.reason}
+    if a.dry_run:
+        print(json.dumps(body))
+        sys.exit(0)
+    req = urllib.request.Request(
+        f"{a.base}/api/alpha/work-orders/{a.close_order}/close",
+        data=json.dumps(body).encode(), headers={"Content-Type": "application/json"},
+        method="POST")
+    print(urllib.request.urlopen(req).read().decode())
+    sys.exit(0)
 
 CASCADE_HEADER = (
     "This dispatch carries a PATTERN CASCADE, not prose instructions.\n"

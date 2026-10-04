@@ -115,14 +115,14 @@ JSON null and false both read as nil."
       (if (listp data) data (list data)))))
 
 (defun turn-stepper--ready-frames (frames)
-  "FRAMES without the newest turns 象 has not read yet.
-Those turns are still in progress (no reading, no reply), so they are
-left out until a refresh finds them read.  An older turn 象 never read
-stays, shown as missing."
+  "FRAMES without the newest turns that have nothing to show yet.
+A trailing turn with 小象's provisional parse stays (marked provisional);
+only a trailing turn with neither draft nor reading is left out.  An
+older turn 象 never read stays, shown as missing."
   (let ((rev (reverse frames)))
-    (while (and rev (not (equal "analyzed"
-                                (turn-stepper--aget
-                                 (quote status) (turn-stepper--aget (quote parse) (car rev))))))
+    (while (and rev (not (member (turn-stepper--aget
+                                  (quote status) (turn-stepper--aget (quote parse) (car rev)))
+                                 (quote ("analyzed" "drafted-provisional")))))
       (setq rev (cdr rev)))
     (nreverse rev)))
 
@@ -175,40 +175,60 @@ content of that mark.  The marks themselves are underlined in PARSE."
             (add-face-text-property i (+ i (length cue))
                                     '(:underline (:style wave :color "purple")) nil out)))))))
 
+(defface turn-stepper-provisional-face
+  '((t :inherit shadow :slant italic))
+  "Face for 小象's provisional parse, replaced by 象's reading when it lands."
+  :group 'turn-stepper)
+
+(defun turn-stepper--render-fragments (fragments provisional)
+  "Render FRAGMENTS lines; PROVISIONAL marks weak guesses with a face."
+  (if (null fragments)
+      "  (no fragments)\n"
+    (mapconcat
+     (lambda (frag)
+       (let* ((labels (turn-stepper--aget (quote labels) frag))
+              (combined (turn-stepper--aget (quote combined) frag))
+              (disagree (turn-stepper--aget (quote disagree) frag))
+              (intents (delq nil (mapcar (lambda (l)
+                                           (turn-stepper--aget (quote intent) l))
+                                         labels)))
+              (head (if (and disagree (> (length intents) 1))
+                        (format "disagree: %s"
+                                (string-join intents " / "))
+                      (or combined "(unlabelled)")))
+              (sources (mapconcat
+                        (lambda (l)
+                          (let ((s (format "%s→%s%s"
+                                           (turn-stepper--aget (quote source) l)
+                                           (turn-stepper--aget (quote intent) l)
+                                           (if (turn-stepper--aget (quote weak) l) "?" ""))))
+                            (if provisional
+                                (propertize s 'face 'turn-stepper-provisional-face)
+                              s)))
+                        labels ", ")))
+         (format "  [%s] %s\n      (%s)"
+                 (if provisional
+                     (propertize head 'face 'turn-stepper-provisional-face)
+                   head)
+                 (turn-stepper--underline-cues
+                  (or (turn-stepper--aget (quote text) frag) "")
+                  (turn-stepper--aget (quote cues) frag))
+                 sources)))
+     fragments
+     "\n")))
+
 (defun turn-stepper--render-parse (parse)
   "Render the PARSE section of a frame's parse alist as a string."
   (let ((status (turn-stepper--aget (quote status) parse))
         (fragments (turn-stepper--aget (quote fragments) parse)))
-    (if (not (equal status "analyzed"))
-        (format "  (%s)\n" (or status "missing"))
-      (if (null fragments)
-          "  (no fragments)\n"
-        (mapconcat
-         (lambda (frag)
-           (let* ((labels (turn-stepper--aget (quote labels) frag))
-                  (combined (turn-stepper--aget (quote combined) frag))
-                  (disagree (turn-stepper--aget (quote disagree) frag))
-                  (intents (delq nil (mapcar (lambda (l)
-                                               (turn-stepper--aget (quote intent) l))
-                                             labels)))
-                  (head (if (and disagree (> (length intents) 1))
-                            (format "disagree: %s"
-                                    (string-join intents " / "))
-                          (or combined "(unlabelled)")))
-                  (sources (mapconcat
-                            (lambda (l)
-                              (format "%s→%s"
-                                      (turn-stepper--aget (quote source) l)
-                                      (turn-stepper--aget (quote intent) l)))
-                            labels ", ")))
-             (format "  [%s] %s\n      (%s)"
-                     head
-                     (turn-stepper--underline-cues
-                      (or (turn-stepper--aget (quote text) frag) "")
-                      (turn-stepper--aget (quote cues) frag))
-                     sources)))
-         fragments
-         "\n")))))
+    (cond
+     ((equal status "analyzed")
+      (turn-stepper--render-fragments fragments nil))
+     ((equal status "drafted-provisional")
+      (concat (propertize "  小象, provisional — 象's reading pending\n"
+                          'face 'turn-stepper-provisional-face)
+              (turn-stepper--render-fragments fragments t)))
+     (t (format "  (%s)\n" (or status "missing"))))))
 
 (defun turn-stepper--pattern-id (item)
   "Best-effort id string for a matched-pattern ITEM (string or alist)."
@@ -283,6 +303,51 @@ content of that mark.  The marks themselves are underlined in PARSE."
            (t ""))))
     (format "  %s  %-28s %s" at type detail)))
 
+(defun turn-stepper--ports-age (since turn-at)
+  "Age of a still-open act: minutes from SINCE to TURN-AT, or nil."
+  (condition-case nil
+      (let ((m (floor (/ (float-time (time-subtract (date-to-time turn-at)
+                                                     (date-to-time since)))
+                         60))))
+        (if (< m 1) "<1m" (format "%dm" m)))
+    (error nil)))
+
+(defun turn-stepper--render-ports (ports turn-at)
+  "Render a frame's PORTS alist as \"closed:\" and \"still open:\" lines.
+PORTS is the record's adapter answer: closed_this_turn and still_open,
+each act as {act kind text since?}.  Returns the empty string when absent
+or empty."
+  (if (not (listp ports))
+      ""
+    (let ((closed (turn-stepper--aget (quote closed_this_turn) ports))
+          (open (turn-stepper--aget (quote still_open) ports)))
+      (if (and (null closed) (null open))
+          ""
+        (concat
+         "\n"
+         (when closed
+           (concat
+            "  closed:\n"
+            (mapconcat
+             (lambda (a)
+               (format "    - %s: %s"
+                       (or (turn-stepper--aget (quote kind) a) "?")
+                       (or (turn-stepper--aget (quote text) a) "")))
+             closed "\n")
+            "\n"))
+         (when open
+           (concat
+            "  still open:\n"
+            (mapconcat
+             (lambda (a)
+               (format "    - %s (%s): %s"
+                       (or (turn-stepper--aget (quote kind) a) "?")
+                       (or (turn-stepper--ports-age
+                            (turn-stepper--aget (quote since) a) turn-at)
+                           "?")
+                       (or (turn-stepper--aget (quote text) a) "")))
+             open "\n"))))))))
+
 (defun turn-stepper--render-frame (frame _index _count _session-id)
   "Render FRAME (alist) as display text.
 _INDEX, _COUNT and _SESSION-ID are accepted for callers that track
@@ -310,6 +375,8 @@ carries that information."
      (if happened
          (mapconcat #'turn-stepper--render-happened-row happened "\n")
        "  (nothing between this turn and the next)")
+     (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
+                                 (turn-stepper--aget 'at turn))
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode
@@ -610,6 +677,79 @@ a closed stepper stays closed."
 
 (add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
+(defun turn-stepper--record-key (frame)
+  "Stable record key for FRAME, including locally appended frames."
+  (or (turn-stepper--aget 'record_path frame)
+      (turn-stepper--aget 'evidence_id (turn-stepper--aget 'turn frame))))
+
+(defun turn-stepper--merge-record-frame (frame path)
+  "Append or replace FRAME for PATH in the visible matching stepper.
+Move to a newly appended frame only when the reader was on the last frame."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (when (and buf (get-buffer-window buf t))
+      (with-current-buffer buf
+        (let* ((old-count (length turn-stepper--frames))
+               (was-last (or (zerop old-count)
+                             (= turn-stepper--index (1- old-count))))
+               (replacement (cons (cons 'record_path path) frame))
+               (key (turn-stepper--record-key replacement))
+               (index (cl-position key turn-stepper--frames
+                                   :test #'equal
+                                   :key #'turn-stepper--record-key)))
+          (if index
+              (setf (nth index turn-stepper--frames) replacement)
+            (setq turn-stepper--frames
+                  (append turn-stepper--frames (list replacement)))
+            (setq index (1- (length turn-stepper--frames))))
+          (puthash turn-stepper--session-id turn-stepper--frames
+                   turn-stepper--cache)
+          (when was-last (setq turn-stepper--index index))
+          (turn-stepper--display-current))))))
+
+(defun turn-stepper--turn-recorded (path)
+  "Read the new frame at PATH asynchronously when its stepper is visible.
+Failures are reported once and never escape the process sentinel."
+  (let* ((source (current-buffer))
+         (buf (get-buffer turn-stepper-buffer-name))
+         (session (and (file-readable-p path)
+                       (ignore-errors
+                         (alist-get 'session_id (json-read-file path))))))
+    (when (and session buf (get-buffer-window buf t)
+               (not (get-process "turn-stepper-frames"))
+               (not (get-process "turn-stepper-one-record"))
+               (with-current-buffer buf
+                 (and (equal session turn-stepper--session-id)
+                      (eq source turn-stepper--source-buffer))))
+      (let ((output (generate-new-buffer " *turn-stepper-one-record-output*"))
+            (stderr (get-buffer-create " *turn-stepper-one-record-stderr*")))
+        (make-process
+         :name "turn-stepper-one-record"
+         :buffer output
+         :command (list turn-stepper-python turn-stepper-script
+                        "--one-record" path)
+         :noquery t :stderr stderr
+         :sentinel
+         (lambda (proc _event)
+           (when (memq (process-status proc) '(exit signal))
+             (unwind-protect
+                 (condition-case err
+                     (if (zerop (process-exit-status proc))
+                         (let* ((json (with-current-buffer (process-buffer proc)
+                                        (buffer-string)))
+                                ;; The one-record CLI returns one object;
+                                ;; bracket it to reuse the full-run parser.
+                                (frame (car (turn-stepper--parse-frames
+                                             (concat "[" json "]")))))
+                           (turn-stepper--merge-record-frame frame path))
+                       (message "turn-stepper: new-turn frame failed: %s"
+                                (turn-stepper--last-error-line)))
+                   (error
+                    (message "turn-stepper: new-turn frame failed: %s"
+                             (error-message-string err))))
+               (when (buffer-live-p output) (kill-buffer output))))))))))
+
+(add-hook 'session-mode-turn-recorded-functions #'turn-stepper--turn-recorded)
+
 (defun turn-stepper--last-error-line ()
   "Last non-empty line the frames script wrote to stderr."
   (let ((b (get-buffer " *turn-stepper-frames-stderr*")))
@@ -660,10 +800,16 @@ Frames are cached per session; use `g' in the stepper to refresh."
     (unless session-id
       (user-error
        "No session id here (agent-chat--session-id unset); not a REPL buffer?"))
+    ;; The cache is only refreshed while the stepper is on screen, so one
+    ;; kept across a closed stepper can be days old (182 of 286 frames,
+    ;; 2026-10-03).  Show it at once, then refresh behind it.
     (if (gethash session-id turn-stepper--cache)
-        (turn-stepper--open session-id source
-                            (1- (length (gethash session-id
-                                                 turn-stepper--cache))))
+        (progn
+          (turn-stepper--open session-id source
+                              (1- (length (gethash session-id
+                                                   turn-stepper--cache))))
+          (unless (get-process "turn-stepper-frames")
+            (turn-stepper--start-fetch session-id source t)))
       (turn-stepper--start-fetch session-id source))))
 
 ;;; ---------------------------------------------------------------- rewind

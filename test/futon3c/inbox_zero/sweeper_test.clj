@@ -400,13 +400,26 @@
     (is (= [[:pull "/repo/futon1"]]
            (filterv #(= :pull (first %)) @calls)))))
 
-(deftest dirty-behind-only-repo-is-never-touched
+(deftest dirty-behind-only-repo-refuses-an-incoming-path-overlap
   (let [calls (atom [])
         counts (sweeper/sync-behind-repos!
                 (sync-options {:ok? true :behind 3 :ahead 0} calls
-                              {:git-fn (constantly [(entry "unfinished.clj" 1 false)])}))]
+                              {:git-fn (constantly [(entry "unfinished.clj" 1 false)])
+                               :incoming-paths-fn
+                               (constantly {:ok? true :paths #{"unfinished.clj"}})}))]
     (is (= 1 (:skipped counts)))
     (is (empty? (filter #(= :pull (first %)) @calls)))))
+
+(deftest dirty-behind-only-repo-fast-forwards-around-disjoint-dirt
+  (let [calls (atom [])
+        counts (sweeper/sync-behind-repos!
+                (sync-options {:ok? true :behind 3 :ahead 0} calls
+                              {:git-fn (constantly [(entry "live-output.edn" 1 false)])
+                               :incoming-paths-fn
+                               (constantly {:ok? true :paths #{"src/new.clj"}})}))]
+    (is (= 1 (:updated counts)))
+    (is (= [[:pull "/repo/futon1"]]
+           (filterv #(= :pull (first %)) @calls)))))
 
 (deftest diverged-repo-is-left-to-push-reconciliation
   (let [calls (atom [])
@@ -430,6 +443,34 @@
       (is (= {:ok? true :behind 0 :ahead 0} after))
       (is (= (git! peer "rev-parse" "HEAD") (git! repo "rev-parse" "HEAD")))
       (is (str/blank? (git! repo "status" "--porcelain"))))))
+
+(deftest sync-lane-preserves-real-disjoint-dirt-while-fast-forwarding
+  (let [{:keys [repo peer original]} (divergent-repo-fixture false)
+        _ (git! repo "reset" "--hard" (str original "^"))
+        dirty-file (java.io.File. repo "base.txt")
+        _ (spit dirty-file "locally regenerated\n")
+        counts (sweeper/sync-behind-repos!
+                {:roots [{:path (str repo) :label "fixture"}]
+                 :sync-log-path (temp-backlog-path)
+                 :print-fn (constantly nil)})]
+    (is (= 1 (:updated counts)))
+    (is (= (git! peer "rev-parse" "HEAD") (git! repo "rev-parse" "HEAD")))
+    (is (= "locally regenerated\n" (slurp dirty-file)))
+    (is (str/includes? (git! repo "status" "--porcelain") "base.txt"))))
+
+(deftest sync-lane-refuses-a-real-dirty-incoming-path
+  (let [{:keys [repo original]} (divergent-repo-fixture false)
+        _ (git! repo "reset" "--hard" (str original "^"))
+        dirty-file (java.io.File. repo "remote.txt")
+        _ (spit dirty-file "local collision\n")
+        before (git! repo "rev-parse" "HEAD")
+        counts (sweeper/sync-behind-repos!
+                {:roots [{:path (str repo) :label "fixture"}]
+                 :sync-log-path (temp-backlog-path)
+                 :print-fn (constantly nil)})]
+    (is (= 1 (:skipped counts)))
+    (is (= before (git! repo "rev-parse" "HEAD")))
+    (is (= "local collision\n" (slurp dirty-file)))))
 
 
 ;; ---------- the worktree lane ----------

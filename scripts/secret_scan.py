@@ -41,6 +41,13 @@ class _Rule:
     kind: str
     pattern: Pattern[str]
     group: int | str = 0
+    # Literal(s) the pattern cannot match without.  Checked with `in` before
+    # the regex runs: a pattern that opens with a lookbehind gets no literal
+    # fast path from `re`, so on a megabyte log line it scans every position
+    # (measured 0.2 s per rule per 4 MB).  The needle is implied by the
+    # pattern, so findings are identical with or without it.
+    needles: tuple[str, ...] = ()
+    needles_fold: bool = False  # match the needle case-insensitively
 
 
 def _start(chars: str) -> str:
@@ -56,19 +63,22 @@ _RULES = (
             r"-----END(?: [A-Z0-9]+)* PRIVATE KEY-----",
             re.DOTALL,
         ),
+        needles=("-----BEGIN",),
     ),
-    _Rule("aws-access-key", re.compile(_start("A-Z0-9") + r"(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])")),
-    _Rule("github-token", re.compile(_start("A-Za-z0-9_") + r"(?:gh[opusr]_[A-Za-z0-9]{20,255}|github_pat_[A-Za-z0-9_]{20,255})(?![A-Za-z0-9_])")),
-    _Rule("anthropic-key", re.compile(_start("A-Za-z0-9_-") + r"sk-ant-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])")),
-    _Rule("openai-key", re.compile(_start("A-Za-z0-9_-") + r"(?:sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,})(?![A-Za-z0-9_-])")),
-    _Rule("slack-token", re.compile(_start("A-Za-z0-9-") + r"xox[abprs]-[A-Za-z0-9-]{10,}(?![A-Za-z0-9-])")),
-    _Rule("google-api-key", re.compile(_start("A-Za-z0-9_-") + r"AIza[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])")),
-    _Rule("jwt", re.compile(_start("A-Za-z0-9_-") + r"eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?![A-Za-z0-9_-])")),
-    _Rule("bearer", re.compile(r"(?i)(?:authorization\s*:\s*)?bearer\s+(?P<value>(?=[A-Za-z._~+/-]*[0-9])[A-Za-z0-9._~+/-]{8,})"), "value"),
+    _Rule("aws-access-key", re.compile(_start("A-Z0-9") + r"(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])"), needles=("AKIA", "ASIA")),
+    _Rule("github-token", re.compile(_start("A-Za-z0-9_") + r"(?:gh[opusr]_[A-Za-z0-9]{20,255}|github_pat_[A-Za-z0-9_]{20,255})(?![A-Za-z0-9_])"),
+          needles=("gho_", "ghp_", "ghu_", "ghs_", "ghr_", "github_pat_")),
+    _Rule("anthropic-key", re.compile(_start("A-Za-z0-9_-") + r"sk-ant-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])"), needles=("sk-ant-",)),
+    _Rule("openai-key", re.compile(_start("A-Za-z0-9_-") + r"(?:sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,})(?![A-Za-z0-9_-])"), needles=("sk-",)),
+    _Rule("slack-token", re.compile(_start("A-Za-z0-9-") + r"xox[abprs]-[A-Za-z0-9-]{10,}(?![A-Za-z0-9-])"), needles=("xox",)),
+    _Rule("google-api-key", re.compile(_start("A-Za-z0-9_-") + r"AIza[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])"), needles=("AIza",)),
+    _Rule("jwt", re.compile(_start("A-Za-z0-9_-") + r"eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?![A-Za-z0-9_-])"), needles=("eyJ",)),
+    _Rule("bearer", re.compile(r"(?i)(?:authorization\s*:\s*)?bearer\s+(?P<value>(?=[A-Za-z._~+/-]*[0-9])[A-Za-z0-9._~+/-]{8,})"), "value", needles=("bearer",), needles_fold=True),
     _Rule(
         "url-credentials",
         re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s/@:]+:(?P<password>[^\s/@]+)@[^\s/]+"),
         "password",
+        needles=("://",),
     ),
 )
 
@@ -89,11 +99,21 @@ _KEYWORD = re.compile(
 _KEYWORD_WORD = re.compile(  # a lookahead, so overlapping keywords all count
     r"(?i)(?=password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)")
 _KEYWORD_PREFIX_CHAR = re.compile(r"[A-Za-z0-9_\-*\\\"'`]")
+# A keyword can only start a _KEYWORD match when a separator follows it, so a
+# line with no keyword-then-[:=] cannot match at all.  Searching for that
+# first skips the position walk on every line that merely mentions tokens
+# ("input_tokens": 4096 in each assistant record).
+_KEYWORD_ANYWHERE = re.compile(
+    r"(?i)(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)"
+    r"(?:\\?[\"'`])?[*_]{0,3}\s*[:=]")
 _UNQUOTED_VALUE = re.compile(r"[^\s,;\}\]\\\"'`]+")
 _HIGH_ENTROPY = re.compile(_start("A-Za-z0-9+/_=-") + r"[A-Za-z0-9+/_=-]{32,}(?![A-Za-z0-9+/_=-])")
 # Longer runs are encoded payloads (images, archives), not credentials; keys long
 # enough to exceed this (PEM blocks, JWTs) have their own structural rules.
 _HIGH_ENTROPY_MAX = 256
+# No lookarounds, so `re` scans it as a plain character-class run; a line
+# with no 32-run of token characters cannot hold a high-entropy finding.
+_HIGH_ENTROPY_ANYWHERE = re.compile(r"[A-Za-z0-9+/_=-]{32}")
 _PLACEHOLDERS = re.compile(
     r"(?i)^(?:<redacted>|\*{3,}|x{3,}|change(?:me)?|changeme\??|none|null|n/?a|placeholder|example)$"
 )
@@ -204,17 +224,28 @@ def scan(text: str) -> list[Finding]:
     """Return non-overlapping suspected-secret ranges without secret values."""
 
     found: list[Finding] = []
+    folded: str | None = None
     for rule in _RULES:
+        if rule.needles:
+            if rule.needles_fold:
+                folded = text.lower() if folded is None else folded
+                haystack = folded
+            else:
+                haystack = text
+            if not any(needle in haystack for needle in rule.needles):
+                continue
         for match in rule.pattern.finditer(text):
             start, end = match.span(rule.group)
             found.append(Finding(rule.kind, start, end))
-    for match in _keyword_matches(text):
-        span = _keyword_span(text, match)
-        if span:
-            found.append(Finding("keyword-assignment", *span))
-    for match in _HIGH_ENTROPY.finditer(text):
-        if _high_entropy_candidate(text, match):
-            found.append(Finding("high-entropy", match.start(), match.end()))
+    if _KEYWORD_ANYWHERE.search(text):
+        for match in _keyword_matches(text):
+            span = _keyword_span(text, match)
+            if span:
+                found.append(Finding("keyword-assignment", *span))
+    if _HIGH_ENTROPY_ANYWHERE.search(text):
+        for match in _HIGH_ENTROPY.finditer(text):
+            if _high_entropy_candidate(text, match):
+                found.append(Finding("high-entropy", match.start(), match.end()))
     return _merge(found)
 
 

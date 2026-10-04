@@ -243,8 +243,27 @@
   namespace in a fresh bounded JVM. Missing test witnesses refuse the packet."
   [{:keys [repo files repo-policy timeout-seconds]
     :or {timeout-seconds 60}}]
-  (let [clj-files (filterv #(clojure-extensions (extension %)) files)]
+  (let [clj-files (filterv #(clojure-extensions (extension %)) files)
+        elisp-files (filterv #(= "el" (extension %)) files)]
     (cond
+      (and (empty? clj-files) (seq elisp-files))
+      (let [test-prefix (:elisp-test-command repo-policy)]
+        (if-not (and (vector? test-prefix) (every? string? test-prefix)
+                     (seq test-prefix))
+          {:ok? false :reason :verification-policy-absent
+           :unsupported-code-files elisp-files}
+          (let [commands [(vec (concat ["emacs" "-Q" "--batch" "-l"
+                                        "/home/joe/code/futon4/dev/check-parens.el"
+                                        "--eval" "(arxana-check-parens-cli)" "--"
+                                        "--no-defaults"] elisp-files))
+                          (vec test-prefix)]
+                results (mapv #(run-command repo timeout-seconds %) commands)
+                failed (first (remove :ok? results))]
+            (if failed
+              {:ok? false :reason :verification-failed
+               :failed failed :results results}
+              {:ok? true :kind :elisp :results results}))))
+
       (and (empty? clj-files) (some #(code-extensions (extension %)) files))
       {:ok? false :reason :verification-policy-absent
        :unsupported-code-files
@@ -463,12 +482,17 @@
                                             [:repo-policy
                                              :intent-marker-exempt-path-regexes]
                                             []))
-        intent-exempt? (and (seq intent-exempt-patterns)
-                            (seq (:files packet))
-                            (every? (fn [path]
-                                      (some #(re-matches % path)
-                                            intent-exempt-patterns))
-                                    (:files packet)))
+        versioned-generated (set (get-in packet
+                                         [:repo-policy
+                                          :versioned-generated-paths]
+                                         #{}))
+        intent-exempt? (and (seq (:files packet))
+                            (or (every? versioned-generated (:files packet))
+                                (and (seq intent-exempt-patterns)
+                                     (every? (fn [path]
+                                               (some #(re-matches % path)
+                                                     intent-exempt-patterns))
+                                             (:files packet)))))
         results (mapv (fn [{:keys [id name check defer-reason-if-fails defer-reason]}]
                         (let [pass? (if (and (= id :inv-15-no-intent-markers)
                                              intent-exempt?)

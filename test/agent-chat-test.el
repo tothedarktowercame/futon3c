@@ -800,6 +800,118 @@ already recorded the park-id, so refusing here would destroy the resume."
     (should (eq 'acked (agent-chat-evidence--classify-response
                         '(:status 409 :json (:err "duplicate-id")))))))
 
+(ert-deftest agent-chat-evidence-outbox-repairs-child-of-failed-parent ()
+  "A permanently failed parent must not poison its queued child."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (agent-chat--evidence-outbox-process nil)
+         (agent-chat--evidence-outbox-timer nil)
+         (failed-directory
+          (expand-file-name "failed" agent-chat-evidence-outbox-directory))
+         (a-path (expand-file-name "a.json" failed-directory))
+         (b-path (expand-file-name "b.json" agent-chat-evidence-outbox-directory))
+         (a-record '((evidence-url . "http://store.test/api/alpha/evidence")
+                     (payload . ((id . "A")
+                                 (type . "coordination")))
+                     (attempts . 8) (next-at . 0)))
+         (b-record '((evidence-url . "http://store.test/api/alpha/evidence")
+                     (payload . ((id . "B")
+                                 (in-reply-to . "A")
+                                 (type . "coordination")))
+                     (attempts . 8) (next-at . 0))))
+    (unwind-protect
+        (progn
+          (agent-chat-evidence--write-record a-path a-record)
+          (agent-chat-evidence--write-record b-path b-record)
+          (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                     (lambda (_method _url _timeout payload)
+                       (if (equal "A" (alist-get 'in-reply-to payload))
+                           '(:status 409 :json (:err "reply-not-found"))
+                         '(:status 201 :json (:evidence/id "B")))))
+                    ((symbol-function 'agent-chat-evidence--start-replay!)
+                     (lambda (path record)
+                       (pcase (agent-chat-evidence--attempt-record record)
+                         ('acked (delete-file path))
+                         ('failed (rename-file
+                                   path (agent-chat-evidence--failed-path path) t)))
+                       (agent-chat-evidence--release-drain-lease))))
+            (agent-chat-evidence-drain-outbox!))
+          (should-not (file-exists-p b-path))
+          (should (= 1 (length (agent-chat-evidence--failed-files))))
+          (should (equal "A"
+                         (alist-get 'id
+                                    (alist-get 'payload
+                                               (agent-chat-evidence--read-record
+                                                (car (agent-chat-evidence--failed-files))))))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+;; Review addition (claude-17): the 2026-10-02 incident had a failed record
+;; whose own parent WAS stored, so the child must be re-pointed to that parent,
+;; not made a root.  The test above only covers the root case.
+(ert-deftest agent-chat-evidence-outbox-repoints-child-to-stored-ancestor ()
+  "A child of a failed chain A2 -> A1 -> P is re-pointed to P, the first id not in failed/."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (failed-directory
+          (expand-file-name "failed" agent-chat-evidence-outbox-directory))
+         (b-path (expand-file-name "b.json" agent-chat-evidence-outbox-directory)))
+    (unwind-protect
+        (progn
+          (agent-chat-evidence--write-record
+           (expand-file-name "a1.json" failed-directory)
+           '((payload . ((id . "A1") (in-reply-to . "P"))) (attempts . 8) (next-at . 0)))
+          (agent-chat-evidence--write-record
+           (expand-file-name "a2.json" failed-directory)
+           '((payload . ((id . "A2") (in-reply-to . "A1"))) (attempts . 8) (next-at . 0)))
+          (agent-chat-evidence--write-record
+           b-path '((payload . ((id . "B") (in-reply-to . "A2"))) (attempts . 8) (next-at . 99)))
+          (agent-chat-evidence--repair-broken-reply-chains!)
+          (let ((b (agent-chat-evidence--read-record b-path)))
+            (should (equal "P" (alist-get 'in-reply-to (alist-get 'payload b))))
+            (should (= 0 (alist-get 'attempts b)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-turn-commits-do-not-reanchor-the-chat-thread ()
+  "Commit evidence branches from, but does not replace, the assistant turn."
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (session-id "session-threading")
+         (agent-chat--evidence-session-id session-id)
+         (agent-chat--last-evidence-id "previous-turn")
+         (payloads nil)
+         (response-index 0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (method _url _timeout &optional payload)
+                     (when (equal method "POST")
+                       (push payload payloads))
+                     (setq response-index (1+ response-index))
+                     `(:status 201 :json (:evidence/id
+                                          ,(format "response-%d" response-index)))))
+                  ((symbol-function 'agent-chat-finish-turn-commits)
+                   (lambda () '(((repo . "futon3c") (sha . "abc123"))))))
+          (agent-chat-emit-turn-evidence!
+           "http://store.test/api/alpha/evidence" 1 t session-id
+           "assistant" "I made the change." "test-agent" "test-transport"
+           '("test") 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id nil "assistant-X")
+          (agent-chat-emit-turn-commits-evidence!
+           "http://store.test/api/alpha/evidence" 1 session-id
+           "test-agent" "test-transport" 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id)
+          (agent-chat-emit-turn-evidence!
+           "http://store.test/api/alpha/evidence" 1 t session-id
+           "user" "Yes" "test-agent" "test-transport"
+           '("test") 'agent-chat--evidence-session-id
+           'agent-chat--last-evidence-id nil "user-Y")
+          (setq payloads (nreverse payloads))
+          (should (= 3 (length payloads)))
+          (should (equal "assistant-X"
+                         (alist-get 'in-reply-to (nth 1 payloads))))
+          (should (equal "assistant-X"
+                         (alist-get 'in-reply-to (nth 2 payloads)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
 (ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
   (should (= 409 (agent-chat-evidence--curl-status
                   "409\n\nProcess agent-chat-evidence-replay finished\n")))

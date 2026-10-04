@@ -43,6 +43,19 @@
          (is (every? (fn [url] (re-find #"limit=(?:10|9)" url)) @urls))
          (is (false? (sut/partial-result? rows)))))))
 
+(deftest hyperedge-read-accepts-a-bounded-caller-page-size
+  (let [urls (atom [])
+        get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn
+      {#'sut/configured-url (constantly "http://substrate.test")
+       get-edn-var (fn [url _] (swap! urls conj url) {:hyperedges []})}
+      #(do
+         (sut/hyperedges-by-type :test/edge {:page-size 1000})
+         (is (= 1 (count @urls)))
+         (is (str/includes? (first @urls) "limit=1000"))
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (sut/hyperedges-by-type :test/edge {:page-size 1001})))))))
+
 (deftest hyperedge-budget-exhaustion-is-marked-partial
   (let [get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
     (with-redefs-fn
@@ -57,6 +70,22 @@
          (is (sut/partial-result? rows))
          (is (= "edge-1" (:next-cursor (meta rows))))
          (is (= 1 (:request-budget (meta rows))))))))
+
+(deftest hyperedge-page-retries-one-transient-timeout
+  (let [calls (atom 0)
+        get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn
+      {#'sut/configured-url (constantly "http://substrate.test")
+       get-edn-var
+       (fn [_url _timeout-ms]
+         (if (= 1 (swap! calls inc))
+           (throw (ex-info "authoritative substrate read timed out"
+                           {:timeout-ms 5}))
+           {:hyperedges [{:hx/id "edge-1"}]}))}
+      #(let [rows (sut/hyperedges-by-type :test/edge {:limit 10})]
+         (is (= ["edge-1"] (mapv :hx/id rows)))
+         (is (= 2 @calls))
+         (is (false? (sut/partial-result? rows)))))))
 
 (def projection-edge
   {:hx/id "attachment" :hx/type :memory/assert :hx/endpoints ["memory"]

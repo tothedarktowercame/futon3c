@@ -1,0 +1,37 @@
+{
+ "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊥ Gist: Done. \"🈸:yes\" now counts as yes in both acceptance parsers, and both running copies are reloaded: the Agency server and your Emacs. Your \"1\" didn't record an agreement, though, because neither parser accepts a bare number. So the offer is still open. Typing \"🈸:yes 1\" would record it and test the whole path, and you should then see a \"yes: agreement …\" line in the buffer.\n\n㊢ (change, commit d9d30ead) The same change is in `agreement_record.clj` and in `agent-chat--acceptance-command` in `agent-chat.el`, so the two parsers still match. A leading \"🈸:\", with or without a space, is dropped before the existing rules are applied.\n\n㊬ (what I checked)\nCommits during the turn (any repo; not necessarily the agent's own):\n- futon3c d9d30ead P11 acceptance: accept '🈸:yes' as a spelling of yes in both parsers (+23 -6 over 3 files)",
+ "version": 1,
+ "source_text": "1",
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "sentences": [
+  {
+   "id": "s1",
+   "status": "unresolved",
+   "cues": null,
+   "start": 0,
+   "end": 1,
+   "text": "1"
+  }
+ ],
+ "unmatched": [
+  "s1"
+ ],
+ "created_at": "2026-10-01T14:00:15Z",
+ "vocabulary_version": 3,
+ "interpretation_version": 3,
+ "tagging_failed": false,
+ "original_text": "1",
+ "agent_id": "claude-17",
+ "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+ "turn_id": "claude-17-turn-393",
+ "secrets_redacted": null,
+ "evidence_id": "emacs-522214448193ddddc080630686eadaf0",
+ "origin": "operator",
+ "surface": "typed",
+ "quotes": null,
+ "analysis_status": "analyzed",
+ "analysis_dispatch": {
+  "job_id": "invoke-1790863262633-29719-c7c4d499"
+ },
+ "analysis_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-I7n9AZ.json.analysis.json"
+}

@@ -1,6 +1,6 @@
 # M-aif-over-the-operator — close the AIF loop over the operator's responses
 
-**Status:** IDENTIFY (opened 2026-10-01, claude-17 with codex-10). Live; open work is the unchecked items under "Work items".
+**Status:** MAP (opened 2026-10-01 at IDENTIFY, claude-17 with codex-10; MAP recorded 2026-10-02). Live; open work is the unchecked items under "Work items".
 **Owner:** Joe · interactive side claude-17 · War Machine side codex-10.
 
 ## Origin
@@ -140,6 +140,12 @@ Interactive side (claude-17 / 象-2000):
 - [ ] **Agents post an offer for each 🈸.** The rule is written in the reply
   proforma; over a sample of later agent replies, every 🈸 paragraph has an
   offer id on the operator's prompt line in that turn.
+  *Mostly met from the reading side (2026-10-02, futon3c `6d579cfe`, Joe: "if
+  you ask me a yes-no 'Shall I...' question, then 🈸:yes does have an obvious
+  interpretation"):* with no stored offer, the agreement route follows the
+  acceptance turn's in-reply-to and mints the offer from the reply's 🈸
+  paragraphs (one option each). Agents need post an explicit offer only for
+  options the prose does not separate, or for a grant scope.
 
 War Machine side (codex-10):
 - [ ] **WM proposals become offers.** At least one nag / brief / silent
@@ -149,6 +155,10 @@ War Machine side (codex-10):
   posterior counts of accepted / declined / censored enter E, separate from
   `cascade-feedback` pattern evidence and from C (Side B); a selection receipt
   shows the term and its counts.
+- [ ] **WM act vocabulary in click reporting.** Wire
+  `futon2/holes/labs/wm-contract/wm-click-acts.edn` into the retained run record so a
+  click receipt lists every act it performed by the table's `:act/id`; the
+  recorded ids must resolve to rows in that pinned vocabulary.
 
 At the seam (proposed owner: WM side, which consumes the observations):
 - [ ] **Response projector.** Reads offers, agreements, withdrawals and
@@ -173,6 +183,56 @@ Tests:
   before the response model is switched on (what is compared, over which
   offers, what result would count against it); then selection with the model
   is run and the result recorded against that statement.
+
+## MAP — what operator turns already say (claude-17, 2026-10-02)
+
+Joe, 2026-10-02: the IDENTIFY gap was real and already attested; the work
+since then was "a relatively arduous version of MAP" — showing what is there
+already, by building an operator-facing language for it. "We needed some
+hard-won red pixels to do that."
+
+Side A records how the operator *responds to offers*. MAP looked at the other
+half: what the operator's own turns are *about*, read against the R-node
+catalogue (`p4ng/empirics-futon/control-stages.edn`). R-nodes are taken as
+existential requirements of the loop, not as conversational acts (Joe).
+Analyses are under `futon0/analysis/audits/`.
+
+What was tried, and what it showed:
+
+| route | result |
+|---|---|
+| pattern stage × 象 intent (`CROSSTAB-stage-intent-2026-10-01.md`) | agreement at chance (κ ≈ 0, loop stages only) |
+| Codex per R-node, reading the node's code, bidding on patterns (`rnode-bids/`) | 17 of 150 patterns bid on, mostly engineering practice |
+| Codex per R-node bidding on blinded turns (`rnode-turn-bids/`) | 167 of 300 turns covered; stage agreement 18.8% vs 15.2% chance |
+| keyword tree from Beer VSM × Max-Neef, elaborated by three agents (`rnode-tree/`) | held-out detection agrees with turn bids 39% vs 22% chance (33% vs 15% without generic words) |
+| codex-10's per-node narrative of a stepped click, compared with the tree | six nodes' cues described a different activity from the node's code; machine-side cues added for R10, R17 |
+
+Only keyword detection did clearly better than chance, and it is independent
+of intent. This bears on the R-node column of the intent table: one R-node
+per intent is not supported by these measurements, so the "Lean column" work
+item should be keyed by R-node rather than by intent row.
+
+What exists now:
+- **Red terms.** `session-mode` paints R-node terms red in operator turns only,
+  from a deterministic vocabulary (`rnode-tree/rnode-vocabulary.json`), skipping
+  phrases that are already intent cues and quoted text after `>>>`. Historical
+  count: 286 of 1,249 live turns carry at least one red term. The cue list is
+  deliberately not shown to Joe, to avoid steering his wording.
+- **Definitions.** `rnode-tree/rnode-definitions.edn`: per node, the quantity,
+  operations, an operator reading and near-misses, with quoted text from
+  `p4ng/sec-glossary.tex` and the catalogue, and an admission test.
+- **象 proposes terms.** Each 象 analysis may propose R-node cues, validated
+  (`scripts/session_turn_analysis.py`) against the definitions; proposals
+  accumulate in `~/.emacs-graph/rnode-cues.json`.
+- **象's own policies.** Per cue keep / promote / retire and per turn ask /
+  cue-only, chosen by minimum G with Dirichlet evidence weighted by source
+  (operator correction 4, distinct seat 1.5, same seat 0.5); silence counts
+  for nothing, as with offers (codex-10's correction above). Each choice is
+  logged to `~/.emacs-graph/xiang-decisions.jsonl` with its terms.
+
+All of 象's stores are local files, not futon1b; the response projector
+cannot read them yet. Open: an audit of the red terms once enough have
+accumulated (Joe cannot yet judge which are good or which node each names).
 
 ## Working from both sides
 

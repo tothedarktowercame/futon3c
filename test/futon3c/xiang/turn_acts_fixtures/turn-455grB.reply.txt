@@ -1,0 +1,13 @@
+㊥ Gist: C-c ; works in your buffer now. Your claude-17 REPL runs on its own copy of the key map, made before these bindings existed, so binding the mode map didn't reach it. The fix also binds the keys in any open REPL buffer like that (commit 1ee5fea7), and I checked that in *claude-repl:claude-17* C-c ; and C-c x p now run the right commands. I agree about the ledger and am dropping it: the marks should feed Elephant-2000's records, not a new store.
+
+㊩ (why the key was missing) Every other Claude REPL buffer already had C-c ;. Yours didn't even have C-a, which the current mode map binds, so it was clearly running on an older map. Loading the file now binds the keys in such buffers too.
+
+㊣ (Elephant-2000, not a new ledger) Agreed. Looking at the M-象-2000 lab directory, it already has records for most of what I described:
+- offers and agreements (P11);
+- withdrawals (P10);
+- saying no, including the operator's negation (P12-5);
+- who answered what (P18).
+
+So the marks are a way of typing into those records. 🈸 or ㊭ opens an offer, "🈸:yes" agrees to it, 🈚 is a no, and 🈡 withdraws it. An offer still open is the "no response" case. What the build needs from us is only the step from marks to those records. Items minted in dialogue would then be offers with no mission behind them, and 象-2000 can say whether it already has a way to mark that.
+
+🈸 (one decision) Shall I read how P11's offer and agreement records get written, and report how a marked turn could produce one? That's reading only, not building.

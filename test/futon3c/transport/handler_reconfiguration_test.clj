@@ -2,7 +2,8 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
             [futon3c.transport.http :as http]
-            [futon3c.runtime.agents :as runtime]))
+            [futon3c.runtime.agents :as runtime]
+            [futon3c.agency.clock-decision]))
 
 (defn- installed-request [request]
   ((var-get (ns-resolve 'futon3c.transport.http 'installed-handler)) request))
@@ -82,3 +83,17 @@
       (is (= {:enabled? false} (:run4 @captured)))
       (runtime/make-http-handler {})
       (is (not (contains? @captured :run4))))))
+
+(deftest a-rebuild-does-not-restore-clock-decisions
+  ;; Building a handler at server start restores clock decisions from
+  ;; futon1b; a rebuild of the running handler must not (it held the rebuild
+  ;; lock ~20 min on 2026-10-04). The decisions live in a defonce atom.
+  (let [restores (atom 0)]
+    (with-redefs [futon3c.agency.clock-decision/restore-registered!
+                  (fn [_] (swap! restores inc) 0)
+                  http/evidence-store-for-config (fn [_] ::backend)]
+      (http/rebuild-handler! (http/make-handler {:patterns {:patterns/ids []}}))
+      (is (= 1 @restores) "a fresh handler restores")
+      (http/rebuild-handler!)
+      (http/reconfigure-handler! identity)
+      (is (= 1 @restores) "rebuild and reconfigure do not"))))

@@ -1,0 +1,17 @@
+㊥ Gist: Elephant-2000 already has most of what we need. Agents can post a structured offer, and when you type plain "yes" in the REPL it is recorded as an agreement, through a parser in Emacs and a matching one on the server. Your "🈸:yes" was read as ordinary text, though, because the parser only knows "yes", "yes 2" and "yes act:ID 2". I've posted an offer for the next decision so you can try it. Type "yes 1" to make "🈸:yes" count as a spelling of yes, or "yes 2" to keep plain yes and have agents post an offer behind each 🈸.
+
+㊢ (what P11 already does, all in futon3c)
+- **Offers:** an agent posts `POST /api/alpha/offer` with numbered options. The record is stored with the agent's seat and its permission to make offers, and your prompt line shows it as pending.
+- **Acceptance:** what you type goes through `agent-chat--acceptance-command` in Emacs and `parse-acceptance` in `agreement_record.clj`, which use the same rules. A recognised yes is posted to `/api/alpha/agreement`, which stores an agreement naming the offer, the option and your turn. Your buffer gets a "yes: agreement …" line.
+- **Ambiguity:** a bare yes with more than one open offer isn't taken as acceptance. The agent is told to ask which one.
+- **What it leads to:** per the design, agreements feed the record of who owes what (P9).
+
+㊩ (what "🈸:yes" did) Nothing was recorded, for two reasons. I hadn't posted an offer for that question, so there was nothing to accept. And "🈸:yes" doesn't match either parser, which only accept text starting with "yes". So for P11, the gap between the marks and the records is the agent side: a 🈸 in a reply currently creates no offer.
+
+㊢ (the offer now open) `act:c7b94af3-b8bd-4947-b064-6c22853d90eb`, open until 3 October:
+1. Accept "🈸:yes" (and "🈸:yes 2") as a spelling of yes in both parsers, with tests. That is a two-file change. P11 asked for exact matching on fixed strings and no reading of agent text by a language model, and this keeps both.
+2. Make no parser change. Agents post an offer for each 🈸, and you answer with plain yes. This needs only a line in CLAUDE.md's reply-proforma section.
+
+Either way, agents will need to post the offer whenever they write a 🈸. That is the step that connects the marks to Elephant-2000. Any 🈸 without an offer gives you nothing to agree to.
+
+🈸 (one decision) Reply "yes 1" or "yes 2". Your buffer should then show a "yes: agreement" line, which would also confirm the whole path works.

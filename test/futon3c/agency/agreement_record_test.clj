@@ -135,3 +135,53 @@
     (is (= agreement-record (agreement/hyperedge->record edge)))
     (is (= agreement-record
            (agreement/hyperedge->record (dissoc edge :hx/valid-time))))))
+
+(def reply-evidence
+  {:evidence/id "emacs-reply" :evidence/at "2026-10-02T04:10:27Z"
+   :evidence/body {:event "chat-turn" :role "assistant"
+                   :text "㊥ (gist) Done.\n\n🈸 (one decision) Shall I build it?\n"}})
+
+(deftest a-single-ask-in-a-reply-is-accepted-by-yes
+  ;; Joe, 2026-10-02: "if you ask me a yes-no 'Shall I...' question, then
+  ;; 🈸:yes does have an obvious interpretation".
+  (let [offer (assoc (agreement/reply-offer-record reply-evidence "claude-17" "s1")
+                     :id "act:reply-offer")
+        resolution (agreement/resolve-acceptance
+                    {:offers [offer]} (agreement/parse-acceptance "🈸:yes"))]
+    (is (= ["🈸 (one decision) Shall I build it?"]
+           (agreement/reply-asks (get-in reply-evidence [:evidence/body :text]))))
+    (is (= "1" (get-in resolution [:accept :option :option/id])))
+    (is (= "🈸 (one decision) Shall I build it?"
+           (get-in resolution [:accept :option :option/label])))
+    (is (= {:reply-evidence "emacs-reply"}
+           (get-in resolution [:accept :option :option/scope])))
+    (is (= "2026-10-02T04:10:27Z" (:at offer)))))
+
+(deftest several-asks-need-a-number
+  (let [reply (assoc-in reply-evidence [:evidence/body :text]
+                        "🈸 (a) Shall I do A?\n\n㊢ (b) did B\n\n🈸 (c) Shall I do C?")
+        offer (assoc (agreement/reply-offer-record reply "claude-17" "s1")
+                     :id "act:reply-offer")]
+    (is (= ["1" "2"] (mapv :option/id (:options offer))))
+    (is (:ambiguous (agreement/resolve-acceptance
+                     {:offers [offer]} (agreement/parse-acceptance "🈸:yes"))))
+    (is (= "🈸 (c) Shall I do C?"
+           (get-in (agreement/resolve-acceptance
+                    {:offers [offer]} (agreement/parse-acceptance "yes 2"))
+                   [:accept :option :option/label])))))
+
+(deftest a-reply-without-an-ask-makes-no-offer
+  (is (nil? (agreement/reply-offer-record
+             (assoc-in reply-evidence [:evidence/body :text] "㊢ (report) Done.\n\nNo question here.")
+             "claude-17" "s1")))
+  ;; 🈸 inside a paragraph is not an ask paragraph
+  (is (= [] (agreement/reply-asks "㊢ I would mark it 🈸 if asking.")))
+  (is (= [] (agreement/reply-asks nil))))
+
+(deftest a-reply-offer-is-a-valid-offer
+  (let [offer (assoc (agreement/reply-offer-record reply-evidence "claude-17" "s1")
+                     :id "act:reply-offer"
+                     :act/stamp {:executor "claude-17" :signer "claude-17"
+                                 :authority {:grant "act:grant"}
+                                 :executor-basis :declared})]
+    (is (= offer (offer-record/validate! offer)))))

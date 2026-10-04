@@ -1,0 +1,37 @@
+{
+ "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊥ Gist: Elephant-2000 already has most of what we need. Agents can post a structured offer, and when you type plain \"yes\" in the REPL it is recorded as an agreement, through a parser in Emacs and a matching one on the server. Your \"🈸:yes\" was read as ordinary text, though, because the parser only knows \"yes\", \"yes 2\" and \"yes act:ID 2\". I've posted an offer for the next decision so you can try it. Type \"yes 1\" to make \"🈸:yes\" count as a spelling of yes, or \"yes 2\" to keep plain yes and have agents post an offer behind each 🈸.\n\n㊢ (what P11 already does, all in futon3c)\n- **Offers:** an agent posts `POST /api/alpha/offer` with numbered options. The record is stored with the agent's seat and its permission to make offers, and your prompt line shows it as pending.\n- **Acceptance:** what you type goes through `agent-chat--acceptance-command` in Emacs and `parse-acceptance` in `agreement_record.clj`, which use the same rules. A recognised yes is posted to `/api/alpha/agreement`, which stores an agreement naming the offer, the option and your turn. Your buffer gets a \"yes: agreement …\" line.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+ "version": 1,
+ "source_text": "OK, I've tried the hydra, and 🈸:yes",
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "sentences": [
+  {
+   "id": "s1",
+   "status": "unresolved",
+   "cues": null,
+   "start": 0,
+   "end": 35,
+   "text": "OK, I've tried the hydra, and 🈸:yes"
+  }
+ ],
+ "unmatched": [
+  "s1"
+ ],
+ "created_at": "2026-10-01T13:52:04Z",
+ "vocabulary_version": 3,
+ "interpretation_version": 3,
+ "tagging_failed": false,
+ "original_text": "OK, I've tried the hydra, and 🈸:yes",
+ "agent_id": "claude-17",
+ "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+ "turn_id": "claude-17-turn-392",
+ "secrets_redacted": null,
+ "evidence_id": "emacs-d591f72267525d8f66c7817d38acbf21",
+ "origin": "operator",
+ "surface": "typed",
+ "quotes": null,
+ "analysis_status": "analyzed",
+ "analysis_dispatch": {
+  "job_id": "invoke-1790862777505-29715-4fe4d44f"
+ },
+ "analysis_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-xJ4TAP.json.analysis.json"
+}

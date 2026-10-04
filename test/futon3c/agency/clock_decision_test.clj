@@ -84,6 +84,28 @@
                         :type :claude :session-id "clock-session"
                         :capabilities [:edit] :invoke-fn invoke}))
 
+(deftest turn-admission-waits-out-a-busy-store
+  ;; 2026-10-03: one 504 refused a codex-18 turn outright. Admission now waits.
+  (binding [decision/*test-store* (atom {:entries {} :order []})
+            decision/*repo-roots* {}]
+    (let [real-append boundary/append!
+          busy {:ok false :error/code :store-unavailable
+                :error/message "futon1b busy (HTTP 504): the write was not served and nothing was written"}]
+      (testing "a busy burst shorter than the schedule admits the turn"
+        (let [calls (atom 0)]
+          (with-redefs [boundary/append! (fn [& args]
+                                           (if (< (swap! calls inc) 3) busy (apply real-append args)))]
+            (binding [decision/*store-busy-waits-ms* [0 0 0]]
+              (let [context (decision/start! "clock-worker" nil "continue" {:turn-id "busy-then-ok"})]
+                (is (= "busy-then-ok" (:turn-id context)))
+                (is (= 3 @calls))
+                (decision/end! context))))))
+      (testing "a store busy past the whole schedule still refuses, saying so"
+        (with-redefs [boundary/append! (fn [& _] busy)]
+          (binding [decision/*store-busy-waits-ms* [0 0]]
+            (let [e (thrown #(decision/start! "clock-worker" nil "continue" {:turn-id "busy-forever"}))]
+              (is (= :clock/store-busy (:error/code (ex-data e)))))))))))
+
 (deftest agent-clock-without-session-reads-the-registered-session
   (register! (fn [& _] {:result "unused"}))
   (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")

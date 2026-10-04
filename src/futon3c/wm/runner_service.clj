@@ -21,6 +21,26 @@
 
 (def war-machine-agent-id "war-machine")
 
+(def ordinary-click-triggers
+  "The complete trigger vocabulary admitted by the rationed ordinary-click
+   entrypoint.  Commissioned and RUN4 clicks have separate admission
+   contracts and do not consult this declaration."
+  #{:duree-click-on-demand})
+
+(defn admit-ordinary-click-trigger!
+  "Return OPTS with its ordinary trigger normalized, or throw before click
+   lifecycle state exists.  A missing trigger denotes the ordinary on-demand
+   trigger; arbitrary caller keywords are never admitted by default."
+  [opts]
+  (let [trigger (or (:trigger opts) :duree-click-on-demand)]
+    (when-not (contains? ordinary-click-triggers trigger)
+      (throw (ex-info "WM ordinary click refused: unsupported trigger"
+                      {:status 400
+                       :error :wm-click-trigger-unsupported
+                       :trigger trigger
+                       :accepted-triggers ordinary-click-triggers})))
+    (assoc opts :trigger trigger)))
+
 (def initial-status
   {:running? false
    :click-id nil
@@ -43,6 +63,9 @@
 
 (def ^:dynamic *click-run-binding-dir*
   "/home/joe/code/futon3c/data/wm-click-run-bindings")
+
+(def ^:dynamic *run-record-dir*
+  "/home/joe/code/futon2/data/wm-runs")
 
 (def ^:dynamic *run4-terminal-projection-dir*
   "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
@@ -203,19 +226,15 @@
                          :error :wm-click-roster-unavailable
                          :cause (.getMessage throwable)}))))))
 
-(defn- seat-family
-  [seat]
-  (first (str/split seat #"-" 2)))
-
 (defn- nonblank-string?
   [value]
   (and (string? value) (not (str/blank? value))))
 
-(def automatic-cast-families
-  "Provider families eligible for automatic ordinary-click casting. Explicit
-   caller-supplied casts remain authoritative. Joe, 2026-10-01: keep new
-   dispatches to Zai and Codex while Kimi is exhausted."
-  #{"zai" "codex"})
+(def automatic-cast
+  "Dedicated execution identities for an ordinary WM click. Explicit
+   caller-supplied casts remain authoritative, but an automatic click never
+   borrows an operator's interactive helper lane."
+  {:author "wm-author" :reviewer "wm-reviewer"})
 
 (defn- available-cast-seats
   [roster]
@@ -224,31 +243,20 @@
                (let [seat (name seat)
                      status (some-> (:status record) name)]
                  (when (and (not= war-machine-agent-id seat)
-                            (contains? automatic-cast-families (seat-family seat))
+                            (contains? (set (vals automatic-cast)) seat)
                             (true? (:invoke-ready? record))
                             (contains? #{"idle" "restored"} status))
                    {:seat seat :status status}))))
        ;; Prefer already-idle seats, then make selection reproducible.
        (sort-by (juxt #(if (= "idle" (:status %)) 0 1) :seat))))
 
-(defn- choose-seat
-  [available excluded prefer-other-family]
-  (let [candidates (remove #(contains? excluded (:seat %)) available)]
-    (or (some #(when (not= prefer-other-family
-                           (seat-family (:seat %)))
-                 (:seat %))
-              candidates)
-        (:seat (first candidates)))))
-
 (defn prepare-ordinary-click-opts
   "Resolve an ordinary click's execution cast before its ration is spent.
 
    Explicit/configured identities win. Missing author and reviewer identities
-   are selected deterministically from the current invoke-ready Zai/Codex
-   Agency roster; independent provider families are preferred and the two
-   roles are always distinct. A missing repair reviewer follows the resolved
-   reviewer. This is a live caller-supplied cast, not the retired static
-   runner default."
+   resolve to the dedicated wm-author and wm-reviewer identities when they are
+   invoke-ready. A missing repair reviewer follows the resolved reviewer.
+   Ordinary interactive helper lanes are never eligible for automatic casts."
   [opts]
   (let [configured (configured-runner-opts opts)]
     (if (and (nonblank-string? (:author configured))
@@ -261,19 +269,18 @@
                               (:author configured))
             explicit-reviewer (when (nonblank-string? (:reviewer configured))
                                 (:reviewer configured))
+            available-ids (set (map :seat available))
             author (or explicit-author
-                       (choose-seat available
-                                    (cond-> #{} explicit-reviewer (conj explicit-reviewer))
-                                    (some-> explicit-reviewer seat-family)))
+                       (when (contains? available-ids (:author automatic-cast))
+                         (:author automatic-cast)))
             reviewer (or explicit-reviewer
-                         (choose-seat available
-                                      (cond-> #{} author (conj author))
-                                      (some-> author seat-family)))]
+                         (when (contains? available-ids (:reviewer automatic-cast))
+                           (:reviewer automatic-cast)))]
         (when-not (and author reviewer (not= author reviewer))
           (throw (ex-info "WM click refused: no distinct live execution cast is available"
                           {:status 409
                            :error :wm-click-cast-unavailable
-                           :automatic-cast-families automatic-cast-families
+                           :automatic-cast automatic-cast
                            :available-seats (mapv :seat available)
                            :author author
                            :reviewer reviewer})))
@@ -379,6 +386,38 @@
                      (:click/id binding)))))
          vec)
     []))
+
+(def ^:private canonical-run-id-pattern
+  #"\d{4}-\d{2}-\d{2}-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+
+(defn admit-run-id!
+  "Validate an explicitly supplied click run id before lifecycle mutation.
+  Omission is preserved so the Futon2 runner remains the sole minter."
+  [opts]
+  (if-not (contains? opts :run-id)
+    opts
+    (let [run-id (:run-id opts)
+          record (io/file *run-record-dir* (str "tick-run-record-" run-id ".edn"))
+          prior-clicks (when (and (string? run-id)
+                                  (re-matches canonical-run-id-pattern run-id))
+                         (existing-run-id-clicks (io/file *click-run-binding-dir*)
+                                                 nil run-id))]
+      (cond
+        (not (and (string? run-id)
+                  (re-matches canonical-run-id-pattern run-id)))
+        (throw (ex-info "WM click refused: malformed caller run id"
+                        {:status 400 :error :wm-click-run-id-malformed
+                         :run-id run-id
+                         :format :utc-date-plus-rfc4122-uuid}))
+
+        (or (.exists record) (seq prior-clicks))
+        (throw (ex-info "WM click refused: caller run id already exists"
+                        {:status 409 :error :wm-click-run-id-collision
+                         :run-id run-id
+                         :run-record (when (.exists record) (.getPath record))
+                         :prior-click-ids (vec prior-clicks)}))
+
+        :else opts))))
 
 (defn- persist-click-run-binding!
   [click-id result]
@@ -610,7 +649,9 @@
           (close-click! agent-id click-id result)))
       (catch Throwable throwable
         (deliver admission
-                 (if (realized? admission)
+                 (if (or (realized? admission)
+                         (= :ordinary-click-budget-exhausted
+                            (:error (ex-data throwable))))
                    throwable
                    (ex-info "WM click refused before ration admission"
                             {:status 409
@@ -645,12 +686,19 @@
    running, returns {:rejected :already-running :click-id ...} without
    starting another thread."
   [opts]
-  (loop []
-    (let [current @!status]
-      (if (:running? current)
-        {:rejected :already-running
-         :click-id (:click-id current)}
-        (let [click-id (str "wm-click-" (UUID/randomUUID))
+  ;; The issue callback identifies the rationed ordinary path.  Validate it
+  ;; before reading or mutating !status, allocating an id, publishing registry
+  ;; state, starting a worker, or giving the callback any chance to consume.
+  (let [opts (if (:ordinary-click/issue! opts)
+               (admit-ordinary-click-trigger! opts)
+               opts)
+        opts (admit-run-id! opts)]
+    (loop []
+      (let [current @!status]
+        (if (:running? current)
+          {:rejected :already-running
+           :click-id (:click-id current)}
+          (let [click-id (str "wm-click-" (UUID/randomUUID))
               started-at (str (Instant/now))
               next-status (assoc current
                                  :running? true
@@ -687,4 +735,4 @@
                       (finally
                         (deliver completion {:status :start-failed
                                              :click-id click-id}))))
-                  (throw throwable))))))))))
+                    (throw throwable)))))))))))

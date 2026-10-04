@@ -36,12 +36,16 @@
     (with-hermetic-stores
       (fn []
         (binding [budget/*ledger-path* (str root "/consumption.jsonl")
+                  service/*roster-fn*
+                  (fn [_] {:zai-1 {:status "idle" :invoke-ready? true}
+                           :codex-34 {:status "idle" :invoke-ready? true}})
                   service/*resolve-var*
                   (fn [sym]
                     (case sym
                       futon2.aif.full-loop-runner/config identity
                       futon2.aif.full-loop-runtime/run-opportunity!
                       (fn [opts]
+                        ((:readiness-admitted-fn opts))
                         (swap! observed conj {:click-id (:click-id opts) :rows (rows)})
                         (throw (ex-info "intentional immediate runner failure" {:fixture true})))
                       nil))]
@@ -52,14 +56,17 @@
             (dotimes [n budget/allocated]
               (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
                                  :body (json/generate-string
-                                        (cond-> {:trigger "duree-click-on-demand"}
+                                        (cond-> {:trigger "duree-click-on-demand"
+                                                 :author "zai-1"
+                                                 :reviewer "codex-34"}
                                           (zero? n) (assoc :issuing-caller "codex-34")))})
                     body (json/parse-string (:body response) true)]
                 (is (= 200 (:status response)))
                 (service/await-click! (:click-id body))
                 (is (= :service-failed (get-in @service/!status [:last-result :outcome])))
                 (is (= (inc n) (count (rows))))))
-            (let [response (h {:request-method :post :uri "/api/alpha/wm/click" :body "{}"})
+            (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
+                               :body "{\"author\":\"zai-1\",\"reviewer\":\"codex-34\"}"})
                   body (json/parse-string (:body response) true)]
               (is (= 409 (:status response)))
               (is (= "ordinary-click-budget-exhausted" (:error body)))
@@ -99,6 +106,38 @@
             outcomes (frequencies (mapv deref attempts))]
         (is (= {:issued budget/allocated :ordinary-click-budget-exhausted 7} outcomes))
         (is (= budget/allocated (count (rows))))))))
+
+(deftest availability-is-source-pinned-and-does-not-consume
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "ordinary-availability" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+      (let [empty-receipt (budget/availability)]
+        (is (= {:allocated budget/allocated :consumed 0
+                :available budget/allocated :unit :ordinary-click}
+               (select-keys empty-receipt [:allocated :consumed :available :unit])))
+        (is (= 64 (count (get-in empty-receipt [:ledger-source :sha256])))))
+      (budget/consume! "click-one" "now" "test")
+      (let [receipt (budget/availability)]
+        (is (= 1 (:consumed receipt)))
+        (is (= (dec budget/allocated) (:available receipt)))
+        (is (= 1 (count (rows))))))))
+
+(deftest refund-is-compensating-idempotent-and-click-specific
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "ordinary-refund" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+      (budget/consume! "click-one" "issued" "test")
+      (is (= 1 (:consumed (budget/availability))))
+      (budget/refund! "click-one" "refunded" "joe" "debugger-proved wiring defect")
+      (is (= 0 (:consumed (budget/availability))))
+      (is (= budget/allocated (:available (budget/availability))))
+      (is (= [nil "refund"] (mapv :event (rows))))
+      (is (= :ordinary-click-already-refunded
+             (try (budget/refund! "click-one" "again" "joe" "duplicate")
+                  (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
+      (is (= :ordinary-click-refund-unknown
+             (try (budget/refund! "not-charged" "now" "joe" "unknown")
+                  (catch clojure.lang.ExceptionInfo e (:error (ex-data e)))))))))
 
 (deftest busy-click-does-not-consume
   (let [h (http/make-handler {}) calls (atom 0)]

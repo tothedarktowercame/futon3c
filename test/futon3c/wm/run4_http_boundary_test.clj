@@ -7,6 +7,7 @@
             [futon3c.wm.run4-attempt-admission :as admission]
             [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-trusted-entry :as entry]
+            [futon3c.wm.ordinary-click-budget :as budget]
             [futon3c.wm.runner-service :as service]))
 
 (def token (apply str (repeat 64 "b")))
@@ -184,11 +185,42 @@
         calls (atom [])]
     (with-redefs [service/click! (fn [opts]
                                    (swap! calls conj opts)
-                                   {:started true})]
+                                   {:started true})
+                  service/prepare-ordinary-click-opts identity
+                  service/cast-preflight-refusal (constantly nil)]
       (is (= 200 (:status (handler (request {:author "legacy"} {})))))
       (is (= [{:author "legacy"
+                :trigger :duree-click-on-demand
                 :issuer-provenance {:status :present :identity :caller-unknown
                                     :source :wm-click-http-boundary}}] (mapv #(dissoc % :ordinary-click/issue!) @calls)))
       (is (fn? (:ordinary-click/issue! (first @calls)))))
-    (with-redefs [service/click! (constantly {:rejected :already-running})]
+    (with-redefs [service/click! (constantly {:rejected :already-running})
+                  service/prepare-ordinary-click-opts identity
+                  service/cast-preflight-refusal (constantly nil)]
       (is (= 409 (:status (handler (request {} {}))))))))
+
+(deftest unsupported-ordinary-trigger-refuses-before-click-or-ration-side-effects
+  (let [handler (http/make-handler {})
+        clicks (atom 0)
+        rations (atom 0)
+        before @service/!status
+        run-root (.toFile (java.nio.file.Files/createTempDirectory
+                           "unsupported-ordinary-trigger-http-"
+                           (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (with-redefs [service/click! (fn [_] (swap! clicks inc))
+                    budget/consume!
+                    (fn [& _] (swap! rations inc))]
+        (let [response (handler
+                        (request {:trigger "custom-operator-trigger"
+                                  :run-id (.getPath (io/file run-root "must-not-exist"))}
+                                 {}))
+              body (json/parse-string (:body response) true)]
+          (is (= 400 (:status response)) (pr-str body))
+          (is (= "wm-click-trigger-unsupported" (:error body)))
+          (is (= "custom-operator-trigger" (:trigger (:details body))))
+          (is (zero? @clicks) "click! was never reached, so no id can exist")
+          (is (zero? @rations) "the ration ledger callback was never reached")
+          (is (= before @service/!status) "running state was not published")
+          (is (empty? (seq (.listFiles run-root))) "no run record was created")))
+      (finally (delete-tree! run-root)))))

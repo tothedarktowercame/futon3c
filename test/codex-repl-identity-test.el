@@ -170,3 +170,23 @@
             (should (codex-repl--restore-ui-state))
             (should (= (marker-position agent-chat--input-start) (point-max)))))
       (set 'agent-chat--prompt-regexp saved))))
+
+(ert-deftest codex-repl-stream-events-preserve-semantic-line-boundaries ()
+  (with-temp-buffer
+    (insert "> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (point-min)))
+    (setq-local agent-chat--input-start (copy-marker (point-max)))
+    (setq-local codex-repl--rendered-assistant-text "")
+    (setq-local codex-repl--last-stream-summary nil)
+    (agent-chat-begin-streaming-message "codex")
+    (codex-repl--stream-inline-event
+     '((type . "text") (text . "changed ranking.")))
+    (codex-repl--stream-inline-event
+     '((type . "item.started")
+       (item . ((type . "command_execution")))))
+    (codex-repl--stream-inline-event
+     '((type . "text") (text . "㊬ next paragraph.")))
+    (should (equal (buffer-substring-no-properties
+                    (marker-position agent-chat--streaming-origin)
+                    (marker-position agent-chat--streaming-marker))
+                   "codex: changed ranking.\nUsing Bash\n㊬ next paragraph."))))

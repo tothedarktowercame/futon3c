@@ -35,6 +35,11 @@
 (defn- get-pending []
   ((http/make-handler {}) {:request-method :get :uri pending-uri}))
 
+(defn- get-item [attempt-id]
+  ((http/make-handler {}) {:request-method :get
+                           :remote-addr "127.0.0.1"
+                           :uri (str "/api/alpha/morning-brief/item/" attempt-id)}))
+
 (defn- post-strategic-selection [payload]
   ((http/make-handler {})
    {:request-method :post
@@ -219,6 +224,23 @@
              (mapv :morning-brief/addendum-id
                    (get-in body [:items 0 :addenda]))))
       (is (= [] (get-in body [:items 1 :answered-objectives]))))))
+
+(deftest item-route-is-the-open-boundary-and-does-not-accept-event-fields
+  (let [calls (atom [])
+        item {:attempt-id "attempt-1" :click-id "click-1" :commit "abc"}]
+    (with-redefs [clojure.core/requiring-resolve
+                  (resolver
+                   {'futon2.aif.morning-brief/open-item!
+                    (fn [attempt-id consumer]
+                      (swap! calls conj [attempt-id consumer])
+                      {:item item :event {:transition :opened}})
+                    'futon2.aif.morning-brief/lifecycle-state
+                    (fn [_] {:status :seen-no-response})})]
+      (let [response (get-item "attempt-1") body (response-body response)]
+        (is (= 200 (:status response)))
+        (is (= [["attempt-1" "field-desk/http:127.0.0.1"]] @calls))
+        (is (= "seen-no-response" (get-in body [:lifecycle :status])))
+        (is (= "click-1" (get-in body [:item :click-id])))))))
 
 (deftest morning-brief-routes-report-an-unavailable-futon2-api
   (with-redefs [clojure.core/requiring-resolve (constantly nil)]

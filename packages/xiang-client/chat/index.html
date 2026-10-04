@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FUTON room · 象</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><h1>FUTON room <span>· 象</span></h1><div id="identity"></div></header>
+  <section id="login" class="login">
+    <h2>Join with Matrix</h2>
+    <p>Private Federation Proof · <code>matrix.paragogy.net</code></p>
+    <form id="login-form">
+      <label>Username <input id="username" autocomplete="username" value="joe"></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password"></label>
+      <button>Sign in</button><span id="login-status"></span>
+    </form>
+    <p class="small"><a id="element-link">Open this room in full Element instead</a></p>
+  </section>
+  <main id="app" hidden>
+    <section class="conversation">
+      <nav class="history" aria-label="Conversation history">
+        <button id="older" type="button">← back 3</button>
+        <span id="range">latest turns</span>
+        <button id="newer" type="button">newer 3 →</button>
+        <label>show <select id="page-size"><option>3</option><option>6</option><option>12</option></select></label>
+        <label>load <select id="load-size"><option>30</option><option>60</option><option>100</option></select></label>
+        <label>marks <select id="mark-style"><option value="css">CSS 3-D</option><option value="text">Emacs flat</option><option value="png">image still</option><option value="gif">image animated</option></select></label>
+      </nav>
+      <ol id="messages"></ol>
+      <form id="composer">
+        <select id="agent" aria-label="agent"><option value="fucodex">codex-1</option><option value="fuclaude">claude-1</option><option value="fuzai">zai-1</option><option value="">room only</option></select>
+        <textarea id="message" rows="3" placeholder="Write to the room…" required></textarea>
+        <button id="send" type="submit">Send</button>
+        <span id="send-status" role="status" aria-live="polite"></span>
+      </form>
+    </section>
+    <aside id="inspector" hidden></aside>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

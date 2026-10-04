@@ -24,7 +24,7 @@
   "Runtime invariants and timing for agent chat buffers."
   :group 'agent-chat)
 
-(defcustom agent-chat-invariants-enabled-groups '(timing)
+(defcustom agent-chat-invariants-enabled-groups '(timing reazon)
   "List of enabled invariant groups.
 Available groups:
   timing   — show cook time after each turn
@@ -176,15 +176,18 @@ Returns list of (TAG MSG) violations."
 (defun agent-chat-invariants--ensure-reazon ()
   "Load Reazon if available. Return non-nil on success."
   (or agent-chat-invariants--reazon-available
-      (unless agent-chat-invariants--reazon-tried
+      (progn
         (setq agent-chat-invariants--reazon-tried t)
-        ;; Try futon4 vendor path
         (let ((vendor (expand-file-name
                        "dev/vendor/reazon"
                        (or (getenv "FUTON4_ROOT")
                            "/home/joe/code/futon4"))))
-          (when (file-directory-p vendor)
-            (add-to-list 'load-path vendor)))
+          (dolist (directory
+                   (cons vendor
+                         (file-expand-wildcards
+                          (expand-file-name "reazon-*" package-user-dir))))
+            (when (file-directory-p directory)
+              (add-to-list 'load-path directory))))
         (setq agent-chat-invariants--reazon-available
               (require 'reazon nil t)))))
 
@@ -292,6 +295,7 @@ GROUP must be in `agent-chat-invariants-enabled-groups' to run."
 Call from REPL init functions after `agent-chat-init-buffer'."
   (setq-local agent-chat-invariants--turn-count 0)
   (setq-local agent-chat-invariants--extra-checks nil)
+  (require 'inbox-zero-reazon-reminder nil t)
   (setq-local agent-chat--on-turn-end
               'agent-chat-invariants--on-turn-end))
 

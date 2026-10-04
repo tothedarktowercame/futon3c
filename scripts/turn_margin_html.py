@@ -80,6 +80,11 @@ def load(path):
                  if os.path.exists(c)), None)
     if side:
         record["_candidates"] = json.load(open(side, encoding="utf-8")).get("candidates", [])
+    # Since 2026-10-04 Joe's >>> blocks live in a display-only sidecar, out of
+    # the record 象 reads; older records still carry them inline.
+    quotes_path = path + ".quotes.json"
+    if not record.get("quotes") and os.path.exists(quotes_path):
+        record["quotes"] = json.load(open(quotes_path, encoding="utf-8"))
     return record, analysis
 
 
@@ -444,7 +449,7 @@ def main():
     paths = list(a.records)
     if a.latest:
         every = [p for p in glob.glob(f"{a.records_dir}/turn-*.json")
-                 if not p.endswith((".analysis.json", ".candidates.json"))]
+                 if re.fullmatch(r"turn-[^.]+\.json", os.path.basename(p))]
         if a.agent:
             # The latest N of THIS agent's turns: counted across all agents,
             # one busy agent's turns push another's out of its own feed.

@@ -998,3 +998,459 @@ agent text is left alone."
             (should (null (alist-get 'evidence_id no-id)))
             (should (equal "emacs-given" (alist-get 'evidence_id given)))))
       (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-marks-take-their-stage-face ()
+  (require 'xiaoxiang-preview)
+  ;; The two mark tables are kept by hand; they must name the same marks and intents.
+  (should (equal (sort (mapcar (lambda (m) (list (nth 0 m) (nth 1 m) (nth 2 m))) session-mode--marks)
+                       (lambda (a b) (string< (car a) (car b))))
+                 (sort (mapcar (lambda (k) (list (nth 2 k) (nth 1 k) (nth 3 k))) xiaoxiang-mark-keys)
+                       (lambda (a b) (string< (car a) (car b))))))
+  (with-temp-buffer
+    (insert "㊥ (gist) fine. 🈸:yes ㊟ but 🈲 not that")
+    (let ((session-mode--missions (make-hash-table :test 'equal))
+          (session-mode--patterns (make-hash-table :test 'equal))
+          (session-mode--overlays nil))
+      (should (= 4 (alist-get 'mark (session-mode--scan))))
+      (let ((faces (mapcar (lambda (o) (cons (overlay-get o 'session-mode-token) (overlay-get o 'face)))
+                           (seq-filter (lambda (o) (equal "mark" (overlay-get o 'session-mode-type)))
+                                       (overlays-in (point-min) (point-max))))))
+        (should (eq 'session-mode-mark-annotator-face (cdr (assoc "㊥" faces))))
+        (should (eq 'session-mode-mark-act-face (cdr (assoc "🈸" faces))))
+        (should (eq 'session-mode-mark-believe-face (cdr (assoc "㊟" faces))))
+        (should (eq 'session-mode-mark-evaluate-face (cdr (assoc "🈲" faces))))))))
+
+(ert-deftest session-mode-mark-hydra-is-pbase-ordered-and-coloured ()
+  (require 'xiaoxiang-preview)
+  (let* ((hint (xiaoxiang--mark-hydra-hint))
+         (headings '("PERCEIVE" "BELIEVE" "EVALUATE" "SELECT" "ACT" "OTHER"))
+         (positions (mapcar (lambda (heading) (string-match heading hint))
+                            headings)))
+    (should (equal positions (sort (copy-sequence positions) #'<)))
+    ;; Transposed: all stage labels occupy one heading line, not one row each.
+    (let ((heading-line (seq-find (lambda (line) (string-match-p "PERCEIVE" line))
+                                  (split-string hint "\n"))))
+      (dolist (heading headings)
+        (should (string-match-p heading heading-line)))
+      ;; Each later heading is preceded by an absolute display anchor.  This
+      ;; survives fallback-font glyphs whose pixel widths are not cell widths.
+      (should
+       (equal '((space :align-to 23) (space :align-to 40) (space :align-to 58)
+                (space :align-to 77) (space :align-to 96))
+              (mapcar (lambda (heading)
+                        (get-text-property (1- (string-match heading heading-line))
+                                           'display heading-line))
+                      (cdr headings)))))
+    (dolist (stage xiaoxiang-mark-stage-order)
+      (let* ((heading (if (eq stage 'annotator)
+                          "OTHER" (upcase (symbol-name stage))))
+             (pos (string-match heading hint)))
+        (should (eq (xiaoxiang--stage-face stage)
+                    (get-text-property pos 'face hint)))))))
+
+(ert-deftest session-mode-mark-hydra-anchors-after-fallback-font-glyphs ()
+  "A variable-width mark must not push the following PBASE column rightward."
+  (require 'xiaoxiang-preview)
+  (let* ((left (xiaoxiang--hydra-cell "_g_ ㊥ gist" 'annotator 23))
+         (row (xiaoxiang--hydra-row (list left "_a_ ㊣ approve" "_d_ 🈚 disagree")
+                                    '(0 23 40))))
+    (should (equal '(space :align-to 23)
+                   (get-text-property (1- (string-match "_a_" row)) 'display row)))
+    (should (equal '(space :align-to 40)
+                   (get-text-property (1- (string-match "_d_" row)) 'display row)))))
+
+(ert-deftest session-mode-turn-tags-paints-marks ()
+  (with-temp-buffer
+    (insert "㊬ (checked) yes. 🈸:go")
+    (session-mode--paint-marks (point-min) (point-max))
+    (session-mode--paint-marks (point-min) (point-max))   ; repaint does not stack
+    (let ((os (seq-filter (lambda (o) (overlay-get o 'session-mode-mark))
+                          (overlays-in (point-min) (point-max)))))
+      (should (= 2 (length os)))
+      (should (eq 'session-mode-mark-act-face (overlay-get (car (overlays-at 1)) 'face))))))
+
+(defun session-mode-test--rnode-vocabulary ()
+  "Write and return a minimal generated R-node vocabulary fixture."
+  (let ((path (make-temp-file "rnode-vocabulary-" nil ".json")))
+    (with-temp-file path
+      (insert
+       (json-serialize
+        '((version . 1)
+          (nodes . [((id . "R14") (label . "Commitment temperature")
+                     (stage . "select") (cues . ["for now"]))])))))
+    path))
+
+(defun session-mode-test--rnode-overlays ()
+  "Return the R-node overlays in the current buffer."
+  (seq-filter (lambda (o) (overlay-get o 'session-mode-rnode-tag))
+              (overlays-in (point-min) (point-max))))
+
+(ert-deftest session-mode-rnode-tags-only-operator-regions ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-rnode-red nil))
+            (insert "joe: let's go with option 2 for now\ncodex: for now ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (let ((underline (plist-get (overlay-get (car overlays) 'face) :underline)))
+                (should (eq 'dots (plist-get underline :style)))
+                (should (equal (face-foreground 'session-mode-mark-select-face nil t)
+                               (plist-get underline :color))))
+              (should (equal "for now" (buffer-substring-no-properties
+                                         (overlay-start (car overlays))
+                                         (overlay-end (car overlays)))))
+              (should (equal
+                       "R14 Commitment temperature (SELECT) — cue “for now” — provisional"
+                       (overlay-get (car overlays) 'help-echo))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-ignore-quoted-tail ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path))
+            (insert "joe: consider this\n>>> quoted material\nfor now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should-not (session-mode-test--rnode-overlays))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-repaint-does-not-stack ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path))
+            (insert "joe: for now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should (= 1 (length (session-mode-test--rnode-overlays))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-missing-vocabulary-fails-soft ()
+  (with-temp-buffer
+    (let ((session-mode-rnode-vocabulary-file "/definitely/missing/rnode-vocabulary.json")
+          (session-mode--rnode-vocabulary nil)
+          (session-mode--rnode-vocabulary-key nil)
+          (session-mode--rnode-missing-reported nil)
+          messages)
+      (insert "joe: for now\ncodex: ok\n")
+      (cl-letf (((symbol-function 'message)
+                 (lambda (format-string &rest args)
+                   (push (apply #'format format-string args) messages))))
+        (should-not (session-mode--paint-rnode-tags (point-min) (point-max)))
+        (should-not (session-mode--paint-rnode-tags (point-min) (point-max))))
+      (should-not (session-mode-test--rnode-overlays))
+      (should (= 1 (length messages))))))
+
+(ert-deftest session-mode-rnode-tags-red-while-trialling ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-rnode-red t))
+            (insert "joe: for now\ncodex: for now\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face)))
+              ;; red replaces, not adds to, an intent underline on the same words
+              (should (> (overlay-get (car overlays) 'priority) 30))
+              (should (null (face-attribute 'session-mode-rnode-red-face :underline))))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-skip-intent-phrases ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil)
+        (session-mode-turn-vocabulary nil))
+    (unwind-protect
+        (with-temp-buffer
+          (let ((session-mode-rnode-vocabulary-file path)
+                (session-mode-turn-vocabulary '(("defer" "for now"))))
+            (insert "joe: for now\ncodex: ok\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (should (null (session-mode-test--rnode-overlays)))))
+      (delete-file path))))
+
+(ert-deftest session-mode-rnode-tags-never-share-characters-with-intent-tags ()
+  ;; Joe, 2026-10-02: "for now" (intent) and "now I think" (R-node) both
+  ;; painted the "now" of "for now I think" in a codex-10 buffer.
+  (let ((path (make-temp-file "rnode-vocabulary-" nil ".json"))
+        (session-mode--rnode-vocabulary nil)
+        (session-mode--rnode-vocabulary-key nil))
+    (with-temp-file path
+      (insert (json-serialize
+               '((version . 1)
+                 (nodes . [((id . "R3") (label . "Belief update")
+                            (stage . "believe") (cues . ["now i think"]))])))))
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file path)
+              (session-mode-turn-vocabulary '(("defer" "for now"))))
+          (dolist (intent-first '(t nil))
+            (with-temp-buffer
+              (insert "joe: but for now I think we need to\ncodex: ok\n")
+              (when intent-first
+                (session-mode--paint-turn-tags (point-min) (point-max) nil))
+              (session-mode--paint-rnode-tags (point-min) (point-max))
+              (unless intent-first
+                (should (session-mode-test--rnode-overlays))
+                (session-mode--paint-turn-tags (point-min) (point-max) nil))
+              (should (session-mode--overlays-with-property
+                       (point-min) (point-max) 'session-mode-turn-tag))
+              (should (null (session-mode-test--rnode-overlays))))))
+      (delete-file path))))
+
+(defun session-mode-test--rnode-analysis (evidence seat text node)
+  "Return one validated R-node cue analysis for EVIDENCE by SEAT."
+  `((status . "analyzed") (evidence_id . ,evidence) (labeller . ,seat)
+    (created_at . "2026-10-02T01:00:00Z")
+    (rnode_cues . (((text . ,text) (node . ,node)
+                    (label . ,(if (equal node "R14")
+                                  "Commitment temperature" "Candidate action space"))
+                    (stage . "select") (operation . "set")
+                    (justification . "sets precision over policies"))))))
+
+(defun session-mode-test--read-rnode-store (path)
+  "Decode R-node cue store PATH as alists and lists."
+  (let ((json-object-type 'alist) (json-array-type 'list))
+    (json-read-file path)))
+
+(ert-deftest session-mode-rnode-valid-proposal-is-stored ()
+  (let ((path (make-temp-file "rnode-store-"))
+        (session-mode--learned-rnode-key nil)
+        (session-mode--learned-rnode-vocabulary nil))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
+          (should (session-mode--record-rnode-cues
+                   (session-mode-test--rnode-analysis "e1" "seat-a" "settle lightly" "R14")))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (equal "settle lightly" (alist-get 'text entry)))
+            (should (= 1 (alist-get 'proposals entry)))
+            (should (equal '("e1") (alist-get 'turns entry)))
+            (should (equal '("seat-a") (alist-get 'seats entry)))
+            (should (equal "candidate" (alist-get 'status entry)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-three-turns-one-seat-is-not-promoted ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
+          (dolist (pair '(("e1" "seat-a") ("e2" "seat-a") ("e3" "seat-a")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car pair) (cadr pair)
+                                                "settle lightly" "R14")))
+          (let ((entry (car (alist-get 'entries
+                                       (session-mode-test--read-rnode-store path)))))
+            (should (= 3 (length (alist-get 'turns entry))))
+            (should (equal "candidate" (alist-get 'status entry)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-promotion-occurs-at-exact-threshold ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
+          ;; Under the default argmin (tau 0): weighted evidence 1 + 1.5 + 0.5 + 0.5 = 3.5
+          ;; (p_top 0.78) keeps a two-seat cue a candidate; a third seat (1 + 1.5 + 1.5 = 4,
+          ;; p_top 0.8) promotes it.  Promotion follows G, not a sampled draw.
+          (let ((session-mode-xiang-temperature 0.0))
+            (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-a") ("e4" "seat-b")))
+              (session-mode--record-rnode-cues
+               (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                  "hold gently" "R14")))
+            (should (equal "candidate"
+                           (alist-get 'status (car (alist-get 'entries
+                                                              (session-mode-test--read-rnode-store path))))))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis "e5" "seat-c" "hold gently" "R14"))
+            (let ((entry (car (alist-get 'entries
+                                         (session-mode-test--read-rnode-store path)))))
+              (should (= 5 (length (alist-get 'turns entry))))
+              (should (= 3 (length (alist-get 'seats entry))))
+              (should (equal "active" (alist-get 'status entry))))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-two-node-conflict-blocks-promotion ()
+  (let ((path (make-temp-file "rnode-store-")))
+    (delete-file path)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file path))
+          (dolist (node '("R14" "R6"))
+            (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
+              (session-mode--record-rnode-cues
+               (session-mode-test--rnode-analysis
+                (concat node "-" (car row)) (cadr row) "keep options open" node))))
+          (let* ((store (session-mode-test--read-rnode-store path))
+                 (entries (alist-get 'entries store))
+                 (conflict (car (alist-get 'conflicts store))))
+            (should-not (seq-some (lambda (entry) (equal "active" (alist-get 'status entry)))
+                                  entries))
+            (should (equal '("R14" "R6") (sort (alist-get 'nodes conflict) #'string<)))))
+      (when (file-exists-p path) (delete-file path)))))
+
+(ert-deftest session-mode-rnode-active-learned-cue-paints-operator-red ()
+  (let ((vocab (session-mode-test--rnode-vocabulary))
+        (store (make-temp-file "rnode-store-"))
+        (session-mode--rnode-vocabulary nil) (session-mode--rnode-vocabulary-key nil)
+        (session-mode--learned-rnode-vocabulary nil) (session-mode--learned-rnode-key nil)
+        (session-mode-turn-vocabulary nil))
+    (delete-file store)
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file vocab)
+              (session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file store)
+              (session-mode-rnode-red t))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                "settle lightly" "R14")))
+          (with-temp-buffer
+            (insert "joe: settle lightly\ncodex: settle lightly\n")
+            (session-mode--paint-rnode-tags (point-min) (point-max))
+            (let ((overlays (session-mode-test--rnode-overlays)))
+              (should (= 1 (length overlays)))
+              (should (eq 'session-mode-rnode-red-face (overlay-get (car overlays) 'face)))
+              (should (string-suffix-p "— learned" (overlay-get (car overlays) 'help-echo))))))
+      (delete-file vocab)
+      (when (file-exists-p store) (delete-file store)))))
+
+(ert-deftest session-mode-rnode-missing-or-corrupt-store-fails-soft ()
+  (let ((missing (make-temp-name "/tmp/missing-rnode-store-"))
+        (corrupt (make-temp-file "corrupt-rnode-store-"))
+        messages)
+    (unwind-protect
+        (progn
+          (with-temp-file corrupt (insert "{not json"))
+          (cl-letf (((symbol-function 'message)
+                     (lambda (format-string &rest args)
+                       (push (apply #'format format-string args) messages))))
+            (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file missing)
+                  (session-mode--learned-rnode-key nil))
+              (should-not (session-mode--load-learned-rnode-vocabulary)))
+            (let ((session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file corrupt)
+                  (session-mode--learned-rnode-key nil)
+                  (session-mode--rnode-store-error-reported nil))
+              (should-not (session-mode--load-learned-rnode-vocabulary))
+              (should-not (session-mode--record-rnode-cues
+                           (session-mode-test--rnode-analysis
+                            "e1" "seat-a" "settle lightly" "R14")))))
+          (should messages))
+      (when (file-exists-p corrupt) (delete-file corrupt)))))
+
+(ert-deftest session-mode-xiang-operator-none-retires-learned-and-seed ()
+  (let ((store (make-temp-file "xiang-store-"))
+        (log (make-temp-file "xiang-log-"))
+        (vocab (session-mode-test--rnode-vocabulary)))
+    (delete-file store) (delete-file log)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file store)
+              (session-mode-xiang-decisions-file log)
+              (session-mode-rnode-vocabulary-file vocab))
+          (dolist (row '(("e1" "seat-a") ("e2" "seat-b") ("e3" "seat-c")))
+            (session-mode--record-rnode-cues
+             (session-mode-test--rnode-analysis (car row) (cadr row)
+                                                "settle lightly" "R14")))
+          (should (session-mode-xiang-correct-rnode "settle lightly" "none"))
+          (should (session-mode-xiang-correct-rnode "for now" "none"))
+          (let ((entries (alist-get 'entries (session-mode-test--read-rnode-store store))))
+            (dolist (text '("settle lightly" "for now"))
+              (should (equal "retired"
+                             (alist-get 'status
+                                        (seq-find (lambda (entry)
+                                                    (equal text (alist-get 'text entry)))
+                                                  entries)))))))
+      (dolist (path (list store log vocab))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-turn-policy-defaults ()
+  (let ((store (make-temp-file "xiang-store-"))
+        (log (make-temp-file "xiang-log-")))
+    (delete-file store) (delete-file log)
+    (unwind-protect
+        (let ((session-mode-rnode-cues-file store)
+              (session-mode-xiang-decisions-file log))
+          (should (equal "ask" (session-mode--xiang-turn-policy "A normal turn." "e1")))
+          (should (equal "cue-only" (session-mode--xiang-turn-policy "  \n" "e2"))))
+      (dolist (path (list store log))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-never-policy-wins-before-scoring ()
+  (let ((session-mode-turn-analysis-policy 'never))
+    (cl-letf (((symbol-function 'session-mode--xiang-turn-policy)
+               (lambda (&rest _) (ert-fail "象 policy should not run"))))
+      (should-not (session-mode--analysis-requested-p
+                   (session-mode--structure-turn "A normal turn."))))))
+
+(ert-deftest session-mode-xiang-decision-log-is-complete-jsonl ()
+  (let ((log (make-temp-file "xiang-log-"))
+        (store (make-temp-file "xiang-store-")))
+    (delete-file log) (delete-file store)
+    (unwind-protect
+        (let ((session-mode-xiang-decisions-file log)
+              (session-mode-rnode-cues-file store))
+          (session-mode--xiang-turn-policy "A normal turn." "e1")
+          (let* ((json-object-type 'alist) (json-array-type 'list)
+                 (line (car (split-string
+                             (with-temp-buffer (insert-file-contents log) (buffer-string))
+                             "\n" t)))
+                 (record (json-read-from-string line))
+                 (terms (alist-get 'rnode_terms record)))
+            (should (equal "turn" (alist-get 'kind record)))
+            (dolist (key '(R1 R7 R6 R5 R14 R3/R17))
+              (should (assq key terms)))))
+      (dolist (path (list log store))
+        (when (file-exists-p path) (delete-file path))))))
+
+(ert-deftest session-mode-xiang-nonpositive-tau-is-argmin ()
+  (let ((session-mode-xiang-temperature 0))
+    (should (equal "low"
+                   (alist-get 'option
+                              (session-mode--xiang-choose
+                               '(((option . "high") (G . 2.0))
+                                 ((option . "low") (G . -1.0)))
+                               '((none . 1.0))))))))
+
+(ert-deftest session-mode-rnode-old-cache-format-is-rebuilt ()
+  (let ((path (session-mode-test--rnode-vocabulary))
+        (session-mode--rnode-vocabulary '(("old-format" . "row")))
+        (session-mode--rnode-vocabulary-key '(1 "old"))
+        (session-mode--learned-rnode-vocabulary '(("old-learned" . "row")))
+        (session-mode--learned-rnode-key '(1 "old")))
+    (unwind-protect
+        (let ((session-mode-rnode-vocabulary-file path)
+              (session-mode-xiang-decisions-file null-device) (session-mode-rnode-cues-file (make-temp-name "/tmp/no-rnode-store-")))
+          (let ((rows (session-mode--load-rnode-vocabulary)))
+            (should (equal "R14" (caar rows)))
+            (should (= session-mode--rnode-cache-format-version
+                       (car session-mode--rnode-vocabulary-key)))
+            (should-not (session-mode--load-learned-rnode-vocabulary))
+            (should (= session-mode--rnode-cache-format-version
+                       (car session-mode--learned-rnode-key)))))
+      (delete-file path))))
+
+(ert-deftest session-mode-xiang-corrupt-log-fails-soft ()
+  (let ((log (make-temp-file "xiang-log-")))
+    (unwind-protect
+        (progn
+          (with-temp-file log (insert "not-json\n"))
+          (let ((session-mode-xiang-decisions-file log))
+            (should-not (condition-case nil
+                            (progn (session-mode--xiang-log '((kind . "turn"))) nil)
+                          (error t)))))
+      (delete-file log))))

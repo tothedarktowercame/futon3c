@@ -69,6 +69,55 @@ class ValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exact source span"):
             analysis.validate(self.request, self.data)
 
+    def test_valid_rnode_reading_and_cue_are_canonicalized(self):
+        contract = {"R14": {"label": "Commitment temperature", "stage": "select",
+                            "quantity": "temperature tau", "operations": {"set"}}}
+        self.fragment["rnode"] = {"node": "R14", "quantity": "seat supplied text",
+                                  "operation": "set", "justification": "sets temperature tau"}
+        self.data["rnode_cues"] = [{"start": 4, "end": 18, "text": "needs evidence",
+                                     "node": "R14", "operation": "set",
+                                     "justification": "sets temperature tau"}]
+        result = analysis.validate(self.request, self.data, rnode_contract=contract,
+                                   generic_cues=set(), intent_phrases=set())
+        self.assertEqual(result["sentences"][0]["fragments"][0]["rnode"]["quantity"],
+                         "temperature tau")
+        self.assertEqual(result["rnode_cues"][0]["stage"], "select")
+        self.assertEqual(result["rnode_validation"]["accepted_fragments"], 1)
+        self.assertEqual(result["rnode_validation"]["accepted_cues"], 1)
+
+    def test_each_invalid_rnode_kind_is_dropped_and_counted(self):
+        source = "unknown badop empty wrong intent generic"
+        request = {"source_text": source, "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+                   "sentences": [{"id": "s1", "start": 0, "end": len(source)}]}
+        fragment = dict(self.fragment, start=0, end=len(source), text=source,
+                        display_cues=[{"start": 0, "end": 7, "text": "unknown"}])
+        data = {"labeller": "seat-1", "sentences": [
+            {"id": "s1", "fragments": [fragment], "unresolved_reason": ""}]}
+        contract = {"R14": {"label": "Commitment temperature", "stage": "select",
+                            "quantity": "temperature tau", "operations": {"set"}}}
+
+        def cue(phrase, **changes):
+            start = source.index(phrase)
+            item = {"start": start, "end": start + len(phrase), "text": phrase,
+                    "node": "R14", "operation": "set", "justification": "sets tau"}
+            item.update(changes)
+            return item
+
+        data["rnode_cues"] = [
+            cue("unknown", node="NOPE"),
+            cue("badop", operation="weigh"),
+            cue("empty", justification=""),
+            cue("wrong", text="not the source"),
+            cue("intent"),
+            cue("generic"),
+        ]
+        result = analysis.validate(request, data, rnode_contract=contract,
+                                   generic_cues={"generic"}, intent_phrases={"intent"})
+        self.assertEqual(result["rnode_cues"], [])
+        self.assertEqual(result["rnode_validation"]["dropped"], {
+            "unknown_node": 1, "invalid_operation": 1, "empty_justification": 1,
+            "inexact_span": 1, "intent_phrase": 1, "generic_cue": 1})
+
     def test_withdraw_target_may_be_null_but_other_intents_may_not(self):
         self.fragment["intent"] = "withdraw"
         self.fragment["target"] = None

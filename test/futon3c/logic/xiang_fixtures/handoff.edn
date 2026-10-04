@@ -1,0 +1,65 @@
+;; A delegation chain between agents, a retracted request, a deferred
+;; proposal, and a disagreement: the plausible multi-agent dialogue McCarthy's
+;; airline never had. Exercises verify, defer, disagree, retract, qualify,
+;; continue, explain and approve alongside the standing-changing acts.
+{:name "handoff"
+ :parties {"joe" :operator "claude-17" :agent "codex-16" :agent "kimi-2" :agent}
+ :history
+ [{:id "d1" :kind :delegate :author "joe" :to "claude-17" :at "2026-10-03T09:00:00Z"
+   :agent "claude-17" :session "s17" :text "please get the evidence chain repaired"}
+  {:id "d2" :kind :delegate :author "claude-17" :to "codex-16" :at "2026-10-03T09:02:00Z"
+   :agent "codex-16" :session "s16" :cites "d1" :text "codex-16: re-point failed predecessors in the drain"}
+  {:id "p2" :kind :promise :author "codex-16" :to "claude-17" :at "2026-10-03T09:05:00Z"
+   :agent "codex-16" :session "s16" :cites "d2" :beneficiary "claude-17" :deadline "2026-10-03T12:00:00Z"
+   :text "I'll have the drain fix and a test by noon"}
+  {:id "q1" :kind :qualify :author "codex-16" :to "claude-17" :at "2026-10-03T09:06:00Z"
+   :agent "codex-16" :session "s16" :cites "p2" :text "with the caveat that the anchor refresh is out of scope"}
+  {:id "pr1" :kind :propose :author "codex-16" :to "joe" :at "2026-10-03T09:40:00Z"
+   :agent "codex-16" :session "s16" :cites "p2" :text "also move the anchor refresh into the drain"}
+  {:id "df1" :kind :defer :author "joe" :to "codex-16" :at "2026-10-03T09:45:00Z"
+   :agent "codex-16" :session "s16" :target "pr1" :cites "pr1" :text "we can come back to that; for now, the fix"}
+  {:id "rp1" :kind :report-problem :author "codex-16" :to "claude-17" :at "2026-10-03T10:30:00Z"
+   :agent "codex-16" :session "s16" :cites "p2" :text "the test needs a fixture store; building one"}
+  ;; claude-17 takes back its request: the promise it elicited is codex-16's
+  ;; own act and stands until codex-16 fulfils or releases it.
+  {:id "rt1" :kind :retract :author "claude-17" :to "codex-16" :at "2026-10-03T10:40:00Z"
+   :agent "codex-16" :session "s16" :target "d2" :text "never mind the drain; kimi-2 has it"}
+  {:id "ds1" :kind :disagree :author "joe" :to "claude-17" :at "2026-10-03T10:42:00Z"
+   :agent "claude-17" :session "s17" :cites "rt1" :text "I disagree; codex-16 is nearly done"}
+  {:id "ct1" :kind :continue :author "joe" :to "codex-16" :at "2026-10-03T10:43:00Z"
+   :agent "codex-16" :session "s16" :cites "ds1" :text "please continue"}
+  {:id "d3" :kind :delegate :author "claude-17" :to "kimi-2" :at "2026-10-03T10:41:00Z"
+   :agent "kimi-2" :session "s2" :cites "rt1" :text "kimi-2: the drain fix"}
+  {:id "rt2" :kind :retract :author "claude-17" :to "kimi-2" :at "2026-10-03T10:45:00Z"
+   :agent "kimi-2" :session "s2" :target "d3" :cites "ct1" :text "stand down, codex-16 continues"}
+  {:id "f2" :kind :fulfil :author "codex-16" :to "claude-17" :at "2026-10-03T11:50:00Z"
+   :agent "codex-16" :session "s16" :target "p2" :cites ["p2" "ct1"] :text "3bd7b7fd and c182dfa1"}
+  {:id "v1" :kind :verify :author "claude-17" :to "codex-16" :at "2026-10-03T11:55:00Z"
+   :agent "codex-16" :session "s16" :cites "f2" :text "we should check the chain replays oldest first"}
+  {:id "ex1" :kind :explain :author "codex-16" :to "claude-17" :at "2026-10-03T11:58:00Z"
+   :agent "codex-16" :session "s16" :cites "v1" :text "here's why: the drain re-points to the nearest stored ancestor"}
+  {:id "ap1" :kind :approve :author "joe" :to "codex-16" :at "2026-10-03T12:05:00Z"
+   :agent "codex-16" :session "s16" :cites "f2" :text "looks good"}]
+ :expect
+ {:open-at {"2026-10-03T09:10:00Z" #{"d1" "p2"}
+            "2026-10-03T10:44:00Z" #{"d1" "p2" "d3" "rp1"}
+            "2026-10-03T12:10:00Z" #{"d1" "rp1"}}      ; joe's own delegation was never answered to joe; codex-16's report never verified
+  :flow {"p2" [["d2" :explicit :closes]]
+         "q1" [["p2" :explicit :keeps]]
+         "df1" [["pr1" :explicit :closes]]
+         "rt1" [["d2" :explicit :closes]]
+         "f2" [["p2" :explicit :closes]]
+         "ex1" [["v1" :explicit :closes]]
+         "ds1" []}
+  :closes {"p2" ["d2"] "rt2" ["d3"] "ex1" ["v1"]}
+  :annotative #{"ds1" "ct1" "ap1"}
+ :obligations {"2026-10-03T09:10:00Z" #{{:debtor "codex-16" :creditor "claude-17" :source "p2"}}
+                "2026-10-03T10:41:00Z" #{{:debtor "codex-16" :creditor "claude-17" :source "p2"}}   ; the retracted request does not end the promise
+                "2026-10-03T12:00:00Z" #{}}
+  :in-force {"2026-10-03T09:50:00Z" #{"d1" "d2" "p2"}      ; pr1 proposed, never carried out; df1 changes no standing
+             "2026-10-03T10:44:00Z" #{"d1" "p2" "d3"}      ; d2 retracted, d3 standing
+             "2026-10-03T10:46:00Z" #{"d1" "p2"}           ; d3 retracted too
+             "2026-10-03T12:10:00Z" #{"d1" "p2"}}          ; p2 is closed (not an obligation) but still a standing act
+  :promulgated {"2026-10-03T09:50:00Z" #{"d1" "d2" "p2" "pr1"}}
+  :derivation {"f2" #{"p2" "d2" "d1" "ct1" "ds1" "rt1"}}
+  :intents #{:delegate :promise :qualify :propose :defer :report-problem :retract :disagree :continue :fulfil :verify :explain :approve}}}

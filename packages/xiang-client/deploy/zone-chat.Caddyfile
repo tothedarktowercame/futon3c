@@ -1,0 +1,61 @@
+# Routes installed inside the zone.hyperreal.enterprises site block.
+# /chat is the forked Element Web client; /xiang-widget remains the FUTON
+# room widget while its features move into Element itself.
+redir /chat /chat/ 308
+
+@element_uncached path /chat/ /chat/index.html /chat/config*.json /chat/i18n/* /chat/version
+header @element_uncached Cache-Control "private, no-cache"
+
+handle_path /chat/* {
+	header {
+		X-Frame-Options SAMEORIGIN
+		X-Content-Type-Options nosniff
+		X-XSS-Protection "1; mode=block"
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Robots-Tag "noindex, nofollow, noarchive"
+	}
+	root * /srv/futon-element-current
+	try_files {path} /index.html
+	file_server
+}
+
+handle_path /chat-api/* {
+	reverse_proxy 127.0.0.1:8131
+}
+
+# The Element client exchanges its Matrix access token for a short-lived,
+# HttpOnly cookie. Caddy checks that cookie before proxying Marimo HTTP or
+# WebSocket traffic; the Python-execution service is never public.
+redir /marimo /marimo/ 308
+handle /marimo/* {
+	forward_auth 127.0.0.1:8131 {
+		uri /api/marimo/check
+	}
+	header {
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Content-Type-Options "nosniff"
+	}
+	@marimo_foreign_origin {
+		header Origin *
+		not header Origin https://zone.hyperreal.enterprises
+	}
+	respond @marimo_foreign_origin 403
+	request_header X-Marimo-Chat-User "matrix-room-member"
+	# Provision MARIMO_UPSTREAM_BASIC_AUTH in Caddy's service environment; do not
+	# put the Marimo execution credential in this tracked deployment fragment.
+	request_header Authorization "Basic {$MARIMO_UPSTREAM_BASIC_AUTH}"
+	reverse_proxy 127.0.0.1:2718
+}
+
+handle_path /xiang-widget/* {
+	header {
+		Cache-Control "private, no-cache"
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://matrix.paragogy.net; img-src 'self' data:; base-uri 'none'; frame-ancestors 'self' https://app.element.io https://*.element.io; form-action 'self'"
+	}
+	root * /srv/xiang-chat
+	file_server
+}

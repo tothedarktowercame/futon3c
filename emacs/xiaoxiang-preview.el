@@ -11,6 +11,7 @@
 
 (require 'json)
 (require 'subr-x)
+(require 'session-mode)
 
 (defvar xiaoxiang-preview-script
   (expand-file-name "../scripts/xiaoxiang_preview.py"
@@ -111,13 +112,97 @@
 ;; proposal and answer easy to code, so the marks should be quick to type.
 
 (defconst xiaoxiang-mark-keys
-  '(("g" "gist" "㊥") ("p" "propose" "㊭") ("a" "approve" "㊣") ("d" "disagree" "🈚")
-    ("f" "qualify" "㊟") ("e" "explain" "🈖") ("c" "clarify" "🈯") ("r" "report" "㊢")
-    ("!" "report-problem" "㊩") ("v" "verify" "㊬") ("t" "retract" "🈹") ("w" "withdraw" "🈡")
-    ("n" "constrain" "🈲") ("s" "ask-action" "🈸") ("l" "delegate" "㊯") ("i" "prioritize" "㊝")
-    ("o" "collect" "㊮") ("x" "extend" "🈕") ("u" "continue" "🈰") ("z" "defer" "🈝")
-    ("j" "redirect" "🈘") ("h" "explore" "㊫") ("." "unresolved" "🈳"))
-  "Key, intent and mark for `xiaoxiang-insert-mark'; marks as in CLAUDE.md.")
+  '(("!" "report-problem" "㊩" perceive)
+    ("e" "explain" "🈖" perceive)
+    ("r" "report" "㊢" perceive)
+    ("c" "clarify" "🈯" believe)
+    ("f" "qualify" "㊟" believe)
+    ("a" "approve" "㊣" believe)
+    ("d" "disagree" "🈚" believe)
+    ("o" "collect" "㊮" believe)
+    ("t" "retract" "🈹" believe)
+    ("n" "constrain" "🈲" evaluate)
+    ("x" "extend" "🈕" evaluate)
+    ("h" "explore" "㊫" evaluate)
+    ("p" "propose" "㊭" select)
+    ("i" "prioritize" "㊝" select)
+    ("j" "redirect" "🈘" select)
+    ("z" "defer" "🈝" select)
+    ("l" "delegate" "㊯" select)
+    ("w" "withdraw" "🈡" select)
+    ("s" "ask-action" "🈸" act)
+    ("u" "continue" "🈰" act)
+    ("v" "verify" "㊬" act)
+    ("g" "gist" "㊥" annotator)
+    ("." "unresolved" "🈳" annotator))
+  "Key, intent, mark and PBASE stage for `xiaoxiang-insert-mark'.")
+
+(defconst xiaoxiang-mark-stage-order
+  '(perceive believe evaluate select act annotator)
+  "PBASE display order, followed by the two non-PBASE annotation marks.")
+
+(defun xiaoxiang--stage-face (stage)
+  "Return the transcript mark face for STAGE."
+  (intern (format "session-mode-mark-%s-face" stage)))
+
+(defun xiaoxiang--hydra-cell (text stage width)
+  "Give TEXT its STAGE face, refusing cells wider than WIDTH columns."
+  (when (> (string-width text) width)
+    (error "Mark hydra cell is wider than %d columns: %s" width text))
+  (propertize text 'face (xiaoxiang--stage-face stage)))
+
+(defun xiaoxiang--hydra-column-offsets (columns)
+  "Return absolute display offsets for COLUMNS with two-column gutters."
+  (let ((offset 0))
+    (mapcar
+     (lambda (column)
+       (prog1 offset
+         (setq offset (+ offset 2 (apply #'max (mapcar #'string-width column))))))
+     columns)))
+
+(defun xiaoxiang--hydra-row (cells offsets)
+  "Place CELLS at their absolute display OFFSETS."
+  (let ((column 0))
+    (mapconcat
+     (lambda (cell)
+       (prog1
+           (if (zerop column)
+               (or cell "")
+             (concat
+              (propertize " " 'display `(space :align-to ,(nth column offsets)))
+              (or cell "")))
+         (setq column (1+ column))))
+     cells "")))
+
+(defun xiaoxiang--mark-hydra-hint ()
+  "Build the stage-coloured mark menu with PBASE stages as columns."
+  (let* ((width 23)
+         (columns
+          (mapcar
+           (lambda (stage)
+             (cons
+              (xiaoxiang--hydra-cell
+               (if (eq stage 'annotator)
+                   "OTHER" (upcase (symbol-name stage)))
+               stage width)
+              (mapcar
+               (lambda (k)
+                 (xiaoxiang--hydra-cell
+                  (format "_%s_ %s %s" (nth 0 k) (nth 2 k) (nth 1 k))
+                  stage width))
+               (seq-filter (lambda (k) (eq stage (nth 3 k)))
+                           xiaoxiang-mark-keys))))
+           xiaoxiang-mark-stage-order))
+         (offsets (xiaoxiang--hydra-column-offsets columns))
+         (height (apply #'max (mapcar #'length columns))))
+    (concat
+     "\nMarks by PBASE stage. Type a colon after a mark to answer it (🈸:yes).\n\n"
+     (mapconcat
+      (lambda (row)
+        (xiaoxiang--hydra-row (mapcar (lambda (column) (nth row column)) columns)
+                              offsets))
+      (number-sequence 0 (1- height)) "\n")
+     "\n\n_q_ quit\n")))
 
 (declare-function xiaoxiang-mark-hydra/body "xiaoxiang-preview")
 
@@ -133,13 +218,7 @@ Type a colon after it to answer the agent's paragraph with that mark: 🈸:yes."
         (eval
          `(defhydra xiaoxiang-mark-hydra (:hint nil :color blue)
             ;; Hydra needs the hint to start with a newline, or it errors on display.
-            ,(concat "\nMarks: key, mark, intent. Type a colon after a mark to answer it (🈸:yes).\n\n"
-                     (let ((cells (mapcar (lambda (k) (format "_%s_ %s %-15s" (nth 0 k) (nth 2 k) (nth 1 k)))
-                                          xiaoxiang-mark-keys))
-                           (out "") (i 0))
-                       (dolist (c cells out)
-                         (setq out (concat out c (if (= (% (setq i (1+ i)) 4) 0) "\n" "")))))
-                     "\n_q_ quit\n")
+            ,(xiaoxiang--mark-hydra-hint)
             ,@(mapcar (lambda (k) (list (nth 0 k) `(xiaoxiang--insert ,(nth 2 k)))) xiaoxiang-mark-keys)
             ("q" nil)))
         (xiaoxiang-mark-hydra/body))

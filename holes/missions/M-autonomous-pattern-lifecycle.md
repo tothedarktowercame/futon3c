@@ -3,6 +3,26 @@
 
 ## Acceptance checklist (2026-09-30)
 
+Gate A boundary progress (2026-10-02):
+`futon3c.pattern-lifecycle.action-rpc/execute!` now accepts one controller-
+stamped pattern, agent, session, and task identity; persists a PSR before
+invoking the supplied action; and persists a linked PUR after either return or
+throw. Both records go through the evidence single-routing authority and must
+be readable back before execution continues. The action cannot override the
+identity stamped onto either record. A thrown action retains a typed failure
+PUR, so a selected pattern is not left without an outcome merely because the
+work failed. `tickle-orchestrate/assign-issue!` now exposes this boundary at
+the real agent invocation seam when its controller supplies `:pattern-action`;
+the controller, rather than the invoked agent, stamps the issue, agent, and
+workflow-session identity. A returned `{:ok false}` assignment is classified
+as a failed pattern outcome without changing the assignment's return contract.
+Focused tests use the real atom evidence backend
+and prove pattern/agent/session continuity, linkage, pre-action identity
+refusal, and the thrown-action case, including a controller-level invocation.
+Gate A remains open until a non-test coding session supplies a selected pattern
+and retains its durable evidence-store pair; this parcel does not manufacture
+that operational observation.
+
 - [ ] An agent completes Gate A without manual `!psr`/`!pur` commands, and the evidence store contains matching PSR and PUR records with pattern, agent, and session continuity.
 - [ ] A Gate B evidence record contains candidate G scores, temperature, probabilities, the suggested pattern, and either adherence or a justified deviation.
 - [ ] A five-or-more-session Gate C record shows PUR outcomes changing a pattern's precision prior and that changed prior affecting a later suggestion.

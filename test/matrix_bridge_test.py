@@ -31,16 +31,40 @@ def batch(token, events=(), room=ROOM, invites=()):
 class FakeHTTP:
     def __init__(self):
         self.calls, self.posts, self.invokes, self.announces = [], {}, [], []
+        self.uploads = []
         self.syncs = []
         self.reply = 'answer'
+        self.user_id = '@codex:matrix.paragogy.net'
         self.fail_send_once = False
 
     def open(self, req, timeout=None):
         self.calls.append(req)
         assert req.get_header('Authorization') == 'Bearer offline-token'
-        path = unquote(urlsplit(req.full_url).path).removeprefix('/_matrix/client/v3')
+        raw_path = unquote(urlsplit(req.full_url).path)
+        if raw_path == '/_matrix/media/v3/upload':
+            self.uploads.append((req.get_header('Content-type'), req.data))
+            return io.BytesIO(json.dumps({'content_uri': 'mxc://offline/chart'}).encode())
+        if raw_path == '/marimo/api/sessions':
+            result = {'s-fumarimo': {
+                'filename': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+                'path': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+            }}
+            return io.BytesIO(json.dumps(result).encode())
+        if raw_path == '/marimo/api/kernel/execute':
+            code = json.loads(req.data)['code']
+            if code in ('6 * 7', 'value = 6 * 7\nvalue'):
+                output = {'mimetype': 'text/html', 'data': "<pre class='text-xs'>42</pre>"}
+            elif code == 'make_an_unrelated_plot()':
+                output = {'mimetype': 'application/vnd.marimo+mimebundle', 'data': json.dumps({
+                    'image/png': 'data:image/png;base64,iVBORw0KGgo=',
+                })}
+            else:
+                raise AssertionError('unexpected Marimo code: ' + code)
+            stream = 'event: done\ndata: ' + json.dumps({'success': True, 'output': output}) + '\n\n'
+            return io.BytesIO(stream.encode())
+        path = raw_path.removeprefix('/_matrix/client/v3')
         if path == '/account/whoami':
-            result = {'user_id': '@codex:matrix.paragogy.net'}
+            result = {'user_id': self.user_id}
         elif path == '/sync':
             result = self.syncs.pop(0)
         elif path.startswith('/join/'):
@@ -70,9 +94,19 @@ class MatrixTest(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / 'codex.token').write_text('offline-token\n')
         self.http = FakeHTTP()
+        marimo_env = patch.dict(m.os.environ, {
+            'FUMARIMO_MARIMO_URL': 'https://offline.invalid/marimo',
+            'FUMARIMO_MARIMO_TOKEN_FILE': str(self.root / 'fumarimo.token'),
+            'FUMARIMO_MARIMO_NOTEBOOK': '/home/joe/code/marimo-zone/notebooks/matrix-room-posts.py',
+        })
+        marimo_env.start()
+        self.addCleanup(marimo_env.stop)
         evidence_patch = patch.object(m.irc, "post_transport_evidence")
         self.evidence = evidence_patch.start()
         self.addCleanup(evidence_patch.stop)
+        xiang_patch = patch.object(m.irc, "xiang_turns", None)
+        xiang_patch.start()
+        self.addCleanup(xiang_patch.stop)
         self.bots = []
         m.irc.ungated_nicks.clear()
         for p in [patch.object(m.urllib.request, 'build_opener', return_value=self.http),
@@ -107,16 +141,106 @@ class MatrixTest(unittest.TestCase):
         self.assertEqual(0, bot._invoke_queue.unfinished_tasks)
 
     def test_mention_invokes_and_replies_with_full_sender_and_surface(self):
-        bot = self.bot()
-        bot.process_sync(batch('b1', [event()]))
-        self.drain(bot)
+        recorded = []
+        fake_xiang = type('FakeXiang', (), {
+            'enabled': staticmethod(lambda: True),
+            'record_turn': staticmethod(lambda *args, **kwargs: recorded.append((args, kwargs)) or 'turn-one'),
+            'after_reply': staticmethod(lambda *args, **kwargs: {}),
+        })
+        with patch.object(m.irc, 'xiang_turns', fake_xiang):
+            bot = self.bot()
+            bot.process_sync(batch('b1', [event()]))
+            self.drain(bot)
         self.assertEqual(1, len(self.http.invokes))
+        self.assertEqual('$one', recorded[0][1]['evidence_id'])
         for payload in self.http.invokes + self.http.announces:
             self.assertEqual('matrix:' + SENDER, payload['caller'])
             self.assertEqual('matrix (' + ROOM + ')', payload['surface'])
             self.assertIn('Surface: Matrix', payload['prompt'])
         reply = next(p for p in self.http.posts.values() if p['body'] == 'answer')
         self.assertEqual('$one', reply['m.relates_to']['m.in_reply_to']['event_id'])
+
+    def test_fumarimo_surface_assigns_the_notebook_llm_role(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-1', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state')
+        self.bots.append(bot)
+        context = bot._surface_context(SENDER, '', False, channel=ROOM)
+        self.assertIn('You are Fumarimo', context)
+        self.assertIn('self-contained Python cell', context)
+        self.assertIn('ask one concise clarifying question', context)
+        self.assertIn('Never invent Matrix history', context)
+        self.assertIn('as its last expression', context)
+        self.assertIn('do not say the cell ran', context)
+        self.assertIn('annotation sidebar', context)
+
+    def test_fumarimo_reply_posts_a_typed_python_cell(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = 'Here is the cell.\n\n```python\nvalue = 6 * 7\nvalue\n```'
+        bot.process_sync(batch('b1', [event('$request', '@fumarimo calculate it')]))
+        self.drain(bot)
+        cell = next(p for p in self.http.posts.values()
+                    if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell')
+        self.assertEqual('value = 6 * 7\nvalue', cell['body'])
+        self.assertEqual('python', cell[m.fumarimo.EVENT_NAMESPACE]['language'])
+        self.assertEqual('$request', cell[m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual('$request', cell['m.relates_to']['m.in_reply_to']['event_id'])
+
+    def test_fumarimo_two_unrelated_cells_use_marimo_and_publish_linked_outputs(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = '```python\n6 * 7\n```'
+        bot.process_sync(batch('b1', [event('$scalar', '@fumarimo calculate')]))
+        self.drain(bot)
+        self.http.reply = '```python\nmake_an_unrelated_plot()\n```'
+        bot.process_sync(batch('b2', [event('$plot', '@fumarimo plot')]))
+        self.drain(bot)
+
+        cells = [p for p in self.http.posts.values()
+                 if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'python-cell']
+        values = [p for p in self.http.posts.values()
+                  if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'value-output']
+        images = [p for p in self.http.posts.values()
+                  if p.get(m.fumarimo.EVENT_NAMESPACE, {}).get('kind') == 'image-output']
+        self.assertEqual(2, len(cells))
+        self.assertEqual(1, len(values))
+        self.assertEqual(1, len(images))
+        self.assertIn('42', values[0]['body'])
+        self.assertEqual('$scalar', values[0][m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual(1, len(self.http.uploads))
+        self.assertEqual('image/png', self.http.uploads[0][0])
+        self.assertTrue(self.http.uploads[0][1].startswith(b'\x89PNG'))
+        self.assertEqual('mxc://offline/chart', images[0]['url'])
+        self.assertEqual('$plot', images[0][m.fumarimo.EVENT_NAMESPACE]['request_event_id'])
+        self.assertEqual('$sent', images[0][m.fumarimo.EVENT_NAMESPACE]['cell_event_id'])
+        self.assertEqual('$sent', images[0]['m.relates_to']['event_id'])
+
+    def test_fumarimo_clarification_remains_an_ordinary_reply(self):
+        (self.root / 'fumarimo.token').write_text('offline-token\n')
+        bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',
+                          self.root, self.root / 'fumarimo-state', handle_commands=True)
+        self.bots.append(bot)
+        self.http.user_id = '@fumarimo:matrix.paragogy.net'
+        bot.connect()
+        bot.process_sync(batch('baseline'))
+        self.http.reply = 'Which date range should I use?'
+        bot.process_sync(batch('b1', [event('$request', '@fumarimo make a chart')]))
+        self.drain(bot)
+        reply = next(p for p in self.http.posts.values()
+                     if p['body'] == 'Which date range should I use?')
+        self.assertNotIn(m.fumarimo.EVENT_NAMESPACE, reply)
+        self.assertEqual('$request', reply['m.relates_to']['m.in_reply_to']['event_id'])
 
     def test_inherited_gating_and_commands(self):
         bot = self.bot()
@@ -194,6 +318,16 @@ class MatrixTest(unittest.TestCase):
         last = list(self.http.posts.values())[-1]['body']
         self.assertLessEqual(len(last), bot.text_cap)
         self.assertTrue(last.endswith('[truncated]'))
+
+    def test_marked_reply_adds_sanitizer_safe_stage_colours(self):
+        bot = self.bot()
+        bot._say('㊢ (result) <safe>\n\n㊬ (check) done')
+        content = list(self.http.posts.values())[-1]
+        self.assertEqual('㊢ (result) <safe>\n\n㊬ (check) done', content['body'])
+        self.assertEqual('org.matrix.custom.html', content['format'])
+        self.assertIn('<span data-mx-color="#2a78d6">㊢&#xfe0e;</span>', content['formatted_body'])
+        self.assertIn('<span data-mx-color="#e87ba4">㊬&#xfe0e;</span>', content['formatted_body'])
+        self.assertIn('&lt;safe&gt;', content['formatted_body'])
 
     def test_queue_preserves_distinct_event_reply_contexts(self):
         bot = self.bot()

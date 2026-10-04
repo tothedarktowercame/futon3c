@@ -52,6 +52,44 @@
         {:offer-id offer-id
          :option-id (or option-after-offer option-only)}))))
 
+;; ---------------------------------------------------------------------------
+;; Asks written in an agent reply
+
+(def ^:private ask-label-max 300)
+
+(defn reply-asks
+  "The 🈸 paragraphs of an agent reply TEXT, in order. A paragraph is a run of
+   lines between blank lines; it is an ask when its first character is the
+   ask-action mark of the reply proforma."
+  [text]
+  (if-not (string? text)
+    []
+    (->> (str/split text #"\n\s*\n")
+         (map str/trim)
+         (filter #(str/starts-with? % "🈸"))
+         vec)))
+
+(defn reply-offer-record
+  "The offer an agent made by writing 🈸 paragraphs in the reply recorded as
+   REPLY-EVIDENCE (a futon1b chat-turn entry), or nil when it has none. One
+   option per ask, numbered from 1, so `yes` takes a single ask and `yes N`
+   picks one of several. The offer is dated at the reply and keyed to it, so
+   a second acceptance of the same reply finds the same offer."
+  [reply-evidence agent session]
+  (let [body (:evidence/body reply-evidence)
+        text (or (get body :text) (get body "text"))
+        asks (reply-asks text)]
+    (when (seq asks)
+      {:kind :offer/record :author agent :addressee "joe"
+       :seat {:agent agent :session session}
+       :at (str (:evidence/at reply-evidence))
+       :options (vec (map-indexed
+                      (fn [i ask]
+                        {:option/id (str (inc i))
+                         :option/label (subs ask 0 (min ask-label-max (count ask)))
+                         :option/scope {:reply-evidence (str (:evidence/id reply-evidence))}})
+                      asks))})))
+
 (defn- candidate [offer option]
   {:offer-id (:id offer) :option-id (:option/id option)})
 

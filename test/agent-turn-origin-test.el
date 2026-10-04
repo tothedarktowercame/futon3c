@@ -10,12 +10,12 @@
 (defvar p6o-session nil)
 (defvar p6o-last nil)
 
-(ert-deftest p6o-turn-evidence-keeps-author-and-origin ()
-  (dolist (case '((operator "joe" "typed" "operator")
-                  (operator "joe" "🗣 dictated" "operator")
-                  (unsolicited "continuation" "wake" "harness")
-                  (unsolicited "followup" "notice" "harness")
-                  (agent "claude-17" "agent text" "agent")))
+(ert-deftest p6o-turn-evidence-authors-user-role-from-origin ()
+  (dolist (case '((operator "joe" "typed" "operator" "joe")
+                  (operator "joe" "🗣 dictated" "operator" "joe")
+                  (unsolicited "parked-resume" "wake" "harness" "parked-resume")
+                  (unsolicited "followup" "notice" "harness" "followup")
+                  (unknown "unknown" "unattributed" "unknown" "unknown")))
     (with-temp-buffer
       (let ((agent-turn-origin-current (agent-turn-origin-decide (nth 0 case) (nth 1 case))) payload)
         (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
@@ -23,9 +23,21 @@
                   ((symbol-function 'agent-chat-evidence-post-entry-id)
                    (lambda (_url _timeout p) (setq payload p) "p6o")))
           (agent-chat-emit-turn-evidence! "test" 1 t "p6o" "user" (nth 2 case) "agent" "test" nil 'p6o-session 'p6o-last))
-        (should (equal (alist-get 'author payload) (or (getenv "USER") user-login-name "joe")))
+        (should (equal (alist-get 'author payload) (nth 4 case)))
         (should (equal (alist-get 'kind (alist-get 'origin payload)) (nth 3 case)))
         (should (equal (alist-get 'actor (alist-get 'origin payload)) (agent-turn-origin-caller)))))))
+
+(ert-deftest p6o-turn-evidence-keeps-assistant-author ()
+  (with-temp-buffer
+    (let ((agent-turn-origin-current '(:kind "harness" :actor "parked-resume")) payload)
+      (cl-letf (((symbol-function 'agent-chat-sync-evidence-anchor!) #'ignore)
+                ((symbol-function 'agent-chat-evidence-enabled-p) (lambda (&rest _) t))
+                ((symbol-function 'agent-chat-evidence-post-entry-id)
+                 (lambda (_url _timeout p) (setq payload p) "p6o")))
+        (agent-chat-emit-turn-evidence!
+         "test" 1 t "p6o" "assistant" "reply" "claude-17" "test" nil
+         'p6o-session 'p6o-last))
+      (should (equal (alist-get 'author payload) "claude-17")))))
 
 (ert-deftest p6o-all-four-repl-request-builders-use-source ()
   (dolist (sender '(claude-repl--call-claude-streaming codex-repl--call-codex-async
@@ -68,7 +80,8 @@
                  (lambda (_url _timeout p) (setq payload p) "p6o")))
         (let ((p6o-session nil) (p6o-last nil))
           (agent-chat-emit-session-start-evidence! "test" 1 "p6o" 'p6o-session 'p6o-last 'p6o-last "test" nil)))
-      (should (equal (alist-get 'kind (alist-get 'origin payload)) "harness")))))
+      (should (equal (alist-get 'kind (alist-get 'origin payload)) "harness"))
+      (should (equal (alist-get 'author payload) "session-start")))))
 
 (ert-deftest p6o-session-mode-human-correction-origin ()
   (let ((session-mode-turn-vocabulary nil) (session-mode-turn-corrections nil) records)

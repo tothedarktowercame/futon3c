@@ -11,9 +11,17 @@ import json
 from pathlib import Path
 import re
 from datetime import datetime, timezone
+import edn_format
+from edn_format import Keyword as K
 
 LIBRARY = Path(__file__).resolve().parents[2] / "futon3" / "library"
+RNODE_DEFINITIONS = Path("/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-definitions.edn")
+RNODE_VOCABULARY = Path("/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-vocabulary.json")
+RNODE_STAGES = Path("/home/joe/code/p4ng/empirics-futon/control-stages.edn")
+INTENT_VOCABULARY = Path.home() / ".emacs-graph/session-turn-vocabulary.json"
 ROLES = {"context", "condition", "contrast", "action", "rationale", "goal", "dependency"}
+RNODE_DROP_REASONS = ("unknown_node", "invalid_operation", "empty_justification",
+                      "inexact_span", "intent_phrase", "generic_cue")
 
 MIN_CUE_WORDS = 2
 """Words of cue a sentence may carry however short it is.
@@ -33,20 +41,80 @@ def required_text(value, field):
 
 
 def template(request):
-    return {"labeller": "", "reusable_cues": [], "sentences": [
+    return {"labeller": "", "reusable_cues": [], "rnode_cues": [], "sentences": [
         {"id": sentence["id"], "fragments": [], "unresolved_reason": ""}
         for sentence in request["sentences"]],
         "fragment_shape": {"start": 0, "end": 0, "text": "exact source fragment",
                            "intent": "meaningful intent", "target": "what the intent concerns",
                            "rationale": "why this reading fits", "relations": ["goal"],
+                           "rnode": {"node": "R14", "quantity": "temperature tau / precision over policies",
+                                     "operation": "set", "justification": "one line naming the quantity"},
                            "pattern_refs": [{"id": "family/pattern-name",
                                              "rationale": "why this pattern fits this fragment"}],
                            "display_cues": [{"start": 0, "end": 0, "text": "short keyword phrase"}],
                            "no_surface_cue": "explain here only if display_cues is empty"}}
 
 
-def validate(request, analysis, library=LIBRARY):
+def load_rnode_contract(definitions=RNODE_DEFINITIONS, stages=RNODE_STAGES):
+    definitions_doc = edn_format.loads(Path(definitions).read_text())
+    stages_doc = edn_format.loads(Path(stages).read_text())
+    stage_by_node = {
+        str(row[K("node")]): ("assurance" if row.get(K("band")) == K("assurance")
+                              else str(row[K("stage")]).lower())
+        for row in stages_doc[K("nodes")]
+    }
+    return {
+        str(row[K("node")]): {
+            "label": str(row[K("label")]),
+            "quantity": str(row[K("quantity")]),
+            "operations": {str(op) for op in row[K("operations")]},
+            "stage": stage_by_node[str(row[K("node")])],
+        }
+        for row in definitions_doc[K("nodes")]
+    }
+
+
+def load_generic_cues(path=RNODE_VOCABULARY):
+    return {str(cue).strip().lower()
+            for cue in json.loads(Path(path).read_text())["excluded"]["generic"]}
+
+
+def load_intent_phrases(path=INTENT_VOCABULARY):
+    try:
+        doc = json.loads(Path(path).read_text())
+    except (OSError, ValueError, TypeError):
+        return set()
+    return {str(phrase).strip().lower()
+            for group in doc.get("rules", []) for phrase in group[1:]}
+
+
+def validate_rnode(value, contract, dropped):
+    """Canonicalize one optional fragment R-node reading, or drop and count it."""
+    if value is None:
+        return None
+    if not isinstance(value, dict) or value.get("node") not in contract:
+        dropped["unknown_node"] += 1
+        return None
+    definition = contract[value["node"]]
+    if value.get("operation") not in definition["operations"]:
+        dropped["invalid_operation"] += 1
+        return None
+    justification = value.get("justification")
+    if not isinstance(justification, str) or not justification.strip():
+        dropped["empty_justification"] += 1
+        return None
+    return {"node": value["node"], "quantity": definition["quantity"],
+            "operation": value["operation"], "justification": justification.strip()}
+
+
+def validate(request, analysis, library=LIBRARY, rnode_contract=None,
+             generic_cues=None, intent_phrases=None):
     labeller = required_text(analysis.get("labeller"), "labeller")
+    rnode_contract = rnode_contract if rnode_contract is not None else load_rnode_contract()
+    generic_cues = generic_cues if generic_cues is not None else load_generic_cues()
+    intent_phrases = intent_phrases if intent_phrases is not None else load_intent_phrases()
+    dropped = {reason: 0 for reason in RNODE_DROP_REASONS}
+    accepted_rnodes = 0
     source = request["source_text"]
     expected = {s["id"]: s for s in request["sentences"]}
     sentences = analysis.get("sentences")
@@ -148,6 +216,10 @@ def validate(request, analysis, library=LIBRARY):
                                              "why the rejected pattern does not fit"),
                      "query": (ref.get("query") or "").strip()})
             item["pattern_rejections"] = checked_rejections
+            rnode = validate_rnode(fragment.get("rnode"), rnode_contract, dropped)
+            if rnode:
+                item["rnode"] = rnode
+                accepted_rnodes += 1
             checked.append(item)
         # Check the union across all fragments so dividing a sentence into
         # many short spans cannot recreate total underlining.
@@ -193,10 +265,50 @@ def validate(request, analysis, library=LIBRARY):
             raise ValueError("invalid reusable intent")
         learned.append({"start": start, "end": end, "text": phrase, "intent": intent,
                         "rationale": required_text(cue.get("rationale"), "reuse rationale")})
+    proposed_rnode_cues = analysis.get("rnode_cues", [])
+    if not isinstance(proposed_rnode_cues, list):
+        raise ValueError("rnode_cues must be an array")
+    checked_rnode_cues = []
+    for cue in proposed_rnode_cues:
+        if not isinstance(cue, dict) or cue.get("node") not in rnode_contract:
+            dropped["unknown_node"] += 1
+            continue
+        definition = rnode_contract[cue["node"]]
+        if cue.get("operation") not in definition["operations"]:
+            dropped["invalid_operation"] += 1
+            continue
+        justification = cue.get("justification")
+        if not isinstance(justification, str) or not justification.strip():
+            dropped["empty_justification"] += 1
+            continue
+        start, end = cue.get("start"), cue.get("end")
+        if (type(start) is not int or type(end) is not int
+                or not 0 <= start < end <= len(source)
+                or source[start:end] != cue.get("text")):
+            dropped["inexact_span"] += 1
+            continue
+        phrase = source[start:end]
+        normalized = phrase.strip().lower()
+        if normalized in intent_phrases:
+            dropped["intent_phrase"] += 1
+            continue
+        if normalized in generic_cues:
+            dropped["generic_cue"] += 1
+            continue
+        checked_rnode_cues.append({
+            "start": start, "end": end, "text": phrase, "node": cue["node"],
+            "operation": cue["operation"], "justification": justification.strip(),
+            "label": definition["label"], "stage": definition["stage"],
+        })
     return {"version": 2, "status": "analyzed", "method": "agent-interpretation",
             "interpretation_version": request.get("interpretation_version", 1),
             "vocabulary_version": request.get("vocabulary_version", 1),
             "human_approved": False, "labeller": labeller, "reusable_cues": learned,
+            "rnode_cues": checked_rnode_cues,
+            "rnode_validation": {"accepted_fragments": accepted_rnodes,
+                                 "accepted_cues": len(checked_rnode_cues),
+                                 "dropped": dropped},
+            "evidence_id": request.get("evidence_id"),
             "created_at": datetime.now(timezone.utc).isoformat(), "source_text": source,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
             "offset_unit": request["offset_unit"], "sentences": canonical}

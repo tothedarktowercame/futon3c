@@ -1,0 +1,48 @@
+;; How the Kimi red tape came to be (M-象-2000 completion criterion), as a
+;; multi-party history: the operator, two agents, and the harness that spoke
+;; under the operator's name. Times are the real ones (2026-09-24/25 UTC).
+{:name "red-tape"
+ :parties {"joe" :operator "claude-11" :agent "kimi-1" :agent "harness" :harness "claude-14" :agent}
+ :history
+ [{:id "t1" :kind :report-problem :author "joe" :to "claude-11" :at "2026-09-24T15:48:00Z"
+   :agent "claude-11" :session "s11"
+   :text "Kimi showed a 5-hour limit at 10:47 on a light morning; investigate"}
+  {:id "r1" :kind :constrain :author "joe" :to "claude-11" :at "2026-09-24T16:03:00Z"
+   :agent "claude-11" :session "s11" :cites "t1"
+   :text "a Kimi job must name its mission/excursion/ticket; if it changes, compact"}
+  {:id "r2" :kind :propose :author "joe" :to "claude-11" :at "2026-09-24T16:20:00Z"
+   :agent "claude-11" :session "s11" :cites "r1"
+   :text "an enforcement rule similar to the inbox-zero followup"}
+  {:id "r3" :kind :propose :author "joe" :to "claude-11" :at "2026-09-24T16:28:00Z"
+   :agent "claude-11" :session "s11" :cites "r2"
+   :text "a one-line requisition request that includes the mission name"}
+  {:id "c1" :kind :commit :author "claude-11" :at "2026-09-24T16:34:00Z"
+   :agent "claude-11" :session "s11" :carries-out ["r2" "r3"] :cites "r3"
+   :sha "5146606d" :text "kimi: each call carries a one-line requisition"}
+  {:id "n1" :kind :notice :author "harness" :to "joe" :at "2026-09-24T19:04:00Z" :cites "c1"
+   :text "You requisitioned… (delivered as a turn under Joe's name)"}
+  {:id "n2" :kind :notice :author "harness" :to "joe" :at "2026-09-25T19:59:00Z" :cites "c1"
+   :text "You can't use a Kimi seat…"}
+  {:id "t2" :kind :report-problem :author "joe" :to "claude-14" :at "2026-09-25T20:10:00Z"
+   :agent "claude-14" :session "s14" :cites ["n1" "n2"]
+   :text "the notices are red tape"}
+  {:id "w1" :kind :withdraw :author "joe" :to "claude-14" :at "2026-09-25T20:15:00Z"
+   :agent "claude-14" :session "s14" :target "r2" :cites "t2"
+   :text "remove the followup half"}
+  {:id "c2" :kind :commit :author "claude-14" :at "2026-09-25T20:40:00Z"
+   :agent "claude-14" :session "s14" :carries-out "w1" :cites "w1" :sha "2ef7a010"}]
+ :expect
+ {:open-at {"2026-09-24T16:30:00Z" #{"t1" "r1" "r2" "r3"}  ; proposals await an answer until the commit; nothing answers r1's constraint, t1 is open until verified or explained
+            "2026-09-24T17:00:00Z" #{"t1" "r1"}          ; c1 carried out r2 and r3
+            "2026-09-25T21:00:00Z" #{"t1" "r1" "t2"}}    ; t2 cites the notices; w1 answers r2, which c1 had closed already
+  :flow {"c1" [["r2" :explicit :closes] ["r3" :explicit :closes]]
+         "w1" [["r2" :explicit :closes]]
+         "c2" [["w1" :explicit :closes]]}
+  :closes {"c1" ["r2" "r3"]}
+ :in-force {"2026-09-24T16:00:00Z" #{}
+             "2026-09-24T16:30:00Z" #{"r1"}          ; said plainly: promulgated and in force; r2 r3 proposed, not yet applied
+             "2026-09-24T17:00:00Z" #{"r1" "r2" "r3"}
+             "2026-09-25T21:00:00Z" #{"r1" "r3"}}      ; the followup half withdrawn
+  :promulgated {"2026-09-24T16:30:00Z" #{"r1" "r2" "r3"}}
+  :derivation {"c1" #{"r3" "r2" "r1" "t1"}
+               "w1" #{"t2" "n1" "n2" "c1" "r3" "r2" "r1" "t1"}}}}

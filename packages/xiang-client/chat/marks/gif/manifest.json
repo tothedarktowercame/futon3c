@@ -1,0 +1,233 @@
+{
+  "approve": {
+    "glyph": "㊣",
+    "filename": "approve.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "disagree": {
+    "glyph": "🈚",
+    "filename": "disagree.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "clarify": {
+    "glyph": "🈯",
+    "filename": "clarify.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "report": {
+    "glyph": "㊢",
+    "filename": "report.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "report-problem": {
+    "glyph": "㊩",
+    "filename": "report-problem.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "verify": {
+    "glyph": "㊬",
+    "filename": "verify.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "retract": {
+    "glyph": "🈹",
+    "filename": "retract.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "withdraw": {
+    "glyph": "🈡",
+    "filename": "withdraw.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "propose": {
+    "glyph": "㊭",
+    "filename": "propose.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "qualify": {
+    "glyph": "㊟",
+    "filename": "qualify.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "explain": {
+    "glyph": "🈖",
+    "filename": "explain.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "constrain": {
+    "glyph": "🈲",
+    "filename": "constrain.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "ask-action": {
+    "glyph": "🈸",
+    "filename": "ask-action.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "delegate": {
+    "glyph": "㊯",
+    "filename": "delegate.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "prioritize": {
+    "glyph": "㊝",
+    "filename": "prioritize.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "collect": {
+    "glyph": "㊮",
+    "filename": "collect.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "extend": {
+    "glyph": "🈕",
+    "filename": "extend.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "continue": {
+    "glyph": "🈰",
+    "filename": "continue.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "defer": {
+    "glyph": "🈝",
+    "filename": "defer.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "redirect": {
+    "glyph": "🈘",
+    "filename": "redirect.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  },
+  "explore": {
+    "glyph": "㊫",
+    "filename": "explore.gif",
+    "pixels": [
+      160,
+      160
+    ],
+    "frames": 18,
+    "frame_duration_ms": 75,
+    "loop": "infinite"
+  }
+}

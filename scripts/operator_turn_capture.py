@@ -65,7 +65,7 @@ def is_harness_text(text):
 def known_turn_ids():
     ids = set()
     for p in glob.glob(f"{RECORDS}/turn-*.json"):
-        if p.endswith((".analysis.json", ".candidates.json")):
+        if not re.fullmatch(r"turn-[^.]+\.json", os.path.basename(p)):
             continue
         try:
             ids.add(json.load(open(p)).get("turn_id"))

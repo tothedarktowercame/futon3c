@@ -164,6 +164,61 @@
     (should (string-match-p "LOOK.*outside 象's marks" out))
     (should-not (string-match-p "is that" out))))
 
+(ert-deftest turn-stepper-keeps-provisional-newest-turns ()
+  "小象's provisional parse shows at once; only a bare missing turn drops."
+  (let ((f (lambda (st) `((parse . ((status . ,st)))))))
+    (should (equal (list (funcall f "analyzed") (funcall f "drafted-provisional"))
+                   (turn-stepper--ready-frames
+                    (list (funcall f "analyzed") (funcall f "drafted-provisional")
+                          (funcall f "missing")))))
+    (should (equal (list (funcall f "missing") (funcall f "drafted-provisional"))
+                   (turn-stepper--ready-frames
+                    (list (funcall f "missing") (funcall f "drafted-provisional")))))))
+
+(ert-deftest turn-stepper-renders-provisional-parse-distinctly ()
+  (let* ((parse '((status . "drafted-provisional")
+                  (fragments . (((text . "do the thing")
+                                 (cues . nil)
+                                 (combined . "continue")
+                                 (labels . (((source . "小象") (intent . "continue") (weak . t)))))))))
+         (out (turn-stepper--render-parse parse)))
+    (should (string-match-p "小象, provisional" out))
+    (should (string-match-p "小象→continue\\?" out))
+    (should (get-text-property 0 'face out))
+    (should (eq 'turn-stepper-provisional-face (get-text-property 2 'face out)))))
+
+(ert-deftest turn-stepper-analyzed-parse-renders-as-before ()
+  (let* ((parse '((status . "analyzed")
+                  (fragments . (((text . "do the thing")
+                                 (cues . nil)
+                                 (combined . "continue")
+                                 (labels . (((source . "象/象-1") (intent . "continue")))))))))
+         (out (turn-stepper--render-parse parse)))
+    (should (string-match-p "象/象-1→continue" out))
+    (should-not (string-match-p "provisional" out))
+    (should-not (get-text-property 0 'face out))))
+
+(ert-deftest turn-stepper-reading-on-an-older-frame-keeps-the-index ()
+  "象's reading lands for the frame the user is reading back on: the
+reload fires and the stepper stays on that frame."
+  (let ((buf (get-buffer-create turn-stepper-buffer-name))
+        (rec (make-temp-file "ts-rec" nil ".json" "{\"session_id\": \"s1\"}"))
+        (fetched nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--start-fetch)
+                   (lambda (sid _src quiet) (push (list sid quiet) fetched))))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s1"
+                  turn-stepper--frames '(f0 f1 f2 f3)
+                  turn-stepper--index 1))
+          (turn-stepper--reading-landed rec)
+          (should (equal fetched '(("s1" t))))
+          (should (= 1 (turn-stepper--index-after-reload "s1" 4))))
+      (delete-other-windows)
+      (kill-buffer buf) (delete-file rec))))
+
 (ert-deftest turn-stepper-drops-unread-newest-turns ()
   (let ((f (lambda (st) `((parse . ((status . ,st)))))))
     (should (equal (list (funcall f "missing") (funcall f "analyzed"))
@@ -318,6 +373,79 @@ times and then stops, rather than never (futon1b busy) or forever."
           (should (= 3 fetches)))
       (delete-other-windows)
       (kill-buffer buf))))
+
+(defun turn-stepper-test--record-frame (id text)
+  `((turn . ((evidence_id . ,id) (at . "2026-10-04T00:00:00Z")
+             (text . ,text)))
+    (parse . ((status . "drafted-provisional") (fragments . nil)))
+    (operators . ((hits . nil) (cues_without_operator . nil)))
+    (patterns . ((matched . nil) (rejected . nil)
+                 (proposed_by_parent . nil)))
+    (happened . nil)))
+
+(ert-deftest turn-stepper-recorded-frame-appends-and-selects-from-last ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (turn-stepper-test--record-frame "old" "old"))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "new" "new") "/tmp/new.json")
+          (with-current-buffer buf
+            (should (= 2 (length turn-stepper--frames)))
+            (should (= 1 turn-stepper--index))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-frame-appends-without-moving-from-older ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (turn-stepper-test--record-frame "a" "a")
+                        (turn-stepper-test--record-frame "b" "b"))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "c" "c") "/tmp/c.json")
+          (with-current-buffer buf
+            (should (= 3 (length turn-stepper--frames)))
+            (should (= 0 turn-stepper--index))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-frame-replaces-the-same-record ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (cons '(record_path . "/tmp/x.json")
+                              (turn-stepper-test--record-frame "x" "first")))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "x" "second") "/tmp/x.json")
+          (with-current-buffer buf
+            (should (= 1 (length turn-stepper--frames)))
+            (should (equal "second"
+                           (turn-stepper--aget
+                            'text (turn-stepper--aget
+                                   'turn (car turn-stepper--frames)))))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-with-no-stepper-does-nothing ()
+  (when-let* ((buf (get-buffer turn-stepper-buffer-name))) (kill-buffer buf))
+  (let ((started nil))
+    (cl-letf (((symbol-function 'make-process)
+               (lambda (&rest _) (setq started t))))
+      (turn-stepper--turn-recorded "/definitely/not/a/record.json"))
+    (should-not started)))
 
 (defun turn-stepper-test--mixed-repo ()
   "Scratch repo: base 10:00, then this session's, another seat's and an
@@ -548,3 +676,30 @@ stepper; switching back shows it again."
             (should (get-buffer-window buf))))
       (delete-other-windows)
       (mapc #'kill-buffer (list repl other buf)))))
+
+(ert-deftest turn-stepper-renders-ports ()
+  (let* ((frame '((turn . ((at . "2026-09-29T11:00:00Z") (text . "t")))
+                  (parse . ((status . "missing") (fragments . [])))
+                  (patterns . ((matched . []) (rejected . [])
+                               (proposed_by_parent . nil)))
+                  (happened . [])
+                  (ports . ((closed_this_turn . [((act . "a1") (kind . "offer")
+                                                  (text . "Reply yes 1 or yes 2"))])
+                            (still_open . [((act . "a2") (kind . "ask-action")
+                                            (text . "Shall I read P11?")
+                                            (since . "2026-09-29T10:45:00Z"))])))))
+         (text (turn-stepper--render-frame frame 0 1 "s")))
+    (should (string-match-p "closed:" text))
+    (should (string-match-p "offer: Reply yes 1 or yes 2" text))
+    (should (string-match-p "still open:" text))
+    (should (string-match-p "ask-action (15m): Shall I read P11?" text))))
+
+(ert-deftest turn-stepper-no-ports-renders-nothing ()
+  (let* ((frame '((turn . ((at . "2026-09-29T11:00:00Z") (text . "t")))
+                  (parse . ((status . "missing") (fragments . [])))
+                  (patterns . ((matched . []) (rejected . [])
+                               (proposed_by_parent . nil)))
+                  (happened . [])))
+         (text (turn-stepper--render-frame frame 0 1 "s")))
+    (should-not (string-match-p "closed:" text))
+    (should-not (string-match-p "still open:" text))))

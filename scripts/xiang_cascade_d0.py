@@ -184,7 +184,7 @@ def main():
     root = Path(os.path.expanduser(args.records))
     all_bases = {}
     for path in root.glob("turn-*.json"):
-        if not (path.name.endswith(".analysis.json") or path.name.endswith(".candidates.json")):
+        if re.fullmatch(r"turn-[^.]+\.json", path.name):
             try:
                 all_bases[path.stem] = read_json(path)
             except (OSError, json.JSONDecodeError):

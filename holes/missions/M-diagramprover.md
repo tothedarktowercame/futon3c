@@ -1,5 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
-**Status:** OPEN — active — programme of work adopted 2026-08-02 (see §Programme of Work below)
+**Status:** OPEN — active — programme of work adopted 2026-08-02; generalised 2026-10-02 to a ladder of diagram flavours with skeleton use cases: Agency behaviour, and M-象-2000 via Fong-style open causal theories (see §Generalisation)
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
@@ -1798,3 +1798,287 @@ chase and the cohort are the same instrumented process). The document
 that instantiates this section — the capability-proof skeleton with
 live certificate links — is the next M-diagramprover artifact
 (queued 2026-08-03; the morning opener).
+
+## Second-opinion review: use in the Lean compiler-port session (2026-10-02, Codex-17)
+
+### What was actually used
+
+The session did not run the existing Clojure DiagramProver engine over Lean
+source. It used the wiring-checker idea to design a new Lean-native reference
+checker in `/home/joe/code/lean-wiring`. That distinction matters. The
+existing checker established the questions and output vocabulary — passes as
+boxes, values/extensions/fields as wires, discontinuities and unsupported
+claims as findings — while Lean's own environment supplied the facts. The new
+checker imports `Lean`, reads `Lean.Compiler.LCNF.builtinPassManager` as a Lean
+value, follows referenced constants, and emits EDN. It therefore avoided both
+a hand-maintained pass inventory and a second parser for `.lean` files.
+
+The use was iterative rather than ceremonial. The first slice inventoried 50
+LCNF passes and checked phase hand-offs and duplicate occurrences. Later
+slices classified environment-extension reads and writes, checked declared
+field dependencies, reported which passes reach a declaration, and built a
+field matrix for `Param.borrow`, `Decl.recursive`, `Decl.inlineAttr?`, and
+`Signature.safe`. The repository history records those increments through
+`87bb512`, `8a711b1`, `d827e8c`, `c2a52e6`, `80fba30`, and `876b07d` (with
+intermediate corrective commits).
+
+### Evidence that it was useful
+
+The method produced a working, independently testable artifact rather than
+only a diagram or analogy. On 2026-10-02 I ran `lake build`, `lake exe
+lean-wiring selftest`, and `lake exe lean-wiring check` at `876b07d`. The
+build passed; all planted cases were detected, including phase discontinuity,
+duplicate occurrence, missing/exogenous extension writers, misattributed
+same-family operations, reader-before-writer, overwrite-between, copied-field
+false writes, `@[implemented_by]` traversal, inherited fields, and an
+unreached declaration. The real-pipeline check returned `[]`. The generated
+EDN inventory was 148,972 bytes.
+
+More importantly, review of the checker itself found mistakes that ordinary
+happy-path execution had not exposed. Claude-4's transcript records planted
+mutations and two corrections in `d827e8c`: operations had been attributed to
+every same-typed extension in a shared body, and alias-family operations had
+been matched too narrowly. Subsequent slices added tests for partial/opaque
+boundaries, `@[implemented_by]`, field-copy semantics, structure inheritance,
+and reachability. This is a useful application of DiagramProver's central
+discipline: make the claimed flow explicit, then construct a nearby bad graph
+or bad classifier that must be rejected.
+
+The output is also suitable for the collaboration that motivated the session.
+Because the reference facts come from Lean and are serialized as EDN, the
+Python port can emit comparable facts without sharing the Lean implementation.
+A difference can then be stated as a particular pass, extension, declaration,
+or field edge rather than as a broad claim that the compilers “work
+differently.”
+
+### Limits of the result
+
+This does not yet validate the Python port, and it does not prove semantic
+equivalence of either compiler. `check` returning no findings means only that
+the properties currently encoded by the checker hold. Constant reachability
+over-approximates execution; opaque constants and generic attribute machinery
+remain named analysis boundaries; copying a structure field creates many real
+but low-information reads. The README states these limits, which is preferable
+to silently treating absent edges as evidence of absence.
+
+Nor does this session exercise DiagramProver's causal-identification, DPO/MPZ,
+Bayesian, TPG, or proof-string-diagram layers. It supports a narrower claim:
+the wiring-checker programme transferred successfully to an external,
+self-hosted compiler and generated evidence useful for port comparison. It
+would be inaccurate to count this as validation of the mission's larger
+theorem-proving programme.
+
+### Judgment
+
+The use was worthwhile. DiagramProver contributed the right unit of inquiry —
+explicit, checkable flow through a pipeline — and the insistence on planted
+counterexamples turned several plausible but false classifications into tested
+repairs. Its best next test is concrete: have MFUTON emit the corresponding
+facts for one bounded compiler path, compare them with `lean-wiring`, and
+require every difference to end as either a port defect, a checker defect, or a
+documented representation difference. Until that comparison is performed,
+the session has established a credible reference instrument, not yet a result
+about the port.
+
+## Generalisation (2026-10-02) — stronger diagrams, skeleton use cases
+
+Dated delta, per the revision contract. It replaces an earlier draft of
+the same date (commit `f0ce648`), which generalised in the wrong
+direction: down to the flow checker, the weakest kind of diagram here. That
+draft's portable recipe survives as `holes/labs/M-diagramprover/
+flow-claim-kit.md` and is rung 0 below. The direction Joe asked for is up:
+use the stronger kinds of diagram the mission has built, develop the
+prover through skeleton use cases, and let each skeleton show what the
+engine still lacks. The first skeleton, verifying agent behaviour in
+Agency, is built and tested here.
+
+### The ladder of diagram flavours
+
+| Rung | Flavour | What it can say | Built in | State |
+|---|---|---|---|---|
+| R0 | Flow maps | which stage reads/writes which field | `wiring.clj` | four applications (WS-E + Lean) |
+| R1 | Typed string diagrams (SMC) | composition type-checks; independent steps commute for free | `graph.clj` | WS-A, landed |
+| R2 | DPO rewriting modulo SMC | equations between processes; normal forms; refinement | `rule`/`matcher`/`rewrite` | WS-A, landed |
+| R3 | Markov / comonoid regime | copy and discard of data; probabilistic semantics | `rmgraph`/`rmdiagram` (MPZ) | A1 landed; A2 (rewriting) open |
+| R3′ | **Mixed regime (new)** | some wires linear (sessions, obligations), others shareable (evidence) | `regime.clj` | **landed today as checks** |
+| R4 | Causal inference | identification, surgery, counterfactuals | `causal/*` | WS-B/C, landed, oracle-checked |
+| R4′ | **Open causal theories (Fong, finite fragment; new)** | patterns as open theories; incidents as their gluing | `causal/open_theory.clj` | **landed today** |
+| R5 | Proofs as diagrams | typed ports = goals; open ports = sorry | — | WS-D, not started |
+
+Two things only show up when the rungs are used together. First, agent
+behaviour is **neither** plain-SMC nor Markov: an agent's session may never
+be copied (I-1), while evidence may be read by anyone or no one. That is
+the linear/non-linear split (Benton's LNL models), so R3′ is the regime
+Agency needs; neither existing kernel provides it alone. Second, R5's
+"open ports are what is left to do" works beyond proofs: in a run of
+Agency the unanswered bells are exactly the open output ports.
+
+### Skeleton use case 1 — Agency behaviour (BUILT 2026-10-02)
+
+`src/futon3c/diagramprover/regime.clj` (generic laws) and
+`src/futon3c/diagramprover/skeleton/agency.clj` (the Agency signature,
+ingest, readings, refinement rule and causal receipt), with tests in
+`test/futon3c/diagramprover/regime_test.clj` and
+`test/futon3c/diagramprover/skeleton/agency_test.clj`.
+
+An ordered window of Agency events (register, ring, accept, drain/deliver,
+answer/reply, hop, publish/read) becomes one open string diagram. Each
+agent's session is a wire through its own actions; a bell is a wire from
+its ring to its answer; the turn queue is a box that touches the bell and
+never the agent. The laws, all in the diagram's types:
+
+| Law | Agency meaning | Planted case that must fail |
+|---|---|---|
+| signature | every step has the declared wire sorts | answering a bell never delivered; answering a request as a query |
+| linearity (per sort) | sessions and bells are used exactly once; evidence is cartesian | a bell answered twice |
+| identity preservation | I-2 and I-3: no step conjures or substitutes an agent | `:transport/create`; `:spawn` |
+| concurrency | I-1: an identity's vertices are totally ordered | a second concurrent session; a clone |
+| routing | a bell is taken only by its addressee | delivery to the wrong agent |
+
+Readings: open bells (the output boundary), crossings (two agents each
+owing the other, E-crossed-bells), and what the window assumed from before
+it started (the input boundary). Equivalence and refinement use R1/R2
+directly: two event orders that differ only in the order of independent
+steps give isomorphic diagrams (`same-run?`). The queue-level steps
+`accept ; drain` rewrite by DPO to the protocol step `deliver`, so a
+queue-level trace is checked against a protocol trace by normalising and
+testing for isomorphism (`refines?`). This holds even when the agent does
+other work between accept and drain, because the queue box never touches
+the agent wire. The R4 tier asks whether turning on typed bells reduces
+crossings. It gives backdoor-identifiable if mesh load is recorded,
+front-door through query threads if it is not, and a refusal if typed
+bells also act directly. So the recording requirement (record load) comes
+out before any experiment is run.
+
+Evidence: 21 new tests / 42 assertions plus the 24 existing kernel and
+identify tests, all green (45 / 111) on a standalone classpath. Four
+mutations, each disabling one law, were each caught by the tests named
+for that law (6, 3, 3 and 1 failures), then reverted.
+
+Relation to `futon3c.agency.logic`: that namespace checks the registry at
+one instant (e.g. `ag-1-session-collisiono`); this checks a run. Where they
+overlap they should agree, and that agreement is a test to write once
+real windows are ingested (S2).
+
+Limits, stated: events are a schema written for this skeleton, and the
+adapter from the invoke-jobs ledger and turn-queue store is not written;
+the causal DAG is authored, not evidenced; `find-iso` is backtracking and
+untested on large windows; rules are instantiated per agent because the
+kernel has no type variables.
+
+### Skeleton use case 2 — M-象-2000 with Fong-style open theories (BUILT 2026-10-02)
+
+Which Fong. Two of his ideas, used together. **Causal theories**: a causal
+model presented as syntax (the DAG generates the processes) separate from
+its mechanisms (a model of that syntax), so one syntax can carry
+alternative mechanisms and interventions act on the syntax. **Decorated
+cospans**: systems made *open* by a declared boundary, composed by gluing
+along it. Together these give *open causal theories*. A design pattern is a
+small theory with an interface, and an incident is the gluing of the
+patterns that bear on it.
+
+Built: `src/futon3c/diagramprover/causal/open_theory.clj`. It holds the
+finite, deterministic fragment: Boolean mechanisms in the `causal.scm`
+grammar, gluing by shared names, and typed refusals (:undeclared-sharing,
+:double-mechanism, :cycle). The composite is an ordinary closed theory, so
+every existing receipt applies to it. The specimen is
+`src/futon3c/diagramprover/skeleton/xiang2000.clj`. Five pattern-sized
+theories (operator proposals, followup delivery, rule reporting, Kimi
+refusals, capture default) glue into the 09-24 Kimi red-tape incident,
+M-象-2000's own acceptance case. The skeleton then asks the questions that
+mission left open or answered by hand:
+
+| M-象-2000 question | Where the mission stands | Computed here |
+|---|---|---|
+| Derivation of R | "a bounded session/order reconstruction, not a stored causal edge" (P0) | the causal cone of R. For the commit it is exactly the hand table's report → constrain → propose |
+| Hole `:反事实世界模型`: "if P had been in force at T0, would the incident have happened?" | hungry. ARGUE-0: needs a world model; P14 narrowed for want of one | counterfactual by abduction/action/prediction: no red tape. The world model is the glued mechanisms, written out and reviewable |
+| Withdrawal semantics | the requisition gate "never reads rule records", so withdrawal changes reports, not enforcement | do(withdraw rule record): red tape persists as built, stops if enforcement reads the record. One syntax, two wirings, both computed |
+| Capture drop held apart from the rule | stated by hand | d-separated, and the counterfactual "no commit" leaves the drop in place. This holds *relative to the glued patterns*: gluing a pattern that links them would change it, so it is a checkable claim |
+| "0 of 1,227 flexiargs carry predictions" (WM never runs a pattern's prose) | open | the glued theory implies 103 testable independencies at conditioning size ≤ 1. These are joint predictions of the patterns, ready for the WS-B falsification pass against the act history |
+
+Evidence: 12 new tests (gluing laws, every receipt, a non-composing
+pattern), 71 tests / 185 assertions green with the kernel, causal and
+Agency suites. Four mutations were each caught: disabling either gluing
+refusal, turning the guard's `and` into `or`, and rewiring the rule
+record's mechanism.
+
+Limits, stated: the mechanisms are authored from M-象-2000's text, not
+mined from the store. Values are Boolean, with no probabilities. Variables
+are identified by name. The 103 predictions have not yet been tested
+against the act history. Fong's full setting (mechanisms in a Markov
+category such as Stoch, surgery as a functor on the diagram rather than on
+the DAG) is the D3 tier of `capability-proof-diagramprover.tex` and stays
+registered, not built.
+
+What it opens for M-象-2000, in order of payoff:
+1. **Q5 prevention, prospectively.** When an act arrives (a proposed
+   enforcement rule, say), glue it into the theory of the patterns in force
+   and ask the counterfactual *before* it lands. The 16:20 proposal is the
+   test: would the guard pattern, already on file, have flagged it?
+2. **Patterns that predict.** Author each flexiarg's IF/HOWEVER/THEN/BECAUSE
+   as an open theory. Its implied independencies are its predictions, and
+   the act history is the data that can falsify them.
+3. **Q4 promises as combs.** A promise is a process with a hole the debtor
+   fills later. The Agency skeleton already shows the open-port half (an
+   unanswered bell is an output port). The semantic half is combs in Markov
+   categories (arXiv:2404.02017), the bridge object this mission's
+   capability proof already names.
+
+### What the skeleton showed the engine lacks
+
+1. **Rewriting in the mixed regime.** DPO rewrites only the plain kernel;
+   R3′ is a check, not a rewriting regime. Rewriting that touches shared
+   evidence needs MPZ A2 (weak boundary complements), with sharing allowed
+   per sort, not globally.
+2. **Kernel constructors.** `graph.clj` has `compose` but no `tensor` or
+   identity wires, so the skeleton builds diagrams vertex by vertex.
+3. **Rule schemas.** A law such as delivery holds for every agent; today it
+   is instantiated once per agent and bell type. Rules need type variables.
+4. **Derivation certificates.** `normalise` reports a step count; it should
+   return the sequence of (rule, match) applications as a checkable
+   certificate. This is the same object WS-D needs for proofs as diagrams,
+   so the two should share it.
+
+### Further skeleton use cases (queued, in order)
+
+1. **Detach/reattach (PAR punctuation)** — R1/R2. An autonomous window is a
+   box on the agent's own wire whose interface must be typed by what it
+   promised (`promise_record`); reattaching with less than was promised is
+   an open port.
+2. **Handoff with warrant** — R1 + R4. A handoff wire must travel tensored
+   with its warrant (`agency/warrant.clj`); the reviewer lane
+   (`:full-rerun` vs `:spot-check`) is a causal question about what a
+   stale warrant does to defects caught.
+3. **futon3b gate pipeline G5→G0** — R5. Evidence as a proof-carrying
+   diagram; a gate not passed is an open port; shares the certificate
+   object from gap 4.
+4. **Lean→Python port** — R2. Compiler passes as generators, and the
+   correspondence table as a map between two signatures. A port difference
+   is a square that fails to commute, classified as port defect, checker
+   defect or representation difference (the review's next test, one rung
+   up from R0).
+
+### Acceptance for the generalisation
+
+- [x] **S1** Agency skeleton: laws, readings, refinement and causal
+      receipt, with planted cases and mutation check (this section).
+- [ ] **S2** Ledger adapter: one real day's invoke-jobs and turn-queue
+      window ingested; every finding triaged; agreement with
+      `agency.logic` on session collisions.
+- [ ] **S3** Kernel: `tensor`/identity, rule schemas with type variables,
+      derivation certificates from `normalise`.
+- [ ] **S4** Mixed-regime rewriting: MPZ A2 with per-sort sharing.
+- [ ] **S5** A second skeleton at R5 (gate pipeline or WS-D proof) reusing
+      `regime.clj` and the S3 certificate.
+- [ ] **S6** Port skeleton, once `lean-wiring` and MFUTON facts are on hand.
+- [x] **S7** M-象-2000 skeleton: open causal theories with gluing, and the
+      Kimi red-tape receipts (derivation, prevention counterfactual,
+      withdrawal semantics, held-apart attribution, predictions).
+- [ ] **S8** Prospective 象 check: glue an arriving act into the theory of
+      patterns in force and return the counterfactual before it lands;
+      replay the 09-24 16:20 proposal as the acceptance case.
+- [ ] **S9** Falsification pass of the glued theory's predictions against
+      the act history (dagitty/y0 oracles as in WS-B D2).
+
+Ownership as before: architecture and review Claude owner; S2–S4 are
+bounded Codex slices in the WS-E pattern (author ≠ reviewer, gates re-run).

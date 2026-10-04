@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "status": "analyzed",
+  "method": "agent-interpretation",
+  "interpretation_version": 3,
+  "vocabulary_version": 3,
+  "human_approved": false,
+  "labeller": "象-2",
+  "reusable_cues": [
+    {
+      "start": 0,
+      "end": 7,
+      "text": "🈸:yes 1",
+      "intent": "approve",
+      "rationale": "Sigil-plus-number shorthand ('yes <n>') accepting option n of an agent's numbered offer is a reusable compact-approval form; the happened_summary confirms it was recorded as an agreement act keyed to offer, option, and evidence id."
+    }
+  ],
+  "created_at": "2026-10-01T14:04:18.232917+00:00",
+  "source_text": "🈸:yes 1",
+  "source_sha256": "27ac1c5dad7cc8f7b3a09f8072fd67b018af14ca1fee8a55d25ce2b7b09e2806",
+  "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+  "sentences": [
+    {
+      "id": "s1",
+      "fragments": [
+        {
+          "start": 0,
+          "end": 7,
+          "text": "🈸:yes 1",
+          "intent": "approve",
+          "target": "option 1 of claude-17's numbered offer",
+          "rationale": "A compact protocol acceptance: the operator agrees to option 1 of the agent's numbered offer using the sigil shorthand. The happened_summary shows it landed as a recorded agreement act (act:e77e3e43) joining offer, option, and the turn's evidence id — i.e. the approval became a first-class artifact, which is exactly what distinguishes this from an informal 'ok'.",
+          "relations": [
+            "action"
+          ],
+          "display_cues": [
+            {
+              "start": 0,
+              "end": 7,
+              "text": "🈸:yes 1"
+            }
+          ],
+          "no_surface_cue": "",
+          "pattern_refs": [
+            {
+              "id": "orchestration/consent-gate",
+              "rationale": "The agent held a numbered offer at the decision locus and the operator's 'yes 1' is the recorded consent grant, keyed and replayable as an artifact — precisely the consent-gate's requirement that approval be a first-class recorded event, not an ad-hoc pause.",
+              "status": "candidate",
+              "source_sha256": "479420b4d1f7673f36610fe5f8e69fed5109fee6b141625144c8d9f311dcee71"
+            }
+          ],
+          "pattern_rejections": [
+            {
+              "id": "snatch/accept-an-offer-that-beats-holding",
+              "reason": "Surfaced on 'compact sigil reply agreeing to a numbered offer option'; it is the Snatch exchange game's P2 acceptance rule priced in token payoffs, not an operator approving a numbered plan option from an agent.",
+              "query": "compact sigil reply agreeing to a numbered offer option"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    }
+  ],
+  "request_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-HUylGP.json",
+  "request_sha256": "d0e480cdea32479dc1f64a7e16de838f106a594afc7e5df2d8cc82ed11e83088"
+}

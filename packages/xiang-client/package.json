@@ -1,0 +1,26 @@
+{
+  "name": "@futon/xiang-client",
+  "version": "0.1.0",
+  "description": "TypeScript client for the \u8c61 (M-\u8c61-2000) turn pipeline: records, marks, acceptance and undo, invoke-stream, Matrix rendering.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist/src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test \"dist/test/**/*.test.js\"",
+    "clean": "rm -rf dist",
+    "build:widget": "esbuild widget/main.ts --bundle --format=esm --target=es2022 --outfile=dist/widget/main.js && cp widget/index.html widget/style.css dist/widget/"
+    ,"build:chat": "esbuild chat/main.ts --bundle --format=esm --target=es2022 --outfile=dist/chat/main.js && cp chat/index.html chat/style.css dist/chat/ && cp -R chat/et-book chat/marks dist/chat/"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.5.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
