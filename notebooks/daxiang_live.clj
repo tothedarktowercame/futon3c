@@ -27,7 +27,7 @@
 ;; that are stated only on explicit evidence (an approval accepts the offer
 ;; just made, a commit carries an accepted offer out). When the operator
 ;; opens a paragraph with `<mark>:`, the server also works out which of the
-;; agent's recent paragraphs he is answering. Two pieces of context are
+;; agent's recent paragraphs is being answered. Two pieces of context are
 ;; written down on every turn and not yet read: the bracketed target an
 ;; agent puts after each mark, and the design pattern retrieved for the
 ;; turn. §9 says what we will do with them.
