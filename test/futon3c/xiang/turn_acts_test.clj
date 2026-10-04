@@ -276,3 +276,23 @@
           target-of (into {} (map (juxt :id :target)) acts)]
       (is (= "t-1-r-0" (target-of "t-2-f-s1-0")))
       (is (nil? (target-of "t-2-f-s2-0"))))))
+
+(deftest a-fragment-after-an-unlinked-pointer-is-not-linked
+  (testing "turn 43 again, but its second pointer (the inline 🈸 at 160)
+            resolved to nothing, as a stored :newest fallback: the fragments
+            after it answer that pointer, so they link nothing; they must
+            not fall back to the 🈯 pointer before it"
+    (let [t42 (fixture-turn "turn-uJNPcf")
+          t43 {:record (read-json "turn-WdLaYK.json")
+               :reading (read-json "turn-WdLaYK.json.analysis.json")
+               :reply ""}
+          stored (-> (futon3c.xiang.reply-target/resolve-targets
+                      (get-in t43 [:record :source_text])
+                      [{:turn-id "stream-id" :origin "operator" :text (:reply t42)}])
+                     (assoc-in [:replies 1 :rule] :newest))
+          acts (ta/session-acts [t42 (assoc-in t43 [:record :reply_to] stored)])
+          by-start (into (sorted-map)
+                         (for [a acts :when (= "claude-17-turn-43" (:turn a))]
+                           [(:start a) (:target a)]))]
+      (is (= {:linked 1 :unlinked 1} (:pointers (meta acts))))
+      (is (= {0 "claude-17-turn-42-r-2" 160 nil 247 nil 280 nil} by-start)))))

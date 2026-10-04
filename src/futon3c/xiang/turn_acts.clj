@@ -225,18 +225,22 @@
    paragraph excerpt against SEEN, the {[mark excerpt] [act-id ..]} of
    the session's earlier replies. A pointer matching no paragraph, or more
    than one, links nothing. Returns {:targets {..} :positioned [{:offset
-   :span :id} ..] :linked n :unlinked n}; :positioned holds the linked pointers that
-   carry an :offset and :span (stored from 2026-10-04, 1d on)."
+   :span :id} ..] :linked n :unlinked n}; :positioned holds every pointer
+   that carries an :offset and :span (stored from 2026-10-04, 1d on),
+   with :id nil when it linked nothing, so that a fragment after an
+   unlinked pointer is not given to the pointer before it."
   [record seen]
   (reduce (fn [acc {:keys [index mark rule paragraph paragraph-mark offset span]}]
             (let [ids (when (#{"mark-match" "bracket-match"} (some-> rule name))
-                        (get seen [(or paragraph-mark mark) paragraph]))]
-              (if (= 1 (count ids))
-                (cond-> (-> acc
-                            (assoc-in [:targets index] (first ids))
-                            (update :linked inc))
-                  (and (int? offset) (= 2 (count span)))
-                  (update :positioned conj {:offset offset :span (vec span) :id (first ids)}))
+                        (get seen [(or paragraph-mark mark) paragraph]))
+                  id (when (= 1 (count ids)) (first ids))
+                  acc (cond-> acc
+                        (and (int? offset) (= 2 (count span)))
+                        (update :positioned conj {:offset offset :span (vec span) :id id}))]
+              (if id
+                (-> acc
+                    (assoc-in [:targets index] id)
+                    (update :linked inc))
                 (update acc :unlinked inc))))
           {:targets {} :positioned [] :linked 0 :unlinked 0}
           (get-in record [:reply_to :replies])))
@@ -245,7 +249,8 @@
   "The reply act a fragment starting at START and ending at END answers:
    among POINTERS in the paragraph whose span contains START, the last one
    whose offset is before END (the nearest at or before START, or one
-   inside the fragment, as in \"OK, I've tried the hydra, and 🈸:yes\")."
+   inside the fragment, as in \"OK, I've tried the hydra, and 🈸:yes\").
+   Nil when that pointer linked nothing."
   [pointers start end]
   (->> pointers
        (filter (fn [{[a b] :span}] (and (<= a start) (< start b))))
