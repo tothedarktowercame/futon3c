@@ -120,6 +120,34 @@ open child), and escalates to Joe only after the bounded reminders are
 spent. Joe hears about orders that cannot move, not about agents that are
 quiet.
 
+## The heads-up display: HAPPENED and DIDN'T HAPPEN (Joe, 2026-10-04)
+Because 象 now reads after a turn has landed (the fast path: 小象's
+provisional parse at send, 象's finalised reading after), 象 can keep the
+marble-run state across turns: which ports closed this turn and which are
+still open from earlier ones. The stepper's HAPPENED pane becomes a HUD:
+closed this turn, and DIDN'T HAPPEN -- what is still open, with its age.
+It is the same judgement as requirements 3 and 7 (one judge: the P24
+kernel), shown to Joe instead of belled to an agent.
+
+Inputs, all already produced:
+- Joe's side: 象's reading, an intent per fragment (ask-action, accept,
+  redirect, ...).
+- The agent's side: the reply proforma marks, read classically
+  (🈸 offer, 🈳 unresolved, ㊭ propose, 🈡 withdraw, ...; commit 50c6b7c1
+  reads them into 象).
+- Commits: the happened note lists them; a commit can carry out an
+  accepted offer, which closes the gap the first P24 run found.
+
+Live example, this session (claude-17, 2026-10-03/04): open with no closing
+answer -- the xiang-trace false alarm under the jvm recorder, the operator
+evidence id not recorded, making `jvm` the saved default, the
+natural-deduction lab note. Each was a 🈸 or 🈳 that nothing recorded as
+open.
+
+Missing piece: the adapter from a settled turn (record + reading +
+happened) and the agent's marked reply to P24 acts. P24's note lists it as
+not built.
+
 ## Order of work
 1. Write both cases up as P24 fixtures (`test/futon3c/logic/xiang_fixtures/`):
    the claude-4/codex-19 half-done order (locate it first), expectation
