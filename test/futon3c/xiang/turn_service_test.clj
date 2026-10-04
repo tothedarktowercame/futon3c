@@ -756,3 +756,24 @@
     (is (nil? (:ports (ts/read-record store id))))
     (is (str/includes? (or (get-in (svc/health (:svc h)) [:detail]) "") "ports not computed")
         "the failure is health detail only")))
+
+(deftest an-operator-turn-records-what-it-answers
+  ;; Joe points with `<mark>:`; the agent's newest turn since his last one
+  ;; (here one that answered a bellback) carries that mark.
+  (let [h (harness {:recent-agent-turns
+                    (fn [agent]
+                      (is (= "claude-17" agent))
+                      [{:turn-id "t-nudge" :origin "work-orders"
+                        :text "㊥ (gist) nudged.\n\n🈸 (still open) Shall I start?"}
+                       {:turn-id "t-joe" :origin "operator"
+                        :text "🈸 (next) Shall I do the other thing?"}])})
+        {:keys [id]} (turn! h {:text "🈸: yes, go ahead.\n\n㊩ the lighter is still red."})
+        rec (ts/read-record (get-in (:svc h) [:config :store]) id)]
+    (is (= ["t-nudge"] (map :turn-id (get-in rec [:reply_to :replies]))))
+    (is (= ["㊩"] (map :mark (get-in rec [:reply_to :declared_intents]))))))
+
+(deftest a-failing-candidate-source-never-fails-the-record
+  (let [h (harness {:recent-agent-turns (fn [_] (throw (ex-info "boom" {})))})
+        {:keys [id]} (turn! h {:text "🈸: yes"})]
+    (is (some? (ts/read-record (get-in (:svc h) [:config :store]) id)))))
+

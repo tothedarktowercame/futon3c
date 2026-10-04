@@ -42,6 +42,7 @@
    shows the notice itself, so the record carries no `repl_notice_*` fields
    written by the server."
   (:require [clojure.string :as str]
+            [futon3c.xiang.reply-target :as rt]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts])
@@ -407,6 +408,19 @@
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
+        ;; Which agent turn this operator turn answers (Joe's `<mark>:`
+        ;; pointers), resolved classically against the agent's turns since
+        ;; his previous one. Never fails the record.
+        _ (when-let [recent (cfg svc :recent-agent-turns)]
+            (when (and agent-id (= "operator" (or (:origin record) "operator")))
+              (try
+                (let [{:keys [replies declared-intents]}
+                      (rt/resolve-targets (:source_text record) (recent agent-id))]
+                  (when (or (seq replies) (seq declared-intents))
+                    (ts/update-record! (cfg svc :store) id
+                                       #(assoc % :reply_to {:replies replies
+                                                            :declared_intents declared-intents}))))
+                (catch Exception _ nil))))
         ;; Off the request path: the caller (Emacs, synchronously) is waiting
         ;; on this response, and a busy futon1b must not hold it up.
         to-seat? (= (cfg svc :seat) agent-id)

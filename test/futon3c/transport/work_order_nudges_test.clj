@@ -108,3 +108,11 @@
     (is (= [:nudge] (map :action (run-case! {"wo-root" (root [])} true)))
         "an unmarked or non-asking reply is not a wait")))
 
+
+(deftest recent-agent-turns-start-at-the-operators-previous-turn
+  (with-redefs-fn {#'http/!recent-turns (atom {})}
+    #(do (#'http/note-turn-text! "claude-17" "old reply to joe" "t1" "operator")
+         (#'http/note-turn-text! "claude-17" "a bellback answer" "t2" "kimi-1")
+         (#'http/note-turn-text! "claude-17" "reply to joe" "t3" "operator")
+         (#'http/note-turn-text! "claude-17" "nudge answer" "t4" "work-orders")
+         (is (= ["t4" "t3"] (map :turn-id (http/recent-agent-turns "claude-17")))))))

@@ -1517,10 +1517,39 @@
   [text]
   (boolean (and (string? text) (re-find #"(?m)^\s*(?:🈸|🈯)" text))))
 
+(defonce ^:private !recent-turns
+  ;; agent-id -> its last few ended turns, oldest first:
+  ;; [{:turn-id :origin :text :at}]. The candidates an operator turn may be
+  ;; answering (futon3c.xiang.reply-target).
+  (atom {}))
+
 (defn- note-turn-text!
-  "Record whether AGENT-ID's turn that just ended is waiting on Joe."
-  [agent-id text]
-  (swap! !asked-operator assoc (canonical-job-agent-id agent-id) (asks-operator? text)))
+  "Record AGENT-ID's turn that just ended: whether it is waiting on Joe, and
+   its text as a reply-target candidate. ORIGIN is \"operator\" for a REPL
+   turn from Joe, else the job's caller."
+  ([agent-id text] (note-turn-text! agent-id text nil nil))
+  ([agent-id text turn-id origin]
+   (let [agent (canonical-job-agent-id agent-id)]
+     (swap! !asked-operator assoc agent (asks-operator? text))
+     (when (and (string? text) (not (str/blank? text)))
+       (swap! !recent-turns update agent
+              (fn [turns]
+                (vec (take-last 12 (conj (vec turns)
+                                         {:turn-id (some-> turn-id str) :origin (some-> origin str)
+                                          :text text :at (System/currentTimeMillis)})))))))))
+
+(defn- operator-caller?
+  "Whether CALLER is the operator at the REPL (Emacs sends \"joe\")."
+  [caller]
+  (contains? #{"joe" "operator"} (some-> caller str str/trim)))
+
+(defn recent-agent-turns
+  "AGENT-ID's turns since the operator's previous turn, newest first: the
+   last operator-origin turn and every turn after it."
+  [agent-id]
+  (let [turns (get @!recent-turns (canonical-job-agent-id agent-id) [])
+        start (or (last (keep-indexed (fn [i t] (when (= "operator" (:origin t)) i)) turns)) 0)]
+    (vec (reverse (subvec turns start)))))
 
 (defn- work-order-agent-state
   [agent-id]
@@ -2322,7 +2351,8 @@
           :bellback-job-id (some-> @bellback-request :bell-job-id)})
         ;; E2 must settle the ending job's order before E3 observes its holder.
         ;; The check itself runs outside the finalize path and cannot fail it.
-        (note-turn-text! (:agent-id updated-terminal-job) result-text)
+        (note-turn-text! (:agent-id updated-terminal-job) result-text
+                         job-id (:caller updated-terminal-job))
         (*schedule-work-order-check!* (:agent-id updated-terminal-job))))
     ;; A caller with no registered push or inbox route can never leave the
     ;; polling-only state. Record that terminal disposition here; unlike seat
@@ -6601,7 +6631,8 @@
                           ;; A REPL turn is not an invoke job, so finalize never
                           ;; checks it; Joe's "ok please continue" turns are
                           ;; where the codex chains do most of their work.
-                          (note-turn-text! aid (:result result))
+                          (note-turn-text! aid (:result result) turn-id
+                                           (if (operator-caller? caller) "operator" caller))
                           (*schedule-work-order-check!* (str aid)))))})
                   ;; Tell the operator what the turn is waiting on (if anything).
                   (when-let [ev (queued-turn-activity aid turn-id)]
@@ -11474,6 +11505,7 @@
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
                     :draft xiang-draft
+                    :recent-agent-turns recent-agent-turns
                     :pattern-candidates xiang-pattern-candidates
                     :skip-routine? (contains? #{"1" "true" "yes"}
                                               (some-> (System/getenv "FUTON3C_XIANG_SKIP_ROUTINE") str/lower-case))
