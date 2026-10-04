@@ -24,6 +24,26 @@
        (remove str/blank?)
        vec))
 
+(defn- paragraph-spans
+  "The paragraphs of TEXT as `paragraphs` gives them, each with its start
+   in TEXT as a Java string index: [[start para] ..]."
+  [text]
+  (let [s (str text)
+        m (re-matcher #"\n\s*\n" s)
+        pieces (loop [from 0 acc []]
+                 (if (.find m)
+                   (recur (.end m) (conj acc [from (subs s from (.start m))]))
+                   (conj acc [from (subs s from)])))]
+    (vec (for [[from piece] pieces
+               :let [t (str/trim piece)]
+               :when (not (str/blank? t))]
+           [(+ from (str/index-of piece t)) t]))))
+
+(defn- cp
+  "Java string index I of S as a codepoint offset (the reading's unit)."
+  [^String s i]
+  (.codePointCount s 0 (int i)))
+
 (defn- opening
   "[mark pointer? bracket] for a paragraph opening with a proforma mark,
    else nil. pointer? is true when the mark is followed by a colon, or by a
@@ -46,7 +66,8 @@
   (str/replace para #"`[^`]*`|\"[^\"]*\"|“[^”]*”" #(apply str (repeat (count %) \space))))
 
 (defn- inline-pointers
-  "Marks used in the colon form after the start of PARA, in order, e.g. the
+  "[[index mark] ..]: marks used in the colon form after the start of
+   PARA, in order, with their Java string index in PARA, e.g. the
    🈸 in \"OK, I've tried the hydra, and 🈸:yes\" (turn 392). A bare mark
    inside a sentence is not a pointer: it is often a quotation.
    Known false positive: an unquoted sentence about the notation (\"the
@@ -67,26 +88,32 @@
                                   (if (and (pos? at) (str/starts-with? (str/triml after) ":"))
                                     (conj acc [at m])
                                     acc))))))))
-         (sort-by first)
-         (map second))))
+         (sort-by first))))
 
 (defn operator-marks
-  "Joe's marked paragraphs: [{:index :mark :pointer? :text}], plus
-   :bracket for the `<mark> (target):` form. A paragraph
-   may also carry `<mark>:` pointers after its start; each is an entry with
-   :pointer? true and :inline? true, and the paragraph's :index."
+  "Joe's marked paragraphs: [{:index :mark :pointer? :text :offset :span}],
+   plus :bracket for the `<mark> (target):` form. A paragraph may also
+   carry `<mark>:` pointers after its start; each is an entry with
+   :pointer? true and :inline? true, and the paragraph's :index. :offset
+   is the mark's position in TEXT and :span [start end] the paragraph's,
+   in codepoints, zero-based, end-exclusive: the unit of the reading's
+   fragment :start/:end."
   [text]
-  (vec (mapcat (fn [i para]
-                 (concat
-                  (when-let [[m pointer? bracket] (opening para)]
-                    [(cond-> {:index i :mark m :pointer? pointer?
-                              :text (str/triml (str/replace-first (subs para (count m))
-                                                                  (if bracket #"^\s*\([^)]*\)\s*:\s*" #"^\s*:\s*")
-                                                                  ""))}
-                       bracket (assoc :bracket bracket))])
-                  (for [m (inline-pointers para)]
-                    {:index i :mark m :pointer? true :inline? true :text para})))
-               (range) (paragraphs text))))
+  (let [s (str text)]
+    (vec (mapcat (fn [i [p0 para]]
+                   (let [span [(cp s p0) (cp s (+ p0 (count para)))]]
+                     (concat
+                      (when-let [[m pointer? bracket] (opening para)]
+                        [(cond-> {:index i :mark m :pointer? pointer?
+                                  :text (str/triml (str/replace-first (subs para (count m))
+                                                                      (if bracket #"^\s*\([^)]*\)\s*:\s*" #"^\s*:\s*")
+                                                                      ""))
+                                  :offset (first span) :span span}
+                           bracket (assoc :bracket bracket))])
+                      (for [[at m] (inline-pointers para)]
+                        {:index i :mark m :pointer? true :inline? true :text para
+                         :offset (cp s (+ p0 at)) :span span}))))
+                 (range) (paragraph-spans s)))))
 
 (defn- squash
   "S lower-cased with runs of whitespace as one space, trimmed."
@@ -114,14 +141,15 @@
    its paragraphs does; otherwise :newest or :none as above.
 
    Returns {:replies [{:index :mark :rule :turn-id :origin :paragraph
-   :paragraph-mark :bracket}] :declared-intents [{:index :mark}]}, where
+   :paragraph-mark :bracket :offset :span}] :declared-intents [{:index :mark}]}, where
    :paragraph-mark is the mark of the agent paragraph matched (it differs
-   from :mark under :bracket-match)."
+   from :mark under :bracket-match), and :offset/:span are as in
+   `operator-marks`."
   [text candidates]
   (let [ms (operator-marks text)
         cands (vec candidates)]
     {:replies
-     (vec (for [{:keys [index mark bracket]} (filter :pointer? ms)
+     (vec (for [{:keys [index mark bracket offset span]} (filter :pointer? ms)
                 :let [b (some-> bracket squash)
                       found (if bracket
                               (when (>= (count b) 8)
@@ -142,6 +170,7 @@
                         {:index index :mark mark :rule :newest
                          :turn-id (:turn-id c) :origin (:origin c)}
                         {:index index :mark mark :rule :none}))
-              bracket (assoc :bracket bracket))))
+              bracket (assoc :bracket bracket)
+              true (assoc :offset offset :span span))))
      :declared-intents (vec (for [{:keys [index mark]} (filter #(or (not (:pointer? %)) (:bracket %)) ms)]
                               {:index index :mark mark}))}))

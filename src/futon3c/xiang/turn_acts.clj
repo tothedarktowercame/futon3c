@@ -107,7 +107,8 @@
                                  :agent (:agent seat) :session (:session seat)
                                  :turn base
                                  :text (:text frag)}
-                          (:target frag) (assoc :about (:target frag))))
+                          (:target frag) (assoc :about (:target frag))
+                          (int? (:start frag)) (assoc :start (:start frag) :end (:end frag))))
                 (update acc :skipped inc)))
             {:acts [] :skipped 0}
             (mapcat (fn [sentence]
@@ -221,26 +222,49 @@
    reply names the agent turn by the stream id the server saw, which
    session records do not carry, so it is matched on the paragraph's mark
    (:paragraph-mark, else :mark for records stored before it) and stored
-   paragraph excerpt against SEEN, the {[mark excerpt] [act-id ..]} of the session's earlier
-   replies. A pointer matching no paragraph, or more than one, links
-   nothing. Returns {:targets {..} :unlinked n}."
+   paragraph excerpt against SEEN, the {[mark excerpt] [act-id ..]} of
+   the session's earlier replies. A pointer matching no paragraph, or more
+   than one, links nothing. Returns {:targets {..} :positioned [{:offset
+   :span :id} ..] :linked n :unlinked n}; :positioned holds the linked pointers that
+   carry an :offset and :span (stored from 2026-10-04, 1d on)."
   [record seen]
-  (reduce (fn [acc {:keys [index mark rule paragraph paragraph-mark]}]
+  (reduce (fn [acc {:keys [index mark rule paragraph paragraph-mark offset span]}]
             (let [ids (when (#{"mark-match" "bracket-match"} (some-> rule name))
                         (get seen [(or paragraph-mark mark) paragraph]))]
               (if (= 1 (count ids))
-                (assoc-in acc [:targets index] (first ids))
+                (cond-> (-> acc
+                            (assoc-in [:targets index] (first ids))
+                            (update :linked inc))
+                  (and (int? offset) (= 2 (count span)))
+                  (update :positioned conj {:offset offset :span (vec span) :id (first ids)}))
                 (update acc :unlinked inc))))
-          {:targets {} :unlinked 0}
+          {:targets {} :positioned [] :linked 0 :unlinked 0}
           (get-in record [:reply_to :replies])))
+
+(defn- positioned-target
+  "The reply act a fragment starting at START and ending at END answers:
+   among POINTERS in the paragraph whose span contains START, the last one
+   whose offset is before END (the nearest at or before START, or one
+   inside the fragment, as in \"OK, I've tried the hydra, and 🈸:yes\")."
+  [pointers start end]
+  (->> pointers
+       (filter (fn [{[a b] :span}] (and (<= a start) (< start b))))
+       (filter #(< (:offset %) (or end (inc start))))
+       (sort-by :offset)
+       last
+       :id))
 
 (defn- link-pointers
   "TURN-ACTS with each kinded operator fragment in a pointer paragraph
-   targeting the reply act that paragraph answers. A fragment that already
+   targeting the reply act that paragraph answers. When the stored
+   pointers carry positions and the fragment its :start, the fragment is
+   assigned by position (`positioned-target`); otherwise by the first
+   paragraph whose text contains the fragment's, as before positions were
+   stored. A fragment that already
    has a target (an approve that accepted the preceding offer) keeps it
    unchanged: the kernel reads an acceptance's :target as the one offer
    accepted (`agreemento`), and a vector there loses the agreement."
-  [record turn-acts targets]
+  [record turn-acts {:keys [targets positioned]}]
   (if (empty? targets)
     turn-acts
     (let [paras (reply-target/paragraphs (:source_text record))
@@ -249,9 +273,11 @@
                       (when-not (str/blank? t)
                         (first (keep-indexed (fn [i p] (when (str/includes? p t) i)) paras)))))]
       (with-meta
-        (mapv (fn [{:keys [author text target] :as act}]
+        (mapv (fn [{:keys [author text target start end] :as act}]
                 (if-let [reply-id (and (= "operator" author) (nil? target)
-                                       (some-> (para-of text) targets))]
+                                       (if (and (seq positioned) (int? start))
+                                         (positioned-target positioned start end)
+                                         (some-> (para-of text) targets)))]
                   (assoc act :target reply-id)
                   act))
               turn-acts)
@@ -285,12 +311,12 @@
            seen {}
            pointers {:linked 0 :unlinked 0}]
       (if-let [{:keys [record reading reply commits]} (first todo)]
-        (let [{:keys [targets unlinked]} (pointer-targets record seen)
+        (let [{:keys [linked unlinked] :as pointers-here} (pointer-targets record seen)
               turn-acts (link-pointers record
                                        (turn->acts record reading reply commits
                                                    {:preceding-offer preceding-offer
                                                     :carries-out accepted})
-                                       targets)
+                                       pointers-here)
               skipped-here (:skipped (meta turn-acts))
               accepted-here (some (fn [{:keys [kind target]}]
                                     (when (= kind :accept) target))
@@ -319,7 +345,7 @@
                  (reduce (fn [m [k id]] (update m k (fnil conj []) id))
                          seen (reply-paragraphs record reply turn-acts))
                  (-> pointers
-                     (update :linked + (count targets))
+                     (update :linked + linked)
                      (update :unlinked + unlinked))))
         (with-meta acts {:skipped skipped :pointers pointers})))))
 

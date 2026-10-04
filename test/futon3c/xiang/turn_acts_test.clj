@@ -231,3 +231,48 @@
     (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
     (is (some #(= "claude-17-turn-42-r-2" (:target %)) acts)
         "the ㊟ paragraph, joined on its own mark, not the operator's 🈯")))
+
+;; ---------------------------------------------------------------------------
+;; Fragments assigned to pointers by position (1d)
+
+(deftest two-pointers-in-one-paragraph-are-assigned-by-position
+  (testing "turn 43 with both of its pointers, as the resolver gives them:
+            the 🈯 bracket pointer at codepoint 0 and the inline 🈸 at 160
+            (161 as a Java string index, after the 🈯 surrogate pair)"
+    (let [t42 (fixture-turn "turn-uJNPcf")
+          t43 {:record (read-json "turn-WdLaYK.json")
+               :reading (read-json "turn-WdLaYK.json.analysis.json")
+               :reply ""}
+          stored (futon3c.xiang.reply-target/resolve-targets
+                  (get-in t43 [:record :source_text])
+                  [{:turn-id "stream-id" :origin "operator" :text (:reply t42)}])
+          acts (ta/session-acts [t42 (assoc-in t43 [:record :reply_to] stored)])
+          by-start (into (sorted-map)
+                         (for [a acts :when (= "claude-17-turn-43" (:turn a))]
+                           [(:start a) (:target a)]))]
+      (is (= [0 160] (map :offset (:replies stored))))
+      (is (= {:linked 2 :unlinked 0} (:pointers (meta acts))))
+      (is (= {0 "claude-17-turn-42-r-2"
+              160 "claude-17-turn-42-r-4" 247 "claude-17-turn-42-r-4" 280 "claude-17-turn-42-r-4"}
+             by-start)
+          "the clarify before the 🈸 answers the ㊟; the rest answer the 🈸"))))
+
+(deftest a-short-fragment-of-a-later-paragraph-is-not-linked
+  (testing "\"yes\" in paragraph 2 also occurs in the pointer paragraph 1;
+            by text it would take paragraph 1's link, by position it does not"
+    (let [asked {:record {:turn_id "t-1" :created_at "2026-10-04T10:00:00Z" :agent_id "a"
+                          :session_id "s" :source_text "start"}
+                 :reading {:sentences []}
+                 :reply "🈸 (next) Shall I do X?"}
+          src "🈸: yes, do it\n\nyes"
+          answer {:record {:turn_id "t-2" :created_at "2026-10-04T10:01:00Z" :agent_id "a"
+                           :session_id "s" :source_text src
+                           :reply_to (futon3c.xiang.reply-target/resolve-targets
+                                      src [{:turn-id "x" :origin "operator" :text "🈸 (next) Shall I do X?"}])}
+                  :reading {:sentences [{:id "s1" :fragments [{:intent "qualify" :text "🈸: yes, do it" :start 0 :end 13}]}
+                                        {:id "s2" :fragments [{:intent "qualify" :text "yes" :start 15 :end 18}]}]}
+                  :reply ""}
+          acts (ta/session-acts [asked answer])
+          target-of (into {} (map (juxt :id :target)) acts)]
+      (is (= "t-1-r-0" (target-of "t-2-f-s1-0")))
+      (is (nil? (target-of "t-2-f-s2-0"))))))
