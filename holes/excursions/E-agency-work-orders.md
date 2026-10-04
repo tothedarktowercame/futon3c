@@ -160,6 +160,30 @@ Packets: W1 the ledger and E1/E2 with the list route (no nudges);
 W2 the pure E3 decision; W3 wiring E3 to job end, the close route, and
 `agency_send.py --close-order`.
 
+## 大象: the classical reader of agent turns (Joe, 2026-10-04)
+Joe: 象 (an LLM) must not run over agent text, but the HUD and the token
+system need a full account of what happened and what did not. So a
+classical reader, 大象, parses each agent turn at its end, in well under a
+second, and only then does the kernel (`futon3c.logic.xiang`: McCarthy's
+speech acts, as in Elephant 2000; Fong's open ports) judge what closed and
+what is open. Order per turn: 大象 produces acts, then the kernel queries.
+
+大象's inputs, all available at turn end without an LLM:
+- the reply's proforma marks with their bracketed targets
+  (`turn-record/reply-marks`): 🈸 offer, 🈳 unresolved, ㊭ propose,
+  🈡 withdraw, 🈹 retract, ㊣ approve, ...;
+- the bells the agent sent during the job (Agency job records whose caller
+  is the agent: recipient, mode, job id), which are the work orders;
+- parks it set (awaiting job ids);
+- commits it made (the Agent-Session / Agency-Job trailers);
+- ownership claims in plain words ("I own", "my blocker", "will replay"),
+  read by fixed patterns as :promise acts, and kept only when they name a
+  next step.
+
+Output: P24 acts with stable ids, so the same turn read twice gives the
+same acts. The turn->acts adapter (kimi-1, job a6d2d865) is the first part
+of 大象: marks and commits. Bells, parks and claims follow.
+
 ## The heads-up display: HAPPENED and DIDN'T HAPPEN (Joe, 2026-10-04)
 Because 象 now reads after a turn has landed (the fast path: 小象's
 provisional parse at send, 象's finalised reading after), 象 can keep the
