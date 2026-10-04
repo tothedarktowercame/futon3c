@@ -120,6 +120,46 @@ open child), and escalates to Joe only after the bounded reminders are
 spent. Joe hears about orders that cannot move, not about agents that are
 quiet.
 
+## Token design for the live case (claude-17, 2026-10-04)
+Joe, 2026-10-04: codex-18/19/20 keep reaching mutual stasis and he does not
+want to tickle them; build the working system, not a one-off watcher.
+The case: codex-19 orders codex-20 (implement) and codex-18 (replay); each
+result comes back to codex-19 by auto-bellback; codex-19 replies ("handoff
+closed", "codex-18 will replay") and its turn ends. If that turn dispatched
+nothing, all three are idle and nobody owes anything visibly.
+
+A token is a work order. It is always held by exactly one agent, and the
+machine checks the holder at the one moment stasis can begin: the end of a
+job. No timer.
+
+Order shape: {:id :requester :debtor :parent :job-id :text :opened-at
+:state (:open | :delivered | :closed) :closed-by :nudges [...]}.
+
+Events:
+- E1 open. A work bell (mode work) from a registered agent opens an order,
+  debtor = recipient. Its parent is the order the caller is working on (the
+  order whose job the caller is running). A work bell from an agent holding
+  no order also opens a chain root: debtor = the caller, requester = the
+  operator. The root is what codex-19 is carrying for Joe.
+- E2 deliver. The debtor's job ends: the order is :delivered and the token
+  returns to the requester, by the existing auto-bellback. When that bellback
+  job ends, the order closes (:fulfil) and the requester holds the parent.
+- E3 check. On every job end, for the agent whose job ended: if it is the
+  debtor of an open order with no open child, and it has no running or
+  queued job and no park, it is holding a token still. Nudge it once, by a
+  work bell naming the order and the choice it owes: dispatch the next step,
+  or close the order (`POST /api/alpha/work-orders/:id/close` with a reason).
+  If its next job ends the same way, the order goes to its requester as a
+  problem; for a root, to Joe's HUD and `GET /api/alpha/work-orders`.
+- Close: the debtor or requester closes with a reason; Joe can close any.
+
+Every transition is also written as a P24 act (:promise creates, :fulfil /
+:release / :lapse close), so the kernel and the HUD read the same orders.
+
+Packets: W1 the ledger and E1/E2 with the list route (no nudges);
+W2 the pure E3 decision; W3 wiring E3 to job end, the close route, and
+`agency_send.py --close-order`.
+
 ## The heads-up display: HAPPENED and DIDN'T HAPPEN (Joe, 2026-10-04)
 Because 象 now reads after a turn has landed (the fast path: 小象's
 provisional parse at send, 象's finalised reading after), 象 can keep the
