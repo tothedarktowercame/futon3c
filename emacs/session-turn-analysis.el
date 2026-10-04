@@ -337,7 +337,11 @@ record `not-requested' and no seat is ever belled for it."
                           ,(when agent-chat--last-evidence-id
                              `(evidence-id . ,agent-chat--last-evidence-id))
                           (failed . ,(if failed t :json-false))
-                          (analysis-requested . ,(if requested t :json-false)))))
+                          (analysis-requested . ,(if requested t :json-false))
+                          ;; The reading starts at send: the JVM dispatches
+                          ;; "soon" (off its request path).  A not-requested
+                          ;; turn carries no dispatch key and is never read.
+                          ,(when requested '(dispatch . "soon")))))
          (response (session-mode--xiang-request "POST" "/api/alpha/xiang/turns" payload)))
     (unless (and response (eq t (alist-get 'ok response)))
       (error "象 turn recording was refused: %s" (or response "no answer")))
@@ -352,6 +356,11 @@ record `not-requested' and no seat is ever belled for it."
       (unless (stringp path)
         (error "象 turn recording returned no path: %s" response))
       (setq session-mode--last-analysis-request path)
+      ;; The reading started at send: ask about it until it settles.  It may
+      ;; land before the agent's reply ends; that is the point.
+      (when requested
+        (session-mode--jvm-poll-turn (file-name-base path) path
+                                     session-mode-turn-jvm-poll-tries))
       path)))
 
 (defun session-mode--record-turn-via-files (text failed original-text)
@@ -1644,11 +1653,17 @@ First reply lines plus one line per commit made during the turn."
       (let ((coding-system-for-write 'utf-8-unix))
         (insert (json-encode record))))))
 
+(defvar session-mode--jvm-turn-state (make-hash-table :test #'equal)
+  "Record path -> `polling' or `landed', for the `jvm' recorder.
+Polling starts at send and the landed hook fires once per turn; a reply
+that ends after the reading landed never restarts either.")
+
 (defun session-mode--jvm-dispatch-after-reply (path response)
-  "Hand PATH's reply and commits to the JVM, then poll for the reading.
-The JVM attaches the happened_summary and dispatches the turn to the
-象 seat itself; a refusal here leaves the record `requested', which is
-the honest state."
+  "Hand PATH's reply and commits to the JVM at turn finalisation.
+\"What happened\" is classical (no LLM), like the \"Cooked for Ns\" line:
+it never triggers or waits for a reading.  Polling started at send is
+left alone; a record that is not being polled (a files-era one) gets
+polled here.  A refusal leaves the record `requested', the honest state."
   (let* ((id (file-name-base path))
          (commits (mapcar
                    (lambda (c)
@@ -1665,14 +1680,18 @@ the honest state."
                     (commits . ,(vconcat commits))))))
     (if answer
         ;; Whatever the dispatch result (queued, drafted as routine), the
-        ;; record's own status is the truth: poll it.
-        (session-mode--jvm-poll-turn id path session-mode-turn-jvm-poll-tries)
+        ;; record's own status is the truth: poll it — unless send already
+        ;; started a poll, or the reading already landed.
+        (unless (memq (gethash path session-mode--jvm-turn-state)
+                      '(polling landed))
+          (session-mode--jvm-poll-turn id path session-mode-turn-jvm-poll-tries))
       (session-mode--set-analysis-health
        'failing (format "%s: the JVM did not answer; the record stays `requested'" id)))))
 
 (defun session-mode--jvm-poll-turn (id path tries)
   "Ask about ID's reading again after `session-mode-turn-jvm-poll-delay'.
 TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
+  (puthash path 'polling session-mode--jvm-turn-state)
   (run-at-time session-mode-turn-jvm-poll-delay nil
                #'session-mode--jvm-poll-now id path tries))
 
@@ -1685,9 +1704,11 @@ TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
                                           (alist-get 'record answer)))))
        (cond
         ((equal status "analyzed")
+         (puthash path 'landed session-mode--jvm-turn-state)
          (session-mode--set-analysis-health 'ok (format "%s: analysed" id))
          (run-hook-with-args 'session-mode-analysis-landed-functions path))
         ((member status '("refused" "failed"))
+         (puthash path 'landed session-mode--jvm-turn-state)
          (session-mode--analysis-note-done path)
          (session-mode--set-analysis-health
           'failing (format "%s: job refused or failed" id))
@@ -1697,10 +1718,12 @@ TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
         ;; Settled without a reading (routine draft, declared, policy off):
         ;; nothing more will land.
         ((member status '("drafted" "declared" "not-requested"))
+         (puthash path 'landed session-mode--jvm-turn-state)
          (session-mode--analysis-note-done path))
         ((> tries 1)
          (session-mode--jvm-poll-turn id path (1- tries)))
         (t
+         (puthash path 'landed session-mode--jvm-turn-state)
          (session-mode--set-analysis-health
           'failing (format "%s: no reading after %d polls"
                            id session-mode-turn-jvm-poll-tries))))))))

@@ -63,6 +63,7 @@
    :reap-late-tries 6                           ; session-mode-analysis-reap-late-tries
    :store-busy-delays [60 180 600]              ; session-mode-analysis-store-busy-retry-delays
    :notice-max-attempts 5                       ; session-mode-withdrawal-notice-max-attempts
+   :settle-evidence-delay 1800                  ; a settled turn waits this long for happened
    :surface "emacs-repl"                        ; agency_send.py --surface default
    :vocabulary tr/default-vocabulary
    :brief-paths tr/default-brief-paths
@@ -265,12 +266,21 @@
 (declare append-evidence!)
 
 (defn- settle-evidence!
-  "Write settled turn ID as evidence, off the caller's path."
+  "Write settled turn ID as evidence, off the caller's path. The packet
+   should carry both the reading and the happened summary, so a turn whose
+   reply has not ended yet waits for it, bounded: after
+   :settle-evidence-delay it is written without the summary. The record is
+   re-read at write time, so a summary that landed in the meantime rides
+   along; the deterministic id keeps a second write a quiet duplicate."
   [svc id reading how]
-  (let [record (ts/read-record (cfg svc :store) id)]
-    ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-     #(append-evidence! svc (turn-evidence-entry id record reading how)
-                        (cfg svc :store-busy-delays)))))
+  (let [store (cfg svc :store)
+        write! (fn []
+                 ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+                  #(append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
+                                     (cfg svc :store-busy-delays))))]
+    (if (:happened_summary (ts/read-record store id))
+      (write!)
+      ((cfg svc :schedule!) (cfg svc :settle-evidence-delay) write!))))
 
 (defn append-evidence!
   "Append ENTRY through the :evidence! effect; never throw, never block the
@@ -318,11 +328,13 @@
 
 (defn record-turn!
   "Record one operator turn. OPTS are `tr/make-record`'s, plus :dispatch
-   (:later, the default, waits for `attach-happened!`; :now dispatches at
-   once, as an externally captured turn does; :none records only and marks
+   (:later, the default, waits for `attach-happened!`; :soon dispatches on
+   the scheduler at delay 0, so the caller is answered at once and the
+   reading still starts at send; :now dispatches synchronously, as an
+   externally captured turn does; :none records only and marks
    the record \"declared\" — settled without a reading, never dispatched).
    Returns {:id :path :record :dispatch} where :dispatch is the dispatch result or
-   :pending/:skipped/:declared.
+   :pending/:skipped/:declared/:scheduled.
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
@@ -337,7 +349,7 @@
         ;; first; otherwise it is drafted off the request path, and dispatch!
         ;; drafts any record still without one.
         draft (when (= dispatch :now) (draft! svc id))
-        _ (when-not (= dispatch :now)
+        _ (when-not (contains? #{:now :soon} dispatch)
             ((or (cfg svc :draft-async!) #((cfg svc :schedule!) 0 %))
              #(draft! svc id)))
         result (cond
@@ -346,6 +358,11 @@
                                                            #(assoc % :analysis_status "declared"))
                                         :declared)
                  (= dispatch :now) (dispatch! svc id {})
+                 ;; :soon (the Emacs jvm recorder): the reading starts at
+                 ;; send, off the request path — POST still answers at once;
+                 ;; dispatch! drafts the record itself.
+                 (= dispatch :soon) (do ((cfg svc :schedule!) 0 #(dispatch! svc id {}))
+                                        :scheduled)
                  :else :pending)]
     {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
      :dispatch result :draft (some? (or draft (ts/read-draft (cfg svc :store) id)))}))
@@ -378,22 +395,38 @@
     draft))
 
 (defn attach-happened!
-  "Attach what the agent did while answering turn ID, then dispatch it: 象
-   reads the turn together with the reply. HAPPENED is a ready summary string
-   or {:reply TEXT :commits [...]}. A failure to build or store the summary
-   still dispatches, as in Emacs."
+  "Attach what the agent did while answering turn ID. The summary is
+   classical (no LLM) and lands at turn finalisation, like the \"Cooked for
+   Ns\" line: it never triggers or waits for a reading. Only a turn still
+   `requested' with no job — a `files'-era record or a bridge's — is
+   dispatched here, as before. On an already settled turn the summary joins
+   the reading in the settled evidence packet (idempotent id, off-path).
+   HAPPENED is a ready summary string or {:reply TEXT :commits [...]}."
   [svc id happened]
-  (let [summary (try (cond (string? happened) happened
+  (let [store (cfg svc :store)
+        summary (try (cond (string? happened) happened
                            (map? happened) (happened-summary (:reply happened) (:commits happened))
                            :else nil)
                      (catch Exception _ nil))]
     (when summary
-      (try (ts/update-record! (cfg svc :store) id #(assoc % :happened_summary summary))
+      (try (ts/update-record! store id #(assoc % :happened_summary summary))
            (catch Exception _ nil)))
-    (let [record (ts/read-record (cfg svc :store) id)]
+    (let [record (ts/read-record store id)
+          status (:analysis_status record)]
       (cond
         (nil? record) {:dispatched false :reason :record-not-found}
         (= (cfg svc :seat) (:agent_id record)) {:dispatched false :reason :addressed-to-seat}
+        (contains? #{"analyzed" "drafted"} status)
+        (do (settle-evidence! svc id
+                              (if (= status "analyzed")
+                                (or (ts/read-analysis store id) {})
+                                (or (ts/read-draft store id) {}))
+                              (keyword status))
+            {:dispatched false :reason (keyword status)})
+        (contains? #{"declared" "not-requested"} status)
+        {:dispatched false :reason (keyword status)}
+        (get-in record [:analysis_dispatch :job_id])
+        {:dispatched false :reason :already-dispatched}
         :else (dispatch! svc id {})))))
 
 ;; ---------------------------------------------------------------------------

@@ -22,14 +22,17 @@
 (defvar session-mode-turn-vocabulary-version)
 
 (defun session-turn-analysis-jvm-test--record (policy)
-  "Record one turn with POLICY; return (PATH . CALLS) the stub saw."
-  (let ((calls nil))
+  "Record one turn with POLICY; return (PATH CALLS . POLLS) the stub saw."
+  (let ((calls nil) (polls nil)
+        (session-mode--jvm-turn-state (make-hash-table :test #'equal)))
     (cl-letf ((session-mode-turn-recorder 'jvm)
               (session-mode-turn-analysis-policy policy)
               (agent-chat--agent-id "claude-17")
               (agent-chat--session-id "sess-1")
               (agent-chat--current-turn-id "claude-17-turn-3")
               (agent-chat--last-evidence-id "emacs-abc")
+              ((symbol-function 'run-at-time)
+               (lambda (&rest args) (push args polls) nil))
               ((symbol-function 'session-mode--structure-turn)
                (lambda (text) `((source_text . ,text) (unmatched . nil))))
               ((symbol-function 'agent-chat-split-surface-marker)
@@ -42,20 +45,24 @@
                (lambda (method api-path &optional payload _callback)
                  (push (list method api-path payload) calls)
                  '((ok . t) (id . "turn-abc123") (path . "/tmp/turn-abc123.json")))))
-      (cons (session-mode--record-turn "Please continue.  Then stop." nil nil)
-            (nreverse calls)))))
+      (list (session-mode--record-turn "Please continue.  Then stop." nil nil)
+            (nreverse calls)
+            (nreverse polls)))))
 
 (ert-deftest session-turn-analysis-jvm-record-posts-turn-with-policy ()
   "Under `jvm', recording POSTs the turn and the policy's analysis-requested."
   (let* ((result (session-turn-analysis-jvm-test--record 'all))
-         (path (car result))
-         (calls (cdr result))
+         (path (nth 0 result))
+         (calls (nth 1 result))
+         (polls (nth 2 result))
          (payload (nth 2 (car calls))))
     (should (equal path "/tmp/turn-abc123.json"))
     (should (equal (length calls) 1))
     (should (equal (car (nth 0 calls)) "POST"))
     (should (equal (nth 1 (car calls)) "/api/alpha/xiang/turns"))
     (should (eq t (alist-get 'analysis-requested payload)))
+    (should (equal "soon" (alist-get 'dispatch payload)))
+    (should (equal 1 (length polls)))
     (should (equal (alist-get 'agent-id payload) "claude-17"))
     (should (equal (alist-get 'session-id payload) "sess-1"))
     (should (equal (alist-get 'turn-id payload) "claude-17-turn-3"))
@@ -67,8 +74,10 @@
 analysis-requested false, so the JVM record comes back not-requested and
 no seat may be belled for it."
   (let* ((result (session-turn-analysis-jvm-test--record 'never))
-         (payload (nth 2 (car (cdr result)))))
-    (should (eq :json-false (alist-get 'analysis-requested payload)))))
+         (payload (nth 2 (car (nth 1 result)))))
+    (should (eq :json-false (alist-get 'analysis-requested payload)))
+    (should-not (assq 'dispatch payload))
+    (should (equal 0 (length (nth 2 result)))))) ; a dark turn is never polled
 
 (ert-deftest session-turn-analysis-jvm-record-refusal-signals ()
   "A refused record signals, so the caller warns instead of losing it silently."
@@ -91,7 +100,8 @@ no seat may be belled for it."
   "Run `session-mode--dispatch-analysis-after-reply' under the `jvm' recorder.
 POLL-ANSWERS is a list of GET answers, one per poll.  Returns (CALLS . LANDED):
 the (METHOD API-PATH PAYLOAD) calls in order and the landed-hook paths."
-  (let ((calls nil) (landed nil) (answers poll-answers))
+  (let ((calls nil) (landed nil) (answers poll-answers)
+        (session-mode--jvm-turn-state (make-hash-table :test #'equal)))
     (cl-letf ((session-mode-turn-recorder 'jvm)
               (session-mode-analysis-agent "象")
               (agent-chat--agent-id "claude-17")
@@ -164,6 +174,53 @@ the (METHOD API-PATH PAYLOAD) calls in order and the landed-hook paths."
       (session-mode--dispatch-analysis-after-reply "/tmp/turn-abc123.json" "REPLY"))
     (should-not landed-hook-ran)
     (should (assq 'failing health))))
+
+(ert-deftest session-turn-analysis-jvm-landed-hook-fires-once ()
+  "The reading may land before the reply ends: the hook runs at send-time
+polling, and happened arriving afterwards never re-runs it."
+  (let ((calls nil) (landed nil)
+        (session-mode--jvm-turn-state (make-hash-table :test #'equal)))
+    (cl-letf ((session-mode-turn-recorder 'jvm)
+              (session-mode-turn-analysis-policy 'all)
+              (session-mode-analysis-agent "象")
+              (agent-chat--agent-id "claude-17")
+              (agent-chat--session-id "sess-1")
+              (agent-chat--current-turn-id "claude-17-turn-3")
+              (agent-chat--last-evidence-id "emacs-abc")
+              (session-mode-analysis-landed-functions
+               (list (lambda (p) (push p landed))))
+              ((symbol-function 'run-at-time)
+               (lambda (_d _r fn &rest args) (apply fn args)))
+              ((symbol-function 'session-mode--structure-turn)
+               (lambda (text) `((source_text . ,text) (unmatched . nil))))
+              ((symbol-function 'agent-chat-split-surface-marker)
+               (lambda (text) (cons nil text)))
+              ((symbol-function 'session-mode--redact-secrets)
+               (lambda (text) (cons text nil)))
+              ((symbol-function 'session-mode--xiang-turn-policy)
+               (lambda (&rest _) "ask"))
+              ((symbol-function 'session-mode--record-requests-analysis-p)
+               (lambda (_path) t))
+              ((symbol-function 'session-mode--turn-commits-snapshot)
+               (lambda () nil))
+              ((symbol-function 'session-mode--set-analysis-health)
+               (lambda (&rest _) nil))
+              ((symbol-function 'session-mode--xiang-request)
+               (lambda (method api-path &optional payload callback)
+                 (push (list method api-path payload) calls)
+                 (if callback
+                     (funcall callback '((ok . t) (record . ((analysis_status . "analyzed")))))
+                   '((ok . t) (id . "turn-abc123") (path . "/tmp/turn-abc123.json"))))))
+      ;; Send: record, then the send-time poll finds the reading already done.
+      (let ((path (session-mode--record-turn "Please continue." nil nil)))
+        (should (equal landed (list path)))
+        ;; Reply ends: happened is POSTed, but nothing polls or lands again.
+        (session-mode--dispatch-analysis-after-reply path "REPLY text")
+        (should (equal landed (list path)))
+        (setq calls (nreverse calls))
+        (should (equal (mapcar #'car calls) '("POST" "GET" "POST")))
+        (should (equal (nth 1 (nth 2 calls))
+                       "/api/alpha/xiang/turns/turn-abc123/happened"))))))
 
 (ert-deftest session-turn-analysis-jvm-not-requested-never-posts-happened ()
   "象-off: a not-requested record never POSTs happened, never polls, never

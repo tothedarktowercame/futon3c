@@ -11415,7 +11415,7 @@
       (some #(str/blank? (str (get payload %))) [:agent-id :session-id :turn-id])
       (json-response 400 {:ok false :reason :missing-field
                           :field (some #(when (str/blank? (str (get payload %))) %) [:agent-id :session-id :turn-id])})
-      (not (contains? #{nil "now" "later" "none"} (:dispatch payload)))
+      (not (contains? #{nil "now" "soon" "later" "none"} (:dispatch payload)))
       (json-response 400 {:ok false :reason :invalid-dispatch})
       (not (contains? #{nil "operator" "agent"} (:origin payload)))
       (json-response 400 {:ok false :reason :invalid-origin})
@@ -11447,7 +11447,7 @@
                                                   (constantly (boolean (:analysis-requested payload))))
                            ;; "none": record only, never dispatch to 象 — the bridges'
                            ;; agent replies (xiang_turns.py after_reply; M-象-2000).
-                           :dispatch (case (:dispatch payload) "now" :now "none" :none :later)})]
+                           :dispatch (case (:dispatch payload) "now" :now "soon" :soon "none" :none :later)})]
           (json-response 201 {:ok true :id (:id result) :path (:path result) :record (:record result)
                               :redacted (:redacted result) :dispatch (:dispatch result)}))
         (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))))

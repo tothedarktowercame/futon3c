@@ -534,7 +534,7 @@
      "For pattern alignment, compare the full passage and target to the pattern context/IF/THEN, never match on the intent label alone. "
      "Suggested intents: " (str/join ", " (map first vocabulary)) ". "
      "Intent withdraw means the operator ends or takes back an earlier act, his own or an agent's; it is not disagreement or redirection. "
-     "The record may carry a happened_summary field: a machine-added note of what the agent did while answering this turn (first reply lines and commits with line counts). It is context for reading the turn, not the operator's words. "
+     "The record may carry a happened_summary field: a machine-added note of what the agent did while answering this turn (first reply lines and commits with line counts). It is usually absent: your reading starts when the turn is sent, before the reply exists — never wait for it. When present it is context for reading the turn, not the operator's words. "
      "For a withdraw fragment, set target to the named act id when the turn names one; set it to seat-active-card only when the turn refers to this/the pattern/card in the current seat; otherwise set target to null. Never guess a withdrawal target. "
      "A withdraw label is an interpretation only and terminates nothing. This brief is interpretation version " interpretation-version ". "
      "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "

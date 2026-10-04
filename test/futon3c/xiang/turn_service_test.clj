@@ -134,6 +134,47 @@
            (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id)))
         "the stored record keeps the policy's answer")))
 
+(deftest a-soon-turn-is-answered-at-once-and-dispatched-off-the-path
+  ;; The Emacs jvm recorder sends "soon": POST returns before the draft or
+  ;; the bell runs, then dispatch! runs on the scheduler at delay 0.
+  (let [drafted (atom 0)
+        h (harness {:draft (fn [_] (swap! drafted inc) nil)})
+        {:keys [id dispatch]} (turn! h {:dispatch :soon})]
+    (is (= :scheduled dispatch))
+    (is (zero? @drafted) "record-turn! returned before the draft ran")
+    (is (empty? @(:bells h)) "and before the seat was belled")
+    (is (= [0] (delays h)))
+    (run-next! h)
+    (is (= 1 (count @(:bells h))) "the reading starts at send")
+    (is (= "job-1" (get-in (ts/read-record (get-in (:svc h) [:config :store]) id)
+                           [:analysis_dispatch :job_id])))))
+
+(deftest happened-after-dispatch-does-not-dispatch-again
+  ;; Planted: count the bells. A turn already on its way to a seat gets its
+  ;; classical summary attached, never a second dispatch.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :soon})]
+    (run-next! h)
+    (is (= 1 (count @(:bells h))))
+    (is (= {:dispatched false :reason :already-dispatched}
+           (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})))
+    (is (= 1 (count @(:bells h))))
+    (is (some? (:happened_summary (ts/read-record (get-in (:svc h) [:config :store]) id)))
+        "the summary still lands on the record")))
+
+(deftest a-not-requested-turn-with-soon-never-bells
+  ;; 象-off: Emacs keeps sending the turn, with analysis-requested false;
+  ;; even "soon" must not queue it.
+  (let [h (harness)
+        {:keys [id dispatch]} (turn! h {:dispatch :soon :analysis-requested? (constantly false)})]
+    (is (= :scheduled dispatch))
+    (run-next! h)
+    (is (empty? @(:bells h)))
+    (is (= "not-requested"
+           (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))
+    (is (= {:dispatched false :reason :not-requested}
+           (svc/attach-happened! (:svc h) id "did things")))))
+
 (deftest an-external-turn-dispatches-at-once-and-a-failed-send-stays-requested
   (let [h (harness {:bell! (fn [_] {:ok false :status 404 :error "agent not registered"})})
         {:keys [id dispatch]} (turn! h {:dispatch :now})]
@@ -452,29 +493,62 @@
     (svc/attach-happened! (:svc h) id "did things")
     (is (empty? @appended) "recorded and dispatched, not yet read: nothing written")))
 
-(deftest an-analysed-turn-is-one-entry-with-its-reading
+(deftest an-analysed-turn-is-one-entry-with-reading-and-happened
+  ;; Reading first, happened second: the entry is written when the second
+  ;; of the two arrives, and carries both.
   (let [appended (atom [])
         h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
         {:keys [id record]} (turn! h)]
     (svc/publish-analysis! (:svc h) id (analysis-for record) {})
-    (is (= 1 (count @appended)))
+    (is (empty? @appended) "the reply has not ended: the write waits, bounded")
+    (is (= [1800] (delays h)))
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (= 1 (count @appended)) "happened on a settled turn writes the packet")
     (let [e (first @appended)]
       (is (= (str "e-xiang-turn-" id) (:evidence-id e)))
       (is (= "emacs-abc" (:in-reply-to e)) "cites the operator turn")
       (is (= "claude-17-turn-3" (get-in e [:body :record :turn_id])))
       (is (= "analyzed" (get-in e [:body :reading :status])))
       (is (= "analyzed" (get-in e [:body :settled])))
+      (is (some? (get-in e [:body :record :happened_summary])) "carries the summary")
       (is (some #{:xiang-turn-analyzed} (:tags e)))
       (is (= "sess-1" (:session-id e))))))
+
+(deftest happened-then-reading-is-also-one-entry-with-both
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h)]
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (empty? @appended) "dispatched, not yet read: nothing written")
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (= 1 (count @appended)))
+    (is (some? (get-in (first @appended) [:body :record :happened_summary])))
+    (is (= "analyzed" (get-in (first @appended) [:body :settled])))))
+
+(deftest a-turn-whose-reply-never-ends-is-written-after-the-bounded-wait
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (empty? @appended))
+    (is (= [1800] (delays h)) "the bounded wait for the summary")
+    (run-next! h)
+    (is (= 1 (count @appended)))
+    (is (nil? (get-in (first @appended) [:body :record :happened_summary]))
+        "written without the summary")
+    (is (= "analyzed" (get-in (first @appended) [:body :settled])))))
 
 (deftest a-routine-turn-is-one-entry-with-its-draft
   (let [appended (atom [])
         h (harness {:draft fake-draft :skip-routine? true
                     :evidence! (fn [e] (swap! appended conj e) {:ok true})})
         {:keys [id]} (turn! h {:text "Looks good." :dispatch :now})]
+    (is (empty? @appended) "no reply yet: the write waits")
+    (svc/attach-happened! (:svc h) id {:reply "done" :commits []})
     (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
     (is (= "drafted" (get-in (first @appended) [:body :settled])))
-    (is (some? (get-in (first @appended) [:body :reading])))))
+    (is (some? (get-in (first @appended) [:body :reading])))
+    (is (some? (get-in (first @appended) [:body :record :happened_summary])))))
 
 (deftest a-dark-turn-is-never-evidence
   ;; 象-off: not-requested turns go dark, and stay out of the database.
@@ -494,6 +568,7 @@
                                    (do (swap! seen conj (:evidence-id e)) {:ok true})))})
         {:keys [id record]} (turn! h)
         _ (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+        _ (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
         result (svc/append-evidence! (:svc h) (svc/turn-evidence-entry id record {} :analyzed) [60])]
     (is (:idempotent? result))
     (is (= 1 (count @seen)) "still exactly one entry")
@@ -507,6 +582,8 @@
         {:keys [id record]} (turn! h)
         out (svc/publish-analysis! (:svc h) id (analysis-for record) {})]
     (is (= "analyzed" (get-in out [:analysis :status])) "the reading still publishes")
+    (is (zero? @attempts) "the write waits for the reply to end")
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
     (is (= 1 @attempts))
     (is (some #{60} (delays h)) "retried on the bounded schedule")))
 
@@ -519,6 +596,7 @@
                                    (do (swap! appended conj e) {:ok true})))})
         {:keys [id record]} (turn! h)]
     (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
     (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
     (is (some #{:xiang-reply-parent-missing} (:tags (first @appended))))
     (is (= "emacs-abc" (get-in (first @appended) [:body :record :evidence_id])))))
@@ -529,7 +607,8 @@
                     :evidence-async! nil})
         {:keys [id record]} (turn! h)]
     (svc/publish-analysis! (:svc h) id (analysis-for record) {})
-    (is (empty? @appended) "publish returned before the append ran")
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (empty? @appended) "publish and happened returned before the append ran")
     (let [i (.indexOf (delays h) 0)]
       (is (<= 0 i))
       ((second (nth @(:scheduled h) i))))
