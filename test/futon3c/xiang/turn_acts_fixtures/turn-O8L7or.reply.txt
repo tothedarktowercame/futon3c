@@ -1,0 +1,1 @@
+🈸 ("whether to delete the file") Shall I delete elephant.txt from /tmp/xiang-demo?

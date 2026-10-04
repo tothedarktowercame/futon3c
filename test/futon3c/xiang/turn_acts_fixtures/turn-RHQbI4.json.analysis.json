@@ -1,0 +1,151 @@
+{
+  "version": 2,
+  "status": "analyzed",
+  "method": "agent-interpretation",
+  "interpretation_version": 3,
+  "vocabulary_version": 3,
+  "human_approved": false,
+  "labeller": "象-1",
+  "reusable_cues": [],
+  "rnode_cues": [],
+  "rnode_validation": {
+    "accepted_fragments": 0,
+    "accepted_cues": 0,
+    "dropped": {
+      "unknown_node": 0,
+      "invalid_operation": 0,
+      "empty_justification": 0,
+      "inexact_span": 0,
+      "intent_phrase": 0,
+      "generic_cue": 0
+    }
+  },
+  "evidence_id": "emacs-3bc355893b41b3d178cb3f6096f9b857",
+  "created_at": "2026-10-04T21:50:38.136806+00:00",
+  "source_text": "This is a demo session for testing 象. Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it. Don't do anything yet.",
+  "source_sha256": "0bb87fdd3e0877ba00107127b33d6e4796ec8d38bb1b0491604ac5497a18140c",
+  "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+  "sentences": [
+    {
+      "id": "s1",
+      "fragments": [
+        {
+          "start": 0,
+          "end": 37,
+          "text": "This is a demo session for testing 象.",
+          "intent": "explain",
+          "target": "session purpose: a demo testing the 象 analysis pipeline",
+          "rationale": "Draft boundary kept; guesses propose/clarify relabelled to explain: Joe declares the session's standing up front — nothing in it is real work; it exists to exercise the 象 pipeline. (The happened_summary confirms the agent complied verbatim.)",
+          "relations": [
+            "context"
+          ],
+          "display_cues": [
+            {
+              "start": 10,
+              "end": 34,
+              "text": "demo session for testing"
+            }
+          ],
+          "no_surface_cue": "",
+          "pattern_refs": [
+            {
+              "id": "vsatelier/session-as-rehearsal",
+              "rationale": "The session is explicitly framed as a rehearsal: a safe, declared practice run of the 象 apparatus rather than production use, so failures here are cheap information.",
+              "status": "candidate",
+              "source_sha256": "77e09196202223de796ea981609b860263d31a382b65d0c00fc8d481b7f99474"
+            }
+          ],
+          "pattern_rejections": []
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s2",
+      "fragments": [
+        {
+          "start": 38,
+          "end": 265,
+          "text": "Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it.",
+          "intent": "ask-action",
+          "target": "scripted proforma reply: 🈯 question + 🈸 numbered options, nothing else",
+          "rationale": "Draft boundary kept; guesses propose/constrain resolved to ask-action: a fully scripted reply request — exact proforma structure, exact two question contents, 'nothing else' — so the pipeline's output is checkable against a fixed expectation.",
+          "relations": [
+            "action",
+            "condition"
+          ],
+          "display_cues": [
+            {
+              "start": 45,
+              "end": 66,
+              "text": "reply in the proforma"
+            },
+            {
+              "start": 72,
+              "end": 109,
+              "text": "two questions for me and nothing else"
+            },
+            {
+              "start": 212,
+              "end": 232,
+              "text": "two numbered options"
+            }
+          ],
+          "no_surface_cue": "",
+          "pattern_refs": [
+            {
+              "id": "data-mining/smoke-before-the-paid-run",
+              "rationale": "A small scripted prompt through the real pipeline whose expected output is fixed in advance is a smoke test: it exercises the genuine path (proforma, sigils, numbered options) cheaply, and any deviation is immediately visible — exactly the smoke-before-the-paid-run logic applied to the 象 session pipeline.",
+              "status": "candidate",
+              "source_sha256": "45bf2e6d4fe6d78a00fc06010ad6ea2eaa8af2760399124f9e24ec418ef7e1f6"
+            }
+          ],
+          "pattern_rejections": [
+            {
+              "id": "writing-coherence/one-paragraph-per-typed-claim",
+              "reason": "Top BM25 hit on 'paragraph'; that pattern is about splitting fused claims in paper prose, not about scripting a typed-paragraph reply format.",
+              "query": "Please reply in the proforma with two questions for me and nothing else: a 🈯 pa"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s3",
+      "fragments": [
+        {
+          "start": 266,
+          "end": 288,
+          "text": "Don't do anything yet.",
+          "intent": "constrain",
+          "target": "no world-changing action during the demo",
+          "rationale": "Draft boundary kept; guesses report-problem/constrain resolved to constrain: explicitly forbids any action beyond the scripted reply — the demo must not write the file or touch the world.",
+          "relations": [
+            "condition"
+          ],
+          "display_cues": [
+            {
+              "start": 266,
+              "end": 287,
+              "text": "Don't do anything yet"
+            }
+          ],
+          "no_surface_cue": "",
+          "pattern_refs": [
+            {
+              "id": "realtime/mode-gate",
+              "rationale": "'Don't do anything yet' holds the agent in chat mode: the mode gate separating talk from code-changing action is asserted explicitly by the operator for the demo's duration.",
+              "status": "candidate",
+              "source_sha256": "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"
+            }
+          ],
+          "pattern_rejections": []
+        }
+      ],
+      "unresolved_reason": ""
+    }
+  ],
+  "request_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-RHQbI4.json",
+  "request_sha256": "88624f417b753ce9b2cef77947707dcbbd972a7d97b50b1aca6c145335607066"
+}

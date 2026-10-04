@@ -508,9 +508,24 @@
    the reading in the settled evidence packet (idempotent id, off-path).
    HAPPENED is a ready summary string or {:reply TEXT :commits [...]}; the
    reply text is also stored as the record's :reply_text (the input 大象
-   reads, and the adapter's source for the reply's marked acts)."
-  [svc id happened]
+   reads, and the adapter's source for the reply's marked acts).
+   :agent-session, a fn of the agent id, gives the agent's session now; a
+   record still under the buffer's placeholder session takes it."
+  [svc id happened & [{:keys [agent-session]}]]
   (let [store (cfg svc :store)
+        placeholder? (fn [sid] (or (str/blank? (str sid)) (= "pending" sid)
+                                   (str/includes? (str sid) "(awaiting session)")))
+        ;; A first turn is recorded before the agent has a session, under
+        ;; the buffer's placeholder; by the turn's end the session exists.
+        ;; Without this the first turn sits in a session of its own and its
+        ;; offers are invisible to the next turn's acceptance.
+        _ (when agent-session
+            (when-let [r (ts/read-record store id)]
+              (when (placeholder? (:session_id r))
+                (when-let [sid (try (agent-session (:agent_id r)) (catch Exception _ nil))]
+                  (when-not (placeholder? sid)
+                    (try (ts/update-record! store id #(assoc % :session_id sid))
+                         (catch Exception _ nil)))))))
         summary (try (cond (string? happened) happened
                            (map? happened) (happened-summary (:reply happened) (:commits happened))
                            :else nil)

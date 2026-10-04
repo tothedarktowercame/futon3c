@@ -1,0 +1,52 @@
+{
+  "quote_count" : 0,
+  "evidence_id" : "emacs-3bc355893b41b3d178cb3f6096f9b857",
+  "interpretation_version" : 3,
+  "source_text" : "This is a demo session for testing 象. Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it. Don't do anything yet.",
+  "secrets_redacted" : [ ],
+  "tagging_failed" : false,
+  "reply_text" : "🈯 (\"called elephant.txt\") Should the demo file be called elephant.txt?\n\n🈸 (\"the one line to write in it\") Which line should I write in it?\n1. `An elephant never forgets.`\n2. `象 reads this line.`",
+  "session_id" : "claude-5 (awaiting session)",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 37,
+    "text" : "This is a demo session for testing 象."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 38,
+    "end" : 265,
+    "text" : "Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it."
+  }, {
+    "id" : "s3",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 266,
+    "end" : 288,
+    "text" : "Don't do anything yet."
+  } ],
+  "analysis_dispatch" : {
+    "scheduled_at" : 1791150521750,
+    "job_id" : "invoke-1791150525795-32223-4b5b015e"
+  },
+  "draft_status" : "drafted",
+  "withdrawal_processing_error" : null,
+  "original_text" : "This is a demo session for testing 象. Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it. Don't do anything yet.",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\n🈯 (\"called elephant.txt\") Should the demo file be called elephant.txt?\n\n🈸 (\"the one line to write in it\") Which line should I write in it?\n1. `An elephant never forgets.`\n2. `象 reads this line.`\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-RHQbI4.json.draft.json",
+  "turn_id" : "claude-5-turn-1",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "analysis_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-RHQbI4.json.analysis.json",
+  "version" : 1,
+  "agent_id" : "claude-5",
+  "unmatched" : [ "s1", "s2", "s3" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-04T21:48:41Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

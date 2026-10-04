@@ -1,0 +1,3 @@
+㊢ ("do it in a new git repo at /tmp/xiang-demo, with a commit") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1.
+
+㊟ (commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit.

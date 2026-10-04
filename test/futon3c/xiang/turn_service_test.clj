@@ -796,3 +796,23 @@
       (is (not (str/includes? brief secret)))
       (is (not (str/includes? brief ".quotes.json")) "the brief never names the sidecar"))))
 
+
+(deftest a-first-turn-takes-the-agent-session-at-reply-end
+  (testing "the 2026-10-04 demo: claude-5's first turn was recorded under
+            the buffer's placeholder and so sat in a session of its own"
+    (let [h (harness)
+          store (get-in (:svc h) [:config :store])
+          {:keys [id]} (turn! h {:session-id "claude-5 (awaiting session)" :agent-id "claude-5"})
+          sessions {"claude-5" "b52510f9-275c-44e1-a74f-243df3750115"}]
+      (svc/attach-happened! (:svc h) id {:reply "done" :commits []} {:agent-session sessions})
+      (is (= "b52510f9-275c-44e1-a74f-243df3750115" (:session_id (ts/read-record store id))))))
+  (testing "a real session is never replaced, and no session leaves the placeholder"
+    (let [h (harness)
+          store (get-in (:svc h) [:config :store])
+          {id1 :id} (turn! h {:session-id "sess-1"})
+          {id2 :id} (turn! h {:session-id "claude-5 (awaiting session)" :agent-id "claude-5"
+                              :turn-id "claude-5-turn-1"})]
+      (svc/attach-happened! (:svc h) id1 {:reply "done" :commits []} {:agent-session (constantly "other")})
+      (svc/attach-happened! (:svc h) id2 {:reply "done" :commits []} {:agent-session (constantly nil)})
+      (is (= "sess-1" (:session_id (ts/read-record store id1))))
+      (is (= "claude-5 (awaiting session)" (:session_id (ts/read-record store id2)))))))

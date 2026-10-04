@@ -340,8 +340,10 @@
     (is (= "t-1-r-0" (:carries-out (some #(when (= :commit (:kind %)) %) acts)))
         "the commit in that turn carries out Q")))
 
-(deftest a-pointer-at-a-non-offer-leaves-the-preceding-acceptance
-  (testing "the pointer names t-2's ㊟ qualify paragraph, which is no offer"
+(deftest a-pointer-at-a-non-offer-answers-it-instead-of-accepting
+  (testing "the pointer names t-2's ㊟ qualify paragraph, which is no offer:
+            the approval answers the ㊟ and P is not accepted (reversed
+            after the 2026-10-04 demo; see the-demo-pointer-at-a-question…)"
     (let [t2 (str "㊟ (a caveat) The index is stale.\n\n"
                   "🈸 (P) Shall I rebuild it?\n1. Now\n2. Later")
           ts (-> (offer-session {:pointer-at (fn [_ t2] t2) :t2-reply t2})
@@ -352,7 +354,8 @@
                             "㊟: yes 1" [{:turn-id "x" :origin "operator" :text t2}])))
           acts (ta/session-acts ts)]
       (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
-      (is (= "t-2-r-1" (:target (accept-of acts "t-3"))) "P stays"))))
+      (is (nil? (accept-of acts "t-3")))
+      (is (= "t-2-r-0" (:target (some #(when (= "t-3" (:turn %)) %) acts)))))))
 
 (deftest a-pointer-at-an-offer-makes-an-approve-an-acceptance
   (testing "no preceding offer: t-2's reply offers nothing"
@@ -360,9 +363,9 @@
                                                 :t2-reply "㊢ (done) Nothing more to offer."}))]
       (is (= "t-1-r-0" (:target (accept-of acts "t-3")))))))
 
-(deftest a-pointer-at-a-withdrawn-offer-leaves-the-preceding-acceptance
+(deftest a-pointer-at-a-withdrawn-offer-accepts-nothing
   (testing "in t-2 the operator withdrew Q with a pointer (\"🈸: drop that\");
-            t-3's pointer at Q then accepts nothing new and P stays"
+            t-3's pointer at Q accepts neither Q nor P"
     (let [t1 "🈸 (Q) Shall I do one of these?\n1. Build the index\n2. Leave it"
           ts (-> (offer-session {:pointer-at (fn [t1 _] t1)})
                  (assoc-in [1 :record :source_text] "🈸: drop that")
@@ -374,4 +377,55 @@
           acts (ta/session-acts ts)]
       (is (= "t-1-r-0" (:target (some #(when (= :withdraw (:kind %)) %) acts)))
           "the withdrawal targets Q through its own pointer")
-      (is (= "t-2-r-0" (:target (accept-of acts "t-3"))) "P stays"))))
+      (is (nil? (accept-of acts "t-3")) "neither the withdrawn Q nor P"))))
+
+;; ---------------------------------------------------------------------------
+;; The demo session (claude-5 turns 1-3, 2026-10-04T21:48-21:50Z), copied
+;; unmodified; replies from evidence emacs-a38f2f58…, emacs-d6e04831…,
+;; emacs-e9d51e6a…. Turn 1 asks for a 🈯 question and a 🈸 offer; turn 2
+;; answers both with pointers ("🈯: yes, call it elephant.txt.  🈸: yes 1,
+;; and do it…"); turn 3 asks for a 🈸 question left unanswered. Turn 1's
+;; record was stored under the placeholder session "claude-5 (awaiting
+;; session)"; the turn service now replaces it at reply end, so the tests
+;; give turn 1 the session its later turns have.
+
+(defn- demo-session []
+  (let [sid "b52510f9-275c-44e1-a74f-243df3750115"]
+    (mapv (fn [b] (-> (fixture-turn b)
+                      (assoc-in [:record :session_id] sid)
+                      (assoc :commits [])))
+          ["turn-RHQbI4" "turn-v2AHXA" "turn-O8L7or"])))
+
+(deftest the-demo-pointer-at-a-question-answers-the-question
+  (let [acts (ta/session-acts (demo-session))
+        by-id (into {} (map (juxt :id identity)) acts)
+        ports (ta/turn-ports acts "claude-5-turn-2")]
+    (is (= [:approve "claude-5-turn-1-r-0"]
+           ((juxt :kind :target) (by-id "claude-5-turn-2-f-s1-0")))
+        "🈯: yes … answers the 🈯 question, not the offer beside it")
+    (is (= [:accept "claude-5-turn-1-r-1" 1]
+           ((juxt :kind :target :option) (by-id "claude-5-turn-2-f-s2-0"))))
+    (is (= 1 (count (filter #(= :accept (:kind %)) acts))) "one acceptance, not two")
+    (is (= #{"claude-5-turn-1-r-0" "claude-5-turn-1-r-1"} (set (:closed-this-turn ports))))
+    (is (= [{:debtor "claude-5" :creditor "operator" :source "claude-5-turn-2-f-s2-0"}]
+           (:obligations ports)))))
+
+(deftest the-demo-quoted-brackets-answer-the-operator
+  (let [acts (ta/session-acts (demo-session))
+        by-id (into {} (map (juxt :id identity)) acts)
+        open-at (fn [t] (set (map :act (:still-open (ta/turn-ports acts t)))))]
+    (is (= "claude-5-turn-2-f-s2-1" (:target (by-id "claude-5-turn-2-r-0")))
+        "㊢ (\"do it in a new git repo at /tmp/xiang-demo, with a commit\") answers that request")
+    (is (not (contains? (open-at "claude-5-turn-2") "claude-5-turn-2-f-s2-1")))
+    (is (= "claude-5-turn-1-f-s2-0" (:target (by-id "claude-5-turn-1-r-0")))
+        "the 🈯 bracket quotes \"called elephant.txt\" from the request for questions")
+    (is (not (contains? (open-at "claude-5-turn-1") "claude-5-turn-1-f-s2-0")))
+    (testing "the control: the 🈸 question of turn 3 stays open"
+      (is (contains? (open-at "claude-5-turn-3") "claude-5-turn-3-r-0")))))
+
+(deftest quoted-targets-reads-only-quotes-in-the-leading-bracket
+  (is (= ["do it in a new git repo"] (ta/quoted-targets "(\"do it in a new git repo\") Done.")))
+  (is (= ["the labels line up"] (ta/quoted-targets "(“the labels line up”) They do")))
+  (is (= [] (ta/quoted-targets "(\"yes\") too short")))
+  (is (nil? (ta/quoted-targets "No bracket, but \"a quoted phrase here\".")))
+  (is (= [] (ta/quoted-targets "(order of work) 1. \"a quoted phrase here\""))))

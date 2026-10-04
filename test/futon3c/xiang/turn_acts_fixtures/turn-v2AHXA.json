@@ -1,0 +1,83 @@
+{
+ "quote_count": 0,
+ "evidence_id": null,
+ "interpretation_version": 3,
+ "source_text": "🈯: yes, call it elephant.txt.  🈸: yes 1, and do it in a new git repo at /tmp/xiang-demo, with a commit.",
+ "secrets_redacted": [],
+ "tagging_failed": false,
+ "reply_text": "㊢ (\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1.\n\n㊟ (commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit.",
+ "session_id": "b52510f9-275c-44e1-a74f-243df3750115",
+ "sentences": [
+  {
+   "id": "s1",
+   "status": "unresolved",
+   "cues": [],
+   "start": 0,
+   "end": 29,
+   "text": "🈯: yes, call it elephant.txt."
+  },
+  {
+   "id": "s2",
+   "status": "unresolved",
+   "cues": [],
+   "start": 31,
+   "end": 103,
+   "text": "🈸: yes 1, and do it in a new git repo at /tmp/xiang-demo, with a commit."
+  }
+ ],
+ "analysis_dispatch": {
+  "scheduled_at": 1791150566987,
+  "job_id": "invoke-1791150567091-32226-8576e6f7"
+ },
+ "draft_status": "drafted",
+ "reply_to": {
+  "replies": [
+   {
+    "turn-id": "repl-claude-5-3e442e2adc214f508a570aea",
+    "index": 0,
+    "offset": 0,
+    "mark": "🈯",
+    "rule": "mark-match",
+    "origin": "operator",
+    "paragraph-mark": "🈯",
+    "paragraph": "(\"called elephant.txt\") Should the demo file be called elephant.txt?",
+    "span": [
+     0,
+     103
+    ]
+   },
+   {
+    "turn-id": "repl-claude-5-3e442e2adc214f508a570aea",
+    "index": 0,
+    "offset": 31,
+    "mark": "🈸",
+    "rule": "mark-match",
+    "origin": "operator",
+    "paragraph-mark": "🈸",
+    "paragraph": "(\"the one line to write in it\") Which line should I write in it?\n1. `An elephant never forgets.`\n2. `象 reads this line.`",
+    "span": [
+     0,
+     103
+    ]
+   }
+  ],
+  "declared_intents": []
+ },
+ "original_text": "🈯: yes, call it elephant.txt.  🈸: yes 1, and do it in a new git repo at /tmp/xiang-demo, with a commit.",
+ "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊢ (\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1.\n\n㊟ (commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+ "draft_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-v2AHXA.json.draft.json",
+ "turn_id": "claude-5-turn-2",
+ "vocabulary_version": 3,
+ "origin": "operator",
+ "version": 1,
+ "agent_id": "claude-5",
+ "unmatched": [
+  "s1",
+  "s2"
+ ],
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "created_at": "2026-10-04T21:49:26Z",
+ "surface": "typed",
+ "analysis_status": "analyzed",
+ "analysis_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-v2AHXA.json.analysis.json"
+}

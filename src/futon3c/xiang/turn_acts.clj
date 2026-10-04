@@ -153,6 +153,41 @@
              :sha sha :repo repo :subject subject})
           commits)))
 
+(defn- squash
+  [s]
+  (str/trim (str/replace (str/lower-case (str s)) #"\s+" " ")))
+
+(defn quoted-targets
+  "The phrases a reply paragraph TEXT quotes in its bracketed target, as in
+   `㊢ (\"do it in a new git repo\") Done.`: each double-quoted span inside
+   a leading bracket, squashed, at least 8 characters."
+  [text]
+  (when-let [[_ bracket] (re-find #"^\s*\(([^)]*)\)" (str text))]
+    (vec (for [[_ q] (re-seq #"[\"“]([^\"”]+)[\"”]" bracket)
+               :let [q (squash q)]
+               :when (>= (count q) 8)]
+           q))))
+
+(defn- link-quoted-brackets
+  "REPLY-ACTS with each paragraph that quotes the operator's words in its
+   bracket targeting the operator fragment of FRAG-ACTS (the turn it
+   answers) that holds them: the fragment whose text contains the quoted
+   phrase, or whose whole text the phrase contains. Linked only when
+   exactly one fragment qualifies; the kernel's adjacency table then says
+   whether the fragment's port closes."
+  [reply-acts frag-acts]
+  (let [frags (mapv (juxt :id (comp squash :text)) frag-acts)]
+    (mapv (fn [{:keys [text target] :as act}]
+            (let [ids (distinct (for [q (quoted-targets text)
+                                      [id ft] frags
+                                      :when (and (not (str/blank? ft))
+                                                 (or (str/includes? ft q) (str/includes? q ft)))]
+                                  id))]
+              (if (and (nil? target) (= 1 (count ids)))
+                (assoc act :target (first ids))
+                act)))
+          reply-acts)))
+
 (defn- accept-fragment?
   "An operator fragment that accepts: kind :approve, or :accept already."
   [act]
@@ -197,6 +232,7 @@
                                   [[] false])
                           first))
          {reply-acts :acts reply-skipped :skipped} (reply-acts record reply-text)
+         reply-acts (link-quoted-brackets reply-acts frag-acts)
          commit-acts (cond-> (commit-acts record commits)
                        carries-out (->> (mapv #(assoc % :carries-out carries-out))))]
      (with-meta (vec (concat frag-acts reply-acts commit-acts))
@@ -282,7 +318,11 @@
 
    An approve fragment (or the acceptance of the preceding offer) whose
    pointer names an offer in OFFERS (`visible-offers`) accepts that offer:
-   the stored pointer is more specific evidence than adjacency. Only the
+   the stored pointer is more specific evidence than adjacency. An
+   acceptance of the preceding offer whose pointer names anything else
+   becomes an approve of what the pointer names (the 2026-10-04 demo:
+   \"🈯: yes, call it elephant.txt\" answers the 🈯 question, not the 🈸
+   offer beside it). Only the
    first such fragment per offer becomes the acceptance. Any other
    fragment that already has a target keeps it unchanged: the kernel
    reads an acceptance's :target as the one offer accepted (`agreemento`),
@@ -308,6 +348,10 @@
                        (nil? q) [(conj out act) accepted]
                        (and (accept-fragment? act) (offers q) (not (accepted q)))
                        [(conj out (approve->accept act q)) (conj accepted q)]
+                       ;; The pointer names something that is not an offer:
+                       ;; the fragment answers that, not the offer just made.
+                       (and (= :accept (:kind act)) (not (offers q)))
+                       [(conj out (-> act (assoc :kind :approve :target q) (dissoc :option))) accepted]
                        (nil? target) [(conj out (assoc act :target q)) accepted]
                        :else [(conj out act) accepted])))
                  [[] #{}]

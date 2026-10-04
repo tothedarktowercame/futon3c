@@ -1,0 +1,5 @@
+🈯 ("called elephant.txt") Should the demo file be called elephant.txt?
+
+🈸 ("the one line to write in it") Which line should I write in it?
+1. `An elephant never forgets.`
+2. `象 reads this line.`

@@ -11662,7 +11662,9 @@
                               :commits (mapv #(select-keys % [:repo :repo-path :sha :subject :numstat])
                                              (or (:commits payload) []))}
                              :else nil)
-              result (xiang-turns/attach-happened! svc id happened)]
+              result (xiang-turns/attach-happened!
+                      svc id happened
+                      {:agent-session #(some-> (reg/get-agent (str %)) :agent/session-id)})]
           (json-response (if (= :record-not-found (:reason result)) 404 200)
                          (assoc result :ok (boolean (:dispatched result)))))
 
