@@ -1,0 +1,14 @@
+㊥ Gist: Done. "🈸:yes" now counts as yes in both acceptance parsers, and both running copies are reloaded: the Agency server and your Emacs. Your "1" didn't record an agreement, though, because neither parser accepts a bare number. So the offer is still open. Typing "🈸:yes 1" would record it and test the whole path, and you should then see a "yes: agreement …" line in the buffer.
+
+㊢ (change, commit d9d30ead) The same change is in `agreement_record.clj` and in `agent-chat--acceptance-command` in `agent-chat.el`, so the two parsers still match. A leading "🈸:", with or without a space, is dropped before the existing rules are applied.
+
+㊬ (what I checked)
+- **Clojure tests:** the agreement-record tests pass, 6 tests with 37 assertions. The new cases are:
+  - "🈸:yes", "🈸: yes 2." and "🈸:yes act:… 2" are accepted;
+  - "🈸:", "🈸:yes please", "㊭:yes" and "x 🈸:yes" are refused.
+- **Emacs parser:** checked by hand on the same inputs, plus "yes 1" (accepted) and "1" (refused).
+- **Running copies:** the server returns option 1 for "🈸:yes 1", and so does your Emacs.
+- **Gates:** clj-kondo and the parens check are clean.
+- **Not run:** the full test suite, and an Emacs test file. There's no ERT test for this parser.
+
+㊟ (what still connects the marks to Elephant-2000) Agents need to post an offer whenever they write a 🈸, as I did this time. Otherwise "🈸:yes" has nothing to agree to. That rule isn't written down anywhere yet. It would go as one line in CLAUDE.md's reply-proforma section, but I haven't edited CLAUDE.md, since it's your workspace file.

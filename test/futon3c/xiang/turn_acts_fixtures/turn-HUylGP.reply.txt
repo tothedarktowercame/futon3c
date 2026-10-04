@@ -1,0 +1,13 @@
+㊥ Gist: The path works, with one fault. Your "🈸:yes 1" is now on record as agreement `act:e77e3e43-ffad-444e-8c0d-552cdedb3804`, joining my offer, option 1, and your turn. But the buffer said "yes: not checked (http 0)", because the agreement call takes about 11 seconds and Emacs gives up after 3. The fix is either to make Emacs wait without blocking, or to find out why the server takes 11 seconds.
+
+㊢ (what happened)
+- **The failure:** I sent the same request by hand with your turn's evidence id (`emacs-bb6cccc9…`), and it took 11.4 s to return the agreement. `agent-chat-agreement-timeout` is 3 s. Emacs gave up and printed the status as 0.
+- **What was recorded:** the agreement's timestamp is 14:02:27, fourteen seconds after your turn at 14:02:13. So most likely your own request finished on the server after Emacs stopped waiting, and my call got that same record back. Agreements are keyed by offer, option and evidence, so a repeat returns the existing one rather than adding another. I haven't confirmed which call wrote it, but either way there is one agreement, not two.
+
+㊩ (why it matters) A yes that is recorded while the buffer says "not checked" looks like a failure when it isn't. If you then retype it, the repeat is harmless, but the buffer gives you the wrong information.
+
+㊭ (fixes, in order of size)
+1. **Make the Emacs call asynchronous.** Post the agreement in the background and insert the "yes: agreement …" line when it returns. Simply raising the timeout would freeze Emacs for 11 seconds on every yes.
+2. **Find the slow step.** The route is fast when it refuses (under 0.1 s), so the time is probably spent on the futon1b reads and writes it makes when it succeeds. That needs measuring before it can be fixed.
+
+🈸 (one decision) Shall I do 1 now and look into 2 afterwards? I've posted no offer this time, so answer in words.

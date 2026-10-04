@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "status": "analyzed",
+  "method": "agent-interpretation",
+  "interpretation_version": 3,
+  "vocabulary_version": 3,
+  "human_approved": false,
+  "labeller": "xiang-1",
+  "reusable_cues": [],
+  "created_at": "2026-10-01T13:53:52.758626+00:00",
+  "source_text": "OK, I've tried the hydra, and 🈸:yes",
+  "source_sha256": "06ab3a10a59e5850da4624038f5acd359447796196c247f6860ece41bb1b2529",
+  "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+  "sentences": [
+    {
+      "id": "s1",
+      "fragments": [
+        {
+          "start": 0,
+          "end": 35,
+          "text": "OK, I've tried the hydra, and 🈸:yes",
+          "intent": "report",
+          "target": "a live trial of the just-delivered hydra and the 🈸:yes mark",
+          "rationale": "The operator uses the feature immediately and reports back — the feature's existence is established by being seen acting live, not by the agent's say-so. The trial also doubled as an unplanned probe: the happened_summary shows the agent discovering that 🈸:yes was read as ordinary text by the acceptance parser, which it then surfaced as a decision offer.",
+          "relations": [
+            "action",
+            "context"
+          ],
+          "display_cues": [
+            {
+              "start": 4,
+              "end": 24,
+              "text": "I've tried the hydra"
+            }
+          ],
+          "no_surface_cue": "",
+          "pattern_refs": [
+            {
+              "id": "apparatus/done-is-observed-running",
+              "rationale": "Joe's immediate trial is the operator-side instance of this pattern: the mechanism (hydra, mark) exists when seen acting live in his buffer, and his report is that observation.",
+              "status": "candidate",
+              "source_sha256": "7f0c05735928fef7fdd95fcfcb369ae4bc39d2191d0a76104e2b4e26ec7621f9"
+            }
+          ],
+          "pattern_rejections": []
+        }
+      ],
+      "unresolved_reason": ""
+    }
+  ],
+  "request_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-xJ4TAP.json",
+  "request_sha256": "f74008f1001ab4adc8d8590850aa9bf27b7697c5cc2f67be57cc5d68adf43d5c"
+}
