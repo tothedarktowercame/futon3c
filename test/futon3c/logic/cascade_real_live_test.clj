@@ -380,6 +380,19 @@
           (is (= [] (:items ((var-get #'live/tickets-section)
                              [{:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]}])))))))))
 
+(deftest tickets-section-does-not-truncate-the-selection-field
+  (let [files (mapv (fn [n]
+                      (doto (io/file (str "/tmp/M-field-" n ".md"))
+                        (.setLastModified n)))
+                    (range 41))]
+    (with-redefs-fn {#'live/doc-files (constantly files)
+                     #'live/live-clocked-stems (constantly #{})}
+      (fn []
+        (let [tickets ((var-get #'live/tickets-section) [])]
+          (is (= 41 (:count-total tickets)))
+          (is (= 41 (count (:items tickets))))
+          (is (some #{"M-field-0"} (map :stem (:items tickets)))))))))
+
 ;; --- control: the mission part is unchanged on today's store (pinned) ---------
 ;; Edges read from futon1b around GET /api/alpha/cascade-real (as-of 1790358119151)
 ;; and /cascade-real/graph (as-of 1790358124816), 2026-09-25; the edge reads

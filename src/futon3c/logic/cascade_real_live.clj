@@ -378,7 +378,7 @@
                       (sort-by :mtime-ms >)
                       vec)]
        {:count-total (count items)
-        :items (vec (take 40 items))})
+        :items items})
      (catch Throwable _
        {:count-total 0
         :items []}))))
