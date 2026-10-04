@@ -42,6 +42,8 @@
       (is (re-find #"replay \+ implement the oracle fix" (:text action)))
       (is (re-find #"joe" (:text action)))
       (is (re-find #"agency_send\.py" (:text action)))
+      (is (re-find #"continue the work yourself" (:text action))
+          "Joe's rule: carry on, do not wait on side requests")
       (is (re-find #"work-orders/wo-root/close" (:text action))))))
 
 (deftest live-case-repeat-stall-escalates

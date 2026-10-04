@@ -72,12 +72,20 @@
 (defn- nudge-text
   [agent order]
   (str "Work order " (:id order) " is still open and you hold the token.\n"
-       "Order: " (:text order) "\n"
-       (waiting-on order) " is waiting on it. You owe one of:\n"
-       "  1. dispatch the next step: python3 /home/joe/code/futon3c/scripts/agency_send.py"
+       "Order: " (if (:parent order)
+                   (:text order)
+                   (str (:text order) " (the work you were given in your REPL)"))
+       "\n" (waiting-on order) " is waiting on it. Do one of these now:\n"
+       "  1. continue the work yourself: the next step on your own path. Side"
+       " requests you sent (bug reports, reviews) do not block you; do not wait"
+       " for them.\n"
+       "  2. if you truly cannot proceed until a reply arrives, park on that job"
+       " (POST /api/alpha/park) so the wait is declared.\n"
+       "  3. to hand off a separate piece: python3 /home/joe/code/futon3c/scripts/agency_send.py"
        " --from " agent " --to <agent> --kind bell --mode work  (message on stdin)\n"
-       "  2. close the order: curl -X POST http://localhost:7070/api/alpha/work-orders/"
-       (:id order) "/close -d '{\"by\":\"" agent "\",\"reason\":\"...\"}'"))
+       "  4. when the order is finished: curl -X POST http://localhost:7070/api/alpha/work-orders/"
+       (:id order) "/close -H 'Content-Type: application/json' -d '{\"by\":\"" agent
+       "\",\"reason\":\"...\"}'"))
 
 (defn- escalate-text
   [order]
