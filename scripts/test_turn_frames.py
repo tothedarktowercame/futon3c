@@ -184,6 +184,13 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual(frames[1]["parse"]["status"], "missing")
         self.assertEqual(frames[1]["parse"]["fragments"], [])
 
+    def test_sidecars_are_not_records(self):
+        # A list-valued sidecar crashed the stepper's reload (2026-10-04).
+        self._write("turn-AAAAAA.json.quotes.json", ["quoted >>> block"])
+        self._write("turn-AAAAAA.json.draft.json", {"session_id": SID})
+        frames = self.build()
+        self.assertEqual(len(frames), 2)
+
     def test_both_candidates_spellings(self):
         frames = self.build()
         p1 = frames[0]["patterns"]["proposed_by_parent"]

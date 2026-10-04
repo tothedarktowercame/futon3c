@@ -20,6 +20,7 @@ counts over files, standard library only.
 from __future__ import annotations
 
 import argparse
+import re
 from collections import Counter, defaultdict
 import glob
 import json
@@ -47,7 +48,7 @@ def load_turns(directory: str) -> list[dict]:
     """Analysed turns: {session, at, turn_id, intents [..], reply_to}."""
     turns = []
     for path in glob.glob(os.path.join(directory, "turn-*.json")):
-        if path.endswith((".analysis.json", ".candidates.json", ".draft.json", ".patterns.json")):
+        if not re.fullmatch(r"turn-[^.]+\.json", os.path.basename(path)):
             continue
         try:
             rec = json.load(open(path, encoding="utf-8"))

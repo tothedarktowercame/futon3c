@@ -18,6 +18,7 @@ States written:
 Only `analyzed` means the work was done, and only the analysis writer sets it.
 """
 import argparse, glob, json, os, sys, urllib.request
+import re
 
 RECORDS = os.path.expanduser("~/.emacs-graph/session-turn-analysis/turn-*.json")
 BASE = os.environ.get("AGENCY_BASE", "http://127.0.0.1:7070")
@@ -72,7 +73,7 @@ def main():
         return
 
     files = a.files or [f for f in sorted(glob.glob(RECORDS))
-                        if not f.endswith((".analysis.json", ".candidates.json"))]
+                        if re.fullmatch(r"turn-[^.]+\.json", os.path.basename(f))]
     counts = {"analyzed": 0, "no-job-id": 0, "running": 0, "refused": 0,
               "failed": 0, "unreachable": 0}
     for f in files:

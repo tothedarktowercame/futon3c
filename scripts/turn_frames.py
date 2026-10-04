@@ -105,8 +105,8 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
     pattern = os.path.join(analysis_dir, "turn-*.json")
     for path in sorted(glob.glob(pattern)):
         base = os.path.basename(path)
-        if base.endswith(".analysis.json") or base.endswith(".candidates.json"):
-            continue
+        if not re.fullmatch(r"turn-[^.]+\.json", base):
+            continue  # a sidecar (.analysis, .candidates, .quotes, ...)
         try:
             with open(path) as f:
                 record = json.load(f)

@@ -103,7 +103,7 @@ def main():
     files = list(a.records)
     if a.dir:
         files += [f for f in sorted(glob.glob(os.path.join(a.dir, "turn-*.json")))
-                  if not f.endswith((".analysis.json", ".candidates.json"))]
+                  if re.fullmatch(r"turn-[^.]+\.json", os.path.basename(f))]
     if not files:
         sys.exit(__doc__)
 
