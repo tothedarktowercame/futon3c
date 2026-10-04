@@ -1,5 +1,6 @@
 (ns futon3c.xiang.reply-target-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.xiang.reply-target :as rt]))
 
 ;; Joe's turn of 2026-10-04 02:2x, verbatim in shape: two pointers and one
@@ -64,3 +65,38 @@
     (is (= [] (rt/operator-marks "the form `🈸:` means a reply")))
     (is (= [] (rt/operator-marks "writing \"🈸: yes\" answers it")))
     (is (= [] (rt/operator-marks "writing “🈸: yes” answers it")))))
+
+;; Joe's turn of 2026-10-04 05:56Z (record turn-WdLaYK), verbatim, and
+;; claude-17's reply to his previous turn (turn-uJNPcf), which it answers:
+;; evidence emacs-0b3b74bca37997e6f56b4b4357a62c5d. The bracket text "no
+;; requisition line" occurs in exactly one paragraph of that reply, the ㊟.
+(def wdlayk
+  (str "🈯 (no requisition line): I meant in an informal sense, the same general way that Kimi agents are requisitioned but not the same exact \"Kimi requisition line\".  🈸:Let's keep the experimental design \"design only\" and not bother claude-4 right now.  We could pick any similar task.  The Lean port can be kept as an e.g."))
+
+(def turn-42-reply
+  {:turn-id "repl-claude-17-turn-42" :origin "operator"
+   :text (slurp "test/futon3c/xiang/turn_acts_fixtures/turn-uJNPcf.reply.txt")})
+
+(deftest a-bracketed-target-with-a-colon-is-a-pointer
+  (let [{:keys [replies declared-intents]} (rt/resolve-targets wdlayk [turn-42-reply])
+        [bracketed inline] replies]
+    (is (= [:bracket-match "🈯" "no requisition line"]
+           ((juxt :rule :mark :bracket) bracketed)))
+    (is (str/starts-with? (:paragraph bracketed) "(your \"send it to the War Machine"))
+    (is (= "㊟" (:paragraph-mark bracketed)) "the agent paragraph's own mark, for the session join")
+    (is (= [:mark-match "🈸"] ((juxt :rule :mark) inline))
+        "the inline 🈸: in the same paragraph still answers the 🈸 paragraph")
+    (is (= [{:index 0 :mark "🈯"}] declared-intents)
+        "the mark in the bracket form is the operator's own intent")))
+
+(deftest bracket-forms-that-are-not-pointers
+  (testing "no colon after the bracket: a declared intent"
+    (is (= {:replies [] :declared-intents [{:index 0 :mark "㊟"}]}
+           (rt/resolve-targets "㊟ (the order) fine as it stands" [turn-42-reply]))))
+  (testing "a colon later in the sentence"
+    (is (= [] (:replies (rt/resolve-targets "㊟ (x) note: y" [turn-42-reply])))))
+  (testing "bracket text found nowhere, or too short to match: the newest fallback"
+    (is (= :newest (:rule (first (:replies (rt/resolve-targets "🈯 (zebra crossings): no" [turn-42-reply]))))))
+    (is (= :newest (:rule (first (:replies (rt/resolve-targets "🈯 (job): no" [turn-42-reply])))))))
+  (testing "bracket text in two paragraphs of the newest turn: not a match"
+    (is (= :newest (:rule (first (:replies (rt/resolve-targets "🈯 (codex-10): yes" [turn-42-reply]))))))))

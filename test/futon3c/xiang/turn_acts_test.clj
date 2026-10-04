@@ -210,3 +210,24 @@
       (is (= [{:debtor "claude-17" :creditor "operator" :source "claude-17-turn-393-f-s1-0"}]
              (:obligations (ta/turn-ports before "claude-17-turn-393"))
              (:obligations (ta/turn-ports after "claude-17-turn-393")))))))
+
+;; turn-uJNPcf and turn-WdLaYK are claude-17 turns 42-43 of the same
+;; session (2026-10-04T05:51/05:56Z), copied unmodified; turn 42's reply is
+;; evidence emacs-0b3b74bca37997e6f56b4b4357a62c5d. Turn 43 opens "🈯 (no
+;; requisition line): …"; its stored :replies are empty (it predates the
+;; bracket form), so the pointer is supplied in memory from the resolver.
+
+(deftest a-bracket-pointer-joins-on-the-agent-paragraph-mark
+  (let [t42 (fixture-turn "turn-uJNPcf")
+        t43 {:record (read-json "turn-WdLaYK.json")
+             :reading (read-json "turn-WdLaYK.json.analysis.json")
+             :reply ""}
+        bracket (->> (futon3c.xiang.reply-target/resolve-targets
+                      (get-in t43 [:record :source_text])
+                      [{:turn-id "stream-id" :origin "operator" :text (:reply t42)}])
+                     :replies (filter :bracket) vec)
+        acts (ta/session-acts [t42 (assoc-in t43 [:record :reply_to :replies] bracket)])]
+    (is (= ["🈯" "㊟"] ((juxt :mark :paragraph-mark) (first bracket))))
+    (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
+    (is (some #(= "claude-17-turn-42-r-2" (:target %)) acts)
+        "the ㊟ paragraph, joined on its own mark, not the operator's 🈯")))

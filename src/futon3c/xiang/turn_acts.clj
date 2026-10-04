@@ -217,16 +217,17 @@
 
 (defn pointer-targets
   "{operator-paragraph-index reply-act-id} for RECORD's stored pointers
-   (:reply_to :replies with rule mark-match). A stored reply names the
-   agent turn by the stream id the server saw, which session records do
-   not carry, so it is matched on its mark and stored paragraph excerpt
-   against SEEN, the {[mark excerpt] [act-id ..]} of the session's earlier
+   (:reply_to :replies with rule mark-match or bracket-match). A stored
+   reply names the agent turn by the stream id the server saw, which
+   session records do not carry, so it is matched on the paragraph's mark
+   (:paragraph-mark, else :mark for records stored before it) and stored
+   paragraph excerpt against SEEN, the {[mark excerpt] [act-id ..]} of the session's earlier
    replies. A pointer matching no paragraph, or more than one, links
    nothing. Returns {:targets {..} :unlinked n}."
   [record seen]
-  (reduce (fn [acc {:keys [index mark rule paragraph]}]
-            (let [ids (when (= "mark-match" (some-> rule name))
-                        (get seen [mark paragraph]))]
+  (reduce (fn [acc {:keys [index mark rule paragraph paragraph-mark]}]
+            (let [ids (when (#{"mark-match" "bracket-match"} (some-> rule name))
+                        (get seen [(or paragraph-mark mark) paragraph]))]
               (if (= 1 (count ids))
                 (assoc-in acc [:targets index] (first ids))
                 (update acc :unlinked inc))))

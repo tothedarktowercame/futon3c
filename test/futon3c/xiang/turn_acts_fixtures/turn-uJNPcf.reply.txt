@@ -1,0 +1,30 @@
+㊥ I've sent codex-10 a follow-up with seven more points, marked no reply needed; job `invoke-1791093150694-31593-0a77f5bc`. I agree with comparing the same job run as a War Machine click and as claude-4's own coordinated dispatches, but there is a naming clash to settle first. In the War Machine, a "requisition" marks a target as taken by an outside lane and so makes it *ineligible*. Sending claude-4's design "as a requisition" would therefore keep the War Machine away from it. Shall I write the comparison into the excursion as §9, using a mfuton Lean-port item that claude-4 hasn't started yet?
+
+㊢ (follow-up to codex-10)
+- **§7 contradiction:** settle it before scoring the vetting and review units.
+- **Baseline:** must start at `2fa9cb49^`, because DOCUMENT already existed.
+- **Token counts:** each figure should say which jobs it covers; 84% of the aggregate is cached input.
+- **Operator outcome:** unobserved, which is not the same as approved.
+- **Overhead products:** amortise them only over reads that actually happened.
+- **The evaluator:** someone other than the War Machine's author and reviewer.
+- **The evaluation record:** keep it free of War Machine-only fields, so it also works for clicks run outside the War Machine.
+
+I didn't park on the job, because you said no bell back.
+
+㊟ (your "send it to the War Machine as a requisition") `futon2/src/futon2/aif/target_field.clj:203-247` implements the ruling in `PROOF-2a-THEOREM-draft-2026-09-24.md`: a `**Requisition:**` line written by kimi-task.sh puts a target out of the War Machine's reach. The War Machine gets work by finding a mission with unchecked acceptance items in its field. So claude-4's design would enter as a mission or excursion with an acceptance checklist and no requisition line. Then either the War Machine selects it, or a controlled click like abb61cd8 is aimed at it. Either route works for the comparison, but the word needs fixing first, or we'll build the wrong entry point.
+
+㊭ (how to run the comparison)
+1. **One job, specified once.** One acceptance item from the Lean port, with the check computed against Lean's own output. Lean is the source of truth for the port, so the result is graded by something neither the War Machine nor claude-4 controls.
+2. **Same starting state, kept apart.**
+   - Both runs start from the same commit, each in its own worktree of the mfuton fork.
+   - Neither run can read the other's commits.
+   - Otherwise whichever runs second learns from the first.
+3. **Compare per acceptance item closed, not per click.** A War Machine click covers one checklist item, while claude-4's dispatches may cover several.
+4. **The packet stays the same; only the attached evidence differs.**
+   - In claude-4's run, claude-4 both selects the work and reviews it.
+   - In the War Machine those are separate roles.
+   - The packet's reader-independence and review checks will show that difference rather than assume it.
+5. **Count your interventions.** "Without my intervention" is the goal, so operator turns per closed item is a measure in its own right. So is how many debts each run leaves open.
+6. **One pair is an anecdote.** Three or four matched pairs, alternating which runs first, are enough to see a direction. They are not enough for a rate.
+
+🈸 (go-ahead) If you agree, I'll add §9 to the excursion and ask claude-4 for one unstarted item to use as the first pair.

@@ -1,0 +1,73 @@
+{
+  "quote_count" : 0,
+  "evidence_id" : "emacs-0481f026f300bd03c46ee07cd1267d2a",
+  "interpretation_version" : 3,
+  "source_text" : "So, first, let's send a follow-up short-list of additional considerations about wm-click-abb61cd8 to codex-10 (no need for a bell back).  Secondly the working definiton of \"click\" for our context is good, e.g. it could apply to a set of dispatches that claude-4 is organising around a Lean port to develop without my intervention.  That's not done inside the War Machine at all.  However, presumably claude-4 could send their design *to* the War Machine as a requisition.  We could then in principle compare (using your evaluation strategy) the same job run through the War Machine as a requisition and run outside the War Machine as an ad hoc coordinated click.",
+  "secrets_redacted" : [ ],
+  "tagging_failed" : false,
+  "reply_text" : "㊥ I've sent codex-10 a follow-up with seven more points, marked no reply needed; job `invoke-1791093150694-31593-0a77f5bc`. I agree with comparing the same job run as a War Machine click and as claude-4's own coordinated dispatches, but there is a naming clash to settle first. In the War Machine, a \"requisition\" marks a target as taken by an outside lane and so makes it *ineligible*. Sending claude-4's design \"as a requisition\" would therefore keep the War Machine away from it. Shall I write the comparison into the excursion as §9, using a mfuton Lean-port item that claude-4 hasn't started yet?\n\n㊢ (follow-up to codex-10)\n- **§7 contradiction:** settle it before scoring the vetting and review units.\n- **Baseline:** must start at `2fa9cb49^`, because DOCUMENT already existed.\n- **Token counts:** each figure should say which jobs it covers; 84% of the aggregate is cached input.\n- **Operator outcome:** unobserved, which is not the same as approved.\n- **Overhead products:** amortise them only over reads that actually happened.\n- **The evaluator:** someone other than the War Machine's author and reviewer.\n- **The evaluation record:** keep it free of War Machine-only fields, so it also works for clicks run outside the War Machine.\n\nI didn't park on the job, because you said no bell back.\n\n㊟ (your \"send it to the War Machine as a requisition\") `futon2/src/futon2/aif/target_field.clj:203-247` implements the ruling in `PROOF-2a-THEOREM-draft-2026-09-24.md`: a `**Requisition:**` line written by kimi-task.sh puts a target out of the War Machine's reach. The War Machine gets work by finding a mission with unchecked acceptance items in its field. So claude-4's design would enter as a mission or excursion with an acceptance checklist and no requisition line. Then either the War Machine selects it, or a controlled click like abb61cd8 is aimed at it. Either route works for the comparison, but the word needs fixing first, or we'll build the wrong entry point.\n\n㊭ (how to run the comparison)\n1. **One job, specified once.** One acceptance item from the Lean port, with the check computed against Lean's own output. Lean is the source of truth for the port, so the result is graded by something neither the War Machine nor claude-4 controls.\n2. **Same starting state, kept apart.**\n   - Both runs start from the same commit, each in its own worktree of the mfuton fork.\n   - Neither run can read the other's commits.\n   - Otherwise whichever runs second learns from the first.\n3. **Compare per acceptance item closed, not per click.** A War Machine click covers one checklist item, while claude-4's dispatches may cover several.\n4. **The packet stays the same; only the attached evidence differs.**\n   - In claude-4's run, claude-4 both selects the work and reviews it.\n   - In the War Machine those are separate roles.\n   - The packet's reader-independence and review checks will show that difference rather than assume it.\n5. **Count your interventions.** \"Without my intervention\" is the goal, so operator turns per closed item is a measure in its own right. So is how many debts each run leaves open.\n6. **One pair is an anecdote.** Three or four matched pairs, alternating which runs first, are enough to see a direction. They are not enough for a rate.\n\n🈸 (go-ahead) If you agree, I'll add §9 to the excursion and ask claude-4 for one unstarted item to use as the first pair.",
+  "session_id" : "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 136,
+    "text" : "So, first, let's send a follow-up short-list of additional considerations about wm-click-abb61cd8 to codex-10 (no need for a bell back)."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 138,
+    "end" : 209,
+    "text" : "Secondly the working definiton of \"click\" for our context is good, e.g."
+  }, {
+    "id" : "s3",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 210,
+    "end" : 330,
+    "text" : "it could apply to a set of dispatches that claude-4 is organising around a Lean port to develop without my intervention."
+  }, {
+    "id" : "s4",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 332,
+    "end" : 378,
+    "text" : "That's not done inside the War Machine at all."
+  }, {
+    "id" : "s5",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 380,
+    "end" : 471,
+    "text" : "However, presumably claude-4 could send their design *to* the War Machine as a requisition."
+  }, {
+    "id" : "s6",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 473,
+    "end" : 662,
+    "text" : "We could then in principle compare (using your evaluation strategy) the same job run through the War Machine as a requisition and run outside the War Machine as an ad hoc coordinated click."
+  } ],
+  "analysis_dispatch" : {
+    "scheduled_at" : 1791093111818,
+    "job_id" : "invoke-1791093112032-31591-86debf57"
+  },
+  "draft_status" : "drafted",
+  "withdrawal_processing_error" : null,
+  "original_text" : "So, first, let's send a follow-up short-list of additional considerations about wm-click-abb61cd8 to codex-10 (no need for a bell back).  Secondly the working definiton of \"click\" for our context is good, e.g. it could apply to a set of dispatches that claude-4 is organising around a Lean port to develop without my intervention.  That's not done inside the War Machine at all.  However, presumably claude-4 could send their design *to* the War Machine as a requisition.  We could then in principle compare (using your evaluation strategy) the same job run through the War Machine as a requisition and run outside the War Machine as an ad hoc coordinated click.",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊥ I've sent codex-10 a follow-up with seven more points, marked no reply needed; job `invoke-1791093150694-31593-0a77f5bc`. I agree with comparing the same job run as a War Machine click and as claude-4's own coordinated dispatches, but there is a naming clash to settle first. In the War Machine, a \"requisition\" marks a target as taken by an outside lane and so makes it *ineligible*. Sending claude-4's design \"as a requisition\" would therefore keep the War Machine away from it. Shall I write the comparison into the excursion as §9, using a mfuton Lean-port item that claude-4 hasn't started yet?\n\n㊢ (follow-up to codex-10)\n- **§7 contradiction:** settle it before scoring the vetting and review units.\n- **Baseline:** must start at `2fa9cb49^`, because DOCUMENT already existed.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-uJNPcf.json.draft.json",
+  "turn_id" : "claude-17-turn-42",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "analysis_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-uJNPcf.json.analysis.json",
+  "version" : 1,
+  "agent_id" : "claude-17",
+  "unmatched" : [ "s1", "s2", "s3", "s4", "s5", "s6" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-04T05:51:51Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

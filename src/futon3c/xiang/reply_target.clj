@@ -25,12 +25,18 @@
        vec))
 
 (defn- opening
-  "[mark pointer?] for a paragraph opening with a proforma mark, else nil.
-   pointer? is true when the mark is followed by a colon."
+  "[mark pointer? bracket] for a paragraph opening with a proforma mark,
+   else nil. pointer? is true when the mark is followed by a colon, or by a
+   bracketed target and then a colon (`🈯 (no requisition line): …`); in
+   that form BRACKET is the bracket text. A colon later in the sentence
+   (`㊟ (x) note: y`) does not count."
   [para]
   (some (fn [m]
           (when (str/starts-with? para m)
-            [m (str/starts-with? (str/triml (subs para (count m))) ":")]))
+            (let [rest (subs para (count m))]
+              (if-let [[_ bracket] (re-find #"^\s*\(([^)]*)\)\s*:" rest)]
+                [m true (str/trim bracket)]
+                [m (str/starts-with? (str/triml rest) ":") nil]))))
         marks))
 
 (defn- unquoted
@@ -65,18 +71,27 @@
          (map second))))
 
 (defn operator-marks
-  "Joe's marked paragraphs: [{:index :mark :pointer? :text}]. A paragraph
+  "Joe's marked paragraphs: [{:index :mark :pointer? :text}], plus
+   :bracket for the `<mark> (target):` form. A paragraph
    may also carry `<mark>:` pointers after its start; each is an entry with
    :pointer? true and :inline? true, and the paragraph's :index."
   [text]
   (vec (mapcat (fn [i para]
                  (concat
-                  (when-let [[m pointer?] (opening para)]
-                    [{:index i :mark m :pointer? pointer?
-                      :text (str/triml (str/replace-first (subs para (count m)) #"^\s*:\s*" ""))}])
+                  (when-let [[m pointer? bracket] (opening para)]
+                    [(cond-> {:index i :mark m :pointer? pointer?
+                              :text (str/triml (str/replace-first (subs para (count m))
+                                                                  (if bracket #"^\s*\([^)]*\)\s*:\s*" #"^\s*:\s*")
+                                                                  ""))}
+                       bracket (assoc :bracket bracket))])
                   (for [m (inline-pointers para)]
                     {:index i :mark m :pointer? true :inline? true :text para})))
                (range) (paragraphs text))))
+
+(defn- squash
+  "S lower-cased with runs of whitespace as one space, trimmed."
+  [s]
+  (str/trim (str/replace (str/lower-case (str s)) #"\s+" " ")))
 
 (defn excerpt
   "The paragraph excerpt a stored reply carries as :paragraph."
@@ -91,23 +106,42 @@
    candidate when no paragraph carries the mark; :none when there are no
    candidates.
 
+   In the `<mark> (target):` form the mark is the operator's own intent
+   (it is also listed as a declared intent) and the bracket names what is
+   answered, so it is not mark-matched. Rule :bracket-match picks the
+   newest candidate with a marked paragraph containing the bracket text
+   (case and spacing ignored, at least 8 characters), when exactly one of
+   its paragraphs does; otherwise :newest or :none as above.
+
    Returns {:replies [{:index :mark :rule :turn-id :origin :paragraph
-   :excerpt}] :declared-intents [{:index :mark}]}."
+   :paragraph-mark :bracket}] :declared-intents [{:index :mark}]}, where
+   :paragraph-mark is the mark of the agent paragraph matched (it differs
+   from :mark under :bracket-match)."
   [text candidates]
   (let [ms (operator-marks text)
         cands (vec candidates)]
     {:replies
-     (vec (for [{:keys [index mark]} (filter :pointer? ms)]
-            (if-let [[c p] (first (for [c cands
-                                        :let [ps (filter #(= mark (:mark %)) (tr/reply-marks (:text c)))]
-                                        :when (seq ps)]
-                                    [c (last ps)]))]
-              {:index index :mark mark :rule :mark-match
-               :turn-id (:turn-id c) :origin (:origin c)
-               :paragraph (excerpt (:text p))}
-              (if-let [c (first cands)]
-                {:index index :mark mark :rule :newest
-                 :turn-id (:turn-id c) :origin (:origin c)}
-                {:index index :mark mark :rule :none}))))
-     :declared-intents (vec (for [{:keys [index mark]} (remove :pointer? ms)]
+     (vec (for [{:keys [index mark bracket]} (filter :pointer? ms)
+                :let [b (some-> bracket squash)
+                      found (if bracket
+                              (when (>= (count b) 8)
+                                (first (for [c cands
+                                             :let [ps (filter #(str/includes? (squash (:text %)) b)
+                                                              (tr/reply-marks (:text c)))]
+                                             :when (seq ps)]
+                                         (when (= 1 (count ps)) [c (first ps) :bracket-match]))))
+                              (first (for [c cands
+                                           :let [ps (filter #(= mark (:mark %)) (tr/reply-marks (:text c)))]
+                                           :when (seq ps)]
+                                       [c (last ps) :mark-match])))]]
+            (cond-> (if-let [[c p rule] found]
+                      {:index index :mark mark :rule rule
+                       :turn-id (:turn-id c) :origin (:origin c)
+                       :paragraph (excerpt (:text p)) :paragraph-mark (:mark p)}
+                      (if-let [c (first cands)]
+                        {:index index :mark mark :rule :newest
+                         :turn-id (:turn-id c) :origin (:origin c)}
+                        {:index index :mark mark :rule :none}))
+              bracket (assoc :bracket bracket))))
+     :declared-intents (vec (for [{:keys [index mark]} (filter #(or (not (:pointer? %)) (:bracket %)) ms)]
                               {:index index :mark mark}))}))

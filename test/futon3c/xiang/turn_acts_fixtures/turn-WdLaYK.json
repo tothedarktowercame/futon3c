@@ -1,0 +1,66 @@
+{
+  "quote_count" : 0,
+  "evidence_id" : "emacs-081fbffe5623067125ca0f8873ccacef",
+  "interpretation_version" : 3,
+  "source_text" : "🈯 (no requisition line): I meant in an informal sense, the same general way that Kimi agents are requisitioned but not the same exact \"Kimi requisition line\".  🈸:Let's keep the experimental design \"design only\" and not bother claude-4 right now.  We could pick any similar task.  The Lean port can be kept as an e.g.",
+  "secrets_redacted" : [ ],
+  "tagging_failed" : false,
+  "reply_text" : "㊥ I've added the comparison to the excursion as §9, as a design only. It treats \"requisitioned to the War Machine\" in your informal sense, uses the Lean port only as an example, and doesn't involve claude-4. One question from my last message is still open: should I send codex-10 my reading of the §7 contradiction (the May walkthrough tested the API; the browser walkthrough is still owed)?\n\n㊣: (informal requisition) Understood. §9 says \"requisitioned\" there means putting the job where the War Machine will pick it up: either as a mission with an acceptance checklist, or as the target of a controlled click. It also notes that futon2's `**Requisition:**` line means the opposite, so the two senses don't get mixed up in later work.\n\n㊢ (what §9 contains) The commit is futon3c `8094ecd3`.\n- **The job:** one acceptance item, checked by something neither arm controls.\n- **The two arms:** they start from the same commit in separate worktrees, and neither can see the other's commits until both are done. Arm W is the War Machine; arm O is an orchestrator such as claude-4 running its own dispatches.\n- **What gets compared:** results per acceptance item closed, with every number stating which population it counts. Your turns per closed item is a main measure.\n- **The evaluation packet:** the same for both arms. A unit one arm doesn't produce, such as the Morning Brief, is recorded as absent rather than counted as a failure.\n- **How many runs:** three or four similar jobs, alternating which arm goes first.\n- **What would make it misleading:**\n  - the arms getting different specification texts;\n  - your interventions counted from memory rather than from the turn records;\n  - choosing a job after knowing which arm it suits.",
+  "session_id" : "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 158,
+    "text" : "🈯 (no requisition line): I meant in an informal sense, the same general way that Kimi agents are requisitioned but not the same exact \"Kimi requisition line\"."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 160,
+    "end" : 245,
+    "text" : "🈸:Let's keep the experimental design \"design only\" and not bother claude-4 right now."
+  }, {
+    "id" : "s3",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 247,
+    "end" : 278,
+    "text" : "We could pick any similar task."
+  }, {
+    "id" : "s4",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 280,
+    "end" : 316,
+    "text" : "The Lean port can be kept as an e.g."
+  } ],
+  "analysis_dispatch" : {
+    "scheduled_at" : 1791093393710,
+    "job_id" : "invoke-1791093393892-31595-676cdbef"
+  },
+  "draft_status" : "drafted",
+  "withdrawal_processing_error" : null,
+  "reply_to" : {
+    "replies" : [ ],
+    "declared_intents" : [ {
+      "index" : 0,
+      "mark" : "🈯"
+    } ]
+  },
+  "original_text" : "🈯 (no requisition line): I meant in an informal sense, the same general way that Kimi agents are requisitioned but not the same exact \"Kimi requisition line\".  🈸:Let's keep the experimental design \"design only\" and not bother claude-4 right now.  We could pick any similar task.  The Lean port can be kept as an e.g.",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊥ I've added the comparison to the excursion as §9, as a design only. It treats \"requisitioned to the War Machine\" in your informal sense, uses the Lean port only as an example, and doesn't involve claude-4. One question from my last message is still open: should I send codex-10 my reading of the §7 contradiction (the May walkthrough tested the API; the browser walkthrough is still owed)?\n\n㊣: (informal requisition) Understood. §9 says \"requisitioned\" there means putting the job where the War Machine will pick it up: either as a mission with an acceptance checklist, or as the target of a controlled click. It also notes that futon2's `**Requisition:**` line means the opposite, so the two senses don't get mixed up in later work.\n\n㊢ (what §9 contains) The commit is futon3c `8094ecd3`.\nCommits during the turn (any repo; not necessarily the agent's own):\n- futon3c 8094ecd3 E-象-evaluation-strategy §9: design for comparing a job inside and outside the War Machine (+80 -0 over 1 files)",
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-WdLaYK.json.draft.json",
+  "turn_id" : "claude-17-turn-43",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "analysis_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-WdLaYK.json.analysis.json",
+  "version" : 1,
+  "agent_id" : "claude-17",
+  "unmatched" : [ "s1", "s2", "s3", "s4" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-04T05:56:33Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

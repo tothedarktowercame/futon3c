@@ -466,6 +466,10 @@ event
 ;; the pointer is supplied, and keep it open in the stored session, whose
 ;; record predates the writer. Known limit: an unquoted sentence about the
 ;; notation ("the legend says 🈸: ask-action") also reads as a pointer.
+;; A second form, `<mark> (target): …`, is also a pointer: there the mark
+;; is the operator's own intent and the bracket text names the paragraph
+;; answered, so it is matched by finding the bracket text in exactly one
+;; paragraph of the agent's newest turn that has it.
 ;;
 ;; 2. Read the bracketed target. Agents write, after each mark, what the
 ;; paragraph is about; today that text is kept but not parsed. Resolve it
