@@ -156,3 +156,22 @@
           [_ o] (wo/open-order {} {:requester "a" :debtor "b" :parent nil
                                    :job-id "j" :text long-prompt})]
       (is (= 400 (count (:text o)))))))
+
+(deftest transitions-stamp-movement-and-explicit-close-releases
+  (let [[orders order] (wo/open-order {} {:requester "requester" :debtor "debtor"
+                                          :job-id "job" :text "work"})
+        opened-move (:moved-at order)
+        delivered (wo/deliver orders (:id order) "bb")]
+    (is (integer? opened-move))
+    (is (>= (get-in delivered [(:id order) :moved-at]) opened-move)))
+  (binding [wo/*append-act!* (fn [_] nil)]
+    (let [opened (wo/maybe-open-order!
+                  {:caller "requester" :debtor "debtor" :job-id "child-job"
+                   :prompt "work" :mode "work" :registered? #{"requester"}
+                   :running-job-id-fn (constantly nil)})
+          root (first opened)
+          child (second opened)]
+      (is (= 409 (:status (wo/close-order! {:id (:id root) :by "joe" :reason "stop"}))))
+      (is (= 403 (:status (wo/close-order! {:id (:id child) :by "stranger" :reason "no"}))))
+      (is (:ok (wo/close-order! {:id (:id root) :by "joe" :reason "stop" :force true})))
+      (is (= :closed (:state (first (wo/list-orders {:agent "requester" :state :closed}))))))))

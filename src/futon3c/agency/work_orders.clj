@@ -22,7 +22,8 @@
    appends a P24 act to evidence through the single boundary, off the
    request path (a future), and never fails the bell that triggered it.
 
-   W1 scope: no nudges, no close route (W2/W3)."
+   W3 adds movement stamps, recorded nudge/escalation actions, and explicit
+   authorized release; transport wiring owns notification delivery and HTTP."
   (:refer-clojure :exclude [deliver])
   (:require [clojure.set :as set]
             [clojure.string :as str]
@@ -33,6 +34,7 @@
 (def order-states #{:open :delivered :closed})
 
 (defn- now-str [] (str (Instant/now)))
+(defn- now-ms [] (System/currentTimeMillis))
 
 (defn- new-order-id [] (str "wo-" (UUID/randomUUID)))
 
@@ -55,6 +57,7 @@
                :job-id job-id
                :text (truncate-text text)
                :opened-at (now-str)
+               :moved-at (now-ms)
                :state :open
                :closed-by nil
                :nudges []}]
@@ -68,7 +71,8 @@
   (if (= :open (get-in orders [id :state]))
     (-> orders
         (assoc-in [id :state] :delivered)
-        (assoc-in [id :bellback-job-id] bellback-job-id))
+        (assoc-in [id :bellback-job-id] bellback-job-id)
+        (assoc-in [id :moved-at] (now-ms)))
     orders))
 
 (defn close
@@ -78,7 +82,8 @@
   (if (contains? #{:open :delivered} (get-in orders [id :state]))
     (-> orders
         (assoc-in [id :state] :closed)
-        (assoc-in [id :closed-by] closed-by))
+        (assoc-in [id :closed-by] closed-by)
+        (assoc-in [id :moved-at] (now-ms)))
     orders))
 
 (defn holder-of
@@ -197,7 +202,7 @@
                                                      :parent (:id parent')
                                                      :job-id job-id
                                                      :text prompt})]
-                            orders'')))
+                            (assoc-in orders'' [(:id parent') :moved-at] (now-ms)))))
             opened-ids (set/difference (set (keys after)) (set (keys before)))
             opened (mapv after (sort-by #(get-in after [% :opened-at]) opened-ids))]
         (doseq [o opened]
@@ -257,9 +262,59 @@
 (defn list-orders
   "Orders matching {:agent (debtor or requester) :state}, each with :holder
    computed (holder-of)."
-  [{:keys [agent state]}]
+  [{:keys [agent state escalated]}]
   (mapv (fn [o] (assoc o :holder (holder-of o)))
-        (orders-for @!orders {:agent agent :state state})))
+        (cond->> (orders-for @!orders {:agent agent :state state})
+          escalated (filter #(some (fn [n] (= :escalate (:kind n))) (:nudges %))))))
+
+(defn record-action!
+  "Record a nudge or escalation on ID. Returns the updated order, or nil."
+  [id {:keys [to kind] :as action}]
+  (when (contains? #{:nudge :escalate} kind)
+    (let [entry {:at (or (:at action) (now-ms)) :to to :kind kind}]
+      (get (swap! !orders
+                  (fn [orders]
+                    (if (contains? orders id)
+                      (update-in orders [id :nudges] (fnil conj []) entry)
+                      orders)))
+           id))))
+
+(defn append-problem-report!
+  "Append the operator-facing evidence act for a joe escalation."
+  [id text]
+  (when-let [order (get @!orders id)]
+    (append-act! :report-problem order {:requester "joe"
+                                        :debtor (:debtor order)
+                                        :text text})))
+
+(defn close-order!
+  "Explicitly release ID. Debtor, requester, or joe may close it. Refuses an
+   open child unless FORCE is true. Returns a result map for the HTTP boundary."
+  [{:keys [id by reason force]}]
+  (let [result (atom nil)
+        [before after]
+        (swap-vals! !orders
+                    (fn [orders]
+                      (let [order (get orders id)
+                            authorized? (and order (contains? (hash-set (:debtor order)
+                                                                        (:requester order) "joe") by))
+                            open-child? (some #(and (= id (:parent %))
+                                                    (contains? #{:open :delivered} (:state %)))
+                                              (vals orders))]
+                        (cond
+                          (nil? order) (do (reset! result {:ok false :status 404 :error :not-found}) orders)
+                          (not authorized?) (do (reset! result {:ok false :status 403 :error :forbidden}) orders)
+                          (= :closed (:state order)) (do (reset! result {:ok true :status 200 :order order}) orders)
+                          (and open-child? (not force))
+                          (do (reset! result {:ok false :status 409 :error :open-child}) orders)
+                          :else (let [closed (close orders id by)]
+                                  (reset! result {:ok true :status 200 :order (get closed id)})
+                                  closed)))))]
+    (when (and (:ok @result)
+               (not= :closed (get-in before [id :state]))
+               (= :closed (get-in after [id :state])))
+      (append-act! :release (get after id) {:by by :reason reason}))
+    @result))
 
 (defn reset-ledger!
   "Test support: empty the ledger."

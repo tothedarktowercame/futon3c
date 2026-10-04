@@ -69,6 +69,12 @@
           action (check/check "codex-19" [nudged later-child child-18] idle 5000)]
       (is (= :nudge (:action action))))))
 
+(deftest explicit-moved-at-resets-the-nudge
+  (let [nudged (assoc root :moved-at 4500
+                      :nudges [{:at 4000 :to "codex-19" :kind :nudge}])]
+    (is (= :nudge (:action (check/check "codex-19"
+                                        [nudged child-20 child-18] idle 5000))))))
+
 (deftest delivered-order-held-by-requester
   (testing "codex-18's job just ended: wo-18 is :delivered, so codex-18 holds nothing"
     (is (nil? (check/check "codex-18" [root child-20 child-18-delivered] idle 5000))))

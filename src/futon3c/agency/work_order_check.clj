@@ -36,15 +36,23 @@
                (contains? #{:open :delivered} (:state child))))
         orders))
 
+(defn- epoch-ms
+  [x]
+  (cond
+    (number? x) (long x)
+    (string? x) (try (.toEpochMilli (java.time.Instant/parse x))
+                     (catch Throwable _ 0))
+    :else 0))
+
 (defn- last-move-ms
   "The most recent observable movement on an order: its own opening, or
   the opening of any child (dispatching a child is the debtor moving)."
   [orders order]
   (reduce max
-          (or (:opened-at order) 0)
+          (epoch-ms (or (:moved-at order) (:opened-at order)))
           (keep (fn [child]
                   (when (= (:id order) (:parent child))
-                    (:opened-at child)))
+                    (epoch-ms (or (:moved-at child) (:opened-at child)))))
                 orders)))
 
 (defn- nudge-since-move?

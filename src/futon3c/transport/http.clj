@@ -107,6 +107,7 @@
             [futon3c.agency.warrant :as warrant]
             [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.work-orders :as work-orders]
+            [futon3c.agency.work-order-check :as work-order-check]
             [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
@@ -1479,6 +1480,70 @@
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
 
+(declare canonical-job-agent-id active-invoke-job-counts)
+
+(defn- work-order-bell-request
+  [{:keys [to text]}]
+  {:agent-id to :prompt text :caller "work-orders" :surface "work-orders"})
+
+(defn- enqueue-work-order-bell!
+  "Enqueue an unregistered, one-way work-order notification. The caller name
+   deliberately cannot open another order and receives no auto-bellback."
+  [{:keys [to text]}]
+  (let [request (work-order-bell-request {:to to :text text})
+        job-id (create-invoke-job! request)]
+    (.submit invoke-executor
+             ^Runnable
+             (fn [] (run-invoke-job! (assoc request :job-id job-id))))
+    job-id))
+
+(def ^:dynamic *enqueue-work-order-bell!* enqueue-work-order-bell!)
+
+(defn- work-order-nudges-enabled?
+  "Emergency off switch. Set FUTON3C_WORK_ORDER_NUDGES=0 while W3 produces
+   incorrect/duplicate notifications; re-arm after the failing finalize case
+   has a regression test and the ledger has been inspected for duplicates."
+  []
+  (not= "0" (System/getenv "FUTON3C_WORK_ORDER_NUDGES")))
+
+(defn- work-order-agent-state
+  [agent-id]
+  (let [agent (canonical-job-agent-id agent-id)
+        counts (get (active-invoke-job-counts) agent {})
+        parked? (some #(and (= agent (str (:agent %))) (not (:released? %)))
+                      (vals (:records (parked-on/snapshot))))]
+    {:running-jobs (or (:running-jobs counts) 0)
+     :queued-jobs (or (:queued-jobs counts) 0)
+     :parked? (boolean parked?)}))
+
+(defn- run-work-order-check!
+  [agent-id]
+  (when (work-order-nudges-enabled?)
+    (when-let [action
+               (locking work-orders/!orders
+                 (when-let [chosen (work-order-check/check
+                                    agent-id (vals @work-orders/!orders)
+                                    (work-order-agent-state agent-id)
+                                    (System/currentTimeMillis))]
+                   ;; Choose and claim atomically, so two closely finishing jobs
+                   ;; cannot both choose the same first nudge.
+                   (work-orders/record-action! (:order chosen)
+                                               {:to (:to chosen) :kind (:action chosen)})
+                   chosen))]
+      (if (and (= :escalate (:action action)) (= "joe" (:to action)))
+        (work-orders/append-problem-report! (:order action) (:text action))
+        (*enqueue-work-order-bell!* action)))))
+
+(def ^:dynamic *schedule-work-order-check!*
+  (fn [agent-id]
+    (future
+      (try
+        (run-work-order-check! agent-id)
+        (catch Throwable t
+          (binding [*out* *err*]
+            (println (str "[work-orders] end-of-job check failed for " agent-id ": "
+                          (.getMessage t)))))))))
+
 ;; --- E-repl-continuations Car 2: parked-on join release wiring -----------------
 ;; A job reaching terminal state folds into any parked-on continuation awaiting it;
 ;; when a join completes, ONE resume turn is enqueued for the parked agent. The hook
@@ -2236,7 +2301,10 @@
         ;; a bellback job's terminal closes the delivered order (:fulfil).
         (work-orders/job-terminal!
          {:job-id job-id
-          :bellback-job-id (some-> @bellback-request :bell-job-id)})))
+          :bellback-job-id (some-> @bellback-request :bell-job-id)})
+        ;; E2 must settle the ending job's order before E3 observes its holder.
+        ;; The check itself runs outside the finalize path and cannot fail it.
+        (*schedule-work-order-check!* (:agent-id updated-terminal-job))))
     ;; A caller with no registered push or inbox route can never leave the
     ;; polling-only state. Record that terminal disposition here; unlike seat
     ;; receipts, it does not depend on a later delivery action.
@@ -3698,19 +3766,36 @@
          vec)))
 
 (defn- handle-work-orders-list
-  "GET /api/alpha/work-orders[?agent=<id>][&state=<open|delivered|closed>] —
+  "GET /api/alpha/work-orders[?agent=<id>][&state=<open|delivered|closed>]
+   [&escalated=true] —
    the W1 work-order ledger (E-agency-work-orders). ?agent= filters to orders
    where the agent is debtor or requester. Each order carries :holder (debtor
    while :open, requester while :delivered)."
   [request]
   (let [params (parse-query-params request)
         agent (some-> (get params "agent") str str/trim not-empty)
-        state (some-> (get params "state") str str/trim str/lower-case not-empty)]
+        state (some-> (get params "state") str str/trim str/lower-case not-empty)
+        escalated (= "true" (some-> (get params "escalated") str str/lower-case))]
     (if (and state (not (contains? work-orders/order-states (keyword state))))
       (json-response 400 {:ok false :err "invalid-state"
                           :message "state must be open, delivered or closed"})
       (json-response 200 {:ok true
-                          :orders (work-orders/list-orders {:agent agent :state state})}))))
+                          :orders (work-orders/list-orders {:agent agent :state state
+                                                           :escalated escalated})}))))
+
+(defn- handle-work-order-close
+  [request order-id]
+  (if-let [payload (parse-json-map (read-body request))]
+    (let [by (some-> (or (:by payload) (get payload "by")) str str/trim not-empty)
+          reason (some-> (or (:reason payload) (get payload "reason")) str)
+          force (true? (or (:force payload) (get payload "force")))
+          result (when (and by (not (str/blank? reason)))
+                   (work-orders/close-order! {:id order-id :by by
+                                              :reason reason :force force}))]
+      (if result
+        (json-response (:status result) (dissoc result :status))
+        (json-response 400 {:ok false :error "by-and-reason-required"})))
+    (json-response 400 {:ok false :error "invalid-json"})))
 
 (defn- handle-patterns-search
   "GET /api/alpha/patterns/search?q=...&limit=N — search pattern catalog."
@@ -12202,6 +12287,11 @@
           ;; E-agency-work-orders W1: the work-order ledger
           (and (= :get method) (= "/api/alpha/work-orders" uri))
           (handle-work-orders-list request)
+
+          (and (= :post method)
+               (re-matches #"/api/alpha/work-orders/([^/]+)/close" uri))
+          (let [[_ raw-id] (re-matches #"/api/alpha/work-orders/([^/]+)/close" uri)]
+            (handle-work-order-close request (enc/decode-uri-component raw-id)))
 
           ;; Walkie-talkie: PSR/PUR/PAR evidence endpoints
           (and (= :post method) (= "/api/alpha/evidence/psr" uri))
