@@ -1506,6 +1506,22 @@
   []
   (not= "0" (System/getenv "FUTON3C_WORK_ORDER_NUDGES")))
 
+(defonce ^:private !asked-operator
+  ;; agent-id -> true when its last turn ended asking Joe something.
+  (atom {}))
+
+(defn- asks-operator?
+  "Whether reply TEXT ends its turn waiting on the operator: it has a
+   paragraph marked 🈸 (ask-action) or 🈯 (clarify, including a question).
+   Classical, by the reply proforma; an unmarked reply asks nothing."
+  [text]
+  (boolean (and (string? text) (re-find #"(?m)^\s*(?:🈸|🈯)" text))))
+
+(defn- note-turn-text!
+  "Record whether AGENT-ID's turn that just ended is waiting on Joe."
+  [agent-id text]
+  (swap! !asked-operator assoc (canonical-job-agent-id agent-id) (asks-operator? text)))
+
 (defn- work-order-agent-state
   [agent-id]
   (let [agent (canonical-job-agent-id agent-id)
@@ -1514,7 +1530,9 @@
                       (vals (:records (parked-on/snapshot))))]
     {:running-jobs (or (:running-jobs counts) 0)
      :queued-jobs (or (:queued-jobs counts) 0)
-     :parked? (boolean parked?)}))
+     ;; Asking Joe is a declared wait on the operator, as a park is on a
+     ;; job: an agent whose turn ended with a question is not stalled.
+     :parked? (boolean (or parked? (get @!asked-operator agent)))}))
 
 (defn- run-work-order-check!
   [agent-id]
@@ -2304,6 +2322,7 @@
           :bellback-job-id (some-> @bellback-request :bell-job-id)})
         ;; E2 must settle the ending job's order before E3 observes its holder.
         ;; The check itself runs outside the finalize path and cannot fail it.
+        (note-turn-text! (:agent-id updated-terminal-job) result-text)
         (*schedule-work-order-check!* (:agent-id updated-terminal-job))))
     ;; A caller with no registered push or inbox route can never leave the
     ;; polling-only state. Record that terminal disposition here; unlike seat
@@ -6582,6 +6601,7 @@
                           ;; A REPL turn is not an invoke job, so finalize never
                           ;; checks it; Joe's "ok please continue" turns are
                           ;; where the codex chains do most of their work.
+                          (note-turn-text! aid (:result result))
                           (*schedule-work-order-check!* (str aid)))))})
                   ;; Tell the operator what the turn is waiting on (if anything).
                   (when-let [ev (queued-turn-activity aid turn-id)]

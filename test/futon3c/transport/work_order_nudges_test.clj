@@ -11,12 +11,14 @@
   (f))
 (use-fixtures :each mesh-fixtures/with-store fresh)
 
+(def ^:private ^:dynamic *reply* "done.")
+
 (defn- terminal-job! [job-id agent]
   (#'http/create-invoke-job! {:requested-job-id job-id :agent-id agent
                               :prompt "turn" :caller "joe" :surface "test"
                               :mode "brief"})
   (#'http/mark-invoke-job-running! job-id)
-  (#'http/finalize-invoke-job! job-id "done" nil nil {:ok true} nil))
+  (#'http/finalize-invoke-job! job-id "done" nil nil {:ok true :result *reply*} nil))
 
 (defn- root [nudges]
   {:id "wo-root" :requester "joe" :debtor "codex-19" :parent nil
@@ -96,3 +98,13 @@
                                  "wo-child" (child :delivered "ending")} true)]
       (is (= "wo-root" (:order (first sent-after)))
           "production finalize runs E2 first, so the closed child cannot be selected"))))
+
+(deftest a-turn-ending-with-a-question-to-joe-is-a-declared-wait
+  ;; claude-17 was nudged live (2026-10-04) right after ending its turn with
+  ;; a 🈸 question to Joe: waiting for the operator is not a stall.
+  (binding [*reply* "㊥ (gist) Done.\n\n🈸 (next) Shall I start with steps 1 and 2?"]
+    (is (empty? (run-case! {"wo-root" (root [])} true))))
+  (binding [*reply* "㊥ (gist) Done.\n\n㊭ (next) I will do steps 1 and 2."]
+    (is (= [:nudge] (map :action (run-case! {"wo-root" (root [])} true)))
+        "an unmarked or non-asking reply is not a wait")))
+
