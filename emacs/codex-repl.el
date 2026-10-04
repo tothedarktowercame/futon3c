@@ -3723,6 +3723,7 @@ When FORCE is non-nil, refresh immediately."
     (codex-repl--append-invoke-trace
      "autorunner initial send scheduled"
      'font-lock-keyword-face))
+  (force-mode-line-update)
   (message "codex-repl autorunner armed in %s" (buffer-name)))
 
 (defun stop-codex-autorunner ()
@@ -3736,7 +3737,13 @@ When FORCE is non-nil, refresh immediately."
   (codex-repl--append-invoke-trace
    "autorunner stopped"
    'shadow)
-  (message "codex-repl autorunner stopped in %s" (buffer-name)))
+  ;; The 象 lighter reads the flag; redraw it now, not at the next output.
+  (force-mode-line-update)
+  ;; Stopping disarms the NEXT send; a turn already running carries on.
+  (message (if (process-live-p agent-chat--pending-process)
+               "codex-repl autorunner stopped in %s; the current turn will finish (C-c C-c interrupts it)"
+             "codex-repl autorunner stopped in %s")
+           (buffer-name)))
 
 (defalias 'codex-repl-start-autorunner #'start-codex-autorunner)
 (defalias 'codex-repl-stop-autorunner #'stop-codex-autorunner)
