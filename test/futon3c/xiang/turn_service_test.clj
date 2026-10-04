@@ -222,71 +222,6 @@
                                         :intent "withdraw" :target nil :rationale "r"
                                         :relations ["action"] :display_cues [] :no_surface_cue "implicit"}]}]}))
 
-(deftest a-recorded-turn-and-its-reading-become-evidence
-  ;; M-象-2000 step 2: one entry for the record (citing the operator turn's
-  ;; evidence_id), one for the published reading (citing the record's entry).
-  (let [appended (atom [])
-        h (harness {:evidence! (fn [entry] (swap! appended conj entry) {:ok true})})
-        {:keys [id record]} (turn! h)]
-    (is (= 1 (count @appended)))
-    (let [entry (first @appended)]
-      (is (= (str "e-xiang-turn-" id) (:evidence-id entry)))
-      (is (= {:ref/type :thread :ref/id id} (:subject entry)))
-      (is (= "emacs-abc" (:in-reply-to entry)) "cites the operator turn's evidence id")
-      (is (= record (:body entry)))
-      (is (= "sess-1" (:session-id entry)))
-      (is (some #{:xiang-turn-record} (:tags entry))))
-    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
-    (is (= 2 (count @appended)))
-    (let [entry (second @appended)]
-      (is (= (str "e-xiang-reading-" id) (:evidence-id entry)))
-      (is (= (str "e-xiang-turn-" id) (:in-reply-to entry)) "cites the record's entry")
-      (is (= {:ref/type :thread :ref/id id} (:subject entry)))
-      (is (some #{:xiang-turn-reading} (:tags entry))))))
-
-(deftest a-retried-evidence-append-is-a-quiet-duplicate
-  ;; The bad case idempotence is named for: the effect runs twice for the
-  ;; same record id. The second append answers duplicate-id; it must not
-  ;; schedule a retry, must not touch health, and the store sees one entry.
-  (let [seen (atom [])
-        h (harness {:evidence! (fn [entry]
-                                 (if (some #{(:evidence-id entry)} @seen)
-                                   {:ok false :error/code :duplicate-id :idempotent? true}
-                                   (do (swap! seen conj (:evidence-id entry))
-                                       {:ok true})))})
-        {:keys [id record]} (turn! h)]
-    (is (= [(str "e-xiang-turn-" id)] @seen))
-    (let [result (svc/append-evidence! (:svc h) (svc/turn-evidence-entry id record)
-                                       [60 180 600])]
-      (is (false? (:ok result)))
-      (is (:idempotent? result)))
-    (is (= [(str "e-xiang-turn-" id)] @seen) "still exactly one entry")
-    (is (empty? @(:scheduled h)) "a duplicate never schedules a retry")
-    (is (nil? (:state (svc/health (:svc h)))) "a duplicate never touches health")))
-
-(deftest a-failed-evidence-append-never-blocks-the-turn
-  ;; futon1b throws: the turn is still recorded, the reading still
-  ;; published, the append is retried once on the bounded schedule, and
-  ;; health says the file is the source of truth.
-  (let [attempts (atom 0)
-        h (harness {:evidence! (fn [_] (swap! attempts inc)
-                                 (throw (ex-info "futon1b busy" {})))
-                    :store-busy-delays [60]})
-        {:keys [id record]} (turn! h)]
-    (is (some? (ts/read-record (get-in (:svc h) [:config :store]) id))
-        "the turn is recorded even while evidence is down")
-    (is (= 1 @attempts))
-    (is (= [60] (delays h)) "the failure is retried on the bounded schedule")
-    (run-next! h)
-    (is (= 2 @attempts) "the retry ran the effect again")
-    (is (= :failing (:state (svc/health (:svc h)))))
-    (is (re-find #"file record is the source of truth"
-                 (:detail (svc/health (:svc h)))))
-    (let [out (svc/publish-analysis! (:svc h) id (analysis-for record) {})]
-      (is (= "analyzed" (get-in out [:analysis :status])) "the reading still publishes")
-      (is (ts/analysis-published? (get-in (:svc h) [:config :store]) id)))
-    (is (= 3 @attempts))))
-
 (deftest publishing-an-analysis-processes-its-withdrawals
   (let [h (harness)
         {:keys [id record]} (turn! h {:dispatch :now})
@@ -496,33 +431,6 @@
       (is (re-find #"pattern candidates failed" (:detail (svc/health (:svc h)))))
       (is (nil? (ts/read-pattern-candidates (get-in (:svc h) [:config :store]) id))))))
 
-(deftest a-missing-reply-parent-keeps-the-entry
-  ;; The real boundary refuses an in-reply-to it cannot resolve
-  ;; (:reply-not-found). The record must still become evidence, unlinked.
-  (let [appended (atom [])
-        h (harness {:evidence! (fn [entry]
-                                 (if (:in-reply-to entry)
-                                   {:ok false :error/code :reply-not-found}
-                                   (do (swap! appended conj entry) {:ok true})))})
-        {:keys [id]} (turn! h)]
-    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
-    (is (some #{:xiang-reply-parent-missing} (:tags (first @appended))))
-    (is (= "emacs-abc" (get-in (first @appended) [:body :evidence_id]))
-        "the operator turn's id survives in the body")
-    (is (nil? (:state (svc/health (:svc h)))))))
-
-(deftest the-record-append-is-off-the-request-path
-  ;; Emacs waits synchronously on POST /turns; a busy futon1b must not hold
-  ;; the response. With the default runner the append is scheduled, not run.
-  (let [appended (atom [])
-        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})
-                    :evidence-async! nil})
-        {:keys [id]} (turn! h)]
-    (is (empty? @appended) "record-turn! returned before the append ran")
-    (is (= 0 (first (delays h))))
-    (run-next! h)
-    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))))
-
 (deftest the-draft-is-off-the-request-path
   ;; A slow draft (11 s live) must not hold POST /turns; dispatch! drafts a
   ;; record that still has none, so the routine check still sees one.
@@ -534,3 +442,95 @@
     (is (= [0] (delays h)))
     (svc/dispatch! (:svc h) id {})
     (is (= 1 @drafted) "dispatch drafted the record that had no draft yet")))
+
+;; M-象-2000 step 2: one evidence entry per turn, once it has settled.
+
+(deftest an-in-flight-turn-is-not-evidence
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id]} (turn! h)]
+    (svc/attach-happened! (:svc h) id "did things")
+    (is (empty? @appended) "recorded and dispatched, not yet read: nothing written")))
+
+(deftest an-analysed-turn-is-one-entry-with-its-reading
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (= 1 (count @appended)))
+    (let [e (first @appended)]
+      (is (= (str "e-xiang-turn-" id) (:evidence-id e)))
+      (is (= "emacs-abc" (:in-reply-to e)) "cites the operator turn")
+      (is (= "claude-17-turn-3" (get-in e [:body :record :turn_id])))
+      (is (= "analyzed" (get-in e [:body :reading :status])))
+      (is (= "analyzed" (get-in e [:body :settled])))
+      (is (some #{:xiang-turn-analyzed} (:tags e)))
+      (is (= "sess-1" (:session-id e))))))
+
+(deftest a-routine-turn-is-one-entry-with-its-draft
+  (let [appended (atom [])
+        h (harness {:draft fake-draft :skip-routine? true
+                    :evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id]} (turn! h {:text "Looks good." :dispatch :now})]
+    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
+    (is (= "drafted" (get-in (first @appended) [:body :settled])))
+    (is (some? (get-in (first @appended) [:body :reading])))))
+
+(deftest a-dark-turn-is-never-evidence
+  ;; 象-off: not-requested turns go dark, and stay out of the database.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id]} (turn! h {:analysis-requested? (constantly false)})]
+    (svc/attach-happened! (:svc h) id "did things")
+    (svc/dispatch! (:svc h) id {})
+    (is (empty? @appended))))
+
+(deftest a-retried-append-is-a-quiet-duplicate
+  ;; The bad case idempotence is named for: the same settled turn twice.
+  (let [seen (atom [])
+        h (harness {:evidence! (fn [e]
+                                 (if (some #{(:evidence-id e)} @seen)
+                                   {:ok false :error/code :duplicate-id :idempotent? true}
+                                   (do (swap! seen conj (:evidence-id e)) {:ok true})))})
+        {:keys [id record]} (turn! h)
+        _ (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+        result (svc/append-evidence! (:svc h) (svc/turn-evidence-entry id record {} :analyzed) [60])]
+    (is (:idempotent? result))
+    (is (= 1 (count @seen)) "still exactly one entry")
+    (is (empty? (filter #(= 60 %) (delays h))) "a duplicate never schedules a retry")
+    (is (not= :failing (:state (svc/health (:svc h)))) "a duplicate never fails health")))
+
+(deftest a-failed-append-never-loses-the-turn
+  (let [attempts (atom 0)
+        h (harness {:evidence! (fn [_] (swap! attempts inc) (throw (ex-info "futon1b busy" {})))
+                    :store-busy-delays [60]})
+        {:keys [id record]} (turn! h)
+        out (svc/publish-analysis! (:svc h) id (analysis-for record) {})]
+    (is (= "analyzed" (get-in out [:analysis :status])) "the reading still publishes")
+    (is (= 1 @attempts))
+    (is (some #{60} (delays h)) "retried on the bounded schedule")))
+
+(deftest a-missing-reply-parent-keeps-the-entry
+  ;; The boundary refuses an in-reply-to it cannot resolve (:reply-not-found).
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e]
+                                 (if (:in-reply-to e)
+                                   {:ok false :error/code :reply-not-found}
+                                   (do (swap! appended conj e) {:ok true})))})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
+    (is (some #{:xiang-reply-parent-missing} (:tags (first @appended))))
+    (is (= "emacs-abc" (get-in (first @appended) [:body :record :evidence_id])))))
+
+(deftest the-append-is-off-the-callers-path
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})
+                    :evidence-async! nil})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (empty? @appended) "publish returned before the append ran")
+    (let [i (.indexOf (delays h) 0)]
+      (is (<= 0 i))
+      ((second (nth @(:scheduled h) i))))
+    (is (= 1 (count @appended)))))

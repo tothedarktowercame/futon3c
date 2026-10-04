@@ -70,7 +70,7 @@
    ;; evidence store. Default no-op so tests and existing callers are
    ;; unaffected; the real append is wired in http.clj's xiang-turn-service.
    :evidence! (fn [_] {:ok true})
-   ;; How the record's append is run off the request path (fn [thunk]); nil
+   ;; How a settled turn's append is run off the caller's path (fn [thunk]); nil
    ;; means on the scheduler at delay 0.
    :evidence-async! nil
    ;; Likewise for the 小象 draft of a turn not dispatched at once.
@@ -234,42 +234,43 @@
            "(none)"))))
 
 ;; ---------------------------------------------------------------------------
-;; Evidence (M-象-2000 step 2: records and readings are also evidence)
+;; Evidence (M-象-2000 step 2: a settled turn is evidence)
 ;;
-;; The files stay the source of truth in this step: a failed append never
-;; fails or blocks a turn. Deterministic entry ids make a retried append a
-;; quiet duplicate, never a second entry.
+;; One entry per turn, written once the turn has settled: the record with
+;; its reading (analysed) or its draft (routine). Nothing is written while a
+;; turn is in flight, so no reader has to look in the database for a turn
+;; that is still being worked on (Joe, 2026-10-04). Turns that settle with
+;; no reading -- declared, not-requested (象-off: gone dark) -- are not
+;; written. The files stay the source of truth: a failed append never fails
+;; or blocks a turn, and the deterministic id makes a retry a quiet
+;; duplicate.
 
 (defn turn-evidence-entry
-  "The evidence entry for turn record ID, as stored. Cites the operator
-   turn's evidence_id when the record carries one."
-  [id record]
+  "The evidence entry for settled turn ID: RECORD with the READING that
+   settled it (an analysis, or a routine draft) and HOW (:analyzed or
+   :drafted). Cites the operator turn's evidence_id when the record has one."
+  [id record reading how]
   (cond-> {:evidence-id (str "e-xiang-turn-" id)
            :subject {:ref/type :thread :ref/id id}
            :type :memory
            :claim-type :assert
            :author "xiang-turn-service"
-           :body record
-           :tags (cond-> [:xiang-turn :xiang-turn-record]
+           :body {:record record :reading reading :settled (name how)}
+           :tags (cond-> [:xiang-turn (keyword (str "xiang-turn-" (name how)))]
                    (:session_id record) (conj (:session_id record))
                    (:agent_id record) (conj (:agent_id record)))}
     (:session_id record) (assoc :session-id (:session_id record))
     (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
 
-(defn reading-evidence-entry
-  "The evidence entry for ID's published reading; cites the record's entry."
-  [id record analysis]
-  (cond-> {:evidence-id (str "e-xiang-reading-" id)
-           :subject {:ref/type :thread :ref/id id}
-           :type :reflection
-           :claim-type :observation
-           :author "xiang-turn-service"
-           :in-reply-to (str "e-xiang-turn-" id)
-           :body analysis
-           :tags (cond-> [:xiang-turn :xiang-turn-reading]
-                   (:session_id record) (conj (:session_id record))
-                   (:agent_id record) (conj (:agent_id record)))}
-    (:session_id record) (assoc :session-id (:session_id record))))
+(declare append-evidence!)
+
+(defn- settle-evidence!
+  "Write settled turn ID as evidence, off the caller's path."
+  [svc id reading how]
+  (let [record (ts/read-record (cfg svc :store) id)]
+    ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+     #(append-evidence! svc (turn-evidence-entry id record reading how)
+                        (cfg svc :store-busy-delays)))))
 
 (defn append-evidence!
   "Append ENTRY through the :evidence! effect; never throw, never block the
@@ -330,9 +331,6 @@
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
         ;; Off the request path: the caller (Emacs, synchronously) is waiting
         ;; on this response, and a busy futon1b must not hold it up.
-        _ ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-           #(append-evidence! svc (turn-evidence-entry id record)
-                              (cfg svc :store-busy-delays)))
         to-seat? (= (cfg svc :seat) agent-id)
         ;; The 小象 draft took 11 s on the live JVM (2026-10-03), past Emacs's
         ;; 10 s wait on this request. A turn dispatched now needs its draft
@@ -434,6 +432,7 @@
                  (contains? #{nil "requested"} (:analysis_status record)))
           ;; Routine: the draft is the reading. Recorded as such, never queued.
           (do (ts/update-record! store id #(assoc % :analysis_status "drafted"))
+              (settle-evidence! svc id draft :drafted)
               (set-health! svc nil (str id ": routine, settled by the draft"))
               {:dispatched false :reason :drafted :agent nil})
           (dispatch-to! svc id agent store-busy-delays record draft path))))))))
@@ -740,7 +739,7 @@
                       (assoc :request_file (ts/record-path store id)
                              :request_sha256 (tr/sha256 (slurp (ts/record-path store id) :encoding "UTF-8"))))
         published (ts/publish-analysis! store id canonical)]
-    (append-evidence! svc (reading-evidence-entry id record canonical) (cfg svc :store-busy-delays))
+    (settle-evidence! svc id canonical :analyzed)
     (handle-analyzed! svc id)
     (assoc published :analysis canonical)))
 
