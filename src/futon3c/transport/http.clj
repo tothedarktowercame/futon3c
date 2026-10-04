@@ -11483,9 +11483,9 @@
                            :dispatch (case (:dispatch payload) "now" :now "soon" :soon "none" :none :later)})]
           (json-response 201 {:ok true :id (:id result) :path (:path result) :record (:record result)
                               :redacted (:redacted result) :dispatch (:dispatch result)
-                              ;; 小象's provisional parse when it finished
-                              ;; inside the inline bound (M-象-2000): the
-                              ;; stepper shows the new frame at RET.
+                              ;; Whether 小象's draft finished inside the
+                              ;; inline bound.  The frame itself comes from
+                              ;; turn_frames.py's shared Python code path.
                               :draft (:draft result)}))
         (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))))
 

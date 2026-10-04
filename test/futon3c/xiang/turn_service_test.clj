@@ -142,7 +142,7 @@
         h (harness {:draft (fn [_] (swap! drafted inc) nil)})
         {:keys [id dispatch draft]} (turn! h {:dispatch :soon})]
     (is (= :scheduled dispatch))
-    (is (nil? draft) "the draft effect returned nothing, so no draft rides the response")
+    (is (false? draft) "the draft effect returned nothing")
     (is (= 1 @drafted) "the draft ran inline (it is usually ~0.1 s)")
     (is (empty? @(:bells h)) "but the seat was not belled yet")
     (is (= [0] (delays h)))
@@ -409,7 +409,7 @@
   (let [h (harness {:draft fake-draft})
         {:keys [id draft record]} (turn! h {:text "Looks good." :dispatch :now})
         store (get-in (:svc h) [:config :store])]
-    (is (= "小象" (:labeller draft)) "the draft map itself is returned")
+    (is (true? draft) "draft readiness is returned")
     (is (= "drafted" (:draft_status record)))
     (is (= "小象" (:labeller (ts/read-draft store id))))
     (is (str/includes? (:prompt (first @(:bells h))) "A CLASSICAL DRAFT EXISTS"))
@@ -417,7 +417,7 @@
     (testing "a bad draft is rejected and nothing is stored"
       (let [h (harness {:draft (fn [_] [{:start 0 :end 99 :text "x"}])})
             {:keys [id draft]} (turn! h {:text "Hello." :dispatch :now})]
-        (is (nil? draft))
+        (is (false? draft))
         (is (nil? (ts/read-draft (get-in (:svc h) [:config :store]) id)))
         (is (re-find #"draft rejected" (:detail (svc/health (:svc h)))))))))
 
@@ -428,8 +428,8 @@
         {:keys [id dispatch draft]} (turn! h {:text "Looks good." :dispatch :soon})
         store (get-in (:svc h) [:config :store])]
     (is (= :scheduled dispatch))
-    (is (= "小象" (:labeller draft)) "the validated draft map rides the response")
-    (is (= draft (ts/read-draft store id)) "and it is the stored one")
+    (is (true? draft) "the response reports that the draft is ready")
+    (is (= "小象" (:labeller (ts/read-draft store id))) "the draft is stored before return")
     (is (empty? @(:bells h)) "dispatch still happens off the request path")))
 
 (deftest a-slow-draft-falls-back-to-the-async-path
@@ -443,13 +443,13 @@
         elapsed (- (System/currentTimeMillis) started)
         store (get-in (:svc h) [:config :store])]
     (is (= :scheduled dispatch))
-    (is (nil? draft) "no draft rides a response the draft could not make")
+    (is (false? draft) "the response reports that the draft is not ready")
     (is (< elapsed 2800)
         (str "the POST is answered inside the inline bound, took " elapsed "ms"))
     (is (nil? (ts/read-draft store id)))
-    (run-next! h)
+    (Thread/sleep 1200)
     (is (= "小象" (:labeller (ts/read-draft store id)))
-        "the async draft was still written")))
+        "the timed-out future continued and wrote the draft")))
 
 (deftest the-skip-policy-settles-routine-turns-without-a-reading
   (let [h (harness {:draft fake-draft :skip-routine? true})

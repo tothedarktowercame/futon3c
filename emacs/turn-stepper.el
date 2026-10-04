@@ -677,6 +677,79 @@ a closed stepper stays closed."
 
 (add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
+(defun turn-stepper--record-key (frame)
+  "Stable record key for FRAME, including locally appended frames."
+  (or (turn-stepper--aget 'record_path frame)
+      (turn-stepper--aget 'evidence_id (turn-stepper--aget 'turn frame))))
+
+(defun turn-stepper--merge-record-frame (frame path)
+  "Append or replace FRAME for PATH in the visible matching stepper.
+Move to a newly appended frame only when the reader was on the last frame."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (when (and buf (get-buffer-window buf t))
+      (with-current-buffer buf
+        (let* ((old-count (length turn-stepper--frames))
+               (was-last (or (zerop old-count)
+                             (= turn-stepper--index (1- old-count))))
+               (replacement (cons (cons 'record_path path) frame))
+               (key (turn-stepper--record-key replacement))
+               (index (cl-position key turn-stepper--frames
+                                   :test #'equal
+                                   :key #'turn-stepper--record-key)))
+          (if index
+              (setf (nth index turn-stepper--frames) replacement)
+            (setq turn-stepper--frames
+                  (append turn-stepper--frames (list replacement)))
+            (setq index (1- (length turn-stepper--frames))))
+          (puthash turn-stepper--session-id turn-stepper--frames
+                   turn-stepper--cache)
+          (when was-last (setq turn-stepper--index index))
+          (turn-stepper--display-current))))))
+
+(defun turn-stepper--turn-recorded (path)
+  "Read the new frame at PATH asynchronously when its stepper is visible.
+Failures are reported once and never escape the process sentinel."
+  (let* ((source (current-buffer))
+         (buf (get-buffer turn-stepper-buffer-name))
+         (session (and (file-readable-p path)
+                       (ignore-errors
+                         (alist-get 'session_id (json-read-file path))))))
+    (when (and session buf (get-buffer-window buf t)
+               (not (get-process "turn-stepper-frames"))
+               (not (get-process "turn-stepper-one-record"))
+               (with-current-buffer buf
+                 (and (equal session turn-stepper--session-id)
+                      (eq source turn-stepper--source-buffer))))
+      (let ((output (generate-new-buffer " *turn-stepper-one-record-output*"))
+            (stderr (get-buffer-create " *turn-stepper-one-record-stderr*")))
+        (make-process
+         :name "turn-stepper-one-record"
+         :buffer output
+         :command (list turn-stepper-python turn-stepper-script
+                        "--one-record" path)
+         :noquery t :stderr stderr
+         :sentinel
+         (lambda (proc _event)
+           (when (memq (process-status proc) '(exit signal))
+             (unwind-protect
+                 (condition-case err
+                     (if (zerop (process-exit-status proc))
+                         (let* ((json (with-current-buffer (process-buffer proc)
+                                        (buffer-string)))
+                                ;; The one-record CLI returns one object;
+                                ;; bracket it to reuse the full-run parser.
+                                (frame (car (turn-stepper--parse-frames
+                                             (concat "[" json "]")))))
+                           (turn-stepper--merge-record-frame frame path))
+                       (message "turn-stepper: new-turn frame failed: %s"
+                                (turn-stepper--last-error-line)))
+                   (error
+                    (message "turn-stepper: new-turn frame failed: %s"
+                             (error-message-string err))))
+               (when (buffer-live-p output) (kill-buffer output))))))))))
+
+(add-hook 'session-mode-turn-recorded-functions #'turn-stepper--turn-recorded)
+
 (defun turn-stepper--last-error-line ()
   "Last non-empty line the frames script wrote to stderr."
   (let ((b (get-buffer " *turn-stepper-frames-stderr*")))

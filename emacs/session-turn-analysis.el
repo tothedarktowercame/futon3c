@@ -356,11 +356,10 @@ record `not-requested' and no seat is ever belled for it."
       (unless (stringp path)
         (error "象 turn recording returned no path: %s" response))
       (setq session-mode--last-analysis-request path)
-      ;; 小象's provisional parse rode the response: show the new turn's
-      ;; frame at once (M-象-2000), before any reading lands.
-      (when-let* ((draft (alist-get 'draft response)))
-        (run-hook-with-args 'session-mode-turn-recorded-functions
-                            path (alist-get 'record response) draft))
+      ;; Let consumers read the record through their own canonical path.
+      ;; This runs after every successful record, including a slow draft;
+      ;; a refused response never reaches it.
+      (run-hook-with-args 'session-mode-turn-recorded-functions path)
       ;; The reading started at send: ask about it until it settles.  It may
       ;; land before the agent's reply ends; that is the point.
       (when requested
@@ -1232,11 +1231,7 @@ analysis health failing; it is not discarded."
   "Called with a record's path when the reaper finds its 象 reading done.")
 
 (defvar session-mode-turn-recorded-functions nil
-  "Called with (PATH RECORD DRAFT) when the jvm recorder answers with a draft.
-PATH is the record's file path, RECORD the response's record alist and DRAFT
-小象's validated draft alist (its \"fragments\" ride the same response).
-The hook runs only when the draft finished inside the JVM's inline bound;
-a slow draft lands off-path and the later full reload shows the frame.")
+  "Called with PATH after the jvm recorder successfully records a turn.")
 
 (add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
 

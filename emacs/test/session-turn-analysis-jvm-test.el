@@ -96,6 +96,28 @@ no seat may be belled for it."
     (should-error (session-mode--record-turn "Please continue." nil nil)
                   :type 'error)))
 
+(ert-deftest session-turn-analysis-jvm-recorded-hook-success-only ()
+  "The new-turn hook runs once with PATH, and never after a refusal."
+  (let* ((seen nil)
+        (session-mode-turn-recorded-functions
+         (list (lambda (path) (push path seen)))))
+    (session-turn-analysis-jvm-test--record 'all)
+    (should (equal '("/tmp/turn-abc123.json") seen))
+    (cl-letf ((session-mode-turn-recorder 'jvm)
+              (session-mode-turn-analysis-policy 'all)
+              (agent-chat--agent-id "claude-17")
+              (agent-chat--session-id "sess-1")
+              (agent-chat--current-turn-id "claude-17-turn-3")
+              (agent-chat--last-evidence-id nil)
+              ((symbol-function 'session-mode--redact-secrets)
+               (lambda (text) (cons text nil)))
+              ((symbol-function 'session-mode--xiang-turn-policy)
+               (lambda (&rest _) "ask"))
+              ((symbol-function 'session-mode--xiang-request)
+               (lambda (&rest _) '((ok . :json-false) (reason . "refused")))))
+      (should-error (session-mode--record-turn "No." nil nil)))
+    (should (equal '("/tmp/turn-abc123.json") seen))))
+
 (defun session-turn-analysis-jvm-test--after-reply (poll-answers)
   "Run `session-mode--dispatch-analysis-after-reply' under the `jvm' recorder.
 POLL-ANSWERS is a list of GET answers, one per poll.  Returns (CALLS . LANDED):

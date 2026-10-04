@@ -7,6 +7,7 @@ calls, no writes.
 
 Usage:
     python3 scripts/turn_frames.py SESSION_ID [--limit N] [--base URL] > frames.json
+    python3 scripts/turn_frames.py --one-record PATH > frame.json
 
 Frame shape:
 {"turn": {"evidence_id", "at", "text"},
@@ -154,6 +155,68 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
         if text_key:
             out["by_text"][text_key] = entry
     return out
+
+
+def load_one_record(path):
+    """Load PATH and its analysis/draft/candidate siblings into an index.
+
+    This is the single-record counterpart of ``load_analyses``.  It performs
+    no glob and no network access; frame construction still goes through
+    ``rows_from_analyses`` and ``build_frames`` below.
+    """
+    path = os.path.abspath(path)
+    with open(path) as f:
+        record = json.load(f)
+    session_id = record.get("session_id")
+    if not session_id:
+        raise ValueError("record has no session_id")
+    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {}}
+    analysis = None
+    try:
+        with open(path + ".analysis.json") as f:
+            analysis = json.load(f)
+    except (OSError, ValueError):
+        pass
+    draft = None
+    if analysis is None:
+        try:
+            with open(path + ".draft.json") as f:
+                draft = json.load(f)
+        except (OSError, ValueError):
+            pass
+    candidates = []
+    base = os.path.basename(path)
+    for cpath in (path + ".candidates.json",
+                  os.path.join(os.path.dirname(path),
+                               base[:-len(".json")] + ".candidates.json")):
+        try:
+            with open(cpath) as f:
+                candidates = json.load(f).get("candidates", [])
+            break
+        except (OSError, ValueError):
+            pass
+    entry = {"record": record, "analysis": analysis, "draft": draft,
+             "candidates": candidates, "path": path}
+    if record.get("evidence_id"):
+        out["by_evidence_id"][record["evidence_id"]] = entry
+    if record.get("turn_id"):
+        out["by_turn_id"][(session_id, record["turn_id"])] = entry
+    text_key = (record.get("source_text") or "").strip()
+    if text_key:
+        out["by_text"][text_key] = entry
+    return session_id, out
+
+
+def frame_for_record(path, operator_rules=None):
+    """Build exactly one frame from PATH and its local siblings."""
+    session_id, analyses = load_one_record(path)
+    frames = build_frames(rows_from_analyses(analyses, session_id), analyses,
+                          session_id=session_id,
+                          operator_rules=operator_rules)
+    if len(frames) != 1:
+        raise ValueError("record did not produce exactly one operator frame")
+    frames[0].pop("_join", None)
+    return frames[0]
 
 
 # ---------------------------------------------------------------- helpers
@@ -598,11 +661,25 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("session_id")
+    ap.add_argument("session_id", nargs="?")
+    ap.add_argument("--one-record", metavar="PATH")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--analysis-dir", default=ANALYSIS_DIR)
     args = ap.parse_args(argv)
+
+    if args.one_record:
+        if args.session_id or args.limit is not None:
+            ap.error("--one-record does not accept SESSION_ID or --limit")
+        try:
+            frame = frame_for_record(args.one_record, operator_rules=load_operators())
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            ap.error(str(e))
+        json.dump(frame, sys.stdout, ensure_ascii=False, indent=1)
+        sys.stdout.write("\n")
+        return 0
+    if not args.session_id:
+        ap.error("SESSION_ID is required unless --one-record is used")
 
     analyses = load_analyses(args.session_id, analysis_dir=args.analysis_dir)
 

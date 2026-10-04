@@ -398,9 +398,9 @@
    externally captured turn does; :none records only and marks
    the record \"declared\" — settled without a reading, never dispatched).
    Returns {:id :path :record :dispatch :draft} where :dispatch is the dispatch result or
-   :pending/:skipped/:declared/:scheduled, and :draft is 小象's validated
-   draft map when one was written (inline drafts are bounded at
-   `inline-draft-timeout-ms`; a slow one lands off-path and :draft is nil).
+   :pending/:skipped/:declared/:scheduled, and :draft is true exactly when
+   小象's draft was written before this call returned (inline drafts are
+   bounded at `inline-draft-timeout-ms`; a slow one continues off-path).
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
@@ -418,21 +418,22 @@
         ;; drafts any record still without one.
         async-draft! (fn [] ((or (cfg svc :draft-async!) #((cfg svc :schedule!) 0 %))
                              #(draft! svc id)))
-        [draft timed-out?]
+        [draft timed-out? draft-future]
         (cond
-          (= dispatch :now) [(draft! svc id) false]
+          (= dispatch :now) [(draft! svc id) false nil]
           (contains? #{:soon :later} dispatch)
           (let [f (future (draft! svc id))
                 d (deref f inline-draft-timeout-ms ::timeout)]
             (if (identical? ::timeout d)
-              (do (future-cancel f) [nil true])
-              [d false]))
-          :else [nil false])
+              ;; Do not cancel: this same future is the async fallback and
+              ;; will write the draft when the slow effect completes.
+              [nil true f]
+              [d false nil]))
+          :else [nil false nil])
         ;; On a timeout the off-path draft still happens: for :soon the
         ;; dispatch below drafts the record itself; :later needs the
         ;; scheduled draft, as does any record-only dispatch (:none).
-        _ (when (or (and timed-out? (= dispatch :later))
-                    (not (contains? #{:now :soon :later} dispatch)))
+        _ (when (not (contains? #{:now :soon :later} dispatch))
             (async-draft!))
         result (cond
                  to-seat? :skipped
@@ -445,11 +446,16 @@
                  ;; dispatch! drafts the record itself.
                  (= dispatch :soon) (do (ts/update-record! (cfg svc :store) id
                                                            #(assoc-in % [:analysis_dispatch :scheduled_at] (now-ms svc)))
-                                        ((cfg svc :schedule!) 0 #(dispatch! svc id {}))
+                                        (if timed-out?
+                                          ;; Do not race a second draft through dispatch!.
+                                          ;; Once the timed-out draft lands, queue the reading.
+                                          (future @draft-future
+                                                  ((cfg svc :schedule!) 0 #(dispatch! svc id {})))
+                                          ((cfg svc :schedule!) 0 #(dispatch! svc id {})))
                                         :scheduled)
                  :else :pending)]
     {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
-     :dispatch result :draft (or draft (ts/read-draft (cfg svc :store) id))}))
+     :dispatch result :draft (boolean (or draft (ts/read-draft (cfg svc :store) id)))}))
 
 (defn draft!
   "Run the :draft effect over ID's source text and store the draft; nil when

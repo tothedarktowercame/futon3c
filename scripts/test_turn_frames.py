@@ -4,6 +4,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -383,6 +384,26 @@ class ProvisionalDrafts(unittest.TestCase):
         with_draft = frames_for(self.rows, tf.load_analyses(SID, self.dir))
         self.assertEqual(without, with_draft)
         self.assertEqual("analyzed", with_draft[0]["parse"]["status"])
+
+    def test_one_record_equals_the_same_frame_from_full_file_build(self):
+        """The fast path uses the same assembler and never fetches evidence."""
+        path = write_turn_files(self.dir, analysis=None)
+        with open(path + ".draft.json", "w") as f:
+            json.dump(DRAFT, f)
+        analyses = tf.load_analyses(SID, self.dir)
+        rules = tf.load_operators()
+        full = tf.build_frames(tf.rows_from_analyses(analyses, SID), analyses,
+                               session_id=SID, operator_rules=rules)
+        full[0].pop("_join", None)
+        one = tf.frame_for_record(path, operator_rules=rules)
+        self.assertEqual(full[0], one)
+
+        script = os.path.join(os.path.dirname(__file__), "turn_frames.py")
+        completed = subprocess.run(
+            [sys.executable, script, "--one-record", path],
+            check=True, text=True, capture_output=True, timeout=2)
+        self.assertEqual(full[0], json.loads(completed.stdout))
+        self.assertEqual("", completed.stderr)
 
 
 class XiangReadings(unittest.TestCase):

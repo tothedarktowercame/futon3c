@@ -374,6 +374,79 @@ times and then stops, rather than never (futon1b busy) or forever."
       (delete-other-windows)
       (kill-buffer buf))))
 
+(defun turn-stepper-test--record-frame (id text)
+  `((turn . ((evidence_id . ,id) (at . "2026-10-04T00:00:00Z")
+             (text . ,text)))
+    (parse . ((status . "drafted-provisional") (fragments . nil)))
+    (operators . ((hits . nil) (cues_without_operator . nil)))
+    (patterns . ((matched . nil) (rejected . nil)
+                 (proposed_by_parent . nil)))
+    (happened . nil)))
+
+(ert-deftest turn-stepper-recorded-frame-appends-and-selects-from-last ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (turn-stepper-test--record-frame "old" "old"))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "new" "new") "/tmp/new.json")
+          (with-current-buffer buf
+            (should (= 2 (length turn-stepper--frames)))
+            (should (= 1 turn-stepper--index))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-frame-appends-without-moving-from-older ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (turn-stepper-test--record-frame "a" "a")
+                        (turn-stepper-test--record-frame "b" "b"))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "c" "c") "/tmp/c.json")
+          (with-current-buffer buf
+            (should (= 3 (length turn-stepper--frames)))
+            (should (= 0 turn-stepper--index))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-frame-replaces-the-same-record ()
+  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--display-current) #'ignore))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s" turn-stepper--index 0
+                  turn-stepper--frames
+                  (list (cons '(record_path . "/tmp/x.json")
+                              (turn-stepper-test--record-frame "x" "first")))))
+          (turn-stepper--merge-record-frame
+           (turn-stepper-test--record-frame "x" "second") "/tmp/x.json")
+          (with-current-buffer buf
+            (should (= 1 (length turn-stepper--frames)))
+            (should (equal "second"
+                           (turn-stepper--aget
+                            'text (turn-stepper--aget
+                                   'turn (car turn-stepper--frames)))))))
+      (delete-other-windows) (kill-buffer buf))))
+
+(ert-deftest turn-stepper-recorded-with-no-stepper-does-nothing ()
+  (when-let* ((buf (get-buffer turn-stepper-buffer-name))) (kill-buffer buf))
+  (let ((started nil))
+    (cl-letf (((symbol-function 'make-process)
+               (lambda (&rest _) (setq started t))))
+      (turn-stepper--turn-recorded "/definitely/not/a/record.json"))
+    (should-not started)))
+
 (defun turn-stepper-test--mixed-repo ()
   "Scratch repo: base 10:00, then this session's, another seat's and an
 unsigned commit, each touching its own file."
