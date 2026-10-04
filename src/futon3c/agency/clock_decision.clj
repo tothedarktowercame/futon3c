@@ -387,6 +387,7 @@
                (str (UUID/randomUUID)))
         context {:agent-id agent-id :session-id session-id :turn-id id
                  :clock-error (atom nil)
+                 :pending-activity (atom [])
                  :job-id (:dispatch-id options) :surface surface
                  :phase :accepted :text text
                  :inherited-clock (:inherited-clock options)
@@ -423,24 +424,46 @@
     (when (and (clock/editable-tool? tool) path)
       (when-let [context (callback-context agent-id session-id)]
         (when (= agent-id (:agent-id context))
-          (try
-            (record! (assoc context :session-id session-id :phase :activity
-                            :event-id (or (:id detail) (get detail "id") (str (UUID/randomUUID)))
-                            :edited-path path))
-            (catch Exception e
-              ;; Pouch callbacks intentionally swallow consumer exceptions.
-              ;; Keep this failure on the invocation so finish! cannot report
-              ;; a successful session after losing its activity decision.
-              (when-let [error (:clock-error context)] (reset! error e))
-              (throw e))))))))
+          (let [activity (assoc context :session-id session-id :phase :activity
+                                :event-id (or (:id detail) (get detail "id") (str (UUID/randomUUID)))
+                                :edited-path path)]
+            (try
+              (record! activity)
+              (catch Exception e
+                (if (and (= :clock/store-busy (:error/code (ex-data e)))
+                         (:pending-activity context))
+                  ;; A busy futon1b has not lost the decision. Until 2026-10-04
+                  ;; one 504 during an edit failed the whole job and dropped
+                  ;; the agent's reply (7 Codex jobs, 10-02..10-04). finish!
+                  ;; retries it on the admission schedule.
+                  (do (println (str "[clock-decision] futon1b busy recording activity agent="
+                                    agent-id " turn=" (:turn-id context) " path=" path
+                                    "; deferred to turn finish"))
+                      (flush)
+                      (swap! (:pending-activity context) conj activity))
+                  (do
+                    ;; Pouch callbacks intentionally swallow consumer exceptions.
+                    ;; Keep this failure on the invocation so finish! cannot report
+                    ;; a successful session after losing its activity decision.
+                    (when-let [error (:clock-error context)] (compare-and-set! error nil e))
+                    (println (str "[clock-decision] activity decision failed agent=" agent-id
+                                  " turn=" (:turn-id context) " path=" path ": "
+                                  (ex-message e) " " (pr-str (ex-data e))))
+                    (flush)
+                    (throw e)))))))))))
 
 (defn finish!
   "Attach the runtime's resolved session identity when admission preceded it."
   [session-id]
   (when *turn*
     (try
+      (doseq [activity (some-> (:pending-activity *turn*) deref)]
+        (try
+          (record-waiting-out-busy-store! activity)
+          (catch Exception e
+            (compare-and-set! (:clock-error *turn*) nil e))))
       (when-let [error (some-> (:clock-error *turn*) deref)]
-        (throw (ex-info "Clock activity decision failed"
+        (throw (ex-info (str "Clock activity decision failed: " (ex-message error))
                         {:error/code :clock/activity-decision-failed} error)))
       (when (and session-id (not= session-id (:session-id *turn*)))
         (record! (assoc *turn* :session-id session-id :phase :session-resolved)))

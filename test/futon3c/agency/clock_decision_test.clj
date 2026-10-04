@@ -313,9 +313,41 @@
                                      {:turn-id "lost-activity" :evidence-store backend})]
         (is (false? (:ok result)))
         (is (= :clock/activity-decision-failed (get-in result [:error :error/code])))
+        (testing "the failed turn keeps the agent's reply and session"
+          (is (= "apparently succeeded" (:result result)))
+          (is (= "clock-session" (:session-id result)))
+          (is (re-find #"^Clock activity decision failed: " (get-in result [:error :error/message]))))
         (is (= :unclocked
                (get-in (first (store/query* backend {:query/tags [:clock-decision]}))
                        [:evidence/body :status])))))))
+
+(deftest busy-store-during-activity-is-waited-out-at-finish
+  ;; 2026-10-04: seven Codex jobs (codex-28 among them) ended
+  ;; "Clock activity decision failed" because one 504 hit an edit's decision;
+  ;; each reply was dropped. A busy store has not lost the decision.
+  (let [backend (atom {:entries {} :order []})
+        real-append boundary/append!
+        busy {:ok false :error/code :store-unavailable
+              :error/message "futon1b busy (HTTP 504): the write was not served and nothing was written"}
+        busy? (atom false)]
+    (binding [decision/*test-store* backend decision/*repo-roots* {}
+              decision/*store-busy-waits-ms* [0 0 0]]
+      (with-redefs [boundary/append! (fn [& args]
+                                       (if @busy? busy (apply real-append args)))]
+        (register! (fn [_ sid]
+                     (reset! busy? true)
+                     (decision/record-tool-use!
+                      "clock-worker" sid
+                      {:name "Edit" :id "during-504" :input {:file_path "/tmp/busy.clj"}})
+                     (reset! busy? false)
+                     {:result "edited through a 504" :session-id sid}))
+        (let [result (reg/invoke-agent! "clock-worker" "continue"
+                                       {:turn-id "busy-activity" :evidence-store backend})]
+          (is (true? (:ok result)))
+          (is (= "edited through a 504" (:result result)))
+          (is (= [:accepted :activity]
+                 (sort (map #(get-in % [:evidence/body :phase])
+                            (store/query* backend {:query/tags [:clock-decision]}))))))))))
 
 (deftest recovery-orders-ties-and-keeps-sessions-separate
   (let [backend (atom {:entries {} :order []})

@@ -1163,7 +1163,14 @@
                                   (call-invoke))
                      {:keys [result session-id error]} result-map]
                  (when-not (:detached? result-map)
-                   ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
+                   (try
+                     ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
+                     (catch clojure.lang.ExceptionInfo e
+                       ;; The turn fails, but its reply and session survive in
+                       ;; the error: losing them never restored the decision.
+                       (throw (ex-info (ex-message e)
+                                       (assoc (ex-data e) :result result :session-id session-id)
+                                       e))))
                    (mark-idle! session-id))
                  (if error
                    {:ok false
@@ -1244,13 +1251,14 @@
                           :invoke-local? (:invoke-local? routing-info)
                           :invoke-ws-available? (:invoke-ws-available? routing-info))}))))
              (catch Exception e
-               (mark-idle! nil)
-               {:ok false
-                :error (make-social-error
-                        (or (:error/code (ex-data e)) :invoke-exception)
-                        (.getMessage e)
-                        :agent-id aid-val
-                        :exception-class (.getName (class e)))}))]
+               (mark-idle! (:session-id (ex-data e)))
+               (merge {:ok false
+                       :error (make-social-error
+                               (or (:error/code (ex-data e)) :invoke-exception)
+                               (.getMessage e)
+                               :agent-id aid-val
+                               :exception-class (.getName (class e)))}
+                      (select-keys (ex-data e) [:result :session-id]))))]
            (when (and @clock-context
                       (not (get-in invoke-result [:error :error/context :detached?])))
              ((requiring-resolve 'futon3c.agency.clock-decision/end!) @clock-context))
