@@ -70,14 +70,33 @@ Each is a plist (:at SECONDS :kind SYMBOL :path STR :session STR ...).")
     (and b (get-buffer-window b t)
          (buffer-local-value 'turn-stepper--session-id b))))
 
+(defun xiang-trace--requested-p (path)
+  "Whether the record at PATH asks for a reading.
+Only a record that says `not-requested' or `declared' asks for none; an
+unreadable one is assumed to, so the trace never hides a missing dispatch."
+  (not (member (condition-case nil
+                   (let ((json-object-type 'alist))
+                     (alist-get 'analysis_status (json-read-file path)))
+                 (error nil))
+               '("not-requested" "declared"))))
+
 (defun xiang-trace--on-record-turn (orig &rest args)
   (let ((path (apply orig args)))
     (when path
-      (xiang-trace-record 'sent path :session (bound-and-true-p agent-chat--session-id)))
+      (xiang-trace-record 'sent path :session (bound-and-true-p agent-chat--session-id))
+      ;; Under the jvm recorder the JVM dispatches at send ("soon");
+      ;; Emacs never calls `session-mode--dispatch-analysis', so the
+      ;; dispatch is recorded here or R1 fires on every turn.
+      (when (and (eq (bound-and-true-p session-mode-turn-recorder) 'jvm)
+                 (xiang-trace--requested-p path))
+        (xiang-trace-record 'dispatched path)))
     path))
 
 (defun xiang-trace--on-reply-end (&rest _)
-  (when (bound-and-true-p session-mode--reply-pending-path)
+  ;; A turn that asks for no reading (象-off, the Codex autorunner) is
+  ;; never dispatched, so its reply end owes nothing.
+  (when (and (bound-and-true-p session-mode--reply-pending-path)
+             (xiang-trace--requested-p session-mode--reply-pending-path))
     (xiang-trace-record 'reply-ended session-mode--reply-pending-path)))
 
 (defun xiang-trace--on-dispatch (path &rest _)

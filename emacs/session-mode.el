@@ -1736,13 +1736,16 @@ Kept separate from full session markup so typing never triggers retrieval."
   "The 象 lighter: red while turns are sent for interpretation, pink while
 delegated analysis is known to be failing, grey while `象-off' holds."
   (let ((failing (eq session-mode--analysis-health 'failing))
-        (off (bound-and-true-p session-mode--xiang-off)))
+        (off (bound-and-true-p session-mode--xiang-off))
+        (autorunner (bound-and-true-p codex-repl--autorunner-enabled)))
     (propertize " 象"
-                'face `(:foreground ,(cond (off "gray50") (failing "hot pink") (t "red")))
+                'face `(:foreground ,(cond ((or off autorunner) "gray50")
+                                           (failing "hot pink") (t "red")))
                 'help-echo
                 (concat (cond
                          (off (format "象 is OFF: turns are captured, not sent.\nRe-arm when: %s\nM-x 象-on to resume"
                                       (plist-get off :rearm)))
+                         (autorunner "Autorunner on: its repeated prompt is captured, not sent.\nOther text you type is still read; M-x stop-codex-autorunner resumes")
                          (failing "Turns are captured, but interpretation is FAILING")
                          (t "Turns are captured and sent for interpretation"))
                         (if session-mode--analysis-health-detail
