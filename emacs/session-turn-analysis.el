@@ -90,9 +90,23 @@ until `象-on' or an Emacs restart."
       (force-mode-line-update t)
       (message "象 on (policy: %s)" session-mode-turn-analysis-policy))))
 
+(defun session-mode--autorunner-turn-p (record)
+  "Whether RECORD is a turn the Codex autorunner sent, not Joe.
+The autorunner repeats one prompt after every turn until
+`stop-codex-autorunner'; 象 reading it each time learns nothing.  This
+switch re-arms by itself: once the autorunner is stopped, or Joe types
+anything other than its prompt, turns are read again."
+  (and (bound-and-true-p codex-repl--autorunner-enabled)
+       (boundp 'codex-repl--autorunner-prompt)
+       (equal (string-trim (or (alist-get 'source_text record) ""))
+              (string-trim (or codex-repl--autorunner-prompt
+                               (bound-and-true-p codex-repl-autorunner-prompt)
+                               "")))))
+
 (defun session-mode--analysis-requested-p (record)
   "Whether RECORD should request interpretation under the current policy."
-  (and (or (eq session-mode-turn-analysis-policy 'all)
+  (and (not (session-mode--autorunner-turn-p record))
+       (or (eq session-mode-turn-analysis-policy 'all)
            (and (eq session-mode-turn-analysis-policy 'unmatched)
                 (> (length (alist-get 'unmatched record)) 0)))
        (equal "ask"

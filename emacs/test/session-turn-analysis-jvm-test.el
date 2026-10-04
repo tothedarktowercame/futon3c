@@ -311,5 +311,22 @@ answer nil (2026-10-04)."
     (should (string-match-p "Now checking" session-mode--turn-reply-text))
     (should (string-match-p "(gist) Done" session-mode--turn-reply-text))))
 
+(ert-deftest session-turn-analysis-autorunner-turns-are-not-read ()
+  "An autorunner prompt is recorded but never requests a 象 reading; Joe's
+own words in the same buffer still do, and stopping re-arms."
+  (with-temp-buffer
+    (let ((session-mode-turn-analysis-policy 'all))
+      (cl-letf (((symbol-function 'session-mode--xiang-turn-policy)
+                 (lambda (&rest _) "ask")))
+        (setq-local codex-repl--autorunner-enabled t)
+        (setq-local codex-repl--autorunner-prompt "ok please continue")
+        (should-not (session-mode--analysis-requested-p
+                     '((source_text . "ok please continue "))))
+        (should (session-mode--analysis-requested-p
+                     '((source_text . "stop and tell me where you are"))))
+        (setq-local codex-repl--autorunner-enabled nil)
+        (should (session-mode--analysis-requested-p
+                 '((source_text . "ok please continue"))))))))
+
 (provide 'session-turn-analysis-jvm-test)
 ;;; session-turn-analysis-jvm-test.el ends here
