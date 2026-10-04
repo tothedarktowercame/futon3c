@@ -303,6 +303,51 @@ content of that mark.  The marks themselves are underlined in PARSE."
            (t ""))))
     (format "  %s  %-28s %s" at type detail)))
 
+(defun turn-stepper--ports-age (since turn-at)
+  "Age of a still-open act: minutes from SINCE to TURN-AT, or nil."
+  (condition-case nil
+      (let ((m (floor (/ (float-time (time-subtract (date-to-time turn-at)
+                                                     (date-to-time since)))
+                         60))))
+        (if (< m 1) "<1m" (format "%dm" m)))
+    (error nil)))
+
+(defun turn-stepper--render-ports (ports turn-at)
+  "Render a frame's PORTS alist as \"closed:\" and \"still open:\" lines.
+PORTS is the record's adapter answer: closed_this_turn and still_open,
+each act as {act kind text since?}.  Returns the empty string when absent
+or empty."
+  (if (not (listp ports))
+      ""
+    (let ((closed (turn-stepper--aget (quote closed_this_turn) ports))
+          (open (turn-stepper--aget (quote still_open) ports)))
+      (if (and (null closed) (null open))
+          ""
+        (concat
+         "\n"
+         (when closed
+           (concat
+            "  closed:\n"
+            (mapconcat
+             (lambda (a)
+               (format "    - %s: %s"
+                       (or (turn-stepper--aget (quote kind) a) "?")
+                       (or (turn-stepper--aget (quote text) a) "")))
+             closed "\n")
+            "\n"))
+         (when open
+           (concat
+            "  still open:\n"
+            (mapconcat
+             (lambda (a)
+               (format "    - %s (%s): %s"
+                       (or (turn-stepper--aget (quote kind) a) "?")
+                       (or (turn-stepper--ports-age
+                            (turn-stepper--aget (quote since) a) turn-at)
+                           "?")
+                       (or (turn-stepper--aget (quote text) a) "")))
+             open "\n"))))))))
+
 (defun turn-stepper--render-frame (frame _index _count _session-id)
   "Render FRAME (alist) as display text.
 _INDEX, _COUNT and _SESSION-ID are accepted for callers that track
@@ -330,6 +375,8 @@ carries that information."
      (if happened
          (mapconcat #'turn-stepper--render-happened-row happened "\n")
        "  (nothing between this turn and the next)")
+     (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
+                                 (turn-stepper--aget 'at turn))
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode

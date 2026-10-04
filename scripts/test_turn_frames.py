@@ -197,6 +197,27 @@ class TurnFramesTest(unittest.TestCase):
                          ["discourse/ask-plainly"])
         self.assertEqual(frames[0]["patterns"]["rejected"][0]["id"], "p/x")
 
+    def test_ports_pass_through_when_present(self):
+        rec_path = os.path.join(self.dir, "turn-AAAAAA.json")
+        with open(rec_path) as f:
+            rec = json.load(f)
+        rec["ports"] = {
+            "closed_this_turn": [{"act": "a1", "kind": "offer",
+                                  "text": "Reply yes 1 or yes 2"}],
+            "still_open": [{"act": "a2", "kind": "ask-action",
+                            "text": "Shall I read P11?", "since": T1}],
+        }
+        self._write("turn-AAAAAA.json", rec)
+        frames = self.build()
+        self.assertEqual(frames[0]["ports"]["closed_this_turn"][0]["act"], "a1")
+        self.assertEqual(frames[0]["ports"]["still_open"][0]["since"], T1)
+        self.assertNotIn("ports", frames[1])
+
+    def test_frames_without_ports_have_no_ports_key(self):
+        frames = self.build()
+        for f in frames:
+            self.assertNotIn("ports", f)
+
     def test_limit(self):
         self.assertEqual(len(self.build(limit=1)), 1)
 

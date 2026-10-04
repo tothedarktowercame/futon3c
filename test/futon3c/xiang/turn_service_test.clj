@@ -2,7 +2,8 @@
   "The 象 pipeline with every effect faked: bells, job status, the
    withdrawal routes and the clock. The scheduler is a queue the test
    drains by hand, so the reap cadence is asserted, not waited for."
-  (:require [clojure.string :as str]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts]
@@ -135,14 +136,15 @@
         "the stored record keeps the policy's answer")))
 
 (deftest a-soon-turn-is-answered-at-once-and-dispatched-off-the-path
-  ;; The Emacs jvm recorder sends "soon": POST returns before the draft or
-  ;; the bell runs, then dispatch! runs on the scheduler at delay 0.
+  ;; The Emacs jvm recorder sends "soon": the 小象 draft is tried inline
+  ;; (bounded, M-象-2000), then dispatch! runs on the scheduler at delay 0.
   (let [drafted (atom 0)
         h (harness {:draft (fn [_] (swap! drafted inc) nil)})
-        {:keys [id dispatch]} (turn! h {:dispatch :soon})]
+        {:keys [id dispatch draft]} (turn! h {:dispatch :soon})]
     (is (= :scheduled dispatch))
-    (is (zero? @drafted) "record-turn! returned before the draft ran")
-    (is (empty? @(:bells h)) "and before the seat was belled")
+    (is (nil? draft) "the draft effect returned nothing, so no draft rides the response")
+    (is (= 1 @drafted) "the draft ran inline (it is usually ~0.1 s)")
+    (is (empty? @(:bells h)) "but the seat was not belled yet")
     (is (= [0] (delays h)))
     (run-next! h)
     (is (= 1 (count @(:bells h))) "the reading starts at send")
@@ -407,7 +409,7 @@
   (let [h (harness {:draft fake-draft})
         {:keys [id draft record]} (turn! h {:text "Looks good." :dispatch :now})
         store (get-in (:svc h) [:config :store])]
-    (is (true? draft))
+    (is (= "小象" (:labeller draft)) "the draft map itself is returned")
     (is (= "drafted" (:draft_status record)))
     (is (= "小象" (:labeller (ts/read-draft store id))))
     (is (str/includes? (:prompt (first @(:bells h))) "A CLASSICAL DRAFT EXISTS"))
@@ -415,9 +417,39 @@
     (testing "a bad draft is rejected and nothing is stored"
       (let [h (harness {:draft (fn [_] [{:start 0 :end 99 :text "x"}])})
             {:keys [id draft]} (turn! h {:text "Hello." :dispatch :now})]
-        (is (false? draft))
+        (is (nil? draft))
         (is (nil? (ts/read-draft (get-in (:svc h) [:config :store]) id)))
         (is (re-find #"draft rejected" (:detail (svc/health (:svc h)))))))))
+
+(deftest a-soon-turn-returns-a-fast-draft-inline
+  ;; M-象-2000: the POST answers with 小象's draft when it finishes inside
+  ;; the bound, so the stepper can show the new frame at RET.
+  (let [h (harness {:draft fake-draft})
+        {:keys [id dispatch draft]} (turn! h {:text "Looks good." :dispatch :soon})
+        store (get-in (:svc h) [:config :store])]
+    (is (= :scheduled dispatch))
+    (is (= "小象" (:labeller draft)) "the validated draft map rides the response")
+    (is (= draft (ts/read-draft store id)) "and it is the stored one")
+    (is (empty? @(:bells h)) "dispatch still happens off the request path")))
+
+(deftest a-slow-draft-falls-back-to-the-async-path
+  ;; The draft that took 11 s live must not hold the POST: the inline try is
+  ;; bounded, the response carries no draft, and the off-path draft still
+  ;; lands (for :soon, dispatch! drafts the record itself).
+  (let [slow (fn [text] (Thread/sleep 3000) (fake-draft text))
+        h (harness {:draft slow})
+        started (System/currentTimeMillis)
+        {:keys [id dispatch draft]} (turn! h {:text "Looks good." :dispatch :soon})
+        elapsed (- (System/currentTimeMillis) started)
+        store (get-in (:svc h) [:config :store])]
+    (is (= :scheduled dispatch))
+    (is (nil? draft) "no draft rides a response the draft could not make")
+    (is (< elapsed 2800)
+        (str "the POST is answered inside the inline bound, took " elapsed "ms"))
+    (is (nil? (ts/read-draft store id)))
+    (run-next! h)
+    (is (= "小象" (:labeller (ts/read-draft store id)))
+        "the async draft was still written")))
 
 (deftest the-skip-policy-settles-routine-turns-without-a-reading
   (let [h (harness {:draft fake-draft :skip-routine? true})
@@ -472,17 +504,18 @@
       (is (re-find #"pattern candidates failed" (:detail (svc/health (:svc h)))))
       (is (nil? (ts/read-pattern-candidates (get-in (:svc h) [:config :store]) id))))))
 
-(deftest the-draft-is-off-the-request-path
-  ;; A slow draft (11 s live) must not hold POST /turns; dispatch! drafts a
-  ;; record that still has none, so the routine check still sees one.
+(deftest the-draft-is-tried-inline-with-an-off-path-backstop
+  ;; M-象-2000: the draft is tried inline (bounded), so a :later turn usually
+  ;; answers with it; dispatch! still drafts a record that has none (the
+  ;; slow-draft timeout path), so the routine check still sees one.
   (let [drafted (atom 0)
         h (harness {:draft (fn [_] (swap! drafted inc) nil)
                     :draft-async! nil :evidence-async! (fn [t] (t))})
         {:keys [id]} (turn! h)]
-    (is (zero? @drafted) "record-turn! returned before the draft ran")
-    (is (= [0] (delays h)))
+    (is (= 1 @drafted) "the draft ran inline inside the bound")
+    (is (= [] (delays h)) "nothing scheduled: the inline draft finished")
     (svc/dispatch! (:svc h) id {})
-    (is (= 1 @drafted) "dispatch drafted the record that had no draft yet")))
+    (is (= 2 @drafted) "dispatch drafted the record that still had no draft")))
 
 ;; M-象-2000 step 2: one evidence entry per turn, once it has settled.
 
@@ -634,3 +667,92 @@
     (svc/attach-happened! (:svc h) id "did things")
     (is (= 1 (count @(:bells h))))))
 
+
+;; ---------------------------------------------------------------------------
+;; Ports: the HAPPENED / DIDN'T HAPPEN heads-up display (E-agency-work-orders).
+;; The session is the turn-acts fixture: claude-17 turns 391-394 of session
+;; 564c8e50, where the "yes 1"/"yes 2" offer was accepted in 393 and the
+;; ask-actions of 391 and 394 were never answered.
+
+(def ^:private ports-fixture-dir "test/futon3c/xiang/turn_acts_fixtures")
+(def ^:private ports-fixture-ids ["turn-455grB" "turn-xJ4TAP" "turn-I7n9AZ" "turn-HUylGP"])
+
+(defn- seed-ports-store
+  "A temp store holding the four real settled turns 391-394 (copied
+   unmodified), each carrying its reply text."
+  []
+  (let [store (temp-store)]
+    (.mkdirs (io/file (:dir store)))
+    (doseq [fid ports-fixture-ids]
+      (io/copy (io/file ports-fixture-dir (str fid ".json"))
+               (io/file (:dir store) (str fid ".json")))
+      (io/copy (io/file ports-fixture-dir (str fid ".json.analysis.json"))
+               (io/file (:dir store) (str fid ".json.analysis.json")))
+      (ts/update-record! store fid
+                         #(assoc % :analysis_status "analyzed"
+                                 :reply_text (slurp (io/file ports-fixture-dir (str fid ".reply.txt"))))))
+    store))
+
+(deftest settle-computes-ports
+  (let [store (seed-ports-store)
+        h (harness {:store store})
+        reply (slurp (io/file ports-fixture-dir "turn-HUylGP.reply.txt"))]
+    ;; happened arrives after the reading: the turn is already analyzed.
+    (svc/attach-happened! (:svc h) "turn-HUylGP" {:reply reply :commits []})
+    (let [rec (ts/read-record store "turn-HUylGP")]
+      (is (= reply (:reply_text rec)) "the reply text is stored for 大象")
+      (let [ports (:ports rec)]
+        (is (some? ports) "the settle computed ports")
+        (is (= [] (:closed_this_turn ports)) "nothing closes in 394")
+        (let [open (into {} (map (juxt :act identity) (:still_open ports)))]
+          (is (= "ask-action" (get-in open ["claude-17-turn-391-r-3" :kind]))
+              "391's unanswered ask-action is still open at 394")
+          (is (str/starts-with? (get-in open ["claude-17-turn-391-r-3" :text])
+                                "(one decision) Shall I read")
+              "the HUD needs no lookup: the act carries its text")
+          (is (= "2026-10-01T13:49:05Z" (get-in open ["claude-17-turn-391-r-3" :since])))
+          (is (some #(str/includes? (:text %) "do 1 now and look into 2") (:still_open ports))
+              "394's own ask-action is open at its turn"))))
+    ;; The accepting turn: its ports close the offer.
+    (svc/compute-ports! (:svc h) "turn-I7n9AZ")
+    (let [ports (:ports (ts/read-record store "turn-I7n9AZ"))]
+      (is (= 1 (count (:closed_this_turn ports))))
+      (is (= "offer" (:kind (first (:closed_this_turn ports)))))
+      (is (str/includes? (:text (first (:closed_this_turn ports))) "yes 1")))))
+
+(deftest ports-land-in-either-arrival-order
+  (testing "reading first, happened second"
+    (let [h (harness)
+          {:keys [id record]} (turn! h)
+          store (get-in (:svc h) [:config :store])]
+      (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+      (is (nil? (:ports (ts/read-record store id))) "no happened yet: no ports")
+      (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+      (is (some? (:ports (ts/read-record store id))) "happened after reading recomputes")))
+  (testing "happened first, reading second"
+    (let [h (harness)
+          {:keys [id record]} (turn! h)
+          store (get-in (:svc h) [:config :store])]
+      (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+      (is (nil? (:ports (ts/read-record store id))) "not yet read: no ports")
+      (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+      (is (some? (:ports (ts/read-record store id))) "the reading settles into ports"))))
+
+(deftest a-ports-failure-never-fails-the-turn
+  ;; The exact bad case the guard is named for: the adapter throws (a
+  ;; settled sibling record whose created_at no Instant parses), and the
+  ;; turn still settles.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h)
+        store (get-in (:svc h) [:config :store])
+        {bad-id :id} (turn! h {:turn-id "claude-17-turn-4"})]
+    (svc/publish-analysis! (:svc h) bad-id (analysis-for (ts/read-record store bad-id)) {})
+    (ts/update-record! store bad-id #(assoc % :created_at "not-a-time"))
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (= 1 (count @appended)) "the settle packet still lands")
+    (is (= "analyzed" (:analysis_status (ts/read-record store id))) "the turn still settles")
+    (is (nil? (:ports (ts/read-record store id))))
+    (is (str/includes? (or (get-in (svc/health (:svc h)) [:detail]) "") "ports not computed")
+        "the failure is health detail only")))

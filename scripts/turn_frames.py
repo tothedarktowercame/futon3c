@@ -589,6 +589,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        # ports (HAPPENED / DIDN'T HAPPEN acts) ride the record; a frame
+        # without them stays byte-identical.
+        if entry is not None and entry["record"].get("ports"):
+            frames[-1]["ports"] = entry["record"]["ports"]
     return frames
 
 

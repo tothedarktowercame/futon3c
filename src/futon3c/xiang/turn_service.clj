@@ -42,6 +42,7 @@
    shows the notice itself, so the record carries no `repl_notice_*` fields
    written by the server."
   (:require [clojure.string :as str]
+            [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.util.concurrent Executors ScheduledExecutorService TimeUnit ThreadFactory]))
@@ -263,7 +264,7 @@
     (:session_id record) (assoc :session-id (:session_id record))
     (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
 
-(declare append-evidence!)
+(declare append-evidence! compute-ports!)
 
 (defn- settle-evidence!
   "Write settled turn ID as evidence, off the caller's path. The packet
@@ -271,7 +272,9 @@
    reply has not ended yet waits for it, bounded: after
    :settle-evidence-delay it is written without the summary. The record is
    re-read at write time, so a summary that landed in the meantime rides
-   along; the deterministic id keeps a second write a quiet duplicate."
+   along; the deterministic id keeps a second write a quiet duplicate.
+   When the packet is complete (reading and happened both present, in
+   either arrival order) the turn's ports are (re)computed alongside it."
   [svc id reading how]
   (let [store (cfg svc :store)
         write! (fn []
@@ -279,7 +282,9 @@
                   #(append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
                                      (cfg svc :store-busy-delays))))]
     (if (:happened_summary (ts/read-record store id))
-      (write!)
+      (do (write!)
+          ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+           #(compute-ports! svc id)))
       ((cfg svc :schedule!) (cfg svc :settle-evidence-delay) write!))))
 
 (defn append-evidence!
@@ -322,9 +327,68 @@
           result))))
 
 ;; ---------------------------------------------------------------------------
+;; Ports (the HAPPENED / DIDN'T HAPPEN heads-up display)
+
+(def ^:private ports-session-cap 50)
+
+(defn- trim-act-text
+  [s]
+  (let [s (str/trim (str (or s "")))]
+    (if (> (count s) 120) (str (subs s 0 119) "…") s)))
+
+(defn compute-ports!
+  "The settled turn's HAPPENED / DIDN'T HAPPEN: run the turn-acts adapter
+   over the session's settled turns (the last `ports-session-cap`, ordered
+   by created_at) and store the kernel's answer on ID's record as :ports
+   {:closed_this_turn [{:act :kind :text}] :still_open [{:act :kind :text
+   :since}]}, each act carrying its paragraph/fragment text trimmed to 120
+   characters so the HUD needs no lookup. Drafted turns contribute their
+   reply and commit acts but no operator fragments: 小象's parse is
+   provisional. Run off the caller's path (the caller schedules this);
+   never fails the turn — a failure sets health detail only."
+  [svc id]
+  (try
+    (let [store (cfg svc :store)
+          record (ts/read-record store id)
+          settled (->> (ts/list-records store :session-id (:session_id record)
+                                        :limit ports-session-cap)
+                       (keep (fn [{rid :id r :record}]
+                               (let [status (:analysis_status r)]
+                                 (when (contains? #{"analyzed" "drafted"} status)
+                                   {:record r
+                                    :reading (if (= status "analyzed")
+                                               (or (ts/read-analysis store rid) {})
+                                               {:sentences []})
+                                    :reply (or (:reply_text r) "")
+                                    :commits (turn-acts/happened-commits (:happened_summary r))}))))
+                       (sort-by #(get-in % [:record :created_at]))
+                       vec)
+          acts (turn-acts/session-acts settled)
+          by-id (into {} (map (juxt :id identity) acts))
+          ports (turn-acts/turn-ports acts (:turn_id record))
+          entry (fn [act-id]
+                  (let [a (by-id act-id)]
+                    {:act act-id
+                     :kind (some-> (:kind a) name)
+                     :text (trim-act-text (:text a))}))]
+      (ts/update-record! store id
+                         #(assoc % :ports
+                                 {:closed_this_turn (mapv entry (:closed-this-turn ports))
+                                  :still_open (mapv (fn [{:keys [act since]}]
+                                                      (assoc (entry act) :since since))
+                                                    (:still-open ports))})))
+    (catch Exception e
+      (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")")))))
+
+;; ---------------------------------------------------------------------------
 ;; Record (session-mode--record-turn via the store)
 
 (declare dispatch! draft!)
+
+(def ^:private inline-draft-timeout-ms
+  "How long record-turn! waits for a :soon/:later turn's 小象 draft before
+   answering without it and letting the off-path draft finish the job."
+  2000)
 
 (defn record-turn!
   "Record one operator turn. OPTS are `tr/make-record`'s, plus :dispatch
@@ -333,8 +397,10 @@
    reading still starts at send; :now dispatches synchronously, as an
    externally captured turn does; :none records only and marks
    the record \"declared\" — settled without a reading, never dispatched).
-   Returns {:id :path :record :dispatch} where :dispatch is the dispatch result or
-   :pending/:skipped/:declared/:scheduled.
+   Returns {:id :path :record :dispatch :draft} where :dispatch is the dispatch result or
+   :pending/:skipped/:declared/:scheduled, and :draft is 小象's validated
+   draft map when one was written (inline drafts are bounded at
+   `inline-draft-timeout-ms`; a slow one lands off-path and :draft is nil).
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
@@ -346,12 +412,28 @@
         to-seat? (= (cfg svc :seat) agent-id)
         ;; The 小象 draft took 11 s on the live JVM (2026-10-03), past Emacs's
         ;; 10 s wait on this request. A turn dispatched now needs its draft
-        ;; first; otherwise it is drafted off the request path, and dispatch!
+        ;; first; :soon/:later turns try the draft inline, bounded (M-象-2000:
+        ;; it is usually ~0.1 s, and the caller wants it in the response),
+        ;; falling back to the off-path draft when the bound is hit. dispatch!
         ;; drafts any record still without one.
-        draft (when (= dispatch :now) (draft! svc id))
-        _ (when-not (contains? #{:now :soon} dispatch)
-            ((or (cfg svc :draft-async!) #((cfg svc :schedule!) 0 %))
-             #(draft! svc id)))
+        async-draft! (fn [] ((or (cfg svc :draft-async!) #((cfg svc :schedule!) 0 %))
+                             #(draft! svc id)))
+        [draft timed-out?]
+        (cond
+          (= dispatch :now) [(draft! svc id) false]
+          (contains? #{:soon :later} dispatch)
+          (let [f (future (draft! svc id))
+                d (deref f inline-draft-timeout-ms ::timeout)]
+            (if (identical? ::timeout d)
+              (do (future-cancel f) [nil true])
+              [d false]))
+          :else [nil false])
+        ;; On a timeout the off-path draft still happens: for :soon the
+        ;; dispatch below drafts the record itself; :later needs the
+        ;; scheduled draft, as does any record-only dispatch (:none).
+        _ (when (or (and timed-out? (= dispatch :later))
+                    (not (contains? #{:now :soon :later} dispatch)))
+            (async-draft!))
         result (cond
                  to-seat? :skipped
                  (= dispatch :none) (do (ts/update-record! (cfg svc :store) id
@@ -367,7 +449,7 @@
                                         :scheduled)
                  :else :pending)]
     {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
-     :dispatch result :draft (some? (or draft (ts/read-draft (cfg svc :store) id)))}))
+     :dispatch result :draft (or draft (ts/read-draft (cfg svc :store) id))}))
 
 (defn draft!
   "Run the :draft effect over ID's source text and store the draft; nil when
@@ -403,15 +485,19 @@
    `requested' with no job — a `files'-era record or a bridge's — is
    dispatched here, as before. On an already settled turn the summary joins
    the reading in the settled evidence packet (idempotent id, off-path).
-   HAPPENED is a ready summary string or {:reply TEXT :commits [...]}."
+   HAPPENED is a ready summary string or {:reply TEXT :commits [...]}; the
+   reply text is also stored as the record's :reply_text (the input 大象
+   reads, and the adapter's source for the reply's marked acts)."
   [svc id happened]
   (let [store (cfg svc :store)
         summary (try (cond (string? happened) happened
                            (map? happened) (happened-summary (:reply happened) (:commits happened))
                            :else nil)
-                     (catch Exception _ nil))]
+                     (catch Exception _ nil))
+        reply (when (map? happened) (:reply happened))]
     (when summary
-      (try (ts/update-record! store id #(assoc % :happened_summary summary))
+      (try (ts/update-record! store id #(cond-> (assoc % :happened_summary summary)
+                                          reply (assoc :reply_text reply)))
            (catch Exception _ nil)))
     (let [record (ts/read-record store id)
           status (:analysis_status record)]
