@@ -66,8 +66,58 @@
         (prin1-to-string body)))
    (t (prin1-to-string body))))
 
-(defun evidence-landscape-search--insert-result (result)
-  "Insert one parsed evidence search RESULT in the current buffer."
+(defun evidence-landscape-search--query-regexp (query)
+  "Return a case-insensitive display regexp for the terms in QUERY.
+
+The evidence index interprets AND and OR as operators, so they are not display
+terms.  This regexp is for showing where index terms occur, not for selecting
+the result set."
+  (let ((terms (seq-remove
+                (lambda (term) (member (upcase term) '("AND" "OR")))
+                (split-string-and-unquote query))))
+    (and terms (regexp-opt terms 'words))))
+
+(defun evidence-landscape-search--matching-lines (text regexp)
+  "Return (LINE-NUMBER LINE MATCH-RANGES) values from TEXT matching REGEXP."
+  (let ((case-fold-search t)
+        matches)
+    (with-temp-buffer
+      (insert text)
+      (goto-char (point-min))
+      (let ((line-number 1))
+        (while (not (eobp))
+          (let* ((start (line-beginning-position))
+                 (end (line-end-position))
+                 (line (buffer-substring-no-properties start end))
+                 ranges)
+            (save-restriction
+              (narrow-to-region start end)
+              (goto-char (point-min))
+              (while (and regexp (re-search-forward regexp nil t))
+                (push (cons (- (match-beginning 0) start)
+                            (- (match-end 0) start))
+                      ranges)))
+            (when ranges
+              (push (list line-number line (nreverse ranges)) matches)))
+          (forward-line 1)
+          (setq line-number (1+ line-number)))))
+    (nreverse matches)))
+
+(defun evidence-landscape-search--insert-match-line (line-number line ranges)
+  "Insert one Occur-like LINE with LINE-NUMBER and highlighted RANGES."
+  (insert (propertize (format "%7d:" line-number)
+                      'font-lock-face 'shadow
+                      'evidence-landscape-prefix t))
+  (let ((start (point)))
+    (insert line)
+    (dolist (range ranges)
+      (add-text-properties (+ start (car range)) (+ start (cdr range))
+                           '(face match evidence-landscape-match t))))
+  (insert "\n"))
+
+(defun evidence-landscape-search--insert-result (result regexp)
+  "Insert one parsed evidence search RESULT using display REGEXP.
+Return the number of matching source lines inserted."
   (let* ((entry (gethash :entry result))
          (at (gethash :evidence/at entry "?"))
          (author (gethash :evidence/author entry "?"))
@@ -75,16 +125,31 @@
          (session (gethash :evidence/session-id entry))
          (id (gethash :evidence/id entry "?"))
          (text (evidence-landscape-search--body-text
-                (gethash :evidence/body entry))))
-    (insert (propertize (format "%s  %s  %s\n" at author (or type ""))
-                        'face 'compilation-info))
-    (when session
-      (insert (format "session: %s\n" session)))
-    (insert (format "evidence: %s\n%s\n\n" id text))))
+                (gethash :evidence/body entry)))
+         (lines (evidence-landscape-search--matching-lines text regexp)))
+    (insert (propertize
+             (format "%d match%s in evidence: %s  %s  %s\n"
+                     (length lines) (if (= (length lines) 1) "" "es")
+                     author at (or type ""))
+             'face 'underline))
+    (insert (propertize
+             (format "  session: %s  evidence: %s\n" (or session "-") id)
+             'font-lock-face 'shadow))
+    (if lines
+        (dolist (line lines)
+          (apply #'evidence-landscape-search--insert-match-line line))
+      ;; FTS can match token normalization/stemming without leaving the exact
+      ;; query spelling in the hydrated body.  Make that distinction visible.
+      (insert (propertize
+               "        [index match; no literal query term in hydrated body]\n"
+               'font-lock-face 'shadow)))
+    (insert "\n")
+    (length lines)))
 
 (defun evidence-landscape-search--render (query all-time payload)
   "Render PAYLOAD for QUERY and ALL-TIME into the results buffer."
   (let ((results (gethash :results payload))
+        (regexp (evidence-landscape-search--query-regexp query))
         (buffer (get-buffer-create "*Evidence Landscape Search*")))
     (with-current-buffer buffer
       (let ((inhibit-read-only t))
@@ -93,11 +158,15 @@
         (setq evidence-landscape-search--query query
               evidence-landscape-search--all-time all-time)
         (insert (propertize
-                 (format "Evidence Landscape: %S (%s)\n\n"
+                 (format "%d evidence result%s for %S (%s):\n\n"
+                         (if (vectorp results) (length results) 0)
+                         (if (and (vectorp results) (= (length results) 1)) "" "s")
                          query (if all-time "all time" "last 24 hours"))
                  'face 'bold))
         (if (and (vectorp results) (> (length results) 0))
-            (mapc #'evidence-landscape-search--insert-result results)
+            (mapc (lambda (result)
+                    (evidence-landscape-search--insert-result result regexp))
+                  results)
           (insert "No matching evidence.\n"))
         (goto-char (point-min))))
     (pop-to-buffer buffer)))
@@ -113,9 +182,11 @@
             (if (not (re-search-forward "\r?\n\r?\n" nil t))
                 (message "Evidence Landscape returned an invalid HTTP response")
               (condition-case err
-                  (let ((payload (parseedn-read-str
-                                  (buffer-substring-no-properties
-                                   (point) (point-max)))))
+                  (let ((payload
+                         (parseedn-read-str
+                          (decode-coding-string
+                           (buffer-substring-no-properties (point) (point-max))
+                           'utf-8))))
                     (if (and (= http-status 200) (gethash :ok payload))
                         (evidence-landscape-search--render query all-time payload)
                       (message "Evidence Landscape search returned HTTP %s: %s"

@@ -35,8 +35,34 @@
             (should (string-match-p "codex-10" (buffer-string)))
             (should (string-match-p "session-10" (buffer-string)))
             (should (string-match-p "breakpoint at the outer loop"
-                                    (buffer-string)))))
+                                    (buffer-string)))
+            (should (text-property-any (point-min) (point-max)
+                                       'evidence-landscape-match t))))
       (when-let* ((buffer (get-buffer "*Evidence Landscape Search*")))
         (kill-buffer buffer)))))
+
+(ert-deftest evidence-landscape-search-shows-only-matching-lines ()
+  (let* ((payload
+          (parseedn-read-str
+           (concat "{:ok true :results [{:entry {:evidence/id \"e-1\" "
+                   ":evidence/author \"象-2\" :evidence/body "
+                   "{:text \"irrelevant first line\\nbreakpoint here\\nother tail\"}}}]}")))
+         (display-buffer-overriding-action '((display-buffer-no-window))))
+    (unwind-protect
+        (progn
+          (evidence-landscape-search--render "breakpoint" nil payload)
+          (with-current-buffer "*Evidence Landscape Search*"
+            (should (string-match-p "象-2" (buffer-string)))
+            (should (string-match-p "      2:breakpoint here" (buffer-string)))
+            (should-not (string-match-p "irrelevant first line" (buffer-string)))
+            (should-not (string-match-p "other tail" (buffer-string)))))
+      (when-let* ((buffer (get-buffer "*Evidence Landscape Search*")))
+        (kill-buffer buffer)))))
+
+(ert-deftest evidence-landscape-search-decodes-http-body-as-utf8 ()
+  (let* ((edn "{:ok true :results [] :label \"象 — arrow →\"}")
+         (raw (encode-coding-string edn 'utf-8))
+         (payload (parseedn-read-str (decode-coding-string raw 'utf-8))))
+    (should (equal (gethash :label payload) "象 — arrow →"))))
 
 ;;; evidence-landscape-search-test.el ends here
