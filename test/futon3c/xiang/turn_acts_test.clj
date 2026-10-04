@@ -16,6 +16,7 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.logic.xiang :as lx]
             [futon3c.xiang.reply-target]
+            [futon3c.xiang.turn-record]
             [futon3c.xiang.turn-acts :as ta]))
 
 (def ^:private fixture-dir "test/futon3c/xiang/turn_acts_fixtures")
@@ -185,3 +186,27 @@
     (let [[a b] (pointer-session)
           acts (ta/session-acts [a (assoc-in b [:record :reply_to :replies 0 :rule] "newest")])]
       (is (= {:linked 0 :unlinked 1} (:pointers (meta acts)))))))
+
+(deftest a-pointer-on-an-accepting-paragraph-keeps-the-agreement
+  (testing "turn 393 (\"1\") accepts turn 392's offer; a stored pointer at
+            that same offer (constructed in memory) leaves the acceptance
+            and the obligation it makes as they were"
+    (let [turns (fixture-turns)
+          offer "claude-17-turn-392-r-4"
+          [mark text] (some (fn [[idx {:keys [mark text]}]]
+                              (when (= 4 idx) [mark text]))
+                            (map-indexed vector (futon3c.xiang.turn-record/reply-marks (:reply (turns 1)))))
+          pointed (assoc-in turns [2 :record :reply_to]
+                            {:replies [{:index 0 :mark mark :rule "mark-match"
+                                        :paragraph (futon3c.xiang.reply-target/excerpt text)}]})
+          accept-target (fn [acts]
+                          (some #(when (and (= "claude-17-turn-393" (:turn %)) (= :accept (:kind %)))
+                                   (:target %))
+                                acts))
+          before (ta/session-acts turns)
+          after (ta/session-acts pointed)]
+      (is (= {:linked 1 :unlinked 0} (:pointers (meta after))))
+      (is (= offer (accept-target before) (accept-target after)))
+      (is (= [{:debtor "claude-17" :creditor "operator" :source "claude-17-turn-393-f-s1-0"}]
+             (:obligations (ta/turn-ports before "claude-17-turn-393"))
+             (:obligations (ta/turn-ports after "claude-17-turn-393")))))))

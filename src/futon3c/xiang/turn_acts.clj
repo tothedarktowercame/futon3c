@@ -235,7 +235,10 @@
 
 (defn- link-pointers
   "TURN-ACTS with each kinded operator fragment in a pointer paragraph
-   targeting the reply act that paragraph answers."
+   targeting the reply act that paragraph answers. A fragment that already
+   has a target (an approve that accepted the preceding offer) keeps it
+   unchanged: the kernel reads an acceptance's :target as the one offer
+   accepted (`agreemento`), and a vector there loses the agreement."
   [record turn-acts targets]
   (if (empty? targets)
     turn-acts
@@ -246,8 +249,9 @@
                         (first (keep-indexed (fn [i p] (when (str/includes? p t) i)) paras)))))]
       (with-meta
         (mapv (fn [{:keys [author text target] :as act}]
-                (if-let [reply-id (and (= "operator" author) (some-> (para-of text) targets))]
-                  (assoc act :target (if target (vec (distinct (conj (if (sequential? target) (vec target) [target]) reply-id))) reply-id))
+                (if-let [reply-id (and (= "operator" author) (nil? target)
+                                       (some-> (para-of text) targets))]
+                  (assoc act :target reply-id)
                   act))
               turn-acts)
         (meta turn-acts)))))
@@ -263,8 +267,9 @@
      turn before it (:carries-out);
    - an operator paragraph answers the reply paragraph its stored pointer
      names (`pointer-targets`): each kinded fragment of that paragraph
-     targets the reply act, and the kernel's adjacency table decides
-     whether the port closes. The pointer is read, never recomputed.
+     that has no target yet targets the reply act, and the kernel's
+     adjacency table decides whether the port closes. The pointer is
+     read, never recomputed.
 
    ^{:skipped n :pointers {:linked n :unlinked n}} metadata totals the
    skipped no-kind fragments and paragraphs over the session, and counts
