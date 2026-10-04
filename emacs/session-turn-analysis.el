@@ -356,6 +356,11 @@ record `not-requested' and no seat is ever belled for it."
       (unless (stringp path)
         (error "象 turn recording returned no path: %s" response))
       (setq session-mode--last-analysis-request path)
+      ;; 小象's provisional parse rode the response: show the new turn's
+      ;; frame at once (M-象-2000), before any reading lands.
+      (when-let* ((draft (alist-get 'draft response)))
+        (run-hook-with-args 'session-mode-turn-recorded-functions
+                            path (alist-get 'record response) draft))
       ;; The reading started at send: ask about it until it settles.  It may
       ;; land before the agent's reply ends; that is the point.
       (when requested
@@ -1226,6 +1231,13 @@ analysis health failing; it is not discarded."
 (defvar session-mode-analysis-landed-functions nil
   "Called with a record's path when the reaper finds its 象 reading done.")
 
+(defvar session-mode-turn-recorded-functions nil
+  "Called with (PATH RECORD DRAFT) when the jvm recorder answers with a draft.
+PATH is the record's file path, RECORD the response's record alist and DRAFT
+小象's validated draft alist (its \"fragments\" ride the same response).
+The hook runs only when the draft finished inside the JVM's inline bound;
+a slow draft lands off-path and the later full reload shows the frame.")
+
 (add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
 
 (defun session-mode--store-busy-failure-p (out)
@@ -1555,7 +1567,7 @@ Never includes diff text."
 (defvar-local session-mode--reply-pending-path nil
   "Record path of the operator turn whose reply has not ended yet.")
 (defvar-local session-mode--turn-reply-text nil
-  "First streamed reply segment of the pending turn, for the summary.")
+  "Streamed reply segments of the pending turn, joined.")
 (defvar-local session-mode--turn-commits-seen nil
   "Commits `agent-chat-finish-turn-commits' returned this turn.
 A streamed turn emits its turn-commits (which clears the heads) before
@@ -1572,10 +1584,16 @@ or from the end of the turn (streamed ones), whichever comes first."
       (session-mode--display-analysis path))))
 
 (defun session-mode--note-reply-segment (text &rest _)
-  "Keep the first reply segment TEXT of a pending turn."
-  (when (and session-mode--reply-pending-path (not session-mode--turn-reply-text)
-             (stringp text))
-    (setq session-mode--turn-reply-text text)))
+  "Append reply segment TEXT of a pending turn.
+All segments are kept: a streamed turn's marked reply (what 大象 reads)
+is its last segment, after the narration between tool calls.  The
+happened summary still reads the first lines."
+  (when (and session-mode--reply-pending-path (stringp text)
+             (not (string-empty-p (string-trim text))))
+    (setq session-mode--turn-reply-text
+          (if session-mode--turn-reply-text
+              (concat session-mode--turn-reply-text "\n\n" text)
+            text))))
 
 (defun session-mode--note-turn-commits (original &rest args)
   "Call ORIGINAL with ARGS and keep the commits it returns for the summary."

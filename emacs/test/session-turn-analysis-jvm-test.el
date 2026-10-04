@@ -278,5 +278,16 @@ answer nil (2026-10-04)."
         (should (equal "/tmp/turn-x.json" (alist-get 'path answer)))
         (should (equal "象-1" (alist-get 'seat answer)))))))
 
+(ert-deftest session-turn-analysis-reply-keeps-every-segment ()
+  "A streamed turn's marked reply is its last segment: it must reach 大象."
+  (with-temp-buffer
+    (setq-local session-mode--reply-pending-path "/tmp/turn-x.json")
+    (setq-local session-mode--turn-reply-text nil)
+    (session-mode--note-reply-segment "Now checking the logs." t)
+    (session-mode--note-reply-segment "  " t)
+    (session-mode--note-reply-segment "㉥ (gist) Done." t)
+    (should (string-match-p "Now checking" session-mode--turn-reply-text))
+    (should (string-match-p "(gist) Done" session-mode--turn-reply-text))))
+
 (provide 'session-turn-analysis-jvm-test)
 ;;; session-turn-analysis-jvm-test.el ends here
