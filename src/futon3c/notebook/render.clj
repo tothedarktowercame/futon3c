@@ -6,8 +6,14 @@
 
    Prose markup is deliberately small: a line starting `# ` or `## ` is a
    heading, a blank `;;` line separates paragraphs, `code` is inline code.
+   A value {:notebook/html S} is embedded as HTML (a diagram).
 
-   Usage: clojure -M -m futon3c.notebook.render NOTEBOOK.clj OUT.html"
+   Tangling: a prose block whose last line is `tangle: PATH` sends the code
+   block right after it to PATH; `tangle` writes each PATH from its blocks
+   in order, so code that lives in the notebook is also ordinary source.
+
+   Usage: ... -m futon3c.notebook.render NOTEBOOK.clj OUT.html
+          ... -m futon3c.notebook.render tangle NOTEBOOK.clj"
   (:require [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.string :as str])
@@ -54,6 +60,20 @@
       (let [f (read {:eof ::eof} r)]
         (if (= ::eof f) acc (recur (conj acc f)))))))
 
+(defn tangled
+  "{path source} for every `tangle: PATH` block of the notebook TEXT."
+  [text]
+  (let [bs (blocks text)]
+    (->> (map vector bs (rest bs))
+         (keep (fn [[a b]]
+                 (when-let [path (and (:prose a) (:code b)
+                                      (some->> (last (remove str/blank? (:prose a)))
+                                               (re-matches #"tangle: (\S+)")
+                                               second))]
+                   [path (:code b)])))
+         (reduce (fn [m [path code]] (update m path (fnil conj []) code)) {})
+         (into {} (map (fn [[path codes]] [path (str (str/join "\n\n" codes) "\n")]))))))
+
 (defn- show [v]
   (let [s (with-out-str (pp/pprint v))]
     (if (> (count s) 6000) (str (subs s 0 6000) "\n…") s)))
@@ -67,6 +87,7 @@
         sections
         (binding [*ns* (create-ns (gensym "notebook-"))]
           (refer-clojure)
+          (let [home *ns*]
           (vec (for [{:keys [prose code]} (blocks text)]
                  (if prose
                    (prose->html prose)
@@ -77,13 +98,20 @@
                                          ms (/ (- (System/nanoTime) t0) 1e6)]
                                      {:out (str out) :v v :ms ms :form form}))
                          results (doall results)
-                         last-r (last results)]
+                         ;; A tangled block may open its own namespace;
+                         ;; the notebook carries on in its own.
+                         _ (set! *ns* home)]
                      (str "<pre class=\"code\">" (esc code) "</pre>\n"
-                          (str/join (for [{:keys [out]} results :when (seq out)]
-                                      (str "<pre class=\"out\">" (esc out) "</pre>\n")))
-                          (when (and last-r (not (and (seq? (:form last-r))
-                                                      (#{'ns 'require 'def 'defn 'defn-} (first (:form last-r))))))
-                            (str "<pre class=\"val\">" (esc (show (:v last-r))) "</pre>\n"))))))))]
+                          (str/join
+                           (for [{:keys [out v form]} results]
+                             (str (when (seq out) (str "<pre class=\"out\">" (esc out) "</pre>\n"))
+                                  (cond
+                                    (and (map? v) (:notebook/html v))
+                                    (str "<div class=\"fig\">" (:notebook/html v) "</div>\n")
+                                    (and (seq? form) ('#{ns require def defn defn-} (first form)))
+                                    nil
+                                    :else
+                                    (str "<pre class=\"val\">" (esc (show v)) "</pre>\n"))))))))))))]
     (str "<!doctype html><html><head><meta charset=\"utf-8\"><title>" (esc title) "</title>"
          "<style>body{max-width:52rem;margin:2rem auto;font:16px/1.55 Georgia,serif;color:#222;padding:0 1rem}"
          "h1{font-size:1.6rem}h2{font-size:1.2rem;margin-top:2rem}"
@@ -91,13 +119,18 @@
          "pre.code{background:#f4f2ea;border-left:3px solid #c9c4b0}"
          "pre.out{background:#fff;border-left:3px solid #9bc}"
          "pre.val{background:#f7f7f7;border-left:3px solid #bbb;color:#333}"
-         "code{font:.85em ui-monospace,Menlo,monospace;background:#f4f2ea;padding:0 .2em}</style></head><body>\n"
+         ".fig{overflow-x:auto;margin:.6rem 0}code{font:.85em ui-monospace,Menlo,monospace;background:#f4f2ea;padding:0 .2em}</style></head><body>\n"
          (str/join "\n" sections)
          "\n</body></html>\n")))
 
-(defn -main [notebook out]
-  (let [html (run notebook)]
-    (io/make-parents out)
-    (spit out html :encoding "UTF-8")
-    (println "wrote" out)
-    (shutdown-agents)))
+(defn -main [a b]
+  (if (= "tangle" a)
+    (doseq [[path source] (tangled (slurp b :encoding "UTF-8"))]
+      (io/make-parents path)
+      (spit path source :encoding "UTF-8")
+      (println "tangled" path))
+    (let [html (run a)]
+      (io/make-parents b)
+      (spit b html :encoding "UTF-8")
+      (println "wrote" b)))
+  (shutdown-agents))

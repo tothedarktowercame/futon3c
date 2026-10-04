@@ -158,6 +158,7 @@
             [clojure.java.shell :as shell]
             [clojure.set :as cset]
             [clojure.string :as str]
+            [futon3c.xiang.daxiang :as daxiang]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.io BufferedWriter FileOutputStream OutputStreamWriter PushbackReader]
@@ -1511,11 +1512,9 @@
   (atom {}))
 
 (defn- asks-operator?
-  "Whether reply TEXT ends its turn waiting on the operator: it has a
-   paragraph marked 🈸 (ask-action) or 🈯 (clarify, including a question).
-   Classical, by the reply proforma; an unmarked reply asks nothing."
+  "Whether reply TEXT ends its turn waiting on the operator: 大象's reading."
   [text]
-  (boolean (and (string? text) (re-find #"(?m)^\s*(?:🈸|🈯)" text))))
+  (daxiang/asks-operator? text))
 
 (defonce ^:private !recent-turns
   ;; agent-id -> its last few ended turns, oldest first:
