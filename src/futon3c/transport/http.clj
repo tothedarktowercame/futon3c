@@ -6578,7 +6578,11 @@
                           (sink-fn {:type "done" :ok false :error "invoke-error"
                                     :message (.getMessage t)}))
                         (finally
-                          (hk/close channel))))})
+                          (hk/close channel)
+                          ;; A REPL turn is not an invoke job, so finalize never
+                          ;; checks it; Joe's "ok please continue" turns are
+                          ;; where the codex chains do most of their work.
+                          (*schedule-work-order-check!* (str aid)))))})
                   ;; Tell the operator what the turn is waiting on (if anything).
                   (when-let [ev (queued-turn-activity aid turn-id)]
                     (sink-fn ev))
@@ -6607,7 +6611,8 @@
                                   :message (.getMessage t)}))
                       (finally
                         (reg/clear-invoke-event-sink! aid)
-                        (hk/close channel))))))))})))))))
+                        (hk/close channel)
+                        (*schedule-work-order-check!* (str agent-id)))))))))})))))))
 
 (defn- invoke-job-terminal-state?
   "Is there nothing further to wait for? Broader than terminal-invoke-state?:
@@ -12157,6 +12162,14 @@
 
 (declare make-handler)
 
+(def ^:dynamic *restore-clock-decisions?*
+  "Whether building a handler restores clock decisions from futon1b. True at
+   server start. False for a rebuild of the running handler: the decisions
+   are already in clock-store's defonce state, and restoring them reads
+   every registered agent's evidence uncached, which held the rebuild lock
+   about 20 minutes on 2026-10-04 and left new routes answering 404."
+  true)
+
 (defn compose-http-websocket-handler
   "Retain the existing WebSocket handler while rebuilding only HTTP config.
 
@@ -12194,7 +12207,7 @@
   ([]
    (locking handler-reconfiguration-lock
      (if-let [build @!handler-builder]
-       (rebuild-handler! (build))
+       (rebuild-handler! (binding [*restore-clock-decisions?* false] (build)))
        (throw (ex-info "installed handler has no rebuild function" {})))))
   ([handler]
    (when-not (fn? handler)
@@ -12226,7 +12239,7 @@
           (throw (ex-info "config transform must return a map"
                           {:reason :handler-config-invalid})))
         (let [factory (or (::config-builder (meta @!installed-handler)) make-handler)
-              handler (factory updated)]
+              handler (binding [*restore-clock-decisions?* false] (factory updated))]
           (reset! !installed-handler handler)
           (reset! !handler-builder (::rebuild-fn (meta handler)))
           (reset! !handler-config updated)
@@ -12244,8 +12257,9 @@
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
   (let [started-at (Instant/now)
-        _ (when-let [backend (evidence-store-for-config config)]
-            (clock-decision/restore-registered! backend))]
+        _ (when *restore-clock-decisions?*
+            (when-let [backend (evidence-store-for-config config)]
+              (clock-decision/restore-registered! backend)))]
     (with-meta
       (fn [request]
       (try

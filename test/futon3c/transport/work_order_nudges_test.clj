@@ -65,10 +65,15 @@
       (is (= :escalate (get-in @wo/!orders ["wo-root" :nudges 1 :kind])))
       (is (= :report-problem (get-in (last @acts) [:evidence/body :kind]))))))
 
-(deftest dispatch-movement-and-off-switch-suppress-actions
-  (is (empty? (run-case! {"wo-root" (root [{:at 1500 :to "codex-19" :kind :nudge}])
-                          "new-child" (assoc (child :open nil) :id "new-child"
-                                             :job-id "new" :moved-at 5000)} true)))
+(deftest dispatch-movement-resets-escalation-and-off-switch-suppresses
+  ;; codex-19 moved after its nudge (dispatched new-child), so it is not
+  ;; escalated. It is nudged again: an open child does not excuse an idle,
+  ;; unparked holder (Joe, 2026-10-04: "you will not wait for them").
+  (let [sent (run-case! {"wo-root" (root [{:at 1500 :to "codex-19" :kind :nudge}])
+                         "new-child" (assoc (child :open nil) :id "new-child"
+                                            :job-id "new" :moved-at 5000)} true)]
+    (is (= [:nudge] (map :action sent)))
+    (is (= "wo-root" (:order (first sent)))))
   (is (empty? (run-case! {"wo-root" (root [])} false)))
   (is (empty? (:nudges (get @wo/!orders "wo-root")))))
 

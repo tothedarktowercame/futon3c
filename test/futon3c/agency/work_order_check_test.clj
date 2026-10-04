@@ -91,13 +91,17 @@
   (testing "parked"
     (is (nil? (check/check "codex-19" orders {:running-jobs 0 :queued-jobs 0 :parked? true} 5000)))))
 
-(deftest open-child-passes-token-down
-  (testing "parent's holder is not stalled while a child is open"
+(deftest an-open-child-does-not-excuse-the-holder
+  (testing "codex-19 idle with a bug report open at codex-18 still holds its root"
+    (let [open-child (assoc child-18 :state :open)
+          action (check/check "codex-19" [root open-child] idle 5000)]
+      (is (= :nudge (:action action)))
+      (is (= (:id root) (:order action)))))
+  (testing "waiting is legitimate only when declared by a park"
     (let [open-child (assoc child-18 :state :open)]
-      (is (nil? (check/check "codex-19" [root open-child] idle 5000)))))
-  (testing "parent's holder is not stalled while a child is delivered"
-    ;; rule 3 skips the root (token below it); codex-19 still holds wo-18
-    ;; directly as its requester.
+      (is (nil? (check/check "codex-19" [root open-child]
+                             (assoc idle :parked? true) 5000)))))
+  (testing "a returned result is acted on first"
     (let [action (check/check "codex-19" [root child-18-delivered] idle 5000)]
       (is (= "wo-18" (:order action))))))
 

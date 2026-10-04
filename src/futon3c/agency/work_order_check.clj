@@ -27,15 +27,6 @@
   (or (and (= agent (:debtor order)) (= :open (:state order)))
       (and (= agent (:requester order)) (= :delivered (:state order)))))
 
-(defn- has-open-child?
-  "Rule 3: an order with a child in :open or :delivered state has passed
-  the token down; its holder is not stalled."
-  [orders order]
-  (some (fn [child]
-          (and (= (:id order) (:parent child))
-               (contains? #{:open :delivered} (:state child))))
-        orders))
-
 (defn- epoch-ms
   [x]
   (cond
@@ -106,8 +97,14 @@
       (when orders
         (->> orders
              (filter #(holding? agent %))
-             (remove #(has-open-child? orders %))
-             (sort-by (fn [order] [(or (:opened-at order) 0) (:id order)]))
+             ;; Rule 3 (Joe, 2026-10-04): an open child does not excuse the
+             ;; parent's holder. Bug reports and side requests are sent "and
+             ;; you will not wait for them"; waiting is legitimate only when
+             ;; declared by a park, which the guard above already honours.
+             ;; A result that came back (:delivered) is the most concrete
+             ;; move owed, so it comes first; then the oldest.
+             (sort-by (fn [order] [(if (= :delivered (:state order)) 0 1)
+                                   (or (:opened-at order) 0) (:id order)]))
              (keep (fn [order]
                      (cond
                        (escalated? order) nil
