@@ -379,7 +379,8 @@ event
 ;; ## References
 ;;
 ;; [1] John McCarthy, "Elephant 2000: A Programming Language Based on
-;; Speech Acts", Stanford University, 1992 (revised 1998).
+;; Speech Acts", Stanford University, 1998;
+;; http://www-formal.stanford.edu/jmc/elephant/elephant.html
 ;;
 ;; [2] Brendan Fong, "Causal Theories: A Categorical Perspective on Bayesian
 ;; Networks", MSc thesis, University of Oxford, 2012; arXiv:1301.6201.
