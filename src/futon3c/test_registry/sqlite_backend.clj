@@ -11,7 +11,9 @@
   (:import [java.sql Connection DriverManager]
            [java.time Instant]))
 
-(def default-path "/home/joe/code/storage/test-registry/warrant-index.sqlite")
+(def default-path
+  (or (System/getenv "FUTON3C_WARRANT_INDEX")
+      "/home/joe/code/storage/test-registry/warrant-index.sqlite"))
 (def ^:private busy-timeout-ms 30000)
 
 (defn- connect ^Connection [path]
