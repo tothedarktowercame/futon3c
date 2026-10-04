@@ -501,14 +501,17 @@ event
 ;;
 ;; Still open, each with the check that will say whether it worked:
 ;;
-;; 1. Read the bracketed target. Agents write, after each mark, what the
-;; paragraph is about; today that text is kept but not parsed. Resolve it
-;; against the operator's fragments in the same way. Check: over a week of
-;; replies, the share of marked paragraphs whose target resolves, and how
-;; many open ports those links close.
+;; 1. The bracketed target. Agents write, after each mark, what the
+;; paragraph is about. A count over 1,772 of them (30 September to
+;; 4 October) found that more than half are reused labels ("progress",
+;; "next step"), and that of the rest only 4% occur verbatim in the
+;; operator turn they answer; most are paraphrases. So they are read as
+;; labels, not links. A link would need the agent to quote the operator's
+;; words in the bracket; if the proforma asks for that, the check is the
+;; share of quoted brackets found verbatim, re-counted with
+;; `scripts/xiang_bracket_census.py`.
 ;;
-;; 2. Count the fourth outcome of §4. With pointers read and step 1 in
-;; place, re-run the
+;; 2. Count the fourth outcome of §4. With pointers read, re-run the
 ;; kernel over the stored sessions. Ports that close were answered but not
 ;; recorded; ports that stay open are the reminder machine's real work.
 ;; Check: the two counts, per week.
