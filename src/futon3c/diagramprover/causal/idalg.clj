@@ -29,9 +29,6 @@
              :given (vec (take index order))})
           (range) order)))
 
-(defn- factors-for [all-factors nodes]
-  (product-expr (filter #(contains? nodes (:variable %)) all-factors)))
-
 (defn- kernel-factors [probability graph nodes]
   (let [order (vec (admg/topological-sort graph))]
     (keep-indexed
@@ -43,7 +40,7 @@
 
 (declare id*)
 
-(defn- id* [y x probability graph all-factors depth]
+(defn- id* [y x probability graph depth]
   (when (> depth 100)
     (throw (ex-info "ID recursion limit" {:graph graph :x x :y y})))
   (let [v (set (:nodes graph))]
@@ -55,21 +52,21 @@
       (let [ancestors (admg/ancestors graph y)]
         (id* y (set/intersection x ancestors)
              (sum-expr (set/difference v ancestors) probability)
-             (admg/induced graph ancestors) all-factors (inc depth)))
+             (admg/induced graph ancestors) (inc depth)))
 
       :else
       (let [without-x (set/difference v x)
             subgraph (admg/induced graph without-x)
             w (set/difference without-x (admg/ancestors subgraph y))]
         (if (seq w)
-          (id* y (set/union x w) probability graph all-factors (inc depth))
+          (id* y (set/union x w) probability graph (inc depth))
           (let [components (admg/districts subgraph)]
             (if (> (count components) 1)
               (sum-expr
                (set/difference v (set/union y x))
                (product-expr
                 (map #(id* % (set/difference v %) probability graph
-                            all-factors (inc depth))
+                            (inc depth))
                      components)))
               (let [s (first components)
                     graph-components (admg/districts graph)]
@@ -90,20 +87,24 @@
                             (product-expr (kernel-factors probability graph s)))
 
                   :else
+                  ;; Line 7 factors the CURRENT P in the current order, as
+                  ;; line 6 does; factors of the original joint would
+                  ;; condition on variables line 2 has already summed out.
                   (let [containing
                         (first (filter #(set/subset? s %) graph-components))]
                     (id* y (set/intersection x containing)
-                         (factors-for all-factors containing)
+                         (product-expr
+                          (kernel-factors probability graph containing))
                          (admg/induced graph containing)
-                         all-factors (inc depth))))))))))))
+                         (inc depth))))))))))))
 
 (defn identify-effect [graph treatment outcome]
   (let [x (if (set? treatment) treatment #{treatment})
         y (if (set? outcome) outcome #{outcome})
-        all-factors (factors graph)]
+        joint (product-expr (factors graph))]
     (try
       {:identifiable? true
-       :estimand (id* y x (product-expr all-factors) graph all-factors 0)}
+       :estimand (id* y x joint graph 0)}
       (catch clojure.lang.ExceptionInfo failure
         (if-let [witness (:witness (ex-data failure))]
           {:identifiable? false :witness witness}
