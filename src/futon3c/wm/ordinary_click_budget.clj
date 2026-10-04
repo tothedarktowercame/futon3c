@@ -46,9 +46,10 @@
    granted to claude-1 on 2026-09-29 (\"OK let's run 20 ticks, you can do
    repairs between them\"), plus ten granted to codex-10 on 2026-10-01 for
    the new registered-run series (\"I'll grant a block of 10 clicks\"; repairs
-   may land between clicks). All grants are recorded in the authorization
-   document named above."
-  45)
+   may land between clicks), plus one granted to codex-10 on 2026-10-04
+   after the repaired read-only META preview ("1 is authorised"). All grants
+   are recorded in the authorization document named above."
+  46)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
