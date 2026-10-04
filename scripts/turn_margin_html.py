@@ -80,6 +80,11 @@ def load(path):
                  if os.path.exists(c)), None)
     if side:
         record["_candidates"] = json.load(open(side, encoding="utf-8")).get("candidates", [])
+    # Since 2026-10-04 Joe's >>> blocks live in a display-only sidecar, out of
+    # the record 象 reads; older records still carry them inline.
+    quotes_path = path + ".quotes.json"
+    if not record.get("quotes") and os.path.exists(quotes_path):
+        record["quotes"] = json.load(open(quotes_path, encoding="utf-8"))
     return record, analysis
 
 

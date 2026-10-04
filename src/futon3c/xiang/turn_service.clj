@@ -404,10 +404,11 @@
    bounded at `inline-draft-timeout-ms`; a slow one continues off-path).
    A turn addressed to the analysis seat itself is recorded, never dispatched."
   [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
-  (let [{:keys [record redacted]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
+  (let [{:keys [record redacted quotes]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
                                                           :now-ms (now-ms svc)}
                                                          (dissoc opts :dispatch)))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
+        _ (when (seq quotes) (ts/write-quotes! (cfg svc :store) id quotes))
         ;; Which agent turn this operator turn answers (Joe's `<mark>:`
         ;; pointers), resolved classically against the agent's turns since
         ;; his previous one. Never fails the record.

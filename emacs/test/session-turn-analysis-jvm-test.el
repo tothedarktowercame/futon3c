@@ -328,5 +328,25 @@ own words in the same buffer still do, and stopping re-arms."
         (should (session-mode--analysis-requested-p
                  '((source_text . "ok please continue"))))))))
 
+(ert-deftest session-turn-analysis-files-recorder-keeps-quotes-out-of-the-record ()
+  "The files recorder: a >>> block never reaches the record 象 reads."
+  (require 'session-mode)
+  (let* ((dir (make-temp-file "sta-quotes" t))
+         (session-mode-turn-analysis-directory dir)
+         (secret "only codex-10 should read this")
+         (typed (concat "Look.\n>>>\n" secret "\n>>>\nThoughts?")))
+    (unwind-protect
+        (with-temp-buffer
+          (cl-letf (((symbol-function 'session-mode--analysis-requested-p) (lambda (&rest _) t))
+                    ((symbol-function 'agent-chat-split-surface-marker) (lambda (s) (cons nil s))))
+            (let ((path (session-mode--record-turn-via-files typed nil typed)))
+              (should-not (string-match-p secret (with-temp-buffer
+                                                   (insert-file-contents path)
+                                                   (buffer-string))))
+              (should (string-match-p secret (with-temp-buffer
+                                               (insert-file-contents (concat path ".quotes.json"))
+                                               (buffer-string)))))))
+      (delete-directory dir t))))
+
 (provide 'session-turn-analysis-jvm-test)
 ;;; session-turn-analysis-jvm-test.el ends here

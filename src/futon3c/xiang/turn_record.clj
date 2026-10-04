@@ -472,7 +472,11 @@
         kinds (vec (distinct (concat (:kinds text-scan) (:kinds original-scan))))
         {marker-surface :surface stripped :text} (split-surface-marker (:text text-scan))
         {elided :text quotes :quotes} (elide-quotes stripped)
-        original (when original-scan (:text (split-surface-marker (:text original-scan))))
+        ;; The original keeps its >>> blocks elided too: 象 reads the record
+        ;; file, and quoted material is never 象's to read (Joe, 2026-10-04).
+        ;; The quoted text itself goes to the :quotes sidecar, for display.
+        original (when original-scan
+                   (:text (elide-quotes (:text (split-surface-marker (:text original-scan))))))
         record (structure-turn elided vocabulary)
         requested? (or failed?
                        (if analysis-requested? (boolean (analysis-requested? record)) true))]
@@ -495,8 +499,9 @@
                      :evidence_id evidence-id
                      :origin origin
                      :surface (or surface marker-surface "typed")
-                     :quotes quotes
+                     :quote_count (count quotes)
                      :analysis_status (if requested? "requested" "not-requested")})
+     :quotes quotes
      :redacted kinds}))
 
 ;; ---------------------------------------------------------------------------

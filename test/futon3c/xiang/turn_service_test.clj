@@ -3,6 +3,7 @@
    withdrawal routes and the clock. The scheduler is a queue the test
    drains by hand, so the reap cadence is asserted, not waited for."
   (:require [clojure.java.io :as io]
+            [clojure.data.json :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.xiang.turn-record :as tr]
@@ -776,4 +777,22 @@
   (let [h (harness {:recent-agent-turns (fn [_] (throw (ex-info "boom" {})))})
         {:keys [id]} (turn! h {:text "🈸: yes"})]
     (is (some? (ts/read-record (get-in (:svc h) [:config :store]) id)))))
+
+(deftest quoted-material-never-reaches-the-file-xiang-reads
+  ;; Joe (2026-10-04): a >>> block must not be passed to 象. 象 is pointed at
+  ;; the record file, so neither the record's text fields nor anything else
+  ;; in it may carry the quote; the feed reads it from a sidecar.
+  (let [secret "the long quoted passage only codex-10 should read"
+        typed (str "Please look at this.\n>>>\n" secret "\n>>>\nWhat do you think?")
+        h (harness)
+        {:keys [id]} (turn! h {:text typed :original-text typed})
+        store (get-in (:svc h) [:config :store])
+        raw (slurp (ts/record-path store id) :encoding "UTF-8")]
+    (is (not (str/includes? raw secret)) "the record file never holds the quote")
+    (is (str/includes? (:source_text (ts/read-record store id)) "QUOTE"))
+    (is (= 1 (:quote_count (ts/read-record store id))))
+    (is (= [secret] (json/read-str (slurp (ts/quotes-path store id)))))
+    (let [brief (tr/analysis-brief id (ts/record-path store id) {})]
+      (is (not (str/includes? brief secret)))
+      (is (not (str/includes? brief ".quotes.json")) "the brief never names the sidecar"))))
 

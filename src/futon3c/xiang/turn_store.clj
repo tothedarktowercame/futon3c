@@ -50,6 +50,10 @@
 (defn candidates-path ^String [store id] (str (record-path store id) ".candidates.json"))
 (defn draft-path ^String [store id] (str (record-path store id) ".draft.json"))
 (defn pattern-candidates-path ^String [store id] (str (record-path store id) ".patterns.json"))
+(defn quotes-path
+  "Joe's >>> blocks for ID, kept beside the record for display only. No
+   brief names this file and 象 is never pointed at it."
+  ^String [store id] (str (record-path store id) ".quotes.json"))
 
 (defn- ensure-dir! [{:keys [dir]}]
   (let [f (io/file dir)]
@@ -151,6 +155,11 @@
   (let [path (pattern-candidates-path store id)]
     (write-json! path candidates)
     {:id id :path path}))
+
+(defn write-quotes!
+  "Write ID's quoted blocks to their display-only sidecar."
+  [store id quotes]
+  (write-json! (quotes-path store id) (vec quotes)))
 
 (defn read-draft
   "小象's draft for ID, or nil."

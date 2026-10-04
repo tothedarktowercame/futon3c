@@ -399,8 +399,13 @@ The addressed agent has already received the original turn and is out of scope."
          (split (agent-chat-split-surface-marker text))
          (surface (car split))
          (text (session-mode--elide-quotes (cdr split)))
+         (quotes session-mode--last-quotes)
+         ;; 象 reads the record file: the original keeps its >>> blocks
+         ;; elided too, and the quoted text goes to a display-only sidecar.
          (original-text (and original-text
-                             (cdr (agent-chat-split-surface-marker original-text))))
+                             (prog1 (session-mode--elide-quotes
+                                     (cdr (agent-chat-split-surface-marker original-text)))
+                               (setq session-mode--last-quotes quotes))))
          (record (session-mode--structure-turn text))
          (directory (file-name-as-directory session-mode-turn-analysis-directory)))
     (make-directory directory t)
@@ -422,13 +427,17 @@ The addressed agent has already received the original turn and is out of scope."
                       (evidence_id . ,agent-chat--last-evidence-id)
                       (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
-                      (quotes . ,(vconcat session-mode--last-quotes))
+                      (quote_count . ,(length quotes))
                       (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
                                              "requested" "not-requested")))))
       (condition-case err
           (with-temp-file path
             (let ((coding-system-for-write 'utf-8-unix))
-              (insert (json-encode (append record metadata)))))
+              (insert (json-encode (append record metadata))))
+            (when quotes
+              (let ((coding-system-for-write 'utf-8-unix))
+                (write-region (json-encode (vconcat quotes)) nil
+                              (concat path ".quotes.json") nil 'silent))))
         (error (delete-file path) (signal (car err) (cdr err))))
       (setq session-mode--last-analysis-request path)
       (when redaction-kinds

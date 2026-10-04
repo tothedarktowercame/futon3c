@@ -87,7 +87,7 @@
   (is (= {:surface nil :text "say 🗣 hello"} (tr/split-surface-marker "say 🗣 hello"))))
 
 (deftest make-record-carries-the-emacs-metadata
-  (let [{:keys [record redacted]}
+  (let [{:keys [record redacted quotes]}
         (tr/make-record {:text "🗣 I agree. token=ghp_abcdefghijklmnopqrstuvwxyz0123\n>>> shown\n>>>\nDone?"
                          :agent-id "claude-1" :session-id "s" :turn-id "t1"
                          :evidence-id "ev1" :now-ms 0})]
@@ -95,7 +95,9 @@
     (is (= "dictated" (:surface record)))
     (is (= "requested" (:analysis_status record)))
     (is (= "operator" (:origin record)))
-    (is (= ["shown"] (:quotes record)))
+    (is (= ["shown"] quotes) "quotes travel beside the record, not in it")
+    (is (nil? (:quotes record)))
+    (is (= 1 (:quote_count record)))
     (is (= "1970-01-01T00:00:00Z" (:created_at record)))
     (is (= "ev1" (:evidence_id record)))
     (is (= 1 (:version record)))
