@@ -361,7 +361,9 @@
                  ;; :soon (the Emacs jvm recorder): the reading starts at
                  ;; send, off the request path — POST still answers at once;
                  ;; dispatch! drafts the record itself.
-                 (= dispatch :soon) (do ((cfg svc :schedule!) 0 #(dispatch! svc id {}))
+                 (= dispatch :soon) (do (ts/update-record! (cfg svc :store) id
+                                                           #(assoc-in % [:analysis_dispatch :scheduled_at] (now-ms svc)))
+                                        ((cfg svc :schedule!) 0 #(dispatch! svc id {}))
                                         :scheduled)
                  :else :pending)]
     {:id id :path path :record (ts/read-record (cfg svc :store) id) :redacted redacted
@@ -427,6 +429,13 @@
         {:dispatched false :reason (keyword status)}
         (get-in record [:analysis_dispatch :job_id])
         {:dispatched false :reason :already-dispatched}
+
+        ;; A "soon" dispatch is drafting (11 s live) and has no job id yet: a
+        ;; short reply ending inside that window must not dispatch it twice.
+        ;; Bounded, so a mark stranded by a JVM restart still lets the turn go.
+        (when-let [at (get-in record [:analysis_dispatch :scheduled_at])]
+          (< (- (now-ms svc) at) (* 5 60 1000)))
+        {:dispatched false :reason :dispatch-scheduled}
         :else (dispatch! svc id {})))))
 
 ;; ---------------------------------------------------------------------------

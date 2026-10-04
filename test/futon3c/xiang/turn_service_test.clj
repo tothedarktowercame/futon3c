@@ -613,3 +613,24 @@
       (is (<= 0 i))
       ((second (nth @(:scheduled h) i))))
     (is (= 1 (count @appended)))))
+
+(deftest happened-inside-the-soon-window-does-not-dispatch-twice
+  ;; Reply ends before the scheduled dispatch has drafted and belled: the
+  ;; turn has no job id yet. Planted: count bells.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :soon})]
+    (is (empty? @(:bells h)) "nothing belled at send")
+    (is (= :dispatch-scheduled (:reason (svc/attach-happened! (:svc h) id "did things"))))
+    (run-next! h)
+    (is (= 1 (count @(:bells h))) "exactly one dispatch")))
+
+(deftest a-stranded-soon-mark-still-lets-the-turn-go
+  ;; The JVM restarted between the mark and the dispatch: after 5 minutes the
+  ;; reply end dispatches the turn itself.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :soon})]
+    (reset! (:scheduled h) [])
+    (swap! (:clock h) + (* 6 60 1000))
+    (svc/attach-happened! (:svc h) id "did things")
+    (is (= 1 (count @(:bells h))))))
+
