@@ -106,6 +106,7 @@
             [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
             [futon3c.agency.inbox :as agency-inbox]
+            [futon3c.agency.work-orders :as work-orders]
             [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
@@ -2229,7 +2230,13 @@
             (catch Throwable t
               (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
                             (.getMessage t)))
-              (flush))))))
+              (flush))))
+        ;; E-agency-work-orders E2: the debtor's job terminal delivers its
+        ;; order (closing at delivery when no bellback carries the result);
+        ;; a bellback job's terminal closes the delivered order (:fulfil).
+        (work-orders/job-terminal!
+         {:job-id job-id
+          :bellback-job-id (some-> @bellback-request :bell-job-id)})))
     ;; A caller with no registered push or inbox route can never leave the
     ;; polling-only state. Record that terminal disposition here; unlike seat
     ;; receipts, it does not depend on a later delivery action.
@@ -3689,6 +3696,21 @@
          (sort-by :score >)
          (take (or limit 5))
          vec)))
+
+(defn- handle-work-orders-list
+  "GET /api/alpha/work-orders[?agent=<id>][&state=<open|delivered|closed>] —
+   the W1 work-order ledger (E-agency-work-orders). ?agent= filters to orders
+   where the agent is debtor or requester. Each order carries :holder (debtor
+   while :open, requester while :delivered)."
+  [request]
+  (let [params (parse-query-params request)
+        agent (some-> (get params "agent") str str/trim not-empty)
+        state (some-> (get params "state") str str/trim str/lower-case not-empty)]
+    (if (and state (not (contains? work-orders/order-states (keyword state))))
+      (json-response 400 {:ok false :err "invalid-state"
+                          :message "state must be open, delivered or closed"})
+      (json-response 200 {:ok true
+                          :orders (work-orders/list-orders {:agent agent :state state})}))))
 
 (defn- handle-patterns-search
   "GET /api/alpha/patterns/search?q=...&limit=N — search pattern catalog."
@@ -6034,6 +6056,17 @@
                                                   :ref (when typed? ref')
                                                   :warrants warrant-normalized}
                                                  harness-present? (assoc :harness (harness/normalize harness-value))))
+                      ;; E-agency-work-orders E1: a work bell from a registered
+                      ;; agent opens a work order once the job id exists. Never
+                      ;; fails the bell (work-orders guards internally).
+                      _ (work-orders/maybe-open-order!
+                         {:caller caller
+                          :debtor (str agent-id)
+                          :job-id job-id
+                          :prompt prompt
+                          :mode mode
+                          :registered? (fn [a] (reg/agent-registered? (str a)))
+                          :running-job-id-fn (fn [a] (some-> (running-invoke-job-for-agent a) :job-id))})
                       run-job (fn []
                                 (run-invoke-job! {:job-id job-id
                                                   :agent-id agent-id
@@ -11449,7 +11482,11 @@
                            ;; agent replies (xiang_turns.py after_reply; M-象-2000).
                            :dispatch (case (:dispatch payload) "now" :now "soon" :soon "none" :none :later)})]
           (json-response 201 {:ok true :id (:id result) :path (:path result) :record (:record result)
-                              :redacted (:redacted result) :dispatch (:dispatch result)}))
+                              :redacted (:redacted result) :dispatch (:dispatch result)
+                              ;; 小象's provisional parse when it finished
+                              ;; inside the inline bound (M-象-2000): the
+                              ;; stepper shows the new frame at RET.
+                              :draft (:draft result)}))
         (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))))
 
 (defn- handle-xiang-turn-action [request config id action]
@@ -12161,6 +12198,10 @@
           ;; Walkie-talkie: pattern search
           (and (= :get method) (= "/api/alpha/patterns/search" uri))
           (handle-patterns-search request)
+
+          ;; E-agency-work-orders W1: the work-order ledger
+          (and (= :get method) (= "/api/alpha/work-orders" uri))
+          (handle-work-orders-list request)
 
           ;; Walkie-talkie: PSR/PUR/PAR evidence endpoints
           (and (= :post method) (= "/api/alpha/evidence/psr" uri))
