@@ -821,7 +821,16 @@
       ;; The published analysis is the authority, not the flag.
       (or (ts/analysis-published? store id)
           (not (contains? #{nil "requested"} (:analysis_status record))))
-      (do (when (ts/analysis-published? store id) (handle-analyzed! svc id))
+      (do (when (ts/analysis-published? store id)
+            (handle-analyzed! svc id)
+            ;; The 象 seats publish with session_turn_analysis.py, which
+            ;; writes the analysis and the flag itself and never calls
+            ;; `publish-analysis!`; the reap is the JVM's first sight of
+            ;; the reading. Settle here too (evidence and ports), else
+            ;; neither is ever written for those turns (none were from
+            ;; 2026-10-04 00:10 until this fix). Idempotent: the entry id
+            ;; is deterministic and ports are recomputed whole.
+            (settle-evidence! svc id (or (ts/read-analysis store id) {}) :analyzed))
           {:outcome :analyzed :status (:analysis_status record)})
 
       :else

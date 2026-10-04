@@ -816,3 +816,20 @@
       (svc/attach-happened! (:svc h) id2 {:reply "done" :commits []} {:agent-session (constantly nil)})
       (is (= "sess-1" (:session_id (ts/read-record store id1))))
       (is (= "claude-5 (awaiting session)" (:session_id (ts/read-record store id2)))))))
+
+(deftest a-reading-published-by-the-script-is-settled-at-reap
+  (testing "the 象 seats publish with session_turn_analysis.py (file plus
+            flag, no JVM call); until 2026-10-04 such turns never got
+            ports or settled evidence. The reap now settles them."
+    (let [appended (atom [])
+          h (harness {:evidence! (fn [e] (swap! appended conj (:evidence-id e)) {:ok true})})
+          {:keys [id record]} (turn! h)
+          store (get-in (:svc h) [:config :store])]
+      (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+      ;; What complete() in session_turn_analysis.py does:
+      (spit (ts/analysis-path store id) (json/write-str (assoc (analysis-for record) :status "analyzed")))
+      (ts/update-record! store id #(assoc % :analysis_status "analyzed"))
+      (is (nil? (:ports (ts/read-record store id))))
+      (is (= :analyzed (:outcome (svc/reap! (:svc h) id {}))))
+      (is (some? (:ports (ts/read-record store id))) "ports computed at reap")
+      (is (some #{(str "e-xiang-turn-" id)} @appended) "the settled turn is written as evidence"))))
