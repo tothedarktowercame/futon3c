@@ -5,7 +5,8 @@
    shows the prose, the code, whatever it printed, and its value.
 
    Prose markup is deliberately small: a line starting `# ` or `## ` is a
-   heading, a blank `;;` line separates paragraphs, `code` is inline code.
+   heading, a blank `;;` line separates paragraphs, `code` is inline code,
+   and [text](url) is a link when the url is http or https.
    A value {:notebook/html S} is embedded as HTML (a diagram).
 
    Tangling: a prose block whose last line is `tangle: PATH` sends the code
@@ -22,8 +23,26 @@
 (defn- esc [s]
   (-> (str s) (str/replace "&" "&amp;") (str/replace "<" "&lt;") (str/replace ">" "&gt;")))
 
-(defn- inline [s]
-  (str/replace (esc s) #"`([^`]+)`" "<code>$1</code>"))
+(defn- esc-attr [s]
+  (-> (esc s) (str/replace "\"" "&quot;") (str/replace "'" "&#39;")))
+
+(defn- inline
+  "Prose S as HTML: `code` spans, [text](url) links for http and https
+   urls only (any other scheme stays literal text), the rest escaped.
+   Inside backticks nothing is a link."
+  [s]
+  (let [m (re-matcher #"`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)" (str s))]
+    (loop [from 0 out (StringBuilder.)]
+      (if (.find m)
+        (let [[whole code text url] (re-groups m)]
+          (.append out (esc (subs s from (.start m))))
+          (.append out (cond
+                         code (str "<code>" (esc code) "</code>")
+                         (re-find #"(?i)^https?://" url)
+                         (str "<a href=\"" (esc-attr url) "\">" (esc text) "</a>")
+                         :else (esc whole)))
+          (recur (.end m) out))
+        (str (.append out (esc (subs s from))))))))
 
 (defn- prose->html [lines]
   (->> (partition-by str/blank? lines)

@@ -505,20 +505,20 @@ event
 ;;
 ;; [1] John McCarthy, "Elephant 2000: A Programming Language Based on
 ;; Speech Acts", Stanford draft, 1989 (revised 1993; HTML 1998),
-;; http://www-formal.stanford.edu/jmc/elephant/elephant.html; abstract in
+;; [www-formal.stanford.edu/jmc/elephant](http://www-formal.stanford.edu/jmc/elephant/elephant.html); abstract in
 ;; OOPSLA '07 Companion, pp. 723–724.
 ;;
 ;; [2] Brendan Fong, "Causal Theories: A Categorical Perspective on Bayesian
-;; Networks", MSc thesis, University of Oxford, 2012; arXiv:1301.6201.
+;; Networks", MSc thesis, University of Oxford, 2012; [arXiv:1301.6201](https://arxiv.org/abs/1301.6201).
 ;;
 ;; [3] Brendan Fong, "Decorated Cospans", Theory and Applications of
-;; Categories 30(33), 2015; arXiv:1502.00872.
+;; Categories 30(33), 2015; [arXiv:1502.00872](https://arxiv.org/abs/1502.00872).
 ;;
 ;; [4] Robin Lorenz and Sean Tull, "Causal models in string diagrams",
-;; arXiv:2304.07638.
+;; [arXiv:2304.07638](https://arxiv.org/abs/2304.07638).
 ;;
 ;; [5] John C. Baez and Kenny Courser, "Structured cospans",
-;; arXiv:1911.04630.
+;; [arXiv:1911.04630](https://arxiv.org/abs/1911.04630).
 ;;
 ;; [6] Tobias Fritz and Wendong Liang, "Free gs-monoidal categories and
-;; free Markov categories", arXiv:2204.02284.
+;; free Markov categories", [arXiv:2204.02284](https://arxiv.org/abs/2204.02284).
