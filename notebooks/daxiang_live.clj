@@ -18,6 +18,20 @@
 ;; acts and the obligations they create; this is an attempt to reimplement
 ;; some of its ideas over a live conversation.
 ;;
+;; No turn is read alone. 大象 itself looks only at one reply: its marked
+;; paragraphs and the commits made during the turn (§2). What a reply
+;; means for the work depends on what surrounds it, and that is joined on
+;; when the session's acts are assembled (§4): the operator's turn it
+;; answers, as 象 read it; up to 50 earlier turns of the same session, with
+;; the offers and questions they left open; and two links between turns
+;; that are stated only on explicit evidence (an approval accepts the offer
+;; just made, a commit carries an accepted offer out). When the operator
+;; opens a paragraph with `<mark>:`, the server also works out which of the
+;; agent's recent paragraphs he is answering. Two pieces of context are
+;; written down on every turn and not yet read: the bracketed target an
+;; agent puts after each mark, and the design pattern retrieved for the
+;; turn. §9 says what we will do with them.
+;;
 ;; The question worked on here: can the stream of acts be given a logic
 ;; that says, after each turn, which obligations closed and which are still
 ;; open, and can design patterns be composed over that stream as open
@@ -57,6 +71,9 @@
 ;; This is the reader itself. The block below is tangled into
 ;; `src/futon3c/xiang/daxiang.clj`, and that file is what the running system
 ;; loads: the notebook is its source, and a test checks the two agree.
+;; Of its two functions, the server calls `asks-operator?` after every
+;; agent turn. `read-agent-turn` is called only on this page; it wraps the
+;; adapter (`turn-acts`) that the server uses when it computes open ports.
 ;;
 ;; tangle: src/futon3c/xiang/daxiang.clj
 (ns futon3c.xiang.daxiang
@@ -263,15 +280,50 @@ seen
 ;; ## 7. A pattern cascade, compiled from the library
 ;;
 ;; The patterns in §5 were written for this page. The library holds about
-;; 1,200 more, each an IF/HOWEVER/THEN/BECAUSE argument, linked by `@why`
-;; edges. The library defines the edge: a pattern's `@why` names the
-;; problems it answers. That gives a generic compilation, the same for
-;; every pattern: a pattern is *unmet* when its IF holds and its THEN does
-;; not, and a problem counts as addressed when some pattern answering it
-;; has its THEN hold. Here is the cone above the card that has been active
-;; in Joe's REPL this week, WR-26, read from the library files.
+;; 1,400 more, each an IF/HOWEVER/THEN/BECAUSE argument. They are linked in
+;; two directions, and the two are not inverses of each other. A pattern's
+;; `@why` points toward the general: the problems it answers, or the more
+;; general pattern it rests on. That is its rationale, and the pattern's
+;; own author writes it. A pattern's `@how` points toward the specific: the
+;; named methods by which it is carried out. That is its practical side,
+;; added later by an editor for the methods worth naming, and it is the
+;; closer of the two to Alexander's smaller patterns that complete a
+;; larger one. Counted from the library files:
 
 (def library "/home/joe/code/futon3/library")
+
+(def pattern-ids
+  (set (for [f (file-seq (io/file library))
+             :let [p (str f)]
+             :when (str/ends-with? p ".flexiarg")]
+         (subs p (inc (count library)) (- (count p) (count ".flexiarg"))))))
+
+(defn directive-lines [directive]
+  (for [id pattern-ids
+        line (str/split-lines (slurp (str library "/" id ".flexiarg")))
+        :when (str/starts-with? line (str "@" directive " "))
+        :let [targets (remove str/blank?
+                              (str/split (str/replace (subs line (+ 2 (count directive))) #"[\[\]]" "")
+                                         #"\s+"))]]
+    {:from id :targets targets :links? (every? pattern-ids targets)}))
+
+(into {}
+      (for [d ["why" "how"]
+            :let [ls (directive-lines d)]]
+        [d {:patterns-with-links (count (filter :links? ls))
+            :links (reduce + (map (comp count :targets) (filter :links? ls)))
+            :other-lines (count (remove :links? ls))}]))
+
+;; So `@why` is the well-populated direction. Most `@how` lines are not
+;; links yet: they hold a sentence of practical instruction (the
+;; `:other-lines` above). The compilation below therefore uses `@why`
+;; only. It is generic, the same for every pattern: a pattern is *unmet*
+;; when its IF holds and its THEN does not, and a problem counts as
+;; addressed when some pattern answering it has its THEN hold. Read
+;; upward, the cascade says why an unmet pattern matters: which problems
+;; above it go unanswered. `@how` would add the downward reading, what to
+;; do about it (§9). Here is the cone above the card that has been active
+;; in Joe's REPL this week, WR-26, read from the library files.
 
 (defn flexiarg [id]
   (let [text (slurp (str library "/" id ".flexiarg"))
@@ -383,10 +435,39 @@ event
 ;; ## 9. What this is, and is not, yet
 ;;
 ;; The readers, the kernel and the reminder machine run in the environment
-;; after every turn; 大象 above is the running code. The compilation in §7
-;; is new and runs only here so far. Next: run it per turn against the card
-;; selected for that turn, with each pattern's IF and THEN tests written as
-;; classical observables of the act stream.
+;; after every turn; `asks-operator?` in §2 is the running code. The
+;; compilation in §7 is new and runs only here so far.
+;;
+;; Next steps, each with the check that will say whether it worked:
+;;
+;; 1. Use the operator's pointers as links. The server already resolves a
+;; paragraph that opens with `<mark>:` to the agent paragraph it answers
+;; (`futon3c.xiang.reply-target`), but `session-acts` does not read the
+;; result, and the resolver does not accept a pointer written inside a
+;; sentence, as in turn 392 ("…and 🈸:yes"). Both are why the question of
+;; turn 391 stays open in §4. Check: on the four turns above, `…-391-r-3`
+;; closes in turn 392.
+;;
+;; 2. Read the bracketed target. Agents write, after each mark, what the
+;; paragraph is about; today that text is kept but not parsed. Resolve it
+;; against the operator's fragments in the same way. Check: over a week of
+;; replies, the share of marked paragraphs whose target resolves, and how
+;; many open ports those links close.
+;;
+;; 3. Count the fourth outcome of §4. With 1 and 2 in place, re-run the
+;; kernel over the stored sessions. Ports that close were answered but not
+;; recorded; ports that stay open are the reminder machine's real work.
+;; Check: the two counts, per week.
+;;
+;; 4. Run the cascade per turn. Each operator turn already arrives with a
+;; retrieved pattern. Compile the cone above it as in §7 and evaluate it
+;; against that turn's acts, starting with the three patterns of §5, whose
+;; observables (`asked`, `answered`) the kernel already supplies. Check:
+;; for each turn, the unmet patterns shown beside its open ports.
+;;
+;; 5. Use `@how` on the way down. When a pattern is unmet, show its `@how`:
+;; the linked methods where they exist, the instruction sentence
+;; otherwise. Check: an unmet pattern in step 4 comes with something to do.
 ;;
 ;; It is finite and Boolean. Variables are identified by name, gluing is by
 ;; shared names, and mechanisms are deterministic. Two places we would most
