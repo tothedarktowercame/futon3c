@@ -259,33 +259,59 @@
        last
        :id))
 
+(defn- visible-offers
+  "Ids of the offers and asks among ACTS (the session's acts so far) that
+   no later act in ACTS cancels: what an operator pointer may accept."
+  [acts]
+  (let [cancelled (set (for [{:keys [kind target]} acts
+                             :when (lx/cancelling-kinds kind)
+                             t (if (sequential? target) target [target])]
+                         t))]
+    (set (for [{:keys [id kind author]} acts
+               :when (and (#{:offer :ask-action} kind) (not= "operator" author))
+               :when (not (cancelled id))]
+           id))))
+
 (defn- link-pointers
   "TURN-ACTS with each kinded operator fragment in a pointer paragraph
    targeting the reply act that paragraph answers. When the stored
    pointers carry positions and the fragment its :start, the fragment is
    assigned by position (`positioned-target`); otherwise by the first
    paragraph whose text contains the fragment's, as before positions were
-   stored. A fragment that already
-   has a target (an approve that accepted the preceding offer) keeps it
-   unchanged: the kernel reads an acceptance's :target as the one offer
-   accepted (`agreemento`), and a vector there loses the agreement."
-  [record turn-acts {:keys [targets positioned]}]
+   stored.
+
+   An approve fragment (or the acceptance of the preceding offer) whose
+   pointer names an offer in OFFERS (`visible-offers`) accepts that offer:
+   the stored pointer is more specific evidence than adjacency. Only the
+   first such fragment per offer becomes the acceptance. Any other
+   fragment that already has a target keeps it unchanged: the kernel
+   reads an acceptance's :target as the one offer accepted (`agreemento`),
+   so :target stays a single value."
+  [record turn-acts {:keys [targets positioned]} offers]
   (if (empty? targets)
     turn-acts
     (let [paras (reply-target/paragraphs (:source_text record))
           para-of (fn [text]
                     (let [t (str/trim (str text))]
                       (when-not (str/blank? t)
-                        (first (keep-indexed (fn [i p] (when (str/includes? p t) i)) paras)))))]
+                        (first (keep-indexed (fn [i p] (when (str/includes? p t) i)) paras)))))
+          pointed (fn [{:keys [author text start end]}]
+                    (when (= "operator" author)
+                      (if (and (seq positioned) (int? start))
+                        (positioned-target positioned start end)
+                        (some-> (para-of text) targets))))]
       (with-meta
-        (mapv (fn [{:keys [author text target start end] :as act}]
-                (if-let [reply-id (and (= "operator" author) (nil? target)
-                                       (if (and (seq positioned) (int? start))
-                                         (positioned-target positioned start end)
-                                         (some-> (para-of text) targets)))]
-                  (assoc act :target reply-id)
-                  act))
-              turn-acts)
+        (first
+         (reduce (fn [[out accepted] {:keys [target] :as act}]
+                   (let [q (pointed act)]
+                     (cond
+                       (nil? q) [(conj out act) accepted]
+                       (and (accept-fragment? act) (offers q) (not (accepted q)))
+                       [(conj out (approve->accept act q)) (conj accepted q)]
+                       (nil? target) [(conj out (assoc act :target q)) accepted]
+                       :else [(conj out act) accepted])))
+                 [[] #{}]
+                 turn-acts))
         (meta turn-acts)))))
 
 (defn session-acts
@@ -300,8 +326,9 @@
    - an operator paragraph answers the reply paragraph its stored pointer
      names (`pointer-targets`): each kinded fragment of that paragraph
      that has no target yet targets the reply act, and the kernel's
-     adjacency table decides whether the port closes. The pointer is
-     read, never recomputed.
+     adjacency table decides whether the port closes. An approve whose
+     pointer names a visible offer accepts that offer instead of the
+     preceding one. The pointer is read, never recomputed.
 
    ^{:skipped n :pointers {:linked n :unlinked n}} metadata totals the
    skipped no-kind fragments and paragraphs over the session, and counts
@@ -321,7 +348,8 @@
                                        (turn->acts record reading reply commits
                                                    {:preceding-offer preceding-offer
                                                     :carries-out accepted})
-                                       pointers-here)
+                                       pointers-here
+                                       (visible-offers acts))
               skipped-here (:skipped (meta turn-acts))
               accepted-here (some (fn [{:keys [kind target]}]
                                     (when (= kind :accept) target))

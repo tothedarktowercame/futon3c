@@ -296,3 +296,82 @@
                            [(:start a) (:target a)]))]
       (is (= {:linked 1 :unlinked 1} (:pointers (meta acts))))
       (is (= {0 "claude-17-turn-42-r-2" 160 nil 247 nil 280 nil} by-start)))))
+
+;; ---------------------------------------------------------------------------
+;; The pointer decides what an approve accepts (1e)
+;;
+;; Constructed: the live store (2026-10-04) holds no operator record whose
+;; stored pointer names an offer. Turn t-1's reply offers Q (numbered
+;; options); turn t-2's reply offers P, the preceding offer; turn t-3 is
+;; the operator's "🈸: yes 1" with a stored pointer, and a commit.
+
+(defn- offer-session [{:keys [pointer-at t2-reply t3-commits]}]
+  (let [t1-reply "🈸 (Q) Shall I do one of these?\n1. Build the index\n2. Leave it"
+        t2-reply (or t2-reply "🈸 (P) Shall I take one of these instead?\n1. Write the note\n2. Skip it")
+        turn (fn [id at src reply & [extra]]
+               {:record (merge {:turn_id id :created_at at :agent_id "a" :session_id "s"
+                                :source_text src}
+                               extra)
+                :reading {:sentences [{:id "s1" :fragments [{:intent "approve" :text src
+                                                             :start 0 :end (count src)}]}]}
+                :reply reply
+                :commits []})
+        t3-src "🈸: yes 1"
+        stored (futon3c.xiang.reply-target/resolve-targets
+                t3-src [{:turn-id "x" :origin "operator" :text (pointer-at t1-reply t2-reply)}])]
+    [(assoc-in (turn "t-1" "2026-10-04T10:00:00Z" "start" t1-reply) [:reading :sentences] [])
+     (assoc-in (turn "t-2" "2026-10-04T10:01:00Z" "go on" t2-reply) [:reading :sentences] [])
+     (assoc (turn "t-3" "2026-10-04T10:02:00Z" t3-src "Done."
+                  {:reply_to stored})
+            :commits (or t3-commits []))]))
+
+(defn- accept-of [acts turn]
+  (some #(when (and (= turn (:turn %)) (= :accept (:kind %))) %) acts))
+
+(deftest a-pointer-at-an-older-offer-accepts-it
+  (let [acts (ta/session-acts (offer-session {:pointer-at (fn [t1 _] t1)
+                                              :t3-commits [{:repo "r" :sha "abc1234" :subject "build"}]}))
+        accept (accept-of acts "t-3")
+        ports (ta/turn-ports acts "t-3")]
+    (is (= ["t-1-r-0" 1] ((juxt :target :option) accept)) "Q, not the preceding P (t-2-r-0)")
+    (is (= [{:debtor "a" :creditor "operator" :source (:id accept)}] (:obligations ports))
+        "the kernel finds the agreement on Q")
+    (is (some #{"t-2-r-0"} (map :act (:still-open ports))) "P is still open")
+    (is (= "t-1-r-0" (:carries-out (some #(when (= :commit (:kind %)) %) acts)))
+        "the commit in that turn carries out Q")))
+
+(deftest a-pointer-at-a-non-offer-leaves-the-preceding-acceptance
+  (testing "the pointer names t-2's ㊟ qualify paragraph, which is no offer"
+    (let [t2 (str "㊟ (a caveat) The index is stale.\n\n"
+                  "🈸 (P) Shall I rebuild it?\n1. Now\n2. Later")
+          ts (-> (offer-session {:pointer-at (fn [_ t2] t2) :t2-reply t2})
+                 (assoc-in [2 :record :source_text] "㊟: yes 1")
+                 (assoc-in [2 :reading :sentences 0 :fragments 0 :text] "㊟: yes 1")
+                 (assoc-in [2 :record :reply_to]
+                           (futon3c.xiang.reply-target/resolve-targets
+                            "㊟: yes 1" [{:turn-id "x" :origin "operator" :text t2}])))
+          acts (ta/session-acts ts)]
+      (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
+      (is (= "t-2-r-1" (:target (accept-of acts "t-3"))) "P stays"))))
+
+(deftest a-pointer-at-an-offer-makes-an-approve-an-acceptance
+  (testing "no preceding offer: t-2's reply offers nothing"
+    (let [acts (ta/session-acts (offer-session {:pointer-at (fn [t1 _] t1)
+                                                :t2-reply "㊢ (done) Nothing more to offer."}))]
+      (is (= "t-1-r-0" (:target (accept-of acts "t-3")))))))
+
+(deftest a-pointer-at-a-withdrawn-offer-leaves-the-preceding-acceptance
+  (testing "in t-2 the operator withdrew Q with a pointer (\"🈸: drop that\");
+            t-3's pointer at Q then accepts nothing new and P stays"
+    (let [t1 "🈸 (Q) Shall I do one of these?\n1. Build the index\n2. Leave it"
+          ts (-> (offer-session {:pointer-at (fn [t1 _] t1)})
+                 (assoc-in [1 :record :source_text] "🈸: drop that")
+                 (assoc-in [1 :record :reply_to]
+                           (futon3c.xiang.reply-target/resolve-targets
+                            "🈸: drop that" [{:turn-id "x" :origin "operator" :text t1}]))
+                 (assoc-in [1 :reading :sentences]
+                           [{:id "s1" :fragments [{:intent "withdraw" :text "🈸: drop that" :start 0 :end 13}]}]))
+          acts (ta/session-acts ts)]
+      (is (= "t-1-r-0" (:target (some #(when (= :withdraw (:kind %)) %) acts)))
+          "the withdrawal targets Q through its own pointer")
+      (is (= "t-2-r-0" (:target (accept-of acts "t-3"))) "P stays"))))
