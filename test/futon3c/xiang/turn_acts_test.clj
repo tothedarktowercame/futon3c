@@ -15,6 +15,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.logic.xiang :as lx]
+            [futon3c.xiang.reply-target]
             [futon3c.xiang.turn-acts :as ta]))
 
 (def ^:private fixture-dir "test/futon3c/xiang/turn_acts_fixtures")
@@ -122,3 +123,65 @@
     (testing "still-open entries carry act, kind and since"
       (let [ports (ta/turn-ports acts "claude-17-turn-394")]
         (is (every? #(and (:act %) (:kind %) (:since %)) (:still-open ports)))))))
+
+;; ---------------------------------------------------------------------------
+;; Stored pointers (:reply_to)
+;;
+;; turn-ArDfbO and turn-xm9Otx are claude-17 turns 27-28 of the same
+;; session (2026-10-04T02:34/02:48Z), copied unmodified from the live store
+;; with turn 27's reply from evidence emacs-06125058b144b04aa089afd28febd38a.
+;; Turn 28 opens "㊟: So it should go into futon1b"; the turn service stored
+;; a :reply_to naming turn 27's ㊟ paragraph (rule mark-match). That
+;; paragraph is a qualify, which opens no port, so this pair pins the link,
+;; not a closure.
+
+(defn- pointer-session []
+  [(fixture-turn "turn-ArDfbO")
+   {:record (read-json "turn-xm9Otx.json")
+    :reading (read-json "turn-xm9Otx.json.analysis.json")
+    :reply ""}])
+
+(deftest a-stored-pointer-links-the-paragraph-it-names
+  (let [acts (ta/session-acts (pointer-session))
+        linked (filter #(= "claude-17-turn-27-r-2" (:target %)) acts)]
+    (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
+    (is (seq linked))
+    (is (every? #(and (= "operator" (:author %)) (= "claude-17-turn-28" (:turn %))) linked)
+        "only the operator's fragments in the pointer paragraph")
+    (is (not-any? #(re-find #"小象" (:text % "")) linked)
+        "fragments of the later ㊭ paragraph are not linked")
+    (is (some #{["claude-17-turn-27-r-2"]} (map (comp vec rest) (lx/explicit-answers acts)))
+        "the kernel sees an explicit answer")))
+
+(deftest a-stored-pointer-closes-an-open-port
+  (testing "turn 392 with the pointer the 1a resolver gives for its text
+            (constructed in memory; the fixture predates the writer)"
+    (let [[t391 t392 & more] (fixture-turns)
+          stored (futon3c.xiang.reply-target/resolve-targets
+                  (get-in t392 [:record :source_text])
+                  [{:turn-id "stream-id" :origin "operator" :text (:reply t391)}])
+          turns (into [t391 (assoc-in t392 [:record :reply_to] stored)] more)
+          acts (ta/session-acts turns)]
+      (is (= {:linked 1 :unlinked 0} (:pointers (meta acts))))
+      (is (some #{"claude-17-turn-391-r-3"}
+                (:closed-this-turn (ta/turn-ports acts "claude-17-turn-392")))))))
+
+(deftest stored-pointers-that-link-nothing
+  (testing "missing reply_to: 391's question stays open at 392"
+    (let [acts (ta/session-acts (fixture-turns))]
+      (is (= {:linked 0 :unlinked 0} (:pointers (meta acts))))
+      (is (some #{"claude-17-turn-391-r-3"}
+                (map :act (:still-open (ta/turn-ports acts "claude-17-turn-392")))))))
+  (testing "empty :replies"
+    (let [[a b] (pointer-session)
+          acts (ta/session-acts [a (assoc-in b [:record :reply_to :replies] [])])]
+      (is (= {:linked 0 :unlinked 0} (:pointers (meta acts))))
+      (is (not-any? #(= "claude-17-turn-27-r-2" (:target %)) acts))))
+  (testing "a reply naming a turn outside the session"
+    (let [acts (ta/session-acts [(second (pointer-session))])]
+      (is (= {:linked 0 :unlinked 1} (:pointers (meta acts))))
+      (is (not-any? :target acts))))
+  (testing "a stored fallback (rule newest) is not a link"
+    (let [[a b] (pointer-session)
+          acts (ta/session-acts [a (assoc-in b [:record :reply_to :replies 0 :rule] "newest")])]
+      (is (= {:linked 0 :unlinked 1} (:pointers (meta acts)))))))

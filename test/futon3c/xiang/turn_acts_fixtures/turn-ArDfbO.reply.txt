@@ -1,0 +1,14 @@
+Now moving the quote text out of everything 象 can read.㊥ (your quoted turn) It's OK to send now, but it wasn't until a few minutes ago. 象 *was* being passed quoted material. Its brief points it at the turn record file, and the record kept every `>>>` block twice: in a `quotes` field and inside `original_text`. Three past records with quotes show this. I've fixed it (`25d321c5`, live in the JVM and your Emacs). The record 象 reads now carries only `QUOTE` and a count.
+
+㊬ (what I checked)
+- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather than yours. The record file doesn't contain the quote text; the quote is only in a new sidecar, `RECORD.quotes.json`, which no brief names.
+- **Tests.** A new test checks that neither the record file nor the 象 brief contains the quote or the sidecar's name. The same check covers the Emacs recorder (codex-10 uses the JVM recorder, but the Emacs one had the same leak). The Emacs test fails against the previous version and passes now.
+
+㊢ (each reader of your turn)
+- **codex-10:** gets your turn exactly as typed.
+- **小象's draft:** runs over the text with `QUOTE` in place of the block.
+- **象:** reads the record, which has `QUOTE`. Fixed as above.
+- **大象 and the HUD:** they read 象's reading and agent replies, not your quote.
+- **feed.html:** shows the block in its quoted style (shaded background, left rule, fixed-width font). The feed builder now takes the text from the sidecar.
+
+㊟ (one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, still stores what you typed, quote included, in futon1b. Nothing annotates that row, but it's there. If you'd rather the quote stayed out of futon1b too, that's a change in `agent-chat.el` I can make. You don't need to wait for it.

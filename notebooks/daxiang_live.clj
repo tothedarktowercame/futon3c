@@ -159,7 +159,11 @@
 ;; The operator's turns contribute the fragments 象 read; the agent's turns
 ;; contribute 大象's acts. Two links are drawn only where the evidence is
 ;; explicit: Joe's approval in turn 393 accepts the offer of turn 392, and
-;; the commit in 393 carries that offer out.
+;; the commit in 393 carries that offer out. A third kind of link comes
+;; from the operator's own pointers: when a paragraph uses `<mark>:` to
+;; answer an agent paragraph, the server stores which one on the turn's
+;; record (`:reply_to`), and `session-acts` reads that stored pointer as an
+;; explicit answer. None of these four turns has one (see below).
 
 (def acts (ta/session-acts turns))
 
@@ -179,11 +183,22 @@
 ;; (`…-391-r-3`, "shall I read how P11's records get written?") is still
 ;; open at the end, but that is the record's fault, not the conversation's:
 ;; Joe answered "🈸:yes" in 392 and the agent did what it proposed. The
-;; parser of the time did not accept that answer form (fixed in 393), 象
-;; read the fragment as a report, and `turn-ports` was called without
-;; links. So this is a fourth outcome a proposal can have besides accepted,
+;; parser of the time did not accept that answer form (fixed in 393), and
+;; 象 read the fragment as a report. The resolver now reads a pointer
+;; written inside a sentence, and `session-acts` reads stored pointers,
+;; but turn 392's record was written on 2026-10-01, three days before the
+;; server began storing pointers, and records are not backfilled. So the
+;; port stays open in this stored session. This is a fourth outcome a proposal can have besides accepted,
 ;; declined and unanswered: considered and accepted, but not recorded. A
 ;; kernel that reads only the record cannot tell it from neglect.
+
+;; What the resolver returns for turn 392's text today, with turn 391's
+;; reply as the only candidate. This is the resolver's output, not the
+;; stored session: it is what the server would have stored had it been
+;; running then.
+
+(futon3c.xiang.reply-target/resolve-targets (:source_text (:record (nth turns 1)))
+                                            [{:turn-id "391-reply" :origin "operator" :text (:reply (nth turns 0))}])
 
 ;; ## 5. Patterns as open causal models
 ;;
@@ -440,13 +455,17 @@ event
 ;;
 ;; Next steps, each with the check that will say whether it worked:
 ;;
-;; 1. Use the operator's pointers as links. The server already resolves a
-;; paragraph that opens with `<mark>:` to the agent paragraph it answers
-;; (`futon3c.xiang.reply-target`), but `session-acts` does not read the
-;; result, and the resolver does not accept a pointer written inside a
-;; sentence, as in turn 392 ("…and 🈸:yes"). Both are why the question of
-;; turn 391 stays open in §4. Check: on the four turns above, `…-391-r-3`
-;; closes in turn 392.
+;; 1. Use the operator's pointers as links. Done, 2026-10-04. The resolver
+;; (`futon3c.xiang.reply-target`) now reads a `<mark>:` pointer inside a
+;; sentence as well as at the start of a paragraph ("…and 🈸:yes"), though
+;; not one in backticks or quotation marks. `session-acts` reads the
+;; pointer the server stored on the record and never recomputes it. A
+;; stored pointer names the agent turn by an id session records do not
+;; carry, so it is matched to a reply paragraph by its mark and stored
+;; excerpt. Check: the turn-acts tests close `…-391-r-3` in turn 392 when
+;; the pointer is supplied, and keep it open in the stored session, whose
+;; record predates the writer. Known limit: an unquoted sentence about the
+;; notation ("the legend says 🈸: ask-action") also reads as a pointer.
 ;;
 ;; 2. Read the bracketed target. Agents write, after each mark, what the
 ;; paragraph is about; today that text is kept but not parsed. Resolve it

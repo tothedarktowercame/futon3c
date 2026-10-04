@@ -1,0 +1,69 @@
+{
+  "evidence_id" : "emacs-38e0775646e7d0cbe561d36792d1bb20",
+  "interpretation_version" : 3,
+  "source_text" : "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL).  I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other than codex-10) will annotate that.  On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation execpt as QUOTE (because 象 should not be passed that text).  I won't send the turn until you assure me this is OK.",
+  "secrets_redacted" : [ ],
+  "tagging_failed" : false,
+  "reply_text" : "Now moving the quote text out of everything 象 can read.㊥ (your quoted turn) It's OK to send now, but it wasn't until a few minutes ago. 象 *was* being passed quoted material. Its brief points it at the turn record file, and the record kept every `>>>` block twice: in a `quotes` field and inside `original_text`. Three past records with quotes show this. I've fixed it (`25d321c5`, live in the JVM and your Emacs). The record 象 reads now carries only `QUOTE` and a count.\n\n㊬ (what I checked)\n- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather than yours. The record file doesn't contain the quote text; the quote is only in a new sidecar, `RECORD.quotes.json`, which no brief names.\n- **Tests.** A new test checks that neither the record file nor the 象 brief contains the quote or the sidecar's name. The same check covers the Emacs recorder (codex-10 uses the JVM recorder, but the Emacs one had the same leak). The Emacs test fails against the previous version and passes now.\n\n㊢ (each reader of your turn)\n- **codex-10:** gets your turn exactly as typed.\n- **小象's draft:** runs over the text with `QUOTE` in place of the block.\n- **象:** reads the record, which has `QUOTE`. Fixed as above.\n- **大象 and the HUD:** they read 象's reading and agent replies, not your quote.\n- **feed.html:** shows the block in its quoted style (shaded background, left rule, fixed-width font). The feed builder now takes the text from the sidecar.\n\n㊟ (one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, still stores what you typed, quote included, in futon1b. Nothing annotates that row, but it's there. If you'd rather the quote stayed out of futon1b too, that's a change in `agent-chat.el` I can make. You don't need to wait for it.",
+  "session_id" : "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 76,
+    "text" : "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL)."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 78,
+    "end" : 229,
+    "text" : "I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other than codex-10) will annotate that."
+  }, {
+    "id" : "s3",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 231,
+    "end" : 406,
+    "text" : "On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation execpt as QUOTE (because 象 should not be passed that text)."
+  }, {
+    "id" : "s4",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 408,
+    "end" : 461,
+    "text" : "I won't send the turn until you assure me this is OK."
+  } ],
+  "analysis_dispatch" : {
+    "scheduled_at" : 1791081295105,
+    "attempts" : [ {
+      "job_id" : "invoke-1791081295291-31471-3635ab5d"
+    } ],
+    "job_id" : "invoke-1791081475877-31472-df9be95b"
+  },
+  "draft_status" : "drafted",
+  "quotes" : [ ],
+  "withdrawal_processing_error" : null,
+  "reply_to" : {
+    "replies" : [ ],
+    "declared_intents" : [ {
+      "index" : 0,
+      "mark" : "🈲"
+    } ]
+  },
+  "original_text" : "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL).  I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other than codex-10) will annotate that.  On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation execpt as QUOTE (because 象 should not be passed that text).  I won't send the turn until you assure me this is OK.",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\nNow moving the quote text out of everything 象 can read.㊥ (your quoted turn) It's OK to send now, but it wasn't until a few minutes ago. 象 *was* being passed quoted material. Its brief points it at the turn record file, and the record kept every `>>>` block twice: in a `quotes` field and inside `original_text`. Three past records with quotes show this. I've fixed it (`25d321c5`, live in the JVM and your Emacs). The record 象 reads now carries only `QUOTE` and a count.\n\n㊬ (what I checked)\n- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather than yours. The record file doesn't contain the quote text; the quote is only in a new sidecar, `RECORD.quotes.json`, which no brief names.\n- **Tests.** A new test checks that neither the record file nor the 象 brief contains the quote or the sidecar's name. The same check covers the Emacs recorder (codex-10 uses the JVM recorder, but the Emacs one had the same leak). The Emacs test fails against the previous version and passes now.\nCommits during the turn (any repo; not necessarily the agent's own):\n- futon3c 25d321c5 象: quoted >>> material never reaches the file 象 reads (+78 -8 over 8 files)",
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-ArDfbO.json.draft.json",
+  "turn_id" : "claude-17-turn-27",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "analysis_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-ArDfbO.json.analysis.json",
+  "version" : 1,
+  "agent_id" : "claude-17",
+  "unmatched" : [ "s1", "s2", "s3", "s4" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-04T02:34:54Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

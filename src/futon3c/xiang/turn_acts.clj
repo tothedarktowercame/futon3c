@@ -23,14 +23,17 @@
    previous turn's reply (session-acts threads that context; turn->acts
    alone cannot see it, and leaves approve as :approve); a commit in a
    turn that accepted an offer, or in the turn right after the
-   acceptance, carries that offer out. Everything inferred beyond that is
-   left to the kernel's flow/posterior.
+   acceptance, carries that offer out; and an operator paragraph whose
+   stored pointer (the record's :reply_to, written by the turn service)
+   names an earlier reply paragraph of the session answers it. Everything
+   inferred beyond that is left to the kernel's flow/posterior.
 
    Act ids are stable: <turn_id>-f-<sentence>-<n> for fragments,
    <turn_id>-r-<n> for reply paragraphs, <turn_id>-c-<sha> for commits."
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.logic.xiang :as lx]
+            [futon3c.xiang.reply-target :as reply-target]
             [futon3c.xiang.turn-record :as turn-record]))
 
 ;; ---------------------------------------------------------------------------
@@ -201,6 +204,54 @@
 ;; ---------------------------------------------------------------------------
 ;; Session
 
+(defn- reply-paragraphs
+  "[[mark excerpt] act-id] for each marked paragraph of a turn's reply that
+   became an act, keyed as a stored pointer names it."
+  [record reply acts]
+  (let [ids (set (map :id acts))
+        base (:turn_id record)]
+    (for [[idx {:keys [mark text]}] (map-indexed vector (turn-record/reply-marks reply))
+          :let [id (str base "-r-" idx)]
+          :when (ids id)]
+      [[mark (reply-target/excerpt text)] id])))
+
+(defn pointer-targets
+  "{operator-paragraph-index reply-act-id} for RECORD's stored pointers
+   (:reply_to :replies with rule mark-match). A stored reply names the
+   agent turn by the stream id the server saw, which session records do
+   not carry, so it is matched on its mark and stored paragraph excerpt
+   against SEEN, the {[mark excerpt] [act-id ..]} of the session's earlier
+   replies. A pointer matching no paragraph, or more than one, links
+   nothing. Returns {:targets {..} :unlinked n}."
+  [record seen]
+  (reduce (fn [acc {:keys [index mark rule paragraph]}]
+            (let [ids (when (= "mark-match" (some-> rule name))
+                        (get seen [mark paragraph]))]
+              (if (= 1 (count ids))
+                (assoc-in acc [:targets index] (first ids))
+                (update acc :unlinked inc))))
+          {:targets {} :unlinked 0}
+          (get-in record [:reply_to :replies])))
+
+(defn- link-pointers
+  "TURN-ACTS with each kinded operator fragment in a pointer paragraph
+   targeting the reply act that paragraph answers."
+  [record turn-acts targets]
+  (if (empty? targets)
+    turn-acts
+    (let [paras (reply-target/paragraphs (:source_text record))
+          para-of (fn [text]
+                    (let [t (str/trim (str text))]
+                      (when-not (str/blank? t)
+                        (first (keep-indexed (fn [i p] (when (str/includes? p t) i)) paras)))))]
+      (with-meta
+        (mapv (fn [{:keys [author text target] :as act}]
+                (if-let [reply-id (and (= "operator" author) (some-> (para-of text) targets))]
+                  (assoc act :target (if target (vec (distinct (conj (if (sequential? target) (vec target) [target]) reply-id))) reply-id))
+                  act))
+              turn-acts)
+        (meta turn-acts)))))
+
 (defn session-acts
   "The acts of TURNS — seqs of {:record :reading :reply :commits} —
    ordered by the records' created_at, with the two cross-turn links
@@ -209,21 +260,31 @@
    - an approve fragment accepts the offer of the previous turn's reply
      (:preceding-offer);
    - a commit carries out the offer accepted in its own turn or in the
-     turn before it (:carries-out).
+     turn before it (:carries-out);
+   - an operator paragraph answers the reply paragraph its stored pointer
+     names (`pointer-targets`): each kinded fragment of that paragraph
+     targets the reply act, and the kernel's adjacency table decides
+     whether the port closes. The pointer is read, never recomputed.
 
-   ^{:skipped n} metadata totals the skipped no-kind fragments and
-   paragraphs over the session."
+   ^{:skipped n :pointers {:linked n :unlinked n}} metadata totals the
+   skipped no-kind fragments and paragraphs over the session, and counts
+   the stored pointers that did and did not resolve to a reply act."
   [turns]
   (let [ordered (sort-by #(get-in % [:record :created_at]) turns)]
     (loop [todo ordered
            acts []
            skipped 0
            preceding-offer nil
-           accepted nil]
+           accepted nil
+           seen {}
+           pointers {:linked 0 :unlinked 0}]
       (if-let [{:keys [record reading reply commits]} (first todo)]
-        (let [turn-acts (turn->acts record reading reply commits
-                                    {:preceding-offer preceding-offer
-                                     :carries-out accepted})
+        (let [{:keys [targets unlinked]} (pointer-targets record seen)
+              turn-acts (link-pointers record
+                                       (turn->acts record reading reply commits
+                                                   {:preceding-offer preceding-offer
+                                                    :carries-out accepted})
+                                       targets)
               skipped-here (:skipped (meta turn-acts))
               accepted-here (some (fn [{:keys [kind target]}]
                                     (when (= kind :accept) target))
@@ -248,8 +309,13 @@
                  (into acts turn-acts)
                  (+ skipped skipped-here)
                  offer-here
-                 accepted-here))
-        (with-meta acts {:skipped skipped})))))
+                 accepted-here
+                 (reduce (fn [m [k id]] (update m k (fnil conj []) id))
+                         seen (reply-paragraphs record reply turn-acts))
+                 (-> pointers
+                     (update :linked + (count targets))
+                     (update :unlinked + unlinked))))
+        (with-meta acts {:skipped skipped :pointers pointers})))))
 
 ;; ---------------------------------------------------------------------------
 ;; The kernel's answer for one turn

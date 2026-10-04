@@ -16,7 +16,7 @@
 
 (def ^:private marks (mapv first tr/proforma-marks))
 
-(defn- paragraphs
+(defn paragraphs
   "Paragraphs of TEXT (runs of lines with no blank line inside), trimmed."
   [text]
   (->> (str/split (str text) #"\n\s*\n")
@@ -42,7 +42,12 @@
 (defn- inline-pointers
   "Marks used in the colon form after the start of PARA, in order, e.g. the
    🈸 in \"OK, I've tried the hydra, and 🈸:yes\" (turn 392). A bare mark
-   inside a sentence is not a pointer: it is often a quotation."
+   inside a sentence is not a pointer: it is often a quotation.
+   Known false positive: an unquoted sentence about the notation (\"the
+   legend says 🈸: ask-action\") or a single-quoted '🈸:' reads as a
+   pointer; single quotes are not blanked because of apostrophes. Once
+   session acts read stored pointers, such a sentence can close a port
+   when a recent agent paragraph carries the same mark."
   [para]
   (let [s (unquoted para)]
     (->> marks
@@ -73,7 +78,9 @@
                     {:index i :mark m :pointer? true :inline? true :text para})))
                (range) (paragraphs text))))
 
-(defn- excerpt [s] (let [s (str/trim (str s))] (if (> (count s) 160) (str (subs s 0 160) "…") s)))
+(defn excerpt
+  "The paragraph excerpt a stored reply carries as :paragraph."
+  [s] (let [s (str/trim (str s))] (if (> (count s) 160) (str (subs s 0 160) "…") s)))
 
 (defn resolve-targets
   "For each `<mark>:` paragraph in operator TEXT, the candidate paragraph it

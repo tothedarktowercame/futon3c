@@ -1,0 +1,102 @@
+{
+  "quote_count" : 0,
+  "evidence_id" : "emacs-638a0cc85d24f5c636fca4e0905a0c0f",
+  "interpretation_version" : 3,
+  "source_text" : "㊟: So it should go into futon1b, that's fine.  I know sometimes this makes post-processing (e.g. catch up by 象) ambiguous and my \"long turns\" look different, but that's a problem to solve in the evidence-processing phase not in the evidence-storage phase (and 象 may remember its rule about triple-greater-than even in the catch-up phase).\n\n㊭ I think we sohuld get back to the idea of thinking about 小象 as a \"prior\" for 象, and use the corrections of the provisional reading from 象 as a way to train 小象.  We could include a little bit of material about this training process in the writeup at https://hyperreal.enterprises/xiaoxiang.html\n\n㊯ I'd also like you to give me a short draft paragraph that I can send to Brendan Fong that explains how we are working on using his work.  I'm hoping I might be able to arrange a meeting with him to discuss later this week.  (I know we are in a preliminary phase of this work; but maybe it could lead to a joint publication or something later on.)",
+  "secrets_redacted" : [ ],
+  "tagging_failed" : false,
+  "session_id" : "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 45,
+    "text" : "㊟: So it should go into futon1b, that's fine."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 47,
+    "end" : 96,
+    "text" : "I know sometimes this makes post-processing (e.g."
+  }, {
+    "id" : "s3",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 97,
+    "end" : 338,
+    "text" : "catch up by 象) ambiguous and my \"long turns\" look different, but that's a problem to solve in the evidence-processing phase not in the evidence-storage phase (and 象 may remember its rule about triple-greater-than even in the catch-up phase)."
+  }, {
+    "id" : "s4",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 340,
+    "end" : 501,
+    "text" : "㊭ I think we sohuld get back to the idea of thinking about 小象 as a \"prior\" for 象, and use the corrections of the provisional reading from 象 as a way to train 小象."
+  }, {
+    "id" : "s5",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 503,
+    "end" : 635,
+    "text" : "We could include a little bit of material about this training process in the writeup at https://hyperreal.enterprises/xiaoxiang.html"
+  }, {
+    "id" : "s6",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 637,
+    "end" : 775,
+    "text" : "㊯ I'd also like you to give me a short draft paragraph that I can send to Brendan Fong that explains how we are working on using his work."
+  }, {
+    "id" : "s7",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 777,
+    "end" : 861,
+    "text" : "I'm hoping I might be able to arrange a meeting with him to discuss later this week."
+  }, {
+    "id" : "s8",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 863,
+    "end" : 985,
+    "text" : "(I know we are in a preliminary phase of this work; but maybe it could lead to a joint publication or something later on.)"
+  } ],
+  "analysis_dispatch" : {
+    "scheduled_at" : 1791082132000,
+    "job_id" : "invoke-1791082132307-31478-e09e5b4d"
+  },
+  "draft_status" : "drafted",
+  "withdrawal_processing_error" : null,
+  "reply_to" : {
+    "replies" : [ {
+      "index" : 0,
+      "mark" : "㊟",
+      "rule" : "mark-match",
+      "turn-id" : "repl-claude-17-f5b3c48bb5993b989a809ece",
+      "origin" : "operator",
+      "paragraph" : "(one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, still stores what you typed, quote includ…"
+    } ],
+    "declared_intents" : [ {
+      "index" : 1,
+      "mark" : "㊭"
+    }, {
+      "index" : 2,
+      "mark" : "㊯"
+    } ]
+  },
+  "original_text" : "㊟: So it should go into futon1b, that's fine.  I know sometimes this makes post-processing (e.g. catch up by 象) ambiguous and my \"long turns\" look different, but that's a problem to solve in the evidence-processing phase not in the evidence-storage phase (and 象 may remember its rule about triple-greater-than even in the catch-up phase).\n\n㊭ I think we sohuld get back to the idea of thinking about 小象 as a \"prior\" for 象, and use the corrections of the provisional reading from 象 as a way to train 小象.  We could include a little bit of material about this training process in the writeup at https://hyperreal.enterprises/xiaoxiang.html\n\n㊯ I'd also like you to give me a short draft paragraph that I can send to Brendan Fong that explains how we are working on using his work.  I'm hoping I might be able to arrange a meeting with him to discuss later this week.  (I know we are in a preliminary phase of this work; but maybe it could lead to a joint publication or something later on.)",
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-xm9Otx.json.draft.json",
+  "turn_id" : "claude-17-turn-28",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "analysis_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-xm9Otx.json.analysis.json",
+  "version" : 1,
+  "agent_id" : "claude-17",
+  "unmatched" : [ "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-04T02:48:51Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}
