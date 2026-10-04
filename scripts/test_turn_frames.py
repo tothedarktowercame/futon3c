@@ -317,6 +317,53 @@ def frames_for(rows, analyses):
     return frames
 
 
+DRAFT = {"source_text": "do the thing please",
+         "fragments": [
+             {"start": 0, "end": 16, "text": "do the thing", "sentence": "s1",
+              "intent": None, "guesses": ["continue", "explain"],
+              "precision": 0.281, "basis": "model", "sure": False},
+             {"start": 17, "end": 23, "text": "please", "sentence": "s1",
+              "intent": None, "guesses": ["ask-action"],
+              "precision": 0.9, "basis": "model", "sure": True}]}
+
+
+class ProvisionalDrafts(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="turn-frames-draft-")
+        self.addCleanup(shutil.rmtree, self.dir)
+        self.rows = [op_turn("emacs-t1", T1, "agent-turn-1", "do the thing please"),
+                     op_turn("emacs-t2", T2, "agent-turn-2", "now stop")]
+
+    def test_draft_only_turn_gets_a_provisional_parse(self):
+        write_turn_files(self.dir, analysis=None)
+        with open(os.path.join(self.dir, "turn-abc123.json.draft.json"), "w") as f:
+            json.dump(DRAFT, f)
+        frames = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        parse = frames[0]["parse"]
+        self.assertEqual("drafted-provisional", parse["status"])
+        self.assertEqual(2, len(parse["fragments"]))
+        self.assertEqual([{"source": "小象", "intent": "continue",
+                           "precision": 0.281, "weak": True}],
+                         parse["fragments"][0]["labels"])
+        self.assertEqual("continue", parse["fragments"][0]["combined"])
+        # the sure guess is not marked weak
+        self.assertEqual([{"source": "小象", "intent": "ask-action", "precision": 0.9}],
+                         parse["fragments"][1]["labels"])
+        # the second turn has no record at all: still missing
+        self.assertEqual("missing", frames[1]["parse"]["status"])
+
+    def test_read_turn_is_unchanged_when_a_draft_file_exists(self):
+        """A turn with a reading keeps exactly today's parse, even with a
+        draft file beside it (frames byte-identical to no-draft)."""
+        write_turn_files(self.dir)                      # record + analysis
+        without = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        with open(os.path.join(self.dir, "turn-abc123.json.draft.json"), "w") as f:
+            json.dump(DRAFT, f)
+        with_draft = frames_for(self.rows, tf.load_analyses(SID, self.dir))
+        self.assertEqual(without, with_draft)
+        self.assertEqual("analyzed", with_draft[0]["parse"]["status"])
+
+
 class XiangReadings(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix="turn-frames-step3-")

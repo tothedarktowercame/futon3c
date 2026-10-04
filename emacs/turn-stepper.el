@@ -115,14 +115,14 @@ JSON null and false both read as nil."
       (if (listp data) data (list data)))))
 
 (defun turn-stepper--ready-frames (frames)
-  "FRAMES without the newest turns 象 has not read yet.
-Those turns are still in progress (no reading, no reply), so they are
-left out until a refresh finds them read.  An older turn 象 never read
-stays, shown as missing."
+  "FRAMES without the newest turns that have nothing to show yet.
+A trailing turn with 小象's provisional parse stays (marked provisional);
+only a trailing turn with neither draft nor reading is left out.  An
+older turn 象 never read stays, shown as missing."
   (let ((rev (reverse frames)))
-    (while (and rev (not (equal "analyzed"
-                                (turn-stepper--aget
-                                 (quote status) (turn-stepper--aget (quote parse) (car rev))))))
+    (while (and rev (not (member (turn-stepper--aget
+                                  (quote status) (turn-stepper--aget (quote parse) (car rev)))
+                                 (quote ("analyzed" "drafted-provisional")))))
       (setq rev (cdr rev)))
     (nreverse rev)))
 
@@ -175,40 +175,60 @@ content of that mark.  The marks themselves are underlined in PARSE."
             (add-face-text-property i (+ i (length cue))
                                     '(:underline (:style wave :color "purple")) nil out)))))))
 
+(defface turn-stepper-provisional-face
+  '((t :inherit shadow :slant italic))
+  "Face for 小象's provisional parse, replaced by 象's reading when it lands."
+  :group 'turn-stepper)
+
+(defun turn-stepper--render-fragments (fragments provisional)
+  "Render FRAGMENTS lines; PROVISIONAL marks weak guesses with a face."
+  (if (null fragments)
+      "  (no fragments)\n"
+    (mapconcat
+     (lambda (frag)
+       (let* ((labels (turn-stepper--aget (quote labels) frag))
+              (combined (turn-stepper--aget (quote combined) frag))
+              (disagree (turn-stepper--aget (quote disagree) frag))
+              (intents (delq nil (mapcar (lambda (l)
+                                           (turn-stepper--aget (quote intent) l))
+                                         labels)))
+              (head (if (and disagree (> (length intents) 1))
+                        (format "disagree: %s"
+                                (string-join intents " / "))
+                      (or combined "(unlabelled)")))
+              (sources (mapconcat
+                        (lambda (l)
+                          (let ((s (format "%s→%s%s"
+                                           (turn-stepper--aget (quote source) l)
+                                           (turn-stepper--aget (quote intent) l)
+                                           (if (turn-stepper--aget (quote weak) l) "?" ""))))
+                            (if provisional
+                                (propertize s 'face 'turn-stepper-provisional-face)
+                              s)))
+                        labels ", ")))
+         (format "  [%s] %s\n      (%s)"
+                 (if provisional
+                     (propertize head 'face 'turn-stepper-provisional-face)
+                   head)
+                 (turn-stepper--underline-cues
+                  (or (turn-stepper--aget (quote text) frag) "")
+                  (turn-stepper--aget (quote cues) frag))
+                 sources)))
+     fragments
+     "\n")))
+
 (defun turn-stepper--render-parse (parse)
   "Render the PARSE section of a frame's parse alist as a string."
   (let ((status (turn-stepper--aget (quote status) parse))
         (fragments (turn-stepper--aget (quote fragments) parse)))
-    (if (not (equal status "analyzed"))
-        (format "  (%s)\n" (or status "missing"))
-      (if (null fragments)
-          "  (no fragments)\n"
-        (mapconcat
-         (lambda (frag)
-           (let* ((labels (turn-stepper--aget (quote labels) frag))
-                  (combined (turn-stepper--aget (quote combined) frag))
-                  (disagree (turn-stepper--aget (quote disagree) frag))
-                  (intents (delq nil (mapcar (lambda (l)
-                                               (turn-stepper--aget (quote intent) l))
-                                             labels)))
-                  (head (if (and disagree (> (length intents) 1))
-                            (format "disagree: %s"
-                                    (string-join intents " / "))
-                          (or combined "(unlabelled)")))
-                  (sources (mapconcat
-                            (lambda (l)
-                              (format "%s→%s"
-                                      (turn-stepper--aget (quote source) l)
-                                      (turn-stepper--aget (quote intent) l)))
-                            labels ", ")))
-             (format "  [%s] %s\n      (%s)"
-                     head
-                     (turn-stepper--underline-cues
-                      (or (turn-stepper--aget (quote text) frag) "")
-                      (turn-stepper--aget (quote cues) frag))
-                     sources)))
-         fragments
-         "\n")))))
+    (cond
+     ((equal status "analyzed")
+      (turn-stepper--render-fragments fragments nil))
+     ((equal status "drafted-provisional")
+      (concat (propertize "  小象, provisional — 象's reading pending\n"
+                          'face 'turn-stepper-provisional-face)
+              (turn-stepper--render-fragments fragments t)))
+     (t (format "  (%s)\n" (or status "missing"))))))
 
 (defun turn-stepper--pattern-id (item)
   "Best-effort id string for a matched-pattern ITEM (string or alist)."

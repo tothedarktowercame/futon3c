@@ -121,6 +121,18 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
                     analysis = json.load(f)
             except (OSError, ValueError):
                 analysis = None
+        draft = None
+        if analysis is None:
+            # 小象's provisional parse, written within ~1 s of send; 象's
+            # reading replaces it when it lands.  The draft never goes to
+            # futon1b on its own.
+            dpath = path + ".draft.json"
+            if os.path.exists(dpath):
+                try:
+                    with open(dpath) as f:
+                        draft = json.load(f)
+                except (OSError, ValueError):
+                    draft = None
         candidates = []
         # both spellings exist: turn-XX.json.candidates.json and turn-XX.candidates.json
         for cpath in (path + ".candidates.json",
@@ -132,7 +144,7 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
                 except (OSError, ValueError):
                     candidates = []
                 break
-        entry = {"record": record, "analysis": analysis,
+        entry = {"record": record, "analysis": analysis, "draft": draft,
                  "candidates": candidates, "path": path}
         if record.get("evidence_id"):
             out["by_evidence_id"][record["evidence_id"]] = entry
@@ -487,6 +499,28 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                     })
                     matched.extend(frag.get("pattern_refs") or [])
                     rejected.extend(frag.get("pattern_rejections") or [])
+        elif entry and entry.get("draft"):
+            # 小象's provisional parse, shown until 象's reading lands:
+            # the best guess, visibly weak when the draft is not sure.
+            status = "drafted-provisional"
+            for frag in (entry["draft"].get("fragments") or []):
+                best = (frag.get("guesses") or [frag.get("intent")])[0]
+                labels = []
+                if best is not None:
+                    label = {"source": "小象", "intent": best,
+                             "precision": frag.get("precision")}
+                    if not frag.get("sure"):
+                        label["weak"] = True
+                    labels.append(label)
+                fragments_out.append({
+                    "sentence": frag.get("sentence"),
+                    "text": frag.get("text"),
+                    "cues": [],
+                    "labels": labels,
+                    "_intents": [best] if best is not None else [],
+                    "_frag": frag,
+                    "_sid": frag.get("sentence"),
+                })
         # negation labels: attach to the fragment they name (fall back to
         # matching fragment-text)
         for nr in negs:

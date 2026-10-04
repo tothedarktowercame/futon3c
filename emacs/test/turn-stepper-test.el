@@ -164,6 +164,61 @@
     (should (string-match-p "LOOK.*outside 象's marks" out))
     (should-not (string-match-p "is that" out))))
 
+(ert-deftest turn-stepper-keeps-provisional-newest-turns ()
+  "小象's provisional parse shows at once; only a bare missing turn drops."
+  (let ((f (lambda (st) `((parse . ((status . ,st)))))))
+    (should (equal (list (funcall f "analyzed") (funcall f "drafted-provisional"))
+                   (turn-stepper--ready-frames
+                    (list (funcall f "analyzed") (funcall f "drafted-provisional")
+                          (funcall f "missing")))))
+    (should (equal (list (funcall f "missing") (funcall f "drafted-provisional"))
+                   (turn-stepper--ready-frames
+                    (list (funcall f "missing") (funcall f "drafted-provisional")))))))
+
+(ert-deftest turn-stepper-renders-provisional-parse-distinctly ()
+  (let* ((parse '((status . "drafted-provisional")
+                  (fragments . (((text . "do the thing")
+                                 (cues . nil)
+                                 (combined . "continue")
+                                 (labels . (((source . "小象") (intent . "continue") (weak . t)))))))))
+         (out (turn-stepper--render-parse parse)))
+    (should (string-match-p "小象, provisional" out))
+    (should (string-match-p "小象→continue\\?" out))
+    (should (get-text-property 0 'face out))
+    (should (eq 'turn-stepper-provisional-face (get-text-property 2 'face out)))))
+
+(ert-deftest turn-stepper-analyzed-parse-renders-as-before ()
+  (let* ((parse '((status . "analyzed")
+                  (fragments . (((text . "do the thing")
+                                 (cues . nil)
+                                 (combined . "continue")
+                                 (labels . (((source . "象/象-1") (intent . "continue")))))))))
+         (out (turn-stepper--render-parse parse)))
+    (should (string-match-p "象/象-1→continue" out))
+    (should-not (string-match-p "provisional" out))
+    (should-not (get-text-property 0 'face out))))
+
+(ert-deftest turn-stepper-reading-on-an-older-frame-keeps-the-index ()
+  "象's reading lands for the frame the user is reading back on: the
+reload fires and the stepper stays on that frame."
+  (let ((buf (get-buffer-create turn-stepper-buffer-name))
+        (rec (make-temp-file "ts-rec" nil ".json" "{\"session_id\": \"s1\"}"))
+        (fetched nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'turn-stepper--start-fetch)
+                   (lambda (sid _src quiet) (push (list sid quiet) fetched))))
+          (delete-other-windows)
+          (display-buffer buf)
+          (with-current-buffer buf
+            (setq turn-stepper--session-id "s1"
+                  turn-stepper--frames '(f0 f1 f2 f3)
+                  turn-stepper--index 1))
+          (turn-stepper--reading-landed rec)
+          (should (equal fetched '(("s1" t))))
+          (should (= 1 (turn-stepper--index-after-reload "s1" 4))))
+      (delete-other-windows)
+      (kill-buffer buf) (delete-file rec))))
+
 (ert-deftest turn-stepper-drops-unread-newest-turns ()
   (let ((f (lambda (st) `((parse . ((status . ,st)))))))
     (should (equal (list (funcall f "missing") (funcall f "analyzed"))
