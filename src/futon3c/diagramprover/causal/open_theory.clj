@@ -1,13 +1,18 @@
 (ns futon3c.diagramprover.causal.open-theory
-  "Open causal theories and their composition by gluing.
+  "Open causal models and their composition by gluing.
 
   Fong's causal theories present a causal model as syntax: a DAG generates
-  the free category of processes on its variables, and a model is a
-  structure-preserving assignment of mechanisms. His decorated cospans make
-  such systems OPEN: each carries a boundary, and two open systems compose by
-  identifying their shared boundary (a pushout). This namespace is the
-  finite, deterministic fragment of that idea that the rest of `causal/`
-  can already compute with:
+  the free copy-discard category of processes on its variables, and a model
+  is a structure-preserving assignment of mechanisms (arXiv:1301.6201 §4).
+  Fong's theories are closed. An open theory here is an open causal model
+  in Lorenz and Tull's sense (arXiv:2304.07638 §5): a DAG some of whose
+  variables are inputs with no mechanism, with Boolean equations as a model
+  in Set. `glue` is not the binary pushout of decorated cospans: it glues
+  any number of theories along shared names, and is partial, accepting
+  exactly when the result satisfies Fritz and Liang's left-monogamy and
+  acyclicity conditions (arXiv:2204.02284 Defs 3.5-3.6). This namespace is
+  the finite, deterministic fragment that the rest of `causal/` can
+  already compute with:
 
   - an open theory is {:id … :variables #{…} :arrows [{:from :to}]
     :mechanisms {var \"equation\"} :interface #{…}}, with equations in the
@@ -16,8 +21,10 @@
     input the theory expects some other theory, or the world, to supply;
   - `glue` composes theories along shared names. A name may be shared only
     if every theory that mentions it lists it in its interface, and at most
-    one theory may own it. The result is a closed causal DAG with structural
-    equations, accepted by `dag/validate` and `scm/validate`, so every
+    one theory may own it. The result is a causal DAG with structural
+    equations, closed in SCM terms by treating unowned inputs as exogenous
+    roots (it carries no priors for them, and no interface, so it cannot
+    yet be glued again), accepted by `dag/validate` and `scm/validate`, so every
     receipt in `causal/` (d-separation, surgery, identification,
     counterfactuals) applies to the composite.
 

@@ -20,9 +20,8 @@
 ;;
 ;; The question worked on here: can the stream of acts be given a logic
 ;; that says, after each turn, which obligations closed and which are still
-;; open, and can design patterns be composed over that stream in the way
-;; Fong's open causal theories [2, 3] suggest? Mistakes in the use of that
-;; work are ours.
+;; open, and can design patterns be composed over that stream as open
+;; causal models [2, 4]? Mistakes in the use of that work are ours.
 
 (require '[clojure.data.json :as json]
          '[clojure.java.io :as io]
@@ -104,7 +103,8 @@
 ;; store. In the first, the agent asks Joe whether it should look into
 ;; something. In the second it offers him two numbered options. Joe answers
 ;; "1" in the third, and the agent's commit in that turn carries option 1
-;; out. The first question is never answered.
+;; out. The first question was answered too ("🈸:yes" in the second turn),
+;; but, as §4 shows, the record holds no act answering it.
 
 (require '[futon3c.xiang.daxiang :as dx])
 
@@ -160,19 +160,31 @@
 
 ;; The offer of 392 closes in 393. The agent's question of 391
 ;; (`…-391-r-3`, "shall I read how P11's records get written?") is still
-;; open at the end. Nobody dropped it on purpose; nothing kept it in view.
-;; In this environment that is the usual way work stalls.
+;; open at the end, but that is the record's fault, not the conversation's:
+;; Joe answered "🈸:yes" in 392 and the agent did what it proposed. The
+;; parser of the time did not accept that answer form (fixed in 393), 象
+;; read the fragment as a report, and `turn-ports` was called without
+;; links. So this is a fourth outcome a proposal can have besides accepted,
+;; declined and unanswered: considered and accepted, but not recorded. A
+;; kernel that reads only the record cannot tell it from neglect.
 
-;; ## 5. Patterns as open causal theories
+;; ## 5. Patterns as open causal models
 ;;
-;; Following Fong [2], a pattern is a small causal theory together with a
-;; model of it: variables, and a mechanism (here a Boolean structural
-;; equation) for each variable the pattern owns. In the spirit of [3], it
-;; is made open by an interface, the
-;; variables it will share, and theories compose by gluing along shared
-;; names. A name may be shared only if every theory mentioning it lists it
-;; in its interface, and only one theory may own it; otherwise gluing
-;; refuses, as data. Three small patterns from our own practice:
+;; Following Fong [2], a pattern's causal structure is a small DAG, which
+;; presents a causal theory, the free copy-discard category on its
+;; variables and mechanisms; the pattern's Boolean structural equations are
+;; a model of that theory in Set [2, §4.2]. Fong's causal theories are
+;; closed. For open ones, in which some variables are inputs with no
+;; mechanism, we follow Lorenz and Tull's open causal models [4, §5], which
+;; they relate to decorated [3] and structured [5] cospans [4, Rem. 59].
+;;
+;; Our `glue` is not the binary pushout composition of [3]. It glues any
+;; number of patterns at once along shared names, and it is partial: it
+;; refuses when a shared name is missing from a sharer's interface, when a
+;; variable would get two mechanisms, or when the result has a cycle. The
+;; last two are the monogamy and acyclicity conditions that single out
+;; copy-discard string diagrams among hypergraph diagrams [6, Defs 3.5–3.6].
+;; Three small patterns from our own practice:
 
 (def answer-your-offers
   (ot/theory :answer-your-offers
@@ -201,8 +213,8 @@
             :fill (into {} (for [v vars] [v (colour (owners v) "#ffffff")]))
             :title "glued: answer-your-offers (beige), token-machine (blue), operator-burden (pink); white = input")})
 
-;; Gluing refuses when two patterns would own one variable, or when one
-;; reads a variable another keeps private:
+;; Gluing refuses when two patterns would own one variable, or when a
+;; theory reads a shared variable without listing it in its own interface:
 
 [(select-keys (ot/glue [answer-your-offers token-machine operator-burden
                         (ot/theory :careless {"stranded" "nudged"} :interface [:stranded :nudged])])
@@ -226,8 +238,10 @@
 
 seen
 
-;; The reminder machine did not exist then, and Joe had to come back to the
-;; question himself. Had the machine been on, would he still have had to?
+;; Take the record at face value: the port stayed open, with no reminder
+;; machine, and suppose Joe had to come back to the question himself (§4
+;; shows the open port is an artefact of the reading, so this premise is
+;; illustrative). Had the machine been on, would he still have had to?
 
 (select-keys (scm/counterfactual (:dag glued)
                                  {:evidence (merge seen {:machine-on false :joe-tickles true})
@@ -235,7 +249,10 @@ seen
                                   :outcome :joe-tickles})
              [:method :answer])
 
-;; For the offer that was answered, nothing fires:
+;; For the offer that was answered, nothing fires. A caution on both
+;; queries: the outcome does not depend on the exogenous noise once the
+;; evidence is fixed, so abduction does no work and these are answers to
+;; interventional questions (rung 2), not genuine counterfactuals.
 
 (let [seen-392 (observe acts "claude-17-turn-392-r-4" "claude-17-turn-394")]
   [seen-392 (:answer (scm/counterfactual (:dag glued)
@@ -353,7 +370,9 @@ event
            [k (:answer (scm/counterfactual d {:evidence event :intervention {:wr-26-then true}
                                               :outcome (keyword (str k "-unmet"))}))]))})
 
-;; As it happened, the condition was written but not countable ("Joe asks
+;; The first column has no intervention, so it is a reading of the record
+;; rather than a counterfactual. As it happened, the condition was written
+;; but not countable ("Joe asks
 ;; for 象 back"), so WR-26 is unmet and so, within this cone, is every
 ;; problem it answers. The counterfactual shows what a countable condition
 ;; would have changed. Two cautions: the problems above WR-26 have other
@@ -373,17 +392,29 @@ event
 ;; shared names, and mechanisms are deterministic. Two places we would most
 ;; like to go further: mechanisms in a Markov category, so that 小象's
 ;; uncertain readings enter as distributions rather than guesses; and
-;; promises treated as processes with a hole the debtor fills later, which
-;; is how an open port in §4 already behaves.
+;; promises treated as processes with a hole the debtor fills later. That
+;; reading fits the kernel's open ports, but not its fuller notion of a
+;; standing being in force, which has cancellation, reversal and two time
+;; axes and is closer to a fluent of the event calculus.
 ;;
 ;; ## References
 ;;
 ;; [1] John McCarthy, "Elephant 2000: A Programming Language Based on
-;; Speech Acts", Stanford University, 1998;
-;; http://www-formal.stanford.edu/jmc/elephant/elephant.html
+;; Speech Acts", Stanford draft, 1989 (revised 1993; HTML 1998),
+;; http://www-formal.stanford.edu/jmc/elephant/elephant.html; abstract in
+;; OOPSLA '07 Companion, pp. 723–724.
 ;;
 ;; [2] Brendan Fong, "Causal Theories: A Categorical Perspective on Bayesian
 ;; Networks", MSc thesis, University of Oxford, 2012; arXiv:1301.6201.
 ;;
 ;; [3] Brendan Fong, "Decorated Cospans", Theory and Applications of
 ;; Categories 30(33), 2015; arXiv:1502.00872.
+;;
+;; [4] Robin Lorenz and Sean Tull, "Causal models in string diagrams",
+;; arXiv:2304.07638.
+;;
+;; [5] John C. Baez and Kenny Courser, "Structured cospans",
+;; arXiv:1911.04630.
+;;
+;; [6] Tobias Fritz and Wendong Liang, "Free gs-monoidal categories and
+;; free Markov categories", arXiv:2204.02284.
