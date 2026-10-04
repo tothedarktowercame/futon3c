@@ -275,6 +275,86 @@ the packet has to test them; none is assumed resolved.
    field is a known WM failure, so the field size is a check, not a given.
 6. **Unaccounted wall time**, about 96 s.
 
+## 9. Comparing apparatus: the same job inside and outside the War Machine (design only)
+
+Joe (2026-10-04): the working definition of a click is not specific to the War
+Machine. An orchestrator such as claude-4, coordinating several dispatches
+toward one goal without Joe stepping in, is also running a click, entirely
+outside the War Machine. The same job could be requisitioned to the War
+Machine, in the informal sense in which Kimi seats are requisitioned. The two
+runs could then be compared with this packet.
+
+This section is a design only. Nobody is asked to run it yet. The mfuton Lean
+port is used as the example because it has an outside check, but any job with
+the properties in step 1 will do.
+
+**A word to keep apart.** In futon2, a `**Requisition:**` line in a mission
+(written by kimi-task.sh) marks the target as held by an outside lane and makes
+it *ineligible* for War Machine selection (`target_field.clj` `requisition`,
+after the PROOF-2a ruling "a requisition is a different semantic layer"). Here
+"requisitioned to the War Machine" means the opposite: the job is put where the
+War Machine will take it up, either as a mission or excursion with an
+acceptance checklist and no requisition line, or as the target of a controlled
+click like abb61cd8.
+
+**Design.**
+1. **One job, specified once.**
+   - The job is a single acceptance item.
+   - Its check is computed by something neither apparatus defines. For the Lean
+     port, that is agreement with Lean's own output, since Lean is the source of
+     truth for port fixes.
+   - The same specification text is given to both arms.
+2. **The same starting state, kept separate.**
+   - Both arms start from the same commit, each in its own worktree.
+   - Neither arm can see the other's commits, evidence or memory writes until
+     both are done.
+   - Without this, the arm that runs second learns from the first.
+3. **Arms.**
+   - **W**: the War Machine takes the job (selected, or a controlled click).
+   - **O**: an orchestrator coordinates its own dispatches.
+   - Either arm may fail to close the item. A failure is a result, not a reason
+     to rerun until both arms succeed.
+4. **Unit of comparison.**
+   - Compare per acceptance item closed, not per click. A W click covers one
+     checklist item, and an O click may cover several.
+   - Every number declares its population (§2).
+5. **Measures.**
+   - **Everything in §3, per arm.**
+   - **Operator turns per item closed.** "Without my intervention" is the
+     goal, so this is a primary measure. It counts every turn in which Joe
+     steers, unblocks or corrects either arm.
+   - **Debts left open** (§2, 诺必践), and rework induced within N days.
+   - **Reader independence.**
+     - In arm O the orchestrator usually both selects and reviews.
+     - In arm W those are separate roles.
+     - The U3 and U4 checks will show this difference without anyone assuming it.
+6. **The packet is the same for both arms.**
+   - The units, the checks and the verdicts are identical.
+   - What differs is the attached evidence: the War Machine's run record and
+     brief in arm W, and the orchestrator's dispatch edges, bell texts and
+     review turns in arm O.
+   - A unit an arm does not produce (arm O usually writes no Morning Brief) is
+     recorded as a typed none. It is not scored as a failure and not
+     reconstructed after the fact.
+7. **Replication.**
+   - One pair is an anecdote.
+   - Three or four matched pairs, alternating which arm starts first (or run
+     at the same time), are enough to see a direction. They are not enough to
+     estimate a rate.
+   - The pairs should be similar jobs, not the same job three times, because
+     the second time a job is done is not the same job.
+
+**What would make the comparison misleading.**
+- **Unequal specifications.** If arm O gets the orchestrator's own richer
+  framing and arm W gets a checklist line, the comparison measures the
+  specification, not the apparatus. The check is to diff the two specification
+  texts.
+- **An incomplete count of operator turns.** Arm O's interventions happen in
+  conversation, while arm W's happen through stops and repairs. Both have to be
+  counted from the turn records (象's operator turns), not from memory.
+- **Choosing a job that suits one arm.** Jobs are picked before either arm is
+  assigned.
+
 ## Steps
 
 1. Run the packet on abb61cd8 by hand. One Kimi or Zai job: the inputs are
