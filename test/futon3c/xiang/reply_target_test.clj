@@ -46,3 +46,21 @@
 (deftest unmarked-turns-point-at-nothing
   (is (= {:replies [] :declared-intents []}
          (rt/resolve-targets "ok please continue" [to-joe]))))
+
+(deftest a-colon-pointer-inside-a-sentence-is-read
+  (testing "turn 392, verbatim: the pointer is not at the start of the paragraph"
+    (is (= [["🈸" :mark-match "t-to-nudge"]]
+           (map (juxt :mark :rule :turn-id)
+                (:replies (rt/resolve-targets "OK, I've tried the hydra, and 🈸:yes" [to-nudge to-joe]))))))
+  (testing "an opening pointer and an inline one in the same paragraph"
+    (is (= ["㊭" "🈸"]
+           (map :mark (filter :pointer? (rt/operator-marks "㊭: fine, and 🈸: yes")))))))
+
+(deftest a-mark-written-about-is-not-a-pointer
+  (testing "a bare mark inside a sentence"
+    (is (= {:replies [] :declared-intents []}
+           (rt/resolve-targets "I liked the 🈸 in your last turn" [to-joe]))))
+  (testing "the colon form quoted in backticks or quotation marks"
+    (is (= [] (rt/operator-marks "the form `🈸:` means a reply")))
+    (is (= [] (rt/operator-marks "writing \"🈸: yes\" answers it")))
+    (is (= [] (rt/operator-marks "writing “🈸: yes” answers it")))))

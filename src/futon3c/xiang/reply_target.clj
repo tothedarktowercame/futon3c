@@ -33,14 +33,45 @@
             [m (str/starts-with? (str/triml (subs para (count m))) ":")]))
         marks))
 
+(defn- unquoted
+  "PARA with backtick spans and double-quoted spans blanked out, so a mark
+   Joe writes about (`🈸:` or \"🈸:\") is not read as one he uses."
+  [para]
+  (str/replace para #"`[^`]*`|\"[^\"]*\"|“[^”]*”" #(apply str (repeat (count %) \space))))
+
+(defn- inline-pointers
+  "Marks used in the colon form after the start of PARA, in order, e.g. the
+   🈸 in \"OK, I've tried the hydra, and 🈸:yes\" (turn 392). A bare mark
+   inside a sentence is not a pointer: it is often a quotation."
+  [para]
+  (let [s (unquoted para)]
+    (->> marks
+         (mapcat (fn [m]
+                   (loop [from 0 acc []]
+                     (let [at (str/index-of s m from)]
+                       (if (nil? at)
+                         acc
+                         (let [after (subs s (+ at (count m)))]
+                           (recur (+ at (count m))
+                                  (if (and (pos? at) (str/starts-with? (str/triml after) ":"))
+                                    (conj acc [at m])
+                                    acc))))))))
+         (sort-by first)
+         (map second))))
+
 (defn operator-marks
-  "Joe's marked paragraphs: [{:index :mark :pointer? :text}]."
+  "Joe's marked paragraphs: [{:index :mark :pointer? :text}]. A paragraph
+   may also carry `<mark>:` pointers after its start; each is an entry with
+   :pointer? true and :inline? true, and the paragraph's :index."
   [text]
-  (vec (keep-indexed (fn [i para]
-                       (when-let [[m pointer?] (opening para)]
-                         {:index i :mark m :pointer? pointer?
-                          :text (str/triml (str/replace-first (subs para (count m)) #"^\s*:\s*" ""))}))
-                     (paragraphs text))))
+  (vec (mapcat (fn [i para]
+                 (concat
+                  (when-let [[m pointer?] (opening para)]
+                    [{:index i :mark m :pointer? pointer?
+                      :text (str/triml (str/replace-first (subs para (count m)) #"^\s*:\s*" ""))}])
+                  (for [m (inline-pointers para)]
+                    {:index i :mark m :pointer? true :inline? true :text para})))
+               (range) (paragraphs text))))
 
 (defn- excerpt [s] (let [s (str/trim (str s))] (if (> (count s) 160) (str (subs s 0 160) "…") s)))
 
