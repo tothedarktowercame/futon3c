@@ -277,14 +277,17 @@ How it is persisted is `session-mode-turn-recorder': `files' writes here,
 (defun session-mode--xiang-parse-buffer ()
   "The JSON response alist in the current url retrieval buffer, or nil."
   (goto-char (point-min))
-  (when (re-search-forward "\\n\\n" nil 'move)
+  ;; The headers end at the first blank line.  The body arrives as raw
+  ;; bytes, so decode it before reading (象 and every mark are multibyte).
+  (when (re-search-forward "\r?\n\r?\n" nil t)
     (let ((json-object-type 'alist)
           (json-array-type 'list)
           (json-false :json-false)
           (json-null nil))
       (condition-case nil
           (json-read-from-string
-           (buffer-substring-no-properties (point) (point-max)))
+           (decode-coding-string
+            (buffer-substring-no-properties (point) (point-max)) 'utf-8))
         (error nil)))))
 
 (defun session-mode--xiang-request (method api-path &optional payload callback)

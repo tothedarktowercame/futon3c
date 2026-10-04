@@ -207,5 +207,19 @@ bothers the JVM at reply end."
                              (alist-get 'analysis_status (json-read-file path)))))))
       (delete-directory dir t))))
 
+(ert-deftest session-turn-analysis-jvm-parse-real-response ()
+  "The parser reads a raw http-kit response, unstubbed: LF and CRLF header
+ends, and a UTF-8 body arriving as bytes.  The stubbed tests above never
+reached it, and a regexp that could not match a blank line made every
+answer nil (2026-10-04)."
+  (dolist (eol '("\n" "\r\n"))
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (insert (concat "HTTP/1.1 201 Created" eol "Content-Type: application/json" eol eol)
+              (encode-coding-string "{\"ok\":true,\"seat\":\"象-1\",\"path\":\"/tmp/turn-x.json\"}" 'utf-8))
+      (let ((answer (session-mode--xiang-parse-buffer)))
+        (should (equal "/tmp/turn-x.json" (alist-get 'path answer)))
+        (should (equal "象-1" (alist-get 'seat answer)))))))
+
 (provide 'session-turn-analysis-jvm-test)
 ;;; session-turn-analysis-jvm-test.el ends here
