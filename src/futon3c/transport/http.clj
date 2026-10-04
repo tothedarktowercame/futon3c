@@ -9377,7 +9377,9 @@
    :items 'futon2.aif.morning-brief/items
    :reviews 'futon2.aif.morning-brief/reviews
    :addenda 'futon2.aif.morning-brief/addenda
-   :item-objectives 'futon2.aif.morning-brief/item-objectives})
+   :item-objectives 'futon2.aif.morning-brief/item-objectives
+   :open-item! 'futon2.aif.morning-brief/open-item!
+   :lifecycle-state 'futon2.aif.morning-brief/lifecycle-state})
 
 (defn- resolve-morning-brief-fns
   [ks]
@@ -9539,6 +9541,24 @@
       (catch Exception e
         (json-response 500 {:ok false :err "morning-brief-read-failed"
                             :message (.getMessage e)})))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-open
+  "GET one item through the actual Field Desk read boundary. The item identity
+   comes from canonical storage; callers cannot submit lifecycle fields."
+  [request attempt-id]
+  (if-let [{open-item! :open-item! lifecycle-state :lifecycle-state}
+           (resolve-morning-brief-fns [:open-item! :lifecycle-state])]
+    (try
+      (let [consumer (str "field-desk/http:" (or (:remote-addr request) "unknown"))
+            opened (open-item! attempt-id consumer)]
+        (json-response 200 {:ok true :item (:item opened)
+                            :lifecycle (lifecycle-state attempt-id)}))
+      (catch clojure.lang.ExceptionInfo e
+        (json-response (if (= :duplicate-transition (:reason (ex-data e))) 409 400)
+                       {:ok false :err "morning-brief-open-refused"
+                        :reason (:reason (ex-data e))
+                        :message (.getMessage e)})))
     (morning-brief-unavailable-response)))
 
 (defn handle-wm-strategic-selection
@@ -12089,6 +12109,11 @@
 
       (and (= :get method) (= "/api/alpha/morning-brief/pending" uri))
       (handle-morning-brief-pending request)
+
+      (and (= :get method)
+           (re-matches #"/api/alpha/morning-brief/item/[^/]+" uri))
+      (let [[_ attempt-id] (re-matches #"/api/alpha/morning-brief/item/([^/]+)" uri)]
+        (handle-morning-brief-open request attempt-id))
 
       (and (= :post method)
            (= "/api/alpha/war-machine/strategic-selection" uri))
