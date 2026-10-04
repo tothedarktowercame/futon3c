@@ -225,6 +225,73 @@ not built.
    reminder.
 4. The listing route and the lighter count.
 
+## Third case: an endorsed idea relayed and half-answered (claude-6, 2026-10-04)
+`*claude-repl:claude-6*`, end of the session. Joe had endorsed the idea of
+the port recording its elaboration steps so they can be compared with
+Lean's trace ("the elaborator as a curriculum"). claude-2 relayed it to
+claude-4 as an open question; claude-4 folded it into codex-23's packet
+about resident reloading as a sub-question; codex-23 answered both (reload
+unsafe; the port discards its terms, 20-40 lines would keep them); the
+queue entry recorded only the reload answer. Joe found out by asking, weeks
+later: "I had this conversation AGES ago and thought that it had been put
+in place." Joe, to claude-17: "we need the features we are building, and
+not just for me."
+
+None of this is visible to 象 today: it reads turns typed into a REPL (727
+records since 2026-10-03, plus 6 from Matrix) and no bell at all. The chain
+Joe → claude-2 → claude-4 → codex-23 has no acts and no ports.
+
+With bells as turns, the case reads: Joe's endorsement is an act in
+claude-6's session; claude-2's bell opens a port in claude-4's ledger,
+linked to it when the bell quotes Joe's words; claude-4's packet opens a
+child port; codex-23's answer closes the reload half and leaves the capture
+half open on claude-4's port and so on Joe's; the reminder goes to the
+holder of the oldest open link.
+
+## Order of work, revised (claude-17, 2026-10-04)
+1. **Bells and whistles are turns.** Record each as a turn of the
+   caller-recipient pair, with the completion bell as its reply, so the
+   pair gets the same acts and ports as a REPL session. Discovery first:
+   the hook in Agency (handle-bell, auto-bellback), bells per day, and what
+   reading them with 象 would cost. Then build.
+2. **Bells carry the proforma.** CLAUDE.md now says bells are not marked.
+   One mark per request, and the operator's words quoted in the bracket
+   when a bell relays them, make each request a separate act ("two
+   questions in one packet" becomes two ports) and link it to its origin.
+   A CLAUDE.md change, so Joe's decision.
+3. **Links across seats.** The kernel makes agreements only within one
+   agent's session (`agreemento`, `visible-offero`). A relayed request
+   (requirement 6's child order) must keep its parent open until it
+   closes.
+4. **Demo, extended.** As the claude-5/claude-7 demos below, plus: the demo
+   agent bells a second agent with half of a two-part request. Check: the
+   unanswered half is open in both ledgers and the reminder goes to its
+   holder.
+
+## What the 2026-10-04 demos showed
+Three scripted turns in a fresh REPL (a 🈯 question and a numbered 🈸
+offer; both answered with pointers in one turn, "🈯: yes, call it
+elephant.txt.  🈸: yes 1, and do it in a new git repo …"; a 🈸 question
+left unanswered). claude-5 at 21:48Z, claude-7 at 22:19Z.
+- claude-5 found three defects, fixed in futon3c 7294d248: the first
+  turn's record kept the buffer's placeholder session ("claude-5 (awaiting
+  session)"), so the offer and its acceptance were in different seats and
+  no obligation formed; "🈯: yes …" accepted the offer beside the question
+  instead of answering the question; nothing linked an agent's report to
+  the operator's request.
+- claude-7 found a fourth, fixed in 0ec902b6: no record had stored ports
+  all day, and no settled-turn evidence was written after 00:10Z, because
+  the 象 seats publish with `session_turn_analysis.py`, which bypasses
+  `publish-analysis!`. The HUD's DIDN'T HAPPEN was always empty. The
+  turn-service tests passed throughout: they published through the JVM.
+- With the fixes, claude-7's session reads as intended: both questions
+  close in turn 2, one acceptance (option 1) with an obligation on
+  claude-7, the turn-3 question open. claude-7's report bracket quoted
+  "yes 1", too short to link, so the "do it in a new git repo" request
+  stays open although it was done; a bracket quoting the request itself
+  ("do it in a new git repo …", as claude-5 wrote) closes it. The commit
+  is not linked: commits in a /tmp repo are not captured.
+
 ## Live cases to test against
 Easy to find: any work bell whose bellback summary says "first half",
 "next I will", or lists unchecked items. The ledger query is
