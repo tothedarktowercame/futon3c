@@ -165,9 +165,10 @@
 
 ;; ## 5. Patterns as open causal theories
 ;;
-;; Following Fong [2], a pattern is a small causal theory: variables, and a
-;; mechanism (here a Boolean structural equation) for each variable the
-;; pattern owns. Following [3], it is made open by an interface, the
+;; Following Fong [2], a pattern is a small causal theory together with a
+;; model of it: variables, and a mechanism (here a Boolean structural
+;; equation) for each variable the pattern owns. In the spirit of [3], it
+;; is made open by an interface, the
 ;; variables it will share, and theories compose by gluing along shared
 ;; names. A name may be shared only if every theory mentioning it lists it
 ;; in its interface, and only one theory may own it; otherwise gluing
@@ -213,7 +214,9 @@
 ;;
 ;; The bridge between the two layers is a pair of observables computed from
 ;; the kernel after each turn: `asked` holds when the agent opened a
-;; question earlier, `answered` when that question is no longer open.
+;; question earlier, `answered` when that question is no longer open. Here
+;; `asked` is set by hand, because we pass in the act id of a question we
+;; already know was opened; only `answered` is read from the kernel.
 
 (defn observe [acts act-id turn-id]
   (let [open (set (map :act (:still-open (ta/turn-ports acts turn-id))))]
@@ -286,11 +289,19 @@ seen
              :inputs (cond-> [(str key "-if")] (empty? answered-by) (conj (str key "-then")))
              :interface [(keyword (str key "-then")) (keyword (str key "-unmet"))]))
 
+;; The equation grammar has only two-input `or`, so a problem answered by
+;; more than two patterns gets a chain of private intermediate variables.
+
 (defn link-theory [{:keys [key]} children]
-  (let [ts (map #(str (:key %) "-then") children)]
+  (let [[t & more] (map #(str (:key %) "-then") children)
+        mids (map #(str key "-then-or-" %) (range 1 (count more)))
+        lhs (concat mids [(str key "-then")])]
     (ot/theory (keyword (str key "-answered-by"))
-               {(str key "-then") (if (= 1 (count ts)) (first ts) (str/join " or " (take 2 ts)))}
-               :interface (map keyword (cons (str key "-then") ts)))))
+               (if (empty? more)
+                 {(str key "-then") t}
+                 (into {} (map (fn [v prev x] [v (str prev " or " x)])
+                               lhs (cons t mids) more)))
+               :interface (map keyword (cons (str key "-then") (cons t more))))))
 
 (def answered-by
   (reduce (fn [m p] (reduce #(update %1 %2 (fnil conj []) p) m (:why p))) {} (vals cone)))
@@ -307,8 +318,9 @@ seen
 
 ;; ## 8. The cascade on a real event
 ;;
-;; On 3 October Joe switched 象 off. The switch requires a written re-arm
-;; condition, and the log holds it:
+;; On 3 October Joe switched 象 off (it was switched back on at 22:55 UTC
+;; the same day). The switch requires a written re-arm condition, and the
+;; log holds it:
 
 (def switch-off
   (first (filter #(re-find #" off " %)
