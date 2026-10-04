@@ -1,9 +1,23 @@
 ;; # 大象 live: reading a working conversation as acts, per turn
 ;;
-;; Joseph Corneli, with Claude (claude-17). Futon stack, work in progress,
-;; begun 4 October 2026. Everything below is evaluated when this page is
-;; built; the outputs are what the code returned, not illustrations. The
-;; source is `futon3c/notebooks/daxiang_live.clj`.
+;; This page shows a small program that reads a conversation between a
+;; person and several AI agents, turn by turn, and keeps a ledger of what
+;; was asked, offered, agreed and still owed. After each turn it can say
+;; which questions were answered and which are still open, so that an open
+;; one is followed up rather than forgotten. It then tries to say why an
+;; open question matters, using small causal models built from a library
+;; of design patterns.
+;;
+;; This is a research prototype and a work-in-progress notebook. Everything
+;; below is computed when the page is built, from real records of our own
+;; working environment; the outputs are what the code returned, not
+;; illustrations. Names for the parts (象, 大象 and the rest) are introduced
+;; as they come up.
+;;
+;; Joseph Corneli, with Claude, an AI agent working in the same
+;; environment. Begun 4 October 2026. The source is
+;; `futon3c/notebooks/daxiang_live.clj`, in the futon stack, the set of
+;; repositories the environment is built from.
 ;;
 ;; The setting is a working environment in which a human operator (Joe) and
 ;; several AI agents hand work to one another in a chat-like REPL. Two kinds
@@ -23,11 +37,10 @@
 ;; means for the work depends on what surrounds it, and that is joined on
 ;; when the session's acts are assembled (§4): the operator's turn it
 ;; answers, as 象 read it; up to 50 earlier turns of the same session, with
-;; the offers and questions they left open; and two links between turns
-;; that are stated only on explicit evidence (an approval accepts the offer
-;; just made, a commit carries an accepted offer out). When the operator
-;; opens a paragraph with `<mark>:`, the server also works out which of the
-;; agent's recent paragraphs is being answered. Two pieces of context are
+;; the offers and questions they left open; and links between turns that
+;; are stated only on explicit evidence (an approval accepts the offer just
+;; made, a commit carries an accepted offer out, and a pointer the operator
+;; writes, `<mark>:`, answers the agent paragraph carrying that mark). Two pieces of context are
 ;; written down on every turn and not yet read: the bracketed target an
 ;; agent puts after each mark, and the design pattern retrieved for the
 ;; turn. §9 says what we will do with them.
@@ -49,9 +62,10 @@
 ;; ## 1. How intents flow
 ;;
 ;; Each operator turn and each agent turn becomes acts; the kernel turns the
-;; act history into open ports; the reminder machine (live since 4 October)
-;; nudges whoever holds an open port and has gone idle. Everything settled
-;; is written to the evidence store, futon1b.
+;; act history into open ports, the moves still awaiting an answer; the
+;; reminder machine (live since 4 October) nudges whoever holds an open
+;; port and has gone idle. Everything settled is written to the evidence
+;; store, a database called futon1b.
 
 {:notebook/html
  (svg/dag [[:op "operator turn"] [:xx "小象 (classical)"] [:x "象 (LLM)"]
@@ -117,10 +131,12 @@
 ;; ## 3. Four real turns
 ;;
 ;; Four consecutive turns from 1 October 2026, copied unchanged from the
-;; store. In the first, the agent asks Joe whether it should look into
-;; something. In the second it offers him two numbered options. Joe answers
-;; "1" in the third, and the agent's commit in that turn carries option 1
-;; out. The first question was answered too ("🈸:yes" in the second turn),
+;; store. A turn id such as `claude-17-turn-391` names the agent (claude-17
+;; is one Claude agent's seat in the environment) and the turn's number. In
+;; the first turn, the agent asks the operator whether it should look into
+;; something. In the second it offers two numbered options. The operator
+;; answers "1" in the third, and the agent's commit in that turn carries
+;; option 1 out. The first question was answered too ("🈸:yes" in the second turn),
 ;; but, as §4 shows, the record holds no act answering it.
 
 (require '[futon3c.xiang.daxiang :as dx])
@@ -158,7 +174,7 @@
 ;;
 ;; The operator's turns contribute the fragments 象 read; the agent's turns
 ;; contribute 大象's acts. Two links are drawn only where the evidence is
-;; explicit: Joe's approval in turn 393 accepts the offer of turn 392, and
+;; explicit: the operator's approval in turn 393 accepts the offer of turn 392, and
 ;; the commit in 393 carries that offer out. A third kind of link comes
 ;; from the operator's own pointers: when a paragraph uses `<mark>:` to
 ;; answer an agent paragraph, the server stores which one on the turn's
@@ -180,17 +196,19 @@
     {:turn t :closed closed-this-turn :open (mapv (juxt :act :kind) still-open)}))
 
 ;; The offer of 392 closes in 393. The agent's question of 391
-;; (`…-391-r-3`, "shall I read how P11's records get written?") is still
-;; open at the end, but that is the record's fault, not the conversation's:
-;; Joe answered "🈸:yes" in 392 and the agent did what it proposed. The
-;; parser of the time did not accept that answer form (fixed in 393), and
-;; 象 read the fragment as a report. The resolver now reads a pointer
-;; written inside a sentence, and `session-acts` reads stored pointers,
-;; but turn 392's record was written on 2026-10-01, three days before the
-;; server began storing pointers, and records are not backfilled. So the
-;; port stays open in this stored session. This is a fourth outcome a proposal can have besides accepted,
-;; declined and unanswered: considered and accepted, but not recorded. A
-;; kernel that reads only the record cannot tell it from neglect.
+;; (`…-391-r-3`, "shall I read how P11's records get written?", where P11
+;; is the step of the build plan that records offers and agreements) is
+;; still open at the end, but that is the record's fault, not the
+;; conversation's: the operator answered "🈸:yes" in 392 and the agent did
+;; what it proposed. The parser of the time did not accept that answer
+;; form (fixed in 393), and 象 read the fragment as a report. The resolver
+;; now reads a pointer written inside a sentence, and `session-acts` reads
+;; stored pointers, but turn 392's record was written on 1 October, three
+;; days before the server began storing pointers, and records are not
+;; backfilled. So the port stays open in this stored session. This is a
+;; fourth outcome a proposal can have besides accepted, declined and
+;; unanswered: considered and accepted, but not recorded. A kernel that
+;; reads only the record cannot tell it from neglect.
 
 ;; What the resolver returns for turn 392's text today, with turn 391's
 ;; reply as the only candidate. This is the resolver's output, not the
@@ -270,10 +288,13 @@
 
 seen
 
-;; Take the record at face value: the port stayed open, with no reminder
-;; machine, and suppose Joe had to come back to the question himself (§4
-;; shows the open port is an artefact of the reading, so this premise is
-;; illustrative). Had the machine been on, would he still have had to?
+;; Take the stored record as it stands. In it, the question of 391 is still
+;; open at 394; §4 explains why, and a turn recorded today would close it
+;; through its pointer. The queries below are therefore about the model of
+;; §5, not about what happened in that conversation: given a record with
+;; an open question, no reminder machine, and the operator coming back to
+;; the question unprompted (`joe-tickles`), would the operator still have
+;; had to, had the machine been on?
 
 (select-keys (scm/counterfactual (:dag glued)
                                  {:evidence (merge seen {:machine-on false :joe-tickles true})
@@ -305,7 +326,7 @@ seen
 ;; closer of the two to Alexander's smaller patterns that complete a
 ;; larger one. Counted from the library files:
 
-(def library "/home/joe/code/futon3/library")
+(def library "../futon3/library")
 
 (def pattern-ids
   (set (for [f (file-seq (io/file library))
@@ -337,8 +358,12 @@ seen
 ;; addressed when some pattern answering it has its THEN hold. Read
 ;; upward, the cascade says why an unmet pattern matters: which problems
 ;; above it go unanswered. `@how` would add the downward reading, what to
-;; do about it (§9). Here is the cone above the card that has been active
-;; in Joe's REPL this week, WR-26, read from the library files.
+;; do about it (§9). Here is the cone above one pattern, read from the
+;; library files: WR-26, "a capability switched off carries its re-arm
+;; condition, in writing, at the switch", from the library's war-room
+;; family. The operator had it selected as the working pattern for the
+;; session this week (each agent's REPL shows such a pattern, called its
+;; card, in its prompt line).
 
 (defn flexiarg [id]
   (let [text (slurp (str library "/" id ".flexiarg"))
@@ -361,6 +386,11 @@ seen
 (for [{:keys [key why if then]} (vals cone)]
   {:pattern key :answers (mapv #(second (re-find #"/([a-z]+-?\d+)" %)) why)
    :if (subs if 0 (min 90 (count if))) :then (subs then 0 (min 90 (count then)))})
+
+;; WR-26 answers two problems: WR-8, "typed files are sources of truth,
+;; prose is regenerated", and R20, a problem node titled "interoceptive
+;; tripwires". WR-8 in turn answers WR-0, "organise as effectively as war,
+;; without becoming a state apparatus", which is the root of the cone.
 
 ;; Compiling: each pattern owns `k-unmet = k-if and not k-then`; a problem's
 ;; `k-then` is owned by a link theory saying that one of the patterns
@@ -402,7 +432,7 @@ seen
 
 ;; ## 8. The cascade on a real event
 ;;
-;; On 3 October Joe switched 象 off (it was switched back on at 22:55 UTC
+;; On 3 October the operator switched 象 off (it was switched back on at 22:55 UTC
 ;; the same day). The switch requires a written re-arm condition, and the
 ;; log holds it:
 
@@ -453,44 +483,45 @@ event
 ;; after every turn; `asks-operator?` in §2 is the running code. The
 ;; compilation in §7 is new and runs only here so far.
 ;;
-;; Next steps, each with the check that will say whether it worked:
+;; Done since the first version of this page (4 October): the operator's
+;; pointers are read as links. A pointer is a `<mark>:` that answers the
+;; agent paragraph carrying that mark, at the start of a paragraph or
+;; inside a sentence ("…and 🈸:yes"), or a `<mark> (target):`, where the
+;; mark is the operator's own intent and the bracket text names the
+;; paragraph answered. The server stores the resolved pointer on the
+;; turn's record, and `session-acts` reads it, never recomputes it; each
+;; fragment of the operator's turn is assigned to a pointer by its
+;; position, and an approval accepts the offer its pointer names rather
+;; than whichever offer came last. Turns stored before 4 October carry no
+;; pointer, which is why §4 still shows the question of 391 open. Known
+;; limits: a sentence about the notation itself ("the legend says 🈸:
+;; ask-action") also reads as a pointer, and a bracket that paraphrases the
+;; agent's point usually matches nothing. Links in the prose of this page
+;; (the references) are also new.
 ;;
-;; 1. Use the operator's pointers as links. Done, 2026-10-04. The resolver
-;; (`futon3c.xiang.reply-target`) now reads a `<mark>:` pointer inside a
-;; sentence as well as at the start of a paragraph ("…and 🈸:yes"), though
-;; not one in backticks or quotation marks. `session-acts` reads the
-;; pointer the server stored on the record and never recomputes it. A
-;; stored pointer names the agent turn by an id session records do not
-;; carry, so it is matched to a reply paragraph by its mark and stored
-;; excerpt. Check: the turn-acts tests close `…-391-r-3` in turn 392 when
-;; the pointer is supplied, and keep it open in the stored session, whose
-;; record predates the writer. Known limit: an unquoted sentence about the
-;; notation ("the legend says 🈸: ask-action") also reads as a pointer.
-;; A second form, `<mark> (target): …`, is also a pointer: there the mark
-;; is the operator's own intent and the bracket text names the paragraph
-;; answered, so it is matched by finding the bracket text in exactly one
-;; paragraph of the agent's newest turn that has it.
+;; Still open, each with the check that will say whether it worked:
 ;;
-;; 2. Read the bracketed target. Agents write, after each mark, what the
+;; 1. Read the bracketed target. Agents write, after each mark, what the
 ;; paragraph is about; today that text is kept but not parsed. Resolve it
 ;; against the operator's fragments in the same way. Check: over a week of
 ;; replies, the share of marked paragraphs whose target resolves, and how
 ;; many open ports those links close.
 ;;
-;; 3. Count the fourth outcome of §4. With 1 and 2 in place, re-run the
+;; 2. Count the fourth outcome of §4. With pointers read and step 1 in
+;; place, re-run the
 ;; kernel over the stored sessions. Ports that close were answered but not
 ;; recorded; ports that stay open are the reminder machine's real work.
 ;; Check: the two counts, per week.
 ;;
-;; 4. Run the cascade per turn. Each operator turn already arrives with a
+;; 3. Run the cascade per turn. Each operator turn already arrives with a
 ;; retrieved pattern. Compile the cone above it as in §7 and evaluate it
 ;; against that turn's acts, starting with the three patterns of §5, whose
 ;; observables (`asked`, `answered`) the kernel already supplies. Check:
 ;; for each turn, the unmet patterns shown beside its open ports.
 ;;
-;; 5. Use `@how` on the way down. When a pattern is unmet, show its `@how`:
+;; 4. Use `@how` on the way down. When a pattern is unmet, show its `@how`:
 ;; the linked methods where they exist, the instruction sentence
-;; otherwise. Check: an unmet pattern in step 4 comes with something to do.
+;; otherwise. Check: an unmet pattern in step 3 comes with something to do.
 ;;
 ;; It is finite and Boolean. Variables are identified by name, gluing is by
 ;; shared names, and mechanisms are deterministic. Two places we would most
