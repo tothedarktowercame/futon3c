@@ -8,6 +8,9 @@ into the flexiargs: @why stays authored, and these edges are a separate,
 regenerable layer that says where the mining put patterns next to each other.
 
 Edge kinds, strongest first:
+  why             authored causal ancestry
+  how             authored practical recipe
+  used-together   patterns retained as jointly enacted by an applied run diff
   co-cited         two patterns cited in the same operator turn
   rejected-beside  a pattern read and turned down for a fragment that cites
                    another; the rejection reason says where the boundary runs
@@ -38,7 +41,8 @@ import json
 import os
 import re
 
-KINDS = ["why", "how", "co-cited", "rejected-beside", "next-in-session"]
+KINDS = ["why", "how", "used-together", "co-cited", "rejected-beside", "next-in-session"]
+DEFAULT_DIFFS = "/home/joe/code/storage/operator-turns/pattern-graph-diffs/applied"
 
 
 def library_ids(lib):
@@ -150,12 +154,36 @@ def components(edge_list, nodes):
     return sorted(groups.values(), key=len, reverse=True)
 
 
-def build_graph(batches, live, library):
+def applied_diffs(directory, ids):
+    edges, uses = [], []
+    if not directory or not os.path.isdir(directory):
+        return edges, uses
+    for path in sorted(glob.glob(os.path.join(directory, "*.json"))):
+        with open(path) as handle:
+            diff = json.load(handle)
+        if diff.get("schema") != "pattern-graph-diff-v1":
+            continue
+        source = diff.get("source", {})
+        for item in diff.get("add_edges", []):
+            if item.get("a") in ids and item.get("b") in ids:
+                for evidence in item.get("evidence", []):
+                    edges.append((item["a"], item["b"], evidence))
+        for item in diff.get("add_uses", []):
+            if item.get("pattern") in ids:
+                uses.append({"pattern": item["pattern"], "run": source.get("run"),
+                             "target": source.get("target"),
+                             "position": item.get("position"),
+                             "wants": item.get("wants", [])})
+    return edges, uses
+
+
+def build_graph(batches, live, library, diffs=None):
     """Return the JSON graph value without printing or writing it."""
     ids = library_ids(library)
     edges, records = mined_edges(batches, live, ids)
     edges["why"] = why_edges(ids)
     edges["how"] = how_edges(ids)
+    edges["used-together"], uses = applied_diffs(diffs, ids)
 
     merged = {}
     for kind in KINDS:
@@ -174,7 +202,7 @@ def build_graph(batches, live, library):
         summary.append({"through": kind, "edges": n, "giant": len(comps[0]),
                         "components": len(comps), "singletons": singles})
 
-    strong = [e for k in ("co-cited", "rejected-beside") for e in edges[k]]
+    strong = [e for k in ("used-together", "co-cited", "rejected-beside") for e in edges[k]]
     giant = components(strong + edges["why"] + edges["how"], list(ids))[0]
     final_components = components(acc, list(ids))
     component_by_pattern = {
@@ -192,6 +220,7 @@ def build_graph(batches, live, library):
             "summary": summary,
             "giant_without_weak_edges": sorted(giant),
             "象_family": xiang_summary,
+            "uses": uses,
             "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))}
 
 
@@ -202,8 +231,10 @@ def main():
                     help="live turn analysis directory; pass an empty path to disable")
     ap.add_argument("--library", default="/home/joe/code/futon3/library")
     ap.add_argument("--out", default="/home/joe/code/storage/operator-turns/mined-pattern-graph.json")
+    ap.add_argument("--diffs", default=DEFAULT_DIFFS,
+                    help="directory of inspected, manually applied pattern graph diffs")
     args = ap.parse_args()
-    graph = build_graph(args.batches, args.live, args.library)
+    graph = build_graph(args.batches, args.live, args.library, args.diffs)
 
     print(f"{graph['records']} analyses, {graph['patterns']} library patterns")
     for row in graph["summary"]:

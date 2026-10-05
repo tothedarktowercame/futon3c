@@ -14,7 +14,8 @@ import mined_pattern_graph
 # is still priced, as weak, for graph files written before then.
 KIND_ORDER = tuple(mined_pattern_graph.KINDS) + ("co-rejected",)
 DEFAULT_WEIGHTS = {
-    "why": 1, "how": 1, "co-cited": 2, "rejected-beside": 3,
+    # Interim engineering choice by claude-2, 2026-10-05; not a ruling.
+    "why": 1, "how": 1, "used-together": 2, "co-cited": 2, "rejected-beside": 3,
     "next-in-session": 3, "co-rejected": 8,
 }
 WEAK_KINDS = {"co-rejected"}

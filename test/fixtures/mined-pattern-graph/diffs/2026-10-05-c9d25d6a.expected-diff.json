@@ -1,0 +1,175 @@
+{
+ "add_edges": [
+  {
+   "a": "ukrns/reader-run-path",
+   "b": "war-machine/state-capture",
+   "evidence": [
+    {
+     "order": [
+      "ukrns/reader-run-path",
+      "war-machine/state-capture"
+     ],
+     "positions": [
+      1,
+      2
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  },
+  {
+   "a": "orchestration/recorded-handoff",
+   "b": "ukrns/reader-run-path",
+   "evidence": [
+    {
+     "order": [
+      "ukrns/reader-run-path",
+      "orchestration/recorded-handoff"
+     ],
+     "positions": [
+      1,
+      3
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  },
+  {
+   "a": "measurement/warrant-travels-with-the-number",
+   "b": "ukrns/reader-run-path",
+   "evidence": [
+    {
+     "order": [
+      "ukrns/reader-run-path",
+      "measurement/warrant-travels-with-the-number"
+     ],
+     "positions": [
+      1,
+      4
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  },
+  {
+   "a": "orchestration/recorded-handoff",
+   "b": "war-machine/state-capture",
+   "evidence": [
+    {
+     "order": [
+      "war-machine/state-capture",
+      "orchestration/recorded-handoff"
+     ],
+     "positions": [
+      2,
+      3
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  },
+  {
+   "a": "measurement/warrant-travels-with-the-number",
+   "b": "war-machine/state-capture",
+   "evidence": [
+    {
+     "order": [
+      "war-machine/state-capture",
+      "measurement/warrant-travels-with-the-number"
+     ],
+     "positions": [
+      2,
+      4
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  },
+  {
+   "a": "measurement/warrant-travels-with-the-number",
+   "b": "orchestration/recorded-handoff",
+   "evidence": [
+    {
+     "order": [
+      "orchestration/recorded-handoff",
+      "measurement/warrant-travels-with-the-number"
+     ],
+     "positions": [
+      3,
+      4
+     ],
+     "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"
+    }
+   ],
+   "kind": "used-together"
+  }
+ ],
+ "add_uses": [
+  {
+   "pattern": "ukrns/reader-run-path",
+   "position": 1,
+   "wants": [
+    {
+     "outcome": "not-recorded",
+     "want": "hole/h3fa53d7f01a5"
+    }
+   ]
+  },
+  {
+   "pattern": "war-machine/state-capture",
+   "position": 2,
+   "wants": [
+    {
+     "outcome": "not-recorded",
+     "want": "hole/h729a33cf7677"
+    }
+   ]
+  },
+  {
+   "pattern": "orchestration/recorded-handoff",
+   "position": 3,
+   "wants": [
+    {
+     "outcome": "not-recorded",
+     "want": "hole/hb0acfa5c247c"
+    }
+   ]
+  },
+  {
+   "pattern": "measurement/warrant-travels-with-the-number",
+   "position": 4,
+   "wants": [
+    {
+     "outcome": "not-recorded",
+     "want": "hole/h22612e4da4e8"
+    }
+   ]
+  }
+ ],
+ "base": {
+  "path": "/home/joe/code/storage/operator-turns/mined-pattern-graph.json",
+  "sha256": "9992e2c62e41453d9ae33ba6c660b20195c91006759c84a3154af858436612e5"
+ },
+ "schema": "pattern-graph-diff-v1",
+ "source": {
+  "artifact": {
+   "commit": "7a9113dfd245ab9918da304f32fc62845ef65741",
+   "repo": "/home/joe/code/futon7"
+  },
+  "enactment": "verified",
+  "kind": "war-machine-run",
+  "run": "2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f",
+  "run_outcome": "build-failed",
+  "target": "M-interim-director-proxy-metric-inventory",
+  "terminal": "reviewer-falsifier-failed",
+  "want_accounting": {
+   "reason": "selected-want-target-mismatch",
+   "status": "refused"
+  }
+ }
+}

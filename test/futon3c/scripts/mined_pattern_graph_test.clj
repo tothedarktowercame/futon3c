@@ -8,12 +8,17 @@
 (defn- fixture-path [& parts]
   (.getPath (apply io/file "test" "fixtures" "mined-pattern-graph" parts)))
 
-(defn- run-graph [live-dir out-file]
-  (shell/sh "python3" "scripts/mined_pattern_graph.py"
-            "--batches" (fixture-path "batches")
-            "--live" live-dir
-            "--library" (fixture-path "library")
-            "--out" (.getPath out-file)))
+(defn- run-graph
+  ([live-dir out-file]
+   (let [empty-diffs (doto (io/file (.getParentFile out-file) "empty-diffs") .mkdir)]
+     (run-graph live-dir out-file (.getPath empty-diffs))))
+  ([live-dir out-file diffs]
+   (shell/sh "python3" "scripts/mined_pattern_graph.py"
+             "--batches" (fixture-path "batches")
+             "--live" live-dir
+             "--library" (fixture-path "library")
+             "--diffs" diffs
+             "--out" (.getPath out-file))))
 
 (defn- read-json [file]
   (json/read-value (slurp file) json/keyword-keys-object-mapper))
@@ -45,3 +50,65 @@
       (is live-edge)
       (is (some #(str/starts-with? (:at %) "live/")
                 (:evidence live-edge))))))
+
+(deftest applied-diffs-add-only-known-pattern-uses-and-links
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                          "mined-pattern-diffs" (make-array java.nio.file.attribute.FileAttribute 0)))
+        no-diffs (doto (io/file tmp-dir "none") .mkdir)
+        applied (doto (io/file tmp-dir "applied") .mkdir)
+        source (io/file (fixture-path "diffs" "2026-10-05-c9d25d6a.expected-diff.json"))
+        _ (io/copy source (io/file applied "run.json"))
+        without-file (io/file tmp-dir "without.json")
+        with-file (io/file tmp-dir "with.json")
+        without-run (run-graph "" without-file (.getPath no-diffs))
+        with-run (run-graph "" with-file (.getPath applied))
+        without (read-json without-file)
+        with (read-json with-file)
+        used (filter #(= "used-together" (:kind %)) (:edges with))]
+    (is (zero? (:exit without-run)) (:err without-run))
+    (is (zero? (:exit with-run)) (:err with-run))
+    (is (empty? (filter #(= "used-together" (:kind %)) (:edges without))))
+    (is (= 6 (count used)))
+    (is (= #{"2026-10-05-c9d25d6a-f2bb-42bf-a162-2c4a000e804f"}
+           (set (mapcat #(map :run (:evidence %)) used))))
+    (is (= 4 (count (:uses with))))
+    (is (some #(= "used-together" (:through %)) (:summary with)))
+    (testing "unknown ids and all links touching them are skipped"
+      (let [unknown-dir (doto (io/file tmp-dir "unknown") .mkdir)
+            diff (read-json source)
+            changed (-> diff
+                        (assoc-in [:add_uses 0 :pattern] "missing/pattern")
+                        (assoc-in [:add_edges 0 :a] "missing/pattern"))
+            _ (spit (io/file unknown-dir "unknown.json")
+                    (json/write-value-as-string changed))
+            output (io/file tmp-dir "unknown-graph.json")
+            run (run-graph "" output (.getPath unknown-dir))
+            graph (read-json output)]
+        (is (zero? (:exit run)) (:err run))
+        (is (= 3 (count (:uses graph))))
+        (is (= 5 (count (filter #(= "used-together" (:kind %)) (:edges graph)))))))))
+
+(deftest apply-copies-once-and-refuses-invalid-diffs
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                          "apply-pattern-diff" (make-array java.nio.file.attribute.FileAttribute 0)))
+        applied (io/file tmp-dir "applied")
+        source (io/file (fixture-path "diffs" "2026-10-05-c9d25d6a.expected-diff.json"))
+        first-run (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
+                            (.getPath source) "--applied-dir" (.getPath applied))
+        destination (first (.listFiles applied))
+        second-run (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
+                             (.getPath source) "--applied-dir" (.getPath applied))
+        wrong (io/file tmp-dir "wrong.json")
+        nothing (io/file tmp-dir "nothing.json")]
+    (spit wrong (json/write-value-as-string {:schema "wrong"}))
+    (spit nothing (json/write-value-as-string
+                   {:schema "pattern-graph-diff-v1" :nothing_to_add "none"
+                    :source {:run "nothing"}}))
+    (is (zero? (:exit first-run)) (:err first-run))
+    (is (= (seq (java.nio.file.Files/readAllBytes (.toPath source)))
+           (seq (java.nio.file.Files/readAllBytes (.toPath destination)))))
+    (is (not (zero? (:exit second-run))))
+    (is (not (zero? (:exit (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
+                                     (.getPath wrong) "--applied-dir" (.getPath applied))))))
+    (is (not (zero? (:exit (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
+                                     (.getPath nothing) "--applied-dir" (.getPath applied))))))))

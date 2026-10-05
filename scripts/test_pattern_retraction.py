@@ -36,6 +36,12 @@ class PatternRetractionTest(unittest.TestCase):
         self.assertEqual({"from": "p/a", "to": "p/m"},
                          result["retractions"][0]["edges"][0]["direction"])
 
+    def test_used_together_has_an_interim_default_weight(self):
+        graph = self.graph([edge("p/a", "p/b", "used-together")])
+        result = subject.retractions(graph, ["p/a", "p/b"], 1,
+                                     dict(subject.DEFAULT_WEIGHTS))
+        self.assertEqual(2, result["retractions"][0]["cost"])
+
     def test_k_results_have_distinct_node_sets(self):
         graph = self.graph([
             edge("p/a", "p/x", "why"), edge("p/x", "p/b", "why"),

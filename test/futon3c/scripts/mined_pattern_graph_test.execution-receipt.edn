@@ -1,0 +1,25 @@
+{:schema :wm/focused-test-execution-v1
+ :date "2026-10-05"
+ :scope ["scripts/mined_pattern_graph.py"
+         "scripts/pattern_graph_diff.py"
+         "scripts/pattern_retraction.py"
+         "scripts/test_pattern_retraction.py"
+         "test/futon3c/scripts/mined_pattern_graph_test.clj"]
+ :runs
+ [{:command "clojure -M:test -n futon3c.scripts.mined-pattern-graph-test"
+   :status :passed :by "codex-10"
+   :tests 3 :assertions 25 :failures 0 :errors 0}
+  {:command "python3 scripts/test_pattern_retraction.py"
+   :status :passed :tests 10 :failures 0 :errors 0}
+  {:command "python3 -m py_compile scripts/mined_pattern_graph.py scripts/pattern_graph_diff.py scripts/pattern_retraction.py"
+   :status :passed}
+  {:command "clj-kondo --lint test/futon3c/scripts/mined_pattern_graph_test.clj"
+   :status :passed :errors 0 :warnings 0}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults test/futon3c/scripts/mined_pattern_graph_test.clj"
+   :status :passed :result "OK"}]
+ :real-inspection
+ {:base-matches true
+  :existing-links {:none 5 :next-in-session 1}
+  :largest-component {:before 734 :after 735
+                      :newly-joined ["ukrns/reader-run-path"]}}
+ :mutations {:real-applied-directory false :real-graph-regenerated false}}
