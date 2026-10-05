@@ -158,13 +158,21 @@ def applied_diffs(directory, ids):
     edges, uses = [], []
     if not directory or not os.path.isdir(directory):
         return edges, uses
+    seen_runs = set()
     for path in sorted(glob.glob(os.path.join(directory, "*.json"))):
         with open(path) as handle:
             diff = json.load(handle)
         if diff.get("schema") != "pattern-graph-diff-v1":
             continue
         source = diff.get("source", {})
+        # One run is one observation: a second file for the same run (a copy
+        # made by hand under another name) adds nothing.
+        if source.get("run") in seen_runs:
+            continue
+        seen_runs.add(source.get("run"))
         for item in diff.get("add_edges", []):
+            if item.get("a") == item.get("b"):
+                continue
             if item.get("a") in ids and item.get("b") in ids:
                 for evidence in item.get("evidence", []):
                     edges.append((item["a"], item["b"], evidence))

@@ -97,6 +97,8 @@ def apply_diff(diff_path, applied_dir):
     run = diff.get("source", {}).get("run")
     if not run:
         raise ValueError("refusing diff: source.run is missing")
+    if os.path.basename(run) != run or run in (".", ".."):
+        raise ValueError("refusing diff: source.run is not usable as a file name: " + run)
     os.makedirs(applied_dir, exist_ok=True)
     destination = os.path.join(applied_dir, run + ".json")
     if os.path.exists(destination):

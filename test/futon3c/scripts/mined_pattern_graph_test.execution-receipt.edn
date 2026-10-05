@@ -9,6 +9,10 @@
  [{:command "clojure -M:test -n futon3c.scripts.mined-pattern-graph-test"
    :status :passed :by "codex-10"
    :tests 3 :assertions 25 :failures 0 :errors 0}
+  {:command "clojure -M:test -n futon3c.scripts.mined-pattern-graph-test"
+   :status :passed :by "claude-2"
+   :tests 4 :assertions 32 :failures 0 :errors 0
+   :note "Review follow-up to debbcdffb. Two constructed cases failed before the fix: the same run present in two applied files doubled its evidence and uses (8 uses for 4), and a diff link from a pattern to itself was written as an edge. The generator now counts a run once and skips self-links; apply refuses a run id that is not a plain file name. python3 scripts/test_pattern_retraction.py: OK; py_compile, clj-kondo and check-parens clean."}
   {:command "python3 scripts/test_pattern_retraction.py"
    :status :passed :tests 10 :failures 0 :errors 0}
   {:command "python3 -m py_compile scripts/mined_pattern_graph.py scripts/pattern_graph_diff.py scripts/pattern_retraction.py"

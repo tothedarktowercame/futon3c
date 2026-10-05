@@ -88,6 +88,32 @@
         (is (= 3 (count (:uses graph))))
         (is (= 5 (count (filter #(= "used-together" (:kind %)) (:edges graph)))))))))
 
+(deftest one-run-counts-once-and-a-pattern-is-not-linked-to-itself
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                          "mined-pattern-diffs-dup" (make-array java.nio.file.attribute.FileAttribute 0)))
+        source (io/file (fixture-path "diffs" "2026-10-05-c9d25d6a.expected-diff.json"))
+        twice (doto (io/file tmp-dir "twice") .mkdir)
+        _ (io/copy source (io/file twice "a.json"))
+        _ (io/copy source (io/file twice "b.json"))
+        twice-out (io/file tmp-dir "twice.json")
+        twice-run (run-graph "" twice-out (.getPath twice))
+        twice-graph (read-json twice-out)
+        self (doto (io/file tmp-dir "self") .mkdir)
+        diff (read-json source)
+        first-edge (get-in diff [:add_edges 0])
+        _ (spit (io/file self "self.json")
+                (json/write-value-as-string
+                 (assoc diff :add_edges [(assoc first-edge :b (:a first-edge))])))
+        self-out (io/file tmp-dir "self.json")
+        self-run (run-graph "" self-out (.getPath self))
+        self-graph (read-json self-out)]
+    (is (zero? (:exit twice-run)) (:err twice-run))
+    (is (= 4 (count (:uses twice-graph))) "the same run in two files is one set of uses")
+    (is (= #{1} (set (map #(count (:evidence %))
+                          (filter #(= "used-together" (:kind %)) (:edges twice-graph))))))
+    (is (zero? (:exit self-run)) (:err self-run))
+    (is (empty? (filter #(= "used-together" (:kind %)) (:edges self-graph))))))
+
 (deftest apply-copies-once-and-refuses-invalid-diffs
   (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
                           "apply-pattern-diff" (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -111,4 +137,10 @@
     (is (not (zero? (:exit (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
                                      (.getPath wrong) "--applied-dir" (.getPath applied))))))
     (is (not (zero? (:exit (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
-                                     (.getPath nothing) "--applied-dir" (.getPath applied))))))))
+                                     (.getPath nothing) "--applied-dir" (.getPath applied))))))
+    (let [escaping (io/file tmp-dir "escaping.json")]
+      (spit escaping (json/write-value-as-string
+                      {:schema "pattern-graph-diff-v1" :source {:run "../outside"}}))
+      (is (not (zero? (:exit (shell/sh "python3" "scripts/pattern_graph_diff.py" "apply"
+                                       (.getPath escaping) "--applied-dir" (.getPath applied))))))
+      (is (not (.exists (io/file tmp-dir "outside.json")))))))
