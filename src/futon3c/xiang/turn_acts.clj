@@ -490,7 +490,13 @@
             (throw (ex-info (str "No acts for turn " turn-id)
                             {:reason :unknown-turn :turn turn-id})))
         db (lx/db acts)
-        before (lx/open-ports db (instant-minus-1s at))
+        ;; A port the turn itself opened and closed counts too: a bell's
+        ;; request and its answer share one turn (E-agency-work-orders W1),
+        ;; and so does an operator request answered in the same reply.
+        before (into (lx/open-ports db (instant-minus-1s at))
+                     (keep (fn [{:keys [id turn kind]}]
+                             (when (and (= turn turn-id) (lx/opening-kinds kind)) id)))
+                     acts)
         after (lx/open-ports db at)
         by-id (into {} (map (juxt :id identity) acts))]
     {:closed-this-turn (vec (sort (set/difference before after)))

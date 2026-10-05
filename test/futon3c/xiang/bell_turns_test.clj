@@ -18,7 +18,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.logic.xiang :as lx]
             [futon3c.xiang.turn-acts :as ta]
             [futon3c.xiang.turn-service :as svc]
@@ -152,3 +152,14 @@
         acts (ta/turn->acts record reading "" [])]
     (is (nil? (ta/bell-act record)))
     (is (= ["t-op-1-f-s1-0"] (map :id acts)) "fragments, exactly as before")))
+
+(deftest a-bell-answered-in-its-own-turn-is-closed-this-turn
+  (testing "live check 2026-10-05: the bell and its marked reply share one
+            turn, so the port opened and closed inside it; closed_this_turn
+            was empty because it counted only ports open before the turn"
+    (let [h (harness)
+          {:keys [id]} (svc/record-turn! (:svc h) bell-opts)
+          _ (svc/attach-happened! (:svc h) id {:reply "㊢ (date) Mon Oct  5 07:58:15 UTC 2026" :commits []}
+                                  {:agent-session (fn [_] (:session-id fixture))})
+          ports (:ports (ts/read-record (store-of h) id))]
+      (is (= [bell-id] (map :act (:closed_this_turn ports)))))))

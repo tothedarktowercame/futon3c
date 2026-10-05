@@ -406,7 +406,10 @@
     (is (= [:accept "claude-5-turn-1-r-1" 1]
            ((juxt :kind :target :option) (by-id "claude-5-turn-2-f-s2-0"))))
     (is (= 1 (count (filter #(= :accept (:kind %)) acts))) "one acceptance, not two")
-    (is (= #{"claude-5-turn-1-r-0" "claude-5-turn-1-r-1"} (set (:closed-this-turn ports))))
+    ;; f-s2-1 ("do it in a new git repo") was asked and reported in turn 2
+    ;; itself; a port opened and closed within the turn counts (W1 review).
+    (is (= #{"claude-5-turn-1-r-0" "claude-5-turn-1-r-1" "claude-5-turn-2-f-s2-1"}
+           (set (:closed-this-turn ports))))
     (is (= [{:debtor "claude-5" :creditor "operator" :source "claude-5-turn-2-f-s2-0"}]
            (:obligations ports)))))
 
