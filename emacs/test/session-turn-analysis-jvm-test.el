@@ -252,10 +252,38 @@ bothers the JVM at reply end."
             (agent-chat--agent-id "claude-17")
             ((symbol-function 'session-mode--record-requests-analysis-p)
              (lambda (_path) nil))
+            ((symbol-function 'session-mode--record-read-p)
+             (lambda (_path) nil))
             ((symbol-function 'session-mode--xiang-request)
              (lambda (&rest _) (error "must not be called"))))
     (session-mode--dispatch-analysis-after-reply "/tmp/turn-abc123.json" "REPLY")
     (should t)))
+
+(ert-deftest session-turn-analysis-jvm-posts-happened-after-the-reading ()
+  "The reading landed before the reply ended (2026-10-05: every long
+reply): happened is still POSTed, with the reply text."
+  (let* ((dir (make-temp-file "xiang-jvm" t))
+         (path (expand-file-name "turn-abc123.json" dir))
+         (calls nil))
+    (dolist (status '("analyzed" "drafted" "not-requested" "declared"))
+      (with-temp-file path (insert (format "{\"analysis_status\": \"%s\"}" status)))
+      (setq calls nil)
+      (cl-letf ((session-mode-turn-recorder 'jvm)
+                (session-mode-analysis-agent "象")
+                (agent-chat--agent-id "claude-17")
+                (session-mode--jvm-turn-state (make-hash-table :test #'equal))
+                ((symbol-function 'session-mode--turn-commits-snapshot) (lambda () nil))
+                ((symbol-function 'run-at-time) (lambda (&rest _) nil))
+                ((symbol-function 'session-mode--xiang-request)
+                 (lambda (method api-path &optional payload _cb)
+                   (push (list method api-path payload) calls)
+                   '((ok . t) (dispatched . :json-false)))))
+        (session-mode--dispatch-analysis-after-reply path "REPLY text"))
+      (if (member status '("analyzed" "drafted"))
+          (progn
+            (should (equal "/api/alpha/xiang/turns/turn-abc123/happened" (nth 1 (car calls))))
+            (should (equal "REPLY text" (alist-get 'reply (nth 2 (car calls))))))
+        (should-not calls)))))
 
 (ert-deftest session-turn-analysis-files-recorder-is-untouched ()
   "The default `files' recorder still writes the file itself, no HTTP."

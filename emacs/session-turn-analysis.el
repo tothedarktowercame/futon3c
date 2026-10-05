@@ -122,6 +122,14 @@ anything other than its prompt, turns are read again."
         (equal "requested" (alist-get 'analysis_status (json-read-file path))))
     (error nil)))
 
+(defun session-mode--record-read-p (path)
+  "Return whether the turn record at PATH has been read: `analyzed' or `drafted'."
+  (condition-case nil
+      (let ((json-object-type 'alist))
+        (member (alist-get 'analysis_status (json-read-file path))
+                '("analyzed" "drafted")))
+    (error nil)))
+
 (defconst session-mode--analysis-tool
   (expand-file-name "../scripts/session_turn_analysis.py"
                     (file-name-directory (or load-file-name buffer-file-name))))
@@ -1774,7 +1782,14 @@ building or storing the summary warns once and still dispatches the turn."
                          agent-chat--agent-id))
              ;; 象-off (policy `never') records turns as `not-requested';
              ;; they are kept on disk but must not be belled to the seat.
-             (session-mode--record-requests-analysis-p path))
+             ;; Under `jvm' the turn is usually read by now (象 reads at
+             ;; send), and its happened is still owed: gating on
+             ;; `requested' alone dropped happened, the reply text and the
+             ;; ports for every reply slower than the reading (none stored
+             ;; from 2026-10-05 03:08 until this fix).
+             (or (session-mode--record-requests-analysis-p path)
+                 (and (eq session-mode-turn-recorder 'jvm)
+                      (session-mode--record-read-p path))))
     (if (eq session-mode-turn-recorder 'jvm)
         (session-mode--jvm-dispatch-after-reply path response)
       (let ((summary
