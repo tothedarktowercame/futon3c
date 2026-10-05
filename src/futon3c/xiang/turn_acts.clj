@@ -203,12 +203,52 @@
     (cond-> (assoc act :kind :accept :target offer-id)
       n (assoc :option n))))
 
+;; ---------------------------------------------------------------------------
+;; Bells (E-agency-work-orders W1)
+
+(defn bell-act
+  "The one act a bell opens: an :ask-action of the whole prompt, authored by
+   the caller and addressed to the recipient. RECORD is an origin \"agent\"
+   record carrying :caller (the 象 turn a work bell between registered
+   agents records); nil for any other record, so operator turns are
+   untouched. The act id is <turn_id>-b-0; the text is the prompt's first
+   300 characters."
+  [record]
+  (when (and (= "agent" (:origin record)) (some-> (:caller record) str/trim not-empty))
+    (let [text (str (:source_text record))]
+      {:id (str (:turn_id record) "-b-0")
+       :kind :ask-action
+       :author (:caller record)
+       :at (:created_at record)
+       :to (:agent_id record)
+       :agent (:agent_id record) :session (:session_id record)
+       :turn (:turn_id record)
+       :text (subs text 0 (min 300 (count text)))})))
+
+(defn- answer-bell
+  "REPLY-ACTS of a bell turn with each :report or :verify act that has no
+   target yet targeting the bell act. The kernel then closes the port:
+   :report via the adjacency table ([:ask-action :report] -> :closes), a
+   :verify via answerso's default — a target link whose pair the table does
+   not list closes the port (futon3c.logic.xiang/answerso)."
+  [reply-acts bell-id]
+  (mapv (fn [{:keys [kind target] :as act}]
+          (if (and (contains? #{:report :verify} kind) (nil? target))
+            (assoc act :target bell-id)
+            act))
+        reply-acts))
+
 (defn turn->acts
   "The acts of one settled turn: the operator's reading fragments, the
    agent's marked reply paragraphs and the happened commits, in that
    order. RECORD and READING are the decoded record and analysis maps
    (keyword keys); REPLY-TEXT is the agent's reply as text; COMMITS is
    [{:repo :sha :subject}] as `happened-commits` parses the note.
+
+   A bell turn (origin \"agent\" with a :caller) has no 象 reading: its
+   request side is one :ask-action act for the bell as a whole
+   (`bell-act`), and the recipient's marked :report/:verify reply acts
+   answer it (`answer-bell`).
 
    OPTS:
    :preceding-offer  id of the offer in the previous turn's reply: this
@@ -222,7 +262,10 @@
   ([record reading reply-text commits]
    (turn->acts record reading reply-text commits {}))
   ([record reading reply-text commits {:keys [preceding-offer carries-out]}]
-   (let [{frag-acts :acts frag-skipped :skipped} (fragment-acts record reading)
+   (let [bell (bell-act record)
+         {frag-acts :acts frag-skipped :skipped} (if bell
+                                                   {:acts [] :skipped 0}
+                                                   (fragment-acts record reading))
          frag-acts (cond-> frag-acts
                      preceding-offer
                      (->> (reduce (fn [[acts accepted?] act]
@@ -232,10 +275,12 @@
                                   [[] false])
                           first))
          {reply-acts :acts reply-skipped :skipped} (reply-acts record reply-text)
-         reply-acts (link-quoted-brackets reply-acts frag-acts)
+         reply-acts (cond-> reply-acts
+                      bell (answer-bell (:id bell))
+                      (seq frag-acts) (link-quoted-brackets frag-acts))
          commit-acts (cond-> (commit-acts record commits)
                        carries-out (->> (mapv #(assoc % :carries-out carries-out))))]
-     (with-meta (vec (concat frag-acts reply-acts commit-acts))
+     (with-meta (vec (concat (when bell [bell]) frag-acts reply-acts commit-acts))
        {:skipped (+ frag-skipped reply-skipped)}))))
 
 ;; ---------------------------------------------------------------------------

@@ -475,6 +475,7 @@
    :jobs {}})
 
 (declare terminal-invoke-state?)
+(declare maybe-record-bell-turn! maybe-close-bell-turn!)
 
 (def ^:private invoke-terminal-detail-retention-ms
   "Keep terminal job transcripts for one day; thereafter retain a small
@@ -1883,7 +1884,8 @@
 (defn- create-invoke-job-ledger!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
            model inherited-clock] :as request}]
-  (let [created-id (atom nil)]
+  (let [created-id (atom nil)
+        fresh? (atom false)]
     (try
       (update-invoke-jobs-ledger!
        (fn [ledger]
@@ -1945,6 +1947,7 @@
                         bell-type (assoc :bell-type bell-type)
                         (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
+             (reset! fresh? true)
                (-> ledger
                    (assoc :next-seq next-seq)
                    (update :job-order (fnil conj []) job-id)
@@ -1958,7 +1961,13 @@
           (throw (ex-info (.getMessage t)
                           (assoc (ex-data t) :committed-invoke-job-id @created-id)
                           t))
-          (throw t))))))
+          (throw t))))
+    ;; E-agency-work-orders W1: a work bell between registered agents opens a
+    ;; port in the 象 ledger. Only a job THIS call created (not a deduped
+    ;; reuse), off the request path, never throwing into the bell.
+    (when (and @created-id @fresh?)
+      (maybe-record-bell-turn! request @created-id))
+    @created-id))
 
 (defn- create-invoke-job!
   [request]
@@ -2352,7 +2361,12 @@
         ;; The check itself runs outside the finalize path and cannot fail it.
         (note-turn-text! (:agent-id updated-terminal-job) result-text
                          job-id (:caller updated-terminal-job))
-        (*schedule-work-order-check!* (:agent-id updated-terminal-job))))
+        (*schedule-work-order-check!* (:agent-id updated-terminal-job))
+        ;; E-agency-work-orders W1: a bell that ended done closes its 象
+        ;; port (failed/cancelled/timeout attach nothing — the port a
+        ;; dropped request opened stays open).
+        (when (= "done" terminal-state)
+          (maybe-close-bell-turn! updated-terminal-job))))
     ;; A caller with no registered push or inbox route can never leave the
     ;; polling-only state. Record that terminal disposition here; unlike seat
     ;; receipts, it does not depend on a later delivery action.
@@ -12325,6 +12339,133 @@
           {:ok true
            :status :handler-reconfigured
            :run4-configured? (map? (:run4 updated))})))))
+
+;; ---------------------------------------------------------------------------
+;; Bells as 象 turns (E-agency-work-orders W1)
+;;
+;; A work bell between two registered agents is a request that stays open
+;; until answered: it records as a 象 turn (origin "agent", dispatch :none —
+;; no reading, no LLM) when the invoke job is created, and the job's done
+;; finalize attaches the result as the happened note, which closes the port
+;; when the recipient's reply declares a :report or :verify act
+;; (futon3c.xiang.turn-acts/answer-bell). Brief bells, auto-bellbacks and
+;; unregistered callers record nothing; failed/cancelled/timed-out jobs
+;; attach nothing, so a dropped request's port stays open. Both hooks are
+;; off the caller's path and never throw into the invoke lifecycle: a
+;; failure is logged in the turn service's health and the bell goes on.
+
+(defn- bell-turn-recordable?
+  "Whether the invoke job described by M (a creation request or a ledger
+   job) opens a 象 port: work mode, one registered agent to another, and not
+   an auto-bellback (a bellback never bellbacks, and never opens a port)."
+  [m]
+  (and (= "work" (invoke-job-mode (:prompt m) (:mode m)))
+       (not (auto-bellback-job? m))
+       (some? (reg/get-agent (str (:caller m))))
+       (some? (reg/get-agent (str (:agent-id m))))))
+
+(def ^:private !bell-turn-ids
+  "job-id -> 象 record id for the bell turns recorded by this JVM. defonce:
+   survives a Drawbridge reload. A bell recorded before a JVM restart is
+   found by the store scan in `bell-turn-record-id` instead."
+  (atom {}))
+
+(defn- bell-turn-record-id
+  "The 象 record id of JOB-ID's bell turn, or nil when none was recorded."
+  [svc job-id]
+  (or (get @!bell-turn-ids job-id)
+      (some (fn [{:keys [id record]}]
+              (when (= job-id (:turn_id record)) id))
+            (xiang-store/list-records (get-in svc [:config :store]) :limit 500))))
+
+(def ^:dynamic *record-bell-turn!*
+  "Test seam for the W1 record hook: when bound, called as (f request
+   job-id) instead of the live record-turn! path."
+  nil)
+
+(def ^:dynamic *close-bell-turn!*
+  "Test seam for the W1 close hook: when bound, called as (f job) instead of
+   the live attach-happened! path."
+  nil)
+
+(defn- xiang-bell-service []
+  (some-> @!handler-config xiang-turn-service))
+
+(defn- maybe-record-bell-turn!
+  "Record REQUEST (a freshly created invoke job, id JOB-ID) as a 象 turn
+   when it is a work bell between registered agents. Off the request path;
+   a failure lands in the service health, the bell goes on."
+  [request job-id]
+  (when (bell-turn-recordable? request)
+    (if-let [f *record-bell-turn!*]
+      (f request job-id)
+      (future
+        (try
+          (when-let [svc (xiang-bell-service)]
+            (let [{:keys [id]} (xiang-turns/record-turn!
+                                svc
+                                {:dispatch :none
+                                 :origin "agent"
+                                 ;; The seat is the RECIPIENT; its session is
+                                 ;; known only at finalize, so the record sits
+                                 ;; under the placeholder until
+                                 ;; attach-happened!'s :agent-session replaces
+                                 ;; it (as for REPL first turns).
+                                 :agent-id (str (:agent-id request))
+                                 :session-id "pending"
+                                 :turn-id (str job-id)
+                                 :text (str (:prompt request))
+                                 :caller (str (:caller request))})]
+              (swap! !bell-turn-ids assoc (str job-id) id)))
+          (catch Throwable t
+            (try
+              (when-let [svc (xiang-bell-service)]
+                (xiang-turns/note-health!
+                 svc (str job-id ": bell turn not recorded (" (.getMessage t) ")")))
+              (catch Throwable _))
+            (println (str "[xiang-bells] record-turn! failed for " job-id ": "
+                          (.getMessage t)))
+            (flush)))))))
+
+(defn- maybe-close-bell-turn!
+  "JOB ended done; attach its result as the bell turn's happened note. Only
+   jobs that have such a record attach anything — the record lookup, not a
+   re-check of registration, is the gate (a caller may have deregistered
+   while the job ran). The record future at creation can lose the race
+   against a fast job, so a missing record is retried twice off-path before
+   giving up. Never throws into finalize."
+  [job]
+  (if-let [f *close-bell-turn!*]
+    (f job)
+    (try
+      (when-let [svc (xiang-bell-service)]
+        (let [job-id (str (:job-id job))
+              reply (:result job)
+              attempt (fn attempt [tries]
+                        (let [id (bell-turn-record-id svc job-id)]
+                          (cond
+                            (and id (string? reply))
+                            (let [r (xiang-turns/attach-happened!
+                                     svc id {:reply reply :commits []}
+                                     {:agent-session (fn [_] (:session-id job))})]
+                              (when (and (= :record-not-found (:reason r)) (pos? tries))
+                                ((get-in svc [:config :schedule!])
+                                 2 #(attempt (dec tries)))))
+
+                            (and (nil? id) (pos? tries))
+                            ((get-in svc [:config :schedule!])
+                             2 #(attempt (dec tries)))
+
+                            (nil? id)
+                            (xiang-turns/note-health!
+                             svc (str job-id ": bell turn record never appeared; port not closed")))))]
+          (attempt 2)))
+      (catch Throwable t
+        (try
+          (when-let [svc (xiang-bell-service)]
+            (xiang-turns/note-health!
+             svc (str (:job-id job) ": bell turn not closed (" (.getMessage t) ")")))
+          (catch Throwable _))))))
 
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.

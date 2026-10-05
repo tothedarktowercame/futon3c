@@ -120,6 +120,14 @@
 
 (defn health [svc] (:health @(:state svc)))
 
+(defn note-health!
+  "Record an out-of-band failure DETAIL in the service health (nil state:
+   detail only, the pipeline itself is fine). For callers outside the
+   pipeline — the bell hooks in transport.http — that must surface a
+   failure where it can be seen but never throw into their own path."
+  [svc detail]
+  (set-health! svc nil detail))
+
 ;; ---------------------------------------------------------------------------
 ;; Seats (session-mode--analysis-seat and friends)
 
@@ -355,7 +363,13 @@
                                         :limit ports-session-cap)
                        (keep (fn [{rid :id r :record}]
                                (let [status (:analysis_status r)]
-                                 (when (contains? #{"analyzed" "drafted"} status)
+                                 ;; Bell turns (origin "agent") settle
+                                 ;; "declared" — no reading, ever; their
+                                 ;; acts come from the prompt and the marked
+                                 ;; reply (E-agency-work-orders W1).
+                                 (when (or (contains? #{"analyzed" "drafted"} status)
+                                           (and (= "declared" status)
+                                                (= "agent" (:origin r))))
                                    {:record r
                                     :reading (if (= status "analyzed")
                                                (or (ts/read-analysis store rid) {})
@@ -403,10 +417,13 @@
    小象's draft was written before this call returned (inline drafts are
    bounded at `inline-draft-timeout-ms`; a slow one continues off-path).
    A turn addressed to the analysis seat itself is recorded, never dispatched."
-  [svc {:keys [dispatch agent-id] :or {dispatch :later} :as opts}]
+  [svc {:keys [dispatch agent-id caller] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted quotes]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
                                                           :now-ms (now-ms svc)}
-                                                         (dissoc opts :dispatch)))
+                                                         (dissoc opts :dispatch :caller)))
+        ;; A bell turn (origin "agent") names who sent it; make-record has no
+        ;; :caller opt, so it rides here (E-agency-work-orders W1).
+        record (cond-> record caller (assoc :caller (str caller)))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
         _ (when (seq quotes) (ts/write-quotes! (cfg svc :store) id quotes))
         ;; Which agent turn this operator turn answers (Joe's `<mark>:`
@@ -548,7 +565,15 @@
                               (keyword status))
             {:dispatched false :reason (keyword status)})
         (contains? #{"declared" "not-requested"} status)
-        {:dispatched false :reason (keyword status)}
+        (do
+          ;; A bell turn (origin "agent", dispatch :none) settles without a
+          ;; reading: the happened note completes it, and its ports are
+          ;; computed here, off the caller's path (E-agency-work-orders W1).
+          ;; Operator "declared" records keep the old reading — nothing runs.
+          (when (and (= "declared" status) (= "agent" (:origin record)))
+            ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+             #(compute-ports! svc id)))
+          {:dispatched false :reason (keyword status)})
         (get-in record [:analysis_dispatch :job_id])
         {:dispatched false :reason :already-dispatched}
 
