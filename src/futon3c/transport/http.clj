@@ -12364,11 +12364,10 @@
        (some? (reg/get-agent (str (:caller m))))
        (some? (reg/get-agent (str (:agent-id m))))))
 
-(def ^:private !bell-turn-ids
-  "job-id -> 象 record id for the bell turns recorded by this JVM. defonce:
-   survives a Drawbridge reload. A bell recorded before a JVM restart is
-   found by the store scan in `bell-turn-record-id` instead."
-  (atom {}))
+;; job-id -> 象 record id for the bell turns recorded by this JVM. defonce:
+;; survives a Drawbridge reload. A bell recorded before a JVM restart is
+;; found by the store scan in `bell-turn-record-id` instead.
+(defonce ^:private !bell-turn-ids (atom {}))
 
 (defn- bell-turn-record-id
   "The 象 record id of JOB-ID's bell turn, or nil when none was recorded."

@@ -9,9 +9,12 @@
    bell_fixtures/c1_capture.edn. Note what the ledger actually holds:
    codex-23's immediate result (\"Waiting on `bg-...`\") carries no
    proforma mark, so the port honestly stays open at the first
-   completion; the closing reply is the ㊢ report the completion bell
-   (auto-bellback-invoke-...) carried back. Codex agents do not write
-   proforma marks — see the mission note."
+   completion. The marked ㊢ text in the fixture's :completion-bell is NOT
+   codex-23's: it is claude-4's turn on receiving the auto-bellback. It is
+   used below only as a stand-in for a marked recipient reply, to test the
+   adapter; live, the port closes only if the recipient's own result is
+   marked. Codex agents do not write proforma marks, so their bells stay
+   open (reported to Joe 2026-10-05)."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -95,7 +98,7 @@
         (is (contains? (open-ids acts (:created_at record)) bell-id)
             "codex-23's unmarked reply declares no act; nothing closes")))))
 
-(deftest completion-report-closes-the-port
+(deftest a-marked-report-closes-the-port
   (let [h (harness)
         {:keys [id record]} (svc/record-turn! (:svc h) bell-opts)
         report (get-in fixture [:completion-bell :report])
