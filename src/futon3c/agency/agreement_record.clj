@@ -57,16 +57,33 @@
 
 (def ^:private ask-label-max 300)
 
+(defn asks-a-question?
+  "True when PARAGRAPH asks something, read by its punctuation: a `?` that
+   ends a sentence (followed by whitespace or the end), outside the leading
+   bracketed target, inline code and quotation marks. So `?q=` in a URL, a
+   quoted question of Joe's and a question in a bracket do not count."
+  [paragraph]
+  (let [body (-> (str paragraph)
+                 (str/replace #"^\S+\s*\([^)]*\)" "")   ; mark and bracketed target
+                 (str/replace #"`[^`]*`" "")
+                 (str/replace #"\"[^\"]*\"" "")
+                 (str/replace #"“[^”]*”" ""))]
+    (boolean (re-find #"\?(?:\s|$)" body))))
+
 (defn reply-asks
-  "The 🈸 paragraphs of an agent reply TEXT, in order. A paragraph is a run of
-   lines between blank lines; it is an ask when its first character is the
-   ask-action mark of the reply proforma."
+  "The asking paragraphs of an agent reply TEXT, in order: those opening with
+   the ask-action mark 🈸, and any other paragraph that asks a question by
+   its punctuation (`asks-a-question?`), whatever its mark. A paragraph is a
+   run of lines between blank lines; fenced code is skipped. Joe, 2026-10-05:
+   claude-4 asked \"May I push …? And should stop C be the first fix?\" under
+   🈳 and the \"yes\" that answered it found no offer; parse the question
+   classically rather than constrain which mark may carry it."
   [text]
   (if-not (string? text)
     []
-    (->> (str/split text #"\n\s*\n")
+    (->> (str/split (str/replace text #"(?s)```.*?```" "") #"\n\s*\n")
          (map str/trim)
-         (filter #(str/starts-with? % "🈸"))
+         (filter #(or (str/starts-with? % "🈸") (asks-a-question? %)))
          vec)))
 
 (defn reply-offer-record

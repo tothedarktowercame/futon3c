@@ -11001,9 +11001,10 @@
     entry))
 
 (defn- reply-offer!
-  "Mint the offer an agent made in prose: the 🈸 paragraphs of the reply that
-   ACCEPTANCE (Joe's turn) answers, read from its :evidence/in-reply-to. Nil
-   unless that reply is this seat's assistant turn, has a 🈸 paragraph, and the
+  "Mint the offer an agent made in prose: the asking paragraphs (🈸, or any
+   paragraph ending a sentence with `?`) of the reply that ACCEPTANCE (Joe's
+   turn) answers, read from its :evidence/in-reply-to. Nil unless that reply
+   is this seat's assistant turn, has an asking paragraph, and the
    agent holds an offer grant. Keyed to the reply, so it is minted once."
   [base acceptance agent session]
   (let [reply-id (:evidence/in-reply-to acceptance)

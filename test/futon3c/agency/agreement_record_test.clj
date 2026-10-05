@@ -1,5 +1,6 @@
 (ns futon3c.agency.agreement-record-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.agency.agreement-record :as agreement]
             [futon3c.agency.offer-record :as offer-record]))
 
@@ -174,6 +175,10 @@
   (is (nil? (agreement/reply-offer-record
              (assoc-in reply-evidence [:evidence/body :text] "㊢ (report) Done.\n\nNo question here.")
              "claude-17" "s1")))
+  (is (= [] (agreement/reply-asks
+             (str "㊢ (\"shall I go on?\") Ran `ok? ` and `done?` then fetched https://a.b/c?d=e.\n\n"
+                  "㊟ (why stop? a quote) Joe asked “is it done?” and it is.\n\n"
+                  "```\nwhy? \n\nreally?\n```"))))
   ;; 🈸 inside a paragraph is not an ask paragraph
   (is (= [] (agreement/reply-asks "㊢ I would mark it 🈸 if asking.")))
   (is (= [] (agreement/reply-asks nil))))
@@ -185,3 +190,19 @@
                                  :authority {:grant "act:grant"}
                                  :executor-basis :declared})]
     (is (= offer (offer-record/validate! offer)))))
+
+(deftest a-question-under-any-mark-is-an-ask
+  (testing "claude-4, 2026-10-05: the decision was asked under 🈳, and Joe's
+            yes found no visible offer"
+    (let [text (str "㊢ (watch) The watcher is `bg-…748`.\n\n"
+                    "🈳 (waiting on you) May I push `8c5a3146` to Rob's main? "
+                    "It matches Lean on all 20 rows. And should stop C be the first fix?")
+          offer (assoc (agreement/reply-offer-record
+                        (assoc-in reply-evidence [:evidence/body :text] text) "claude-4" "s1")
+                       :id "act:reply-offer")
+          resolution (agreement/resolve-acceptance {:offers [offer]} (agreement/parse-acceptance "yes"))]
+      (is (= 1 (count (:options offer))) "one asking paragraph, one option")
+      (is (str/starts-with? (get-in resolution [:accept :option :option/label]) "🈳 (waiting on you) May I push"))))
+  (testing "a question inside a gist paragraph, as claude-4 first asked about stop C"
+    (is (= 1 (count (agreement/reply-asks
+                     "㊥ (results) Stop C accounts for 6 of 14. Shall I authorize it, or would you rather review first? No fixes are out."))))))
