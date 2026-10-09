@@ -491,3 +491,42 @@
         "a commit the seat did not make is never attributed to it")
     (is (= "No such subject" (:subject (last got))))))
 
+
+(deftest turn-result-carries-summed-usage-for-the-terminal-job
+  ;; 2026-10-09: a Z.AI turn returned no :usage, so WM jobs on zai seats read
+  ;; :provider-usage-missing-or-invalid although every round reported tokens.
+  (let [responses (atom [(assoc (tool-response 0)
+                                :model "glm-test"
+                                :usage {:prompt_tokens 100 :completion_tokens 10
+                                        :total_tokens 110
+                                        :prompt_tokens_details {:cached_tokens 40}})
+                         (assoc (tool-response 1)
+                                :usage {:prompt_tokens 200 :completion_tokens 20
+                                        :total_tokens 220})
+                         (assoc (text-response-with-usage
+                                 "done" {:prompt_tokens 300 :completion_tokens 30
+                                         :total_tokens 330})
+                                :model "glm-test")])
+        invoke (make-invoke {})]
+    (with-redefs-fn {#'zai/chat! (fn [_ _ _]
+                                   (let [r (first @responses)]
+                                     (swap! responses rest)
+                                     r))
+                     #'zai/execute-tool fake-tool-result}
+      (fn []
+        (let [resp (invoke "work" nil)]
+          (is (= "done" (:result resp)))
+          (is (= {:cost/input-tokens 600 :cost/output-tokens 60
+                  :cost/total-tokens 660 :cost/cached-input-tokens 40
+                  :cost/source :zai :cost/calls 3 :cost/model "glm-test"}
+                 (:usage resp))))))))
+
+(deftest turn-without-reported-usage-claims-none
+  (let [invoke (make-invoke {})]
+    (with-redefs [zai/chat! (fn [_ _ _] (text-response "done"))]
+      (is (not (contains? (invoke "work" nil) :usage))))))
+
+(deftest add-usage-tolerates-nil-and-partial-counters
+  (is (nil? (zai/add-usage nil nil)))
+  (is (= {:cost/input-tokens 5 :cost/source :zai :cost/calls 1}
+         (zai/add-usage nil {:cost/input-tokens 5 :cost/source :zai}))))

@@ -986,6 +986,44 @@
         (cond-> (assoc counters :cost/source :zai)
           (some? (:model resp)) (assoc :cost/model (:model resp)))))))
 
+(def ^:private summed-usage-counters
+  [:cost/input-tokens :cost/output-tokens :cost/total-tokens
+   :cost/cached-input-tokens :cost/reasoning-tokens])
+
+(defn add-usage
+  "Fold one call's normalized usage into a turn total. Counters add; the
+   model is the last one the server reported; :cost/calls counts the calls
+   that carried usage. Either side may be nil."
+  [total usage]
+  (if (nil? usage)
+    total
+    (let [summed (reduce (fn [acc k]
+                           (if (some? (get usage k))
+                             (assoc acc k (+ (or (get acc k) 0) (get usage k)))
+                             acc))
+                         (or total {})
+                         summed-usage-counters)]
+      (cond-> (assoc summed
+                     :cost/source :zai
+                     :cost/calls (inc (or (:cost/calls total) 0)))
+        (:cost/model usage) (assoc :cost/model (:cost/model usage))))))
+
+(defn- with-turn-usage
+  "Attach the turn's summed usage as :usage, the provider-owned receipt the
+   terminal job carries (http finalize keeps (:usage result)). Until
+   2026-10-09 a Z.AI turn returned no :usage, so every WM job on a zai seat
+   read :provider-usage-missing-or-invalid although each round had it."
+  [result usage]
+  (cond-> result
+    (and (map? result) (seq usage)) (assoc :usage usage)))
+
+(defn- update-in-usage
+  "Charge a pre-turn compaction summary's usage to the turn it served."
+  [summary-usage result]
+  (if (and (map? result) summary-usage)
+    (with-turn-usage result (add-usage (:usage result) summary-usage))
+    result))
+
 ;; --- U1: transcript persistence (M-zaif-harness) --------------------------
 ;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
 ;; gone on JVM restart — which left an agent's claims about its own past
@@ -1744,7 +1782,9 @@ CALLS contains maps of tool name, arguments, and result digest."
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
            !repeats !interrupted auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
-  (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
+  (let [auto-continue-max (configured-auto-continue-max auto-continue-max)
+        !turn-usage (atom nil)]
+    (with-turn-usage
     (loop [remaining tool-round-budget
            final-text ""
            auto-continues 0
@@ -1806,6 +1846,7 @@ CALLS contains maps of tool name, arguments, and result digest."
              :session-id sid
              :error (result-string err)}
             (let [usage (normalized-usage resp)
+                  _ (swap! !turn-usage add-usage usage)
                   _ (when usage
                       (sink! agent-id (assoc usage :type "usage")))
                   _ (when-let [!context-tokens (:!context-tokens ctx)]
@@ -1909,7 +1950,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :text (if (str/blank? text) final-text text)
                                    :calls [] :final? true :usage usage})
                   {:result (if (str/blank? text) final-text text)
-                   :session-id sid}))))))))))
+                   :session-id sid}))))))))
+    @!turn-usage)))
 
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
@@ -2075,7 +2117,8 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; running headless while the registry stayed :invoking and new
             ;; turns queued forever. The flag is checked every tool round.
             !interrupted (atom false)
-            interrupt-token (str sid-prefix "invoke-" (UUID/randomUUID))]
+            interrupt-token (str sid-prefix "invoke-" (UUID/randomUUID))
+            !summary-usage (atom nil)]
         (cond
           (not key*)
           {:result nil
@@ -2162,6 +2205,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                         prompt)]
           (when compact?
             (when-let [usage (:usage summary-result)]
+              (reset! !summary-usage usage)
               (sink! agent-id (assoc usage :type "usage")))
             (swap! !messages #(vec (take 1 %)))
             (reset! !context-tokens nil)
@@ -2207,7 +2251,9 @@ CALLS contains maps of tool name, arguments, and result digest."
              :message "zai invoke interrupted; turn stops at the next round boundary"
              :interrupted? true})})
         (try
-          (run-tool-rounds! {:client client
+          (update-in-usage
+           @!summary-usage
+           (run-tool-rounds! {:client client
                              :opts opts
                              :api-key key*
                              :!messages !messages
@@ -2227,6 +2273,6 @@ CALLS contains maps of tool name, arguments, and result digest."
                              :!interrupted !interrupted
                              :profile profile*
                              :zaif-inputs-fn zaif-inputs-fn
-                             :auto-continue-max turn-auto-continue-max})
+                             :auto-continue-max turn-auto-continue-max}))
           (finally
             (invoke-controls/deregister! agent-id interrupt-token))))))))))
