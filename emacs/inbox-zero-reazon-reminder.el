@@ -6,10 +6,13 @@
 
 (agent-chat-invariants--ensure-reazon)
 
-(defcustom inbox-zero-reazon-reminder-state-file
-  "/home/joe/code/futon0/data/inbox-zero-delta-state.json"
-  "Hourly inbox-zero health receipt consumed by the reminder."
-  :type 'file
+(defcustom inbox-zero-reazon-reminder-receipt-files
+  '("/home/joe/code/storage/inbox-zero/operator-backlog.edn"
+    "/home/joe/code/storage/inbox-zero/push-log.edn"
+    "/home/joe/code/storage/inbox-zero/sync-log.edn"
+    "/home/joe/code/storage/inbox-zero/worktree-log.edn")
+  "Receipts written by one pass of the in-process inbox-zero sweeper."
+  :type '(repeat file)
   :group 'agent-chat-invariants)
 
 (defcustom inbox-zero-reazon-reminder-max-age-seconds 7200
@@ -32,41 +35,41 @@
                   (cons key value)))
               (split-string (string-trim (buffer-string)) "\n" t)))))
 
+(defun inbox-zero-reazon-reminder--newest-receipt-age ()
+  "Return the age in seconds of the newest inbox-zero sweeper receipt."
+  (let ((mtimes (delq nil
+                      (mapcar (lambda (file)
+                                (when (file-exists-p file)
+                                  (float-time
+                                   (file-attribute-modification-time
+                                    (file-attributes file)))))
+                              inbox-zero-reazon-reminder-receipt-files))))
+    (when mtimes
+      (- (float-time) (apply #'max mtimes)))))
+
 (defun inbox-zero-reazon-reminder--status ()
-  "Return the current inbox-zero health status from systemd and its receipt."
+  "Return health of the pressure-triggered inbox-zero sweeper.
+
+The old `futon-sync-check-clean.timer' was deliberately retired on
+2026-09-18.  The serving futon3c JVM now owns the recurring sweeper, and its
+current-state files are the durable proof that passes continue to finish."
   (condition-case err
-      (let* ((timer (inbox-zero-reazon-reminder--systemd-properties
-                     "futon-sync-check-clean.timer" '("ActiveState")))
-             (service (inbox-zero-reazon-reminder--systemd-properties
-                       "futon-sync-check-clean.service"
-                       '("Result" "ExecMainStatus" "ExecMainExitTimestamp")))
-             (timestamp (cdr (assoc "ExecMainExitTimestamp" service)))
-             (age (and timestamp (not (string-empty-p timestamp))
-                       (- (float-time) (float-time (date-to-time timestamp)))))
-             (receipt (with-temp-buffer
-                        (insert-file-contents
-                         inbox-zero-reazon-reminder-state-file)
-                        (json-parse-buffer :object-type 'alist
-                                           :array-type 'list)))
-             (signature (alist-get 'signature receipt)))
+      (let* ((service (inbox-zero-reazon-reminder--systemd-properties
+                       "futon3c-zone.service" '("ActiveState" "SubState")))
+             (age (inbox-zero-reazon-reminder--newest-receipt-age)))
         (cond
-         ((not (equal "active" (cdr (assoc "ActiveState" timer))))
-          'timer-inactive)
-         ((or (not (equal "success" (cdr (assoc "Result" service))))
-              (not (equal "0" (cdr (assoc "ExecMainStatus" service)))))
-          'gate-failed)
+         ((or (not (equal "active" (cdr (assoc "ActiveState" service))))
+              (not (equal "running" (cdr (assoc "SubState" service)))))
+          'sweeper-service-inactive)
          ((or (not age) (> age inbox-zero-reazon-reminder-max-age-seconds))
-          'gate-stale)
-         ((and signature (cl-some (lambda (repo) (cdr repo)) signature))
-          'failures-present)
+          'sweeper-stale)
          (t 'healthy)))
     (error (cons 'monitor-unreadable (error-message-string err)))))
 
 (reazon-defrel inbox-zero-reazon-reminder--unhealthyo (status)
   (reazon-conde
-   ((reazon-== status 'timer-inactive))
-   ((reazon-== status 'gate-failed))
-   ((reazon-== status 'gate-stale))
+   ((reazon-== status 'sweeper-service-inactive))
+   ((reazon-== status 'sweeper-stale))
    ((reazon-== status 'failures-present))
    ((reazon-fresh (message)
       (reazon-conso 'monitor-unreadable message status)))))

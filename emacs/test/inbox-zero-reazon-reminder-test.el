@@ -17,25 +17,26 @@
       (should (= 1 (length violations)))
       (should (string-match-p "ask Codex" (cadar violations))))))
 
-(ert-deftest inbox-zero-reazon-reminder-reads-live-systemd-health ()
-  (let ((inbox-zero-reazon-reminder-state-file
-         (make-temp-file "inbox-zero-state-")))
+(ert-deftest inbox-zero-reazon-reminder-reads-live-sweeper-health ()
+  (let* ((receipt (make-temp-file "inbox-zero-state-"))
+         (inbox-zero-reazon-reminder-receipt-files (list receipt)))
     (unwind-protect
         (progn
-          (with-temp-file inbox-zero-reazon-reminder-state-file
-            (insert "{\"signature\":{\"futon3c\":[]}}"))
           (cl-letf (((symbol-function
                       'inbox-zero-reazon-reminder--systemd-properties)
-                     (lambda (unit _properties)
-                       (if (string-suffix-p ".timer" unit)
-                           '(("ActiveState" . "active"))
-                         `(("Result" . "success")
-                           ("ExecMainStatus" . "0")
-                           ("ExecMainExitTimestamp" .
-                            ,(format-time-string "%a %Y-%m-%d %H:%M:%S UTC"
-                                                 nil t)))))))
+                     (lambda (_unit _properties)
+                       '(("ActiveState" . "active")
+                         ("SubState" . "running")))))
             (should (eq 'healthy (inbox-zero-reazon-reminder--status)))))
-      (delete-file inbox-zero-reazon-reminder-state-file))))
+      (delete-file receipt))))
+
+(ert-deftest inbox-zero-reazon-reminder-rejects-stale-sweeper-receipts ()
+  (cl-letf (((symbol-function 'inbox-zero-reazon-reminder--systemd-properties)
+             (lambda (_unit _properties)
+               '(("ActiveState" . "active") ("SubState" . "running"))))
+            ((symbol-function 'inbox-zero-reazon-reminder--newest-receipt-age)
+             (lambda () (1+ inbox-zero-reazon-reminder-max-age-seconds))))
+    (should (eq 'sweeper-stale (inbox-zero-reazon-reminder--status)))))
 
 (provide 'inbox-zero-reazon-reminder-test)
 ;;; inbox-zero-reazon-reminder-test.el ends here
