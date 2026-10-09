@@ -578,6 +578,45 @@
       (:duplicate-of-clicks binding)
       (assoc :duplicate-of-clicks (:duplicate-of-clicks binding)))))
 
+;; ---------------------------------------------------------------------------
+;; Park signals. An agent waiting on a click parks on these dep ids instead of
+;; polling (claude-12, 2026-10-09: a monitor loop died with its session and
+;; nothing woke anyone at a debugger stop). The generic ids exist because the
+;; launcher learns the click id only after firing, and the run id later still.
+;; ---------------------------------------------------------------------------
+
+(def click-end-dep "wm-click/end")
+(def debugger-stop-dep "wm-debugger/stop")
+
+(defn- signal-park-deps!
+  [dep-ids result]
+  (try
+    (when-let [complete! (*resolve-var* 'futon3c.transport.http/complete-park-dep!)]
+      (doseq [dep-id dep-ids]
+        (complete! dep-id result)))
+    (catch Throwable throwable
+      (println "[wm-click] park signal failed" (pr-str dep-ids)
+               (.getMessage throwable))
+      (flush))))
+
+(defn install-debugger-park-signal!
+  "Complete wm-debugger/stop (and wm-debugger/stop/<run-id>) whenever the
+   attached debugger registers a new stop. Idempotent: one watch per key."
+  []
+  ;; A signal must never cost a click: an unresolvable debugger is no watch.
+  (when-let [stops-var (try (*resolve-var* 'futon2.aif.wm.debugger/!stops)
+                            (catch Throwable _ nil))]
+    (add-watch @stops-var ::park-signal
+               (fn [_ _ old new]
+                 (doseq [[run-id entry] new
+                         :when (not (contains? old run-id))]
+                   (signal-park-deps!
+                    [debugger-stop-dep (str debugger-stop-dep "/" run-id)]
+                    (-> (select-keys entry [:run-id :attempt-id :opportunity-id
+                                            :phase :condition :stopped-at])
+                        (assoc :has-stop-value? (boolean (:has-stop-value? entry))))))))
+    :installed))
+
 (defn- close-click!
   [agent-id click-id result]
   (let [fallback-attempt-id (:attempt-id @!status)
@@ -594,7 +633,9 @@
                current)))
     (publish-registry! click-id :close #(report-idle! agent-id))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
-    (flush)))
+    (flush)
+    (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
+                       (assoc summary :click-id click-id))))
 
 (defn- fail-click!
   [agent-id click-id throwable]
@@ -615,12 +656,18 @@
                current)))
     (publish-registry! click-id :failure #(report-idle! agent-id))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
-    (flush)))
+    (flush)
+    (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
+                       (-> summary
+                           (dissoc :error-data)
+                           (assoc :click-id click-id
+                                  :error-kind (some-> summary :error-data :error))))))
 
 (defn- run-click!
   [click-id started-at opts completion admission]
   (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
     (try
+      (install-debugger-park-signal!)
       (let [configured (configured-runner-opts opts)
             run! (*resolve-var*
                   'futon2.aif.full-loop-runtime/run-opportunity!)

@@ -553,3 +553,65 @@
           (if-let [data (ex-data throwable)]
             (is (= data (:error-data summary)))
             (is (not (contains? summary :error-data)))))))))
+
+;; Park signals (claude-12, 2026-10-09): a launcher parks on wm-click/end and
+;; wm-debugger/stop rather than polling the status route.
+
+(def ^:private test-debugger-stops (atom {}))
+
+(defn- park-signal-resolver
+  [run! signals]
+  (let [base (resolver run! (fn [_] {:selected-policy-id "pi-test"}))]
+    (fn [sym]
+      (case sym
+        futon3c.transport.http/complete-park-dep!
+        (fn [dep-id result] (swap! signals conj [dep-id result]))
+        futon2.aif.wm.debugger/!stops #'test-debugger-stops
+        (base sym)))))
+
+(def ^:private park-cast
+  {:author "zai-2" :reviewer "codex-2" :repair-reviewer "codex-1"})
+
+(deftest click-end-completes-generic-and-click-scoped-park-deps
+  (let [signals (atom [])
+        run! (fn [_] {:attempt-id "attempt-test" :outcome :grounded-change})]
+    (binding [service/*resolve-var* (park-signal-resolver run! signals)]
+      (let [{:keys [click-id]} (service/click! park-cast)]
+        (service/await-click! click-id)
+        (is (= [service/click-end-dep (str service/click-end-dep "/" click-id)]
+               (mapv first @signals)))
+        (is (= :grounded-change (:outcome (second (first @signals)))))
+        (is (= click-id (:click-id (second (first @signals)))))))))
+
+(deftest failed-click-completes-park-deps-with-its-error-kind
+  (let [signals (atom [])
+        run! (fn [_] (throw (ex-info "budget gone"
+                                     {:error :ordinary-click-budget-exhausted})))]
+    (binding [service/*resolve-var* (park-signal-resolver run! signals)]
+      (let [click-id (try (:click-id (service/click! park-cast))
+                          (catch Exception _ (:click-id (service/status))))]
+        (service/await-click! click-id)
+        (is (= [service/click-end-dep (str service/click-end-dep "/" click-id)]
+               (mapv first @signals)))
+        (is (= :service-failed (:outcome (second (first @signals)))))
+        (is (= :ordinary-click-budget-exhausted
+               (:error-kind (second (first @signals)))))
+        (is (not (contains? (second (first @signals)) :error-data))
+            "ex-data may carry throwables; the park result stays plain data")))))
+
+(deftest debugger-stop-completes-park-deps-once-per-new-stop
+  (let [signals (atom [])]
+    (reset! test-debugger-stops {})
+    (binding [service/*resolve-var* (park-signal-resolver (fn [_] nil) signals)]
+      (is (= :installed (service/install-debugger-park-signal!)))
+      (is (= :installed (service/install-debugger-park-signal!)) "idempotent")
+      (swap! test-debugger-stops assoc "run-1"
+             {:run-id "run-1" :phase :author :condition {:kind :ex-info}
+              :decision (promise) :throwable (Exception. "x")})
+      (swap! test-debugger-stops assoc-in ["run-1" :phase] :author)
+      (swap! test-debugger-stops dissoc "run-1")
+      (is (= [service/debugger-stop-dep (str service/debugger-stop-dep "/run-1")]
+             (mapv first @signals)))
+      (is (= {:run-id "run-1" :phase :author :condition {:kind :ex-info}
+              :has-stop-value? false}
+             (second (first @signals)))))))

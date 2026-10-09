@@ -6061,6 +6061,17 @@
 
             :else (throw e)))))))
 
+(defn complete-park-dep!
+  "Mark parked-on DEP-ID complete on behalf of an in-process producer (WM
+   click end, WM debugger stop), so an agent can park on events that are not
+   invoke jobs. Same release path as POST /api/alpha/park/complete; nil while
+   parks are disabled."
+  [dep-id result]
+  (when (parked-on-enabled?)
+    (parked-on/note-completion! dep-id result
+                                {:resume! parked-resume!
+                                 :now-ms (System/currentTimeMillis)})))
+
 (defn- handle-park-complete
   "POST /api/alpha/park/complete — mark an arbitrary parked-on dependency complete."
   [request _config]
