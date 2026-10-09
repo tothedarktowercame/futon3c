@@ -78,6 +78,12 @@
   "Resolver seam for tests. Production always delegates to requiring-resolve."
   requiring-resolve)
 
+(def ^:dynamic *admission-wait-ms*
+  "Maximum time click! holds its caller while the runner has neither admitted
+   nor refused the click. The worker remains live after this bound and its
+   authoritative state remains observable through status/GET."
+  30000)
+
 (def ^:dynamic *click-run-binding-persist-stage-hook*
   "Fault-injection seam. Stages are :temp-forced before rename and :renamed
    after authoritative replacement but before directory force."
@@ -885,8 +891,13 @@
               (.setDaemon thread true)
               (try
                 (.start thread)
-                (let [admitted @admission]
+                (let [pending (Object.)
+                      admitted (deref admission *admission-wait-ms* pending)]
                   (cond
+                    (identical? pending admitted)
+                    {:click-id click-id :started-at started-at
+                     :admission :admission-pending
+                     :admission-wait-ms *admission-wait-ms*}
                     (instance? Throwable admitted) (throw admitted)
                     (map? admitted)
                     (assoc admitted
