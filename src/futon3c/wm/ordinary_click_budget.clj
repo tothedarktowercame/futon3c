@@ -50,9 +50,11 @@
    after the repaired read-only META preview (\"1 is authorised\"), plus one
    granted to codex-10 on 2026-10-05 for the R20 certificate evaluation, plus
    one granted to claude-12 on 2026-10-09 for a debugger-attached click with
-   Lean, token and timing assessment. All grants are recorded in the
-   authorization document named above."
-  48)
+   Lean, token and timing assessment, plus one more granted to claude-12 on
+   2026-10-09 for the post-repair verification click, watched phase by phase
+   under the debugger. All grants are recorded in the authorization document
+   named above."
+  49)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
