@@ -579,42 +579,54 @@
       (finally
         (Files/deleteIfExists (.toPath tmp))))))
 
-(defn- replace-binding-report-card!
-  "Atomically add REPORT-CARD to the already-authoritative click binding."
+(defn- write-report-card-sidecar!
+  "Record REPORT-CARD for BINDING in its own file beside the binding,
+  report-card-<click-id>.edn.  The authoritative click binding is a verified
+  receipt and is never rewritten after its durable write; this name does not
+  match the click-run-binding- scan.  Atomic and fsynced."
   [binding report-card]
-  (let [target (io/file (:path binding))
-        dir (.getParentFile target)
-        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
-        updated (assoc binding :report-card report-card)]
+  (let [target (io/file (.getParentFile (io/file (:path binding)))
+                        (str "report-card-" (:click/id binding) ".edn"))
+        tmp (io/file (.getParentFile target)
+                     (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
+        record {:schema :wm-click-report-card-v1
+                :click/id (:click/id binding)
+                :run-id (get-in binding [:run-id-observation :value])
+                :report-card report-card}]
     (try
-      (spit tmp (str (pr-str (dissoc updated :path :durability :durability-warning)) "\n"))
+      (with-open [out (java.io.FileOutputStream. tmp)]
+        (.write out (.getBytes (str (pr-str record) "\n") "UTF-8"))
+        (.sync (.getFD out)))
       (Files/move (.toPath tmp) (.toPath target)
                   (into-array StandardCopyOption
                               [StandardCopyOption/ATOMIC_MOVE
                                StandardCopyOption/REPLACE_EXISTING]))
-      updated
+      (assoc binding :report-card report-card :report-card-path (.getAbsolutePath target))
       (finally (Files/deleteIfExists (.toPath tmp))))))
 
 (defn publish-report-card-after-close!
   "Generate a report card after the close binding exists, then launch the
-  durable p4ng publication chain. Failures are typed into that binding and
-  never escape into the click outcome. Returns the updated binding."
+  durable p4ng publication chain. The outcome is written to a sidecar beside
+  the binding (never into it), and failures never escape into the click
+  outcome. Returns the binding with :report-card attached in memory only."
   [binding]
   (let [run-id (get-in binding [:run-id-observation :value])
         run-record (:run-record binding)
         url (when run-id
               (str "https://zone.hyperreal.enterprises/wip/wm-runs/" run-id ".html"))]
     (if-not (and (= :verified (:binding-status binding)) run-id run-record)
-      (replace-binding-report-card!
+      (write-report-card-sidecar!
        binding {:status :failed :reason :verified-run-record-unavailable})
       (try
         (let [paths (*generate-report-card!* run-record)
               launch (*launch-report-card-publish!* run-id)]
-          (replace-binding-report-card!
-           binding {:status :published :url url :artifacts paths
+          (write-report-card-sidecar!
+           binding {:status :publication-launched :url url :artifacts paths
+                    ;; Launched, not yet published: the p4ng chain records its
+                    ;; own outcome on wip/publish-status.html.
                     :publication-job (select-keys launch [:id :pid :out-file :started-at])}))
         (catch Throwable throwable
-          (replace-binding-report-card!
+          (write-report-card-sidecar!
            binding {:status :failed
                     :reason (or (:reason (ex-data throwable))
                                 :report-card-generation-or-launch-failed)

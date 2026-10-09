@@ -667,13 +667,16 @@
               service/*launch-report-card-publish!*
               (fn [run-id] (swap! launched conj run-id)
                 {:id "bg-test" :pid 42 :out-file "/tmp/test"})]
-      (let [updated (service/publish-report-card-after-close! close-binding)
-            persisted (edn/read-string (slurp (:path close-binding)))]
+      (let [before (slurp (:path close-binding))
+            updated (service/publish-report-card-after-close! close-binding)
+            sidecar (edn/read-string (slurp (io/file dir "report-card-click-1.edn")))]
         (is (= [(:run-record close-binding)] @generated))
         (is (= ["run-1"] @launched))
-        (is (= :published (get-in updated [:report-card :status])))
-        (is (= :published (get-in persisted [:report-card :status])))
-        (is (= :completed (:outcome persisted)))))))
+        (is (= :publication-launched (get-in updated [:report-card :status])))
+        (is (= :publication-launched (get-in sidecar [:report-card :status])))
+        (is (= before (slurp (:path close-binding)))
+            "the verified click binding is never rewritten")
+        (is (= :completed (:outcome (edn/read-string before))))))))
 
 (deftest report-card-generator-failure-is-isolated-from-click-outcome
   (let [dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -685,10 +688,12 @@
               (fn [_] (throw (ex-info "generator broke" {:reason :generator-broke})))
               service/*launch-report-card-publish!*
               (fn [_] (reset! launched? true))]
-      (let [updated (service/publish-report-card-after-close! close-binding)
-            persisted (edn/read-string (slurp (:path close-binding)))]
+      (let [before (slurp (:path close-binding))
+            updated (service/publish-report-card-after-close! close-binding)
+            sidecar (edn/read-string (slurp (io/file dir "report-card-click-1.edn")))]
         (is (false? @launched?))
         (is (= {:status :failed :reason :generator-broke}
                (select-keys (:report-card updated) [:status :reason])))
-        (is (= :reviewer-falsifier-failed (:outcome persisted)))
-        (is (= :failed (get-in persisted [:report-card :status])))))))
+        (is (= before (slurp (:path close-binding))))
+        (is (= :reviewer-falsifier-failed (:outcome (edn/read-string before))))
+        (is (= :failed (get-in sidecar [:report-card :status])))))))
