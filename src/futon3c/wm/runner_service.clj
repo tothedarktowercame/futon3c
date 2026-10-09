@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
+            [futon3c.agency.bg-process :as bg-process]
             [futon3c.agency.registry :as reg]
             [futon3c.test-registry.local-port]
             [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
@@ -81,6 +82,28 @@
   "Fault-injection seam. Stages are :temp-forced before rename and :renamed
    after authoritative replacement but before directory force."
   nil)
+
+(def ^:dynamic *generate-report-card!*
+  "Injection seam around futon2's in-JVM report-card generator."
+  (fn [run-record]
+    (if-let [generate! (*resolve-var* 'wm-report-card/generate!)]
+      (generate! run-record)
+      (throw (ex-info "WM report-card generator unavailable"
+                      {:reason :report-card-generator-unavailable})))))
+
+(def ^:private publish-chain-command
+  (str "cd /home/joe/code/p4ng && "
+       "./publish-job.py wm-run-cards -- ./publish-wm-runs.py && "
+       "./publish-job.py wip-index -- python3 ./publish-wip-index.py && "
+       "./publish-job.py wip-nav -- bash ./publish-wip-nav.sh"))
+
+(def ^:dynamic *launch-report-card-publish!*
+  "Injection seam for the durable, non-blocking publication launch."
+  (fn [run-id]
+    (bg-process/launch! {:cmd publish-chain-command
+                         :agent-id war-machine-agent-id
+                         :label (str "publish WM report card " run-id)
+                         :dir "/home/joe/code/p4ng"})))
 
 (defn status
   "Return the current click service status."
@@ -556,9 +579,66 @@
       (finally
         (Files/deleteIfExists (.toPath tmp))))))
 
+(defn- replace-binding-report-card!
+  "Atomically add REPORT-CARD to the already-authoritative click binding."
+  [binding report-card]
+  (let [target (io/file (:path binding))
+        dir (.getParentFile target)
+        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
+        updated (assoc binding :report-card report-card)]
+    (try
+      (spit tmp (str (pr-str (dissoc updated :path :durability :durability-warning)) "\n"))
+      (Files/move (.toPath tmp) (.toPath target)
+                  (into-array StandardCopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING]))
+      updated
+      (finally (Files/deleteIfExists (.toPath tmp))))))
+
+(defn publish-report-card-after-close!
+  "Generate a report card after the close binding exists, then launch the
+  durable p4ng publication chain. Failures are typed into that binding and
+  never escape into the click outcome. Returns the updated binding."
+  [binding]
+  (let [run-id (get-in binding [:run-id-observation :value])
+        run-record (:run-record binding)
+        url (when run-id
+              (str "https://zone.hyperreal.enterprises/wip/wm-runs/" run-id ".html"))]
+    (if-not (and (= :verified (:binding-status binding)) run-id run-record)
+      (replace-binding-report-card!
+       binding {:status :failed :reason :verified-run-record-unavailable})
+      (try
+        (let [paths (*generate-report-card!* run-record)
+              launch (*launch-report-card-publish!* run-id)]
+          (replace-binding-report-card!
+           binding {:status :published :url url :artifacts paths
+                    :publication-job (select-keys launch [:id :pid :out-file :started-at])}))
+        (catch Throwable throwable
+          (replace-binding-report-card!
+           binding {:status :failed
+                    :reason (or (:reason (ex-data throwable))
+                                :report-card-generation-or-launch-failed)
+                    :error-class (.getName (class throwable))
+                    :message (or (ex-message throwable)
+                                 (.getName (class throwable)))}))))))
+
 (defn- result-summary
   [click-id result fallback-attempt-id]
-  (let [binding (persist-click-run-binding! click-id result)]
+  (let [binding (persist-click-run-binding! click-id result)
+        ;; This hook is deliberately after the close binding's atomic write.
+        ;; Generation is local; publication is launched under the durable JVM
+        ;; parent and is never awaited by the click.
+        binding (try
+                  (publish-report-card-after-close! binding)
+                  (catch Throwable throwable
+                    ;; The click is already closed. Even a secondary binding
+                    ;; update failure cannot rewrite its terminal outcome.
+                    (assoc binding :report-card
+                           {:status :failed
+                            :reason :report-card-binding-update-failed
+                            :error-class (.getName (class throwable))
+                            :message (or (ex-message throwable)
+                                         (.getName (class throwable)))})))]
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
@@ -576,7 +656,10 @@
       (assoc :run-record-absence (:run-record-absence binding))
 
       (:duplicate-of-clicks binding)
-      (assoc :duplicate-of-clicks (:duplicate-of-clicks binding)))))
+      (assoc :duplicate-of-clicks (:duplicate-of-clicks binding))
+
+      (:report-card binding)
+      (assoc :report-card (:report-card binding)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Park signals. An agent waiting on a click parks on these dep ids instead of
