@@ -615,3 +615,32 @@
       (is (= {:run-id "run-1" :phase :author :condition {:kind :ex-info}
               :has-stop-value? false}
              (second (first @signals)))))))
+
+(deftest pre-admission-debugger-stop-releases-the-click-caller
+  ;; The ration admission is a runner phase (futon2, 2026-10-09), so an
+  ;; attached debugger can stop before admission. click! must answer with the
+  ;; stop rather than hold its caller until a restart.
+  (let [signals (atom [])
+        release (promise)
+        run! (fn [_]
+               (swap! test-debugger-stops assoc "run-adm"
+                      {:run-id "run-adm" :phase :admission
+                       :condition {:kind :ex-info} :decision (promise)})
+               @release
+               (swap! test-debugger-stops dissoc "run-adm")
+               {:attempt-id "attempt-test" :outcome :incomplete})]
+    (reset! test-debugger-stops {})
+    (binding [service/*resolve-var* (park-signal-resolver run! signals)]
+      (let [answer (deref (future (service/click!
+                                   (assoc park-cast
+                                          :ordinary-click/issue! (fn [& _]))))
+                          5000 ::blocked)]
+        (is (not= ::blocked answer))
+        (is (= :pending-debugger-restart (:admission answer)))
+        (is (= {:run-id "run-adm" :phase :admission :condition {:kind :ex-info}}
+               (:debugger-stop answer)))
+        (deliver release true)
+        (service/await-click! (:click-id answer))
+        (is (empty? (filter #(and (vector? %) (= ::service/pre-admission-stop (first %)))
+                            (keys (.getWatches test-debugger-stops))))
+            "the per-click watch is removed when the click ends")))))

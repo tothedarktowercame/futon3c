@@ -617,6 +617,28 @@
                         (assoc :has-stop-value? (boolean (:has-stop-value? entry))))))))
     :installed))
 
+(defn- watch-pre-admission-stop!
+  "The ration admission is a runner phase, so an attached debugger can stop a
+   click before admission is decided. click! waits on ADMISSION; release it
+   with the stop instead of holding the HTTP caller until a restart."
+  [click-id admission]
+  (when-let [stops-var (try (*resolve-var* 'futon2.aif.wm.debugger/!stops)
+                            (catch Throwable _ nil))]
+    (add-watch @stops-var [::pre-admission-stop click-id]
+               (fn [_ _ old new]
+                 (when-not (realized? admission)
+                   (when-let [[_ entry] (first (remove #(contains? old (key %)) new))]
+                     (deliver admission
+                              {:debugger-stop
+                               (select-keys entry [:run-id :phase :condition
+                                                   :stopped-at])})))))))
+
+(defn- unwatch-pre-admission-stop!
+  [click-id]
+  (when-let [stops-var (try (*resolve-var* 'futon2.aif.wm.debugger/!stops)
+                            (catch Throwable _ nil))]
+    (remove-watch @stops-var [::pre-admission-stop click-id])))
+
 (defn- close-click!
   [agent-id click-id result]
   (let [fallback-attempt-id (:attempt-id @!status)
@@ -668,6 +690,7 @@
   (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
     (try
       (install-debugger-park-signal!)
+      (watch-pre-admission-stop! click-id admission)
       (let [configured (configured-runner-opts opts)
             run! (*resolve-var*
                   'futon2.aif.full-loop-runtime/run-opportunity!)
@@ -706,6 +729,7 @@
                             throwable)))
         (fail-click! agent-id click-id throwable))
       (finally
+        (unwatch-pre-admission-stop! click-id)
         (deliver completion {:status :completed :click-id click-id})))))
 
 (defn await-click!
@@ -767,9 +791,13 @@
               (try
                 (.start thread)
                 (let [admitted @admission]
-                  (if (instance? Throwable admitted)
-                    (throw admitted)
-                    {:click-id click-id :started-at started-at}))
+                  (cond
+                    (instance? Throwable admitted) (throw admitted)
+                    (map? admitted)
+                    (assoc admitted
+                           :click-id click-id :started-at started-at
+                           :admission :pending-debugger-restart)
+                    :else {:click-id click-id :started-at started-at}))
                 (catch Throwable throwable
                   ;; A pre-admission refusal was already closed by the worker;
                   ;; only a failure to start the worker belongs to this path.
