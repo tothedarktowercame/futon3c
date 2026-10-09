@@ -10,6 +10,8 @@ opposite ends. **The loop is open at both ends.**
 
 ## Status at 2026-08-26
 
+**VERDICT (2026-10-09, provisional):** OPEN — Slice 1 is DONE but the excursion's point — the one missing edge / nag-0 inference — is explicitly not established yet. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+
 | | state |
 |---|---|
 | the ring's claim | **CONFIRMED** — and for the first time today, checking it strengthened rather than falsified it |

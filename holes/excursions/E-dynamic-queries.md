@@ -12,6 +12,8 @@ verification) under M-memory-retrieval WS1.
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
 mutate memory, alter shared receipts, or affect live mission ordering.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Rungs 1/3/4 implemented and rung 4 verified, but the stated calibration gate was NOT met, so the excursion's own success bar is unmet. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 ## HEAD
 
 When the desired memory is not known until it is encountered, retrieval is not

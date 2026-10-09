@@ -1,5 +1,7 @@
 # E-promotion-deadlock-discovery
 
+**VERDICT (2026-10-09, provisional):** DONE — Discovery-only excursion whose findings (one missing operation; D5/D6 confirmed) are fully written with no store changes; that was its whole scope. _(WM status classification by zai-1, high confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-18 by codex-6 for claude-2. Discovery only. No source or
 store state was changed.**
 

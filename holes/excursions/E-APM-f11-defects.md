@@ -1,5 +1,7 @@
 # E-APM-f11-defects — defect inventory for the APM demonstration, frame 11 onward
 
+**VERDICT (2026-10-09, provisional):** OPEN — Open-ended defect inventory for frame 11 onward with no stated close; latest entries folded into pinned solver cards but nothing marks the inventory complete. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-18 by claude-2 (ground control, M-apm-demonstration) at Joe's
 direction**, while frame-11 was running: *"Lets save the defects in
 E-APM-f11-defects.md so that we don't forget them."*

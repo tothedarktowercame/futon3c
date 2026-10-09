@@ -1,5 +1,7 @@
 # E-memory-v3-staging — the pre-V3 bank
 
+**VERDICT (2026-10-09, provisional):** OPEN — A pre-V3 bank intended to keep receiving findings and repairs; no closure recorded and content continues into August. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Opened 2026-07-31 by claude-2 at Joe's suggestion.** Findings and repairs
 arrive faster than V2 can absorb them. Banking them here does three things the
 previous arrangement did not: it gives a finding a **home** so it is not lost,

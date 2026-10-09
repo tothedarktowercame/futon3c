@@ -1,5 +1,7 @@
 # E-APM-f12-defects — frame 12 (m03J01), defects D40–D48 + the ContDiff-⊤ corpus sweep
 
+**VERDICT (2026-10-09, provisional):** OPEN — Defect catalogue with confirmed/inapplicable findings and self-corrections but no overall closure statement. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 Source: f12-guide's close report (bell `invoke-1787127271290-4993-afdeb624`,
 2026-08-19). Numbering assigned by ground control, continuing D27–D39 in
 `E-APM-f11-defects.md`. `[verified]` = re-checked here; `[reported]` = taken from

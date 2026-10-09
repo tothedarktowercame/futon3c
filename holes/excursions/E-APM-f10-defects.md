@@ -1,5 +1,7 @@
 # E-APM-f10-defects — defect inventory for the APM demonstration, through frame 10
 
+**VERDICT (2026-10-09, provisional):** DONE — Scoped defect inventory through f10 was delivered (D1-D26) and explicitly continued in a separate f11 file rather than left pending. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-18 by claude-2 (ground control, M-apm-demonstration) at Joe's
 direction**, while frame-10's Analyst was still running: *"while we wait for the
 analyst (which will have more findings) I think we should make a list of

@@ -15,6 +15,8 @@ status the 203 are 22 `:reviewed`, ~174 with no review at all, the rest
 memories used on a problem other than the one they were mined from": a
 memory named by its problem is only ever found by its problem.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Only a six-item proof-text slice of the 203-memory review was closed; the full Population A review described in the doc remains open. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 ## Two populations, two treatments
 
 The 203 are not one population. By author:

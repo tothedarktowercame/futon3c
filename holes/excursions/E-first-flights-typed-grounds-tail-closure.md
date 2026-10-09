@@ -1,5 +1,7 @@
 # E-first-flights-typed-grounds-tail-closure — W2 census
 
+**VERDICT (2026-10-09, provisional):** OPEN — Census result is a HOLD (status :construction/:open); the excursion explicitly holds rather than closes. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 **Excursion:** E-first-flights-transferred-work, workstream W2.
 **Date:** 2026-07-06. **Author:** zai-6 (ground-control dispatched).
 **Verdict:** **HOLD**

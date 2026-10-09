@@ -1,5 +1,7 @@
 # E-car3-first-flight — does the WM hit the Car-3 criteria? (a logged pilot flight)
 
+**VERDICT (2026-10-09, provisional):** DONE — Flight log records Part A and Part B (a) executor built and verified end-to-end with gates cleared on 2026-06-24; the charter's flight was flown and logged. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Date:** 2026-06-24
 **Pilot:** claude-5 (inhabits the WM). **Ground Control:** claude-2 (on bell if stuck; judges the logs).
 **Operator / consent:** Joe. **Relation:** Car-3 of `M-wm-policies` (CLOSED — Car-3 acting was HELD for arming);

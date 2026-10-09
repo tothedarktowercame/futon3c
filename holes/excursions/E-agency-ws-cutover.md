@@ -15,6 +15,8 @@ broadcast registry, `broadcast-frame!`), `social/presence.clj` (`verify`, the ga
 "Solve Agents Flickers" (2026-06-10) — the connector was built as the single ordered reader but the
 server-side handshake never admitted a non-agent observer.
 
+**VERDICT (2026-10-09, provisional):** DONE — Header marks the fix VERIFIED LIVE 2026-07-01, built, gated and confirmed end-to-end on a fresh JVM boot. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
+
 ## HEAD (one line)
 `/agency/ws` upgrades to a WebSocket **via the agents `make-ws-handler`** (correct handler), but the
 observer's `ready` frame is **rejected by the `presence/verify` gate** (`:agent-not-found`) because

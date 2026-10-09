@@ -1,5 +1,7 @@
 # E-convert-operator-turns-to-patterns — Joe's turns read in pattern terms, then carried out
 
+**VERDICT (2026-10-09, provisional):** ABANDONED — Explicit wind-down section dated 2026-09-25: Joe ended the Seat A/B experiment, no further rounds dispatched. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Opened 2026-09-25 by claude-12 at Joe's request, as the requisition for the
 seat that interprets his turns and as the record of the experiment.
 

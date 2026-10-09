@@ -1,5 +1,7 @@
 # E-memory-whitepaper-v2 — the derived programme
 
+**VERDICT (2026-10-09, provisional):** OPEN — Programme document with most experiments 'not started' and a defined sequencing gate; no recorded completion of the programme. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Opened 2026-07-31 by claude-2, at Joe's challenge** that the day's work had
 drifted into hot-fixing rather than deriving. **The challenge is correct.** This
 document supersedes §4 of `E-memory-whitepaper-v2-plan.md` as the executable

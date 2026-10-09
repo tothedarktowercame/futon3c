@@ -6,6 +6,8 @@
 **Parent:** M-G-over-cascades (futon2) — grain-2 grounding. **Source:** deep-research open-Q3.
 **Status:** CHARTER.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Chartered excursion at Status: CHARTER with owner only proposed; no result or closure recorded since 2026-06-24. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 ## Why it exists
 
 M-wm-policies omission 2 built an **operational** AIF cascade scorer: `F = accuracy − λ·complexity`

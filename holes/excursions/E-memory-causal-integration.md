@@ -17,6 +17,8 @@ cycle we want: author a coarse model, observe failures, identify the
 upstream cause, revise implementation and graph together, test predicted
 downstream consequences.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Tracks joint modeling work with Rob's causal engine that has spec delivery recorded but no completion of the joint modeling itself. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Their documentation pointers (mfuton, not on our disk — zip offered and
 accepted):**
 

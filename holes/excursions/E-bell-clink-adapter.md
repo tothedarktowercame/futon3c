@@ -17,6 +17,8 @@ session.
 **Sibling:** `E-crossed-bells.md`. That note is about *threading*; this one is about
 *delivery*. See "Three separate problems" below.
 
+**VERDICT (2026-10-09, provisional):** DONE — Pull lane BUILT, reviewed and demonstrated end-to-end on 2026-08-26; the only remaining step is a Joe-owned JVM restart to activate the new ack route, outside the build's scope. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 ## HEAD (one line)
 **A CLI seat has no place to put an inbound message except inside a second copy of itself.**
 Agency's only delivery mechanism is `spawn-pouch!` running `claude --print --resume <sid>`,

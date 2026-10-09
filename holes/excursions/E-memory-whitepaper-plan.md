@@ -4,6 +4,8 @@
 **Target:** `futon3c/docs/retrieval-whitepaper.md`  
 **Opened:** 2026-07-30  
 
+**VERDICT (2026-10-09, provisional):** OPEN — Still a 'proposed finishing strategy' targeting the whitepaper; no completion recorded and the plan's benchmark work is stated as not yet built. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+
 ## Purpose
 
 The current retrieval white paper is a valuable evidence ledger, but it is not

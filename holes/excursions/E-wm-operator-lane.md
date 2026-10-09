@@ -20,6 +20,8 @@ behaves on an unattended overnight run.
 - `futon7/holes/M-futon-forward-model.md` (claude-1) — the **futon-focused** model (mission-backlog salience).
 - `futon7/holes/M-interim-director-forward-model.edn` — the **Joe-focused** model (what Joe is tracking).
 
+**VERDICT (2026-10-09, provisional):** DONE — Status: DATA BACKBONE LIVE with the full chain shipped and verified over HTTP; read-contract and adapter contracts marked RESOLVED. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 This excursion *consumes* those two models; it does **not** rebuild them, and it must not drag either
 toward a predictive claim (M-futon-forward-model is descriptive-first — "the wall").
 

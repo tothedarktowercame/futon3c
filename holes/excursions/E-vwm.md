@@ -5,6 +5,8 @@
 **Owner:** claude-2 (build) + Joe (direction).
 **Files:** `futon3c/holes/labs/vwm/vwm_harness.py`; generated scenes → `futon5a/holes/stories/vwm-lucid-scenes.md`.
 
+**VERDICT (2026-10-09, provisional):** OPEN — V1 harness built with an explicit Next list; no completion statement and untouched since 2026-06-24. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 ## Why it exists
 
 The WM's real failure is the **stall**: an agent enters a mission, its candidate patterns are a flat, low-cosine

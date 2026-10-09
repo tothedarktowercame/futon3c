@@ -9,6 +9,8 @@ haven't tested it live yet ever." Do not cite the ratchet as receipted
 practice (to Rob or anyone) until ≥1 completed cycle below has a
 classified outcome.
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Designed-never-run header, but appended cycle records show probe cycles run with classified outcomes (2026-08-03) and P2 still untested — investigation ongoing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 ## The claim under test
 
 Author≠reviewer (long-standing, receipted: sorry-loop 137/145, both

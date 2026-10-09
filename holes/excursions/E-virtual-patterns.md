@@ -3,6 +3,8 @@
 **Status:** INVENTORY (2026-07-01, claude-5). **Member of:** C-cascade-real §7
 DISSOLUTION (the A×B join). **Data:** [`virtual-patterns.edn`](virtual-patterns.edn).
 
+**VERDICT (2026-10-09, provisional):** OPEN — Inventory delivered but the gated next step (fold the virtuals into formalized patterns) is explicitly still pending; the excursion parks candidates awaiting backing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 ## What a virtual pattern is
 
 A **virtual pattern** is a pattern the build *names or implies* but that does **not

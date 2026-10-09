@@ -14,6 +14,8 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 
 ## Status board (verified live, 2026-07-04 morning)
 
+**VERDICT (2026-10-09, provisional):** OPEN — Workshop checklist still has unchecked items (portal setup, disk cleanup, wifi check) and no completion note; last touched 2026-07-10. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
+
 | Checklist item | State | Evidence |
 |---|---|---|
 | ngircd on lucy, 6667 + 6697/TLS | **GREEN** | listening both ports; LE cert valid for `172-236-28-208.ip.linodeusercontent.com`, verify rc 0 |

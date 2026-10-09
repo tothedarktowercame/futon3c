@@ -16,6 +16,8 @@ sidecar) and owes D2 (the #5637 evidence packet). Operator anchor:
 phases trimmed — see §Lifecycle plan at the end. Until then this file stands
 as the IDENTIFY + DERIVE draft.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Status PROPOSED since 2026-08-23 with execution deferred to a follow-on gated on JUXT engagement; no completion evidence. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 ## Purpose
 
 Build a reproducible benchmark that turns the capability and design choices in

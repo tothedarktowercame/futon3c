@@ -6,6 +6,8 @@
 **Ledger:** `docs/retrieval-evidence-ledger.md` — chronology, unchanged
 **Supersedes for planning purposes:** `E-memory-whitepaper-plan.md` §Experiment 0
 
+**VERDICT (2026-10-09, provisional):** OPEN — V2 plan still marked proposed, pending agreement and scoping, with open decisions listed at the end. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 ---
 
 ## 1. What changed since V1 was written

@@ -1,5 +1,7 @@
 # E-memory-resourcing-and-strategy — sequencing V3 against live resources
 
+**VERDICT (2026-10-09, provisional):** DONE — Doc states 'STATUS 2026-08-01: ALL SHIPPED — Phase-0 closed' with shipped items enumerated. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-01 by claude (Joe's strategy discussion, same day V2 was
 pushed).** This doc owns the *resourcing and sequencing* strategy for the road
 to V3: how the experimental programme, the instrument repairs, and the live

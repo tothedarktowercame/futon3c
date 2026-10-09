@@ -3,6 +3,8 @@
 **Status:** OPENED 2026-07-25 (Joe's direction). Theory recovered from existing
 documents, not reinvented; v0 operator-sweep prototype run same day.
 
+**VERDICT (2026-10-09, provisional):** OPEN — Opened 2026-07-25 with a v0 same-day prototype, but no closure or successor hand-off is recorded; the flow remains a proposal. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 ## Provenance
 
 Three bodies of existing work say the same thing at different granularities,

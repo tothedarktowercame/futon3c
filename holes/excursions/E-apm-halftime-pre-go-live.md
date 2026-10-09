@@ -1,5 +1,7 @@
 # E-apm-halftime-pre-go-live — the locked problem list
 
+**VERDICT (2026-10-09, provisional):** SUPERSEDED by M-apm-demonstration — Closed 2026-08-14 by Joe with items discharged/corrected/parked and the remaining work explicitly continued as mission M-apm-demonstration. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
+
 **CLOSED 2026-08-14 by Joe.** The 24 items are discharged, corrected in
 place, or explicitly parked. What remains is construction, not repair, so it
 continues as a mission: **`holes/missions/M-apm-demonstration.md`**.

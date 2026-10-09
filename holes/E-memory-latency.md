@@ -3,6 +3,8 @@
 **Status: BUILD-TEST COMPLETE; MONITOR (2026-07-23). Owner: Joe + Zaif/WM
 implementers.**
 
+**VERDICT (2026-10-09, provisional):** OPEN — Build-test phase is complete but the excursion is explicitly in MONITOR status with a latency monitor series still being recorded through 2026-08-31. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Origin:** Phase 3 live acceptance for
 `M-shared-memory-control-build-test`. Correctness acceptance passed; this
 excursion records the remaining latency problem before the same read seam is

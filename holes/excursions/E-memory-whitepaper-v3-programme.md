@@ -1,5 +1,7 @@
 # E-memory-whitepaper-v3-programme — finishing the M-memory-retrieval V3 whitepaper
 
+**VERDICT (2026-10-09, provisional):** OPEN — V3 whitepaper finishing programme drafted 2026-08-10 with rungs queued ('Queue behind the retrieval rungs') and no completion recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+
 **Drafted 2026-08-10 by ams-claude-1 (ground control) at Joe's request.**
 Successor to `E-memory-whitepaper-v2-programme.md`. Inputs:
 `E-memory-v3-staging.md` (the bank, 2026-08-01), `retrieval-whitepaper-v2.md`

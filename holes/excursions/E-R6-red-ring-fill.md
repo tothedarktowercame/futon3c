@@ -9,6 +9,8 @@ describes none of them accurately.**
 
 ## Status at 2026-08-26 end of day
 
+**VERDICT (2026-10-09, provisional):** OPEN — Diagnosed four failure mechanisms and converted the fix-list into requirements; no fix or closure recorded. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Verdict so far: R6 is red for none of the reasons recorded.** The tension
 proposer is built and live-installed; the ring says it is unbuilt. What is
 actually wrong is that the stratum **cannot account for what it generated or

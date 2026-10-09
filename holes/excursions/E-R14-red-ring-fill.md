@@ -8,6 +8,8 @@ open as a repair.**
 
 ## Status at 2026-08-26 end of day
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Status table shows slice 2 done and formalisation built but slice 1 'OPEN' and operator level 'OPEN' with live next steps; last touched 2026-08-26. _(WM status classification by zai-5, low confidence; not yet confirmed by the author.)_
+
 **Verdict so far: R14 is red on a *disconnected dial*** — a third kind, distinct
 from R8's demonstrated defect and from this excursion's opening guess of an
 evidence hole. On the enacting path no value of τ can change the selected action;

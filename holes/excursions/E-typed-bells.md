@@ -13,6 +13,8 @@ graph for free. Joe: bells are basically an **untyped** channel — *"rather tha
 we could say 'here is a pointer to my question, help me resolve it.'"* Typing the bells
 makes the graph semantic and makes ArSE populate by construction.
 
+**VERDICT (2026-10-09, provisional):** SUPERSEDED by M-typed-bells — Header states the excursion was promoted to holes/missions/M-typed-bells.md and this file remains only as a pointer. _(WM status classification by zai-2, high confidence; not yet confirmed by the author.)_
+
 ## HEAD (one line)
 **Type the bells.** A bell is currently one untyped imperative ("invoke B with text");
 typing it recovers the **illocutionary force** (ask / answer / assert / challenge / …),

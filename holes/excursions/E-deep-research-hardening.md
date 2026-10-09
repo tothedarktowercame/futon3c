@@ -7,6 +7,8 @@ Original OBSERVATION + hypothesis (claude-2) preserved below.
 **Provenance:** the AIF∩morphogenesis deep-research (M-G-over-cascades / E-substrate-2-timetravel) — the
 background `Workflow` repeatedly failed to finish.
 
+**VERDICT (2026-10-09, provisional):** DONE — Investigation TESTED 2026-06-24 with the strong hypothesis REFUTED and a sharp conclusion recorded. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 ## What happened
 
 Launched the `deep-research` Workflow (background fan-out: search → fetch → verify → synthesize). Across **3–4
