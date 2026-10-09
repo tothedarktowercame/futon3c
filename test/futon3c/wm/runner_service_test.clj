@@ -644,3 +644,56 @@
         (is (empty? (filter #(and (vector? %) (= ::service/pre-admission-stop (first %)))
                             (keys (.getWatches test-debugger-stops))))
             "the per-click watch is removed when the click ends")))))
+
+(defn- report-card-binding [dir outcome]
+  (let [path (.getAbsolutePath (io/file dir "click-run-binding-click-1.edn"))
+        binding {:schema :wm-click-run-binding-v1
+                 :click/id "click-1" :outcome outcome
+                 :binding-status :verified
+                 :run-id-observation {:status :present :value "run-1"}
+                 :run-record (.getAbsolutePath (io/file dir "tick-run-record-run-1.edn"))
+                 :path path :durability :confirmed}]
+    (spit path (pr-str (dissoc binding :path :durability)))
+    binding))
+
+(deftest close-binding-generates-card-and-launches-publication
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "wm-report-card-success"
+                      (make-array java.nio.file.attribute.FileAttribute 0)))
+        close-binding (report-card-binding dir :completed)
+        generated (atom []) launched (atom [])]
+    (binding [service/*generate-report-card!*
+              (fn [path] (swap! generated conj path) {:html "report-card.html"})
+              service/*launch-report-card-publish!*
+              (fn [run-id] (swap! launched conj run-id)
+                {:id "bg-test" :pid 42 :out-file "/tmp/test"})]
+      (let [before (slurp (:path close-binding))
+            updated (service/publish-report-card-after-close! close-binding)
+            sidecar (edn/read-string (slurp (io/file dir "report-card-click-1.edn")))]
+        (is (= [(:run-record close-binding)] @generated))
+        (is (= ["run-1"] @launched))
+        (is (= :publication-launched (get-in updated [:report-card :status])))
+        (is (= :publication-launched (get-in sidecar [:report-card :status])))
+        (is (= before (slurp (:path close-binding)))
+            "the verified click binding is never rewritten")
+        (is (= :completed (:outcome (edn/read-string before))))))))
+
+(deftest report-card-generator-failure-is-isolated-from-click-outcome
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "wm-report-card-failure"
+                      (make-array java.nio.file.attribute.FileAttribute 0)))
+        close-binding (report-card-binding dir :reviewer-falsifier-failed)
+        launched? (atom false)]
+    (binding [service/*generate-report-card!*
+              (fn [_] (throw (ex-info "generator broke" {:reason :generator-broke})))
+              service/*launch-report-card-publish!*
+              (fn [_] (reset! launched? true))]
+      (let [before (slurp (:path close-binding))
+            updated (service/publish-report-card-after-close! close-binding)
+            sidecar (edn/read-string (slurp (io/file dir "report-card-click-1.edn")))]
+        (is (false? @launched?))
+        (is (= {:status :failed :reason :generator-broke}
+               (select-keys (:report-card updated) [:status :reason])))
+        (is (= before (slurp (:path close-binding))))
+        (is (= :reviewer-falsifier-failed (:outcome (edn/read-string before))))
+        (is (= :failed (get-in sidecar [:report-card :status])))))))
