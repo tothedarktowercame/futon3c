@@ -171,7 +171,12 @@
         {:zai-2 {:status "idle" :invoke-ready? true}
          :codex-2 {:status "idle" :invoke-ready? true}
          :codex-1 {:status "idle" :invoke-ready? true}})
-      futon2.aif.full-loop-runtime/run-opportunity! run!
+      futon2.aif.full-loop-runtime/run-opportunity!
+      (fn [opts]
+        ;; Model the real runner's :admission phase: a successful readiness
+        ;; decision invokes this seam before later phases or the fake body.
+        (when-let [admit! (:readiness-admitted-fn opts)] (admit!))
+        (run! opts))
       futon3c.peripheral.live-wm-selection/validated-selection select
       futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
       nil)))
@@ -225,6 +230,9 @@
                 :uri "/api/alpha/wm/click"
                 :body "{}"})
             second-body (response-body second-response)
+            direct-second (service/click! {:author "zai-2"
+                                           :reviewer "codex-2"
+                                           :repair-reviewer "codex-1"})
             get-response
             (h {:request-method :get :uri "/api/alpha/wm/click"})
             get-body (response-body get-response)
@@ -234,8 +242,12 @@
         (is (string? (:click-id first-body)))
         (is (string? (:started-at first-body)))
         (is (= 409 (:status second-response)))
-        (is (= "already-running" (:rejected second-body)))
-        (is (= (:click-id first-body) (:click-id second-body)))
+        ;; The HTTP route performs live cast preflight before entering click!,
+        ;; so the already-invoking cast is refused there. The service remains
+        ;; the single-flight authority for callers that already hold opts.
+        (is (= "wm-click-cast-unavailable" (:error second-body)))
+        (is (= :already-running (:rejected direct-second)))
+        (is (= (:click-id first-body) (:click-id direct-second)))
         (is (= 200 (:status get-response)))
         (is (true? (:running? get-body)))
         (is (= "author-wait" (:phase get-body)))
@@ -286,9 +298,14 @@
               (case sym
                 futon2.aif.full-loop-runner/config identity
                 (throw (ex-info "runner unavailable" {:symbol sym}))))]
-    (let [started (service/click! {:wm-agent-id scratch-agent-id})]
-      (is (string? (:click-id started)))
+    (let [failure (try (service/click! {:wm-agent-id scratch-agent-id}) nil
+                       (catch clojure.lang.ExceptionInfo throwable throwable))
+          click-id (:click-id (service/status))]
+      (is (= :wm-click-cast-not-admitted (:error (ex-data failure))))
+      (is (= 409 (:status (ex-data failure))))
+      (is (instance? clojure.lang.ExceptionInfo (.getCause failure)))
       (is (wait-until #(false? (:running? (service/status))) 5000))
+      (is (= :completed (:status (service/await-click! click-id))))
       (is (= :service-failed
              (get-in (service/status) [:last-result :outcome])))
       (is (= :idle
@@ -545,8 +562,13 @@
                 (case sym
                   futon2.aif.full-loop-runner/config identity
                   (throw throwable)))]
-      (let [started (service/click! {:wm-agent-id scratch-agent-id})]
-        (is (= :completed (:status (service/await-click! (:click-id started)))))
+      (let [failure (try (service/click! {:wm-agent-id scratch-agent-id}) nil
+                         (catch clojure.lang.ExceptionInfo failure failure))
+            click-id (:click-id (service/status))]
+        (is (= :wm-click-cast-not-admitted (:error (ex-data failure))))
+        (is (= 409 (:status (ex-data failure))))
+        (is (= throwable (.getCause failure)))
+        (is (= :completed (:status (service/await-click! click-id))))
         (let [summary (:last-result (service/status))]
           (is (= :service-failed (:outcome summary)))
           (is (= (.getMessage throwable) (:error summary)))
@@ -560,17 +582,49 @@
 (def ^:private test-debugger-stops (atom {}))
 
 (defn- park-signal-resolver
-  [run! signals]
-  (let [base (resolver run! (fn [_] {:selected-policy-id "pi-test"}))]
-    (fn [sym]
-      (case sym
-        futon3c.transport.http/complete-park-dep!
-        (fn [dep-id result] (swap! signals conj [dep-id result]))
-        futon2.aif.wm.debugger/!stops #'test-debugger-stops
-        (base sym)))))
+  ([run! signals] (park-signal-resolver run! signals true))
+  ([run! signals admit?]
+   (let [base (resolver run! (fn [_] {:selected-policy-id "pi-test"}))]
+     (fn [sym]
+       (case sym
+         futon3c.transport.http/complete-park-dep!
+         (fn [dep-id result] (swap! signals conj [dep-id result]))
+         futon2.aif.wm.debugger/!stops #'test-debugger-stops
+         futon2.aif.full-loop-runtime/run-opportunity!
+         (if admit? (base sym) run!)
+         (base sym))))))
 
 (def ^:private park-cast
   {:author "zai-2" :reviewer "codex-2" :repair-reviewer "codex-1"})
+
+(deftest bounded-pre-admission-wait-leaves-click-running-and-observable
+  (let [release (promise)
+        entered (promise)
+        issued (atom 0)
+        raw-run! (fn [_]
+                   (deliver entered true)
+                   @release
+                   {:attempt-id "attempt-pending" :outcome :incomplete})
+        base (resolver raw-run! (fn [_] {:selected-policy-id "unused"}))
+        pre-admission-resolver
+        (fn [sym]
+          (if (= sym 'futon2.aif.full-loop-runtime/run-opportunity!)
+            raw-run!
+            (base sym)))]
+    (binding [service/*resolve-var* pre-admission-resolver
+              service/*admission-wait-ms* 20]
+      (let [answer (service/click!
+                    (assoc park-cast :ordinary-click/issue!
+                           (fn [& _] (swap! issued inc))))]
+        (is (= true (deref entered 1000 false)))
+        (is (= :admission-pending (:admission answer)))
+        (is (= 20 (:admission-wait-ms answer)))
+        (is (= (:click-id answer) (:click-id (service/status))))
+        (is (true? (:running? (service/status))))
+        (is (zero? @issued) "a pending admission has not spent the ration")
+        (deliver release true)
+        (is (= :completed (:status (service/await-click! (:click-id answer)))))
+        (is (= :incomplete (get-in (service/status) [:last-result :outcome])))))))
 
 (deftest click-end-completes-generic-and-click-scoped-park-deps
   (let [signals (atom [])
@@ -630,7 +684,7 @@
                (swap! test-debugger-stops dissoc "run-adm")
                {:attempt-id "attempt-test" :outcome :incomplete})]
     (reset! test-debugger-stops {})
-    (binding [service/*resolve-var* (park-signal-resolver run! signals)]
+    (binding [service/*resolve-var* (park-signal-resolver run! signals false)]
       (let [answer (deref (future (service/click!
                                    (assoc park-cast
                                           :ordinary-click/issue! (fn [& _]))))
