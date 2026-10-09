@@ -48,9 +48,11 @@
    the new registered-run series (\"I'll grant a block of 10 clicks\"; repairs
    may land between clicks), plus one granted to codex-10 on 2026-10-04
    after the repaired read-only META preview (\"1 is authorised\"), plus one
-   granted to codex-10 on 2026-10-05 for the R20 certificate evaluation. All
-   grants are recorded in the authorization document named above."
-  47)
+   granted to codex-10 on 2026-10-05 for the R20 certificate evaluation, plus
+   one granted to claude-12 on 2026-10-09 for a debugger-attached click with
+   Lean, token and timing assessment. All grants are recorded in the
+   authorization document named above."
+  48)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
