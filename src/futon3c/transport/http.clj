@@ -68,6 +68,7 @@
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.evidence.futon1b-backend :as futon1b-backend]
             [futon3c.test-registry.local-port :as registry-local-port]
             [futon3c.test-registry.local-store :as registry-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
@@ -3409,6 +3410,20 @@
         count* (estore/count* evidence-store query)]
     (json-response 200 {:ok true
                         :count count*})))
+
+(defn- handle-evidence-text-search
+  "GET /api/alpha/evidence/text-search — forwarded verbatim to futon1b, whose
+   sidecar index serves it. A store without that index refuses (501) rather
+   than answering with something that is not a search."
+  [request config]
+  (let [store (evidence-store-for-config config)]
+    (if (instance? futon3c.evidence.futon1b_backend.Futon1bBackend store)
+      (let [{:keys [status body]} (futon1b-backend/text-search
+                                   store (:query-string request))]
+        (json-response status body))
+      (json-response 501 {:ok false
+                          :err "text-search-unavailable"
+                          :message "text-search is served by futon1b's index; this evidence store has none"}))))
 
 (defn- handle-evidence-entry
   "GET /api/alpha/evidence/:id — fetch one entry."
@@ -12502,6 +12517,11 @@
 
           (and (= :get method) (= "/api/alpha/evidence/count" uri))
           (handle-evidence-count request config)
+
+          ;; Must precede /evidence/:id, which would otherwise treat
+          ;; "text-search" as an evidence id.
+          (and (= :get method) (= "/api/alpha/evidence/text-search" uri))
+          (handle-evidence-text-search request config)
 
           (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)

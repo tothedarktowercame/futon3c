@@ -547,7 +547,13 @@
     (let [{:keys [status body]}
           (get-edn (str (api-url base-url "/api/alpha/evidence/") (enc evidence-id))
                    append-timeout-ms)]
-      (when (= 200 status) body)))
+      ;; Only an entry is an entry. futon1b serves sub-routes under the same
+      ;; prefix (text-search, ...): until 2026-10-09 a lookup of id
+      ;; "text-search" returned futon1b's query-less search page as a 200
+      ;; "entry", so :7070 /evidence/text-search?q=x answered with the
+      ;; newest rows, unscored, for every q.
+      (when (and (= 200 status) (map? body) (:evidence/id body))
+        body)))
 
   (-exists? [this evidence-id]
     (some? (backend/-get this evidence-id)))
@@ -617,6 +623,14 @@
     (let [{:keys [status body]} (get-edn (api-url base-url "/health"))]
       (when (= 200 status) body))
     (catch Exception _ nil)))
+
+(defn text-search
+  "Forward a text-search QUERY-STRING (the raw ?... part, q/df/tags/filters
+   untouched) to futon1b's own /api/alpha/evidence/text-search, the index
+   that serves it. Returns {:status :body} with BODY as EDN."
+  [{:keys [base-url]} query-string]
+  (get-edn (str (api-url base-url "/api/alpha/evidence/text-search")
+                (when-not (str/blank? query-string) (str "?" query-string)))))
 
 (defn make-futon1b-backend
   "Construct the backend. base-url default: FUTON1B_URL env, then

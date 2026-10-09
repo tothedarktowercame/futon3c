@@ -473,3 +473,27 @@
                  (:error/component (ex-data error)))))))
     (with-redefs [http/get (fn [_ _] (delay {:status 404 :body "{}"}))]
       (is (nil? (backend/-get store "actually-absent"))))))
+
+(deftest get-refuses-a-body-that-is-not-an-entry
+  ;; 2026-10-09: GET /evidence/text-search (no q) is futon1b's query-less
+  ;; search page; -get returned it as the entry with id "text-search".
+  (let [b (sut/make-futon1b-backend "http://futon1b.test")]
+    (with-redefs [http/get (fn [_ _]
+                             (delay {:status 200
+                                     :body (pr-str {:results [{:score nil}]})}))]
+      (is (nil? (backend/-get b "text-search"))))
+    (with-redefs [http/get (fn [_ _]
+                             (delay {:status 200
+                                     :body (pr-str {:evidence/id "e-1"})}))]
+      (is (= "e-1" (:evidence/id (backend/-get b "e-1")))))))
+
+(deftest text-search-forwards-the-query-string-verbatim
+  (let [seen (atom nil)
+        b (sut/make-futon1b-backend "http://futon1b.test/")]
+    (with-redefs [http/get (fn [url _]
+                             (reset! seen url)
+                             (delay {:status 200 :body (pr-str {:results []})}))]
+      (is (= {:status 200 :body {:results []}}
+             (sut/text-search b "q=debugger&limit=5")))
+      (is (= "http://futon1b.test/api/alpha/evidence/text-search?q=debugger&limit=5"
+             @seen)))))
