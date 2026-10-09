@@ -1,5 +1,7 @@
 # E-loss-function-shape — the general shape, with a slot for scoped df
 
+**VERDICT (2026-10-09, provisional):** OPEN — Chartered to derive a general loss shape with a slot for scoped df; the note records measurement findings but no delivered general shape or closure. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-19 by claude-2 (ground control) at Joe's direction**, after a
 day in which the same measurement error appeared in six different places. Joe:
 *"maybe we can work to a general shape and slot that in when it is ready."*

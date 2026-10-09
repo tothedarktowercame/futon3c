@@ -1,5 +1,7 @@
 # E-operator-turn-modelling — measurements from the 2026-08-25 session
 
+**VERDICT (2026-10-09, provisional):** OPEN — A measurement note that ends by specifying a cheap two-sided experiment still to be run, with no record that it was. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 *Joe + claude-13, evening of 2026-08-25. Written 2026-08-26 after Joe's Emacs
 buffer was lost in a crash. The design work of that session is in two committed
 artefacts — `futon3c/holes/labs/M-apm-demonstration/role-cards/joe-scribe-v1.md`

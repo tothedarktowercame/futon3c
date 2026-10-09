@@ -1,5 +1,7 @@
 # E-warranted-play — the WM's explore pole (the dāna loop; the peradam generator)
 
+**VERDICT (2026-10-09, provisional):** OPEN — Status IDENTIFY with first cycle running, but no completion evidence and no work since 2026-06-08. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
+
 **Excursion** (E-prefix: a bounded scope-out, owned end-to-end by one agent — claude-1).
 **Date:** 2026-06-08. **Status:** IDENTIFY → first cycle running.
 **What it is (Joe, 2026-06-08):** the WM's **permission to play** — the *explore* pole of the EFE (the epistemic

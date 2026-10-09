@@ -2,6 +2,8 @@
 
 **Requisition:** completed — 2026-10-03T00:34:09.882104672Z, job invoke-1790986976715-30649-68f36ee9, state done
 
+**VERDICT (2026-10-09, provisional):** DONE — Finite one-turn boundary investigation completed, reviewed and committed (mfuton-sbcl 38b59d2). _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: kimi-2.
 
 Joe authorized Kimi parallelization on 2026-10-03. Target: Array.extract and independently addressable Array.extract.loop.

@@ -1,5 +1,7 @@
 # E: shared design requirements for a futon/mfuton successor (outer loop)
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Outer-loop synthesis with pass 3 committed 2026-09-20 (within 30 days) and the dialogue protocol still evolving; no closure statement. _(WM status classification by zai-4, low confidence; not yet confirmed by the author.)_
+
 Joe, 2026-09-14, in the Matrix room *Private Federation Proof*
 (`!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw`): fucodex runs the inner loop
 (tight Q&A with @fiona, mfuton's representative); fuclaude runs the outer loop,

@@ -2,6 +2,8 @@
 
 **Requisition:** completed — 2026-10-03T00:36:20.351745028Z, job invoke-1790986974585-30648-a5142f02, state done
 
+**VERDICT (2026-10-09, provisional):** DONE — Header states the requisition is completed with job id and timestamp. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: kimi-1.
 
 Joe authorized Kimi parallelization on 2026-10-03. Target: Array.extract and independently addressable Array.extract.loop.

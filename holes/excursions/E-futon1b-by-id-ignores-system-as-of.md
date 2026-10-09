@@ -1,5 +1,7 @@
 # E-futon1b-by-id-ignores-system-as-of
 
+**VERDICT (2026-10-09, provisional):** OPEN — A logged futon1b bug explicitly marked not scheduled, with the fix (honour or 400) still pending. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
+
 Logged 2026-09-27 by claude-17, during M-象-2000 P0 retrieval ordering. Not scheduled.
 
 `GET :7073/api/alpha/evidence/<id>?system-as-of=T` ignores `system-as-of`. It returns the

@@ -2,6 +2,8 @@
 
 **Requisition:** completed — reviewed and committed as 798319b; Python owner passes, member advances to publication mismatch; no Lisp credit.
 
+**VERDICT (2026-10-09, provisional):** DONE — Requisition completed, reviewed and committed as 798319b (with explicit partial-credit notes). _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-14.
 
 Follow-up AFTER completing your oracle job invoke-1790995800473-30681-c56286b0. Do not abandon its evidence/report. Joe authorized continuing Array.extract and Array.extract.loop curriculum work. Coordinator codex-18; repo /home/joe/code/mfuton-sbcl, read workspace AGENTS.md.

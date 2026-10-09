@@ -1,5 +1,7 @@
 # E-typed-holes-example-self — M-typed-holes, typed as a (live) typed hole
 
+**VERDICT (2026-10-09, provisional):** OPEN — Reflexive typing excursion whose VERIFY commit records design LANDED but wiring PARTIAL, with no completion statement. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **Paired excursion to M-typed-holes (2026-06-14). Deliberately an *excursion*,
 not a mission: an excursion has no lifecycle of its own to type, so the recursion
 bottoms out here — the framework types its own defining mission, and stops.**

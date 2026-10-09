@@ -1,5 +1,7 @@
 # E-futon1b latency inventory
 
+**VERDICT (2026-10-09, provisional):** DONE — Measurement inventory was delivered, reviewed and mutation-tested, with review commits accepting the retraction speedup; discovery-only scope was met. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Measured 2026-08-17 by codex-5. Discovery only: no production source was
 changed and no service was restarted. The multi-watcher remained stopped.
 

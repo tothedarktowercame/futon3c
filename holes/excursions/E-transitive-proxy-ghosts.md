@@ -1,5 +1,7 @@
 # E-transitive-proxy-ghosts — a proxy nobody can prune
 
+**VERDICT (2026-10-09, provisional):** OPEN — Defect note describing a pruning requirement not carried into code; no fix recorded. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
+
 Opened 2026-08-14. Found by Joe noticing `ams-apm-driver` had been `invoking`
 for **116h47m** in the `*agents*` HUD. Topology traced by claude-3; code
 confirmed independently by ams-claude-2 on Zone.

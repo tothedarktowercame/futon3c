@@ -2,6 +2,8 @@
 
 **Requisition:** completed — 2026-10-03T00:50:13.093046896Z, job invoke-1790988067875-30654-67a7b97f, state done
 
+**VERDICT (2026-10-09, provisional):** DONE — Requisition state done and coordinator review closes the matchAlt implementation. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: kimi-1.
 
 Implement the next bounded owner-lane step in /home/joe/code/mfuton-sbcl on its current branch. Read workspace AGENTS.md and lisp/parallel/owner/contract.json (coordinator_review included). You are kimi-1; codex-18 reviews and commits. Joe authorized this parallel port work.

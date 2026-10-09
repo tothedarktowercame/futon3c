@@ -1,5 +1,7 @@
 # E-arse-ct-probe — does ArSE earn its keep? a codex swarm grounds one dark-tower conjecture in the math.CT scan
 
+**VERDICT (2026-10-09, provisional):** OPEN — Probe was built but still awaiting a go decision to dispatch, recorded 2026-06-12 with no dispatch or closure since. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **Date:** 2026-06-12 · Joe + claude-6 · **Status: PROBE BUILT, awaiting go to dispatch**
 **Spawned from:** Joe's longstanding thesis that ArSE is *useful*, now testable because (a)
 typed bells → ArSE is live (M-typed-bells), (b) tonight's no-text + desync fixes make a codex

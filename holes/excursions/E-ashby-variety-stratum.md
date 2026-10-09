@@ -5,6 +5,8 @@ direction: *"install a theoretical layer, linking to Ashby and the concept of
 Intelligence Amplification."* §4 contains the one genuinely new claim and it is
 a **conjecture with a named check**, not a result. Nothing here is measured.
 
+**VERDICT (2026-10-09, provisional):** DONE — Exploratory DERIVE essay with the theoretical layer laid out and conjectures explicitly flagged; no stated next steps left inside the doc. _(WM status classification by zai-1, low confidence; not yet confirmed by the author.)_
+
 **Source Joe supplied:** R. S. O'Rourke, *"The LLM as variety transducer:
 Ashby's intelligence-amplifier architecture and Beer's viable system model as a
 diagnostic and predictive framework"*, **Kybernetes** (Emerald), accepted

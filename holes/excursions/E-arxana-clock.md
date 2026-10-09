@@ -1,5 +1,7 @@
 # Excursion: the Arxana Clock — one surface for the system's time-drivers (E-arxana-clock)
 
+**VERDICT (2026-10-09, provisional):** OPEN — Status is IDENTIFY + MAP only (2026-06-26); incident fixes landed but the tail names a residual diagnosis still owed and no completion is recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+
 **Date:** 2026-06-26 · **Status:** IDENTIFY + MAP grounded in live inventory (2026-06-26) — owned end-to-end by one agent (claude-10).
 **Authored by:** claude-10.
 **Parent / relates:**

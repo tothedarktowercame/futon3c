@@ -1,5 +1,7 @@
 # E-apm-A3-ingest-efficiency — the A3 series as handoffs
 
+**VERDICT (2026-10-09, provisional):** OPEN — Decomposition of A3 into handoffs with design detail recorded but no stated delivery of the 30-minute ingest target; final commits only elaborate packets. _(WM status classification by zai-5, low confidence; not yet confirmed by the author.)_
+
 **Created 2026-08-13 (claude-2) at Joe's request:** *"let's focus on getting
 the A3 series into a list of handoffs that get the ingest to be efficient …
 I liked your previous estimate of 'something plausibly under half an hour'

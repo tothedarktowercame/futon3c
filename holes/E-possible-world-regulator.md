@@ -1,5 +1,7 @@
 # E-possible-world-regulator — a regulator that tunes the War Machine across possible futures
 
+**VERDICT (2026-10-09, provisional):** OPEN — Charter at IDENTIFY with a dispatched sweep awaiting bell-back; no sweep result or ratification recorded since 2026-06-09. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **Excursion** (E-prefix: a bounded scope-out, owned end-to-end by one agent — claude-1).
 **Date:** 2026-06-08. **Status:** IDENTIFY (charter — concept + framing + the score-axis; not yet building).
 **Parent:** `E-efe-education` (the precision-learning charter) — this excursion is *how* it tunes the delicacy

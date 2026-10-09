@@ -1,5 +1,7 @@
 # Excursion: t01A05 repair plan
 
+**VERDICT (2026-10-09, provisional):** OPEN — Repair plan with a recommended implementation sequence still awaiting approval/execution; last touched 2026-08-18. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 Date: 2026-08-18
 
 Scope: discovery only.  No problem bundle or live frame branch was modified.

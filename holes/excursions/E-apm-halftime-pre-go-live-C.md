@@ -1,5 +1,7 @@
 # E-apm-halftime-pre-go-live-C — "Format and parser", as handoff packets
 
+**VERDICT (2026-10-09, provisional):** SUPERSEDED by M-apm-demonstration — A dispatch-ready packet for section C of the locked list, which the parent excursion records as closed 2026-08-14 with work continuing as mission M-apm-demonstration. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Written 2026-08-13/14 by claude-2** alongside the B and D packets, at Joe's
 request that B/C/D be elaborated so they are ready to process once A is
 settled.

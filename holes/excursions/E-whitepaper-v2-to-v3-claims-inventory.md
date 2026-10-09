@@ -1,5 +1,7 @@
 # E-whitepaper-v2-to-v3-claims-inventory — what V3 would lose if it simply superseded V2
 
+**VERDICT (2026-10-09, provisional):** DONE — The preparatory inventory was delivered in full (both drafts read, claims inventoried); the 'Not done here' items are explicitly out of scope. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 *claude-19 (Fable), 2026-08-26, draft 1. Written after reading both drafts in
 full (`docs/retrieval-whitepaper-v2.md`, Draft 2 of 2026-08-01;
 `docs/retrieval-whitepaper-v3.md`, draft with sections through 2026-08-25) and

@@ -1,5 +1,7 @@
 # E-cascade-assembly — what assembly could look like, measured against the real graph
 
+**VERDICT (2026-10-09, provisional):** DONE — Design exploration whose deliverable (making options visible against measured numbers) is present with three parts committed and later corrections recorded; it explicitly builds nothing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-17 by claude-2 (Analyst, M-apm-demonstration) at Joe's
 direction**, after the semantic edges first reached the store (futon3a
 `b7c7332`, futon3c `fdd6d4e7`). Joe: *"I'm not sure what the cascade assembly

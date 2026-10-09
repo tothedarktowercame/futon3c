@@ -1,5 +1,7 @@
 # E-drive-prior-art — survey of the stack's previous answers to the drive problem
 
+**VERDICT (2026-10-09, provisional):** DONE — A one-shot survey of prior drive-problem attempts delivered with conclusions and recommendations; its deliverable is the survey itself, committed 2026-06-11. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 **Date:** 2026-06-11 (post Arc-2, pre autorunner-discussion)
 **Author:** fable-1 (ground control), at Joe's direction
 **Question:** Arc-2's autorunner failed five ways. The stack contains at

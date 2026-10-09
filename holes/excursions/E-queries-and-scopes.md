@@ -1,5 +1,7 @@
 # E-queries-and-scopes — the relationship between queries and scopes
 
+**VERDICT (2026-10-09, provisional):** OPEN — Synthesis document with numbered open rungs (dogfood answers, queryComb bridge) still to build; last touch 2026-07-10 with no completion recorded. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Excursion (synthesis). Spun 2026-06-15 from a Joe↔claude-3 thread picking up
 M-typed-holes projection #5.** This document takes the **relationship itself** as
 its subject — not a worked example (that is

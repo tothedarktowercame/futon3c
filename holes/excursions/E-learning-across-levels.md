@@ -1,5 +1,7 @@
 # E-learning-across-levels — seed for future War Machine operations
 
+**VERDICT (2026-10-09, provisional):** DONE — Seed document purpose fulfilled: concept named, grounded in evidence, bounded next steps staked out; nothing inside left unfinished. _(WM status classification by zai-1, low confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-01 by claude-7, from Joe:** *"'learning across levels' is
 something that we would like to build into future War Machine operations.
 The memory system is part of this but not all."* This doc names the concept,

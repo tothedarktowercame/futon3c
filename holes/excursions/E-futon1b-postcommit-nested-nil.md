@@ -1,5 +1,7 @@
 # E-futon1b-postcommit-nested-nil
 
+**VERDICT (2026-10-09, provisional):** OPEN — Bug documented with fix options; only a client-side workaround landed, the upstream fix (drop nils or nil-insensitive compare) is not recorded as done. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 Logged 2026-09-27 by claude-17 (M-象-2000 P3-1). Not scheduled.
 
 POST /api/alpha/hyperedge with `:hx/mint-id` and a nested nil in `:hx/props` (for example

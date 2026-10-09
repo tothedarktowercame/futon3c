@@ -1,4 +1,7 @@
 # Findings
+
+**VERDICT (2026-10-09, provisional):** DONE — Analysis delivered and self-corrected: method validated against the meter, one paragraph withdrawn, projection finding and WS2 criterion critique recorded. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 Admitting the subject relation does *not* clear the floor — λ₂ 0.0754 → 0.0836 — and on the scale-robust normalised Laplacian conduction gets **worse**, −24.5%. My method is validated: it reproduces the meter's own reading to 0.0754 against their 0.0755. The cause is mundane — concrete handles average 2.7 uses and **116 of 161 are used exactly once**, so they attach pendant nodes rather than shortcuts. I've withdrawn that paragraph in §4.1 rather than softening it.
 
 **But the repair exposed something worth more than either verdict.** Projecting the relation instead — joining two memories directly when they share a handle — *does* clear the meter's criterion, 0.0754 → **0.2002** against a 0.1 floor. And normalised conductance simultaneously **falls 39%**.

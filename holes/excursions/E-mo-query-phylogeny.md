@@ -1,5 +1,7 @@
 # E-mo-query-phylogeny — MathOverflow as a query phylogeny + QA benchmark
 
+**VERDICT (2026-10-09, provisional):** OPEN — Charter marked 'longer-term, gated' with acceptance criteria framed as 'when run' — the benchmark run is not recorded. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Excursion (charter; longer-term, gated). Spun 2026-06-14 from a Joe↔claude-2
 thread. Application of M-typed-holes' queries-as-scopes projection.**
 

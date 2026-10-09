@@ -1,5 +1,7 @@
 # E-apm-bundle-sorry-drift
 
+**VERDICT (2026-10-09, provisional):** DONE — Discovery-only excursion with a full Result section (the drift census) documented and committed. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-18 by codex-6 for the Analyst. Discovery only: no problem
 bundle or metadata was changed.**
 

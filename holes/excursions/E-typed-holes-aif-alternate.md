@@ -1,5 +1,7 @@
 # E-typed-holes-aif-alternate — M-typed-holes down the HEAD→AIF lifeform path
 
+**VERDICT (2026-10-09, provisional):** DONE — Counterfactual comparison write-up is complete through its §5 comparison with cross-references; it is a bounded analysis artifact, fully written. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 **Paired with `E-typed-holes-example-self.md`. A counterfactual: what
 M-typed-holes *would have looked like* had we seeded it as an AIF+ lifeform
 (HEAD → sigil → vitals → … → ARGUE-as-aif⁺-battle) the way E-mission-head did,

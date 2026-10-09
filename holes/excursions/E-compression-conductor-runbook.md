@@ -1,5 +1,7 @@
 # E-compression-conductor-runbook — running the compression pass
 
+**VERDICT (2026-10-09, provisional):** OPEN — Runbook for the compression pass retains open rulings (grade discrepancy left for claude-4) and was last revised mid-process, with no completion statement. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+
 **For the conductor seat (candidate: claude-4 if Opus, or a codex
 agent — Joe + Fable assign). Written 2026-08-12 by claude-1 (Fable)
 after conducting the case-1 pilot by hand; supervisor: claude-1. Read

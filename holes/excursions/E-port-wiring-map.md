@@ -1,5 +1,7 @@
 # E-port-wiring-map — which port is what, on which host
 
+**VERDICT (2026-10-09, provisional):** OPEN — Port inventory has unresolved entries (futon1b endpoint on lucy not located, :7072 role unconfirmed) and no completion marker. _(WM status classification by zai-4, low confidence; not yet confirmed by the author.)_
+
 Opened 2026-08-14 (Joe: "different hosts are using different ports and it's
 confusing!"). Written during `M-dionysus-winddown`, after the confusion cost
 several wrong conclusions in a single afternoon.

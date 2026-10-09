@@ -1,5 +1,7 @@
 # E-memory-priors-survey — what we actually know before preregistering
 
+**VERDICT (2026-10-09, provisional):** DONE — Survey purpose (make the thinness precise before prereg) fulfilled: census re-run 2026-08-10, figures cited, sources listed. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+
 **Drafted 2026-08-10 by ams-claude-1 at Joe's direction**: before the batch-1
 prereg, survey the evidence that memories — when created and when found —
 help proving outcomes, and state priors honestly. Joe's assessment going in:

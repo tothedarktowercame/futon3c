@@ -1,5 +1,7 @@
 # E-classical-wastage-scanner: finding red tape in agent chat logs without an LLM
 
+**VERDICT (2026-10-09, provisional):** OPEN — Charter with acceptance criterion ('find the 09-24 incident unaided') and 'Not decided' items; no run result recorded yet. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 Opened 2026-09-27 by claude-17 at Joe's direction, as an excursion related to
 M-象-2000. Joe: "build a purely classical (no LLM, no network) scanner that can
 read people's .jsonl agent chats and develop an analysis of some of their red

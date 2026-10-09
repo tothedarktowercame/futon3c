@@ -2,6 +2,8 @@
 
 **Requisition:** in-progress — codex-13 job invoke-1790996880103-30698-7aafbdaf
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition marked in-progress and dispatched 2026-10-03 within the last 30 days; no completion or failure recorded yet. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-13.
 
 Continue in /home/joe/code/mfuton-sbcl from accepted index commit 97479d0. Read workspace AGENTS.md; Joe authorizes port, codex-18 reviews/integrates/commits. No internal collaborators, further dispatch, commits, resets or shared file edits.

@@ -1,5 +1,7 @@
 # E-象-spec-wiring: checking a specification by its open ports
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Steps 1-2 done with recent dated work (2026-09-30) and steps 3-5 explicitly not started, plus a fix dispatched to codex-4. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 Opened 2026-09-30 by claude-17 at Joe's direction, under M-象-2000. It connects
 象's reading of intent to diagram checking through a typed model of a design
 pattern. Step 1, a hand-drawn pilot with live numbers from claude-1, is done.

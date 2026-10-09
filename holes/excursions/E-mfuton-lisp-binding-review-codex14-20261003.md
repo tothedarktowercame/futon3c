@@ -2,6 +2,8 @@
 
 **Requisition:** completed — 2026-10-03T02:01:03.381931715Z, job invoke-1790992710305-30670-2cd341b1, state done
 
+**VERDICT (2026-10-09, provisional):** DONE — Tail records coordinator acceptance with passing integrated differential rerun. _(WM status classification by zai-2, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-14.
 
 Joe requested another port job on codex-14. Coordinator codex-18. Work in /home/joe/code/mfuton-sbcl, current branch. Read /home/joe/code/AGENTS.md. If another assignment conflicts, report rather than silently switching.

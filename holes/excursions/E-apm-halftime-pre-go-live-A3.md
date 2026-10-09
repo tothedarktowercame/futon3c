@@ -1,5 +1,7 @@
 # A3 work plan — reconcile duplicate `pattern/library` entities
 
+**VERDICT (2026-10-09, provisional):** DONE — The A3 packet's deliverable was a read-only investigation and proposed fix order, delivered 2026-08-13; the parent's closure records A3 subsequently swept (21,513 rows to 10,956). _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 Scope: A3 only from `E-apm-halftime-pre-go-live.md`. This is a read-only
 investigation and a proposed execution plan. No store write, migration, dedupe,
 or service restart was performed while preparing it.

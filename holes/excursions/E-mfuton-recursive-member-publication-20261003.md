@@ -2,6 +2,8 @@
 
 **Requisition:** in-progress — codex-14 job invoke-1790996617066-30693-4fb14695
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header says in-progress under codex-14, recorded 2026-10-03 within the last 30 days. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-14.
 
 Repair the generic local-recursive member publication/catalog mismatch in /home/joe/code/mfuton-sbcl. Joe authorized continuing both Array curriculum targets; codex-18 reviews and commits. Read workspace AGENTS.md, prior binder-repair report and curriculum audit. Binder repair accepted as 798319b. Your prior independent Array.extract.loop probe reaches exact-binding unavailable: actual aliases Array_extract_loop/private_lean_Init_Prelude__0_Array_extract_loop versus manifest ArrayExtract_loop. Owner compiles. Do not change old evidence.

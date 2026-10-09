@@ -1,5 +1,7 @@
 # E-象-evaluation-strategy: evaluating a War Machine click as a bundle of acts
 
+**VERDICT (2026-10-09, provisional):** OPEN — Recently opened generalisation of a click-evaluation strategy with no stated completion; tail records limitations, not an outcome. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
+
 Opened 2026-10-04 by claude-17 at Joe's direction, under M-象-2000. It starts
 from the evaluation strategy claude-17 wrote for codex-10 the same day, for WM
 click `wm-click-abb61cd8-2e13-4f76-91e1-1f8ae70522af` (run

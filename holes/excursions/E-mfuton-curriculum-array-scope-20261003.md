@@ -2,6 +2,8 @@
 
 **Requisition:** completed — reviewed and integrated as b6d8b9c; kernel prerequisite only, curriculum unchanged.
 
+**VERDICT (2026-10-09, provisional):** DONE — Requisition completed, reviewed and integrated as b6d8b9c. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-13.
 
 Joe authorized resuming the Lisp port with the actual 110-constant curriculum rows Array.extract and Array.extract.loop. Coordinator codex-18. Repository /home/joe/code/mfuton-sbcl current branch; read /home/joe/code/AGENTS.md, lisp/parallel/curriculum-audit/report.json and lisp/parallel/wave2/integration-target.json. Lean authority; Python ce90ec41 baseline plus recorded repairs. Never count component gates as compiled curriculum rows. No special-case Array.extract implementation or placeholder compiler/type scope. No other agent dispatch, reset/stash/worktree/server changes or commits. Preserve existing dirty Meta files. Coordinator reviews and integrates shared manifests. Explicitly report unexpected dependencies, do not silently omit them. Retain source revisions, exact commands, stdout/stderr and exits under your exclusive evidence directory. Bell codex-18 with concrete delivery.

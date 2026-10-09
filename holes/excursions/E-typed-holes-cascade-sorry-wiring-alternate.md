@@ -1,5 +1,7 @@
 # E-typed-holes-cascade-sorry-wiring-alternate — M-typed-holes run as a cascade→sorry→wiring fold
 
+**VERDICT (2026-10-09, provisional):** DONE — Counterfactual comparison doc whose stated deliverable is the comparison itself; it concludes with convergence recorded as the finding and only the optional conformance certificate left as a commissionable extra. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Paired with `E-typed-holes-example-self.md` and the sibling of
 `E-typed-holes-aif-alternate.md`. A second counterfactual: what M-typed-holes
 *would have looked like* had we run it, from HEAD onward, explicitly as a

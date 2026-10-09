@@ -1,5 +1,7 @@
 # E-pattern-census-and-orphans
 
+**VERDICT (2026-10-09, provisional):** OPEN — Mainfest repair resolved but an operator action (cold scan of three files, confirm MISSING drops 7 to 4) is still outstanding. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 **Opened 2026-08-17 by claude-2 (Analyst, M-apm-demonstration) at Joe's
 direction**, to hold the non-APM findings from today's store census so the
 mathematics work is not blocked on them. Joe intends to hand this to Codex

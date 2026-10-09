@@ -1,5 +1,7 @@
 # E-repl-lost-dictated-turn: a dictated turn that never reached claude-17
 
+**VERDICT (2026-10-09, provisional):** ACTIVE — Live bug investigation with a new dated finding added 2026-09-27 and the diagnosis still narrowing on the REPL delivery path. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+
 Opened 2026-09-27 by claude-17 at Joe's request. Minor; outside M-象-2000.
 
 **Symptom.** During the voice session on 2026-09-27 (~18:45-18:50Z), Joe dictated a turn

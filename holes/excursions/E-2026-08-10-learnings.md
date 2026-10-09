@@ -1,5 +1,7 @@
 # E-2026-08-10-learnings — one day of instrumented ground control
 
+**VERDICT (2026-10-09, provisional):** DONE — Day-level synthesis document with findings written and delivered — its stated purpose is the synthesis itself, which is present. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Written 2026-08-10 late by ams-claude-1 at Joe's request: the day-level
 synthesis. Batch specifics: `batch-1-report.md` (+ errata). Sources for
 each claim are in the store (session "vote-and-callback-pipeline") and

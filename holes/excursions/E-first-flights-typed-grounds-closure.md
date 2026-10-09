@@ -1,5 +1,7 @@
 # E-first-flights typed-grounds closure — producer-side typed grounds
 
+**VERDICT (2026-10-09, provisional):** DONE — Verdict: CLOSED at producer/spec/witness grain; the producer-side gap is stated closed. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
+
 Date: 2026-07-06
 Author: codex-1, interactive with Joe
 Excursion: `E-first-flights-transferred-work`

@@ -1,5 +1,7 @@
 # E-first-flights — W1 Phase-B policy-grade G(s,π) closure
 
+**VERDICT (2026-10-09, provisional):** DONE — Verdict section says CLOSED; conclusion confirms W1 CLOSED with 18/18 tests passing and the sorry justified. _(WM status classification by zai-1, high confidence; not yet confirmed by the author.)_
+
 **Date:** 2026-07-06
 **Excursion:** E-first-flights-transferred-work
 **Workstream:** W1 — Phase-B policy-grade G(s,π)

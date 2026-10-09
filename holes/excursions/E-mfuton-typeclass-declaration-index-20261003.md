@@ -2,6 +2,8 @@
 
 **Requisition:** completed — integrated as 97479d0; no curriculum credit
 
+**VERDICT (2026-10-09, provisional):** DONE — Header states the requisition is completed with job id and timestamp. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Owner: codex-18. Executor: codex-13.
 
 Implement a faithful generic declaration-index prerequisite for SourceTypeclassScope.from_declarations in /home/joe/code/mfuton-sbcl. Prior kernel prerequisite is integrated as b6d8b9c. Read workspace AGENTS.md and curriculum audit; no internal collaborators or further dispatch. Owner codex-18 reviews/commits; do not commit or edit shared manifests.

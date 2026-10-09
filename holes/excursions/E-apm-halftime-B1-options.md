@@ -1,5 +1,7 @@
 # B1 discovery — pattern and memory taxonomy options
 
+**VERDICT (2026-10-09, provisional):** OPEN — Options document whose decision (taxonomy for absent edges) is explicitly pending a separation-of-powers review. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
+
 The measured gap is structural: recall traverses reviewed `memory/assert`
 attachments, while a flexiarg's existence as a `pattern/library` entity does
 not itself make that pattern recallable. Only 3 of 75 mathematics patterns are

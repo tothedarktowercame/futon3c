@@ -1,5 +1,7 @@
 # E-apm-halftime-pre-go-live-EF — a working lab for the second half
 
+**VERDICT (2026-10-09, provisional):** SUPERSEDED by M-apm-demonstration — Header status change says the parent excursion is closed and the formal plan is now M-apm-demonstration; this packet remains only as an empirical source. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 > **STATUS CHANGE 2026-08-14 (Joe).** The parent excursion
 > `E-apm-halftime-pre-go-live.md` is **closed**, and this packet is **no longer
 > "the" plan**. It remains live as an **empirical source** — the informal

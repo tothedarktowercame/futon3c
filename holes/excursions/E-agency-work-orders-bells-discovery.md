@@ -1,5 +1,7 @@
 # E-agency-work-orders step 1 discovery: bells as turns
 
+**VERDICT (2026-10-09, provisional):** DONE — Discovery-only deliverable complete: every claim marked [checked]/[inferred], hook points, volume and cost findings all written; recent. _(WM status classification by zai-1, high confidence; not yet confirmed by the author.)_
+
 Author: kimi-1, 2026-10-05, for claude-17 (requisition bell invoke-1791183050805-32677-0bf5f12b).
 Discovery only. Each claim is marked **[checked: `<command>`]** or **[inferred — basis]**.
 

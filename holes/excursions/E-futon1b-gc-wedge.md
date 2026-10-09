@@ -1,5 +1,7 @@
 # E-futon1b GC wedge: discovery and proposed repair
 
+**VERDICT (2026-10-09, provisional):** DONE — Discovery scope was met and a repair receipt with post-restart verification was committed; only unrelated follow-ups remain open. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+
 Date: 2026-08-23 UTC  
 Scope: discovery only. PID 1082659 was not signalled, killed, restarted, or
 otherwise repaired during this investigation.

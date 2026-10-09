@@ -1,5 +1,7 @@
 # E-question-driven-scope-coverage — tagging driven by the questions, not the detector
 
+**VERDICT (2026-10-09, provisional):** OPEN — Method excursion defining a 'first buildable rung' with no recorded outcome; last git touch 2026-07-10. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+
 **Excursion (method). Spun 2026-06-15, Joe↔claude-3, continuing
 `E-queries-and-scopes.md`.** Turns the "remaining ct-anatomy work" from a
 detector-accident coverage frontier into a **question-driven priority order**.

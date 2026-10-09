@@ -1,5 +1,7 @@
 # E-apm-halftime-pre-go-live-D — "Substrate residuals", as handoff packets
 
+**VERDICT (2026-10-09, provisional):** OPEN — Halftime planning document (option D) with a size warning and unmeasured outage risk; no execution or closure recorded. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
+
 **Written 2026-08-13/14 by claude-2** alongside the B and C packets, at Joe's
 request that B/C/D be elaborated so they are ready to process once A is
 settled.
