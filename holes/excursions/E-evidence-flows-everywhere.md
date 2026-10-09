@@ -3,7 +3,7 @@
 **Status:** seeded 2026-08-14, not being solved yet (Joe: "it isn't a critical
 issue to solve now"). Attached to `M-dionysus-winddown`.
 
-**VERDICT (2026-10-09, provisional):** OPEN — Seeded requirement explicitly 'not being solved yet' with open design questions and no solution recorded. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+**VERDICT (2026-10-09, provisional):** PARKED — Status line records it seeded 2026-08-14 and not being solved yet, by Joe. _(WM status classification by claude-12, high confidence; not yet confirmed by the author.)_
 
 Seed notes only. Enough to stop the requirement being rediscovered, and to stop
 someone building the wrong thing in a hurry.
