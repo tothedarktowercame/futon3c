@@ -905,3 +905,10 @@ treatment of the disconnection finding.
 - `p4ng/empirics-futon/NOTE-light-formalisation-standard.md` — the module recipe.
 - `p4ng/empirics-futon/NOTE-modular-formalisation-order.md` — needs the module-1 refinement above.
 - `futon2/src/futon2/aif/selection_gain.clj` — the gain-in face, docstring at lines 7–70.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Joe rules on the bearer (slice 1) so ?salience(required) is filled from the four candidates on the table
+- [ ] Record the disposition of the disconnected dial: keep slice 3 uninstrumented by design, or cut it with a ruling

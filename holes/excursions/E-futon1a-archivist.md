@@ -102,3 +102,12 @@ Tooling: `futon3c/scripts/archivist_cleanup.bb` (penholder `joe`, gated `run-era
    `gate-queue/snapshot` records correctly. Wire the view route (slice-1 follow-on).
 5. **dot-drift canonical name** `futon3c-d/mission/substrate-metric.R2-curvature-report` (a `.` in
    the id) — gate rejects future dotted writes; this existing one is a normalization target.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
+
+- [ ] One canonical id/type scheme per entity kind is registered in the descriptor registry and documented
+- [ ] A write with a non-canonical mission id is rejected or queued, demonstrated on the write-path gate
+- [ ] O3 lineage references the canonical mission node so verify-live composition becomes meaningful
+- [ ] README-archivist.md exists in futon1a with the new-type request process

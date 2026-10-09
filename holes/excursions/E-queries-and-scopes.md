@@ -152,3 +152,10 @@ math.ct) look like they need two query layers when they need one, and the
   `queryComb`, `answers_eq_fills`, `toHEdge?`).
 - **`E-the-dark-tower-2`** (futon5a) — the Poly substrate the object/probe
   reading lives in.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Answer the HEAD question in writing: in what sense a query is a scope, where the two come apart, and the precise definition of each (resolving the two senses o…
+- [ ] Complete the numbered open rungs named in the synthesis (e.g. dogfood answers via scripts/scope_query_dogfood.py, the queryComb bridge) or explicitly dispositi…

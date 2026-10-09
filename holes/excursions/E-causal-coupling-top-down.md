@@ -286,3 +286,10 @@ manufacture outcomes.
   measured `:component-limited` — *below* the floor where the operator beats
   direct lookup. That admission is the reason this excursion exists, and
   hiding it would remove the argument.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, medium confidence); not yet confirmed by the author._
+
+- [ ] Test the section-8 falsifiable prediction (selection finds the coupling) with a measurement
+- [ ] Share the reading with Rob and record agreement or divergence before any build

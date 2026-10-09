@@ -186,3 +186,9 @@ zero for the same reason a disjoint union of stars has trivial flow.
   direct lookup.** Both are true: the exotype improved and is still binding.
 - That Joe is "the xenotype" in any exclusive sense. §6's assemblage claim
   cuts against a single-locus reading, including a flattering one.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, low confidence); not yet confirmed by the author._
+
+- [ ] Test the §6 falsifiable prediction with a recorded measurement (the doc currently states 'No measurement').

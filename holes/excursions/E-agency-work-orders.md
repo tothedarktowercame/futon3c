@@ -296,3 +296,12 @@ left unanswered). claude-5 at 21:48Z, claude-7 at 22:19Z.
 Easy to find: any work bell whose bellback summary says "first half",
 "next I will", or lists unchecked items. The ledger query is
 `GET /api/alpha/invoke/jobs?agent=<id>`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Locate the codex-19 to claude-4 half-done order in the invoke-jobs ledger (first named task)
+- [ ] Implement open/closed work-order state via xiang obligationo/openo so an order stays open past turn end
+- [ ] Reminder fires for an agent whose turn ends with an order still open
+- [ ] Live cases pass: bells whose bellbacks say first-half or list unchecked items stay open

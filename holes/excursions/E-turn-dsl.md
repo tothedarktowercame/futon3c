@@ -97,3 +97,11 @@ phatic marker immediately, on top of the auto-clock already there.
   timestamp}`) the attribution rides on.
 - `agent-chat.el` clock infra: `agent-chat-set-clock!`, `agent-chat--maybe-auto-clock-from-turn` (:672),
   `agent-chat-mission-label`, the clock hydra (`C-c C-o` / 🍒).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Implement the first slice: E→/M→/C→ transition prefix + OT: unclocked marker on agent-chat-send-input, riding agent-chat-set-clock!
+- [ ] Second pass: the E: one-off per-turn attribution field and create-if-needed stub template
+- [ ] State the precedence rule between the typed prefix and the fuzzy auto-clock (prefix authoritative; fuzzy fills only the floor) in the code/doc

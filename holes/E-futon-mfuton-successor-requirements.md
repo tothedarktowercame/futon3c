@@ -506,3 +506,10 @@ overstating-against-yourself corollary (R31) applies to both sides.
   retrieval whitepaper v2) and the configurator sketch with its acceptance
   test. The pass-1 posting reached the room at 22:53:54Z with an earlier
   sentence of this turn's text prefixed to it by the bridge.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, low confidence); not yet confirmed by the author._
+
+- [ ] Each open question in 'Open questions carried to the next pass' is answered or explicitly re-carried with a decision
+- [ ] A pass of the shared design-requirements document is accepted by Joe and posted to the federation room

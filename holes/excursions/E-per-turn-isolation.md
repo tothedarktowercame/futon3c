@@ -84,3 +84,10 @@ load-bearing pair.
   schema this was traced through.
 - The phatic / push-to-talk idea — a reliable lane that doesn't contend with the main invoke path; once
   per-turn isolation lands, `OT:` is its trigger.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Build the scoped server-side fix in futon3c transport/http.clj unifying REPL-stream and bell admission through one per-agent path.
+- [ ] Demonstrate with a test that an overlapping bell invocation on the same agent no longer drops or cross-routes the REPL turn's streamed reply.

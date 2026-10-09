@@ -145,3 +145,11 @@ statement.  Joe's explicit sign-off is required before those three bundle
 changes land.  The recommended implementation sequence is: approve the reduced
 statement verbatim, edit `Main.lean`, elaborate it under the recorded pin, then
 derive the outline and status metadata from that result.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Obtain Joe's sign-off for changing the frozen statement (Main.lean:77-96)
+- [ ] Land the repair in exactly Main.lean, proof-outline.md, status.json (reduced theorem; part (c) deferred)
+- [ ] Verify the repaired artifact elaborates; record its sorry counts

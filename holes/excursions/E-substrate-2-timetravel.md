@@ -198,3 +198,10 @@ criterion; (c) "Knowing one's place" as the morphogenesis-as-FE grounding. **Sou
 Joe ratifies the diagnosis + the fix direction (file-level versioned code projection first), and the future
 implementation mission is named. Until then, M-G-over-cascades uses the git co-edit pilot and treats native
 substrate-2 κ time-travel as the post-fix upgrade.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Joe ratifies the diagnosis and the fix direction (file-level versioned code projection first)
+- [ ] A future implementation mission for per-commit versioned code is named and chartered

@@ -57,3 +57,10 @@ surface a one-click resume" rather than full auto-respawn. Decide from the findi
 detection), `scripts/codex-picker` (the manual resume path + session-id file
 `/tmp/futon-codex-session-id`), M-kangaroo / [[project_kangaroo]], E-zai-agent-upgrades
 U1 (transcript persistence — the adjacent non-claude-durability thread).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Codex agents get a JVM-owned supervisor mirroring the claude agent_pouch path
+- [ ] After a JVM restart, a codex agent resumes its session automatically (no ghost roster entry, last-active live), verified by a restart test

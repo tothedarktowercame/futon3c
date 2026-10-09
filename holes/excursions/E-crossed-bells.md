@@ -116,3 +116,10 @@ delivered.
   restrict capability).
 - The `Caller: auto-bellback` attribution gap (datapoints) — the degenerate case; the router
   is the general fix.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, low confidence); not yet confirmed by the author._
+
+- [ ] A bell router in futon3c gives each delivered bell a visible conversation thread
+- [ ] Bell attribution is visible to the receiving agent, closing the auto-bellback Caller gap

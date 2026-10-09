@@ -96,3 +96,10 @@ hyperedge scan costs 1.9 s? Candidates worth eliminating: a full-table scan on
 the entity-id path; a per-request `await-tx`/basis sync; the 2-permit
 `with-expensive-read!` admission gate being taken on a route that should not
 need it; or an XTQL plan that is not using the id index.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] The 27s /api/alpha/entity/<id> point-read latency cause is identified by eliminating the candidate list (full-table scan, await-tx sync, read-admission gate, XTQL id-index plan)
+- [ ] The interrupted run is restarted after the external diagnosis and an after-latency number is recorded

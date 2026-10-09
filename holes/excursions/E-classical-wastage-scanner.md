@@ -141,3 +141,12 @@ consent terms below.
 Scope of the first pass (Claude Code format only, or Codex too); where it runs
 in sequence with M-象-2000 (after INSTANTIATE, like E-象-2000-wm-seam, or in
 parallel on a separate seat).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Build the deterministic no-LLM no-network scanner over Claude Code and Codex transcript directories
+- [ ] Each reported wastage incident carries start/end, cost (turns, tokens, wall-clock), evidence rows, and matched pattern
+- [ ] Acceptance: the scanner finds the 2026-09-24 incident unaided
+- [ ] Decide first-pass scope (Claude Code only, or Codex too) and its sequencing with M-xiang-2000

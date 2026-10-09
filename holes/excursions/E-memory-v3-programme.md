@@ -417,3 +417,11 @@ Three commitments, all enforceable by the facility rather than by intention:
    zero before we spent the coding pass discovering it.
 3. **Costs from measured rates, with a stated budget cap and a teardown
    deadline scheduled independently of success.**
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, high confidence); not yet confirmed by the author._
+
+- [ ] Settle the V3 model within the preregistered DarkTower experiments (Joe's bound: ≤10)
+- [ ] Every observable inhabits check_sound (can distinguish absence from inability-to-ask)
+- [ ] Costs come from measured rates with a stated budget cap and an independent teardown deadline

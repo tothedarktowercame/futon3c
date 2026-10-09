@@ -61,3 +61,10 @@ Feed the top-cited virtuals (`interest-event-vocabulary`, `read-existing-seam-be
 `logic-model-before-code`, …) to the fold as construction targets; a virtual pattern that
 folds to a low-ΔG wiring is a formalization candidate. Until then they stay here — named,
 counted, and honest.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Feed the top-cited virtual patterns to the fold as construction targets and record each one's ΔG score
+- [ ] Promote any virtual pattern whose fold discharges to a formalized pattern/library node

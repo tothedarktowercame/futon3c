@@ -478,3 +478,10 @@ Create the frozen benchmark and its labeling/provenance schema before adding
 more mechanisms. It is the common instrument needed to evaluate hybrid recall,
 topological rent, functional damage, receipt updates, and future cluster
 liveness on comparable evidence.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, medium confidence); not yet confirmed by the author._
+
+- [ ] Create the frozen benchmark and its labeling/provenance schema before adding more mechanisms
+- [ ] Reshape retrieval-whitepaper.md from evidence ledger into a finished white paper

@@ -430,3 +430,10 @@ around. Items that need a DECISION rather than labour are marked
    injectivity + card equality, apply `Nat.bijective_iff_injective_and_card`)
    reads as a technique. Recorded as authored rather than silently
    re-graded by the captain; claude-4 rules.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] Each compression-pass step in the runbook is executed with its outcome recorded
+- [ ] claude-4's ruling on the SNIPPET-vs-technique grade discrepancy is recorded in the runbook

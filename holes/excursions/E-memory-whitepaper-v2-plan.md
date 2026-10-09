@@ -1295,3 +1295,10 @@ the section V2's identity is built on.
   own code and may make Experiment 0 reconstructible retroactively.
 - **Whether a second runner model is in scope for V3** (§6.3 item 5), which
   determines whether the rejection taxonomy generalises or stays codex-specific.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, medium confidence); not yet confirmed by the author._
+
+- [ ] Record agreement with claude-9 and Joe's scoping (currently 'proposed')
+- [ ] Decide the open items: projection-guard repair before per-dispatch snapshotting, and whether a second runner model is in scope for V3

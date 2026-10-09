@@ -149,3 +149,9 @@ This tail is NOT a dependency of M-fold-ansatz. M-fold-ansatz may benefit from
 any typed-grounding representation that falls out of a future design, but this
 Excursion holds or closes on its own evidence. The hold does not block
 M-fold-ansatz.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, low confidence); not yet confirmed by the author._
+
+- [ ] The HOLD verdict is resolved: the typed-grounds/return-channel tail closes on its own evidence (or is closed explicitly), with the decision recorded in the excursion

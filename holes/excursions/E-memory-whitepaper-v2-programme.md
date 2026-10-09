@@ -551,3 +551,10 @@ Both were weakly attached to any claim, and reporting a below-calibration
 n=20 replay would have been the kind of number this programme exists to avoid.
 The sequencing gate delays three repairs by the length of P1–P3. That is the
 price of V2 having a measurable subject.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, medium confidence); not yet confirmed by the author._
+
+- [ ] Complete the programme's experiment table to its stated end (V2-4 dropped, V2-7 deferred-or-run recorded)
+- [ ] Resolve the P1–P3 sequencing gate and execute the three repairs it delays

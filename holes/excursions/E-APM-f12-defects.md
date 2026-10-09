@@ -1415,3 +1415,10 @@ direction"*) and then committed myself, in the sentence Joe quoted back.
 2. Raise `default-query-term-limit` above 4.
 
 Neither will help f15. Both are correct.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, medium confidence); not yet confirmed by the author._
+
+- [ ] Ship the two named fixes: drop or rank-last :stdin-packet as a query-term source, and raise default-query-term-limit above 4
+- [ ] Record the corpus disposition for the ContDiff-top vacuity finding (frozen-statement defect class)

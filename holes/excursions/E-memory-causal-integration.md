@@ -245,3 +245,10 @@ surgery; (3) the filter≡ship d-separation check.
 `E-memory-v3-programme.md` (E2, claims), `E-memory-v3-staging.md` (§H
 ablation detail, §B instruments),
 `docs/retrieval-whitepaper-v2-cover-note-rob.md` (the note this replies to).*
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, low confidence); not yet confirmed by the author._
+
+- [ ] Complete the named joint-model checks with Rob's engine, including the filter≡ship d-separation check
+- [ ] Record the joint modeling outcome (what the engine supports vs what the memory system needs) in this doc

@@ -15,3 +15,9 @@ a caller believe it has a historical read when it has the current one.
 
 Related: futon1b returns no per-record system timestamp. M-象-2000 P0 bracketed system
 times through LIST visibility instead (futon3c 900fe35a).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
+
+- [ ] futon1b's by-id read either honours the system :as-of parameter or refuses it with 400, covered by a test

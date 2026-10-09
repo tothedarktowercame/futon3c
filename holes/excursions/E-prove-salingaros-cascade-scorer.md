@@ -80,3 +80,11 @@ O1 requires fixing the `C` naming.
 - Theory: `deep-research-AIF-morphogenesis.md` §"Grounding audit" + Thread 2 (EFE = complexity−accuracy; the
   Millidge wrinkle) + Thread 4 (L=T·H, the unbuilt link) + open-Q3.
 - Parent: `futon2/holes/M-wm-policies.md` Track 3 (omission 2). Sibling: [[E-vwm]].
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
+
+- [ ] Settle open-Q3 in writing: prove, establish monotone-equivalence, or give a clean negative for L = T·H recoverable as accuracy × (−complexity) on a generative…
+- [ ] Pin the definitions used: M(ψ), accuracy = E_q[log p(ψ|patterns)], complexity = KL(q‖p), and exactly which of T/H/(10−H) each term is.
+- [ ] Leave the live operational scorer unchanged unless the result requires fixing the C naming (then record that requirement).

@@ -544,3 +544,10 @@ The second factor is message count, and that is ground control's to fix by
 batching tool calls: six sequential shell calls cost six context reads, one
 combined call costs one. At 482k a read, each avoided round trip is half a
 million tokens.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, low confidence); not yet confirmed by the author._
+
+- [ ] Write the general loss-function shape with a slot for scoped df
+- [ ] Slot the shape into the measurement sites where the error appeared

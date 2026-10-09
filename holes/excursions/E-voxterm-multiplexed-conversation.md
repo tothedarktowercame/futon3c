@@ -25,3 +25,10 @@ The reason is pace. When one session is working, its conversation has gaps. Seve
 
 - README-voxterm.md: the gist-only and speak-only-buffer settings.
 - E-repl-lost-dictated-turn.md: the lost dictated turn.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Answer the four open questions in writing (speaker prefix, dictation routing, ordering/holding-back, operator trial design)
+- [ ] Try the multiplexed gist queue with two sessions and record whether the combined pace holds up

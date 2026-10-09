@@ -166,3 +166,11 @@ Part **A ratified and executed** (Q-den hygiene, zero registry writes). Part **B
 ### Provenance (this session, 2026-06-26)
 
 Census run live against `:7071` via Drawbridge count-pushdown. Corrected the relation→`:hx/type` mapping after a first pass mis-counted 75 relation types via `:entity/type` (artifact: 75 → 72 truly empty). Confirmed heavy types off-catalog (grep of `/types` for `code/v05/*` empty). Confirmed no deletion path (registry emitted in `run-write!`, `pipeline.clj:129/188`; no `retract-type!` in source). The billed-cheap hygiene pass was found to require new gated code; surfaced rather than executed as a raw write.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Decide and build a gated retraction/deletion path for the type registry (no retract-type! exists today)
+- [ ] Disposition the heavy off-catalog code/v05/* empty types found by the census
+- [ ] Deliver the negative-space map: what is not populated and what cleaning the registry actually costs

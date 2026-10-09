@@ -386,3 +386,12 @@ This strategy could reward the wrong thing in three ways:
 - **Becoming a process to satisfy.** If the evaluation record becomes something
   a click must have, it turns into the gate CLAUDE.md warns against (a warrant
   is labour-saving, not a gate). It stays an observation about the click.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Fix the decomposition, act-kind-to-rule table, and verdict vocabulary so the analysis is repeatable by any reader
+- [ ] Run a second-reader test on click abb61cd8 (or another click) and record agreement — the first test of repeatability
+- [ ] Script the seven mechanical steps only after the two-reader test
+- [ ] Feed :eval/debts into the P9 obligations reader so walkthrough-owed is listed with other debts

@@ -442,3 +442,10 @@ The 2026-07-23 discussion involved Codex-4 (Phase 4 owner), Zai-3
 They agreed on the three-rung plan and the hard Phase 1–4 boundary above. A
 Claude mentor whistle was unavailable because that environment's subscription
 access was disabled.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] Rung 2's calibration gate is met by the one-outcome operator update, or a recorded decision closes it
+- [ ] All four rungs are implemented and verified dark within the Phase 1-4 admissible-subgraph boundary (no gate changes)

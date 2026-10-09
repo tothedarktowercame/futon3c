@@ -147,3 +147,12 @@ systemctl --user list-units --type=service | grep futon
   lucy was not located, which is what blocked testing a restored dual-write.
 - `:7072`'s role on Zone and chicago is unconfirmed; on Dionysus it is the same
   futon1b process as `:7073`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
+
+- [ ] Identify what lucy :7075 (serves HTML) is.
+- [ ] Locate the futon1b HTTP endpoint on lucy (the missing piece that blocked the restored dual-write test).
+- [ ] Confirm :7072's role on Zone and chicago.
+- [ ] Update the map table so no Open entries remain.

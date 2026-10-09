@@ -121,3 +121,10 @@ whether the fix is "make announce dispatch" or "fix a missed notify".
 The orphaned job `codex-8` created 13:44:47 on 2026-08-22 was deliberately left in place
 rather than reaped. It is a live example of an accepted job that will never run. Please
 inspect before clearing.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Give announce a real dispatch (or record the reservation-only semantics as ruled design), inspecting the orphaned codex-8 specimen first
+- [ ] Only after the dispatch gap is closed, measure siege throughput so the budget measures the solver not the gap

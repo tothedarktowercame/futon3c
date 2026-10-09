@@ -122,3 +122,11 @@ E-codex-resume-after-JVM-restart (ownership gap, 07-04 — re-verify its status
 as a step-3 side-effect); `codex_cli.clj` `on-runtime-event` (the unforwarded
 stream); `agent_pouch.clj` (what "owned and observable" looks like for claude);
 futon1b/TN-futon1b-memory-incident.md (same-day sibling incident, store side).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Reproduce the incident via a Joe-gated JVM cycle and record the trace
+- [ ] A successful resumed turn is observably successful: roster status, last-active, and the forwarded stream all show it
+- [ ] External-agent execution of the fix recorded against the TN-invoke-lifecycle-gaps acceptance bar

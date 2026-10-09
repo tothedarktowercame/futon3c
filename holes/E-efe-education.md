@@ -76,3 +76,11 @@ Non-negotiable, because a runaway tuner could destabilise the EFE:
 - `[[project_bayesian_structure_learning]]` — the reliability-posterior machinery, reused.
 - peradam / mana reward (deferred, M-capability-star-map design note) — the candidate richer outcome signal.
 - `WM-GUARDRAILS-SPEC.md` — the consent/observability posture this inherits.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
+
+- [ ] Star-map precision converges to a stable justified value beating the static prior on an outcome metric
+- [ ] Convergence is achieved without destabilising the EFE or breaching the clamp
+- [ ] The whole tuning trajectory is auditable (weight, posterior, perturbation, reward visible) with operator consent on large shifts and working revert

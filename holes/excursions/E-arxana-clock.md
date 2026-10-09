@@ -134,3 +134,11 @@ competing with the live request path. This is the operational sibling of the
 **Residual.** If the evidence store is *still* frozen after `stop!`, the cause is
 elsewhere and needs separate diagnosis — retiring the loop removes my hazard
 regardless.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] One surface answers at a glance: what keeps the system ticking, when each last fired, when each fires next, across all three driver mechanisms
+- [ ] A new driver can register on the clock so it is visible rather than hidden
+- [ ] The residual (evidence store still frozen after stop!) is diagnosed or ruled out separately

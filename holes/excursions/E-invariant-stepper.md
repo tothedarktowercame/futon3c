@@ -63,3 +63,11 @@ by default.
 - `futon3c/docs/wiring-claims.edn` + `wiring-evidence.edn` — the existing machine-readable claims to
   register as live invariants.
 - futon4 `arxana-window-constraints.el` — Reazon live-checks; their proper opt-in home.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, medium confidence); not yet confirmed by the author._
+
+- [ ] Build the opt-in Emacs mode (loop-lag shape) that displays live green checks over the running system's invariants
+- [ ] Register futon3c wiring-claims.edn + wiring-evidence.edn claims as live invariants in the mode
+- [ ] Assign an owner (currently TBD)

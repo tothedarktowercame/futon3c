@@ -97,3 +97,12 @@ this can be done **inexpensively** — at boot (once), at the persist chokepoint
 - `futon1a/docs/invariants.md`, `futon1a/src/futon1a/core/invariants.clj`, `futon1a/README.md`
 - `futon3c/holes/missions/turn-delivery-invariants.md` (D1–D5)
 - The week's failures: roster clobber + flag-loss-on-resume (M-agency-hardening notes)
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Name the Agency invariants (durable-queue trio, restore, single-writer, operator-turn delivery) as one-line statements with traceability
+- [ ] Build A2 first: port the counter-ratchet to the roster persist
+- [ ] Add the A3 boot gate asserting the hardening trio
+- [ ] Give each invariant a proof test

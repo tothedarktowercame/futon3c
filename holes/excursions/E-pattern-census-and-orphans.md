@@ -279,3 +279,11 @@ candidate directories and are a separate question.
 **Operator action for Joe, when the watcher is restarted:** cold-scan the three
 files above (or dispatch them explicitly), then re-run
 `scripts/pattern_store_census.py` and confirm MISSING drops from 7 to 4.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
+
+- [ ] Cold-scan the three named files (or dispatch them explicitly) when the watcher is restarted, so a restart does not adopt them as baseline.
+- [ ] Re-run scripts/pattern_store_census.py and confirm MISSING drops from 7 to 4.
+- [ ] Resolve or explicitly disposition the remaining four MISSING ids in staging/candidate .flexiarg files.

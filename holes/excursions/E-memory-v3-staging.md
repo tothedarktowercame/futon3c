@@ -744,3 +744,10 @@ current-index (snapshot 2026-08-01) while dispatches are historical.
 *Generalisable lesson: an authorised action is not automatically the right one.
 Both reasons the reload would have failed were cheap to check and would have
 been expensive to discover by attempting it on a shared live service.*
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, low confidence); not yet confirmed by the author._
+
+- [ ] Each V3 finding is banked with a home (not lost) and the repair queue stays separate from measurement
+- [ ] Carried caveats (e.g. DF current-index vs historical dispatches) are either resolved or explicitly carried into V3

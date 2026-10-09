@@ -205,3 +205,11 @@ Cross-refs: M-typed-memories (the store/dialogue-acts substrate this flows
 over) · M-zai-learning-loop charter §Second derivative (Ψ as the first
 outer-loop mechanism) · algorithms/zai-learning-loop.md (operational
 reproduction recipe).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Run the v1 sweep on the combined graph (phase-4 + live bootstrap attachments + six draft rewrite rules via shared trigger-class patterns)
+- [ ] Wire the sustaining-band language into Rung 4's battery spec (exploration-mass floor as coefficient-space constraint)
+- [ ] Show the note and correspondence table to Rob via the WS6 whitepaper docs/retrieval-whitepaper.md and record his response

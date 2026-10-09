@@ -48,3 +48,11 @@ Any deviation (step 1 errors, parent ≠ JVM, no captured output) means the faci
 
 - Reachable equivalently over Drawbridge directly: `(futon3c.agency.bg-process/launch! {:cmd "…" :label "…"})`, `/status`, `/tail`, `/kill!`, `/forget!`.
 - This checks the fresh JVM only. It does **not** recover pre-restart tasks (by design — v1 tracks tasks in-memory).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] After a JVM restart: scripts/bg.py list loads the facility and a marker job launches
+- [ ] Verify the launched process's parent is the JVM pid and both output lines are captured
+- [ ] Report any deviation rather than relying on bg-process until fixed

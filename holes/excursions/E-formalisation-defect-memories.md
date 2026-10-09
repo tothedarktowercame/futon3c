@@ -165,3 +165,10 @@ must be counted separately rather than reported as one "defect rate".
   category that should live alongside the pattern library?
 - BPM (~1,019 problems) is the natural test: it has never been formalised, so
   it is a clean arm for the prediction in §5.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] A decision is recorded: formalisation-defect memories stay APM-local or become a corpus-independent category beside the pattern library
+- [ ] The BPM (~1,019 problems) clean-arm test of the §5 prediction is run and its result recorded

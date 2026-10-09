@@ -78,3 +78,12 @@ which work is chosen; only which seat does it.
 - voxterm commits 78d99b1, 0b9822c (reading Kimi's quota and its exhausted
   window correctly) are what make the Kimi reading trustworthy enough to pace
   against.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] I1: expose per-provider/window pace beside the readings, with the just-reset and failed-reading cases handled
+- [ ] I2: record the chosen seat's provider pace on each dispatch job record (agency_send.py or the invoke route)
+- [ ] I3: advisory roster helper ordering idle seats by pace, with order and choice recorded
+- [ ] I4: over a few days of I2 records, report how often a provider ran out before reset and how much window went unused

@@ -249,3 +249,11 @@ the part nobody had checked, as with R8 and R14.
 - `futon2/holes/missions/M-formal-war-machine.md` §2.1b — family 9, whose Lean cell this excursion fills.
 - `futon2/src/futon2/aif/action_proposer.clj:31,61` — `proposer-id`, declared and never composed.
 - `futon2/src/futon2/aif2/tension.clj` — the tension proposer, and WR-20's S1 instance.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Write CandidateSpace.lean (family 9) so it builds with zero sorry
+- [ ] Complete slice 1 (artifact provenance), which the doc marks blocking the module
+- [ ] Complete slice 2 (full-loop proposer-set census) and record Joe's WR-20 ring ruling

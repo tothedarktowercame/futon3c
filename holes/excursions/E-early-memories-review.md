@@ -165,3 +165,10 @@ that needs the cross-frame snapshot (`invoke-…878`) so the Student can see
 prior frames' reviewed memories at all. Review makes them *eligible*;
 snapshot seeding makes them *accessible*; whether they are then *used* is
 the reading after the next frame.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] All 203 problem-centric memories have a receipted review pass recorded, reviewer ≠ depositor
+- [ ] Reviewed memories are made accessible to the Student via the cross-frame snapshot (invoke-…878)

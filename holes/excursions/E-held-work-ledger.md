@@ -54,3 +54,11 @@ invisibly). One typed adapter (`from-sorrys`) + a generic registry tree-scan
    E-futon1a-archivist canonicalisation + claude-2's D4 feeder pattern).
 4. **Real wake-trigger evaluator** — "what wakes now?" governed by evidence/dates/
    dependency-events, not just gap-detection.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] One common held/deferred schema unifies the five shapes (holes prose, sorrys.edn, star-map :held, pudding-prover-registry, archivist gate-queue)
+- [ ] A durable queryable ledger POC exists that answers 'what held work should wake up now?' without manual archaeology
+- [ ] A real wake-trigger evaluator runs governed by evidence/dates/dependency-events

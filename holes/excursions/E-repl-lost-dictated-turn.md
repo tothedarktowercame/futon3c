@@ -28,3 +28,10 @@ turn in `*claude-repl:claude-17*`; the result was found only by polling the job.
 that time the store was slow (reads >5 s at 19:17:44-45Z) and one claude-17 chat-turn
 append was rejected. So the lost deliveries are not only dictated turns: a park resume
 went missing too, which points at the REPL's delivery path, not at voxterm.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Establish the cause via the voxterm log, store chat-turn records for session 564c8e50, and agent-repl-park.el vs claude-repl markers
+- [ ] Write a diagnosis explaining both the dictated turn and the missing park wake, or rule out suspected causes with evidence

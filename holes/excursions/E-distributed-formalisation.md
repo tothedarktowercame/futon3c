@@ -186,3 +186,10 @@ deeper. Conclusion-in-progress, not a verdict.
   counterpart: realtime structural+semantic index on Lean build.
 - **`substrate-2`** (Arxana, :7071) + **futon3a embeddings** — our neo4j/pgvector
   analog already in hand.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
+
+- [ ] One pilot-paper segment's IATC skeleton is lifted to Lean statements with a sorry at each :missing-warrant and lake build is green
+- [ ] A small distributed fill on the easiest hole is completed and witnessed in ArSE

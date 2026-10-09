@@ -81,3 +81,12 @@ whether structural-only suffices or semantic matching is needed. Commit artifact
 `holes/missions/M-typed-holes-example-scope-query.md`,
 `scripts/scope_query_dogfood.py`, `mathlib4/DarkTower/ScopeQuery.lean`,
 `storage/superpod-mo-processed.tar.gz`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
+
+- [ ] Produce the query phylogeny as a real hx/type distribution over the MO corpus.
+- [ ] Answer at least one MO question as a scope-query and check it against its accepted answer.
+- [ ] Write the read on whether structural-only suffices or semantic matching is needed.
+- [ ] Commit the artifacts.

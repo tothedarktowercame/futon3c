@@ -260,3 +260,11 @@ papers; the papers/sections with low coverage are where the missing scopes live.
   (C1–C5); this excursion says which of those to fix *first* (the ones feeding
   `quantifies`/`constrains`).
 - **MO corpus** — `/home/joe/code/storage/mo-processed-gpu/{scopes,tags}.json`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Derive a question distribution from the MO corpus (/home/joe/code/storage/mo-processed-gpu/{scopes,tags}.json).
+- [ ] Produce a question-driven tagging priority order for untagged content (tag next what the question distribution most demands), replacing detector-accident cover…
+- [ ] Apply the order to pick which detector gaps (anatomy-v0-loss-backlog C1–C5) are fixed first (those feeding quantifies/constrains) and record the outcome.

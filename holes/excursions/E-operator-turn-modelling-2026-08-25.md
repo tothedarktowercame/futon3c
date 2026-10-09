@@ -241,3 +241,10 @@ earlier "Air composes the FTS query" idea is the same move one layer over.
 currently falls back to the slug, construct psi from that session's operator
 turns instead, and compare `size`, `wholeness` and top `rel` against both the
 slug and the mission doc. That is the two-sided experiment, and it is cheap.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Run the two-sided experiment: for a mission where the WM falls back to the slug, construct psi from that session's operator turns and compare size, wholeness a…
+- [ ] Record the comparison results in writing before building anything on top.

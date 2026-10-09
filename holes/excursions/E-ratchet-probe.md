@@ -213,3 +213,11 @@ completes with a classified outcome. If the outcome is `reverted`,
 that is not a failure of the package — it is its strongest exhibit
 (P1 confirmed in our own domain), and the package's emphasis shifts
 accordingly: gates and harness, not instruction.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
+
+- [ ] Run at least one full live probe cycle of the designed experiment (review pushback → later unprompted behavior or a durable meta-learning artifact).
+- [ ] Classify the cycle's outcome by the three learning locations (L0–L4 / L-artifact) in writing.
+- [ ] Only after a classified cycle may the ratchet be cited as receipted practice.

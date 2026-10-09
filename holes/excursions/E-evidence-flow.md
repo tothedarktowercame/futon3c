@@ -92,3 +92,10 @@ a timescale). Each has different failure modes for the attestation/WM consumers 
 - A clean kill is a success: "streams are intentionally disjoint and consumers just
   need their bases pinned" is an acceptable finding — then this closes into
   documentation plus a handful of base-URL fixes.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] The actual evidence-flow topology is written up: where evidence is written, where read, and whether streams merge, with probe results
+- [ ] Either base-URL fixes land for consumers needing pinned bases, or the clean-kill finding (intentionally disjoint streams) is recorded as closure

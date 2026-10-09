@@ -112,3 +112,10 @@ relay it is not.
   which allows a hub to relay while requiring the event to retain its original
   origin and ordering domain. This defect is that requirement not being carried
   into pruning.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Implement one of the two repair shapes in federation pruning so relays cannot re-attest a departed agent
+- [ ] Verify on the zone-chi-lucy-oxf topology that the phantom proxy is pruned

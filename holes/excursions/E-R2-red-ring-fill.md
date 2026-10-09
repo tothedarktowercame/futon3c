@@ -201,3 +201,10 @@ feedback the WM lacks, and R2 is the edge that would carry it.
 - `p4ng/empirics-futon/NOTE-thirtyfour-steps-both-levels.md` — why this ring carries the join.
 - `futon3c/holes/excursions/E-wm-operator-lane.md` (2026-06-05) — the lanes, the nag gate, and the figures' origin.
 - `futon3c/src/futon3c/wm/operator_lane.clj`, `operator_bulletin.clj` — the classifier and the projection.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Verify or retract the unverified 0.009 credit figure in slice 1
+- [ ] Record a ruling on the one missing operator-turn-to-belief edge: built, or explicitly left open

@@ -311,3 +311,11 @@ the instrument works and earned its keep on run #1.**
      fast-follow), avoiding a futon2↔futon3c dependency tangle. Awaiting bell-back (summary + gate results + shas).
 3. **ARGUE/VERIFY** the swept gap-weight → hand the recommended value to `E-efe-education` for the live re-tune
    (Joe's consent locus).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Codex build delivered: the two shims (pin-snapshot, rollout-under-opts), sweep harness, S(W), the two question-objectives and the gap-weight acceptance run.
+- [ ] Gates pass: clj-kondo, check-parens, futon2 tests, and the acceptance run reproduces the gap-weight 6.0 saturation finding.
+- [ ] ARGUE/VERIFY the swept gap-weight and hand the recommended value to E-efe-education for the live re-tune (Joe's consent locus).

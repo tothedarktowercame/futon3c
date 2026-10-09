@@ -219,3 +219,12 @@ D1–D5 are invariants of the *queue*. D6 is the invariant of the *pouch*, and i
   here, the *surface* mis-pairs them. Same "which turn is this?" question at two layers.
 - `holes/missions/M-kangaroo.md` — warm-pouch lifecycle owner; background work in pouches is already a
   known hazard there (reset kills session-held processes). This is the read-side counterpart.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Land fixes (2)-(5): the remaining scoped-but-unbuilt pouch demux fixes beyond the flag-gated fix (1)
+- [ ] Populate msg-id in [invoke-trace] so the D1 gate can actually run, and re-run it
+- [ ] Give the JVM an append-only runtime log under data/ so pouch drain and startup recovery are auditable
+- [ ] Ship the missing-trailer ('Cooked for') tripwire as a standing detector and regression test

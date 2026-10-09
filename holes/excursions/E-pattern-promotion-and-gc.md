@@ -89,3 +89,11 @@ analyses (2026-08-22 → 2026-09-30) in `created_at` order through the edge rule
    turn, operator confirmation) — P21 rules out counting links.
 3. What withdraws evidence: rewound turns, superseded readings, deleted patterns.
 4. Whether growth of the node set should stay hand-authored only.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Answer the four open measurement questions in writing (co-rejected edges, edge weight gain, evidence withdrawal, node-set growth).
+- [ ] Define the promotion, demotion and garbage-collection operations for patterns in the cascade, consistent with P21 (no link-counting).
+- [ ] Do this only after the M-象-2000 cascade exists, per the doc's own gating.

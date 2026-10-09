@@ -171,3 +171,11 @@ This is the piece that makes the continuation *visible where Joe works* — the 
 - **C-cascade-real** — the motivating consumer: cascade DAG flows autonomously if agents park-until-deps-ready.
 - **M-agency-hardening** — owns the durable queue / drainer-v2 / OOM-resume work this builds on.
 - `agency/clock_lineage.clj` — durable-per-agent-state precedent for the `parked-on` record.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Implement the ergonomic agent-facing entry for 'park me on these deps and resume' on the existing turn-queue/durable-state engine.
+- [ ] Demonstrate live: an agent parks its REPL turn until its dependencies return and self-resumes, with the continuation payload durable across turns (survives LRU…
+- [ ] Cascade DAG consumer check: a cross-agent dependency chain flows without Joe hand-cranking each step.

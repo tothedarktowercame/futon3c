@@ -52,3 +52,11 @@ The seeding relaxation: we showed "seed the *perfect* pattern → findable" (sli
 - **Seed good-enough class patterns** for a real gap (cluster 4: mathematical-reasoning/ai4ci) and re-scan.
 - **Wire the generated Lucid Scenes into VSATARCS as a live view** (browse the WM's dreams).
 - Narrate the highest-stakes scenes agent-in-the-loop (full speculative fiction).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Sharpen relevance: replace the cluster-generic warrant with a learned / discharge-trained prior so cascades are mission-specific
+- [ ] Seed good-enough class patterns for a real gap (cluster 4: mathematical-reasoning/ai4ci) and re-scan the gap map
+- [ ] Wire the generated Lucid Scenes into VSATARCS as a live view

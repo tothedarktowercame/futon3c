@@ -15,3 +15,9 @@ the same idempotency key returns the same act, so the write is not duplicated.
 Fix options: drop nils in the transform before the transaction, or compare nil-insensitively.
 Either way, a committed write should not be reported as failed.
 Client-side workaround in futon3c grant_record.clj: drop nils before writing.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
+
+- [ ] futon1b upstream fix lands (nils dropped in the transform, or nil-insensitive compare) so a committed write is never reported as failed, covered by a test

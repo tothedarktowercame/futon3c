@@ -615,3 +615,10 @@ This is independent of historical rows. The gate prevents new violations; the
 A3 sweep/reingest decision governs old values. Closing the live route therefore
 does not require reingesting code and docs, and reingesting without the gate
 would not close the route.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Full ~1,148-file pattern corpus ingested in under 30 minutes, measured and recorded
+- [ ] The live ingest route enforces the batch gate (invalid pattern id rejects the batch before any sibling write)

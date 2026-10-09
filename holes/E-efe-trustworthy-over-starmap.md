@@ -72,3 +72,10 @@ distraction — the self-representing loop closing on itself.
 - `M-pudding-peradams` (futon7) — the Petri-net / marking POC where witness (c) is demonstrated.
 - `E-possible-world-regulator` — the instrument that earned (a); `E-efe-education` — the *precision* sibling
   (orthogonal layer: precision = how-confident; this = the preference/marking the EFE drifts toward).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
+
+- [ ] Witness leg (c) is demonstrated out-of-model (marking on the Petri-net POC per M-pudding-peradams) and recorded
+- [ ] The keystone witness is earned and recorded in the excursion with legs (a), (b), (c) all witnessed

@@ -327,3 +327,12 @@ path may apply. Worth a look by whoever owns that function.
 first action of every retraction policy followed the alphabetical order of
 pattern names (through sorted edge endpoints). A fix is dispatched to codex-4
 (job `invoke-1790780752104-29159-8b342179`).
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Build the typed port model per pattern and claim (takes-in/produces/left-to-supply) from flexiarg slots
+- [ ] Do steps 3-5: pattern-to-diagram translation and typed ports into M-diagramprover Layer 1.5 checking
+- [ ] Run the check on a real spec: wired or declared-external inputs; findings for unwired-constructed and unconsumed outputs
+- [ ] Land the codex-4 fix for target_policy_family.clj alphabetical first-action

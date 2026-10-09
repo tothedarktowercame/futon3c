@@ -101,3 +101,11 @@ idle, knows the proof is incomplete, but does not act on that knowledge.
 - `zai_api.clj` `run-tool-rounds!` — the intra-turn auto-continue mechanism
   (24 rounds × up to 8 continues), which handles round-budget exhaustion
   within a single turn but not turn-level re-dispatch
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Build the auto-continuation loop in apm_conductor_v3.clj: make-on-idle re-dispatches or records a typed stop
+- [ ] Multi-turn APM problems complete without a human calling continue!/backup!
+- [ ] Preserve prior session context on re-dispatch (no fresh-agent context loss)

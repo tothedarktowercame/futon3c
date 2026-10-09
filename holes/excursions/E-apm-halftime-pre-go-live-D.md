@@ -229,3 +229,11 @@ log replay means a 4.3 GB log would take ~39 hours to replay from empty. The
 store only boots quickly because it replays from a checkpoint. Anything that
 invalidates the checkpoint is an outage, and nothing currently measures how
 close we are to that.*
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] D3 lands first: the pure-addition fix that would have turned the 2026-08-13 outage into a warning
+- [ ] D1 lands second, D2 (boot path) last with nothing else in flight against the substrate
+- [ ] Replay-rate proximity to checkpoint invalidation becomes measurable (runtime offsets polled)

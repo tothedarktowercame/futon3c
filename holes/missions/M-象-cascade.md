@@ -232,3 +232,13 @@ Decisions taken here as owner:
   futon2 (read-only: the rule shape), futon1b (read-only: evidence).
 
 **IDENTIFY exit:** awaiting Joe's reading of the gap and scope.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Corpus: every analysed turn has a triple or typed reason (proxies counted); one induced rule beats a pre-declared baseline on held-out turns
+- [ ] Coalescing unattended: auto-compare proposals; stamped merges/splits; split restores citations; Joe does nothing daily
+- [ ] Holes close: an added pattern links back to the turns it fills; census hole count falls accordingly
+- [ ] Lookup: parent-child measured vs flat BM25 recall@5 (~0.29), reported either way
+- [ ] Machine loads it: one induced rule admitted by the WM loader, appearing in a plan-only run (FUTON_WM_FLIGHT=plan)

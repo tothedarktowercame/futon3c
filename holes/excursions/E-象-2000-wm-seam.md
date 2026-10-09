@@ -83,3 +83,11 @@ The War Machine's consumer is built: futon2 950c6301b, `source-wants :primary-se
 - **S2 writes it deterministically and commits it.** It writes only when the mission's criteria text changes, so a rerun on unchanged input produces no diff (R1).
 - **Two commits are involved.** The document's `:source :commit` names the mission-file commit its quote spans point into. A flight reads the document itself at futon3c master HEAD at flight start (`git show <sha>:<path>`), and records that sha and the document's SHA-256 in its receipt. A document whose `:source :commit` is not an ancestor of the read sha is refused.
 - **A missing file** means the mission has no primary wants yet. That is typed `:no-seam-document`, not an empty want list.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] S2: write deterministic per-mission primary-wants seam files (schema :wm/primary-wants-seam-v1); rerun gives no diff on unchanged input
+- [ ] S3 adapter: propose :produces/:needs for uncovered flexiargs, confirmed before the constructor uses them
+- [ ] Widen the C8 command validator (or wrap P0 in bb) so xiang2000_p0.py --check can register

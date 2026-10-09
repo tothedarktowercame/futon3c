@@ -289,3 +289,11 @@ probe -424 (reconciler beat the deadline) → completion wakes, delivered late.
 No wakes are lost either way (backstop semantics working as designed); the
 degradation is latency + unsuppressed bellbacks. Restart still the fix;
 diagnose the finalize-time hook first in the quiet window.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
+
+- [ ] Fix bugs 2 and 3 and finding-0 (still open after Fix 1).
+- [ ] Diagnose the finalize-time hook (parked-on-notify!) race in the quiet window — restart remains the interim fix until then.
+- [ ] Run and record the acceptance run of the repaired park-resume path.

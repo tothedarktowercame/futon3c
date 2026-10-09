@@ -1231,3 +1231,10 @@ review, and one theorem was thereby discharged as `0 = k · 0`.
 That gate is now in the pinned card, so every future solver inherits it without
 ground control writing it into each packet by hand — which is where it has lived
 all day.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, medium confidence); not yet confirmed by the author._
+
+- [ ] Every D27-D39 entry has a disposition: fixed-and-gated, verified, or explicitly parked
+- [ ] The residual gap in D25/D28 (:write-use reachable only in a closed phase window) is fixed or ruled open

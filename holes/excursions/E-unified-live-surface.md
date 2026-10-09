@@ -96,3 +96,11 @@ because it is now clocked. The instruments verified each other.
 **Remaining (O2 continuation, unclaimed):** more panels by payoff (held, holes,
 arrows); EFE overlay as a CLJS layer; O3 stays parked. Evidence panel still gated
 on E-evidence-flow.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] O2 continuation: add more native panels by payoff (held, holes, arrows) and the EFE overlay as a CLJS layer
+- [ ] Unpark or explicitly drop O3 (the fuller fold), recording Joe's ARGUE decision
+- [ ] Wire the evidence panel once E-evidence-flow blesses which store the viewer reads (no hardcoded host)

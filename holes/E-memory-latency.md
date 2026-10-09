@@ -510,3 +510,10 @@ The recommended order is:
 - `src/futon3c/substrate/client.clj` — HTTP calls and 60-second read timeout.
 - `futon1b/futon1b_server.clj` and `futon1b/futon1b_graph.clj` — admission,
   endpoint query, bitemporal filtering, and hydration.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, low confidence); not yet confirmed by the author._
+
+- [ ] Pattern-conditioned memory queries run within the stated percentile targets on the fixed-query monitor series
+- [ ] Exit MONITOR status with a recorded decision (resolved or re-scoped) by Joe + implementers

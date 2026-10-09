@@ -377,3 +377,10 @@ check-parens / tests per the workspace standard. Frozen artifacts under
   files; a six-week window would be perhaps a third of that and still clear
   n ≥ 20 for S2. Full history is the better graph and the slower ingest.
   Default assumption unless told otherwise: **full history, pinned sha.**
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-2, low confidence); not yet confirmed by the author._
+
+- [ ] The ingest-scope decision (full history vs windowed slice) is ratified by Joe beyond the stated full-history default
+- [ ] If approved, the git-history memory corpus is ingested pinned to a sha with S2's n ≥ 20 verified on the measured counts

@@ -417,3 +417,10 @@ operator/reviewer/scribe separation holds regardless of which model fills
 each). Enables model comparison on the same residue battery — and the
 budget distribution (three independent quotas) makes it nearly free to
 schedule. Queue behind the retrieval rungs.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, medium confidence); not yet confirmed by the author._
+
+- [ ] Finish the V3 whitepaper as the counterfactual/ablation paper
+- [ ] Record the ablation that makes 'load-bearing' a measurement rather than a judgement

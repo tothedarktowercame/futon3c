@@ -61,3 +61,10 @@ un-fire if it's junk) · **outward/irreversible acts still consent-gate** (the e
 - `C-pudding-prover` §11 — the brake→engine model; this is its **explore** pole.
 - `E-efe-trustworthy-over-starmap` — the **exploit**-side keystone (the marking-rule); siblings, two poles.
 - The WM pilot (`README-pilot.md`) — the inhabitant that runs the loop.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Complete cycle-1: verify the supersession, obtain the operator's fold/close ruling, clear :hypergraph-operator (fruit-witness lands)
+- [ ] Keep further cycles inside the four-part envelope (pattern-warranted, PUR-recorded, on a branch, consent-gated)

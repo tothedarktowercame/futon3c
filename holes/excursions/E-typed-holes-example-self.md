@@ -101,3 +101,10 @@ will visibly fill one of the ghosts above.
 `M-typed-holes-MAP.md`, `M-typed-holes-example-mission-head.md` (the completed
 sibling), `mathlib4/DarkTower/Examples.lean` (`MissionExample`, the Lean witness
 for the mission genre), `futon4/holes/mission-lifecycle.md`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
+
+- [ ] Watch each phase-commit on M-typed-holes fill one of the typed ghost lines (INSTANTIATE, DOCUMENT) recorded in the satiety map
+- [ ] Complete the wiring certificate's open arrow to D1 so the two-cert scope (design + wiring) is closed in M-typed-holes-VERIFY

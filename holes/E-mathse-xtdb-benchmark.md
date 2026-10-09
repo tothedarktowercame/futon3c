@@ -371,3 +371,10 @@ for. Trimmed:
 | VERIFY | Specification BOM. The *claim* row is the one to get right: denominator = S3.6's exclusion counts; confounder = post-closure edits (item 4 above). |
 | INSTANTIATE | handoffs 2–5. |
 | DOCUMENT | the #5637 comment (Joe-gated, per D2), not a docbook entry. |
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-3, high confidence); not yet confirmed by the author._
+
+- [ ] Build the benchmark per spec S1–S3 and S6–S7 (corpus, importer/manifest/XTDB/sidecar/runner/report)
+- [ ] Deliver D2: the Joe-gated #5637 evidence packet/comment to JUXT with the claim row right (denominator = S3.6 exclusion counts)

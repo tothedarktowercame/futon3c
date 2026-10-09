@@ -91,3 +91,10 @@ make them, because the mapping into the core reconciles them afterwards.
 - E-convert-operator-turns-to-patterns.md: the interpreter seat and the brief.
 - `scripts/turn_batch.py`, `scripts/turn_dispatch_reap.py`,
   `emacs/session-turn-analysis.el`.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
+
+- [ ] Analyse the ~7,200 pre-August operator turns that currently have no coverage, closing the coverage gap in the month table
+- [ ] Answer the three open questions in writing: core vocabulary (existing 22 vs re-derived), mapping approval method, pattern-ref hierarchy

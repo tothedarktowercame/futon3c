@@ -95,3 +95,11 @@ stronger groundedness gate before it's useful.
 - `holes/missions/M-typed-bells.md` — the typed-bell→ArSE substrate (this probe is its S4 dry-run).
 - `README-arse.md` — the Q&A store under test.
 - Tonight's `M-agency-hardening` appendices (no-text + desync) — what makes the swarm reliable.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Record Joe's go/no-go decision for dispatching the codex swarm
+- [ ] Swarm answers one dark-tower section-4 conjecture grounded in the math.CT scan, Q&A landing in ArSE via typed bells
+- [ ] Record the usefulness verdict: grounded citable claims that sharpen the excursion, or a real negative finding

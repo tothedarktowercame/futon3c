@@ -51,3 +51,10 @@ with reviewed experiential support,” or both as explicitly different result
 classes. Until then, attachment coverage is a diagnostic count, not a target.
 Mass-creating the 72 absent edges would prejudge that decision and bypass the
 separation-of-powers review contract.
+
+## Closure criteria (provisional, 2026-10-09)
+
+_Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
+
+- [ ] Joe rules what recallable pattern means (reviewed flexiarg, reviewed experiential support, or both as classes)
+- [ ] No mass creation of the 72 absent edges occurs before that ruling
