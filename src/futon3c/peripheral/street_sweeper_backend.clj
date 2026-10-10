@@ -542,6 +542,14 @@
                          (catch Throwable _ {:out "?"}))]
            (str/blank? (or (:out r-st) ""))))))
 
+(defn- sister-file-ignored?
+  "True iff `rel-path` is gitignored in sister `repo` — runtime data that is
+   never meant to be tracked, so it cannot be an uncommitted dependency."
+  [repo rel-path]
+  (try (zero? (:exit (shell/sh "git" "check-ignore" "-q" "--" rel-path
+                               :dir (repo-path repo))))
+       (catch Throwable _ false)))
+
 (defn check-cross-repo-deps
   "INV-14: scan each file in `files` (relative paths within `current-repo`)
    for cross-repo references. For each, verify the sister-repo file is
@@ -568,7 +576,8 @@
                   rel   (:rel-path ref)]
               (when (and (not= sister current-repo)
                          (valid-repo? sister)
-                         (not (sister-file-tracked? sister rel)))
+                         (not (sister-file-tracked? sister rel))
+                         (not (sister-file-ignored? sister rel)))
                 (swap! issues conj
                        {:in-staged-file f
                         :sister-repo sister

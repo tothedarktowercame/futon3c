@@ -167,6 +167,40 @@
     (is (nil? (ssb/check-cross-repo-deps "futon0" ["scripts/cr"]
                                          {:accept-broken-cross-ref true})))))
 
+(deftest inv-14-gitignored-sister-file-is-not-a-dep
+  ;; 2026-10-10: a futon2 plan doc cited a futon3c data/ file that futon3c
+  ;; gitignores; INV-14 refused the packet on every sweep pass, forever.
+  (let [base (.toFile (java.nio.file.Files/createTempDirectory
+                       "street-sweeper-xref-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        here (io/file base "fixture")
+        sister (io/file base "sister")
+        root-var (ns-resolve 'futon3c.peripheral.street-sweeper-backend
+                             'repos-root)
+        check #(with-redefs-fn {root-var (str base)}
+                 (fn [] (ssb/check-cross-repo-deps "fixture" ["src/x.clj"] {})))]
+    (try
+      (doseq [r [here sister]]
+        (.mkdirs r)
+        (sh! base "git" "init" (str r)))
+      (.mkdirs (io/file sister "data"))
+      (spit (io/file sister ".gitignore") "data/*\n")
+      (spit (io/file sister "data/run.edn") "{}\n")
+      (spit (io/file sister "loose.edn") "{}\n")
+      (.mkdirs (io/file here "src"))
+      (testing "a cited path the sister repo ignores passes"
+        (spit (io/file here "src/x.clj")
+              ";; see /home/joe/code/sister/data/run.edn\n")
+        (is (nil? (check))))
+      (testing "a cited untracked path that is NOT ignored still fails"
+        (spit (io/file here "src/x.clj")
+              ";; see /home/joe/code/sister/loose.edn\n")
+        (let [r (check)]
+          (is (= :inv-14-cross-repo-untracked-dep (:error r)))
+          (is (= ["loose.edn"] (mapv :referenced-rel-path (:issues r))))))
+      (finally
+        (delete-tree! base)))))
+
 ;; =============================================================================
 ;; INV-1: cg-id binding registry
 ;; =============================================================================
