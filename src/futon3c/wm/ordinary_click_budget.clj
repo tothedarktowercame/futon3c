@@ -53,9 +53,10 @@
    Lean, token and timing assessment, plus one more granted to claude-12 on
    2026-10-09 for the post-repair verification click, watched phase by phase
    under the debugger, plus one more granted to claude-12 on 2026-10-09 for the
-   click that scores the first report-card preregistrations. All grants are
-   recorded in the authorization document named above."
-  50)
+   click that scores the first report-card preregistrations, and one on
+   2026-10-10 after the close-overflow fix. All grants are recorded in the
+   authorization document named above."
+  51)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
