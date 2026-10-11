@@ -99,8 +99,8 @@
   "One act per reading fragment with a kernel kind. Returns
    {:acts .. :skipped n} — fragments whose intent has no kind are skipped
    and counted, never invented."
-  [record reading]
-  (let [base (:turn_id record)
+  [record reading base]
+  (let [turn-id (:turn_id record)
         at (:created_at record)
         seat {:agent (:agent_id record) :session (:session_id record)}]
     (reduce (fn [acc [sid idx {:keys [intent] :as frag}]]
@@ -112,7 +112,7 @@
                                  :at at
                                  :to (:agent_id record)
                                  :agent (:agent seat) :session (:session seat)
-                                 :turn base
+                                 :turn turn-id
                                  :text (:text frag)}
                           (:target frag) (assoc :about (:target frag))
                           (int? (:start frag)) (assoc :start (:start frag) :end (:end frag))))
@@ -127,8 +127,8 @@
   "One act per marked paragraph of the agent's reply, the mark declaring
    the kind. Marked paragraphs whose intent has no kernel kind (gist,
    unresolved) are skipped and counted."
-  [record reply-text]
-  (let [base (:turn_id record)
+  [record reply-text base]
+  (let [turn-id (:turn_id record)
         at (:created_at record)]
     (reduce (fn [acc [idx {:keys [intent text]}]]
               (if-let [kind (mark-kind intent text)]
@@ -139,7 +139,7 @@
                                  :at at
                                  :to "operator"
                                  :agent (:agent_id record) :session (:session_id record)
-                                 :turn base
+                                 :turn turn-id
                                  :text text}
                           (= kind :offer) (assoc :option (vec (option-numbers text)))))
                 (update acc :skipped inc)))
@@ -148,15 +148,15 @@
 
 (defn- commit-acts
   "One :commit act per happened-note commit."
-  [record commits]
-  (let [base (:turn_id record)]
+  [record commits base]
+  (let [turn-id (:turn_id record)]
     (mapv (fn [{:keys [sha repo subject]}]
             {:id (str base "-c-" sha)
              :kind :commit
              :author (:agent_id record)
              :at (:created_at record)
              :agent (:agent_id record) :session (:session_id record)
-             :turn base
+             :turn turn-id
              :sha sha :repo repo :subject subject})
           commits)))
 
@@ -220,17 +220,18 @@
    agents records); nil for any other record, so operator turns are
    untouched. The act id is <turn_id>-b-0; the text is the prompt's first
    300 characters."
-  [record]
-  (when (and (= "agent" (:origin record)) (some-> (:caller record) str/trim not-empty))
-    (let [text (str (:source_text record))]
-      {:id (str (:turn_id record) "-b-0")
-       :kind :ask-action
-       :author (:caller record)
-       :at (:created_at record)
-       :to (:agent_id record)
-       :agent (:agent_id record) :session (:session_id record)
-       :turn (:turn_id record)
-       :text (subs text 0 (min 300 (count text)))})))
+  ([record] (bell-act record (:turn_id record)))
+  ([record base]
+   (when (and (= "agent" (:origin record)) (some-> (:caller record) str/trim not-empty))
+     (let [text (str (:source_text record))]
+       {:id (str base "-b-0")
+        :kind :ask-action
+        :author (:caller record)
+        :at (:created_at record)
+        :to (:agent_id record)
+        :agent (:agent_id record) :session (:session_id record)
+        :turn (:turn_id record)
+        :text (subs text 0 (min 300 (count text)))}))))
 
 (defn- answer-bell
   "REPLY-ACTS of a bell turn with each :report or :verify act that has no
@@ -263,16 +264,20 @@
                      evidence). Without it an approve stays :approve.
    :carries-out      offer id this turn's commits carry out (an offer the
                      previous turn accepted).
+   :act-base         id prefix; session-acts supplies a collision-safe base.
+   :record-id        durable store id carried by every resulting act.
 
    Returns the act vector, with ^{:skipped n} metadata counting fragments
    and marked paragraphs whose intent had no kernel kind."
   ([record reading reply-text commits]
    (turn->acts record reading reply-text commits {}))
-  ([record reading reply-text commits {:keys [preceding-offer carries-out]}]
-   (let [bell (bell-act record)
+  ([record reading reply-text commits {:keys [preceding-offer carries-out
+                                               act-base record-id]}]
+   (let [base (or act-base (:turn_id record))
+         bell (bell-act record base)
          {frag-acts :acts frag-skipped :skipped} (if bell
                                                    {:acts [] :skipped 0}
-                                                   (fragment-acts record reading))
+                                                   (fragment-acts record reading base))
          frag-acts (cond-> frag-acts
                      preceding-offer
                      (->> (reduce (fn [[acts accepted?] act]
@@ -281,14 +286,15 @@
                                       [(conj acts act) accepted?]))
                                   [[] false])
                           first))
-         {reply-acts :acts reply-skipped :skipped} (reply-acts record reply-text)
+         {reply-acts :acts reply-skipped :skipped} (reply-acts record reply-text base)
          reply-acts (cond-> reply-acts
                       bell (answer-bell (:id bell))
                       (seq frag-acts) (link-quoted-brackets frag-acts))
-         commit-acts (cond-> (commit-acts record commits)
+         commit-acts (cond-> (commit-acts record commits base)
                        carries-out (->> (mapv #(assoc % :carries-out carries-out))))]
      (with-meta (mapv stamp-act
-                      (concat (when bell [bell]) frag-acts reply-acts commit-acts))
+                      (map #(assoc % :record record-id)
+                           (concat (when bell [bell]) frag-acts reply-acts commit-acts)))
        {:skipped (+ frag-skipped reply-skipped)}))))
 
 ;; ---------------------------------------------------------------------------
@@ -297,9 +303,9 @@
 (defn- reply-paragraphs
   "[[mark excerpt] act-id] for each marked paragraph of a turn's reply that
    became an act, keyed as a stored pointer names it."
-  [record reply acts]
+  [record reply acts base]
   (let [ids (set (map :id acts))
-        base (:turn_id record)]
+        base (or base (:turn_id record))]
     (for [[idx {:keys [mark text]}] (map-indexed vector (turn-record/reply-marks reply))
           :let [id (str base "-r-" idx)]
           :when (ids id)]
@@ -412,7 +418,7 @@
         (meta turn-acts)))))
 
 (defn session-acts
-  "The acts of TURNS — seqs of {:record :reading :reply :commits} —
+  "The acts of TURNS — seqs of {:record :record-id :reading :reply :commits} —
    ordered by the records' created_at, with the two cross-turn links
    stated from explicit evidence:
 
@@ -438,13 +444,20 @@
            preceding-offer nil
            accepted nil
            seen {}
+           seen-turn-ids #{}
            pointers {:linked 0 :unlinked 0}]
-      (if-let [{:keys [record reading reply commits]} (first todo)]
-        (let [{:keys [linked unlinked] :as pointers-here} (pointer-targets record seen)
+      (if-let [{:keys [record reading reply commits record-id]} (first todo)]
+        (let [turn-id (:turn_id record)
+              act-base (if (contains? seen-turn-ids turn-id)
+                         (str turn-id "@" record-id)
+                         turn-id)
+              {:keys [linked unlinked] :as pointers-here} (pointer-targets record seen)
               turn-acts (link-pointers record
                                        (turn->acts record reading reply commits
                                                    {:preceding-offer preceding-offer
-                                                    :carries-out accepted})
+                                                    :carries-out accepted
+                                                    :act-base act-base
+                                                    :record-id record-id})
                                        pointers-here
                                        (visible-offers acts))
               skipped-here (:skipped (meta turn-acts))
@@ -473,7 +486,8 @@
                  offer-here
                  accepted-here
                  (reduce (fn [m [k id]] (update m k (fnil conj []) id))
-                         seen (reply-paragraphs record reply turn-acts))
+                         seen (reply-paragraphs record reply turn-acts act-base))
+                 (conj seen-turn-ids turn-id)
                  (-> pointers
                      (update :linked + linked)
                      (update :unlinked + unlinked))))
@@ -495,13 +509,19 @@
    untargeted reply paragraph is inferred to answer the sole operator opening
    fragment, if there is exactly one. The adjacency table alone determines
    that inferred pair's effect. The kernel's openo/closedo/obligationo answer,
-   as of the turn's own timestamp."
-  [acts turn-id]
-  (let [at (some (fn [{:keys [turn at]}] (when (= turn turn-id) at)) acts)
+   as of the turn's own timestamp. RECORD-ID selects one occurrence when a
+   process restart reused TURN-ID; the two-argument form remains compatible
+   with histories whose turn ids are unique."
+  ([acts turn-id] (turn-ports acts turn-id nil))
+  ([acts turn-id record-id]
+  (let [chosen? (fn [{:keys [turn record]}]
+                  (and (= turn turn-id)
+                       (or (nil? record-id) (= record record-id))))
+        at (some (fn [{:keys [at] :as act}] (when (chosen? act) at)) acts)
         _ (when-not at
             (throw (ex-info (str "No acts for turn " turn-id)
                             {:reason :unknown-turn :turn turn-id})))
-        inferred (->> (group-by :turn acts)
+        inferred (->> (group-by (juxt :turn :record) acts)
                       vals
                       (mapcat (fn [turn-acts]
                                 (let [openers (filterv #(and (= "operator" (:author %))
@@ -525,8 +545,8 @@
         ;; request and its answer share one turn (E-agency-work-orders W1),
         ;; and so does an operator request answered in the same reply.
         before (into (lx/open-ports db (instant-minus-1s at))
-                     (keep (fn [{:keys [id turn] :as act}]
-                             (when (and (= turn turn-id) (lx/port-act? act)) id)))
+                     (keep (fn [{:keys [id] :as act}]
+                             (when (and (chosen? act) (lx/port-act? act)) id)))
                      acts)
         after (lx/open-ports db at)
         by-id (into {} (map (juxt :id identity) acts))]
@@ -538,4 +558,4 @@
                                        :since (:at (by-id id))})
                                     after)))
      :obligations (vec (lx/obligations db at))
-     :inferred inferred}))
+     :inferred inferred})))

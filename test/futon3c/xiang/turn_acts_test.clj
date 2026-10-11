@@ -112,6 +112,49 @@
     (is (= [true false] ((juxt :port? :standing?) (by-kind :ask-action))))
     (is (= [true true] ((juxt :port? :standing?) (by-kind :propose))))))
 
+(deftest reused-turn-ids-get-record-qualified-act-ids
+  (let [first-turn (assoc (synthetic-turn [{:intent "clarify" :text "First?"}] "")
+                          :record-id "turn-first")
+        second-turn (-> (synthetic-turn [{:intent "constrain" :text "Keep it."}] "")
+                        (assoc :record-id "turn-second")
+                        (assoc-in [:record :created_at] "2026-10-11T04:01:00Z"))
+        acts (ta/session-acts [first-turn second-turn])
+        ids (mapv :id acts)
+        ports (ta/turn-ports acts "agent-turn-1" "turn-second")]
+    (is (= ["agent-turn-1-f-s1-0"
+            "agent-turn-1@turn-second-f-s1-0"]
+           ids))
+    (is (= (count ids) (count (distinct ids))))
+    (is (= #{"turn-first" "turn-second"} (set (map :record acts))))
+    (is (map? ports) "the second occurrence resolves by durable record id")
+    (testing "the older clarify remains a port; the later constraint is only a standing"
+      (is (= #{"agent-turn-1-f-s1-0"}
+             (set (map :act (:still-open ports))))))))
+
+(deftest distinct-turn-ids-preserve-the-established-act-ids
+  (is (= ["claude-17-turn-391-f-s1-0"
+          "claude-17-turn-391-f-s2-0"
+          "claude-17-turn-391-r-1"
+          "claude-17-turn-391-r-2"
+          "claude-17-turn-391-r-3"
+          "claude-17-turn-391-c-1ee5fea7"
+          "claude-17-turn-392-f-s1-0"
+          "claude-17-turn-392-r-1"
+          "claude-17-turn-392-r-2"
+          "claude-17-turn-392-r-3"
+          "claude-17-turn-392-r-4"
+          "claude-17-turn-393-f-s1-0"
+          "claude-17-turn-393-r-1"
+          "claude-17-turn-393-r-2"
+          "claude-17-turn-393-r-3"
+          "claude-17-turn-393-c-d9d30ead"
+          "claude-17-turn-394-f-s1-0"
+          "claude-17-turn-394-r-1"
+          "claude-17-turn-394-r-2"
+          "claude-17-turn-394-r-3"
+          "claude-17-turn-394-r-4"]
+         (mapv :id (ta/session-acts (fixture-turns))))))
+
 (deftest sole-operator-port-infers-table-typed-reply-links
   (let [clarify {:intent "clarify" :text "Is that clarifying?"}
         explain "㊢ (where we are) Yes, that explains it."

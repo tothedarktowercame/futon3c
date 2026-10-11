@@ -373,6 +373,7 @@
                                            (and (= "declared" status)
                                                 (= "agent" (:origin r))))
                                    {:record r
+                                    :record-id rid
                                     :reading (if (= status "analyzed")
                                                (or (ts/read-analysis store rid) {})
                                                {:sentences []})
@@ -382,7 +383,7 @@
                        vec)
           acts (turn-acts/session-acts settled)
           by-id (into {} (map (juxt :id identity) acts))
-          ports (turn-acts/turn-ports acts (:turn_id record))
+          ports (turn-acts/turn-ports acts (:turn_id record) id)
           entry (fn [act-id]
                   (let [a (by-id act-id)]
                     {:act act-id
