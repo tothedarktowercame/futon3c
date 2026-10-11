@@ -173,3 +173,28 @@
             (is (= "do it" (get-in commission [:commission :prompt])))
             (is (= "trace-a" (get-in commission [:job-join :trace-id]))))
           (finally (reset! ledger-atom saved)))))))
+
+(deftest failed-append-forces-a-snapshot-instead-of-fusing-lines
+  ;; A partial append (disk full, I/O error) must not be followed by another
+  ;; append on the same line: that fuses into a corrupt middle line and the
+  ;; ledger refuses to load at the next start.
+  (with-store
+    (fn [_ journal]
+      (let [a (ledger {"a" {:job-id "a" :state "queued"}} ["a"] {} 1)
+            b (assoc-in a [:jobs "a" :state] "running")
+            c (assoc-in b [:jobs "a" :state] "done")
+            d (assoc-in c [:jobs "a" :result-summary] "ok")]
+        (#'http/invoke-ledger-write! a)
+        (swap! (var-get #'http/!invoke-ledger-journal-state)
+               update-vals #(assoc % :snapshot-size Long/MAX_VALUE))
+        (#'http/invoke-ledger-write! b)
+        (with-redefs-fn {#'http/write-journal-line!
+                         (fn [_]
+                           (spit journal "{:j/seq 2 :j/base \"half" :append true)
+                           (throw (java.io.IOException. "No space left on device")))}
+          #(is (thrown? java.io.IOException (#'http/invoke-ledger-write! c))))
+        (#'http/invoke-ledger-write! d)
+        ;; and one more, so a fused line would sit in the middle, not the tail
+        (#'http/invoke-ledger-write! (assoc-in d [:jobs "a" :finished-at] "t"))
+        (is (= (assoc-in d [:jobs "a" :finished-at] "t")
+               (#'http/load-invoke-jobs-ledger)))))))

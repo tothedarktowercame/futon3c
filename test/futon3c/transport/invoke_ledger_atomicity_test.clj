@@ -164,7 +164,7 @@
                             (#'http/flush-invoke-jobs-ledger!))
                           nil
                           (catch clojure.lang.ExceptionInfo e e))
-                disk (edn/read-string (slurp target))]
+                disk (dissoc (edn/read-string (slurp target)) :journal/snapshot-id)]
             (is (some? failure))
             (is (true? (:committed? (ex-data failure))))
             (is (= :unconfirmed (:durability (ex-data failure))))

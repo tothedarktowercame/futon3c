@@ -905,13 +905,24 @@
             (when-let [new-state (:snapshot-state (ex-data e))]
               (swap! !invoke-ledger-journal-state assoc store new-state))
             (throw e)))
-        (let [record (invoke-ledger-delta (:ledger state) ledger
-                                          (:snapshot-id state)
-                                          (:journal-seq state))]
-          (write-journal-line! record)
-          (swap! !invoke-ledger-journal-state assoc store
-                 (assoc state :ledger ledger :journal-seq (:j/seq record)))
-          ledger)))))
+        (try
+          (let [record (invoke-ledger-delta (:ledger state) ledger
+                                            (:snapshot-id state)
+                                            (:journal-seq state))]
+            (write-journal-line! record)
+            (swap! !invoke-ledger-journal-state assoc store
+                   (assoc state :ledger ledger :journal-seq (:j/seq record)))
+            ledger)
+          (catch Throwable t
+            ;; A failed append may have left a partial line in the journal.
+            ;; Appending after it would fuse the fragment with the next
+            ;; record into a corrupt middle line that refuses every later
+            ;; load. Forget the journal state so the next write is a fresh
+            ;; snapshot, which replaces the journal by atomic rename. The
+            ;; same path covers a delta that cannot be expressed (a
+            ;; non-append :job-order change).
+            (swap! !invoke-ledger-journal-state dissoc store)
+            (throw t)))))))
 
 ;; ---------- coalesced ledger persistence (2026-09-30 invoke-jobs write storm) ----------
 ;; kimi-5 measured every invoke-job event rewriting and fsyncing the WHOLE
